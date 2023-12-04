@@ -333,12 +333,15 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
     name = models.CharField(max_length=100, unique=True)
     text = models.CharField(
         max_length=500,
-        help_text="Jinja2 template code for link text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.name }}</code>. Links which render as empty text will not be displayed.",
+        help_text="Jinja2 template code for link text. "
+        "Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.name }}</code>. "
+        "Links which render as empty text will not be displayed.",
     )
     target_url = models.CharField(
         max_length=500,
         verbose_name="URL",
-        help_text="Jinja2 template code for link URL. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.name }}</code>.",
+        help_text="Jinja2 template code for link URL. "
+        "Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.name }}</code>.",
     )
     weight = models.PositiveSmallIntegerField(default=100)
     group_name = models.CharField(

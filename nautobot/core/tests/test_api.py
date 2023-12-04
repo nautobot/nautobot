@@ -5,6 +5,7 @@ from unittest import skip
 
 from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.test import RequestFactory, override_settings, TestCase
 from django.urls import reverse
 
@@ -26,6 +27,9 @@ from nautobot.extras import choices
 from nautobot.extras import models as extras_models
 from nautobot.ipam import models as ipam_models
 from nautobot.ipam.api import serializers as ipam_serializers
+
+
+User = get_user_model()
 
 
 class AppTest(testing.APITestCase):
@@ -72,6 +76,9 @@ class APIDocsTestCase(TestCase):
         self.cf_text.save()
 
     def test_api_docs(self):
+        user = User.objects.create_user(username="nautobotuser")
+        self.client.force_login(user)
+
         url = reverse("api_docs")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -810,6 +817,9 @@ class APIOrderingTestCase(testing.APITestCase):
 class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
     def test_get_menu(self):
         """Asset response from new ui nav menu api returns a well formatted registry["new_ui_nav_menu"] expected by nautobot-ui."""
+        self.user.is_superuser = True
+        self.user.save()
+
         url = reverse("ui-api:get-menu")
         response = self.client.get(url, **self.header)
         expected_response = {
@@ -912,6 +922,7 @@ class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
                 },
             },
         }
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, expected_response)
 

@@ -113,11 +113,11 @@ class PluginNavBarTestCase(SeleniumTestCase):
                 item = group.find_by_xpath(item_xpath)
 
                 for button_name in item_details["buttons"]:
-                    button = item.find_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']")
+                    button = item.find_by_xpath(f"{item_xpath}/div//a[@data-original-title='{button_name}']")
                     if button_class := getattr(ButtonActionColorChoices, button_name.upper(), None):
                         self.assertIn(button_class, button["class"])
                     if button_icon := getattr(ButtonActionIconChoices, button_name.upper(), None):
-                        icon = button.find_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']/i")
+                        icon = button.find_by_xpath(f"{item_xpath}/div//a[@data-original-title='{button_name}']/i")
                         self.assertIn(button_icon, icon["class"])
 
         tab.click()
@@ -145,11 +145,11 @@ class PluginNavBarTestCase(SeleniumTestCase):
                 item = group.find_by_xpath(item_xpath)
 
                 for button_name in item_details["buttons"]:
-                    button = item.find_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']")
+                    button = item.find_by_xpath(f"{item_xpath}/div//a[@data-original-title='{button_name}']")
                     if button_class := getattr(ButtonActionColorChoices, button_name.upper(), None):
                         self.assertIn(button_class, button.get_attribute("class"))
                     if button_icon := getattr(ButtonActionIconChoices, button_name.upper(), None):
-                        icon = button.find_by_xpath(f"{item_xpath}/div//a[@title='{button_name}']/i")
+                        icon = button.find_by_xpath(f"{item_xpath}/div//a[@data-original-title='{button_name}']/i")
                         self.assertIn(button_icon, icon["class"])
 
         tab.click()

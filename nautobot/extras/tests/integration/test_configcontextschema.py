@@ -148,7 +148,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         for row in self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr"):
             self.assertEqual(
                 row.find_by_tag("td")[-2].html,
-                '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
+                '<span class="text-success"><i class="mdi mdi-check-bold" title="" data-original-title="Yes"></i></span>',
             )
 
         # Edit the schema
@@ -170,7 +170,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         for row in self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr"):
             self.assertEqual(
                 row.find_by_tag("td")[-2].html,
-                '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+                '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
             )
 
         # Edit the device local context data and redirect back to the validation tab
@@ -188,15 +188,15 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         # Config context still fails
         self.assertEqual(
             self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr")[0].find_by_tag("td")[-2].html,
-            '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+            '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
         )
         # Device now passes
         self.assertEqual(
             self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr")[1].find_by_tag("td")[-2].html,
-            '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
+            '<span class="text-success"><i class="mdi mdi-check-bold" title="" data-original-title="Yes"></i></span>',
         )
         # Virtual machine still fails
         self.assertEqual(
             self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr")[2].find_by_tag("td")[-2].html,
-            '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+            '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
         )

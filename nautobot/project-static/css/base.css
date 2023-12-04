@@ -318,6 +318,9 @@ ul.nav-tabs li a {
     padding: 8px 10px;
     border: none;
 }
+.label a {
+    color: inherit;
+}
 
 /* Filters */
 .filter-container {
@@ -664,7 +667,7 @@ td span.hover_copy:hover .hover_copy_button {
 }
 
 .navbar-fixed-left .navbar-nav > .dropdown > .dropdown-menu > li > .buttons.pull-right + a {
-    margin-right: 48px;
+    margin-right: 53px;
 }
 
 .navbar-fixed-left .navbar-nav > .dropdown > .dropdown-menu > li > a {

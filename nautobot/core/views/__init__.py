@@ -25,7 +25,6 @@ from prometheus_client.registry import Collector
 from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.extras.models import GraphQLQuery
 from nautobot.extras.registry import registry
@@ -58,8 +57,8 @@ class HomeView(AccessMixin, TemplateView):
         return template.render(additional_context)
 
     def get(self, request, *args, **kwargs):
-        # Redirect user to login page if not authenticated and HIDE_RESTRICTED_UI is set to True
-        if not request.user.is_authenticated and get_settings_or_config("HIDE_RESTRICTED_UI"):
+        # Redirect user to login page if not authenticated
+        if not request.user.is_authenticated:
             return self.handle_no_permission()
         # Check whether a new release is available. (Only for staff/superusers.)
         new_release = None
@@ -242,7 +241,7 @@ def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
 
 class CustomGraphQLView(GraphQLView):
     def render_graphiql(self, request, **data):
-        if not request.user.is_authenticated and get_settings_or_config("HIDE_RESTRICTED_UI"):
+        if not request.user.is_authenticated:
             graphql_url = reverse("graphql")
             login_url = reverse(settings.LOGIN_URL)
             return redirect(f"{login_url}?next={graphql_url}")

@@ -40,6 +40,17 @@ theme:
       toggle:
         icon: "material/weather-night"
         name: "Switch to light mode"
+
+# The animated *.gif files in nautobot/docs/media are only used in the README.
+# Since their file size is quite large, we exclude them from the built docs.
+exclude_docs: |
+  /media/*.gif
+
+validation:
+  absolute_links: warn
+  omitted_files: warn
+  unrecognized_links: warn
+
 extra_css:
   - "assets/extra.css"
 
