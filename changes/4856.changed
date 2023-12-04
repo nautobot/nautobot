@@ -1,1 +1,0 @@
-ConfigContexts have been enhanced to apply to VirtualMachines that have Cluster instances residing in the ConfigContexts' locations.

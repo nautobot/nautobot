@@ -37,11 +37,7 @@ class ConfigContextQuerySet(RestrictedQuerySet):
         else:
             tenant_groups = []
         # Match against the directly assigned location as well as any parent locations
-        if cluster is not None:
-            location = getattr(cluster, "location", None)
-        else:
-            location = getattr(obj, "location", None)
-
+        location = getattr(obj, "location", None)
         if location:
             locations = location.ancestors(include_self=True)
         else:
