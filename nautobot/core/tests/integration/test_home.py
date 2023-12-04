@@ -97,11 +97,13 @@ class HomeTestCase(SeleniumTestCase):
                 for item_name, item_details in panel_details.items():
                     panel_element_to_search = self.browser.find_by_xpath(
                         f".//div[@class='homepage_column']"
+                        f"/ul[@class='list-unstyled ui-sortable']"
+                        f"/li[@class='list-unstyled draggable-panel ui-sortable-handle']"
                         f"/div[@class='panel panel-default']"
                         f"/div[@class='panel-heading']"
                         f"/strong[contains(text(), '{panel_name}')]"
                         f"/../.."
-                        f"/div[@class='list-group']"
+                        f"/div[@class='list-group collapse in collapsible-div']"
                     )
                     links = panel_element_to_search.links.find_by_text(item_name)
                     if item_details["permission"] in user_permissions:
