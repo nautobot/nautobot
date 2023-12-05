@@ -221,25 +221,29 @@ class PrefixFilterSet(
         model = Prefix
         fields = ["date_allocated", "id", "prefix_length", "tags"]
 
+    def _strip_values(self, values):
+        return [value.strip() for value in values if value.strip()]
+
     def filter_prefix(self, queryset, name, value):
-        prefixes = [value.strip() for value in value]
+        prefixes = self._strip_values(value)
         return queryset.net_equals(*prefixes)
 
     def search_within(self, queryset, name, value):
-        prefixes = [value.strip() for value in value]
+        prefixes = self._strip_values(value)
         return queryset.net_contained(*prefixes)
 
     def search_within_include(self, queryset, name, value):
-        prefixes = [value.strip() for value in value]
+        prefixes = self._strip_values(value)
         return queryset.net_contained_or_equal(*prefixes)
 
     def search_contains(self, queryset, name, value):
         prefixes_queryset = queryset.none()
+        values = self._strip_values(value)
 
-        if prefixes := [prefix.strip() for prefix in value if "/" in prefix]:
+        if prefixes := [prefix for prefix in values if "/" in prefix]:
             prefixes_queryset |= queryset.net_contains_or_equals(*prefixes)
 
-        if prefixes_without_length := [prefix.strip() for prefix in value if "/" not in prefix]:
+        if prefixes_without_length := [prefix for prefix in values if "/" not in prefix]:
             query = Q()
             for _prefix in prefixes_without_length:
                 with contextlib.suppress(netaddr.AddrFormatError, ValueError):
@@ -361,7 +365,7 @@ class IPAddressFilterSet(
         return queryset.filter(params)
 
     def search_by_prefix(self, queryset, name, value):
-        ips = [value.strip() for value in value]
+        ips = [value.strip() for value in value if value.strip()]
         return queryset.net_host_contained(*ips)
 
     def filter_address(self, queryset, name, value):
