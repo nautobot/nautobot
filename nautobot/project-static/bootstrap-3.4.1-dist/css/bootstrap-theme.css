@@ -514,7 +514,7 @@ fieldset[disabled] .btn-danger.active {
   background-image: linear-gradient(to bottom, #ffffff 0%, #ececec 100%);
   filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffffff', endColorstr='#ffececec', GradientType=0);
   background-repeat: repeat-x;
-  border-color: #979797;
+  border-color: #bfbfbf;
 }
 .list-group-item.active .badge,
 .list-group-item.active:hover .badge,
