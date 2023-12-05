@@ -3644,7 +3644,7 @@ tbody.collapse.in {
 .dropdown-menu > .active > a:focus {
   color: #007dff;
   text-decoration: none;
-  background-color: rgba(0, 125, 255, 0.1);
+  background-color: #eaf2f9;
   outline: 0;
 }
 .dropdown-menu > .disabled > a,
@@ -4799,10 +4799,10 @@ fieldset[disabled] .navbar-inverse .btn-link:focus {
   padding: 7px 19px;
   margin-left: -1px;
   line-height: 1.71428572;
-  color: #646464;
+  color: #007dff;
   text-decoration: none;
-  background-color: #f4f4f4;
-  border: 1px solid #d2d2d2;
+  background-color: transparent;
+  border: 1px solid #007dff;
 }
 .pagination > li > a:hover,
 .pagination > li > span:hover,
@@ -4810,8 +4810,8 @@ fieldset[disabled] .navbar-inverse .btn-link:focus {
 .pagination > li > span:focus {
   z-index: 2;
   color: #007dff;
-  background-color: rgba(0, 125, 255, 0.1);
-  border-color: #d2d2d2;
+  background-color: #eaf2f9;
+  border-color: #007dff;
 }
 .pagination > li:first-child > a,
 .pagination > li:first-child > span {
@@ -4831,10 +4831,10 @@ fieldset[disabled] .navbar-inverse .btn-link:focus {
 .pagination > .active > a:focus,
 .pagination > .active > span:focus {
   z-index: 3;
-  color: #007dff;
+  color: #0938e1;
   cursor: default;
-  background-color: #ffffff;
-  border-color: #d2d2d2;
+  background-color: #eaf2f9;
+  border-color: #007dff;
 }
 .pagination > .disabled > span,
 .pagination > .disabled > span:hover,
@@ -4842,10 +4842,10 @@ fieldset[disabled] .navbar-inverse .btn-link:focus {
 .pagination > .disabled > a,
 .pagination > .disabled > a:hover,
 .pagination > .disabled > a:focus {
-  color: #919396;
+  color: #aaaaaa;
   cursor: not-allowed;
-  background-color: #aaaaaa;
-  border-color: #d2d2d2;
+  background-color: #f4f4f4;
+  border-color: #007dff;
 }
 .pagination-lg > li > a,
 .pagination-lg > li > span {
@@ -4892,14 +4892,14 @@ fieldset[disabled] .navbar-inverse .btn-link:focus {
 .pager li > span {
   display: inline-block;
   padding: 5px 14px;
-  background-color: #f4f4f4;
-  border: 1px solid #d2d2d2;
+  background-color: transparent;
+  border: 1px solid #007dff;
   border-radius: 10px;
 }
 .pager li > a:hover,
 .pager li > a:focus {
   text-decoration: none;
-  background-color: rgba(0, 125, 255, 0.1);
+  background-color: #eaf2f9;
 }
 .pager .next > a,
 .pager .next > span {
@@ -4913,9 +4913,9 @@ fieldset[disabled] .navbar-inverse .btn-link:focus {
 .pager .disabled > a:hover,
 .pager .disabled > a:focus,
 .pager .disabled > span {
-  color: #919396;
+  color: #aaaaaa;
   cursor: not-allowed;
-  background-color: #f4f4f4;
+  background-color: transparent;
 }
 .label {
   display: inline;
@@ -5392,7 +5392,7 @@ a.list-group-item:focus,
 button.list-group-item:focus {
   color: #0938e1;
   text-decoration: none;
-  background-color: rgba(0, 125, 255, 0.1);
+  background-color: #eaf2f9;
 }
 button.list-group-item {
   width: 100%;
