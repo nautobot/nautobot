@@ -30,24 +30,25 @@ class InstalledPluginsView(AdminRequiredMixin, View):
     table = InstalledPluginsTable
 
     def get(self, request):
-        plugins = [apps.get_app_config(plugin) for plugin in settings.PLUGINS]
         data = []
-        for plugin in plugins:
-            data.append(
-                {
-                    "name": plugin.verbose_name,
-                    "package_name": plugin.name,
-                    "author": plugin.author,
-                    "author_email": plugin.author_email,
-                    "description": plugin.description,
-                    "version": plugin.version,
-                    "actions": {
-                        "home": plugin.home_view_name,
-                        "configure": plugin.config_view_name,
-                        "docs": plugin.docs_view_name,
-                    },
-                }
-            )
+        for plugin in apps.get_app_configs():
+            if plugin.name in settings.PLUGINS:
+                data.append(
+                    {
+                        "name": plugin.verbose_name,
+                        "package_name": plugin.name,
+                        "app_label": plugin.label,
+                        "author": plugin.author,
+                        "author_email": plugin.author_email,
+                        "description": plugin.description,
+                        "version": plugin.version,
+                        "actions": {
+                            "home": plugin.home_view_name,
+                            "configure": plugin.config_view_name,
+                            "docs": plugin.docs_view_name,
+                        },
+                    }
+                )
         table = self.table(data, user=request.user)
 
         paginate = {
@@ -73,10 +74,10 @@ class InstalledPluginDetailView(LoginRequiredMixin, View):
     """
 
     def get(self, request, plugin):
-        if plugin not in settings.PLUGINS:
+        plugin_config = apps.get_app_config(plugin)
+        if plugin_config.name not in settings.PLUGINS:
             raise Http404
 
-        plugin_config = apps.get_app_config(plugin)
         return render(
             request,
             "extras/plugin_detail.html",

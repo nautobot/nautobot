@@ -710,7 +710,7 @@ class JobResult(BaseModel, CustomFieldModel):
                 if hasattr(obj, "get_absolute_url")
                 else "",
             )
-        except NotImplementedError:
+        except (AttributeError, NotImplementedError):
             log = JobLogEntry(
                 job_result=self,
                 log_level=level_choice,
