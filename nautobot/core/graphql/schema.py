@@ -4,6 +4,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.validators import ValidationError
 from django.db.models.fields.reverse_related import ManyToOneRel, OneToOneRel
 
 import graphene
@@ -43,6 +44,7 @@ from nautobot.extras.registry import registry
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
 from nautobot.extras.graphql.types import TagType, DynamicGroupType
+from nautobot.extras.utils import check_if_key_is_graphql_safe
 from nautobot.ipam.graphql.types import IPAddressType, PrefixType
 from nautobot.virtualization.graphql.types import VirtualMachineType, VMInterfaceType
 
@@ -460,6 +462,15 @@ def generate_query_mixin():
                 # Find the model class based on the content type
                 ct = ContentType.objects.get(app_label=app_name, model=model_name)
                 model = ct.model_class()
+                if model == ComputedField:
+                    for i, cpf in enumerate(ComputedField.objects.all()):
+                        try:
+                            check_if_key_is_graphql_safe("Computed Field", cpf.key)
+                        except ValidationError:
+                            cpf.key = cpf.key.replace(" ", "_")
+                            cpf.key = cpf.key.replace("-", "_")
+                            cpf.key = f"a{i}" + cpf.key
+                            cpf.save()
             except ContentType.DoesNotExist:
                 logger.warning(
                     'Unable to generate a schema type for the model "%s.%s" in GraphQL, '

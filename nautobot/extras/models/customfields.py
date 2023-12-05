@@ -112,8 +112,8 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
             logger.warning("Failed to render computed field %s: %s", self.key, exc)
             return self.fallback_value
 
-    def clean(self):
-        super().clean()
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
         if self.key != "":
             check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
 
