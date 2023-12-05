@@ -530,37 +530,23 @@ class Prefix(PrimaryModel):
     def __str__(self):
         return str(self.prefix)
 
-    @staticmethod
-    def deconstruct_prefix(prefix):
-        if isinstance(prefix, str):
-            prefix = netaddr.IPNetwork(prefix)
-        # Note that our "broadcast" field is actually the last IP address in this prefix.
-        # This is different from the more accurate technical meaning of a network's broadcast address in 2 cases:
-        # 1. For a point-to-point prefix (IPv4 /31 or IPv6 /127), there are two addresses in the prefix,
-        #    and neither one is considered a broadcast address. We store the second address as our "broadcast".
-        # 2. For a host prefix (IPv6 /32 or IPv6 /128) there's only one address in the prefix.
-        #    We store this address as both the network and the "broadcast".
-        # This variance is intentional in both cases as we use the "broadcast" primarily for filtering and grouping
-        # of addresses and prefixes, not for packet forwarding. :-)
-        network = str(prefix.network)
-        broadcast = str(prefix.broadcast or prefix[-1])
-        prefix_length = prefix.prefixlen
-        ip_version = prefix.version
-
-        return {
-            "network": network,
-            "broadcast": broadcast,
-            "prefix_length": prefix_length,
-            "ip_version": ip_version,
-        }
-
     def _deconstruct_prefix(self, prefix):
         if prefix:
-            network, broadcast, prefix_length, ip_version = self.deconstruct_prefix(prefix).values()
-            self.network = network
-            self.broadcast = broadcast
-            self.prefix_length = prefix_length
-            self.ip_version = ip_version
+            if isinstance(prefix, str):
+                prefix = netaddr.IPNetwork(prefix)
+            # Note that our "broadcast" field is actually the last IP address in this prefix.
+            # This is different from the more accurate technical meaning of a network's broadcast address in 2 cases:
+            # 1. For a point-to-point prefix (IPv4 /31 or IPv6 /127), there are two addresses in the prefix,
+            #    and neither one is considered a broadcast address. We store the second address as our "broadcast".
+            # 2. For a host prefix (IPv6 /32 or IPv6 /128) there's only one address in the prefix.
+            #    We store this address as both the network and the "broadcast".
+            # This variance is intentional in both cases as we use the "broadcast" primarily for filtering and grouping
+            # of addresses and prefixes, not for packet forwarding. :-)
+            broadcast = prefix.broadcast if prefix.broadcast else prefix[-1]
+            self.network = str(prefix.network)
+            self.broadcast = str(broadcast)
+            self.prefix_length = prefix.prefixlen
+            self.ip_version = prefix.version
 
     def clean(self):
         super().clean()
