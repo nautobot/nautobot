@@ -59,6 +59,34 @@
                 </button>
             </div>
         </form>
+        <!-- Begin nested example of "inc/paginator.html" -->
+        <div class="paginator text-right">
+            <nav>
+                <ul class="pagination pull-right">
+                    <li><a><i class="mdi mdi-chevron-double-left"></i></a></li>
+                    <li><a>1</a></li>
+                    <li><a>2</a></li>
+                    <li class="active"><a>3</a></li>
+                    <li><a>4</a></li>
+                    <li><a>5</a></li>
+                    <li class="disabled"><span>&hellip;</span></li>
+                    <li><a>10</a></li>
+                    <li><a><i class="mdi mdi-chevron-double-right"></i></a></li>
+                </ul>
+            </nav>
+            <form>
+                <select name="per_page" id="per_page">
+                    <option value="25" selected="selected">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select> per page
+            </form>
+            <div class="text-right text-muted">
+                Showing 50-75 of 250
+            </div>
+        </div>
+        <!-- End nested example of "inc/paginator.html" -->
+        <div class="clearfix"></div>
     </div>
 </div>
 <!-- End example of "object_list.html" -->
