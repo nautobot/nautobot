@@ -71,6 +71,24 @@ html[data-theme="dark"] .table-headings th {              /* Table header bar */
   background-color: rgb(196, 204, 210) !important;
 }
 
+html[data-theme="dark"] .select2-container--default,      /* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-container--classic,      /* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-container--bootstrap,    /* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-selection--single,       /* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-selection--multiple,     /* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-search--dropdown,        /* Drop down menu selections for filter form */
+html[data-theme="dark"] .select2-search--inline,          /* Search field in filter form */
+html[data-theme="dark"] .select2-search__field,           /* Search field in filter form */
+html[data-theme="dark"] .select2-close-mask,              /* Close selection */
+html[data-theme="dark"] .form-control {                   /* Text fields, text boxes, etc. */
+  background-color: rgb(242, 242, 242) !important;
+}
+
+html[data-theme="dark"] .form-control[disabled],
+html[data-theme="dark"] .form-control[readonly],
+html[data-theme="dark"] .fieldset[disabled] .form-control {
+  background-color: rgb(210, 210, 210) !important;
+}
 
 html[data-theme="dark"] .scheme-container {                /* Swagger docs container header bar */
   background-color: rgb(217, 217, 217) !important;
@@ -139,17 +157,7 @@ html[data-theme="dark"] .swagger-ui .btn {                /* Swagger button text
 /* Form fields and backdrops, lighter than headers, navbars, etc */
 html[data-theme="dark"] #per_page,                        /* Pagination page selection dropdown menu */
 html[data-theme="dark"] .dropdown-menu,                   /* Dropdown menu from navbar */
-html[data-theme="dark"] .form-control,                    /* Multi-line text fields, eg add device: notes, comments, etc */
 html[data-theme="dark"] .swagger-ui .servers>label select /* Swagger docs server dropdown selection */
-html[data-theme="dark"] .select2-container--default,      /* Drop down menu selections, eg adding new item */
-html[data-theme="dark"] .select2-container--classic,      /* Drop down menu selections, eg adding new item */
-html[data-theme="dark"] .select2-container--bootstrap,    /* Drop down menu selections, eg adding new item */
-html[data-theme="dark"] .select2-selection--single,       /* Drop down menu selections, eg adding new item */
-html[data-theme="dark"] .select2-selection--multiple,     /* Drop down menu selections, eg adding new item */
-html[data-theme="dark"] .select2-search--dropdown,        /* Drop down menu selections for filter form */
-html[data-theme="dark"] .select2-search__field,           /* Search field in filter form */
-html[data-theme="dark"] .select2-search--inline,          /* Search field in filter form */
-html[data-theme="dark"] .select2-close-mask,              /* Close selection */
 html[data-theme="dark"] .select2-dropdown {               /* Dropdown form fields */
   background-color: rgb(222, 222, 222) !important;
 }
