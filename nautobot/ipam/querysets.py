@@ -1,3 +1,4 @@
+import contextlib
 import re
 
 import netaddr
@@ -191,46 +192,50 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
 class PrefixQuerySet(BaseNetworkQuerySet):
     """Queryset for `Prefix` objects."""
 
-    def net_equals(self, prefix):
-        prefix = netaddr.IPNetwork(prefix)
-        last_ip = self._get_last_ip(prefix)
-        return self.filter(prefix_length=prefix.prefixlen, network=prefix.network, broadcast=last_ip)
+    def net_equals(self, *prefixes):
+        query = Q()
+        for prefix in prefixes:
+            with contextlib.suppress(netaddr.AddrFormatError, ValueError):
+                prefix = netaddr.IPNetwork(prefix)
+                last_ip = self._get_last_ip(prefix)
+                query |= Q(prefix_length=prefix.prefixlen, network=prefix.network, broadcast=last_ip)
+        return self.filter(query)
 
-    def net_contained(self, prefix):
-        prefix = netaddr.IPNetwork(prefix)
-        last_ip = self._get_last_ip(prefix)
-        return self.filter(
-            prefix_length__gt=prefix.prefixlen,
-            network__gte=prefix.network,
-            broadcast__lte=last_ip,
-        )
+    def net_contained(self, *prefixes):
+        query = Q()
+        for prefix in prefixes:
+            with contextlib.suppress(netaddr.AddrFormatError, ValueError):
+                prefix = netaddr.IPNetwork(prefix)
+                last_ip = self._get_last_ip(prefix)
+                query |= Q(prefix_length__gt=prefix.prefixlen, network__gte=prefix.network, broadcast__lte=last_ip)
+        return self.filter(query)
 
-    def net_contained_or_equal(self, prefix):
-        prefix = netaddr.IPNetwork(prefix)
-        last_ip = self._get_last_ip(prefix)
-        return self.filter(
-            prefix_length__gte=prefix.prefixlen,
-            network__gte=prefix.network,
-            broadcast__lte=last_ip,
-        )
+    def net_contained_or_equal(self, *prefixes):
+        query = Q()
+        for prefix in prefixes:
+            with contextlib.suppress(netaddr.AddrFormatError, ValueError):
+                prefix = netaddr.IPNetwork(prefix)
+                last_ip = self._get_last_ip(prefix)
+                query |= Q(prefix_length__gte=prefix.prefixlen, network__gte=prefix.network, broadcast__lte=last_ip)
+        return self.filter(query)
 
-    def net_contains(self, prefix):
-        prefix = netaddr.IPNetwork(prefix)
-        last_ip = self._get_last_ip(prefix)
-        return self.filter(
-            prefix_length__lt=prefix.prefixlen,
-            network__lte=prefix.network,
-            broadcast__gte=last_ip,
-        )
+    def net_contains(self, *prefixes):
+        query = Q()
+        for prefix in prefixes:
+            with contextlib.suppress(netaddr.AddrFormatError, ValueError):
+                prefix = netaddr.IPNetwork(prefix)
+                last_ip = self._get_last_ip(prefix)
+                query |= Q(prefix_length__lt=prefix.prefixlen, network__lte=prefix.network, broadcast__gte=last_ip)
+        return self.filter(query)
 
-    def net_contains_or_equals(self, prefix):
-        prefix = netaddr.IPNetwork(prefix)
-        last_ip = self._get_last_ip(prefix)
-        return self.filter(
-            prefix_length__lte=prefix.prefixlen,
-            network__lte=prefix.network,
-            broadcast__gte=last_ip,
-        )
+    def net_contains_or_equals(self, *prefixes):
+        query = Q()
+        for prefix in prefixes:
+            with contextlib.suppress(netaddr.AddrFormatError, ValueError):
+                prefix = netaddr.IPNetwork(prefix)
+                last_ip = self._get_last_ip(prefix)
+                query |= Q(prefix_length__lte=prefix.prefixlen, network__lte=prefix.network, broadcast__gte=last_ip)
+        return self.filter(query)
 
     def get(self, *args, **kwargs):
         """
@@ -422,15 +427,16 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
 
         return self.filter(the_filter)
 
-    def net_host_contained(self, network):
+    def net_host_contained(self, *networks):
         # consider only host ip address when
         # filtering for membership in |network|
-        network = netaddr.IPNetwork(network)
-        last_ip = self._get_last_ip(network)
-        return self.filter(
-            host__lte=last_ip,
-            host__gte=network.network,
-        )
+        query = Q()
+        for ip in networks:
+            with contextlib.suppress(netaddr.AddrFormatError, ValueError):
+                ip = netaddr.IPNetwork(ip)
+                last_ip = self._get_last_ip(ip)
+                query |= Q(host__lte=last_ip, host__gte=ip.network)
+        return self.filter(query)
 
     def net_in(self, networks):
         # for a tuple of IP addresses, filter queryset for matches.

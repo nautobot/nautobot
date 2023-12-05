@@ -1,8 +1,8 @@
+import contextlib
 import django_filters
 import netaddr
 from django.core.exceptions import ValidationError
 from django.db.models import Q
-from netaddr.core import AddrFormatError
 
 from nautobot.core.filters import (
     MultiValueCharFilter,
@@ -158,19 +158,19 @@ class PrefixFilterSet(
     parent = django_filters.ModelMultipleChoiceFilter(
         queryset=Prefix.objects.all(),
     )
-    prefix = django_filters.CharFilter(
+    prefix = MultiValueCharFilter(
         method="filter_prefix",
         label="Prefix",
     )
-    within = django_filters.CharFilter(
+    within = MultiValueCharFilter(
         method="search_within",
         label="Within prefix",
     )
-    within_include = django_filters.CharFilter(
+    within_include = MultiValueCharFilter(
         method="search_within_include",
         label="Within and including prefix",
     )
-    contains = django_filters.CharFilter(
+    contains = MultiValueCharFilter(
         method="search_contains",
         label="Prefixes which contain this prefix or IP",
     )
@@ -222,53 +222,31 @@ class PrefixFilterSet(
         fields = ["date_allocated", "id", "prefix_length", "tags"]
 
     def filter_prefix(self, queryset, name, value):
-        value = value.strip()
-        if not value:
-            return queryset
-        # filter for Prefix models equal to |value|
-        try:
-            return queryset.net_equals(netaddr.IPNetwork(value))
-        except (AddrFormatError, ValueError):
-            return queryset.none()
+        prefixes = [value.strip() for value in value]
+        return queryset.net_equals(*prefixes)
 
     def search_within(self, queryset, name, value):
-        value = value.strip()
-        if not value:
-            return queryset
-        try:
-            return queryset.net_contained(netaddr.IPNetwork(value))
-        except (AddrFormatError, ValueError):
-            return queryset.none()
+        prefixes = [value.strip() for value in value]
+        return queryset.net_contained(*prefixes)
 
     def search_within_include(self, queryset, name, value):
-        value = value.strip()
-        if not value:
-            return queryset
-        try:
-            return queryset.net_contained_or_equal(netaddr.IPNetwork(value))
-        except (AddrFormatError, ValueError):
-            return queryset.none()
+        prefixes = [value.strip() for value in value]
+        return queryset.net_contained_or_equal(*prefixes)
 
     def search_contains(self, queryset, name, value):
-        value = value.strip()
-        if not value:
-            return queryset
-        try:
-            # Searching by prefix
-            if "/" in value:
-                return queryset.net_contains_or_equals(netaddr.IPNetwork(value).cidr)
-            # Searching by IP address
-            else:
-                # filter for Prefixes containing |value|
-                # netaddr.IPAddress objects have no netmask
-                # so prefix_length is not considered
-                query = netaddr.IPAddress(value)
-                return queryset.filter(
-                    network__lte=bytes(query),
-                    broadcast__gte=bytes(query),
-                )
-        except (AddrFormatError, ValueError):
-            return queryset.none()
+        prefixes_queryset = queryset.none()
+
+        if prefixes := [prefix.strip() for prefix in value if "/" in prefix]:
+            prefixes_queryset |= queryset.net_contains_or_equals(*prefixes)
+
+        if prefixes_without_length := [prefix.strip() for prefix in value if "/" not in prefix]:
+            query = Q()
+            for _prefix in prefixes_without_length:
+                with contextlib.suppress(netaddr.AddrFormatError, ValueError):
+                    prefix = netaddr.IPAddress(_prefix)
+                    query |= Q(network__lte=bytes(prefix), broadcast__gte=bytes(prefix))
+            prefixes_queryset |= queryset.filter(query)
+        return prefixes_queryset
 
     def generate_query_filter_present_in_vrf(self, value):
         if isinstance(value, str):
@@ -295,7 +273,7 @@ class IPAddressFilterSet(
         queryset=Prefix.objects.all(),
         label="Parent prefix",
     )
-    prefix = django_filters.CharFilter(
+    prefix = MultiValueCharFilter(
         method="search_by_prefix",
         label="Contained in prefix",
     )
@@ -383,14 +361,8 @@ class IPAddressFilterSet(
         return queryset.filter(params)
 
     def search_by_prefix(self, queryset, name, value):
-        value = value.strip()
-        if not value:
-            return queryset
-        try:
-            query = netaddr.IPNetwork(value.strip()).cidr
-            return queryset.net_host_contained(query)
-        except (AddrFormatError, ValueError):
-            return queryset.none()
+        ips = [value.strip() for value in value]
+        return queryset.net_host_contained(*ips)
 
     def filter_address(self, queryset, name, value):
         try:
