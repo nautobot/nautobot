@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import re
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from django import template
 from django.conf import settings
@@ -728,12 +729,10 @@ def support_message():
 @register.simple_tag
 def versioned_static(file_path):
     """Returns a versioned static file URL with a query parameter containing the version number."""
-    static_file_path = static(file_path)
-    if '?' in static_file_path:
-        return f"{static_file_path}&v{settings.VERSION}"
-    else:
-        return f"{static_file_path}?v{settings.VERSION}"
-
+    parsed = urlparse(file_path)
+    qs = parse_qs(parsed.query)
+    qs["version"] = settings.VERSION
+    return urlunparse(parsed._replace(query=urlencode(qs, doseq=True)))
 
 
 @library.filter()

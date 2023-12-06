@@ -53,5 +53,5 @@
 
 {% block javascript %}
     {{ block.super }}
-    <script src="{% static 'js/rack_elevations.js' %}?v{{ settings.VERSION }}"></script>
+    <script src="{% versioned_static 'js/rack_elevations.js' %}"></script>
 {% endblock %}
