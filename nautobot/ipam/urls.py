@@ -214,6 +214,11 @@ urlpatterns = [
         name="ipaddress_interfaces",
     ),
     path(
+        "ip-addresses/<uuid:pk>/vm-interfaces/",
+        views.IPAddressVMInterfacesView.as_view(),
+        name="ipaddress_vm_interfaces",
+    ),
+    path(
         "ip-addresses/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="ipaddress_notes",

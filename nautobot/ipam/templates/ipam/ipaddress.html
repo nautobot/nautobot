@@ -23,6 +23,13 @@
                 </li>
             {% endif %}
         {% endwith %}
+        {% with vm_interface_count=object.vm_interfaces.count %}
+            {% if vm_interface_count %}
+                <li role="presentation" {% if active_tab == 'vm_interfaces' %} class="active"{% endif %}>
+                    <a href="{% url 'ipam:ipaddress_vm_interfaces' pk=object.pk %}">VM Interfaces {% badge vm_interface_count %}</a>
+                </li>
+            {% endif %}
+        {% endwith %}
 {% endblock extra_nav_tabs %}
 
 {% block content_left_page %}
@@ -95,14 +102,31 @@
                     </td>
                 </tr>
                 <tr>
-                    <!-- TODO: update to work with interface M2M -->
                     <td>Assignment</td>
                     <td>
-                        {% if object.assigned_object %}
-                            {{ object.assigned_object.parent|hyperlinked_object }} ({{ object.assigned_object }})
-                        {% else %}
-                            <span class="text-muted">&mdash;</span>
-                        {% endif %}
+                        {% with interface_count=object.interfaces.count vm_interface_count=object.vm_interfaces.count %}
+                            {% if interface_count == 1 and vm_interface_count == 0 %}
+                                {{ object.interfaces.first.parent|hyperlinked_object }} ({{ object.interfaces.first|hyperlinked_object }})
+                            {% elif interface_count == 0 and vm_interface_count == 1 %}
+                                {{ object.vm_interfaces.first.parent|hyperlinked_object }} ({{ object.vm_interfaces.first|hyperlinked_object }})
+                            {% elif interface_count == 0 and vm_interface_count == 0 %}
+                                <span class="text-muted">&mdash;</span>
+                            {% else %}
+                                {% if interface_count > 0 %}
+                                    <a href="{% url 'ipam:ipaddress_interfaces' pk=object.pk %}">
+                                        {{ interface_count }} interface{{ interface_count|pluralize }}
+                                    </a>
+                                    {% if vm_interface_count > 0 %}
+                                        <br>
+                                    {% endif %}
+                                {% endif %}
+                                {% if vm_interface_count > 0 %}
+                                    <a href="{% url 'ipam:ipaddress_vm_interfaces' pk=object.pk %}">
+                                        {{ vm_interface_count }} VM interface{{ vm_interface_count|pluralize }}
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+                        {% endwith %}
                     </td>
                 </tr>
                 <tr>
