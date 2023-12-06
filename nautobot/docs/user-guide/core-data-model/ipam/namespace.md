@@ -15,4 +15,4 @@ Namespaces exist in Nautobot to model the _exceptions_ to the above case, where 
 
 ## Sample Namespace Implementation Diagram
 
-![IPAM Namespace Example](./media/ipam_namespace_documentation.drawio.svg)
+![IPAM Namespace Example](./media/ipam_namespace_documentation.drawio.png)
