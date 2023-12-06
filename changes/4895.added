@@ -1,0 +1,1 @@
+Added `http_method`, `headers` and `ca_file_path` fields to `ExternalIntegration` model.
