@@ -1,1 +1,1 @@
-Moved `ComputedField` key string validation from clean() to save()
+Move invocation of `ComputedField`, `CustomField`, and `Relationship` `key` string validation `clean()` methods to `save()` to protect against creation of invalid data.

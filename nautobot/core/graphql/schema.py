@@ -279,19 +279,19 @@ def extend_schema_type_computed_field(schema_type, model):
         prefix = f"{settings.GRAPHQL_COMPUTED_FIELD_PREFIX}_"
 
     for field in cfs:
-        field_name = f"{prefix}{field.key}"
-        resolver_name = f"resolve_{field_name}"
-
         try:
             check_if_key_is_graphql_safe("Computed Field", field.key)
         except ValidationError:
             logger.warning(
-                'Unable to add the computed field "%s" to %s because ' 'computed field key "%s" is not GraphQL safe',
+                'Unable to add the computed field "%s" to %s because computed field key "%s" is not GraphQL safe',
                 field,
                 schema_type._meta.name,
                 field_name,
             )
             continue
+
+        field_name = f"{prefix}{field.key}"
+        resolver_name = f"resolve_{field_name}"
 
         if hasattr(schema_type, resolver_name):
             logger.warning(
