@@ -282,6 +282,17 @@ def extend_schema_type_computed_field(schema_type, model):
         field_name = f"{prefix}{field.key}"
         resolver_name = f"resolve_{field_name}"
 
+        try:
+            check_if_key_is_graphql_safe("Computed Field", field.key)
+        except ValidationError:
+            logger.warning(
+                'Unable to add the computed field "%s" to %s because ' 'computed field key "%s" is not GraphQL safe',
+                field,
+                schema_type._meta.name,
+                field_name,
+            )
+            continue
+
         if hasattr(schema_type, resolver_name):
             logger.warning(
                 'Unable to add the computed field "%s" to %s because '
@@ -462,15 +473,6 @@ def generate_query_mixin():
                 # Find the model class based on the content type
                 ct = ContentType.objects.get(app_label=app_name, model=model_name)
                 model = ct.model_class()
-                if model == ComputedField:
-                    for i, cpf in enumerate(ComputedField.objects.all()):
-                        try:
-                            check_if_key_is_graphql_safe("Computed Field", cpf.key)
-                        except ValidationError:
-                            cpf.key = cpf.key.replace(" ", "_")
-                            cpf.key = cpf.key.replace("-", "_")
-                            cpf.key = f"a{i}" + cpf.key
-                            cpf.save()
             except ContentType.DoesNotExist:
                 logger.warning(
                     'Unable to generate a schema type for the model "%s.%s" in GraphQL, '

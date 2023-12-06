@@ -564,10 +564,13 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
         return field
 
-    def clean(self):
+    def save(self, *args, **kwargs):
         # Check if relationship.key is graphql safe.
         if self.key != "":
             check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
+        super().save(*args, **kwargs)
+
+    def clean(self):
         # Check if source and destination filters are valid
         for side in ["source", "destination"]:
             if not getattr(self, f"{side}_filter"):

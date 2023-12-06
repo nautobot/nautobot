@@ -113,9 +113,9 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
             return self.fallback_value
 
     def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
         if self.key != "":
             check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
+        super().save(*args, **kwargs)
 
 
 class CustomFieldModel(models.Model):
@@ -408,11 +408,15 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     def __str__(self):
         return self.label
 
+    def save(self, *args, **kwargs):
+        # Check if relationship.key is graphql safe.
+        if self.key != "":
+            check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
+        super().save(*args, **kwargs)
+
     def clean(self):
         super().clean()
 
-        if self.key != "":
-            check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
         if self.present_in_database:
             # Check immutable fields
             database_object = self.__class__.objects.get(pk=self.pk)
