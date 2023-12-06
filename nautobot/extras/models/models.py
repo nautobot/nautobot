@@ -27,6 +27,7 @@ from nautobot.core.models.validators import EnhancedURLValidator
 from nautobot.core.utils.data import deepmerge, render_jinja2
 from nautobot.extras.choices import (
     ButtonClassChoices,
+    HTTPMethodClassChoices,
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
@@ -488,6 +489,24 @@ class ExternalIntegration(PrimaryModel):
         blank=True,
         null=True,
         help_text="Optional user-defined JSON data for this integration",
+    )
+    http_method = models.CharField(
+        max_length=10,
+        choices=HTTPMethodClassChoices,
+        default=HTTPMethodClassChoices.METHOD_GET,
+        verbose_name="HTTP method",
+        blank=True,
+    )
+    headers = models.JSONField(
+        encoder=DjangoJSONEncoder,
+        blank=True,
+        null=True,
+        help_text="Headers for the HTTP request",
+    )
+    ca_file_path = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="CA File path",
     )
 
     def __str__(self):

@@ -537,6 +537,8 @@ class ExternalIntegrationTestCase(FilterTestCases.FilterTestCase):
         ["timeout"],
         ["secrets_group", "secrets_group__id"],
         ["secrets_group", "secrets_group__name"],
+        ["http_method"],
+        ["ca_file_path"]
     )
 
     @classmethod

@@ -34,6 +34,7 @@ from nautobot.core.forms import (
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
+    HTTPMethodClassChoices,
     JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
@@ -605,10 +606,17 @@ class ExternalIntegrationBulkEditForm(NautobotBulkEditForm):
     verify_ssl = forms.NullBooleanField(required=False, label="Verify SSL", widget=BulkEditNullBooleanSelect)
     timeout = forms.IntegerField(required=False, min_value=0)
     extra_config = forms.JSONField(required=False)
+    http_method = forms.ChoiceField(
+        required=False,
+        label="HTTP Method",
+        choices=add_blank_choice(HTTPMethodClassChoices),
+    )
+    headers = forms.JSONField(required=False, label="HTTP Request headers")
+    ca_file_path = forms.CharField(required=False, label="CA File Path")
 
     class Meta:
         model = ExternalIntegration
-        nullable_fields = ["extra_config", "secrets_group"]
+        nullable_fields = ["extra_config", "secrets_group", "http_method", "headers", "ca_file_path"]
 
 
 #

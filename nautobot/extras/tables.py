@@ -413,6 +413,8 @@ class ExternalIntegrationTable(BaseTable):
     name = tables.Column(linkify=True)
     remote_url = tables.Column(linkify=False)
     secrets_group = tables.Column(linkify=True)
+    http_method = tables.Column(linkify=False)
+    ca_file_path = tables.Column(linkify=False)
 
     class Meta(BaseTable.Meta):
         model = ExternalIntegration
@@ -423,6 +425,8 @@ class ExternalIntegrationTable(BaseTable):
             "secrets_group",
             "verify_ssl",
             "timeout",
+            "http_method",
+            "ca_file_path"
         )
         default_columns = (
             "pk",
@@ -431,6 +435,7 @@ class ExternalIntegrationTable(BaseTable):
             "secrets_group",
             "verify_ssl",
             "timeout",
+            "http_method",
         )
 
 

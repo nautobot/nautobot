@@ -30,6 +30,7 @@ from nautobot.dcim.tests import test_views
 from nautobot.extras.api.serializers import ConfigContextSerializer, JobResultSerializer
 from nautobot.extras.choices import (
     DynamicGroupOperatorChoices,
+    HTTPMethodClassChoices,
     JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
@@ -824,10 +825,14 @@ class ExternalIntegrationTest(APIViewTestCases.APIViewTestCase):
             "verify_ssl": False,
             "timeout": 5,
             "extra_config": "{'foo': 'bar'}",
+            "http_method": HTTPMethodClassChoices.METHOD_DELETE,
+            "headers": "{'header': 'fake header'}",
+            "ca_file_path": "/this/is/a/file/path",
         },
         {
             "name": "Test External Integration 2",
             "remote_url": "http://example.com/test2/",
+            "http_method": HTTPMethodClassChoices.METHOD_POST,
         },
         {
             "name": "Test External Integration 3",
@@ -835,6 +840,8 @@ class ExternalIntegrationTest(APIViewTestCases.APIViewTestCase):
             "verify_ssl": True,
             "timeout": 30,
             "extra_config": "{'foo': ['bat', 'baz']}",
+            "headers": "{'new_header': 'fake header'}",
+            "ca_file_path": "/this/is/a/new/file/path",
         },
     ]
     bulk_update_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}"}

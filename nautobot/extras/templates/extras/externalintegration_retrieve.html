@@ -32,6 +32,18 @@
                     <td>Extra Config</td>
                     <td><pre>{{ object.extra_config | render_json }}</pre></td>
                 </tr>
+                <tr>
+                    <td>HTTP Method</td>
+                    <td>{{ object.http_method }}</td>
+                </tr>
+                <tr>
+                    <td>Headers</td>
+                    <td><pre>{{ object.headers | render_json }}</pre></td>
+                </tr>
+                <tr>
+                    <td>CA File Path</td>
+                    <td>{{ object.ca_file_path }}</td>
+                </tr>
             </table>
         </div>
 {% endblock content_left_page %}
