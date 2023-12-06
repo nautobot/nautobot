@@ -1,30 +1,36 @@
 // Enables panels on homepage to be collapsed and expanded
-$(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function() {
     // Function to toggle and save state for a specific collapsible element
     function toggleAndSaveState(elementId) {
         // Remove 'toggle-' in the ID to get the localStorage key the toggle btn references
         elementId = elementId.replace("toggle-", "");
-        var collapsibleDiv = $('#' + elementId);
+        var collapsibleDiv = document.getElementById(elementId);
 
         // Toggle the collapsed class
-        collapsibleDiv.toggleClass('collapsed');
+        if (collapsibleDiv.classList.contains('collapsed')) {
+            collapsibleDiv.classList.remove('collapsed');
+        } else {
+            collapsibleDiv.classList.add('collapsed');
+        }
 
         // Update the state in localStorage
-        var isCollapsed = collapsibleDiv.hasClass('in');
+        var isCollapsed = collapsibleDiv.classList.contains('in');
         localStorage.setItem(elementId, isCollapsed ? 'collapsed' : 'expanded');
         // Set Cookie value based on isCollapsed
         if (isCollapsed) {
             document.cookie = elementId + "=True; path=/";
-        }
-        else {
+        } else {
             document.cookie = elementId + "=False; path=/";
         }
     }
 
     // Add event listener to each collapsible div
-    $('.collapse-icon').on('click', function() {
-        var elementId = this.id;
-        toggleAndSaveState(elementId);
+    var collapseIcons = document.querySelectorAll('.collapse-icon');
+    collapseIcons.forEach(function(icon) {
+        icon.addEventListener('click', function() {
+            var elementId = this.id;
+            toggleAndSaveState(elementId);
+        });
     });
 });
 
