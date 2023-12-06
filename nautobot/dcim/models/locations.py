@@ -237,7 +237,13 @@ class Location(TreeModel, StatusModel, PrimaryModel):
     @property
     def base_site(self):
         """The site that this Location belongs to, if any, or that its root ancestor belongs to, if any."""
-        return self.site or self.ancestors().first().site
+        if self.site:
+            return self.site
+        current_location = self
+        while current_location := current_location.parent:
+            if current_location.site:
+                return current_location.site
+        return None
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a Location with no parent.
