@@ -310,6 +310,17 @@ ul.nav-tabs li a {
     padding: 8px 10px;
     border: none;
 }
+ul.nav-tabs li a:hover,
+ul.nav-tabs li a:focus,
+ul.nav-pills li a:hover,
+ul.nav-pills li.active a:hover,
+ul.nav-pills li a:focus {
+    background-color: #d2d2d2;
+}
+ul.nav-pills li.active a {
+    background-color: #eaf2f9;
+}
+ul.nav-tabs li a:hover,
 .label a {
     color: inherit;
 }
