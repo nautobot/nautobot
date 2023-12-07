@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.checks import register, Error, Tags, Warning  # pylint: disable=redefined-builtin
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
+from django.db import connections
 
 
 E002 = Error(
@@ -35,6 +36,11 @@ W005 = Warning(
     id="nautobot.core.W005",
     obj=settings,
 )
+
+MIN_POSTGRESQL_MAJOR_VERSION = 12
+MIN_POSTGRESQL_MINOR_VERSION = 0
+
+MIN_POSTGRESQL_VERSION = MIN_POSTGRESQL_MAJOR_VERSION * 10000 + MIN_POSTGRESQL_MINOR_VERSION
 
 
 @register(Tags.security)
@@ -74,6 +80,30 @@ def check_maintenance_mode(app_configs, **kwargs):
     if settings.MAINTENANCE_MODE and settings.SESSION_ENGINE == "django.contrib.sessions.backends.db":
         return [E005]
     return []
+
+
+@register(Tags.database)
+def check_postgresql_version(app_configs, databases=None, **kwargs):
+    if databases is None:
+        return []
+    errors = []
+    for alias in databases:
+        conn = connections[alias]
+        if conn.vendor == "postgresql":
+            server_version = conn.cursor().connection.info.server_version
+            if server_version < MIN_POSTGRESQL_VERSION:
+                errors.append(
+                    Error(
+                        f"PostgreSQL version less than {MIN_POSTGRESQL_VERSION} "
+                        f"(i.e. {MIN_POSTGRESQL_MAJOR_VERSION}.{MIN_POSTGRESQL_MINOR_VERSION}) "
+                        "is not supported by this version of Nautobot",
+                        id="nautobot.core.E006",
+                        obj=f"connections[{alias}]",
+                        hint=f"Detected version is {server_version} (major version {server_version // 10000})",
+                    )
+                )
+
+    return errors
 
 
 @register(Tags.security)
