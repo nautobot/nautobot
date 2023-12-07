@@ -515,6 +515,30 @@ class ExternalIntegration(PrimaryModel):
     class Meta:
         ordering = ["name"]
 
+    def render_headers(self, context):
+        """
+        Render headers and return a dict of Header: Value pairs.
+        """
+        if not self.headers:
+            return {}
+        data = render_jinja2(self.headers, context)
+        return data
+
+    def render_extra_config(self, context):
+        """
+        Render extra_config and return a dict of Header: Value pairs.
+        """
+        if not self.extra_config:
+            return {}
+        data = render_jinja2(self.extra_config, context)
+        return data
+
+    def render_remote_url(self, context):
+        if not self.remote_url:
+            return ""
+        data = render_jinja2(self.remote_url, context)
+        return data
+
 
 #
 # File attachments

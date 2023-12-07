@@ -426,7 +426,7 @@ class ExternalIntegrationTable(BaseTable):
             "verify_ssl",
             "timeout",
             "http_method",
-            "ca_file_path"
+            "ca_file_path",
         )
         default_columns = (
             "pk",
