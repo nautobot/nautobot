@@ -593,7 +593,10 @@ class ExternalIntegrationForm(NautobotModelForm):
                 },
             }</code></pre>
         """
-        help_texts = {"extra_config": inspect.cleandoc(EXTRA_CONFIG_HELP_TEXT), "headers": inspect.cleandoc(EXTRA_CONFIG_HELP_TEXT)}
+        help_texts = {
+            "extra_config": inspect.cleandoc(EXTRA_CONFIG_HELP_TEXT),
+            "headers": inspect.cleandoc(EXTRA_CONFIG_HELP_TEXT),
+        }
 
 
 class ExternalIntegrationBulkEditForm(NautobotBulkEditForm):
