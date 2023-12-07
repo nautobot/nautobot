@@ -128,10 +128,11 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
         cpf1 = ComputedField(
             label="Test 1",
             key="12_test_1",
+            template="{{obj}}",
             content_type=ContentType.objects.get_for_model(Device),
         )
         with self.assertRaises(ValidationError) as error:
-            cpf1.validated_save()
+            cpf1.save()
         self.assertIn(
             "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
             str(error.exception),
@@ -139,7 +140,7 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
         # Check if it catches the cpf.key with whitespace.
         cpf1.key = "test 1"
         with self.assertRaises(ValidationError) as error:
-            cpf1.validated_save()
+            cpf1.save()
         self.assertIn(
             "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
             str(error.exception),
@@ -147,7 +148,7 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
         # Check if it catches the cpf.key with hyphens.
         cpf1.key = "test-1-computed-field"
         with self.assertRaises(ValidationError) as error:
-            cpf1.validated_save()
+            cpf1.save()
         self.assertIn(
             "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
             str(error.exception),
@@ -155,7 +156,7 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
         # Check if it catches the cpf.key with special characters
         cpf1.key = "test_1_computed_f)(&d"
         with self.assertRaises(ValidationError) as error:
-            cpf1.validated_save()
+            cpf1.save()
         self.assertIn(
             "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
             str(error.exception),
