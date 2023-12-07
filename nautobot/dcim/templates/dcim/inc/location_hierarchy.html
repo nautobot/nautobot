@@ -17,7 +17,7 @@
             <li>{{ region|hyperlinked_object }} (Region)
                 <ul>
         {% endfor %}
-        {% if site %}
+        {% if site and site.region %}
             <li>{{ site.region|hyperlinked_object }} (Region)
                 <ul>
         {% endif %}
