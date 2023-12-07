@@ -112,6 +112,10 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
             logger.warning("Failed to render computed field %s: %s", self.key, exc)
             return self.fallback_value
 
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
     def clean(self):
         super().clean()
         if self.key != "":
@@ -408,11 +412,16 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     def __str__(self):
         return self.label
 
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
     def clean(self):
         super().clean()
 
         if self.key != "":
             check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
+
         if self.present_in_database:
             # Check immutable fields
             database_object = self.__class__.objects.get(pk=self.pk)
