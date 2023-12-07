@@ -1,0 +1,1 @@
+Fixed GraphQL UI unable to load when some ComputedField instances have non-graphql-safe keys.
