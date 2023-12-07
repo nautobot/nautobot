@@ -68,7 +68,6 @@ class LocationTable(StatusTableMixin, BaseTable):
             "parent",
             "tenant",
             "description",
-            "actions",
             "facility",
             "asn",
             "time_zone",
@@ -80,6 +79,7 @@ class LocationTable(StatusTableMixin, BaseTable):
             "contact_phone",
             "contact_email",
             "tags",
+            "actions",
         )
         default_columns = ("pk", "name", "status", "parent", "tenant", "description", "tags", "actions")
         orderable = False

@@ -1,0 +1,1 @@
+Fixed unnecessary git operations when calling `ensure_git_repository` while the desired commit is already checked out.
