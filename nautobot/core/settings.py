@@ -258,6 +258,8 @@ SPECTACULAR_SETTINGS = {
         "CableTypeChoices": "nautobot.dcim.choices.CableTypeChoices",
         "ConsolePortTypeChoices": "nautobot.dcim.choices.ConsolePortTypeChoices",
         "CustomFieldTypeChoices": "nautobot.extras.choices.CustomFieldTypeChoices",
+        "HTTPMethodClassChoices": "nautobot.extras.choices.HTTPMethodClassChoices",
+        "WebhookHttpMethodChoices": "nautobot.extras.choices.WebhookHttpMethodChoices",
         "InterfaceTypeChoices": "nautobot.dcim.choices.InterfaceTypeChoices",
         "IPAddressTypeChoices": "nautobot.ipam.choices.IPAddressTypeChoices",
         "PortTypeChoices": "nautobot.dcim.choices.PortTypeChoices",
