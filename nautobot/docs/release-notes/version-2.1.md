@@ -37,7 +37,11 @@ The Nautobot UI has been updated with a customized theme, giving it a brand new 
 
 ### Removed
 
-#### Remove HIDE_RESTRICTED_UI toggle ([#4787](https://github.com/nautobot/nautobot/issues/4787))
+#### Drop Support for Legacy PostgreSQL Versions ([#4757](https://github.com/nautobot/nautobot/issues/4757))
+
+Support for versions of PostgreSQL prior to 12.0 has been removed as these versions are no longer maintained and contain bugs that prevent migrations from running in certain scenarios. The `nautobot-server migrate` or `nautobot-server post_upgrade` commands will now abort when detecting an unsupported PostgreSQL version.
+
+#### Remove `HIDE_RESTRICTED_UI` Toggle ([#4787](https://github.com/nautobot/nautobot/issues/4787))
 
 Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specific permissions will now always be hidden from users lacking those permissions. Additionally, users not logged in will now be automatically redirected to the login page.
 

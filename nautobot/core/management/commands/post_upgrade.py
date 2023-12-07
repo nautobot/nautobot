@@ -99,6 +99,7 @@ class Command(BaseCommand):
             self.stdout.write("Performing database migrations...")
             call_command(
                 "migrate",
+                skip_checks=False,  # make sure Postgres version check and others are applied
                 interactive=False,
                 traceback=options["traceback"],
                 verbosity=options["verbosity"],
