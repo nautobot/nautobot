@@ -72,7 +72,7 @@ IPADDRESS_MASK_LENGTH_CHOICES = add_blank_choice(
 class NamespaceForm(LocatableModelFormMixin, NautobotModelForm):
     class Meta:
         model = Namespace
-        fields = ["name", "description", "location"]
+        fields = ["name", "description", "location", "tags"]
 
 
 #
