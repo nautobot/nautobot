@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        nautobot-version: ["develop", "ltm-1.6"]
+        nautobot-version: ["develop", "1.6"]
     runs-on: "ubuntu-20.04"
     steps:
       - name: "Check out repository code"
