@@ -53,7 +53,7 @@ class Migration(migrations.Migration):
                     "headers",
                     models.JSONField(blank=True, encoder=django.core.serializers.json.DjangoJSONEncoder, null=True),
                 ),
-                ("http_method", models.CharField(blank=True, default="", max_length=10)),
+                ("http_method", models.CharField(blank=True, max_length=10)),
             ],
             options={
                 "ordering": ["name"],
