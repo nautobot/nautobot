@@ -188,7 +188,7 @@
     </footer>
 {% endif %}
 {% include 'modals/modal_theme.html' with name='theme'%}
-<script src="{% static 'js/theme.js' %}"></script>
+<script src="{% versioned_static 'js/theme.js' %}"></script>
 {% block javascript %}{% endblock %}
 </body>
 </html>
