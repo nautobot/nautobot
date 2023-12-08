@@ -27,17 +27,17 @@
           href="{% static 'flatpickr-4.6.9/themes/light.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/themes/light.min.css'">
     <link rel="stylesheet" id="dark-theme"
-          href="{% static 'css/dark.css' %}?v{{ settings.VERSION }}"
+          href="{% versioned_static 'css/dark.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=css/dark.css'"{% if request.COOKIES|get_item:"theme" != 'dark' %} disabled="disabled"{% endif %} />
     <link rel="stylesheet" id="base-theme"
-          href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
+          href="{% versioned_static 'css/base.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
-    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/nautobot_icon_180x180.png' %}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/nautobot_icon_32x32.png' %}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'img/nautobot_icon_16x16.png' %}">
-    <link rel="icon" type="image/png" href="{% static 'img/nautobot_icon_192x192.png' %}" sizes="192x192">
-    <link rel="mask-icon" href="{% static 'img/nautobot_icon_monochrome.svg' %}" color="#0097ff">
-    <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{%  custom_branding_or_static 'icon_180' 'img/nautobot_icon_180x180.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% custom_branding_or_static 'icon_32' 'img/nautobot_icon_32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% custom_branding_or_static 'icon_16' 'img/nautobot_icon_16x16.png' %}">
+    <link rel="icon" type="image/png" href="{% custom_branding_or_static 'icon_192' 'img/nautobot_icon_192x192.png' %}" sizes="192x192">
+    <link rel="mask-icon" href="{% custom_branding_or_static 'icon_mask' 'img/nautobot_icon_monochrome.svg' %}" color="#0097ff">
+    <link rel="shortcut icon" href="{% custom_branding_or_static 'favicon' 'img/favicon.ico' %}">
 
     <script src="{% static 'jquery/jquery-3.6.0.min.js' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=jquery/jquery-3.6.0.min.js'"></script>
@@ -188,7 +188,7 @@
     </footer>
 {% endif %}
 {% include 'modals/modal_theme.html' with name='theme'%}
-<script src="{% static 'js/theme.js' %}"></script>
+<script src="{% versioned_static 'js/theme.js' %}"></script>
 {% block javascript %}{% endblock %}
 </body>
 </html>
