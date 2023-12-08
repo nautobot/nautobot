@@ -697,7 +697,7 @@ class ExportTemplateTestCase(
 
 class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = ExternalIntegration
-    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}"}
+    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}", "headers": r"{}"}
     csv_data = (
         "name,remote_url,verify_ssl,timeout,http_method",
         "Test External Integration 1,https://example.com/test1/,False,10,POST",
