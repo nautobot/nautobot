@@ -372,8 +372,8 @@ class IPAddressFilterSet(
         return queryset.filter(params)
 
     def search_by_prefix(self, queryset, name, value):
-        ips = [value.strip() for value in value if value.strip()]
-        return queryset.net_host_contained(*ips)
+        prefixes = [prefix.strip() for prefix in value if prefix.strip()]
+        return queryset.net_host_contained(*prefixes)
 
     def filter_address(self, queryset, name, value):
         try:
