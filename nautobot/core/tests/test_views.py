@@ -3,16 +3,47 @@ from unittest import mock
 import urllib.parse
 
 from django.contrib.contenttypes.models import ContentType
-from django.test import override_settings
+from django.test import RequestFactory, override_settings
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.core.testing import TestCase
+from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.dcim.models.locations import Location
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
+
+
+class GetReturnURLMixinTestCase(TestCase):
+    """Tests for the API of GetReturnURLMixin."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.factory = RequestFactory(SERVER_NAME="nautobot.example.com")
+        cls.mixin = GetReturnURLMixin()
+
+    def test_get_return_url_explicit(self):
+        request = self.factory.get("/", {"return_url": "/dcim/devices/"})
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=None), "/dcim/devices/")
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=Location.objects.first()), "/dcim/devices/")
+
+        request = self.factory.get("/", {"return_url": "/dcim/devices/?status=Active"})
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=None), "/dcim/devices/?status=Active")
+
+    def test_get_return_url_explicit_unsafe(self):
+        request = self.factory.get("/", {"return_url": "http://example.com"})
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=None), reverse("home"))
+
+    def test_get_return_url_explicit_punycode(self):
+        request = self.factory.get("/", {"return_url": "/dcım/devices/"})
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=None), "/dc%C4%B1m/devices/")
+
+    def test_get_return_url_default_with_obj(self):
+        request = self.factory.get("/")
+        location = Location.objects.first()
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=location), location.get_absolute_url())
 
 
 class HomeViewTestCase(TestCase):
