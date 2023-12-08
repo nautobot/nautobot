@@ -1193,7 +1193,7 @@ class IPAddress(PrimaryModel):
 
 @extras_features("graphql")
 class IPAddressToInterface(BaseModel):
-    ip_address = models.ForeignKey("ipam.IPAddress", on_delete=models.CASCADE, related_name="+")
+    ip_address = models.ForeignKey("ipam.IPAddress", on_delete=models.CASCADE, related_name="interface_assignments")
     interface = models.ForeignKey(
         "dcim.Interface", blank=True, null=True, on_delete=models.CASCADE, related_name="ip_address_assignments"
     )

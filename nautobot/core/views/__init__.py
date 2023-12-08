@@ -6,7 +6,8 @@ import time
 from django.apps import apps
 import prometheus_client
 from django.conf import settings
-from django.contrib.auth.mixins import AccessMixin
+from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin
+from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponseServerError, JsonResponse, HttpResponseForbidden, HttpResponse
 from django.shortcuts import redirect, render
 from django.template import loader, RequestContext, Template
@@ -26,7 +27,7 @@ from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
 from nautobot.core.utils.lookup import get_route_for_model
-from nautobot.extras.models import GraphQLQuery
+from nautobot.extras.models import GraphQLQuery, Status
 from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
 
@@ -107,6 +108,16 @@ class HomeView(AccessMixin, TemplateView):
                                 )
 
         return self.render_to_response(context)
+
+
+class ThemePreviewView(LoginRequiredMixin, TemplateView):
+    template_name = "utilities/theme_preview.html"
+
+    def get_context_data(self, **kwargs):
+        return {
+            "content_type": ContentType.objects.get_for_model(Status),
+            "object": Status.objects.first(),
+        }
 
 
 class SearchView(AccessMixin, View):

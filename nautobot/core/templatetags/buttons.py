@@ -123,6 +123,7 @@ def export_button(context, content_type=None):
     else:
         export_templates = []
         export_url = None
+        include_yaml_option = False
 
     return {
         "export_url": export_url,
