@@ -27,7 +27,6 @@ from nautobot.core.models.validators import EnhancedURLValidator
 from nautobot.core.utils.data import deepmerge, render_jinja2
 from nautobot.extras.choices import (
     ButtonClassChoices,
-    HTTPMethodClassChoices,
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
@@ -492,8 +491,7 @@ class ExternalIntegration(PrimaryModel):
     )
     http_method = models.CharField(
         max_length=10,
-        choices=HTTPMethodClassChoices,
-        default=HTTPMethodClassChoices.METHOD_GET,
+        choices=WebhookHttpMethodChoices,
         verbose_name="HTTP method",
         blank=True,
     )
@@ -504,9 +502,10 @@ class ExternalIntegration(PrimaryModel):
         help_text="Headers for the HTTP request",
     )
     ca_file_path = models.CharField(
-        max_length=100,
+        max_length=255,
         blank=True,
-        help_text="CA File path",
+        help_text="CA file path",
+        verbose_name="CA file path",
     )
 
     def __str__(self):
@@ -520,7 +519,7 @@ class ExternalIntegration(PrimaryModel):
         Render headers and return a dict of Header: Value pairs.
         """
         if not self.headers:
-            return {}
+            return ""
         data = render_jinja2(self.headers, context)
         return data
 
@@ -529,13 +528,11 @@ class ExternalIntegration(PrimaryModel):
         Render extra_config and return a dict of Header: Value pairs.
         """
         if not self.extra_config:
-            return {}
+            return ""
         data = render_jinja2(self.extra_config, context)
         return data
 
     def render_remote_url(self, context):
-        if not self.remote_url:
-            return ""
         data = render_jinja2(self.remote_url, context)
         return data
 

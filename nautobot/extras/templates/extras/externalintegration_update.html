@@ -8,6 +8,7 @@
         <div class="panel-body">
             {% render_field form.name %}
             {% render_field form.remote_url %}
+            {% render_field form.verify_ssl %}
             {% render_field form.secrets_group %}
             {% render_field form.timeout %}
             {% render_field form.extra_config %}
@@ -36,29 +37,6 @@
     // Toggle v -. >
     $("#accordion .accordion-toggle").click(function () {
         $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
-    });
-    // Dynamically collapse/expand all when clicking the "Collapse All" button, and then update the button text.
-    $('#accordion-toggle-all').click(function () {
-
-        if ($(this).data("lastState") === null || $(this).data("lastState") === 1) {
-            $('.collapse').collapse('show');
-            $(this).data("lastState", 0);
-
-            $("#accordion .accordion-toggle").addClass("mdi-chevron-down").removeClass("mdi-chevron-right");
-
-            $(this).text("Collapse All");
-        }
-        else {
-            $('[class^=collapseme]').removeData('bs.collapse').collapse({parent: false, toggle: false})
-            .collapse('hide')
-            .removeData('bs.collapse')
-            .collapse({parent: '#accordion', toggle: false});
-
-            $(this).data("lastState", 1);
-            $("#accordion .accordion-toggle").addClass("mdi-chevron-right").removeClass("mdi-chevron-down");
-
-            $(this).text("Expand All");
-        }
     });
 </script>
 

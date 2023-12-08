@@ -30,7 +30,6 @@ from nautobot.dcim.tests import test_views
 from nautobot.extras.api.serializers import ConfigContextSerializer, JobResultSerializer
 from nautobot.extras.choices import (
     DynamicGroupOperatorChoices,
-    HTTPMethodClassChoices,
     JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
@@ -38,6 +37,7 @@ from nautobot.extras.choices import (
     RelationshipTypeChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
+    WebhookHttpMethodChoices,
 )
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
@@ -825,14 +825,14 @@ class ExternalIntegrationTest(APIViewTestCases.APIViewTestCase):
             "verify_ssl": False,
             "timeout": 5,
             "extra_config": "{'foo': 'bar'}",
-            "http_method": HTTPMethodClassChoices.METHOD_DELETE,
+            "http_method": WebhookHttpMethodChoices.METHOD_DELETE,
             "headers": "{'header': 'fake header'}",
             "ca_file_path": "/this/is/a/file/path",
         },
         {
             "name": "Test External Integration 2",
             "remote_url": "http://example.com/test2/",
-            "http_method": HTTPMethodClassChoices.METHOD_POST,
+            "http_method": WebhookHttpMethodChoices.METHOD_POST,
         },
         {
             "name": "Test External Integration 3",
@@ -845,6 +845,7 @@ class ExternalIntegrationTest(APIViewTestCases.APIViewTestCase):
         },
     ]
     bulk_update_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}"}
+    choices_fields = ["http_method"]
 
 
 class FileProxyTest(

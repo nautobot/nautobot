@@ -34,11 +34,11 @@ from nautobot.core.forms import (
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
-    HTTPMethodClassChoices,
     JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
     RelationshipTypeChoices,
+    WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.datasources import get_datasource_content_choices
@@ -612,14 +612,13 @@ class ExternalIntegrationBulkEditForm(NautobotBulkEditForm):
     http_method = forms.ChoiceField(
         required=False,
         label="HTTP Method",
-        choices=add_blank_choice(HTTPMethodClassChoices),
+        choices=add_blank_choice(WebhookHttpMethodChoices),
     )
     headers = forms.JSONField(required=False, label="HTTP Request headers")
-    ca_file_path = forms.CharField(required=False, label="CA File Path")
 
     class Meta:
         model = ExternalIntegration
-        nullable_fields = ["extra_config", "secrets_group", "http_method", "headers", "ca_file_path"]
+        nullable_fields = ["extra_config", "secrets_group", "headers"]
 
 
 #

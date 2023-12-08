@@ -126,27 +126,6 @@ class DynamicGroupOperatorChoices(ChoiceSet):
 
 
 #
-# HTTP Methods
-#
-
-
-class HTTPMethodClassChoices(ChoiceSet):
-    METHOD_GET = "GET"
-    METHOD_POST = "POST"
-    METHOD_PATCH = "PATCH"
-    METHOD_PUT = "PUT"
-    METHOD_DELETE = "DELETE"
-
-    CHOICES = (
-        (METHOD_GET, "GET"),
-        (METHOD_POST, "POST"),
-        (METHOD_PATCH, "PATCH"),
-        (METHOD_PUT, "PUT"),
-        (METHOD_DELETE, "DELETE"),
-    )
-
-
-#
 # Jobs
 #
 

@@ -19,11 +19,11 @@ from nautobot.dcim.models import ConsolePort, Device, DeviceType, Interface, Man
 from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
-    HTTPMethodClassChoices,
     JobExecutionType,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
+    WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import (
@@ -711,7 +711,7 @@ class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         "secrets_group": None,
         "timeout": 10,
         "extra_config": '{"foo": "bar"}',
-        "http_method": HTTPMethodClassChoices.METHOD_GET,
+        "http_method": WebhookHttpMethodChoices.METHOD_GET,
         "headers": '{"header": "fake header"}',
         "ca_file_path": "this/is/a/file/path",
     }

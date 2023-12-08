@@ -411,10 +411,11 @@ class ExportTemplateTable(BaseTable):
 class ExternalIntegrationTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    remote_url = tables.Column(linkify=False)
+    remote_url = tables.Column()
+    http_method = tables.Column()
     secrets_group = tables.Column(linkify=True)
-    http_method = tables.Column(linkify=False)
-    ca_file_path = tables.Column(linkify=False)
+    ca_file_path = tables.Column()
+    tags = TagColumn(url_name="extras:externalintegration_list")
 
     class Meta(BaseTable.Meta):
         model = ExternalIntegration
@@ -422,11 +423,12 @@ class ExternalIntegrationTable(BaseTable):
             "pk",
             "name",
             "remote_url",
+            "http_method",
             "secrets_group",
             "verify_ssl",
             "timeout",
-            "http_method",
             "ca_file_path",
+            "tags",
         )
         default_columns = (
             "pk",
@@ -436,6 +438,7 @@ class ExternalIntegrationTable(BaseTable):
             "verify_ssl",
             "timeout",
             "http_method",
+            "tags",
         )
 
 
