@@ -837,7 +837,7 @@ class ExternalIntegrationTest(ModelTestCases.BaseModelTestCase):
         ei_without_headers = ExternalIntegration.objects.filter(headers__isnull=True)
         self.assertEqual(
             ei_with_headers.first().render_headers({}),
-            ei_with_headers.first().extra_config,
+            ei_with_headers.first().headers,
         )
         self.assertEqual(
             ei_without_headers.first().render_headers({}),
