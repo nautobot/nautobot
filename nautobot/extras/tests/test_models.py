@@ -1,5 +1,4 @@
 import os
-import json
 import tempfile
 from unittest import mock, expectedFailure
 import uuid
