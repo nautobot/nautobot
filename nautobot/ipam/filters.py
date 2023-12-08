@@ -226,22 +226,29 @@ class PrefixFilterSet(
 
     def filter_prefix(self, queryset, name, value):
         prefixes = self._strip_values(value)
-        return queryset.net_equals(*prefixes)
+        with contextlib.suppress(netaddr.AddrFormatError, ValueError):
+            return queryset.net_equals(*prefixes)
+        return queryset.none()
 
     def search_within(self, queryset, name, value):
         prefixes = self._strip_values(value)
-        return queryset.net_contained(*prefixes)
+        with contextlib.suppress(netaddr.AddrFormatError, ValueError):
+            return queryset.net_contained(*prefixes)
+        return queryset.none()
 
     def search_within_include(self, queryset, name, value):
         prefixes = self._strip_values(value)
-        return queryset.net_contained_or_equal(*prefixes)
+        with contextlib.suppress(netaddr.AddrFormatError, ValueError):
+            return queryset.net_contained_or_equal(*prefixes)
+        return queryset.none()
 
     def search_contains(self, queryset, name, value):
         prefixes_queryset = queryset.none()
         values = self._strip_values(value)
 
         if prefixes := [prefix for prefix in values if "/" in prefix]:
-            prefixes_queryset |= queryset.net_contains_or_equals(*prefixes)
+            with contextlib.suppress(netaddr.AddrFormatError, ValueError):
+                prefixes_queryset |= queryset.net_contains_or_equals(*prefixes)
 
         if prefixes_without_length := [prefix for prefix in values if "/" not in prefix]:
             query = Q()
