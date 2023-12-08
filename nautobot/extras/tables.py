@@ -434,10 +434,10 @@ class ExternalIntegrationTable(BaseTable):
             "pk",
             "name",
             "remote_url",
+            "http_method",
             "secrets_group",
             "verify_ssl",
             "timeout",
-            "http_method",
             "tags",
         )
 

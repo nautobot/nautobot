@@ -1,4 +1,5 @@
 import os
+import json
 import tempfile
 from unittest import mock, expectedFailure
 import uuid
@@ -13,6 +14,7 @@ from django.db.utils import IntegrityError
 from django.test import override_settings
 from django.test.utils import isolate_apps
 from django.utils.timezone import now
+from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
 
 from nautobot.circuits.models import CircuitType
 from nautobot.core.choices import ColorChoices
@@ -808,6 +810,50 @@ class ExternalIntegrationTest(ModelTestCases.BaseModelTestCase):
         ei.validated_save()
         ei.timeout = 65536
         ei.validated_save()
+
+    def test_render_extra_config(self):
+        ei_with_extra_config = ExternalIntegration.objects.filter(extra_config__isnull=False)
+        ei_without_extra_config = ExternalIntegration.objects.filter(extra_config__isnull=True)
+        self.assertEqual(
+            ei_with_extra_config.first().render_extra_config({}),
+            ei_with_extra_config.first().extra_config,
+        )
+        self.assertEqual(
+            ei_without_extra_config.first().render_extra_config({}),
+            {},
+        )
+        ei = ei_with_extra_config.first()
+        ei.extra_config = {"context": "{% foo %}"}
+        ei.save()
+        with self.assertRaises(TemplateSyntaxError):
+            ei.render_extra_config({})
+
+        ei.extra_config = "{{ data | notvalid }}"
+        ei.save()
+        with self.assertRaises(TemplateAssertionError):
+            ei.render_extra_config({})
+
+    def test_render_headers(self):
+        ei_with_headers = ExternalIntegration.objects.filter(headers__isnull=False)
+        ei_without_headers = ExternalIntegration.objects.filter(headers__isnull=True)
+        self.assertEqual(
+            ei_with_headers.first().render_extra_config({}),
+            ei_with_headers.first().extra_config,
+        )
+        self.assertEqual(
+            ei_without_headers.first().render_extra_config({}),
+            {},
+        )
+        ei = ei_with_headers.first()
+        ei.headers = {"context": "{% foo %}"}
+        ei.save()
+        with self.assertRaises(TemplateSyntaxError):
+            ei.render_headers({})
+
+        ei.headers = "{{ data | notvalid }}"
+        ei.save()
+        with self.assertRaises(TemplateAssertionError):
+            ei.render_headers({})
 
 
 class FileProxyTest(ModelTestCases.BaseModelTestCase):

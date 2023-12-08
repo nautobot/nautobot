@@ -517,22 +517,35 @@ class ExternalIntegration(PrimaryModel):
     def render_headers(self, context):
         """
         Render headers and return a dict of Header: Value pairs.
+        Raises:
+            TemplateAssertionError: Raised when an invalid template helper function exists in extra_config.
+            TemplateSyntaxError: Raised when an invalid template variable exists in extra_config.
+            json.decoder.JSONDecodeError: Raised when invalid JSON data exists in context.
         """
         if not self.headers:
-            return ""
-        data = render_jinja2(self.headers, context)
+            return {}
+
+        data = json.loads(render_jinja2(json.dumps(self.headers, ensure_ascii=False), context))
         return data
 
     def render_extra_config(self, context):
         """
         Render extra_config and return a dict of Header: Value pairs.
+        Raises:
+            TemplateAssertionError: Raised when an invalid template helper function exists in extra_config.
+            TemplateSyntaxError: Raised when an invalid template variable exists in extra_config.
+            json.decoder.JSONDecodeError: Raised when invalid JSON data exists in context.
         """
         if not self.extra_config:
-            return ""
-        data = render_jinja2(self.extra_config, context)
+            return {}
+
+        data = json.loads(render_jinja2(json.dumps(self.extra_config, ensure_ascii=False), context))
         return data
 
     def render_remote_url(self, context):
+        """
+        Render remote_url in jinja2 templates.
+        """
         data = render_jinja2(self.remote_url, context)
         return data
 

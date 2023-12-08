@@ -14,13 +14,9 @@
             {% render_field form.extra_config %}
         </div>
     </div>
-    <div id="accordion" class="panel panel-default">
-        <div class="panel-heading"><strong>Optional Configurations</strong>
-            <button type="button" class="accordion-toggle mdi mdi-chevron-down" data-toggle="collapse" data-target=".collapseme">
-            </button>
-        </strong>
-        </div>
-        <div class="collapseme collapse in panel-body " data-parent="#accordion">
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Advanced Configurations</strong></div>
+        <div class="panel-body">
             {% render_field form.headers %}
             {% render_field form.http_method %}
             {% render_field form.ca_file_path %}
@@ -30,14 +26,3 @@
     {% include 'inc/extras_features_edit_form_fields.html' %}
 
 {% endblock form %}
-
-{% block javascript %}
-{{ block.super }}
-<script>
-    // Toggle v -. >
-    $("#accordion .accordion-toggle").click(function () {
-        $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
-    });
-</script>
-
-{% endblock javascript %}
