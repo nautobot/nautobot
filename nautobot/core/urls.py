@@ -4,7 +4,14 @@ from django.urls import path
 from django.views.generic import TemplateView
 from django.views.static import serve
 
-from nautobot.core.views import CustomGraphQLView, HomeView, StaticMediaFailureView, SearchView, nautobot_metrics_view
+from nautobot.core.views import (
+    CustomGraphQLView,
+    HomeView,
+    StaticMediaFailureView,
+    SearchView,
+    ThemePreviewView,
+    nautobot_metrics_view,
+)
 from nautobot.extras.plugins.urls import (
     plugin_admin_patterns,
     plugin_patterns,
@@ -60,6 +67,7 @@ if settings.DEBUG:
 
         urlpatterns += [
             path("__debug__/", include(debug_toolbar.urls)),
+            path("theme-preview/", ThemePreviewView.as_view(), name="theme_preview"),
         ]
     except ImportError:
         pass

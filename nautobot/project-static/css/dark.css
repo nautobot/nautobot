@@ -9,8 +9,13 @@ html[data-theme="dark"] {
 /* Double-invert the following elements, restoring them to the original non-inverted colors */
 html[data-theme="dark"] img,                              /* Images like .png, .jpg, etc */
 html[data-theme="dark"] .badge,
-html[data-theme="dark"] button,                           /* Buttons */
-html[data-theme="dark"] .btn,                             /* Buttons */
+html[data-theme="dark"] .btn.btn-default,                 /* Buttons */
+html[data-theme="dark"] .btn.btn-primary,                 /* Buttons */
+html[data-theme="dark"] .btn.btn-success,                 /* Buttons */
+html[data-theme="dark"] .btn.btn-info,                    /* Buttons */
+html[data-theme="dark"] .btn.btn-warning,                 /* Buttons */
+html[data-theme="dark"] .btn.btn-danger,                  /* Buttons */
+/* html[data-theme="dark"] .btn.btn-link,                    do not double-invert these! */
 html[data-theme="dark"] .label,                           /* Labels */
 html[data-theme="dark"] .color-block,                     /* Colored choices, like statuses */
 html[data-theme="dark"] .select2-selection__choice,       /* Colored choices, like statuses */
@@ -36,9 +41,11 @@ html[data-theme="dark"] .container-fluid.wrapper {
 
 /* Lighter than the background */
 html[data-theme="dark"] .navbar,                          /* Top menu navbar */
+html[data-theme="dark"] .navbar-nav > li > a:hover,
+html[data-theme="dark"] .navbar-nav > li > a:focus,
 html[data-theme="dark"] .footer,                          /* Bottom footer bar */
 html[data-theme="dark"] .footer .row {                    /* Bottom footer bar */
-  background-color: rgb(209, 216, 221) !important;
+  background-color: rgb(222, 222, 222) !important;
 }
 
 html[data-theme="dark"] .panel,                           /* Section panels, like on home page */
@@ -61,7 +68,9 @@ html[data-theme="dark"] .dropdown-menu>li>a:hover,        /* Navbar menu item wh
 html[data-theme="dark"] .table-responsive>table>tbody>tr:hover, /* Display objects table when hovering over row */
 html[data-theme="dark"] .nav-tabs>li>a:hover,             /* Tab selection when hovering */
 html[data-theme="dark"] .nav-tabs>li>a:focus,             /* Tab selection when clicked */
-html[data-theme="dark"] .panel-heading,                   /* Panel header bars */
+html[data-theme="dark"] .nav-pills>li>a:hover,            /* Tab selection when hovering */
+html[data-theme="dark"] .nav-pills>li>a:focus,            /* Tab selection when clicked */
+html[data-theme="dark"] .panel-default .panel-heading,    /* Panel header bars */
 html[data-theme="dark"] .panel-footer,                    /* Panel footer bars */
 html[data-theme="dark"] .modal-header,                    /* Header bar in modals */
 html[data-theme="dark"] .modal-footer,                    /* Footer bar in modals */
@@ -69,6 +78,24 @@ html[data-theme="dark"] .table-headings th {              /* Table header bar */
   background-color: rgb(196, 204, 210) !important;
 }
 
+html[data-theme="dark"] .select2-container--default,      /* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-container--classic,      /* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-container--bootstrap,    /* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-selection--single,       /* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-selection--multiple,     /* Drop down menu selections, eg adding new item */
+html[data-theme="dark"] .select2-search--dropdown,        /* Drop down menu selections for filter form */
+html[data-theme="dark"] .select2-search--inline,          /* Search field in filter form */
+html[data-theme="dark"] .select2-search__field,           /* Search field in filter form */
+html[data-theme="dark"] .select2-close-mask,              /* Close selection */
+html[data-theme="dark"] .form-control {                   /* Text fields, text boxes, etc. */
+  background-color: rgb(242, 242, 242) !important;
+}
+
+html[data-theme="dark"] .form-control[disabled],
+html[data-theme="dark"] .form-control[readonly],
+html[data-theme="dark"] .fieldset[disabled] .form-control {
+  background-color: rgb(210, 210, 210) !important;
+}
 
 html[data-theme="dark"] .scheme-container {                /* Swagger docs container header bar */
   background-color: rgb(217, 217, 217) !important;
@@ -137,23 +164,9 @@ html[data-theme="dark"] .swagger-ui .btn {                /* Swagger button text
 /* Form fields and backdrops, lighter than headers, navbars, etc */
 html[data-theme="dark"] #per_page,                        /* Pagination page selection dropdown menu */
 html[data-theme="dark"] .dropdown-menu,                   /* Dropdown menu from navbar */
-html[data-theme="dark"] .form-control,                    /* Multi-line text fields, eg add device: notes, comments, etc */
 html[data-theme="dark"] .swagger-ui .servers>label select /* Swagger docs server dropdown selection */
-html[data-theme="dark"] .select2-container--default,      /* Drop down menu selections, eg adding new item */
-html[data-theme="dark"] .select2-container--classic,      /* Drop down menu selections, eg adding new item */
-html[data-theme="dark"] .select2-container--bootstrap,    /* Drop down menu selections, eg adding new item */
-html[data-theme="dark"] .select2-selection--single,       /* Drop down menu selections, eg adding new item */
-html[data-theme="dark"] .select2-selection--multiple,     /* Drop down menu selections, eg adding new item */
-html[data-theme="dark"] .select2-search--dropdown,        /* Drop down menu selections for filter form */
-html[data-theme="dark"] .select2-search__field,           /* Search field in filter form */
-html[data-theme="dark"] .select2-search--inline,          /* Search field in filter form */
-html[data-theme="dark"] .select2-close-mask,              /* Close selection */
 html[data-theme="dark"] .select2-dropdown {               /* Dropdown form fields */
   background-color: rgb(222, 222, 222) !important;
-}
-
-html[data-theme="dark"] .navbar-nav>li>a {                /* Navbar top level menu dropdown links */
-  color: rgb(100, 100, 100) !important;
 }
 
 html[data-theme="dark"] .navbar-nav>li>a:hover {          /* Navbar top level menu dropdown links on hover */
@@ -186,11 +199,6 @@ html[data-theme="dark"] .breadcrumb>li+li:before {
   color: rgb(142, 142, 142);
 }
 
-/* Code */
-html[data-theme="dark"] code {
-  color: rgb(0, 255, 0);
-}
-
 /* Dynamic filter selection outside box */
 html[data-theme="dark"] .filter-container .filter-selection {
   background-color: rgb(201, 201, 201);                 /* Background color of dynamic filters selected across most pages, outer box */
@@ -202,13 +210,6 @@ html[data-theme="dark"] .filter-container .filter-selection .filter-selection-ch
   background-color: rgb(185, 185, 185);                 /* Background color of dynamic filters selected across most pages, inner selection box */
   border: 1px solid rgb(170, 170, 170);                 /* Border color of dynamic filters selected across most pages, inner selection box */
 }
-
-
-/* Buttons */
-html[data-theme="dark"] .btn-default {
-    background-color: rgb(38, 38, 38) !important;
-}
-
 
 /* List View Table and Tables in Detail Views */
 html[data-theme="dark"] .table-responsive>table>tbody>tr,
