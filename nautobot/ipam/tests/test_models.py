@@ -23,6 +23,7 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
+    get_default_namespace,
 )
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
@@ -978,10 +979,24 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         self.assertEqual(expected_err_msg, err.exception.message_dict["parent"][0])
 
     def test_creating_an_ipaddress_without_namespace_or_parent(self):
+        # No namespace, and no appropriate parent in the default namespace --> error
         with self.assertRaises(ValidationError) as err:
             ip = IPAddress(address="1976:2023::1/128", status=self.status)
             ip.validated_save()
-        self.assertEqual(err.exception.message_dict["parent"][0], "Either a parent or a namespace must be provided.")
+        self.assertIn("namespace", err.exception.message_dict)
+        self.assertEqual(
+            err.exception.message_dict["namespace"][0],
+            "No suitable parent Prefix exists in this Namespace",
+        )
+
+        # Appropriate parent exists in the default namespace --> no error
+        Prefix.objects.create(
+            prefix="1976:2023::/32",
+            status=self.status,
+            namespace=get_default_namespace(),
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        ip.validated_save()
 
     def test_varbinary_ip_fields_with_empty_values_do_not_violate_not_null_constrains(self):
         # Assert that an error is triggered when the host is not provided.
