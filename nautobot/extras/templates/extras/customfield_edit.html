@@ -36,21 +36,17 @@
         <div class="panel-heading"><strong>Custom Field Choices</strong></div>
         <div class="panel-body">
             {% if choices.errors %}
-                <div class="panel panel-danger">
-                    <div class="panel-heading"><strong>Errors</strong></div>
-                    <div class="panel-body">
-                        Please correct the error(s) below:
+                <div class="text-danger">
+                    Please correct the error(s) below:
 
-                        {% for choice in choices.forms %}
-                            {% if choice.errors %}
-                                {% for error in choice.errors.values %}{{ error }}{% endfor %}
-                            {% endif %}
-                        {% endfor %}
-                    </div>
+                    {% for choice in choices.forms %}
+                        {% if choice.errors %}
+                            {% for error in choice.errors.values %}{{ error }}{% endfor %}
+                        {% endif %}
+                    {% endfor %}
                 </div>
             {% endif %}
             {{ choices.non_field_errors }}
-            <div class="form-group{% if field.errors %} has-error{% endif %}">
             <table class="table" id="custom-field-choices">
               {{ choices.management_form }}
               {% for choice in choices.forms %}
@@ -87,7 +83,6 @@
                     </tr>
                {% endfor %}
             </table>
-            </div>
         </div>
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}
