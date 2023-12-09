@@ -109,8 +109,6 @@ class TenantTestCase(FilterTestCases.NameOnlyFilterTestCase):
 
         # TODO: move this to nautobot.core.management.commands.generate_test_data and update all impacted tests
         factory.random.reseed_random("Nautobot")
-        User = get_user_model()
-        User.objects.all().delete()
         UserFactory.create_batch(10)
         RackFactory.create_batch(10)
         RackReservationFactory.create_batch(10)
