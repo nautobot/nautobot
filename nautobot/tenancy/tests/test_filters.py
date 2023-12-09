@@ -1,7 +1,5 @@
 import factory
 
-from django.contrib.auth import get_user_model
-
 from nautobot.circuits.models import Circuit
 from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Platform, Rack, RackReservation
