@@ -25,7 +25,7 @@ class UserFactory(BaseModelFactory):
         "has_first_name",
         factory.Maybe(
             "has_last_name",
-            factory.LazyAttribute(lambda u: f"{u.first_name[0].lower()}{u.last_name.lower()}"),
+            factory.LazyAttribute(lambda u: f"{u.first_name.lower()}{u.last_name.lower()}"),
             factory.LazyAttribute(lambda u: u.first_name.lower()),
         ),
         factory.Maybe(
