@@ -20,7 +20,10 @@ The `Job` base class now includes a [`create_file(filename, content)`](../develo
 
 #### Django Admin Log Entries ([#4646](https://github.com/nautobot/nautobot/pull/4646))
 
-Django Admin Log Entries are implemented to record administrative changes made under the "Admin" section of the user interface. Changes (add/delete/update) to Objects like Users, Group, Object Permissions, and etc. in the "Admin" user interface will now be recorded and displayed as "Log Entries" under the "Administration" section of the Admin List View.
+Django Admin Log Entries record administrative changes made under the "Admin" section of the user interface. Changes (add/delete/update) to Objects like Users, Group, Object Permissions, etc. in the "Admin" user interface are now displayed as "Log Entries" under the "Administration" section of the Admin UI.
+
+!!! info
+    Django Admin Log Entries are automatically created when adminstrative changes happen and have always existed natively in Django Admin. This feature is simply providung a read-only UI view for admin/privileged users to access them with more ease.
 
 See [Administrative Change-logging](../user-guide/platform-functionality/change-logging.md#administrative-changes) for more details.
 
