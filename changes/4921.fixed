@@ -1,1 +1,0 @@
-Fixed inefficient queries in `Location.base_site`.
