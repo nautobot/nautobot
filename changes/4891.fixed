@@ -1,0 +1,2 @@
+Fixed Prefix API and UI inability to filter on multiple values for the fields `prefix`, `within`, `within_include`, `contains`.
+Fixed IPAddress API and UI inability to filter on multiple values of `prefix`.
