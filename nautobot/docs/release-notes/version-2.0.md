@@ -371,6 +371,64 @@ A `natural_slug` property has been added to all models that inherit from `BaseMo
 A natural key interface has been provided for most models to allow for uniquely referencing objects by a name that is friendlier than the primary key. For more information on the usage of natural keys vs primary keys see the documentation for [Uniquely Identifying a Nautobot Object](../development/apps/api/platform-features/uniquely-identify-objects.md).
 
 <!-- towncrier release notes start -->
+## v2.0.6 (2023-12-11)
+
+### Security
+
+- [#4876](https://github.com/nautobot/nautobot/issues/4876) - Updated `cryptography` to `~41.0.6` due to CVE-2023-49083. As this is not a direct dependency of Nautobot, it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#4890](https://github.com/nautobot/nautobot/issues/4890) - Updated alpha UI dependency `@adobe/css-tools` to version 4.3.2 due to CVE-2023-48631.
+
+### Added
+
+- [#4854](https://github.com/nautobot/nautobot/issues/4854) - Added invocations of `clean()` methods to `save()` methods for `ComputedField`, `CustomField`, and `Relationship` models to protect against creation of invalid data.
+- [#4873](https://github.com/nautobot/nautobot/issues/4873) - Added QSFP112 interface type to interface type choices.
+- [#4883](https://github.com/nautobot/nautobot/issues/4883) - Added `get_default_namespace` and `get_default_namespace_pk` methods to `nautobot.apps.models` API.
+
+### Changed
+
+- [#4813](https://github.com/nautobot/nautobot/issues/4813) - Changed `generate_secret_key.py` to use Python `secrets` library instead of `random`.
+
+### Removed
+
+- [#4805](https://github.com/nautobot/nautobot/issues/4805) - Removed unused `nautobot.extras.choices.JobSourceChoices`.
+- [#4805](https://github.com/nautobot/nautobot/issues/4805) - Removed check for `__init__.py` in `JOBS_ROOT` directory.
+- [#4858](https://github.com/nautobot/nautobot/issues/4858) - Removed Jathan McCollum as a point of contact in `SECURITY.md`.
+
+### Fixed
+
+- [#3488](https://github.com/nautobot/nautobot/issues/3488) - Corrected positioning and style of "Collapse All" button in Jobs list view.
+- [#4142](https://github.com/nautobot/nautobot/issues/4142) - Fixed unnecessary git operations when calling `ensure_git_repository` while the desired commit is already checked out.
+- [#4747](https://github.com/nautobot/nautobot/issues/4747) - Fixed an issue when appending nautobot version to a static file path with existing query parameters resulted in an invalid URL generation.
+- [#4768](https://github.com/nautobot/nautobot/issues/4768) - Fixed incorrect link in TenantGroup template.
+- [#4768](https://github.com/nautobot/nautobot/issues/4768) - Fixed ConfigContext not applied to nested TenantGroup objects.
+- [#4819](https://github.com/nautobot/nautobot/issues/4819) - Fixed empty assignment field in IPAddress detail view.
+- [#4845](https://github.com/nautobot/nautobot/issues/4845) - Fixed issues with installing an app that is nested inside a python package (e.g. `my_apps/app1/` + `my_apps/app2/`), and lookups for UI view testing.
+- [#4851](https://github.com/nautobot/nautobot/issues/4851) - Fixed an exception when trying to access computed fields via GraphQL.
+- [#4854](https://github.com/nautobot/nautobot/issues/4854) - Fixed GraphQL UI unable to load when some ComputedField instances have non-graphql-safe keys.
+- [#4856](https://github.com/nautobot/nautobot/issues/4856) - Fix ConfigContext application logic for Locations and TenantGroups.
+- [#4867](https://github.com/nautobot/nautobot/issues/4867) - Added try/except block to handle the `AttributeError` raised by `get_absolute_url()` when a valid absolute url cannot be found.
+- [#4883](https://github.com/nautobot/nautobot/issues/4883) - Fixed `IPAddress` default namespace, when no namespace is provided.
+- [#4891](https://github.com/nautobot/nautobot/issues/4891) - Fixed Prefix API and UI inability to filter on multiple values for the fields `prefix`, `within`, `within_include`, `contains`.
+- [#4891](https://github.com/nautobot/nautobot/issues/4891) - Fixed IPAddress API and UI inability to filter on multiple values of `prefix`.
+- [#4911](https://github.com/nautobot/nautobot/issues/4911) - Fixed the ability to modify tags on Namespaces via the UI.
+- [#4922](https://github.com/nautobot/nautobot/issues/4922) - Fixed incorrect position of "actions" column in Location table view.
+
+### Dependencies
+
+- [#4812](https://github.com/nautobot/nautobot/issues/4812) - Updated `django-tree-queries` to `0.16.1` to bring in some desired feature fixes.
+- [#4937](https://github.com/nautobot/nautobot/issues/4937) - Updated alpha UI dependency @rjsf/core to version 5.13.6.
+- [#4937](https://github.com/nautobot/nautobot/issues/4937) - Updated alpha UI dependency @rjsf/utils to version 5.13.6.
+- [#4937](https://github.com/nautobot/nautobot/issues/4937) - Updated alpha UI dependency @rjsf/validator-ajv8 to version 5.13.6.
+- [#4937](https://github.com/nautobot/nautobot/issues/4937) - Updated alpha UI dependency react-refresh to version 0.14.0.
+- [#4937](https://github.com/nautobot/nautobot/issues/4937) - Updated alpha UI dependency react-router-dom to version 6.18.0.
+
+### Documentation
+
+- [#4805](https://github.com/nautobot/nautobot/issues/4805) - Updated documentation on jobs registration.
+- [#4871](https://github.com/nautobot/nautobot/issues/4871) - Removed some duplicate documentation links in the Feature Guides.
+- [#4923](https://github.com/nautobot/nautobot/issues/4923) - Fixed border for namespace image in docs.
+- [#4952](https://github.com/nautobot/nautobot/issues/4952) - Corrected spelling of "extensions" in the navigation menu.
+
 ## v2.0.5 (2023-11-21)
 
 ### Security
