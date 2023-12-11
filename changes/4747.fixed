@@ -1,0 +1,1 @@
+Fixed an issue when appending nautobot version to a static file path with existing query parameters resulted in an invalid URL generation.
