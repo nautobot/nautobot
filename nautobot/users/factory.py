@@ -15,7 +15,11 @@ class UserFactory(BaseModelFactory):
         model = User
         exclude = "has_email"
 
-    username = factory.Faker("user_name")
+    first_name = factory.Faker("first_name")
+
+    last_name = factory.Faker("last_name")
+
+    username = factory.LazyAttribute(lambda u: f"{u.first_name[0].lower()}{u.last_name.lower()}")
 
     has_email = NautobotBoolIterator()
     email = factory.Maybe("has_email", factory.LazyAttribute(lambda u: f"{u.username}@example.com"), "")
