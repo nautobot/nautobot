@@ -22,3 +22,13 @@ class ContentTypeType(OptimizedNautobotObjectType):
 
     class Meta:
         model = ContentType
+
+
+class JSON(graphene.Scalar):
+    @staticmethod
+    def serialize_data(dt):
+        return dt
+
+    serialize = serialize_data
+    parse_value = serialize_data
+    parse_literal = serialize_data
