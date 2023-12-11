@@ -592,10 +592,21 @@ class ExternalIntegrationForm(NautobotModelForm):
                     "Content-Type": "application/json",
                 },
             }</code></pre>
+            You can render the field value in Jinja2 template as well with the .render_extra_config() helper method.
+        """
+        EXTRA_HEADERS_TEXT = """
+            Optional user-defined <a href="https://json.org/">JSON</a> data for this integration. Example:
+            <pre><code>{
+                "headers": {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                },
+            }</code></pre>
+            You can render the field value in Jinja2 template as well with the .render_headers() helper method.
         """
         help_texts = {
             "extra_config": inspect.cleandoc(EXTRA_CONFIG_HELP_TEXT),
-            "headers": inspect.cleandoc(EXTRA_CONFIG_HELP_TEXT),
+            "headers": inspect.cleandoc(EXTRA_HEADERS_TEXT),
         }
 
 

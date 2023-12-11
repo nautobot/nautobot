@@ -531,7 +531,7 @@ class ExternalIntegration(PrimaryModel):
 
     def render_extra_config(self, context):
         """
-        Render extra_config and return a dict of Header: Value pairs.
+        Render extra_config and return a dict of Key: Value pairs.
 
         Raises:
             TemplateAssertionError: Raised when an invalid template helper function exists in extra_config.

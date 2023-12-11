@@ -18,4 +18,4 @@ The external integration model includes the following fields:
 
 ## Jinja2 Template Support
 
-[Jinja2 templating](https://jinja.palletsprojects.com/) is supported for the `remote_url`, `headers` and `extra_config` fields. This enables the user to render URLs and credentials as well as their request headers and extra configurations required to interact with systems external to Nautobot.
+[Jinja2 templating](https://jinja.palletsprojects.com/) is supported for the `remote_url`, `headers` and `extra_config` fields. This enables the user to render URLs and credentials as well as their request headers and extra configurations required to interact with systems external to Nautobot. Code consuming this model can use the `ExternalIntegration.render_remote_url()`, `.render_headers()`, and `.render_extra_config()` APIs as appropriate.

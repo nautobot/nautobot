@@ -813,20 +813,26 @@ class ExternalIntegrationTest(ModelTestCases.BaseModelTestCase):
     def test_render_extra_config(self):
         ei_with_extra_config = ExternalIntegration.objects.filter(extra_config__isnull=False)
         ei_without_extra_config = ExternalIntegration.objects.filter(extra_config__isnull=True)
+        ei = ei_with_extra_config.first()
         self.assertEqual(
-            ei_with_extra_config.first().render_extra_config({}),
-            ei_with_extra_config.first().extra_config,
+            ei.render_extra_config({}),
+            ei.extra_config,
         )
         self.assertEqual(
             ei_without_extra_config.first().render_extra_config({}),
             {},
         )
-        ei = ei_with_extra_config.first()
+        # Data gets substituted correctly
+        ei.extra_config = {"config": "{{ data }}"}
+        ei.save()
+        context = {"data": "extra_config_data"}
+        self.assertEqual(ei.render_extra_config(context), {"config": "extra_config_data"})
+        # Invalid template tag
         ei.extra_config = {"context": "{% foo %}"}
         ei.save()
         with self.assertRaises(TemplateSyntaxError):
             ei.render_extra_config({})
-
+        # Invalid template helper
         ei.extra_config = "{{ data | notvalid }}"
         ei.save()
         with self.assertRaises(TemplateAssertionError):
@@ -835,20 +841,26 @@ class ExternalIntegrationTest(ModelTestCases.BaseModelTestCase):
     def test_render_headers(self):
         ei_with_headers = ExternalIntegration.objects.filter(headers__isnull=False)
         ei_without_headers = ExternalIntegration.objects.filter(headers__isnull=True)
+        ei = ei_with_headers.first()
         self.assertEqual(
-            ei_with_headers.first().render_headers({}),
-            ei_with_headers.first().headers,
+            ei.render_headers({}),
+            ei.headers,
         )
         self.assertEqual(
             ei_without_headers.first().render_headers({}),
             {},
         )
-        ei = ei_with_headers.first()
+        # Data gets substituted correctly
+        ei.headers = {"headers": "{{ data }}"}
+        ei.save()
+        context = {"data": "headers_data"}
+        self.assertEqual(ei.render_headers(context), {"headers": "headers_data"})
+        # Invalid template tag
         ei.headers = {"context": "{% foo %}"}
         ei.save()
         with self.assertRaises(TemplateSyntaxError):
             ei.render_headers({})
-
+        # Invalid template helper
         ei.headers = "{{ data | notvalid }}"
         ei.save()
         with self.assertRaises(TemplateAssertionError):
