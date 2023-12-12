@@ -2,13 +2,16 @@ import re
 from unittest import mock
 import urllib.parse
 
+from django.contrib.contenttypes.models import ContentType
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.extras.registry import registry
-from nautobot.utilities.testing import TestCase
+from nautobot.utilities.permissions import get_permission_for_model
+from nautobot.utilities.testing import TestCase, User
 
 
 class HomeViewTestCase(TestCase):
@@ -408,3 +411,29 @@ class ErrorPagesTestCase(TestCase):
         self.assertNotContains(response, "Network to Code", status_code=500)
         response_content = response.content.decode(response.charset)
         self.assertInHTML("Hello world!", response_content)
+
+
+class DBFileStorageViewTestCase(TestCase):
+    """Test overwritten views for django_db_file_storage views"""
+
+    def setUp(self):
+        self.user = User.objects.create(username="testuser")
+        self.test_file = SimpleUploadedFile(name="test_file.txt", content=b"I am content.\n")
+        self.file_proxy = FileProxy.objects.create(name=self.test_file.name, file=self.test_file)
+        self.urls = [
+            f"{reverse('db_file_storage.download_file')}?name={self.file_proxy.file.name}",
+            f"{reverse('db_file_storage.get_file')}?name={self.file_proxy.file.name}",
+        ]
+
+    def test_authorization_failed(self):
+        for url in self.urls:
+            with self.subTest(url):
+                response = self.client.get(url)
+                self.assertHttpStatus(response, 403)
+
+    def test_authorization_succeeded(self):
+        self.add_permissions(get_permission_for_model(FileProxy, "view"))
+        for url in self.urls:
+            with self.subTest(url):
+                response = self.client.get(url)
+                self.assertHttpStatus(response, 200)

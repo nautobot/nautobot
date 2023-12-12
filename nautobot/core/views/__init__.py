@@ -3,8 +3,10 @@ import platform
 import sys
 import time
 
+from db_file_storage.views import get_file
 import prometheus_client
 from django.conf import settings
+from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin
 from django.http import HttpResponseServerError, JsonResponse, HttpResponseForbidden, HttpResponse
 from django.shortcuts import redirect, render
@@ -24,10 +26,11 @@ from prometheus_client.registry import Collector
 from nautobot.core.constants import SEARCH_MAX_RESULTS, SEARCH_TYPES
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
-from nautobot.extras.models import GraphQLQuery
+from nautobot.extras.models import GraphQLQuery, FileProxy
 from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.utilities.config import get_settings_or_config
+from nautobot.utilities.permissions import get_permission_for_model
 
 
 class HomeView(AccessMixin, TemplateView):
@@ -278,3 +281,9 @@ def nautobot_metrics_view(request):
         pass
     metrics_page = prometheus_client.generate_latest(prometheus_registry)
     return HttpResponse(metrics_page, content_type=prometheus_client.CONTENT_TYPE_LATEST)
+
+
+@permission_required(get_permission_for_model(FileProxy, "view"), raise_exception=True)
+def get_file_with_authorization(*args, **kwargs):
+    """Patch db_file_storage view with authentication."""
+    return get_file(*args, **kwargs)
