@@ -32,6 +32,7 @@ from .models import (
     VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
+from nautobot.virtualization.tables import VMInterfaceTable
 
 AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')  # noqa: S308
 
@@ -618,6 +619,13 @@ class IPAddressInterfaceTable(InterfaceTable):
         ]
         row_attrs = {
             "style": cable_status_color_css,
+            "data-name": lambda record: record.name,
+        }
+
+
+class IPAddressVMInterfaceTable(VMInterfaceTable):
+    class Meta(VMInterfaceTable.Meta):
+        row_attrs = {
             "data-name": lambda record: record.name,
         }
 

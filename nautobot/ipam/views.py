@@ -1150,6 +1150,26 @@ class IPAddressInterfacesView(generic.ObjectView):
         }
 
 
+class IPAddressVMInterfacesView(generic.ObjectView):
+    queryset = IPAddress.objects.all()
+    template_name = "ipam/ipaddress_vm_interfaces.html"
+
+    def get_extra_context(self, request, instance):
+        vm_interfaces = instance.vm_interfaces.restrict(request.user, "view").prefetch_related(
+            Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
+        )
+        vm_interface_table = tables.IPAddressVMInterfaceTable(data=vm_interfaces, user=request.user, orderable=False)
+        if request.user.has_perm("virtualization.change_vminterface") or request.user.has_perm(
+            "virtualization.delete_vminterface"
+        ):
+            vm_interface_table.columns.show("pk")
+
+        return {
+            "vm_interface_table": vm_interface_table,
+            "active_tab": "vm_interfaces",
+        }
+
+
 #
 # IPAddress to Interface (assignments
 #

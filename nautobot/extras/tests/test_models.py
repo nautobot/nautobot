@@ -128,10 +128,11 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
         cpf1 = ComputedField(
             label="Test 1",
             key="12_test_1",
+            template="{{obj}}",
             content_type=ContentType.objects.get_for_model(Device),
         )
         with self.assertRaises(ValidationError) as error:
-            cpf1.validated_save()
+            cpf1.save()
         self.assertIn(
             "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
             str(error.exception),
@@ -139,7 +140,7 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
         # Check if it catches the cpf.key with whitespace.
         cpf1.key = "test 1"
         with self.assertRaises(ValidationError) as error:
-            cpf1.validated_save()
+            cpf1.save()
         self.assertIn(
             "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
             str(error.exception),
@@ -147,7 +148,7 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
         # Check if it catches the cpf.key with hyphens.
         cpf1.key = "test-1-computed-field"
         with self.assertRaises(ValidationError) as error:
-            cpf1.validated_save()
+            cpf1.save()
         self.assertIn(
             "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
             str(error.exception),
@@ -155,7 +156,7 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
         # Check if it catches the cpf.key with special characters
         cpf1.key = "test_1_computed_f)(&d"
         with self.assertRaises(ValidationError) as error:
-            cpf1.validated_save()
+            cpf1.save()
         self.assertIn(
             "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
             str(error.exception),
@@ -192,6 +193,9 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         cls.platform = Platform.objects.first()
         cls.tenant = Tenant.objects.first()
         cls.tenantgroup = cls.tenant.tenant_group
+        cls.child_tenant = Tenant.objects.filter(tenant_group__isnull=False, tenant_group__parent__isnull=False).first()
+        cls.parent_tenantgroup = cls.child_tenant.tenant_group.parent
+        cls.child_tenantgroup = cls.child_tenant.tenant_group
         cls.tag, cls.tag2 = Tag.objects.get_for_model(Device)[:2]
         cls.dynamic_groups = DynamicGroup.objects.create(
             name="Dynamic Group",
@@ -296,6 +300,12 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(device_context, annotated_queryset[0].get_config_context())
         for key in ["location", "platform", "tenant_group", "tenant", "tag", "dynamic_group"]:
             self.assertIn(key, device_context)
+        # Add a device type constraint that does not match the device in question to the location config context
+        # And make sure that location_context is not applied to it anymore.
+        no_match_device_type = DeviceType.objects.exclude(pk=self.devicetype.pk).first()
+        location_context.device_types.add(no_match_device_type)
+        device_context = device.get_config_context()
+        self.assertNotIn("location", device_context)
 
     def test_annotation_same_as_get_for_object_device_relations_in_child_locations(self):
         location_context = ConfigContext.objects.create(name="root-location", weight=100, data={"location-1": 1})
@@ -311,8 +321,39 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             status=self.device_status,
             device_type=self.devicetype,
         )
+
         device_context = device.get_config_context()
+        annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
+        self.assertEqual(device_context, annotated_queryset[0].get_config_context())
+
         for key in ["location-1", "location-2", "location-3"]:
+            self.assertIn(key, device_context)
+
+    def test_annotation_same_as_get_for_object_device_relations_in_child_tenant_groups(self):
+        tenant_group_context = ConfigContext.objects.create(
+            name="parent_tenant_group", weight=100, data={"parent-group-1": 1}
+        )
+        tenant_group_context.tenant_groups.add(self.parent_tenantgroup)
+        tenant_group_context = ConfigContext.objects.create(
+            name="child_tenant_group", weight=100, data={"child-group-1": 2}
+        )
+        tenant_group_context.tenant_groups.add(self.child_tenantgroup)
+        tenant_context = ConfigContext.objects.create(name="child_tenant", weight=100, data={"child-tenant-1": 3})
+        tenant_context.tenants.add(self.child_tenant)
+        device = Device.objects.create(
+            name="Child Tenant Device",
+            location=self.location,
+            role=self.devicerole,
+            status=self.device_status,
+            device_type=self.devicetype,
+            tenant=self.child_tenant,
+        )
+
+        device_context = device.get_config_context()
+        annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
+        self.assertEqual(device_context, annotated_queryset[0].get_config_context())
+
+        for key in ["parent-group-1", "child-group-1", "child-tenant-1"]:
             self.assertIn(key, device_context)
 
     def test_annotation_same_as_get_for_object_virtualmachine_relations(self):
@@ -337,6 +378,7 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             cluster_group=cluster_group,
             cluster_type=cluster_type,
             location=self.location,
+            tenant=self.tenant,
         )
         cluster_context = ConfigContext.objects.create(name="cluster", weight=100, data={"cluster": 1})
         cluster_context.clusters.add(cluster)
@@ -371,6 +413,12 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             "vm_dynamic_group",
         ]:
             self.assertIn(key, vm_context)
+        # Add a platform constraint that does not match the device in question to the location config context
+        # And make sure that location_context is not applied to it anymore.
+        no_match_platform = Platform.objects.exclude(pk=self.platform.pk).first()
+        location_context.platforms.add(no_match_platform)
+        device_context = virtual_machine.get_config_context()
+        self.assertNotIn("location", device_context)
 
     def test_annotation_same_as_get_for_object_virtualmachine_relations_in_child_locations(self):
         location_context = ConfigContext.objects.create(name="root-location", weight=100, data={"location-1": 1})
@@ -394,11 +442,56 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             role=self.devicerole,
             status=vm_status,
         )
+
+        annotated_queryset = VirtualMachine.objects.filter(name=virtual_machine.name).annotate_config_context_data()
         vm_context = virtual_machine.get_config_context()
+
+        self.assertEqual(vm_context, annotated_queryset[0].get_config_context())
+
         for key in [
             "location-1",
             "location-2",
             "location-3",
+        ]:
+            self.assertIn(key, vm_context)
+
+    def test_annotation_same_as_get_for_object_virtualmachine_relations_in_child_tenant_groups(self):
+        tenant_group_context = ConfigContext.objects.create(
+            name="parent_tenant_group", weight=100, data={"parent-group-1": 1}
+        )
+        tenant_group_context.tenant_groups.add(self.parent_tenantgroup)
+        tenant_group_context = ConfigContext.objects.create(
+            name="child_tenant_group", weight=200, data={"child-group-1": 2}
+        )
+        tenant_group_context.tenant_groups.add(self.child_tenantgroup)
+        tenant_context = ConfigContext.objects.create(name="child_tenant", weight=300, data={"child-tenant-1": 3})
+        tenant_context.tenants.add(self.child_tenant)
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        cluster_group = ClusterGroup.objects.create(name="Cluster Group")
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster = Cluster.objects.create(
+            name="Cluster",
+            cluster_group=cluster_group,
+            cluster_type=cluster_type,
+            location=self.location,
+        )
+        virtual_machine = VirtualMachine.objects.create(
+            name="Child Tenant VM",
+            cluster=cluster,
+            role=self.devicerole,
+            status=vm_status,
+            tenant=self.child_tenant,
+        )
+
+        annotated_queryset = VirtualMachine.objects.filter(name=virtual_machine.name).annotate_config_context_data()
+        vm_context = virtual_machine.get_config_context()
+
+        self.assertEqual(vm_context, annotated_queryset[0].get_config_context())
+
+        for key in [
+            "parent-group-1",
+            "child-group-1",
+            "child-tenant-1",
         ]:
             self.assertIn(key, vm_context)
 
