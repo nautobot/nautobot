@@ -10,7 +10,7 @@ This document describes all new features and changes in Nautobot 2.1.
 
 #### isnull Filter on Nullable Fields
 
-`<attr>__isnull` filter expression has been added to support filtering objects based on nullable model fields (i.e. model fields with `null=True`). Now users can obtain a filtered list of objects from the API with `<attr>__isnull=True`.
+`<attr>__isnull` filter expression has been added to support filtering objects based on nullable model fields (i.e. model fields with `null=True`). Now users can obtain a filtered list of objects from the API with `<attr>__isnull=True/False`.
 
 !!! note
     Model fields that have the value `""` (i.e. blank) will not match with `__isnull=True`. Instead, they will match with `__isnull=False`.
