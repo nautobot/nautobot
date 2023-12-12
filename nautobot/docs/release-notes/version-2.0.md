@@ -398,6 +398,7 @@ A natural key interface has been provided for most models to allow for uniquely 
 
 - [#3488](https://github.com/nautobot/nautobot/issues/3488) - Corrected positioning and style of "Collapse All" button in Jobs list view.
 - [#4142](https://github.com/nautobot/nautobot/issues/4142) - Fixed unnecessary git operations when calling `ensure_git_repository` while the desired commit is already checked out.
+- [#4179](https://github.com/nautobot/nautobot/issues/4179) - Fixed error in creation of storage directories (GIT_ROOT, JOBS_ROOT, MEDIA_ROOT, etc.) when running tests in parallel.
 - [#4747](https://github.com/nautobot/nautobot/issues/4747) - Fixed an issue when appending nautobot version to a static file path with existing query parameters resulted in an invalid URL generation.
 - [#4768](https://github.com/nautobot/nautobot/issues/4768) - Fixed incorrect link in TenantGroup template.
 - [#4768](https://github.com/nautobot/nautobot/issues/4768) - Fixed ConfigContext not applied to nested TenantGroup objects.
@@ -428,6 +429,10 @@ A natural key interface has been provided for most models to allow for uniquely 
 - [#4871](https://github.com/nautobot/nautobot/issues/4871) - Removed some duplicate documentation links in the Feature Guides.
 - [#4923](https://github.com/nautobot/nautobot/issues/4923) - Fixed border for namespace image in docs.
 - [#4952](https://github.com/nautobot/nautobot/issues/4952) - Corrected spelling of "extensions" in the navigation menu.
+
+### Housekeeping
+
+- [#4945](https://github.com/nautobot/nautobot/issues/4945) - Replaced calls to deprecated `is_safe_url()` Django API with `url_has_allowed_host_and_scheme()` replacement API.
 
 ## v2.0.5 (2023-11-21)
 

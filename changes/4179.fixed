@@ -1,1 +1,0 @@
-Fixed error in creation of storage directories (GIT_ROOT, JOBS_ROOT, MEDIA_ROOT, etc.) when running tests in parallel.

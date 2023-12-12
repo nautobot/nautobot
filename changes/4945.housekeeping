@@ -1,1 +1,0 @@
-Replaced calls to deprecated `is_safe_url()` Django API with `url_has_allowed_host_and_scheme()` replacement API.
