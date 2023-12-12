@@ -252,7 +252,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         queryset = self.get_queryset()
         try:
-            actions = PERMISSIONS_ACTION_MAP.get(self.action, ["view"])
+            actions = [PERMISSIONS_ACTION_MAP.get(self.action, "view")]
         except KeyError:
             messages.error(
                 self.request,
