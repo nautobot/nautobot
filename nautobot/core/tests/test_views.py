@@ -2,12 +2,17 @@ import re
 from unittest import mock
 import urllib.parse
 
+from django.contrib.contenttypes.models import ContentType
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
 
+from nautobot.extras.models import FileProxy
 from nautobot.extras.registry import registry
+from nautobot.users.models import ObjectPermission
+from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.testing import TestCase
 
 
@@ -408,3 +413,59 @@ class ErrorPagesTestCase(TestCase):
         self.assertNotContains(response, "Network to Code", status_code=500)
         response_content = response.content.decode(response.charset)
         self.assertInHTML("Hello world!", response_content)
+
+
+class DBFileStorageViewTestCase(TestCase):
+    """Test authentication/permission enforcement for django_db_file_storage views."""
+
+    def setUp(self):
+        super().setUp()
+        self.test_file_1 = SimpleUploadedFile(name="test_file_1.txt", content=b"I am content.\n")
+        self.file_proxy_1 = FileProxy.objects.create(name=self.test_file_1.name, file=self.test_file_1)
+        self.test_file_2 = SimpleUploadedFile(name="test_file_2.txt", content=b"I am content.\n")
+        self.file_proxy_2 = FileProxy.objects.create(name=self.test_file_2.name, file=self.test_file_2)
+        self.urls = [
+            f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_1.file.name}",
+            f"{reverse('db_file_storage.get_file')}?name={self.file_proxy_1.file.name}",
+        ]
+
+    def test_get_file_anonymous(self):
+        self.client.logout()
+        for url in self.urls:
+            with self.subTest(url):
+                response = self.client.get(url)
+                self.assertHttpStatus(response, 403)
+
+    def test_get_file_without_permission(self):
+        for url in self.urls:
+            with self.subTest(url):
+                response = self.client.get(url)
+                self.assertHttpStatus(response, 403)
+
+    def test_get_object_with_permission(self):
+        self.add_permissions(get_permission_for_model(FileProxy, "view"))
+        for url in self.urls:
+            with self.subTest(url):
+                response = self.client.get(url)
+                self.assertHttpStatus(response, 200)
+
+    def test_get_object_with_constrained_permission(self):
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": self.file_proxy_1.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(FileProxy))
+        for url in self.urls:
+            with self.subTest(url):
+                response = self.client.get(url)
+                self.assertHttpStatus(response, 200)
+        for url in [
+            f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_2.file.name}",
+            f"{reverse('db_file_storage.get_file')}?name={self.file_proxy_2.file.name}",
+        ]:
+            with self.subTest(url):
+                response = self.client.get(url)
+                self.assertHttpStatus(response, 404)
