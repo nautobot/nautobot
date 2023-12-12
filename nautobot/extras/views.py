@@ -13,8 +13,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import TemplateDoesNotExist, get_template
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
-from django.utils.http import is_safe_url
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
@@ -412,9 +413,9 @@ class CustomFieldEditView(generic.ObjectEditView):
                 verb = "Created" if object_created else "Modified"
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                if hasattr(obj, "get_absolute_url"):
+                try:
                     msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
-                else:
+                except AttributeError:
                     msg = format_html("{} {}", msg, obj)
                 messages.success(request, msg)
 
@@ -427,8 +428,8 @@ class CustomFieldEditView(generic.ObjectEditView):
                     return redirect(request.get_full_path())
 
                 return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(return_url)
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
                 else:
                     return redirect(self.get_return_url(request, obj))
 
@@ -650,9 +651,9 @@ class DynamicGroupEditView(generic.ObjectEditView):
                 verb = "Created" if object_created else "Modified"
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                if hasattr(obj, "get_absolute_url"):
+                try:
                     msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
-                else:
+                except AttributeError:
                     msg = format_html("{} {}", msg, obj)
                 messages.success(request, msg)
 
@@ -665,8 +666,8 @@ class DynamicGroupEditView(generic.ObjectEditView):
                     return redirect(request.get_full_path())
 
                 return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(return_url)
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
                 else:
                     return redirect(self.get_return_url(request, obj))
 
@@ -2035,9 +2036,9 @@ class SecretsGroupEditView(generic.ObjectEditView):
                 verb = "Created" if object_created else "Modified"
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                if hasattr(obj, "get_absolute_url"):
+                try:
                     msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
-                else:
+                except AttributeError:
                     msg = format_html("{} {}", msg, obj)
                 messages.success(request, msg)
 
@@ -2050,8 +2051,8 @@ class SecretsGroupEditView(generic.ObjectEditView):
                     return redirect(request.get_full_path())
 
                 return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(return_url)
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
                 else:
                     return redirect(self.get_return_url(request, obj))
 

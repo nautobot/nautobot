@@ -457,7 +457,7 @@ nav:
         - "development/apps/api/platform-features/index.md"
         - Custom Validators: "development/apps/api/platform-features/custom-validators.md"
         - Database Backed Config: "development/apps/api/database-backend-config.md"
-        - Filter Extentions: "development/apps/api/platform-features/filter-extensions.md"
+        - Filter Extensions: "development/apps/api/platform-features/filter-extensions.md"
         - Git Repository Content: "development/apps/api/platform-features/git-repository-content.md"
         - Jinja2 Filters: "development/apps/api/platform-features/jinja2-filters.md"
         - Jobs: "development/apps/api/platform-features/jobs.md"

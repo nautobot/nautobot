@@ -48,6 +48,7 @@ from nautobot.extras.models.models import ConfigContextSchemaValidationMixin
 from nautobot.extras.plugins import CustomValidator
 from nautobot.extras.utils import extras_features
 from nautobot.ipam.fields import VarbinaryIPField
+from nautobot.ipam.models import get_default_namespace, get_default_namespace_pk
 
 
 __all__ = (
@@ -78,6 +79,8 @@ __all__ = (
     "ForeignKeyLimitedByContentTypes",
     "ForeignKeyWithAutoRelatedName",
     "get_all_concrete_models",
+    "get_default_namespace",
+    "get_default_namespace_pk",
     "is_taggable",
     "JSONArrayField",
     "JSONBAgg",

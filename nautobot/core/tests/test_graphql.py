@@ -1449,8 +1449,8 @@ query {
                 IPAddress.objects.net_host_contained("10.0.0.0/16").count(),
             ),
             (
-                'prefix: "10.0.2.0/24"',
-                IPAddress.objects.net_host_contained("10.0.2.0/24").count(),
+                'prefix: ["10.0.1.0/24", "10.0.2.0/24"]',
+                IPAddress.objects.net_host_contained("10.0.1.0/24", "10.0.2.0/24").count(),
             ),
         )
 

@@ -1,0 +1,1 @@
+Added `get_default_namespace` and `get_default_namespace_pk` methods to `nautobot.apps.models` API.
