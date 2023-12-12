@@ -37,6 +37,7 @@ from nautobot.extras.choices import (
     RelationshipTypeChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
+    WebhookHttpMethodChoices,
 )
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
@@ -824,10 +825,14 @@ class ExternalIntegrationTest(APIViewTestCases.APIViewTestCase):
             "verify_ssl": False,
             "timeout": 5,
             "extra_config": "{'foo': 'bar'}",
+            "http_method": WebhookHttpMethodChoices.METHOD_DELETE,
+            "headers": "{'header': 'fake header'}",
+            "ca_file_path": "/this/is/a/file/path",
         },
         {
             "name": "Test External Integration 2",
             "remote_url": "http://example.com/test2/",
+            "http_method": WebhookHttpMethodChoices.METHOD_POST,
         },
         {
             "name": "Test External Integration 3",
@@ -835,9 +840,12 @@ class ExternalIntegrationTest(APIViewTestCases.APIViewTestCase):
             "verify_ssl": True,
             "timeout": 30,
             "extra_config": "{'foo': ['bat', 'baz']}",
+            "headers": "{'new_header': 'fake header'}",
+            "ca_file_path": "/this/is/a/new/file/path",
         },
     ]
     bulk_update_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}"}
+    choices_fields = ["http_method"]
 
 
 class FileProxyTest(
