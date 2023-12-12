@@ -2429,8 +2429,9 @@ class InterfaceBulkEditForm(
         )
         devices = Device.objects.filter(interfaces__in=interfaces).only("pk").distinct()
         locations = Location.objects.without_tree_fields().order_by().filter(devices__in=devices).only("pk").distinct()
+        device_count = devices.count()
 
-        if devices.count() > 0:
+        if device_count > 0:
             device = devices.first()
 
             # Limit VRF choices to only VRFs available on the first parent device
@@ -2444,7 +2445,7 @@ class InterfaceBulkEditForm(
                 self.fields["tagged_vlans"].widget.add_query_param("location", location.pk)
 
         # Restrict parent/bridge/LAG interface assignment by device (or VC master)
-        if devices.count() == 1:
+        if device_count == 1:
             self.fields["parent_interface"].widget.add_query_param("device_with_common_vc", device.pk)
             self.fields["bridge"].widget.add_query_param("device_with_common_vc", device.pk)
             self.fields["lag"].widget.add_query_param("device_with_common_vc", device.pk)
