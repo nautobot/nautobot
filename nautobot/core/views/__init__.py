@@ -10,7 +10,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin
 from django.http import HttpResponseServerError, JsonResponse, HttpResponseForbidden, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import resolve, reverse
@@ -300,6 +300,10 @@ def nautobot_metrics_view(request):
 
 
 @permission_required(get_permission_for_model(FileProxy, "view"), raise_exception=True)
-def get_file_with_authorization(*args, **kwargs):
+def get_file_with_authorization(request, *args, **kwargs):
     """Patch db_file_storage view with authentication."""
-    return get_file(*args, **kwargs)
+    # Make sure user has permissions
+    queryset = FileProxy.objects.restrict(request.user, "view")
+    get_object_or_404(queryset, file=request.GET.get("name"))
+
+    return get_file(request, *args, **kwargs)
