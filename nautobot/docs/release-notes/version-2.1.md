@@ -8,6 +8,13 @@ This document describes all new features and changes in Nautobot 2.1.
 
 ### Added
 
+#### isnull Filter on Nullable Fields
+
+`<attr>__isnull` filter expression has been added to support filtering objects based on nullable model fields (i.e. model fields with `null=True`). Now users can obtain a filtered list of objects from the API with `<attr>__isnull=True`.
+
+!!! note
+    Model fields that have the value `""` (i.e. blank) will not match with `__isnull=True`. Instead, they will match with `__isnull=False`.
+
 #### Job File Outputs ([#3352](https://github.com/nautobot/nautobot/issues/3352), [#4820](https://github.com/nautobot/nautobot/issues/4820))
 
 The `Job` base class now includes a [`create_file(filename, content)`](../development/jobs/index.md#file-output) method which can be called by a Job to create a persistent file with the provided content when run. This file will be linked from the Job Result detail view for subsequent downloading by users, and can also be downloaded via the REST API (`/api/extras/file-proxies/<id>/download/`) as desired.
