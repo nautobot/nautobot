@@ -2422,12 +2422,7 @@ class InterfaceBulkEditForm(
         if "pk" not in self.initial:
             return
 
-        interfaces = (
-            Interface.objects.filter(pk__in=self.initial["pk"])
-            .select_related("device__location")
-            .only("id", "device", "device__location")
-        )
-        devices = Device.objects.filter(interfaces__in=interfaces).only("pk").distinct()
+        devices = Device.objects.filter(interfaces__in=self.initial["pk"]).only("pk").distinct()
         locations = Location.objects.without_tree_fields().order_by().filter(devices__in=devices).only("pk").distinct()
         device_count = devices.count()
 
