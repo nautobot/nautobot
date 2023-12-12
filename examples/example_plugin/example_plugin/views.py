@@ -85,7 +85,11 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
         Returns a list of all the example model names.
         """
         all_example_models = ExampleModel.objects.all()
-        return Response({"data": [model.name for model in all_example_models]})
+        return render(
+            request,
+            "example_plugin/examplemodel_custom_action_get_all_example_model_names.html",
+            {"data": [model.name for model in all_example_models]},
+        )
 
 
 # Example excluding the BulkUpdateViewSet

@@ -252,7 +252,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         queryset = self.get_queryset()
         try:
-            actions = [PERMISSIONS_ACTION_MAP[self.action]]
+            actions = PERMISSIONS_ACTION_MAP.get(self.action, ["view"])
         except KeyError:
             messages.error(
                 self.request,
@@ -473,7 +473,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         Override the original `get_queryset()` to apply permission specific to the user and action.
         """
         queryset = super().get_queryset()
-        return queryset.restrict(self.request.user, PERMISSIONS_ACTION_MAP[self.action])
+        return queryset.restrict(self.request.user, PERMISSIONS_ACTION_MAP.get(self.action, "view"))
 
     def get_extra_context(self, request, instance=None):
         """
