@@ -1,7 +1,6 @@
 from django.shortcuts import HttpResponse, render
 from django.views.generic import View
 from rest_framework.decorators import action
-from rest_framework.response import Response
 
 from nautobot.apps import views
 from nautobot.circuits.models import Circuit
