@@ -18,6 +18,15 @@ The `Job` base class now includes a [`create_file(filename, content)`](../develo
 !!! tip
     Users must have permission to `view` the `extras > file proxy` object type in order to list and download files from the REST API.
 
+#### Django Admin Log Entries ([#4646](https://github.com/nautobot/nautobot/pull/4646))
+
+Django Admin Log Entries record administrative changes made under the "Admin" section of the user interface. Changes (add/delete/update) to Objects like Users, Group, Object Permissions, etc. in the "Admin" user interface are now displayed as "Log Entries" under the "Administration" section of the Admin UI.
+
+!!! info
+    Django Admin Log Entries are automatically created when adminstrative changes happen and have always existed natively in Django Admin. This feature is simply providung a read-only UI view for admin/privileged users to access them with more ease.
+
+See [Administrative Change-logging](../user-guide/platform-functionality/change-logging.md#administrative-changes) for more details.
+
 #### External Integration Model ([#4694](https://github.com/nautobot/nautobot/issues/4694))
 
 A new [`ExternalIntegration` model](../user-guide/platform-functionality/externalintegration.md) has been added which provides a centralized store for data such as URLs and credentials that are used to access systems external to Nautobot. This information can then be used by jobs or apps to perform actions such as creating DNS records or updating configuration management tickets.
