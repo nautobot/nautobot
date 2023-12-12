@@ -377,6 +377,7 @@ A natural key interface has been provided for most models to allow for uniquely 
 
 - [#4876](https://github.com/nautobot/nautobot/issues/4876) - Updated `cryptography` to `~41.0.6` due to CVE-2023-49083. As this is not a direct dependency of Nautobot, it will not auto-update when upgrading. Please be sure to upgrade your local environment.
 - [#4890](https://github.com/nautobot/nautobot/issues/4890) - Updated alpha UI dependency `@adobe/css-tools` to version 4.3.2 due to CVE-2023-48631.
+- [#4959](https://github.com/nautobot/nautobot/issues/4959) - Enforce authentication and object permissions on DB file storage views ([GHSA-75mc-3pjc-727q](https://github.com/nautobot/nautobot/security/advisories/GHSA-75mc-3pjc-727q)).
 
 ### Added
 
