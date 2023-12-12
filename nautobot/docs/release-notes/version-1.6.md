@@ -72,6 +72,27 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.7 (2023-12-12)
+
+### Security
+
+- [#4959](https://github.com/nautobot/nautobot/issues/4959) - Enforce authentication and object permissions on DB file storage views ([GHSA-75mc-3pjc-727q](https://github.com/nautobot/nautobot/security/advisories/GHSA-75mc-3pjc-727q)).
+
+### Added
+
+- [#4873](https://github.com/nautobot/nautobot/issues/4873) - Added QSFP112 interface type to interface type choices.
+
+### Removed
+
+- [#4797](https://github.com/nautobot/nautobot/issues/4797) - Removed erroneous `custom_fields` decorator from InterfaceRedundancyGroupAssociation as it's not a supported feature for this model.
+- [#4857](https://github.com/nautobot/nautobot/issues/4857) - Removed Jathan McCollum as a point of contact in `SECURITY.md`.
+
+### Fixed
+
+- [#4142](https://github.com/nautobot/nautobot/issues/4142) - Fixed unnecessary git operations when calling `ensure_git_repository` while the desired commit is already checked out.
+- [#4917](https://github.com/nautobot/nautobot/issues/4917) - Fixed slow performance on location hierarchy html template.
+- [#4921](https://github.com/nautobot/nautobot/issues/4921) - Fixed inefficient queries in `Location.base_site`.
+
 ## v1.6.6 (2023-11-21)
 
 ### Security
