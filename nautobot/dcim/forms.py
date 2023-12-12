@@ -2395,11 +2395,10 @@ class InterfaceBulkEditForm(
             "location": "null",
         },
     )
-    vrf = forms.ModelChoiceField(
+    vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         label="VRF",
         required=False,
-        widget=StaticSelect2(),
     )
 
     class Meta:
@@ -2428,15 +2427,15 @@ class InterfaceBulkEditForm(
             .select_related("device__location")
             .only("id", "device", "device__location")
         )
-        devices = Device.objects.order_by().filter(interfaces__in=interfaces).only("pk").distinct()
+        devices = Device.objects.filter(interfaces__in=interfaces).only("pk").distinct()
         locations = Location.objects.without_tree_fields().order_by().filter(devices__in=devices).only("pk").distinct()
 
         if devices.count() > 0:
-            # Limit VRF choices to only VRFs available on all parent devices
-            vrf_choices = VRF.objects.order_by().all()
-            for parent_device in devices:
-                vrf_choices = vrf_choices.filter(devices=parent_device)
-            self.fields["vrf"].choices = add_blank_choice(vrf_choices.values_list("pk", "name"))
+            device = devices.first()
+
+            # Limit VRF choices to only VRFs available on the first parent device
+            # TODO: The choices for this field should be only VRFs that are associated to every parent device
+            self.fields["vrf"].widget.add_query_param("device", device.pk)
 
             # Limit VLAN choices by Location
             if locations.count() == 1:
@@ -2446,7 +2445,6 @@ class InterfaceBulkEditForm(
 
         # Restrict parent/bridge/LAG interface assignment by device (or VC master)
         if devices.count() == 1:
-            device = devices.first()
             self.fields["parent_interface"].widget.add_query_param("device_with_common_vc", device.pk)
             self.fields["bridge"].widget.add_query_param("device_with_common_vc", device.pk)
             self.fields["lag"].widget.add_query_param("device_with_common_vc", device.pk)
