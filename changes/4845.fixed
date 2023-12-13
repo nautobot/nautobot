@@ -1,1 +1,0 @@
-Fixed issues with installing an app that is nested inside a python package (e.g. `my_apps/app1/` + `my_apps/app2/`), and lookups for UI view testing.

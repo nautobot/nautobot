@@ -1,2 +1,0 @@
-Removed unused `nautobot.extras.choices.JobSourceChoices`.
-Removed check for `__init__.py` in `JOBS_ROOT` directory.

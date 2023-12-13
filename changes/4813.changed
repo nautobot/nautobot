@@ -1,1 +1,0 @@
-Changed `generate_secret_key.py` to use Python `secrets` library instead of `random`.
