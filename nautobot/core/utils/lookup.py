@@ -2,6 +2,7 @@
 
 import inspect
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
@@ -36,7 +37,6 @@ def get_model_from_name(model_name):
 
     :return: Found model.
     """
-    from django.apps import apps
 
     try:
         return apps.get_model(model_name)
@@ -90,7 +90,7 @@ def get_route_for_model(model, action, api=False):
         sep = "_" if not api else "-"
     viewname = f"{prefix}{sep}{action}"
 
-    if model._meta.app_label in settings.PLUGINS:
+    if apps.get_app_config(app_label).name in settings.PLUGINS:
         viewname = f"plugins{suffix}:{viewname}"
 
     return viewname
@@ -125,11 +125,9 @@ def get_related_class_for_model(model, module_name, object_suffix):
         raise TypeError(f"{model!r} is not a subclass of a Django Model class")
 
     # e.g. "nautobot.dcim.forms.DeviceFilterForm"
-    app_label = model._meta.app_label
+    app_config = apps.get_app_config(model._meta.app_label)
     object_name = f"{model.__name__}{object_suffix}"
-    object_path = f"{app_label}.{module_name}.{object_name}"
-    if app_label not in settings.PLUGINS:
-        object_path = f"nautobot.{object_path}"
+    object_path = f"{app_config.name}.{module_name}.{object_name}"
 
     try:
         return import_string(object_path)

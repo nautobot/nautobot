@@ -54,6 +54,7 @@ from nautobot.dcim.models import (
     Interface,
     InterfaceTemplate,
     InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     Manufacturer,
     InventoryItem,
     Location,
@@ -2910,7 +2911,7 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             SecretsGroup.objects.create(name="Secrets Group 3"),
         )
 
-        interface_redundancy_groups = (
+        cls.interface_redundancy_groups = (
             InterfaceRedundancyGroup(
                 name="Interface Redundancy Group 1",
                 protocol="hsrp",
@@ -2944,13 +2945,41 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             ),
         )
 
-        for group in interface_redundancy_groups:
+        for group in cls.interface_redundancy_groups:
             group.validated_save()
+
+        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
+
+        devicetypes = DeviceType.objects.all()[:2]
+
+        deviceroles = Role.objects.get_for_model(Device)[:2]
+
+        device_statuses = Status.objects.get_for_model(Device)
+        status_active = device_statuses[0]
+        device = Device.objects.create(
+            name="Device 1",
+            location=locations[0],
+            device_type=devicetypes[0],
+            role=deviceroles[0],
+            status=status_active,
+        )
+        intf_status = Status.objects.get_for_model(Interface).first()
+
+        cls.interfaces = (
+            Interface.objects.create(device=device, name="Interface 1", status=intf_status),
+            Interface.objects.create(device=device, name="Interface 2", status=intf_status),
+            Interface.objects.create(device=device, name="Interface 3", status=intf_status),
+        )
 
         cls.form_data = {
             "name": "IRG χ",
             "protocol": InterfaceRedundancyGroupProtocolChoices.GLBP,
             "status": statuses[3].pk,
+        }
+        cls.interface_add_form_data = {
+            "interface_redundancy_group": cls.interface_redundancy_groups[0].pk,
+            "interface": cls.interfaces[0].pk,
+            "priority": 100,
         }
 
         cls.csv_data = (
@@ -2967,3 +2996,29 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "virtual_ip": cls.ips[0].pk,
             "secrets_group": cls.secrets_groups[1].pk,
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_adding_interfaces_to_group(self):
+        initial_count = InterfaceRedundancyGroupAssociation.objects.all().count()
+
+        # Assign unconstrained permission
+        self.add_permissions("dcim.add_interfaceredundancygroupassociation")
+        return_url = reverse("dcim:interfaceredundancygroup", kwargs={"pk": self.interface_redundancy_groups[0].pk})
+        url = reverse("dcim:interfaceredundancygroupassociation_add")
+        url = url + f"?interface_redundancy_group={self.interface_redundancy_groups[0].pk}&return_url={return_url}"
+        self.assertHttpStatus(self.client.get(url), 200)
+
+        # Try POST with model-level permission
+        request = {
+            "path": url,
+            "data": post_data(self.interface_add_form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_count + 1, InterfaceRedundancyGroupAssociation.objects.all().count())
+        self.interface_add_form_data["interface"] = self.interfaces[1]
+        request = {
+            "path": url,
+            "data": post_data(self.interface_add_form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_count + 2, InterfaceRedundancyGroupAssociation.objects.all().count())

@@ -3,13 +3,15 @@ import platform
 import sys
 import time
 
+from db_file_storage.views import get_file
 from django.apps import apps
 import prometheus_client
 from django.conf import settings
+from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponseServerError, JsonResponse, HttpResponseForbidden, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import resolve, reverse
@@ -27,7 +29,8 @@ from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
 from nautobot.core.utils.lookup import get_route_for_model
-from nautobot.extras.models import GraphQLQuery, Status
+from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.extras.models import FileProxy, GraphQLQuery, Status
 from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
 
@@ -304,3 +307,13 @@ def nautobot_metrics_view(request):
         pass
     metrics_page = prometheus_client.generate_latest(prometheus_registry)
     return HttpResponse(metrics_page, content_type=prometheus_client.CONTENT_TYPE_LATEST)
+
+
+@permission_required(get_permission_for_model(FileProxy, "view"), raise_exception=True)
+def get_file_with_authorization(request, *args, **kwargs):
+    """Patch db_file_storage view with authentication."""
+    # Make sure user has permissions
+    queryset = FileProxy.objects.restrict(request.user, "view")
+    get_object_or_404(queryset, file=request.GET.get("name"))
+
+    return get_file(request, *args, **kwargs)
