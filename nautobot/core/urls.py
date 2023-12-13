@@ -1,9 +1,16 @@
 from django.conf import settings
-from django.conf.urls import include
+from django.conf.urls import include, url
 from django.urls import path
 from django.views.static import serve
 
-from nautobot.core.views import CustomGraphQLView, HomeView, StaticMediaFailureView, SearchView, nautobot_metrics_view
+from nautobot.core.views import (
+    CustomGraphQLView,
+    HomeView,
+    StaticMediaFailureView,
+    SearchView,
+    nautobot_metrics_view,
+    get_file_with_authorization,
+)
 from nautobot.extras.plugins.urls import (
     plugin_admin_patterns,
     plugin_patterns,
@@ -46,7 +53,18 @@ urlpatterns = [
     # django-health-check
     path(r"health/", include("health_check.urls")),
     # FileProxy attachments download/get URLs used in admin views only
-    path("files/", include("db_file_storage.urls")),
+    url(
+        "files/download/",
+        get_file_with_authorization,
+        {"add_attachment_headers": True},
+        name="db_file_storage.download_file",
+    ),
+    url(
+        "files/get/",
+        get_file_with_authorization,
+        {"add_attachment_headers": False},
+        name="db_file_storage.get_file",
+    ),
 ]
 
 
