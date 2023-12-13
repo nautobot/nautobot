@@ -603,6 +603,7 @@ class DeviceTypeTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        Device.objects.all().delete()
         manufacturers = Manufacturer.objects.all()[:2]
 
         DeviceType.objects.create(model="Test Device Type 1", manufacturer=manufacturers[0])
@@ -633,7 +634,6 @@ class DeviceTypeTestCase(
     # factories.
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_bulk_edit_objects_with_constrained_permission(self):
-        Device.objects.all().delete()
         DeviceType.objects.exclude(model__startswith="Test Device Type").delete()
         super().test_bulk_edit_objects_with_constrained_permission()
 
@@ -643,7 +643,6 @@ class DeviceTypeTestCase(
     # factories.
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_bulk_edit_objects_with_permission(self):
-        Device.objects.all().delete()
         DeviceType.objects.exclude(model__startswith="Test Device Type").delete()
         super().test_bulk_edit_objects_with_permission()
 

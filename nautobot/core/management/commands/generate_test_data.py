@@ -148,7 +148,7 @@ class Command(BaseCommand):
         self.stdout.write("Creating DeviceRedundancyGroups...")
         DeviceRedundancyGroupFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Devices...")
-        DeviceFactory.create_batch(50, using=db_name)
+        DeviceFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating CircuitTypes...")
         CircuitTypeFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Providers...")
