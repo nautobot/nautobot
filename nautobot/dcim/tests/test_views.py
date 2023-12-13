@@ -85,7 +85,7 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.ipam.choices import IPAddressTypeChoices
-from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
@@ -1821,6 +1821,9 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     @classmethod
     def setUpTestData(cls):
         device = create_test_device("Device 1")
+        vrfs = list(VRF.objects.all()[:3])
+        for vrf in vrfs:
+            vrf.add_device(device)
 
         statuses = Status.objects.get_for_model(Interface)
         status_active = statuses[0]
@@ -1892,6 +1895,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "tags": [t.pk for t in Tag.objects.get_for_model(Interface)],
             "status": status_active.pk,
+            "vrf": vrfs[0].pk,
         }
 
         cls.bulk_add_data = {
@@ -1906,6 +1910,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "An Interface",
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "tags": [],
+            "vrf": vrfs[1].pk,
         }
 
         cls.bulk_edit_data = {
@@ -1920,6 +1925,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "status": status_active.pk,
+            "vrf": vrfs[2].pk,
         }
 
         cls.csv_data = (
