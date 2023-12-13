@@ -13,8 +13,8 @@ def files_from_contenttype_directories(base_path, job_result, log_grouping):
     """
     Iterate over a directory structure base_path/<app_label>/<model>/ and yield the ContentType and files encountered.
 
-    Yields:
-      (ContentType, file_path)
+    Returns:
+        (Tuple[ContentType, file_path]): A tuple of the ContentType and the file path.
     """
     for app_label in os.listdir(base_path):
         app_label_path = os.path.join(base_path, app_label)

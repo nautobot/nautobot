@@ -56,7 +56,7 @@ class CSVDataField(django_forms.CharField):
     as that is now handled by the NautobotCSVParser class and the REST API serializers.
 
     Args:
-        required_field_names: List of field names representing required fields for this import.
+        required_field_names (list[str]): List of field names representing required fields for this import.
     """
 
     widget = django_forms.Textarea
@@ -354,11 +354,16 @@ class ExpandableIPAddressField(django_forms.CharField):
             )
 
     def to_python(self, value):
+        # Ensure that a subnet mask has been specified. This prevents IPs from defaulting to a /32 or /128.
+        if len(value.split("/")) != 2:
+            raise ValidationError("CIDR mask (e.g. /24) is required.")
+
         # Hackish address version detection but it's all we have to work with
         if "." in value and re.search(forms.IP4_EXPANSION_PATTERN, value):
             return list(forms.expand_ipaddress_pattern(value, 4))
         elif ":" in value and re.search(forms.IP6_EXPANSION_PATTERN, value):
             return list(forms.expand_ipaddress_pattern(value, 6))
+
         return [value]
 
 
@@ -776,8 +781,10 @@ class TagFilterField(DynamicModelMultipleChoiceField):
     """
 
     def __init__(self, model, *args, query_params=None, queryset=None, **kwargs):
+        from nautobot.extras.models import Tag
+
         if queryset is None:
-            queryset = model.tags.all()
+            queryset = Tag.objects.get_for_model(model)
         query_params = query_params or {}
         query_params.update({"content_types": model._meta.label_lower})
         super().__init__(

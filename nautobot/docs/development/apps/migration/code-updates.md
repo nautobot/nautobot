@@ -73,15 +73,58 @@ menu_items = (
 
 ```
 
+### Remove Tag/Tags Filter from FilterSet Definitions
+
+In Nautobot 2.0, you can safely remove `tag = TagFilter(...)` from your filter set definitions as long as your filter sets inherit from `NautobotFilterSet` class and `tags` is added to the filter set class `Meta.fields`.
+
+For example, before the filter set could look like this:
+
+```py
+
+class AppModelFilterSet(BaseFilterSet):
+
+    name = MultiValueCharFilter(...)
+    number = MultiValueNumberFilter(...)
+    tag = TagFilter(...)
+
+    class Meta:
+        fields = ["name", "number"]
+```
+
+After changing the base class to `NautobotFilterSet` the `tag` filter should be removed:
+
+```py
+
+class AppModelFilterSet(NautobotFilterSet):
+
+    name = MultiValueCharFilter(...)
+    number = MultiValueNumberFilter(...)
+
+    class Meta:
+        fields = ["name", "number", "tags"]
+
+```
+
 ## Replace DjangoFilterBackend with NautobotFilterBackend
 
 If your REST API has any `FilterBackend` classes derived from `DjangoFilterBackend`, you should replace `DjangoFilterBackend` with `NautobotFilterBackend`.
+
+## App Model Serializer Inheritance
+
+App Model Serializers for any models that could have a Generic Foreign Key or a Many to Many relationship from a Nautobot Core model **must** inherit from BaseModelSerializer at a minimum so that they have a properly generated `object_type` field. This also applies to the case where your model is a subclass of `ChangeLoggedModel` and you will have a Generic Foreign Key from `ObjectChange`'s `changed_object` field. Otherwise drf-spectacular schema generation will throw an error:
+
+```no-highlight
+(drf_spectacular.E001) Schema generation threw exception "Field name `object_type` is not valid for model `YourAppModel`.
+```
 
 ## Revamp Rest API Serializers
 
 `NestedSerializer` classes are no longer needed in Nautobot 2.0. If any `NestedSerializers` exist for your models, you should just remove their class definitions and references.
 
 After removing existing `NestedSerializers`, you can change the `fields` attribute in your serializers' `class Meta` to `__all__` and that will automatically include all the model's fields in the serializer, including related-model fields that would previously have required a reference to a `NestedSerializer`. If you want to exclude certain fields of the model, you can specify a list of fields you want to display in the `fields` attribute instead.
+
+!!! warning
+    Use caution around `fields = "__all__"` -- if your model has any fields that should _not_ be exposed in the REST API, you should avoid using `"__all__"` and instead use an explicit `fields` list to ensure that such fields are not exposed. In some cases, it may be appropriate to use `"__all__"` in combination with flags such as `write_only=True` on specific fields, but proceed with caution and examine the REST API data carefully to ensure that its contents are as expected.
 
 Include all model attributes:
 

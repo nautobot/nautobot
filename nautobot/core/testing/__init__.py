@@ -50,13 +50,15 @@ def run_job_for_testing(job, username="test-user", profile=False, **kwargs):
     Provide a common interface to run Nautobot jobs as part of unit tests.
 
     Args:
-      job (Job): Job model instance (not Job class) to run
-      username (str): Username of existing or to-be-created User account to own the JobResult.
-      profile (bool): Whether to profile the job execution.
-      **kwargs: Input keyword arguments for Job run method.
+        job (Job): Job model instance (not Job class) to run
+        username (str): Username of existing or to-be-created User account to own the JobResult.
+        profile (bool): Whether to profile the job execution.
+
+    Keyword Args:
+        **kwargs (any): Input keyword arguments for Job run method.
 
     Returns:
-      JobResult: representing the executed job
+        (JobResult): representing the executed job
     """
     # Enable the job if it wasn't enabled before
     if not job.enabled:
@@ -98,7 +100,7 @@ def get_job_class_and_model(module, name, source="local"):
         source (str): Job grouping (default: "local")
 
     Returns:
-        JobClassInfo: Named 2-tuple of (job_class, job_model)
+        (JobClassInfo): Named 2-tuple of (job_class, job_model)
     """
     job_class = get_job(f"{module}.{name}")
     job_model = Job.objects.get(module_name=module, job_class_name=name)

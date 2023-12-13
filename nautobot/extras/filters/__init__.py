@@ -633,8 +633,6 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         queryset=Job.objects.all(),
         label="Job (ID) - Deprecated (use job_model filter)",
     )
-    date_created = django_filters.DateTimeFilter()
-    date_done = django_filters.DateTimeFilter()
     status = django_filters.MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
 
     class Meta:
@@ -674,12 +672,9 @@ class ScheduledJobFilterSet(BaseFilterSet):
         label="Job (ID) - Deprecated (use job_model filter)",
     )
 
-    first_run = django_filters.DateTimeFilter()
-    last_run = django_filters.DateTimeFilter()
-
     class Meta:
         model = ScheduledJob
-        fields = ["id", "name", "total_run_count"]
+        fields = ["id", "name", "total_run_count", "start_time", "last_run_at"]
 
 
 #

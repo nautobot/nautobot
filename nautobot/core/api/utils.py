@@ -3,6 +3,7 @@ import logging
 import platform
 import sys
 
+from django.apps import apps
 from django.conf import settings
 from django.http import JsonResponse
 from django.urls import reverse
@@ -72,7 +73,7 @@ def get_api_version_serializer(serializer_choices, api_version):
         api_version (str): Request API version
 
     Returns:
-        returns the serializer for the api_version if found in serializer_choices else None
+        (Serializer): the serializer for the api_version if found in serializer_choices else None
     """
     for versions, serializer in serializer_choices:
         if api_version in versions:
@@ -103,20 +104,20 @@ def get_serializer_for_model(model, prefix=""):
     Raises:
         SerializerNotFound: if the requested serializer cannot be located.
     """
-    app_name, model_name = model._meta.label.split(".")
-    if app_name == "contenttypes" and model_name == "ContentType":
-        app_name = "extras"
+    app_label, model_name = model._meta.label.split(".")
+    if app_label == "contenttypes" and model_name == "ContentType":
+        app_path = "nautobot.extras"
     # Serializers for Django's auth models are in the users app
-    if app_name == "auth":
-        app_name = "users"
-    serializer_name = f"{app_name}.api.serializers.{prefix}{model_name}Serializer"
-    if app_name not in settings.PLUGINS:
-        serializer_name = f"nautobot.{serializer_name}"
+    elif app_label == "auth":
+        app_path = "nautobot.users"
+    else:
+        app_path = apps.get_app_config(app_label).name
+    serializer_name = f"{app_path}.api.serializers.{prefix}{model_name}Serializer"
     try:
         return dynamic_import(serializer_name)
     except AttributeError as exc:
         raise exceptions.SerializerNotFound(
-            f"Could not determine serializer for {app_name}.{model_name} with prefix '{prefix}'"
+            f"Could not determine serializer for {app_label}.{model_name} with prefix '{prefix}'"
         ) from exc
 
 
@@ -314,14 +315,9 @@ def nested_serializer_factory(relation_info, nested_depth):
         base_serializer_class = get_serializer_for_model(relation_info.related_model)
 
         class NautobotNestedSerializer(base_serializer_class):
-            class Meta:
-                model = relation_info.related_model
+            class Meta(base_serializer_class.Meta):
                 is_nested = True
                 depth = nested_depth - 1
-                if hasattr(base_serializer_class.Meta, "fields"):
-                    fields = base_serializer_class.Meta.fields
-                if hasattr(base_serializer_class.Meta, "exclude"):
-                    exclude = base_serializer_class.Meta.exclude
 
         NautobotNestedSerializer.__name__ = nested_serializer_name
         NESTED_SERIALIZER_CACHE[nested_serializer_name] = NautobotNestedSerializer
@@ -338,11 +334,11 @@ def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_rel
     When depth > 0, return the data for the appropriate nested serializer, plus a "generic_foreign_key = True" field.
 
     Args:
-        serializer: BaseSerializer
-        depth: Levels of nested serialization
-        obj: Object needs to be serialized
-        obj_related_field: Related object needs to be serialized
-        obj_related_field_name: Object's field name that represents the related object.
+        serializer (BaseSerializer): BaseSerializer
+        depth (int): Levels of nested serialization
+        obj (BaseModel): Object needs to be serialized
+        obj_related_field (BaseModel): Related object needs to be serialized
+        obj_related_field_name (str): Object's field name that represents the related object.
     """
     if depth == 0:
         url = obj_related_field.get_absolute_url(api=True)

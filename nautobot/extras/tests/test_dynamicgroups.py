@@ -40,6 +40,7 @@ from nautobot.extras.models import (
     RelationshipAssociation,
     Role,
     Status,
+    Tag,
 )
 from nautobot.ipam.models import Prefix
 from nautobot.tenancy.models import Tenant
@@ -135,9 +136,9 @@ class DynamicGroupTestBase(TestCase):
                 filter={"status": [statuses[0].name]},
                 content_type=cls.device_ct,
             ),
-            # No matches (bogus/invalid name match)
+            # No matches (bogus name match)
             DynamicGroup.objects.create(
-                name="Invalid Filter",
+                name="No Match Filter",
                 description="A group with a non-matching filter",
                 filter={"name": ["bogus"]},
                 content_type=cls.device_ct,
@@ -157,7 +158,13 @@ class DynamicGroupTestBase(TestCase):
         cls.second_child = cls.groups[2]
         cls.third_child = cls.groups[3]
         cls.nested_child = cls.groups[4]
-        cls.invalid_filter = cls.groups[5]
+        cls.no_match_filter = cls.groups[5]
+        cls.invalid_filter = DynamicGroup.objects.create(
+            name="Invalid Filter",
+            description="A group with a filter that's invalid",
+            filter={"platform": ["invalidvalue"]},
+            content_type=cls.device_ct,
+        )
 
         # Setup the group membership hiearchy to use for graph testing
         cls.memberships = [
@@ -279,6 +286,10 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         self.assertIn(device1, group.members)
         self.assertNotIn(device2, group.members)
 
+    def test_members_fail_closed(self):
+        """An invalid filter should fail closed, not fail open."""
+        self.assertFalse(self.invalid_filter.members.exists())
+
     def test_members_tree_nodes(self):
         """
         Test `DynamicGroup.members` when filtering on tree nodes like `Location`.
@@ -348,6 +359,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
             self.second_child.count: 1,
             self.third_child.count: 2,
             self.nested_child.count: 2,
+            self.no_match_filter.count: 0,
             self.invalid_filter.count: 0,
         }
         for grp, cnt in expected.items():
@@ -587,17 +599,17 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
     def test_add_child(self):
         """Test `DynamicGroup.add_child()`."""
         self.parent.add_child(
-            child=self.invalid_filter,
+            child=self.no_match_filter,
             operator=DynamicGroupOperatorChoices.OPERATOR_DIFFERENCE,
             weight=10,
         )
-        self.assertTrue(self.parent.children.filter(name=self.invalid_filter.name).exists())
+        self.assertTrue(self.parent.children.filter(name=self.no_match_filter.name).exists())
 
     def test_clean_child_validation(self):
         """Test various ways in which adding a child group should fail."""
         parent = self.parent
         parent.filter = {"location": ["Location 1"]}
-        child = self.invalid_filter
+        child = self.no_match_filter
 
         # parent.add_child() should fail
         with self.assertRaises(ValidationError):
@@ -959,6 +971,17 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         this_dg.set_filter({"example_plugin_prefix_tenant_name": [a_tenant]})
         this_dg.validated_save()
 
+    def test_unapplied_tags_can_be_added_to_dynamic_group_filters(self):
+        """
+        Test that tags without being applied to any member instances can still be added as filters on DynamicGroups
+        """
+        dg = self.groups[0]
+        unapplied_tag = Tag.objects.create(name="Unapplied Tag")
+        unapplied_tag.content_types.set([ContentType.objects.get_for_model(Device)])
+        unapplied_tag.save()
+        dg.filter["tags"] = [unapplied_tag.pk]
+        dg.validated_save()
+
     def test_member_caching_output(self):
         group = self.first_child
 
@@ -1063,7 +1086,7 @@ class DynamicGroupMembershipModelTest(DynamicGroupTestBase):  # TODO: BaseModelT
         with self.assertRaises(ValidationError):
             DynamicGroupMembership.objects.create(
                 parent_group=self.first_child,
-                group=self.invalid_filter,
+                group=self.no_match_filter,
                 weight=10,
                 operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
             )
@@ -1096,15 +1119,15 @@ class DynamicGroupFilterTest(DynamicGroupTestBase):
 
     def test_content_type(self):
         params = {"content_type": ["dcim.device", "virtualization.virtualmachine"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 7)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 8)
 
     def test_search(self):
         tests = {
             "Devices No Filter": 0,  # name
             "Invalid Filter": 1,  # name
             "A group with a non-matching filter": 1,  # description
-            "dcim": 7,  # content_type__app_label
-            "device": 7,  # content_type__model
+            "dcim": 8,  # content_type__app_label
+            "device": 8,  # content_type__model
         }
         for value, cnt in tests.items():
             params = {"q": value}

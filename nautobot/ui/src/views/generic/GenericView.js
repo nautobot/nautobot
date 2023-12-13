@@ -1,15 +1,20 @@
 import {
-    Box,
     Breadcrumb,
     Breadcrumbs,
+    calc,
     Flex,
+    getCssVar,
     NautobotGrid,
 } from "@nautobot/nautobot-ui";
 import { FiltersPanelContainer } from "@components/FiltersPanel";
 import { Navbar } from "@components/Navbar";
 import { useMemo } from "react";
 import { useSelector } from "react-redux";
-import { Link as ReactRouterLink, useLocation } from "react-router-dom";
+import {
+    Link as ReactRouterLink,
+    useLocation,
+    useParams,
+} from "react-router-dom";
 
 import { useGetUIMenuQuery } from "@utils/api";
 import { uiUrl } from "@utils/url";
@@ -88,6 +93,8 @@ export default function GenericView({
     const BREADCRUMB_KEY_HOME = "0_home";
 
     const { pathname } = useLocation();
+    const { app_label, model_name, object_id } = useParams();
+
     const { data: menu, isSuccess } = useGetUIMenuQuery();
 
     // Using useMemo to prevent unnecessary re-execution of findMenuPathRecursive
@@ -116,6 +123,8 @@ export default function GenericView({
     const hasBreadcrumbs =
         breadcrumbs.length > 0 && breadcrumbs[0].key !== BREADCRUMB_KEY_HOME;
 
+    const isListView = Boolean(app_label && model_name && !object_id);
+
     return (
         <Flex
             background="gray-0"
@@ -128,9 +137,16 @@ export default function GenericView({
             <Navbar appState={currentState} />
 
             <Flex flex="1" overflow="hidden">
-                <Box flex="1" overflow="auto" paddingBottom="md" paddingX="md">
+                <Flex
+                    direction="column"
+                    flex="1"
+                    overflow="auto"
+                    paddingBottom="md"
+                    paddingX="md"
+                >
                     {hasBreadcrumbs ? (
                         <Breadcrumbs
+                            flex="none"
                             marginBottom="md"
                             position="relative"
                             zIndex="5"
@@ -149,13 +165,24 @@ export default function GenericView({
                         gridAutoRows="auto"
                         {...(hasBreadcrumbs
                             ? { minHeight: "auto" }
+                            : { flex: "1 0 auto" })}
+                        {...(isListView
+                            ? {
+                                  gridAutoRows:
+                                      getCssVar("sizes.full").reference,
+                                  maxHeight: calc.subtract(
+                                      getCssVar("sizes.full"),
+                                      getCssVar("lineHeights.normal"),
+                                      getCssVar("space.md")
+                                  ),
+                              }
                             : undefined)}
                     >
                         {typeof children === "function"
                             ? children(menuPath)
                             : children}
                     </NautobotGrid>
-                </Box>
+                </Flex>
 
                 <FiltersPanelContainer />
             </Flex>

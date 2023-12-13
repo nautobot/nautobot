@@ -2,4 +2,5 @@
 
 from nautobot.core.admin import NautobotModelAdmin
 
+
 __all__ = ("NautobotModelAdmin",)

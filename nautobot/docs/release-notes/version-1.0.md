@@ -180,12 +180,13 @@ The "Related Devices" table has been removed from the detailed Device view.
 
 ## v1.0.3 (2021-06-21)
 
+### Security
+
+- [#418](https://github.com/nautobot/nautobot/issues/418) - Removed unused JQuery-UI component flagged by vulnerability scanner (CVE-2020-7729)
+
 ### Added
 
 - [#143](https://github.com/nautobot/nautobot/issues/143) - Added "copy" button on hover to `Device` detail view for name, primary IP addresses, and serial number.
-- [#183](https://github.com/nautobot/nautobot/issues/183) - Implemented a baseline integration test suite using Selenium
-- [#505](https://github.com/nautobot/nautobot/pull/505) - Added example of Okta OAuth2 integration to the docs.
-- [#523](https://github.com/nautobot/nautobot/issues/523) - Added instructions for using LDAP TLS Options to SSO documentation
 - [#576](https://github.com/nautobot/nautobot/pull/576) - `JobResult` detail views now support custom links and plugin template extensions
 
 ### Changed
@@ -194,7 +195,6 @@ The "Related Devices" table has been removed from the detailed Device view.
 
 ### Fixed
 
-- [#220](https://github.com/nautobot/nautobot/issues/220) - Added a troubleshooting section to the development guide for issues encountered when using the multi-threaded development server
 - [#342](https://github.com/nautobot/nautobot/issues/342) - Fixed inconsistent behavior in `Site.time_zone` to emit and accept input as a null field if not set when using API
 - [#389](https://github.com/nautobot/nautobot/issues/389) - Fixed incorrect TaggedItem base class that caused tag issues on MySQL.
 - [#421](https://github.com/nautobot/nautobot/issues/421) - Fixed `git: Reference at 'refs/heads/master' does not exist` by improving error-handling displaying a warning when a user tries to use an empty repo or a branch that does not exist upstream.
@@ -205,39 +205,45 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#501](https://github.com/nautobot/nautobot/issues/501) - Fixed missing prepopulation of address/prefix value into the form when adding an address or prefix under a parent prefix.
 - [#508](https://github.com/nautobot/nautobot/pull/508) - Fixed typo in `500.html` page template.
 - [#512](https://github.com/nautobot/nautobot/issues/512) - Fixed ServerError when cloning a record with exactly one `Tag` applied to it.
-- [#513](https://github.com/nautobot/nautobot/issues/513) - Fixed inadvertent omission of "Search" box from ReadTheDocs.
 - [#528](https://github.com/nautobot/nautobot/pull/528) - Fixed an ordering issue in the `test_EXTERNAL_AUTH_DEFAULT_groups` test case.
 - [#530](https://github.com/nautobot/nautobot/issues/530) - Fixed incorrect/confusing docstring in `nautobot.core.api.serializers.WritableNestedSerializer`
-- [#540](https://github.com/nautobot/nautobot/pull/540) - Fixed intermittent CI failures due to DockerHub rate limits.
-- [#542](https://github.com/nautobot/nautobot/pull/542) - Fixed incorrect documentation for running `nautobot-server test` commands.
 - [#562](https://github.com/nautobot/nautobot/issues/562) - Fixed inability to use a Git repository to define a `ConfigContext` mapped to a specific `DeviceType`.
 - [#564](https://github.com/nautobot/nautobot/pull/564) - Fixed incorrect docstring on `nautobot.utilities.tables.ButtonsColumn`.
 - [#570](https://github.com/nautobot/nautobot/issues/570) - Fixed inability to import `ExportTemplates` for the `VLAN` model via Git.
 - [#583](https://github.com/nautobot/nautobot/pull/583) - Fixed incorrect rejection of various forms when explicitly selecting a `null` option. (Port of [NetBox #5704](https://github.com/netbox-community/netbox/pull/5704))
 
-### Security
+### Documentation
 
-- [#418](https://github.com/nautobot/nautobot/issues/418) - Removed unused JQuery-UI component flagged by vulnerability scanner (CVE-2020-7729)
+- [#220](https://github.com/nautobot/nautobot/issues/220) - Added a troubleshooting section to the development guide for issues encountered when using the multi-threaded development server
+- [#505](https://github.com/nautobot/nautobot/pull/505) - Added example of Okta OAuth2 integration to the docs.
+- [#513](https://github.com/nautobot/nautobot/issues/513) - Fixed inadvertent omission of "Search" box from ReadTheDocs.
+- [#523](https://github.com/nautobot/nautobot/issues/523) - Added instructions for using LDAP TLS Options to SSO documentation
+- [#542](https://github.com/nautobot/nautobot/pull/542) - Fixed incorrect documentation for running `nautobot-server test` commands.
+
+### Housekeeping
+
+- [#183](https://github.com/nautobot/nautobot/issues/183) - Implemented a baseline integration test suite using Selenium
+- [#540](https://github.com/nautobot/nautobot/pull/540) - Fixed intermittent CI failures due to DockerHub rate limits.
 
 ## v1.0.2 (2021-05-27)
 
 ### Added
 
 - [#14](https://github.com/nautobot/nautobot/issues/14) - Plugins are now officially permitted to use the generic view classes defined in `nautobot.core.views.generic` and corresponding base templates defined in `nautobot/core/templates/generic/`.
-- [#162](https://github.com/nautobot/nautobot/issues/162) - Added Invoke tasks `dumpdata` and `loaddata` for database backup/restoration in the development environment.
 - [#430](https://github.com/nautobot/nautobot/pull/430) - GraphQL `ip_addresses` now includes an `assigned_object` field
 - [#438](https://github.com/nautobot/nautobot/issues/438) - Config contexts can now be assigned to individual DeviceTypes.
 - [#442](https://github.com/nautobot/nautobot/issues/442) - Added warning when mixing `@extras_features("graphql")` with explicitly declared GraphQL types
 - [#450](https://github.com/nautobot/nautobot/issues/450) - GraphQL `ip_addresses` now includes `interface` and `vminterface` fields; GraphQL `interfaces` and similar models now include `connected_endpoint` and `path` fields
 - [#451](https://github.com/nautobot/nautobot/issues/451) - Added static GraphQL type for VirtualMachine model
-- [#456](https://github.com/nautobot/nautobot/issues/456) - Added mkdocs-include-markdown-plugin
 - [#465](https://github.com/nautobot/nautobot/pull/465) - Added Virtual Chassis to the Home Page
 
 ### Changed
 
-- [#423](https://github.com/nautobot/nautobot/pull/423) - Clarified reference to `/config_contexts/` folder in Git user guide
 - [#448](https://github.com/nautobot/nautobot/issues/448) - `nautobot-server init`  no longer provides an option to overwrite the existing configuration files.
-- [#474](https://github.com/nautobot/nautobot/pull/474) - The `dummy_plugin` has been moved to a new `examples` directory in the Git repository and now serves as an example of implementing various plugin features.
+
+### Removed
+
+- [#456](https://github.com/nautobot/nautobot/issues/456) - Removed markdown-include
 
 ### Fixed
 
@@ -245,7 +251,6 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#396](https://github.com/nautobot/nautobot/issues/396) - Fixed `ValidationError` not being raised when Relationship filters are invalid
 - [#397](https://github.com/nautobot/nautobot/issues/397) - Fixed Git repository sync failure when token contains special characters
 - [#415](https://github.com/nautobot/nautobot/issues/415) - Fixed incorrect handling of Unicode in view test cases
-- [#417](https://github.com/nautobot/nautobot/pull/417) - Fixed incorrect link to Docker docs from installation docs
 - [#428](https://github.com/nautobot/nautobot/issues/428) - Fixed GraphQL error when handling ASNs greater than 2147483647
 - [#430](https://github.com/nautobot/nautobot/pull/430) - Fixed missing `ContentType` foreign keys in GraphQL
 - [#436](https://github.com/nautobot/nautobot/issues/436) - Fixed Redis Cacheops error when using newly generated `nautobot_config.py` file
@@ -253,12 +258,19 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#459](https://github.com/nautobot/nautobot/issues/459) - Fixed issue with Job forms not respecting `field_order`
 - [#461](https://github.com/nautobot/nautobot/issues/461) - Fixed `NAUTOBOT_DB_TIMEOUT` read as string in default config
 - [#482](https://github.com/nautobot/nautobot/issues/482) - Fixed `FieldError` from being raised when a `JobResult` references a model with no `name` field
-- [#486](https://github.com/nautobot/nautobot/issues/486) - Fixed failing Docker builds due to do missing `examples` development dependency
 - [#488](https://github.com/nautobot/nautobot/issues/488) - Fix migrations in MySQL by hard-coding the `VarbinaryIPField` to use `varbinary(16)`
 
-### Removed
+### Documentation
 
-- [#456](https://github.com/nautobot/nautobot/issues/456) - Removed markdown-include
+- [#417](https://github.com/nautobot/nautobot/pull/417) - Fixed incorrect link to Docker docs from installation docs
+- [#423](https://github.com/nautobot/nautobot/pull/423) - Clarified reference to `/config_contexts/` folder in Git user guide
+
+### Housekeeping
+
+- [#162](https://github.com/nautobot/nautobot/issues/162) - Added Invoke tasks `dumpdata` and `loaddata` for database backup/restoration in the development environment.
+- [#456](https://github.com/nautobot/nautobot/issues/456) - Added mkdocs-include-markdown-plugin as a development dependency.
+- [#474](https://github.com/nautobot/nautobot/pull/474) - The `dummy_plugin` has been moved to a new `examples` directory in the Git repository and now serves as an example of implementing various plugin features.
+- [#486](https://github.com/nautobot/nautobot/issues/486) - Fixed failing Docker builds due to do missing `examples` development dependency
 
 ## v1.0.1 (2021-05-06)
 
@@ -266,15 +278,9 @@ The "Related Devices" table has been removed from the detailed Device view.
 
 - [#242](https://github.com/nautobot/nautobot/issues/242) - Added a production-ready `Dockerfile` for clustered deployment
 - [#356](https://github.com/nautobot/nautobot/issues/356) - Added a new `nautobot-server startplugin` management command to ease plugin development
-- [#366](https://github.com/nautobot/nautobot/pull/366) - Added GraphQL filter tests for `interfaces` queries and added missing unit tests for `Interface` filtersets
-
-### Changed
-
-- [#362](https://github.com/nautobot/nautobot/pull/362) - Updated sample code in plugin development guide to inherit from `BaseModel`
 
 ### Fixed
 
-- [#15](https://github.com/nautobot/nautobot/issues/15) - Added documentation for plugins using generic models to get change logging using `ChangeLoggedModel`
 - [#336](https://github.com/nautobot/nautobot/issues/336) - Fixed `nautobot.utilities.api.get_serializer_for_model` to now support the plugins namespace
 - [#337](https://github.com/nautobot/nautobot/issues/337) - Fixed `nautobot.extras.plugins.api.views.PluginsAPIRootView` no longer creates null entries when `PluginConfig` does not define a `base_url`
 - [#365](https://github.com/nautobot/nautobot/issues/365) - Fixed incorrect field types on GraphQL ID fields
@@ -282,7 +288,16 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#393](https://github.com/nautobot/nautobot/issues/393) - Fixed creating a `VirtualChassis` with a master device changes the master device's `vc_position`
 - [#398](https://github.com/nautobot/nautobot/issues/398) - Fixed `VirtualChassis` edit view to now show "Update" button vs. "Create"
 - [#399](https://github.com/nautobot/nautobot/issues/399) - Fixed `nautobot.utilities.utils.get_filterset_for_model` to now support the plugins namespace
-- [#400](https://github.com/nautobot/nautobot/issues/400) - Fixed the class_path format for Jobs API usage documentation not being clear enough
+
+### Documentation
+
+- [#15](https://github.com/nautobot/nautobot/issues/15) - Added documentation for plugins using generic models to get change logging using `ChangeLoggedModel`
+- [#362](https://github.com/nautobot/nautobot/pull/362) - Updated sample code in plugin development guide to inherit from `BaseModel`
+- [#400](https://github.com/nautobot/nautobot/issues/400) - Fixed the `class_path` format for Jobs API usage documentation not being clear enough
+
+### Housekeeping
+
+- [#366](https://github.com/nautobot/nautobot/pull/366) - Added GraphQL filter tests for `interfaces` queries and added missing unit tests for `Interface` filtersets
 - [#402](https://github.com/nautobot/nautobot/issues/402) - Docs build requirements will now install `markdown-include` version from PyPI instead of GitHub
 - [#409](https://github.com/nautobot/nautobot/pull/409) - Fixed misspelling: "Datbase" --> "Database" in `nautobot_config.py.j2`
 
@@ -295,7 +310,6 @@ The "Related Devices" table has been removed from the detailed Device view.
 ### Changed
 
 - [#333](https://github.com/nautobot/nautobot/issues/333) - Relationships now display the name of the related object type as well as the count
-- [#358](https://github.com/nautobot/nautobot/pull/358) - Updated Python dependencies to their latest patch versions
 
 ### Fixed
 
@@ -307,23 +321,16 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#359](https://github.com/nautobot/nautobot/issues/359) - Fixed incorrect GraphQL filtering of cables by `site`
 - [#361](https://github.com/nautobot/nautobot/issues/361) - Fixed duplicate "tags" field when creating a cable connection
 
+### Dependencies
+
+- [#358](https://github.com/nautobot/nautobot/pull/358) - Updated Python dependencies to their latest patch versions
+
 ## v1.0.0b4 (2021-04-19)
-
-### Added
-
-- [#96](https://github.com/nautobot/nautobot/issues/96) - Implemented user guide documentation for GraphQL
-- [#97](https://github.com/nautobot/nautobot/issues/97) - Implemented user guide documentation for Git as a Data Source
 
 ### Changed
 
-- [#150](https://github.com/nautobot/nautobot/issues/150) - Revised all documentation referencing objects with status fields
-- [#175](https://github.com/nautobot/nautobot/issues/175) - Revised plugin development guide to use Poetry
-- [#211](https://github.com/nautobot/nautobot/pull/211) - Travis CI build improvements to simplify entry points and make tests fail faster
 - [#217](https://github.com/nautobot/nautobot/pull/217) - Replaced JSONB aggregation with custom cross-database implementation that supports PG and MySQL
 - [#245](https://github.com/nautobot/nautobot/pull/245) - Replaced PG-specific "advisory locks" with cross-database distributed Redis lock
-- [#252](https://github.com/nautobot/nautobot/pull/252) - Revised and clarified install instructions for CentOS
-- [#262](https://github.com/nautobot/nautobot/issues/262) - Revised Nautobot upgrade and NetBox migration guides
-- [#273](https://github.com/nautobot/nautobot/pull/273) - Update to jQuery 3.6.0
 - [#289](https://github.com/nautobot/nautobot/pull/289) - Updated natural unicode-aware sorting for interface/device names to support MySQL
 
 ### Fixed
@@ -334,7 +341,6 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#233](https://github.com/nautobot/nautobot/issues/233) - Fix to enable filtering by booleans in GraphQL
 - [#247](https://github.com/nautobot/nautobot/issues/247) - Fix to enable filtering by custom field values in GraphQL
 - [#260](https://github.com/nautobot/nautobot/issues/260) - Fix cable path tracing by not coercing UUID values to version 4
-- [#264](https://github.com/nautobot/nautobot/issues/264) - Fix missing parenthesis in datasources example
 - [#265](https://github.com/nautobot/nautobot/issues/265) - Fix 500 crash in API when posting ports as strings to IPAM services
 - [#269](https://github.com/nautobot/nautobot/issues/269) - Fix `NoneType` error when searching for /31 prefixes
 - [#272](https://github.com/nautobot/nautobot/pull/272) - Fix invalid f-string in `invoke createsuperuser`
@@ -352,10 +358,28 @@ The "Related Devices" table has been removed from the detailed Device view.
 - [#308](https://github.com/nautobot/nautobot/issues/308) - Fix missing template error when viewing a PowerFeed connected to a PowerPort on a Device.
 - [#318](https://github.com/nautobot/nautobot/issues/318) - Fix `TypeError` when creating any IPAM network object  with prefix of /0
 - [#320](https://github.com/nautobot/nautobot/issues/320) - Fix issue causing model validation to fail on all IPAM network objects
-- [#324](https://github.com/nautobot/nautobot/pull/324) - Fix unit test execution on MySQL by changing subquery limiting to list slicing
 - [#325](https://github.com/nautobot/nautobot/issues/325) - Fix to allow relationship associations to be unset in the web UI
 - [#326](https://github.com/nautobot/nautobot/issues/326) - Fix 404 error when attempting to delete a RelationshipAssociation from the list view
 - [#373](https://github.com/nautobot/nautobot/pull/373) - Fix missing "Bulk Add IP Addresses" tab
+
+### Dependencies
+
+- [#273](https://github.com/nautobot/nautobot/pull/273) - Update to jQuery 3.6.0
+
+### Documentation
+
+- [#96](https://github.com/nautobot/nautobot/issues/96) - Implemented user guide documentation for GraphQL
+- [#97](https://github.com/nautobot/nautobot/issues/97) - Implemented user guide documentation for Git as a Data Source
+- [#150](https://github.com/nautobot/nautobot/issues/150) - Revised all documentation referencing objects with status fields
+- [#175](https://github.com/nautobot/nautobot/issues/175) - Revised plugin development guide to use Poetry
+- [#252](https://github.com/nautobot/nautobot/pull/252) - Revised and clarified install instructions for CentOS
+- [#262](https://github.com/nautobot/nautobot/issues/262) - Revised Nautobot upgrade and NetBox migration guides
+- [#264](https://github.com/nautobot/nautobot/issues/264) - Fix missing parenthesis in datasources example
+
+### Housekeeping
+
+- [#211](https://github.com/nautobot/nautobot/pull/211) - Travis CI build improvements to simplify entry points and make tests fail faster
+- [#324](https://github.com/nautobot/nautobot/pull/324) - Fix unit test execution on MySQL by changing subquery limiting to list slicing
 
 ## v1.0.0b3 (2021-04-05)
 
@@ -364,10 +388,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 
 ### Added
 
-- [#100](https://github.com/nautobot/nautobot/issues/100) - Added detailed documentation of the `nautobot-server` command
 - [#105](https://github.com/nautobot/nautobot/issues/105) - Added tooltip with detailed information to utilization graph bars.
-- [#109](https://github.com/nautobot/nautobot/pull/109) - Docker development environment build now automatically installs from any present `local_requirements.txt` file
-- [#121](https://github.com/nautobot/nautobot/pull/121) - Added "Data Model Changes" section to the "Migrating from NetBox" documentation
 - [#141](https://github.com/nautobot/nautobot/pull/141) - Custom Link UI now includes example usage hints
 - [#227](https://github.com/nautobot/nautobot/pull/227) - Add QFSP+ (64GFC) FiberChannel interface type
 - [#236](https://github.com/nautobot/nautobot/pull/236) - Add `post_upgrade` to developer docs and add `invoke post-upgrade`
@@ -386,27 +407,17 @@ Other changes:
 
 - [#78](https://github.com/nautobot/nautobot/pull/78) - Replaced PostgreSQL-specific IP network/address fields with more generic field types
 - [#83](https://github.com/nautobot/nautobot/issues/83) - Custom user model added; UserConfig model merged into User model
-- [#84](https://github.com/nautobot/nautobot/issues/84) - Revised developer documentation for clarity and current workflows
 - [#98](https://github.com/nautobot/nautobot/issues/98) - Simplify MultipleContentTypeField boilerplate
-- [#119](https://github.com/nautobot/nautobot/pull/119) - Various documentation improvements
-- [#120](https://github.com/nautobot/nautobot/issues/120) - Revise development release checklist document for new processes
 - [#128](https://github.com/nautobot/nautobot/pull/128) - Overview of usage for the `nautobot-netbox-importer` plugin could be mistaken for full instructions
 - [#122](https://github.com/nautobot/nautobot/pull/122) - Improved installation flow for creating nautobot user and virtualenv
 - [#131](https://github.com/nautobot/nautobot/pull/131) - Replaced PostgreSQL-specific ArrayField with a more generic JSONArrayField
 - [#137](https://github.com/nautobot/nautobot/issues/137) - Explicitly disallow Custom Field Name Changes
 - [#142](https://github.com/nautobot/nautobot/pull/142) - Converted various config validation checks into proper Django checks
-- [#149](https://github.com/nautobot/nautobot/issues/149) - Unify optional settings documentation for `REMOTE_AUTH*/SOCIAL_AUTH*`
-- [#159](https://github.com/nautobot/nautobot/issues/159) - Update documentation for external authentication SSO Backend to get a proper install
-- [#180](https://github.com/nautobot/nautobot/pull/180) - Revised available Invoke tasks for simplicity and maintainability
 - [#208](https://github.com/nautobot/nautobot/pull/208) - Custom fields model refactor
-- [#216](https://github.com/nautobot/nautobot/pull/216) - Update install docs to address inconsistent experience w/ `$PATH`
-- [#235](https://github.com/nautobot/nautobot/pull/235) - Update restart docs to include worker
 - [#241](https://github.com/nautobot/nautobot/pull/241) - Swap `contrib.postgres.fields.JSONField` for `db.models.JSONField`
 
 ### Removed
 
-- [#124](https://github.com/nautobot/nautobot/pull/124) - Removed incorrect statement from feature request template
-- [#161](https://github.com/nautobot/nautobot/pull/161) - Removed leftover references in documentation to `RQ_DEFAULT_TIMEOUT`
 - [#188](https://github.com/nautobot/nautobot/pull/189) - Remove `CSRF_TRUSTED_ORIGINS` from core settings
 - [#189](https://github.com/nautobot/nautobot/pull/189) - Remove all references to `settings.BASE_PATH`
 
@@ -418,51 +429,55 @@ Other changes:
 - [#95](https://github.com/nautobot/nautobot/issues/95) - Plugin load errors under Gunicorn
 - [#127](https://github.com/nautobot/nautobot/issues/127) - SSL error: decryption failed or bad record mac & SSL SYSCALL error: EOF detected
 - [#132](https://github.com/nautobot/nautobot/issues/132) - Generated `nautobot_config.py` did not include a trailing newline
-- [#134](https://github.com/nautobot/nautobot/issues/134) - Missing venv activation step in install guide
 - [#135](https://github.com/nautobot/nautobot/issues/135) - Custom field Selection value name change causes data inconsistency
-- [#147](https://github.com/nautobot/nautobot/issues/147) - Login failed when BASE_PATH is set
+- [#147](https://github.com/nautobot/nautobot/issues/147) - Login failed when `BASE_PATH` is set
 - [#153](https://github.com/nautobot/nautobot/issues/153) - Editing an existing user token shows "create" buttons instead of "update"
-- [#154](https://github.com/nautobot/nautobot/issues/154) - Some tests were failing when run in the development Docker container
 - [#155](https://github.com/nautobot/nautobot/issues/155) - NAPALM driver string not displayed in Platform detail view
 - [#166](https://github.com/nautobot/nautobot/issues/166) - Contrib directory is missing (including the apache.conf)
-- [#168](https://github.com/nautobot/nautobot/issues/168) - Incorrect `AUTHENTICATION_BACKENDS` example in remote authentication documentation
 - [#170](https://github.com/nautobot/nautobot/issues/170) - GraphQL filtering failure returned all objects instead of none
 - [#172](https://github.com/nautobot/nautobot/issues/172) - Incorrect whitespace in some HTML template tags
-- [#181](https://github.com/nautobot/nautobot/pull/181) - Incorrect UI reference in Webhook documentation
 - [#185](https://github.com/nautobot/nautobot/issues/185) - Possible infinite loop in cable tracing algorithm
 - [#186](https://github.com/nautobot/nautobot/issues/186) - Example Jobs are not updated for Nautobot
-- [#201](https://github.com/nautobot/nautobot/issues/201) - Custom Fields cannot filter by name for content_types
-- [#205](https://github.com/nautobot/nautobot/issues/205) - API Documentation shows numeric id instead of UUID
-- [#213](https://github.com/nautobot/nautobot/issues/213) - Programming Error Exception Value: relation "social_auth_usersocialauth" does not exist
+- [#201](https://github.com/nautobot/nautobot/issues/201) - Custom Fields cannot filter by name for `content_types`
+- [#213](https://github.com/nautobot/nautobot/issues/213) - Programming Error Exception Value: relation `"social_auth_usersocialauth"` does not exist
 - [#224](https://github.com/nautobot/nautobot/issues/224) - Edit view for IPAM network objects does not emit the current network address value
+
+### Documentation
+
+- [#84](https://github.com/nautobot/nautobot/issues/84) - Revised developer documentation for clarity and current workflows
+- [#100](https://github.com/nautobot/nautobot/issues/100) - Added detailed documentation of the `nautobot-server` command
+- [#119](https://github.com/nautobot/nautobot/pull/119) - Various documentation improvements
+- [#120](https://github.com/nautobot/nautobot/issues/120) - Revise development release checklist document for new processes
+- [#121](https://github.com/nautobot/nautobot/pull/121) - Added "Data Model Changes" section to the "Migrating from NetBox" documentation
+- [#134](https://github.com/nautobot/nautobot/issues/134) - Missing venv activation step in install guide
+- [#149](https://github.com/nautobot/nautobot/issues/149) - Unify optional settings documentation for `REMOTE_AUTH*/SOCIAL_AUTH*`
+- [#159](https://github.com/nautobot/nautobot/issues/159) - Update documentation for external authentication SSO Backend to get a proper install
+- [#161](https://github.com/nautobot/nautobot/pull/161) - Removed leftover references in documentation to `RQ_DEFAULT_TIMEOUT`
+- [#168](https://github.com/nautobot/nautobot/issues/168) - Incorrect `AUTHENTICATION_BACKENDS` example in remote authentication documentation
+- [#181](https://github.com/nautobot/nautobot/pull/181) - Incorrect UI reference in Webhook documentation
+- [#216](https://github.com/nautobot/nautobot/pull/216) - Update install docs to address inconsistent experience w/ `$PATH`
+- [#205](https://github.com/nautobot/nautobot/issues/205) - API Documentation shows numeric id instead of UUID
+- [#235](https://github.com/nautobot/nautobot/pull/235) - Update restart docs to include worker
+
+### Housekeeping
+
+- [#109](https://github.com/nautobot/nautobot/pull/109) - Docker development environment build now automatically installs from any present `local_requirements.txt` file
+- [#124](https://github.com/nautobot/nautobot/pull/124) - Removed incorrect statement from feature request template
+- [#154](https://github.com/nautobot/nautobot/issues/154) - Some tests were failing when run in the development Docker container
+- [#180](https://github.com/nautobot/nautobot/pull/180) - Revised available Invoke tasks for simplicity and maintainability
 - [#255](https://github.com/nautobot/nautobot/issues/255) - Update docs `edit_uri` to point to correct path
 
 ## v1.0.0b2 (2021-03-08)
 
 ### Added
 
-- [#35](https://github.com/nautobot/nautobot/issues/35) - Documentation for troubleshooting Nautobot's interaction with SELinux.
-- [#47](https://github.com/nautobot/nautobot/issues/47) - Basic user documentation for Relationships feature.
 - [#48](https://github.com/nautobot/nautobot/issues/48) - Additional unit testing and bug fixes for Relationships feature.
 - [#99](https://github.com/nautobot/nautobot/pull/99) - Add `BASE_PATH` to `development/nautobot_config.py`.
-- [#101](https://github.com/nautobot/nautobot/issues/101) - Complete documentation of `NAUTOBOT_ROOT`
 - [#107](https://github.com/nautobot/nautobot/pull/107) - Add `nautobot-server post_upgrade` command
 
 ### Changed
 
-- [#52](https://github.com/nautobot/nautobot/pull/52) - Disabled Poetry's "parallel installation" feature for CI and development builds.
-- [#61](https://github.com/nautobot/nautobot/pull/61) - Updated pull request template contents for clarity.
-- [#74](https://github.com/nautobot/nautobot/pull/74) - Refactor install instructions to be more streamlined and more intuitive.
-    - Renamed `nautobot-rq` service to `nautobot-worker`
-    - Replaced `BASE_STORAGE_DIR` configuration setting with `NAUTOBOT_ROOT`; this new setting also influences the default value of `DEFAULT_CONFIG_PATH`.
 - [#88](https://github.com/nautobot/nautobot/issues/88) - Replace Gunicorn w/ uWSGI
-- [#89](https://github.com/nautobot/nautobot/pull/89) - Development workflow improvements
-    - Replace `pycodestyle` with `flake8` for linting.
-    - Add `invoke black` and `invoke tests` commands
-    - Improve speed of development Docker container rebuilds
-    - `django-debug-toolbar` is now a development dependency rather than a production dependency for Nautobot.
-- [#106](https://github.com/nautobot/nautobot/pull/106) - Revise deployment docs to use `$PATH` instead of venv activate
-- [#108](https://github.com/nautobot/nautobot/pull/108) - Document special workflow for development using containers on remote servers
 
 ### Removed
 
@@ -470,19 +485,40 @@ Other changes:
 
 ### Fixed
 
-- [#36](https://github.com/nautobot/nautobot/pull/36) - Broken links to ReadTheDocs pages.
 - [#41](https://github.com/nautobot/nautobot/pull/41) - Incorrect field name in CustomLink Admin page.
-- [#42](https://github.com/nautobot/nautobot/issues/42) - Incorrect link to `nautobot-plugin-golden-config` GitHub repository
 - [#45](https://github.com/nautobot/nautobot/issues/45) - Incorrect button labels when creating/editing an Interface record.
-- [#43](https://github.com/nautobot/nautobot/issues/43) - Incorrect commands in documentation for adding optional dependencies to `local_requirements.txt`
-- [#51](https://github.com/nautobot/nautobot/issues/51) - Incorrect functioning of "development container" in VSCode integration.
-- [#57](https://github.com/nautobot/nautobot/pull/57) - Incorrect `AUTHENTICATION_BACKENDS` example in `authentication/ldap.md`
 - [#63](https://github.com/nautobot/nautobot/issues/63) - Incorrect help text for "Destination Label" field when creating/editing Relationship records.
-- [#64](https://github.com/nautobot/nautobot/issues/64) - Incorrect absolute link to ReadTheDocs page.
-- [#69](https://github.com/nautobot/nautobot/issues/69) - More incorrect links to ReadTheDocs pages.
-- [#79](https://github.com/nautobot/nautobot/issues/79) - Incorrect internal documentation link to `STORAGE_BACKEND` optional setting.
 - [#81](https://github.com/nautobot/nautobot/issues/81) - Unable to change Device rack position after creation.
 - [#93](https://github.com/nautobot/nautobot/issues/93) - Bug when setting `CACHEOPS_DEFAULTS` timeout value to `0`.
+
+### Documentation
+
+- [#35](https://github.com/nautobot/nautobot/issues/35) - Documentation for troubleshooting Nautobot's interaction with SELinux.
+- [#36](https://github.com/nautobot/nautobot/pull/36) - Broken links to ReadTheDocs pages.
+- [#42](https://github.com/nautobot/nautobot/issues/42) - Incorrect link to `nautobot-plugin-golden-config` GitHub repository
+- [#43](https://github.com/nautobot/nautobot/issues/43) - Incorrect commands in documentation for adding optional dependencies to `local_requirements.txt`
+- [#47](https://github.com/nautobot/nautobot/issues/47) - Basic user documentation for Relationships feature.
+- [#57](https://github.com/nautobot/nautobot/pull/57) - Incorrect `AUTHENTICATION_BACKENDS` example in `authentication/ldap.md`
+- [#64](https://github.com/nautobot/nautobot/issues/64) - Incorrect absolute link to ReadTheDocs page.
+- [#69](https://github.com/nautobot/nautobot/issues/69) - More incorrect links to ReadTheDocs pages.
+- [#74](https://github.com/nautobot/nautobot/pull/74) - Refactor install instructions to be more streamlined and more intuitive.
+    - Renamed `nautobot-rq` service to `nautobot-worker`
+    - Replaced `BASE_STORAGE_DIR` configuration setting with `NAUTOBOT_ROOT`; this new setting also influences the default value of `DEFAULT_CONFIG_PATH`.
+- [#79](https://github.com/nautobot/nautobot/issues/79) - Incorrect internal documentation link to `STORAGE_BACKEND` optional setting.
+- [#101](https://github.com/nautobot/nautobot/issues/101) - Complete documentation of `NAUTOBOT_ROOT`
+- [#106](https://github.com/nautobot/nautobot/pull/106) - Revise deployment docs to use `$PATH` instead of venv activate
+
+### Housekeeeping
+
+- [#51](https://github.com/nautobot/nautobot/issues/51) - Incorrect functioning of "development container" in VSCode integration.
+- [#52](https://github.com/nautobot/nautobot/pull/52) - Disabled Poetry's "parallel installation" feature for CI and development builds.
+- [#61](https://github.com/nautobot/nautobot/pull/61) - Updated pull request template contents for clarity.
+- [#89](https://github.com/nautobot/nautobot/pull/89) - Development workflow improvements
+    - Replace `pycodestyle` with `flake8` for linting.
+    - Add `invoke black` and `invoke tests` commands
+    - Improve speed of development Docker container rebuilds
+    - `django-debug-toolbar` is now a development dependency rather than a production dependency for Nautobot.
+- [#108](https://github.com/nautobot/nautobot/pull/108) - Document special workflow for development using containers on remote servers
 
 ## v1.0.0b1 (2021-02-24)
 

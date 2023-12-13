@@ -10,7 +10,7 @@ from textwrap import dedent
 from typing import final
 import warnings
 
-from billiard.einfo import ExceptionInfo
+from billiard.einfo import ExceptionInfo, ExceptionWithTraceback
 from celery import states
 from celery.exceptions import NotRegistered, Retry
 from celery.result import EagerResult
@@ -21,7 +21,6 @@ from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
 from django.db.models import Model
@@ -41,7 +40,7 @@ from nautobot.core.forms import (
 )
 from nautobot.core.utils.lookup import get_model_from_name
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
-from nautobot.extras.context_managers import change_logging, JobChangeContext, JobHookChangeContext
+from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.forms import JobForm
 from nautobot.extras.models import (
     FileProxy,
@@ -121,10 +120,12 @@ class BaseJob(Task):
             deserialized_kwargs = self.deserialize_data(kwargs)
         except Exception as err:
             raise RunJobTaskFailed("Error initializing job") from err
-        context_class = JobHookChangeContext if isinstance(self, JobHookReceiver) else JobChangeContext
-        change_context = context_class(user=self.user, context_detail=self.class_path)
+        if isinstance(self, JobHookReceiver):
+            change_context = ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK
+        else:
+            change_context = ObjectChangeEventContextChoices.CONTEXT_JOB
 
-        with change_logging(change_context):
+        with web_request_context(user=self.user, context_detail=self.class_path, context=change_context):
             if self.celery_kwargs.get("nautobot_job_profile", False) is True:
                 import cProfile
 
@@ -193,7 +194,7 @@ class BaseJob(Task):
             kwargs (Dict): Original keyword arguments for the task to execute.
 
         Returns:
-            None: The return value of this handler is ignored.
+            (None): The return value of this handler is ignored.
         """
         self.clear_cache()
 
@@ -248,7 +249,7 @@ class BaseJob(Task):
             kwargs (Dict): Original keyword arguments for the executed task.
 
         Returns:
-            None: The return value of this handler is ignored.
+            (None): The return value of this handler is ignored.
         """
 
     def on_retry(self, exc, task_id, args, kwargs, einfo):
@@ -264,7 +265,7 @@ class BaseJob(Task):
             einfo (~billiard.einfo.ExceptionInfo): Exception information.
 
         Returns:
-            None: The return value of this handler is ignored.
+            (None): The return value of this handler is ignored.
         """
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
@@ -280,7 +281,7 @@ class BaseJob(Task):
             einfo (~billiard.einfo.ExceptionInfo): Exception information.
 
         Returns:
-            None: The return value of this handler is ignored.
+            (None): The return value of this handler is ignored.
         """
 
     def after_return(self, status, retval, task_id, args, kwargs, einfo):
@@ -298,7 +299,7 @@ class BaseJob(Task):
             einfo - ExceptionInfo instance, containing the traceback (if any).
 
         Returns:
-            None: The return value of this handler is ignored.
+            (None): The return value of this handler is ignored.
         """
 
         # Cleanup FileProxy objects
@@ -361,6 +362,10 @@ class BaseJob(Task):
             },
             "properties": options,  # one line fix to overloaded method
         }
+        if "stamped_headers" in options:
+            request["stamped_headers"] = maybe_list(options["stamped_headers"])
+            request["stamps"] = {header: maybe_list(options.get(header, [])) for header in request["stamped_headers"]}
+
         tb = None
         tracer = build_tracer(
             task.name,
@@ -373,6 +378,8 @@ class BaseJob(Task):
         retval = ret.retval
         if isinstance(retval, ExceptionInfo):
             retval, tb = retval.exception, retval.traceback
+            if isinstance(retval, ExceptionWithTraceback):
+                retval = retval.exc
         if isinstance(retval, Retry) and retval.sig is not None:
             return retval.sig.apply(retries=retries + 1)
         state = states.SUCCESS if ret.info is None else ret.info.state
@@ -758,7 +765,7 @@ class BaseJob(Task):
             pk (uuid): Primary key of the `FileProxy` to retrieve
 
         Returns:
-            File-like object
+            (FileProxy): A File-like object
         """
         fp = FileProxy.objects.get(pk=pk)
         return fp.file
@@ -773,7 +780,7 @@ class BaseJob(Task):
             uploaded_file (file): File handle of file to save to database
 
         Returns:
-            uuid
+            (uuid): The pk of the `FileProxy` object
         """
         fp = FileProxy.objects.create(name=uploaded_file.name, file=uploaded_file)
         return fp.pk
@@ -785,7 +792,7 @@ class BaseJob(Task):
             files_to_delete (*args): List of primary keys to delete
 
         Returns:
-            int (number of objects deleted)
+            (int): number of objects deleted
         """
         files = FileProxy.objects.filter(pk__in=files_to_delete)
         num = 0
@@ -1172,12 +1179,11 @@ def enqueue_job_hooks(object_change):
         return
 
     # Determine whether this type of object supports job hooks
-    model_type = object_change.changed_object._meta.model
-    if model_type not in ChangeLoggedModelsQuery().list_subclasses():
+    content_type = object_change.changed_object_type
+    if content_type not in ChangeLoggedModelsQuery().as_queryset():
         return
 
     # Retrieve any applicable job hooks
-    content_type = ContentType.objects.get_for_model(object_change.changed_object)
     action_flag = {
         ObjectChangeActionChoices.ACTION_CREATE: "type_create",
         ObjectChangeActionChoices.ACTION_UPDATE: "type_update",

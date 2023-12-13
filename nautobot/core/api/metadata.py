@@ -1,21 +1,19 @@
 import contextlib
-from copy import deepcopy
 from typing import Any, Dict, List
 
 from django.core.exceptions import PermissionDenied
+import django_filters
 from django.http import Http404
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 import drf_react_template.schema_form_encoder as schema
 from rest_framework import exceptions
-from rest_framework import fields as drf_fields, relations as drf_relations, serializers as drf_serializers
+from rest_framework import fields as drf_fields, serializers as drf_serializers
 from rest_framework.metadata import SimpleMetadata
 from rest_framework.request import clone_request
 
-from nautobot.core.constants import RESERVED_NAMES_FOR_OBJECT_DETAIL_VIEW_SCHEMA
-from nautobot.core.exceptions import ViewConfigException
-from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.filtering import build_lookup_label, get_filter_field_label
 
 
 # FIXME(jathan): I hate this pattern that these fields are hard-coded here. But for the moment, this
@@ -195,9 +193,6 @@ class NautobotMetadata(SimpleMetadata):
     - uiSchema: The object UI schema which describes the form layout in the UI
     """
 
-    view_serializer = None
-    advanced_tab_fields = ["id", "url", "object_type", "composite_key", "created", "last_updated", "natural_slug"]
-
     def determine_actions(self, request, view):
         """Generate the actions and return the names of the allowed methods."""
         actions = []
@@ -223,72 +218,17 @@ class NautobotMetadata(SimpleMetadata):
         serializer_meta = getattr(serializer, "Meta", None)
         return list(getattr(serializer_meta, "list_display_fields", []))
 
-    def get_advanced_tab_fields(self, serializer):
-        """Try to get the advanced tab fields or default to an empty list."""
-        if hasattr(serializer.Meta, "advanced_view_config"):
-            # Gather all fields defined in the custom `advanced_view_config` if there is one defined on the serializer.
-            advanced_view_layout = serializer.Meta.advanced_view_config["layout"]
-            advanced_fields = []
-            for section in advanced_view_layout:
-                for value in section.values():
-                    advanced_fields += value["fields"]
-        else:
-            # Default advanced fields
-            advanced_fields = self.advanced_tab_fields
-        advanced_fields = [field for field in advanced_fields if field in serializer.fields.keys()]
-        return advanced_fields
-
-    def determine_view_options(self, request, serializer):
-        """Determine view options that will be used for non-form display metadata."""
-        list_display = []
-        fields = []
-
-        processor = NautobotColumnProcessor(serializer, request.parser_context)
-        field_map = dict(serializer.fields)
-        all_fields = list(field_map)
-
-        # Explicitly order the "big ugly" fields to the bottom.
-        processor.order_fields(all_fields)
-        list_display_fields = self.get_list_display_fields(serializer)
-
-        # Process the list_display fields first.
-        for field_name in list_display_fields:
-            try:
-                field = field_map[field_name]
-            except KeyError:
-                continue  # Ignore unknown fields.
-            column_data = processor._get_column_properties(field, field_name)
-            list_display.append(column_data)
-            fields.append(column_data)
-
-        # Process the rest of the fields second.
-        for field_name in all_fields:
-            # Don't process list display fields twice.
-            if field_name in list_display_fields:
-                continue
-            try:
-                field = field_map[field_name]
-            except KeyError:
-                continue  # Ignore unknown fields.
-            column_data = processor._get_column_properties(field, field_name)
-            fields.append(column_data)
-
-        return {
-            "retrieve": self.determine_detail_view_schema(serializer),
-            "advanced": self.determine_advanced_view_schema(serializer),
-            "list_display_fields": list_display,
-            "fields": fields,
-        }
-
     def determine_metadata(self, request, view):
         """This is the metadata that gets returned on an `OPTIONS` request."""
         metadata = super().determine_metadata(request, view)
 
+        # Include the object type label for this model.
+        object_type = view.queryset.model._meta.label_lower if getattr(view, "queryset", None) else "unknown"
+        metadata["object_type"] = object_type
+
         # If there's a serializer, do the needful to bind the schema/uiSchema.
         if hasattr(view, "get_serializer"):
             serializer = view.get_serializer()
-            # TODO(timizuo): Replace every serializer passed as an attribute to a method with this
-            self.view_serializer = serializer
             # TODO(jathan): Bit of a WIP here. Will likely refactor. There might be cases where we
             # want to explicitly override the UI field ordering, but that's not yet accounted for
             # here. For now the assertion is always put the `list_display_fields` first, and then
@@ -303,178 +243,47 @@ class NautobotMetadata(SimpleMetadata):
                 }
             )
 
-            metadata["view_options"] = self.determine_view_options(request, serializer)
+            metadata["filters"] = self.get_filter_info(view)
+
+            if hasattr(serializer, "determine_view_options"):
+                metadata["view_options"] = serializer.determine_view_options(request)
 
         return metadata
 
-    def add_missing_field_to_view_config_layout(self, view_config_layout, exclude_fields):
-        """Add fields from view serializer fields that are missing from view_config_layout."""
-        serializer_fields = self.view_serializer.fields.keys()
-        view_config_fields = [
-            field for config in view_config_layout for field_list in config.values() for field in field_list["fields"]
-        ]
-        missing_fields = sorted(set(serializer_fields) - set(view_config_fields) - set(exclude_fields))
-        view_config_layout[0]["Other Fields"] = {"fields": missing_fields}
-        return view_config_layout
+    def get_filter_info(self, view):
+        """Enumerate filterset information for the view. Returns a dictionary with the following format:
 
-    def restructure_view_config(self, serializer, view_config, detail=True):
-        """
-        Restructure the view config by removing specific fields
-        ("composite_key", "url", "display", "status", "id", "created", "last_updated") from the view config.
-
-        This operation aims to establish a standardized and consistent way of displaying the fields.
-
-        Example:
-            >>> view_config = [
-                {
-                    Location: {fields: ["display", "name",...]},
-                    Others: {fields: ["tenant", "tenant_group", "status"]}
-                },
-                ...
-            ]
-            >>> restructure_view_config(serializer, view_config)
-            [
-                {
-                    Location: {fields: ["name","id","composite_key","url"]},
-                    Others: {fields: ["tenant", "tenant_group"]}
-                },
-                ...
-            ]
-        """
-        if detail:
-            # TODO(timizuo): Add a standardized way of handling `tenant` and `tags` fields, Possible should be on last items on second col.
-            fields_to_remove = [
-                "display",
-                "status",
-                "tags",
-                "custom_fields",
-                "relationships",
-                "computed_fields",
-                "notes_url",
-            ]
-            fields_to_remove += self.get_advanced_tab_fields(serializer)
-        else:
-            fields_to_remove = []
-
-        # Make a deepcopy to avoid altering view_config
-        view_config_layout = deepcopy(view_config.get("layout"))
-
-        for section in view_config_layout:
-            for value in section.values():
-                for field in fields_to_remove:
-                    if field in value["fields"]:
-                        value["fields"].remove(field)
-
-        if view_config.get("include_others", False) and detail:
-            view_config_layout = self.add_missing_field_to_view_config_layout(view_config_layout, fields_to_remove)
-        return view_config_layout
-
-    def get_m2m_and_non_m2m_fields(self, serializer):
-        """
-        Retrieve the many-to-many (m2m) fields and other non-m2m fields from the serializer.
-
-        Returns:
-            A tuple containing two lists: m2m_fields and non m2m fields.
-                - m2m_fields: A list of dictionaries, each containing the name and label of an m2m field.
-                - non_m2m_fields: A list of dictionaries, each containing the name and label of a non m2m field.
-        """
-        m2m_fields = []
-        non_m2m_fields = []
-
-        for field_name, field in serializer.fields.items():
-            if isinstance(field, drf_relations.ManyRelatedField):
-                m2m_fields.append({"name": field_name, "label": field.label or field_name})
-            else:
-                non_m2m_fields.append({"name": field_name, "label": field.label or field_name})
-
-        return m2m_fields, non_m2m_fields
-
-    def get_default_advanced_view_config(self):
-        """
-        Generate advanced view config for the view
-
-        Examples:
-            >>> get_advanced_detail_view_config(serializer).
-            {
-                "layout":[
-                    {
-                        "Object Details": {
-                            "fields": ["id", "url", "composite_key", "created", "last_updated"]
-                        }
-                    },
+        {
+            "filter_name": {
+                "label": "Filter Label",
+                "lookup_types": [
+                    {"value": "filter_name__n", "label": "not exact (n)"},
+                    {"value": "filter_name__re", "label": "matches regex (re)"},
+                    ...
                 ]
             }
-
-        Returns:
-            A list representing the advanced view config.
-        """
-        return {"layout": [{"Object Details": {"fields": self.advanced_tab_fields}}]}
-
-    def get_default_detail_view_config(self, serializer):
-        """
-        Generate detail view config for the view based on the serializer's fields.
-
-        Examples:
-            >>> get_default_detail_view_config(serializer).
-            {
-                "layout":[
-                    {
-                        Device: {
-                            "fields": ["name", "subdevice_role", "height", "comments"...]
-                        }
-                    },
-                    {
-                        Tags: {
-                            "fields": ["tags"]
-                        }
-                    }
-                ]
-            }
-
-        Returns:
-            A list representing the view config.
-        """
-        m2m_fields, other_fields = self.get_m2m_and_non_m2m_fields(serializer)
-        # TODO(timizuo): How do we get verbose_name of not model serializers?
-        model_verbose_name = serializer.Meta.model._meta.verbose_name
-        return {
-            "layout": [
-                {
-                    bettertitle(model_verbose_name): {
-                        "fields": [field["name"] for field in other_fields],
-                    }
-                },
-                {field["label"]: {"fields": [field["name"]]} for field in m2m_fields},
-            ]
         }
 
-    def determine_detail_view_schema(self, serializer):
-        """Determine the layout option that would be used for the detail view"""
-        if hasattr(serializer.Meta, "detail_view_config"):
-            view_config = self.validate_view_config(serializer.Meta.detail_view_config)
-        else:
-            view_config = self.get_default_detail_view_config(serializer)
-        return self.restructure_view_config(serializer, view_config)
+        """
 
-    def determine_advanced_view_schema(self, serializer):
-        """Determine the layout option that would be used for the detail view advanced tab"""
-        if hasattr(serializer.Meta, "advanced_view_config"):
-            view_config = self.validate_view_config(serializer.Meta.advanced_view_config)
-        else:
-            view_config = self.get_default_advanced_view_config()
-        return self.restructure_view_config(serializer, view_config, detail=False)
+        if not getattr(view, "filterset_class", None):
+            return {}
+        filterset = view.filterset_class
+        filters = {}
+        for filter_name, filter_instance in sorted(
+            filterset.base_filters.items(),
+            key=lambda x: get_filter_field_label(x[1]),
+        ):
+            filter_key = filter_name.rsplit("__", 1)[0]
+            label = get_filter_field_label(filter_instance)
+            lookup_label = self._filter_lookup_label(filter_name, filter_instance)
+            filters.setdefault(filter_key, {"label": label})
+            filters[filter_key].setdefault("lookup_types", []).append({"value": filter_name, "label": lookup_label})
+        return filters
 
-    def validate_view_config(self, view_config):
-        """Validate view config"""
-
-        # 1. Validate key `layout` is in view_config; as this is a required key is creating a view config
-        if not view_config["layout"]:
-            raise ViewConfigException("`layout` is a required key in creating a custom view_config")
-
-        # 2. Validate `Other Fields` is not part of a layout group name, as this is a nautobot reserver keyword for group names
-        for col in view_config["layout"]:
-            for group_name in col.keys():
-                if group_name in RESERVED_NAMES_FOR_OBJECT_DETAIL_VIEW_SCHEMA:
-                    raise ViewConfigException(f"`{group_name}` is a reserved group name keyword.")
-
-        return view_config
+    # TODO: move this into `build_lookup_label` when the legacy UI is removed
+    def _filter_lookup_label(self, filter_name, filter_instance):
+        """Fix confusing lookup labels for boolean filters."""
+        if isinstance(filter_instance, django_filters.BooleanFilter):
+            return "exact"
+        return build_lookup_label(filter_name, filter_instance.lookup_expr)

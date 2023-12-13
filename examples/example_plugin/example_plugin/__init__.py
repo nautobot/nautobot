@@ -27,6 +27,9 @@ class ExamplePluginConfig(NautobotAppConfig):
         "SAMPLE_VARIABLE": ConstanceConfigItem(
             default="example_default_value", help_text="Example of supplying a setting through Django Constance."
         ),
+        "lowercase_example": ConstanceConfigItem(
+            default="example_lowercase_variable", help_text="Example of all lowercase variable name."
+        ),
     }
     searchable_models = ["examplemodel"]
 

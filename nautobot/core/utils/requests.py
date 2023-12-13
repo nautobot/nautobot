@@ -1,6 +1,8 @@
 import re
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from django import forms
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.http import QueryDict
@@ -17,7 +19,7 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
 
     Args:
         request_querydict (QueryDict): QueryDict to convert
-        filterset_class: Filterset class
+        filterset (FilterSet): Filterset class
 
     Examples:
         >>> convert_querydict_to_factory_formset_acceptable_querydict({"status": ["active", "decommissioning"], "name__ic": ["location"]},)
@@ -107,9 +109,12 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
     to return only queryset filterable parameters.
 
     Args:
-        filter_params(QueryDict): Filter param querydict
-        non_filter_params(list): Non queryset filterable params
-        filterset: The FilterSet class
+        filter_params (QueryDict): Filter param querydict
+        non_filter_params (list): Non queryset filterable params
+        filterset (FilterSet): The FilterSet class
+
+    Returns:
+        (QueryDict): Filter param querydict with only queryset filterable params
     """
     for non_filter_param in non_filter_params:
         filter_params.pop(non_filter_param, None)
@@ -168,3 +173,11 @@ def normalize_querydict(querydict, form_class=None):
                 # Only a single value in the querydict for this key, and no guidance otherwise, so make it single
                 result[key] = value_list[0]
     return result
+
+
+def add_nautobot_version_query_param_to_url(url):
+    parsed_url = urlparse(url)
+    params = parse_qs(parsed_url.query)
+    params["version"] = settings.VERSION
+    updated_query = urlencode(params, doseq=True)
+    return parsed_url._replace(query=updated_query).geturl()

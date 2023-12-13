@@ -130,20 +130,6 @@ class DynamicGroupOperatorChoices(ChoiceSet):
 #
 
 
-class JobSourceChoices(ChoiceSet):
-    SOURCE_LOCAL = "local"
-    SOURCE_GIT = "git"
-    SOURCE_PLUGIN = "plugins"
-    SOURCE_SYSTEM = "system"
-
-    CHOICES = (
-        (SOURCE_LOCAL, "Installed in $JOBS_ROOT"),
-        (SOURCE_GIT, "Provided by a Git repository"),
-        (SOURCE_PLUGIN, "Part of a plugin"),
-        (SOURCE_SYSTEM, "Provided by Nautobot"),
-    )
-
-
 class JobExecutionType(ChoiceSet):
     TYPE_IMMEDIATELY = "immediately"
     TYPE_FUTURE = "future"
@@ -228,7 +214,7 @@ class JobResultStatusChoices(ChoiceSet):
             state (str): One of the status choices.
 
         Returns:
-            int: Precedence value.
+            (int): Precedence value.
 
         Examples:
             >>> JobResultStatusChoices.precedence(JobResultStatusChoices.STATUS_SUCCESS)

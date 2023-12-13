@@ -1,38 +1,47 @@
+import contextlib
+from copy import deepcopy
 import logging
 import uuid
-
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
+    FieldDoesNotExist,
     FieldError,
     MultipleObjectsReturned,
     ObjectDoesNotExist,
     ValidationError as DjangoValidationError,
 )
-from django.db.models import AutoField, ManyToManyField
+from django.contrib.contenttypes.fields import GenericRel
+from django.db import models
 from django.db.models.fields.related_descriptors import ManyToManyDescriptor
+from django.db.models.functions import Cast
 from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field, PolymorphicProxySerializer as _PolymorphicProxySerializer
-from rest_framework import serializers
+from rest_framework import relations as drf_relations, serializers
 from rest_framework.fields import CreateOnlyDefault
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.reverse import reverse
 from rest_framework.serializers import SerializerMethodField
 from rest_framework.utils.model_meta import RelationInfo, _get_to_field
 
+
 from nautobot.core.api.fields import NautobotHyperlinkedRelatedField, ObjectTypeField
 from nautobot.core.api.utils import (
     dict_to_filter_params,
     nested_serializer_factory,
 )
-from nautobot.core.models import constants
+from nautobot.core import constants
+from nautobot.core.exceptions import ViewConfigException
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug
+from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.extras.api.relationships import RelationshipsDataField
 from nautobot.extras.api.customfields import CustomFieldsDataField, CustomFieldDefaultValues
 from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import RelationshipAssociation, Tag
+from nautobot.ipam.fields import VarbinaryIPField
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +130,8 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
     display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
     object_type = ObjectTypeField()
-    composite_key = serializers.SerializerMethodField()
+    # composite_key = serializers.SerializerMethodField()  # TODO: Revisit if we reintroduce composite keys
+    natural_keys_values = None
     natural_slug = serializers.SerializerMethodField()
 
     def __init__(self, *args, **kwargs):
@@ -130,10 +140,158 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         if not self.is_nested:
             self.Meta.depth = self.context.get("depth", 0)
 
+        # Check if the request is related to CSV export;
+        if self._is_csv_request() and self.instance:
+            # Retrieve the natural key values of related fields in an optimized way.
+            all_related_fields_natural_key_lookups = self._get_related_fields_natural_key_field_lookups()
+            case_query = self._build_query_case_for_natural_key_field_lookup(all_related_fields_natural_key_lookups)
+            if isinstance(self.instance, models.QuerySet):
+                queryset = self.instance
+            else:
+                # We would only need to run one additional query, making this a more efficient method of
+                # obtaining all the natural key values for this instance;
+                queryset = self.Meta.model.objects.filter(pk=self.instance.pk)
+            self.natural_keys_values = queryset.annotate(**case_query).values(
+                *all_related_fields_natural_key_lookups, "pk"
+            )
+
+    def _get_lookup_field_name_and_output_field(self, lookup_field):
+        """Get lookup field name and its corresponding output_field.
+
+        Used in building this lookup Case in `_build_query_case_for_natural_key_field_lookup`.
+
+        Example:
+            >>> self._get_lookup_field_name_and_output_field("device__location__name")
+            ("device__location", CharField)
+            >>> self._get_lookup_field_name_and_output_field("ipaddress__parent__network")
+            ("ipaddress__parent", VarbinaryIPField)
+        """
+        *field_names, lookup = lookup_field.split("__")
+        model = self.Meta.model
+        for field_component in field_names:
+            model = model._meta.get_field(field_component).remote_field.model
+
+        lookup = "id" if lookup == "pk" else lookup
+        field = model._meta.get_field(lookup)
+        # VarbinaryIPField needs to be handled specially in `_build_query_case_for_natural_key_field_lookup`
+        output_field = field.__class__ if field.__class__ is VarbinaryIPField else models.CharField
+
+        field_name = "__".join(field_names)
+        return field_name, output_field
+
+    def _build_query_case_for_natural_key_field_lookup(self, lookups):
+        """
+        Build a query using Case expressions to handle natural key field instances that do not exist.
+
+        This function constructs a database query with Case expressions to handle natural key lookup fields
+        that may have missing instances. In cases where the natural key field instance does not exist
+        (i.e., is None), this function replaces it with the value 'NoObject'. This is particularly
+        useful for CSV Export processes, as it allows fields with missing instances to be safely ignored.
+        Such handling is essential for CSV Import processes, as attempting to import missing instances can
+        lead to 'Object Not Found' errors, potentially causing the import to fail.
+
+        Example:
+            Consider a Device model with a related field 'tenant' and a 'name' attribute. In this case, the
+            function can be used as follows:
+
+            Device.objects.annotate(
+                tenant__name=Case(
+                    When(tenant__isnull=False, then=F("tenant__name")),
+                    default="NoObject"
+                )
+            ).values("tenant__name")
+
+        Explanation:
+            - If `device.tenant` is None, the 'tenant__name' field is set to "NoObject".
+            - If `device.tenant` is not None, the 'tenant__name' field is set to the actual tenant name.
+
+        Args:
+            lookups: List of natural key lookups
+        """
+        case_query = {}
+        for lookup_field in lookups:
+            field_name, output_field = self._get_lookup_field_name_and_output_field(lookup_field)
+
+            # Since VarbinaryIPField cant be cast into CharField we would have to set the output_field as
+            # `VarbinaryIPField`
+            when_case = {
+                f"{field_name}__isnull": False,
+                "then": models.F(lookup_field)
+                if output_field == VarbinaryIPField
+                else Cast(models.F(lookup_field), models.CharField()),
+            }
+            case_query[lookup_field] = models.Case(
+                models.When(**when_case),
+                default=models.Value(constants.CSV_NO_OBJECT),
+                output_field=output_field(),
+            )
+        return case_query
+
+    def _get_related_fields_natural_key_field_lookups(self):
+        """Retrieve a list of field lookups for natural key fields of related models.
+
+        This method iterates through the related fields of the Serializer model,
+        retrieves the natural_key_field_lookups for each related model, and prepends the field name
+        to create a list of field lookups.
+
+        Examples:
+            >>> # Example usage on Device
+            >>> self._get_related_fields_natural_key_field_lookups()
+            [
+                "tenant__name",
+                "status__name",
+                "role__name",
+                "location__name",
+                "location__parent__name",
+                "location__parent__parent__name"
+                ...
+            ]
+
+        """
+        model = self.Meta.model
+        field_lookups = []
+        # NOTE: M2M and One2M fields field are ignored in csv export
+        fields = [
+            field
+            for field in model._meta.get_fields()
+            if field.is_relation and not field.many_to_many and not field.one_to_many
+            # Ignore GenericRel since its `fk` and `content_type` would be used.
+            and not isinstance(field, GenericRel)
+        ]
+        # Get each related field model's natural_key_fields and prepend field name
+        for field in fields:
+            # ContentType and Group are not Nautobot Model hence do not have the `natural_key_field_lookups` attr.
+            # fallback to using default behavior for these fields
+            with contextlib.suppress(AttributeError):
+                field_lookups.extend(
+                    f"{field.name}__{lookup}" for lookup in field.related_model.csv_natural_key_field_lookups()
+                )
+        return field_lookups
+
+    def _is_csv_request(self):
+        """Return True if this a CSV export request"""
+        request = self.context.get("request")
+        return hasattr(request, "accepted_media_type") and "text/csv" in request.accepted_media_type
+
     @property
     def is_nested(self):
         """Return whether this is a nested serializer."""
         return getattr(self.Meta, "is_nested", False)
+
+    @property
+    def list_display_fields(self):
+        return list(getattr(self.Meta, "list_display_fields", []))
+
+    @property
+    def advanced_tab_fields(self):
+        advanced_fields = list(
+            getattr(
+                self.Meta,
+                "advanced_tab_fields",
+                ["id", "url", "object_type", "created", "last_updated", "natural_slug"],
+            )
+        )
+        return [field for field in advanced_fields if field in self.fields]
 
     @extend_schema_field(serializers.CharField)
     def get_display(self, instance):
@@ -215,10 +373,233 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             # These are expensive to look up, so we have decided not to include them on nested serializers
             if self.is_nested and isinstance(getattr(self.Meta.model, field, None), ManyToManyDescriptor):
                 return False
+
+            # Ignore M2M fields
+            with contextlib.suppress(FieldDoesNotExist):
+                if self._is_csv_request():
+                    field = self.Meta.model._meta.get_field(field)
+                    # ContentType is ManyToMany Field that is specially handled, Hence it can be exported/imported
+                    if field.many_to_many and field.related_model is not ContentType:
+                        return False
             return True
 
         fields = [field for field in fields if filter_field(field)]
         return fields
+
+    def determine_view_options(self, request=None):
+        """
+        Determine view options to use for rendering the list and detail views associated with this serializer.
+        """
+        list_display = []
+        fields = []
+
+        from nautobot.core.api.metadata import NautobotColumnProcessor  # avoid circular import
+
+        processor = NautobotColumnProcessor(self, request.parser_context if request else {})
+        field_map = dict(self.fields)
+        all_fields = list(field_map)
+
+        # Explicitly order the "big ugly" fields to the bottom
+        processor.order_fields(all_fields)
+        list_display_fields = self.list_display_fields
+
+        # Process the list_display_fields first.
+        for field_name in list_display_fields:
+            try:
+                field = field_map[field_name]
+            except KeyError:
+                continue  # Ignore unknown fields.
+            column_data = processor._get_column_properties(field, field_name)
+            list_display.append(column_data)
+            fields.append(column_data)
+
+        # Process the rest of the fields second.
+        for field_name in all_fields:
+            # Don't process list display fields twice.
+            if field_name in list_display_fields:
+                continue
+            try:
+                field = field_map[field_name]
+            except KeyError:
+                continue  # Ignore unknown fields.
+            column_data = processor._get_column_properties(field, field_name)
+            fields.append(column_data)
+
+        return {
+            "retrieve": {
+                "tabs": self._determine_detail_view_tabs(),
+            },
+            "list": {
+                "default_fields": list_display,
+                "all_fields": fields,
+            },
+        }
+
+    def _determine_detail_view_tabs(self):
+        """Determine the layout for the detail view tabs that are intrinsic to this serializer."""
+        tabs = self.get_additional_detail_view_tabs()
+
+        if hasattr(self.Meta, "detail_view_config"):
+            detail_view_config = self._validate_view_config(self.Meta.detail_view_config)
+        else:
+            detail_view_config = self._get_default_detail_view_config()
+        detail_view_config = self._refine_detail_view_config(detail_view_config, tabs)
+
+        return {
+            bettertitle(self.Meta.model._meta.verbose_name): detail_view_config,
+            **tabs,
+        }
+
+    def get_additional_detail_view_tabs(self):
+        """
+        Retrieve definitions of non-default detail view tabs.
+
+        By default provides an "Advanced" tab containing `self.advanced_tab_fields`, but subclasses
+        can override this to move additional serializer fields to this or other tabs.
+
+        Returns:
+            (dict): `{<tab label>: [{<panel label>: {"fields": [<list of fields>]}, ...}, ...], ...}`
+        """
+        return {
+            "Advanced": [{"Object Details": {"fields": self.advanced_tab_fields}}],
+        }
+
+    def _get_default_detail_view_config(self):
+        """
+        Generate detail view config for the view based on the serializer's fields.
+
+        Examples:
+            >>> DeviceSerializer._get_default_detail_view_config().
+            {
+                "layout":[
+                    {
+                        Device: {
+                            "fields": ["name", "subdevice_role", "height", "comments"...]
+                        }
+                    },
+                    {
+                        Tags: {
+                            "fields": ["tags"]
+                        }
+                    }
+                ]
+            }
+
+        Returns:
+            (list): A list representing the view config.
+        """
+        m2m_fields, other_fields = self._get_m2m_and_non_m2m_fields()
+        # TODO(timizuo): How do we get verbose_name of not model serializers?
+        model_verbose_name = self.Meta.model._meta.verbose_name
+        return {
+            "layout": [
+                {
+                    bettertitle(model_verbose_name): {
+                        "fields": [field["name"] for field in other_fields],
+                    }
+                },
+                {field["label"]: {"fields": [field["name"]]} for field in m2m_fields},
+            ]
+        }
+
+    def _get_m2m_and_non_m2m_fields(self):
+        """
+        Retrieve the many-to-many (m2m) fields and other non-m2m fields from the serializer.
+
+        Returns:
+            A tuple containing two lists: m2m_fields and non m2m fields.
+                - m2m_fields: A list of dictionaries, each containing the name and label of an m2m field.
+                - non_m2m_fields: A list of dictionaries, each containing the name and label of a non m2m field.
+        """
+        m2m_fields = []
+        non_m2m_fields = []
+
+        for field_name, field in self.fields.items():
+            if isinstance(field, drf_relations.ManyRelatedField):
+                m2m_fields.append({"name": field_name, "label": field.label or field_name})
+            else:
+                non_m2m_fields.append({"name": field_name, "label": field.label or field_name})
+
+        return m2m_fields, non_m2m_fields
+
+    def _refine_detail_view_config(self, detail_view_config, other_tabs):
+        """
+        Refine the detail view config for the default tab (auto-generated, or as defined by Meta.detail_view_config).
+
+        - Remove fields that should never be present in the detail view config (e.g. `notes_url`).
+        - Ensure that fields that are already present in `other_tabs` aren't included in the detail view config.
+        - Ensure that certain fields such as `tags` are always included in the detail view config if applicable.
+
+        Args:
+            detail_view_config (dict): `{"layout": [{<left-column>}, {<right-column}], "include_others": False}`
+
+        Returns:
+            (list): `[{"Panel 1 Name": {"fields": ["field1", "field2", ...]}, "Panel 2 Name": ...}, {...}]`
+        """
+        fields_to_always_move_to_right_column = [
+            "comments",
+            "tags",
+        ]
+        fields_to_always_remove = [
+            # always handled explicitly by the UI
+            "display",
+            "status",
+            # not yet supported in the UI
+            "custom_fields",
+            "relationships",
+            "computed_fields",
+            # irrelevant to the UI
+            "notes_url",
+        ]
+        fields_to_remove = fields_to_always_remove + fields_to_always_move_to_right_column
+        # Any field that's already present in another tab
+        for tab_layout in other_tabs.values():
+            for column in tab_layout:
+                for grouping in column.values():
+                    fields_to_remove += grouping["fields"]
+
+        # Make a deepcopy to avoid altering view_config
+        view_config_layout = deepcopy(detail_view_config.get("layout"))
+
+        # Remove fields_to_remove from the view_config_layout
+        for column in view_config_layout:
+            for section in column.values():
+                for field in fields_to_remove:
+                    if field in section["fields"]:
+                        section["fields"].remove(field)
+
+        serializer_fields = list(self.fields)
+
+        # Add special-cased fields to right column
+        for field in fields_to_always_move_to_right_column:
+            if field in serializer_fields:
+                if len(view_config_layout) < 2:
+                    view_config_layout.append({})
+                view_config_layout[1].setdefault(bettertitle(field), {}).setdefault("fields", []).append(field)
+
+        # Add fields not otherwise included in another tab, only if include_others is set to True.
+        if detail_view_config.get("include_others", False):
+            view_config_fields = [
+                field for column in view_config_layout for section in column.values() for field in section["fields"]
+            ]
+            missing_fields = sorted(set(serializer_fields) - set(view_config_fields) - set(fields_to_remove))
+            view_config_layout[0]["Other Fields"] = {"fields": missing_fields}
+
+        return view_config_layout
+
+    def _validate_view_config(self, view_config):
+        """Validate view config."""
+        # 1. Validate key `layout` is in view_config; as this is a required key is creating a view config
+        if not view_config["layout"]:
+            raise ViewConfigException("`layout` is a required key in creating a custom view_config")
+
+        # 2. Validate `Other Fields` is not part of a layout group name, as this is a reserved keyword for group names
+        for col in view_config["layout"]:
+            for group_name in col.keys():
+                if group_name in constants.RESERVED_NAMES_FOR_OBJECT_DETAIL_VIEW_SCHEMA:
+                    raise ViewConfigException(f"`{group_name}` is a reserved group name keyword.")
+
+        return view_config
 
     def build_field(self, field_name, info, model_class, nested_depth):
         """
@@ -247,6 +628,58 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             return self.build_nested_field(field_name, relation_info, nested_depth)
 
         return super().build_field(field_name, info, model_class, nested_depth)
+
+    def _get_natural_key_lookups_value_for_field(self, field_name, natural_key_field_instance):
+        """Extract natural key field lookups for a specific field name.
+
+        Args:
+            field_name (str): The field name to extract lookups for.
+            natural_key_field_instance (dict): The dict containing natural key field values.
+
+        Example:
+            >>> natural_key_field_instance = Device.objects.values("tenant__name", "location__name", "location__parent__name", ...)
+            >>> _get_natural_key_lookups_value_for_field("location", natural_key_field_instance)
+            {
+                "location__name": "Sample Location",
+                "location__parent__name": "Sample Location Parent Name",
+                "location__parent__parent__name": "NoObject"
+                ...
+            }
+
+        """
+        data = {}
+        for key, value in natural_key_field_instance.items():
+            if key.startswith(f"{field_name}__"):
+                if isinstance(value, uuid.UUID):
+                    data[key] = str(value)
+                elif value == constants.VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT:
+                    data[key] = constants.CSV_NO_OBJECT
+                elif not value:
+                    data[key] = constants.CSV_NULL_TYPE
+                else:
+                    data[key] = value
+        return data
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        altered_data = {}
+
+        if self._is_csv_request() and self.natural_keys_values is not None:
+            if natural_key_field_instance := [item for item in self.natural_keys_values if item["pk"] == instance.pk]:
+                cleaned_natural_key_field_instance = natural_key_field_instance[0]
+                for key, value in data.items():
+                    # FK field with natural_field_lookups
+                    if natural_key_field_lookups_for_field := self._get_natural_key_lookups_value_for_field(
+                        key, cleaned_natural_key_field_instance
+                    ):
+                        altered_data.update(natural_key_field_lookups_for_field)
+                    else:
+                        # Not FK field
+                        altered_data[key] = constants.CSV_NULL_TYPE if value is None else value
+        else:
+            altered_data = data
+
+        return altered_data
 
     def build_relational_field(self, field_name, relation_info):
         """Override DRF's default relational-field construction to be app-aware."""
@@ -314,7 +747,7 @@ class ValidatedModelSerializer(BaseModelSerializer):
 
         # Skip ManyToManyFields
         for field in self.Meta.model._meta.get_fields():
-            if isinstance(field, ManyToManyField):
+            if isinstance(field, models.ManyToManyField):
                 attrs.pop(field.name, None)
 
         # Run clean() on an instance of the model
@@ -370,7 +803,7 @@ class WritableNestedSerializer(BaseModelSerializer):
         queryset = self.get_queryset()
         pk = None
 
-        if isinstance(self.Meta.model._meta.pk, AutoField):
+        if isinstance(self.Meta.model._meta.pk, models.AutoField):
             # PK is an int for this model. This is usually the User model
             try:
                 pk = int(data)

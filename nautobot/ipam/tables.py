@@ -20,6 +20,7 @@ from nautobot.tenancy.tables import TenantColumn
 from nautobot.virtualization.models import VMInterface
 from .models import (
     IPAddress,
+    IPAddressToInterface,
     Namespace,
     Prefix,
     RIR,
@@ -31,8 +32,9 @@ from .models import (
     VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
+from nautobot.virtualization.tables import VMInterfaceTable
 
-AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')
+AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')  # noqa: S308
 
 UTILIZATION_GRAPH = """
 {% load helpers %}
@@ -551,7 +553,7 @@ class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
     List IP addresses assigned to a specific Interface.
     """
 
-    address = tables.TemplateColumn(template_code=IPADDRESS_ASSIGN_COPY_LINK, verbose_name="IP Address")
+    address = tables.TemplateColumn(template_code=IPADDRESS_COPY_LINK, verbose_name="IP Address")
     # vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
 
@@ -619,6 +621,45 @@ class IPAddressInterfaceTable(InterfaceTable):
             "style": cable_status_color_css,
             "data-name": lambda record: record.name,
         }
+
+
+class IPAddressVMInterfaceTable(VMInterfaceTable):
+    class Meta(VMInterfaceTable.Meta):
+        row_attrs = {
+            "data-name": lambda record: record.name,
+        }
+
+
+#
+# IPAddress to Interface
+#
+
+
+class IPAddressToInterfaceTable(BaseTable):
+    pk = ToggleColumn()
+    ip_address = tables.Column(linkify=True, verbose_name="IP Address")
+    # TODO(jathan): Probably should crib from something like the CABLETERMINATION column template so
+    # that these columns show something like device1 > interface1 instead of just interface1 for
+    # usability?
+    interface = tables.Column(linkify=True)
+    vm_interface = tables.Column(linkify=True, verbose_name="VM Interface")
+
+    class Meta(BaseTable.Meta):
+        model = IPAddressToInterface
+        fields = (
+            "pk",
+            "ip_address",
+            "interface",
+            "vm_interface",
+            "is_source",
+            "is_destination",
+            "is_default",
+            "is_preferred",
+            "is_primary",
+            "is_secondary",
+            "is_standby",
+        )
+        default_columns = ("pk", "ip_address", "interface", "vm_interface")
 
 
 #
