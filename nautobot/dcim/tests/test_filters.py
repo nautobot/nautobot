@@ -102,6 +102,7 @@ User = get_user_model()
 
 
 def common_test_data(cls):
+    Device.objects.all().delete()
     tenants = Tenant.objects.filter(tenant_group__isnull=False)
     cls.tenants = tenants
 
