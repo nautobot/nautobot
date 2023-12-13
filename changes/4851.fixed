@@ -1,1 +1,0 @@
-Fixed an exception when trying to access computed fields via GraphQL.
