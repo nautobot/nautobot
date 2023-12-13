@@ -27,7 +27,27 @@ Declared subclasses should be gathered into a list or tuple for integration with
 
 +++ 1.4.0
 
-In order for any extra tabs to work properly, the `"url"` key must reference a view which inherits from the `nautobot.apps.views.ObjectView` class and the template must extend the object's detail template such as:
+The `detail_tabs()` method should return a list of dicts, each of which has the keys `"title"` and `"url"`. In order for tabs to work properly:
+
+* The `"url"` key should typically be a URL that includes `self.context["object"].pk` in some form (so that the URL may know which object is being referenced)
+* The view referenced by the `"url"` must inherit from the `nautobot.apps.views.ObjectView` class
+* The template rendered by this view must extend the object's detail template
+
+For example:
+
+```python
+class DeviceExtraTabs(TemplateExtension):
+    """Template extension to add extra tabs to the Device detail view."""
+    model = 'dcim.device'
+
+    def detail_tabs(self):
+        return [
+            {
+                "title": "App Tab 1",
+                "url": reverse("plugins:example_plugin:device_detail_tab_1", kwargs={"pk": self.context["object"].pk}),
+            },
+        ]
+```
 
 ```html
 <!-- example_plugin/tab_device_detail_1.html -->
