@@ -34,6 +34,9 @@ router.register("export-templates", views.ExportTemplateViewSet)
 # External integrations
 router.register("external-integrations", views.ExternalIntegrationViewSet)
 
+# File proxies
+router.register("file-proxies", views.FileProxyViewSet)
+
 # Git repositories
 router.register("git-repositories", views.GitRepositoryViewSet)
 

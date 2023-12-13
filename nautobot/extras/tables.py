@@ -1,7 +1,6 @@
 import django_tables2 as tables
 from django.conf import settings
 from django.utils.html import format_html
-from django.utils.safestring import mark_safe
 from django_tables2.utils import Accessor
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
@@ -237,7 +236,7 @@ class CustomFieldTable(BaseTable):
 
     def render_description(self, record):
         if record.description:
-            return mark_safe(render_markdown(record.description))
+            return render_markdown(record.description)
         return self.default
 
 
@@ -412,8 +411,11 @@ class ExportTemplateTable(BaseTable):
 class ExternalIntegrationTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    remote_url = tables.Column(linkify=False)
+    remote_url = tables.Column()
+    http_method = tables.Column()
     secrets_group = tables.Column(linkify=True)
+    ca_file_path = tables.Column()
+    tags = TagColumn(url_name="extras:externalintegration_list")
 
     class Meta(BaseTable.Meta):
         model = ExternalIntegration
@@ -421,17 +423,22 @@ class ExternalIntegrationTable(BaseTable):
             "pk",
             "name",
             "remote_url",
+            "http_method",
             "secrets_group",
             "verify_ssl",
             "timeout",
+            "ca_file_path",
+            "tags",
         )
         default_columns = (
             "pk",
             "name",
             "remote_url",
+            "http_method",
             "secrets_group",
             "verify_ssl",
             "timeout",
+            "tags",
         )
 
 

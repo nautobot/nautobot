@@ -48,6 +48,12 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
+                ("ca_file_path", models.CharField(blank=True, max_length=255)),
+                (
+                    "headers",
+                    models.JSONField(blank=True, encoder=django.core.serializers.json.DjangoJSONEncoder, null=True),
+                ),
+                ("http_method", models.CharField(blank=True, max_length=10)),
             ],
             options={
                 "ordering": ["name"],

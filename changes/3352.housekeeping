@@ -1,1 +1,0 @@
-Added a shared `media_root` volume to developer Docker Compose environment.

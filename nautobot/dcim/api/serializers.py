@@ -275,9 +275,9 @@ class RackSerializer(
         model = Rack
         fields = "__all__"
         list_display_fields = ["name", "location", "rack_group", "status", "facility_id", "tenant", "role", "u_height"]
-        # Omit the UniqueTogetherValidator that would be automatically added to validate (rack_group, facility_id).
-        # This prevents facility_id from being interpreted as a required field.
-        validators = [UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("rack_group", "name"))]
+        # Omit the UniqueTogetherValidators that would be automatically added to validate (rack_group, facility_id) and (rack_group, name).
+        # This prevents facility_id and rack_group from being interpreted as required fields.
+        validators = []
         detail_view_config = {
             "layout": [
                 {
@@ -294,8 +294,12 @@ class RackSerializer(
         }
 
     def validate(self, data):
+        # Validate uniqueness of (rack_group, name) since we omitted the automatically-created validator above.
+        if data.get("rack_group", None):
+            validator = UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("rack_group", "name"))
+            validator(data, self)
         # Validate uniqueness of (rack_group, facility_id) since we omitted the automatically-created validator above.
-        if data.get("facility_id", None):
+        if data.get("facility_id", None) and data.get("rack_group", None):
             validator = UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("rack_group", "facility_id"))
             validator(data, self)
 

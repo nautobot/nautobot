@@ -54,6 +54,7 @@ from nautobot.extras.models import (
     DynamicGroupMembership,
     ExportTemplate,
     ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -103,6 +104,7 @@ __all__ = (
     "DynamicGroupFilterSet",
     "DynamicGroupMembershipFilterSet",
     "ExportTemplateFilterSet",
+    "FileProxyFilterSet",
     "GitRepositoryFilterSet",
     "GraphQLQueryFilterSet",
     "ImageAttachmentFilterSet",
@@ -504,6 +506,34 @@ class ExternalIntegrationFilterSet(NautobotFilterSet):
     class Meta:
         model = ExternalIntegration
         fields = "__all__"
+
+
+#
+# File proxies
+#
+
+
+class FileProxyFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "job_result__job_model__name": "icontains",
+        },
+    )
+    job = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="job_result__job_model",
+        to_field_name="name",
+        queryset=Job.objects.all(),
+        label="Job (name or ID)",
+    )
+    job_result_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=JobResult.objects.all(),
+        label="Job Result (ID)",
+    )
+
+    class Meta:
+        model = FileProxy
+        fields = ["id", "name", "uploaded_at", "job", "job_result_id"]
 
 
 #

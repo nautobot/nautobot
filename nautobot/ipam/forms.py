@@ -75,6 +75,22 @@ class NamespaceForm(LocatableModelFormMixin, NautobotModelForm):
         fields = ["name", "description", "location"]
 
 
+class NamespaceBulkEditForm(
+    TagsBulkEditFormMixin,
+    LocatableModelBulkEditFormMixin,
+    NautobotBulkEditForm,
+):
+    pk = forms.ModelMultipleChoiceField(queryset=Namespace.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=200, required=False)
+
+    class Meta:
+        model = Namespace
+        nullable_fields = [
+            "description",
+            "location",
+        ]
+
+
 #
 # VRFs
 #
