@@ -80,7 +80,6 @@ See the example [below](#example-adding-object-details-and-tabs).
 
 ## Example Adding Object Details and Tabs
 
-
 ```python
 # template_content.py
 from django.urls import reverse
