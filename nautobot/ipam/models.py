@@ -1048,6 +1048,9 @@ class IPAddress(PrimaryModel):
         if namespace is None and self.parent is not None:
             namespace = self.parent.namespace
 
+        if namespace is None:
+            namespace = get_default_namespace()
+
         self._namespace = namespace
 
         self._deconstruct_address(address)
@@ -1069,6 +1072,11 @@ class IPAddress(PrimaryModel):
         # TODO: Implement proper caching of `closest_parent` and ensure the cache is invalidated when
         #  `_namespace` changes. Currently, `_get_closest_parent` is called twice, in the `clean` and `save` methods.
         #  Caching would improve performance.
+
+        # Host and maxlength are required to get the closest_parent
+        empty_values = [None, b"", ""]
+        if self.host in empty_values or self.mask_length in empty_values:
+            return None
         try:
             closest_parent = (
                 Prefix.objects.filter(namespace=self._namespace)
@@ -1099,7 +1107,7 @@ class IPAddress(PrimaryModel):
 
         closest_parent = self._get_closest_parent()
         # Validate `parent` can be used as the parent for this ipaddress
-        if self.parent:
+        if self.parent and closest_parent:
             if self.parent != closest_parent:
                 raise ValidationError(
                     {
@@ -1121,7 +1129,10 @@ class IPAddress(PrimaryModel):
         if not self.dns_name.islower:
             self.dns_name = self.dns_name.lower()
 
-        self.parent = self._get_closest_parent()
+        # Host and mask_length are required to get closest parent
+        closest_parent = self._get_closest_parent()
+        if closest_parent is not None:
+            self.parent = closest_parent
         super().save(*args, **kwargs)
 
     @property

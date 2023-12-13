@@ -3,6 +3,7 @@ import logging
 import platform
 import sys
 
+from django.apps import apps
 from django.conf import settings
 from django.http import JsonResponse
 from django.urls import reverse
@@ -103,20 +104,20 @@ def get_serializer_for_model(model, prefix=""):
     Raises:
         SerializerNotFound: if the requested serializer cannot be located.
     """
-    app_name, model_name = model._meta.label.split(".")
-    if app_name == "contenttypes" and model_name == "ContentType":
-        app_name = "extras"
+    app_label, model_name = model._meta.label.split(".")
+    if app_label == "contenttypes" and model_name == "ContentType":
+        app_path = "nautobot.extras"
     # Serializers for Django's auth models are in the users app
-    if app_name == "auth":
-        app_name = "users"
-    serializer_name = f"{app_name}.api.serializers.{prefix}{model_name}Serializer"
-    if app_name not in settings.PLUGINS:
-        serializer_name = f"nautobot.{serializer_name}"
+    elif app_label == "auth":
+        app_path = "nautobot.users"
+    else:
+        app_path = apps.get_app_config(app_label).name
+    serializer_name = f"{app_path}.api.serializers.{prefix}{model_name}Serializer"
     try:
         return dynamic_import(serializer_name)
     except AttributeError as exc:
         raise exceptions.SerializerNotFound(
-            f"Could not determine serializer for {app_name}.{model_name} with prefix '{prefix}'"
+            f"Could not determine serializer for {app_label}.{model_name} with prefix '{prefix}'"
         ) from exc
 
 

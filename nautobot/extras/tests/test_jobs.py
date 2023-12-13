@@ -483,6 +483,20 @@ class JobTransactionTest(TransactionTestCase):
         self.assertTrue(profiling_result.exists())
         profiling_result.unlink()
 
+    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks")
+    def test_job_fires_webhooks(self, mock_enqueue_webhooks):
+        module = "atomic_transaction"
+        name = "TestAtomicDecorator"
+
+        status_ct = ContentType.objects.get_for_model(models.Status)
+        webhook = models.Webhook.objects.create(name="Test Webhook", type_create=True, payload_url="http://localhost/")
+        webhook.content_types.set([status_ct])
+
+        job_result = create_job_result_and_run_job(module, name)
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+
+        mock_enqueue_webhooks.assert_called_once()
+
 
 class JobFileUploadTest(TransactionTestCase):
     """Test a job that uploads/deletes files."""
@@ -857,17 +871,17 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         with web_request_context(user=self.user):
             status = models.Status.objects.get_for_model(Location).first()
             Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type, status=status)
-            job_result = models.JobResult.objects.get(job_model=self.job_model)
-            expected_log_messages = [
-                ("info", "Running job"),
-                ("info", f"change: dcim | location Test Job Hook Location 1 created by {self.user.username}"),
-                ("info", "action: create"),
-                ("info", f"jobresult.user: {self.user.username}"),
-                ("info", "Test Job Hook Location 1"),
-                ("info", "Job completed"),
-            ]
-            log_messages = models.JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")
-            self.assertSequenceEqual(log_messages, expected_log_messages)
+        job_result = models.JobResult.objects.get(job_model=self.job_model)
+        expected_log_messages = [
+            ("info", "Running job"),
+            ("info", f"change: dcim | location Test Job Hook Location 1 created by {self.user.username}"),
+            ("info", "action: create"),
+            ("info", f"jobresult.user: {self.user.username}"),
+            ("info", "Test Job Hook Location 1"),
+            ("info", "Job completed"),
+        ]
+        log_messages = models.JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")
+        self.assertSequenceEqual(log_messages, expected_log_messages)
 
     def test_enqueue_job_hook_m2m(self):
         """
@@ -883,17 +897,17 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         tag.content_types.add(ContentType.objects.get_for_model(Location))
         with web_request_context(user=self.user):
             loc.tags.add(tag)
-            job_result = models.JobResult.objects.get(job_model=self.job_model)
-            expected_log_messages = [
-                ("info", "Running job"),
-                ("info", f"change: dcim | location Test Job Hook Location 1 updated by {self.user.username}"),
-                ("info", "action: update"),
-                ("info", f"jobresult.user: {self.user.username}"),
-                ("info", "Test Job Hook Location 1"),
-                ("info", "Job completed"),
-            ]
-            log_messages = models.JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")
-            self.assertSequenceEqual(log_messages, expected_log_messages)
+        job_result = models.JobResult.objects.get(job_model=self.job_model)
+        expected_log_messages = [
+            ("info", "Running job"),
+            ("info", f"change: dcim | location Test Job Hook Location 1 updated by {self.user.username}"),
+            ("info", "action: update"),
+            ("info", f"jobresult.user: {self.user.username}"),
+            ("info", "Test Job Hook Location 1"),
+            ("info", "Job completed"),
+        ]
+        log_messages = models.JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")
+        self.assertSequenceEqual(log_messages, expected_log_messages)
 
 
 class RemoveScheduledJobManagementCommandTestCase(TestCase):

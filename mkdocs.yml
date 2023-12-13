@@ -40,6 +40,17 @@ theme:
       toggle:
         icon: "material/weather-night"
         name: "Switch to light mode"
+
+# The animated *.gif files in nautobot/docs/media are only used in the README.
+# Since their file size is quite large, we exclude them from the built docs.
+exclude_docs: |
+  /media/*.gif
+
+validation:
+  absolute_links: warn
+  omitted_files: warn
+  unrecognized_links: warn
+
 extra_css:
   - "assets/extra.css"
 
@@ -313,8 +324,6 @@ nav:
       - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"
       - GraphQL: "user-guide/feature-guides/graphql.md"
       - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
-      - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"
-      - GraphQL: "user-guide/feature-guides/graphql.md"
       - Relationships: "user-guide/feature-guides/relationships.md"
     - Core Data Model:
       - Circuits:
@@ -448,7 +457,7 @@ nav:
         - "development/apps/api/platform-features/index.md"
         - Custom Validators: "development/apps/api/platform-features/custom-validators.md"
         - Database Backed Config: "development/apps/api/database-backend-config.md"
-        - Filter Extentions: "development/apps/api/platform-features/filter-extensions.md"
+        - Filter Extensions: "development/apps/api/platform-features/filter-extensions.md"
         - Git Repository Content: "development/apps/api/platform-features/git-repository-content.md"
         - Jinja2 Filters: "development/apps/api/platform-features/jinja2-filters.md"
         - Jobs: "development/apps/api/platform-features/jobs.md"

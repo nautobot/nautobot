@@ -19,10 +19,11 @@ from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.utils import color, config, data, lookup
 from nautobot.core.utils.navigation import is_route_new_ui_ready
+from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
-HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
-HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
-HTML_NONE = '<span class="text-muted">&mdash;</span>'
+HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
+HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')  # noqa: S308
+HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')  # noqa: S308
 
 DEFAULT_SUPPORT_MESSAGE = (
     "If further assistance is required, please join the `#nautobot` channel "
@@ -99,7 +100,7 @@ def placeholder(value):
     """
     if value:
         return value
-    return mark_safe(HTML_NONE)
+    return HTML_NONE
 
 
 @library.filter()
@@ -123,7 +124,7 @@ def add_html_id(element_str, id_str):
     match = re.match(r"^(.*?<\w+) ?(.*)$", element_str, flags=re.DOTALL)
     if not match:
         return element_str
-    return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))
+    return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))  # noqa: S308
 
 
 @library.filter()
@@ -154,10 +155,10 @@ def render_boolean(value):
         '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
     """
     if value is None:
-        return mark_safe(HTML_NONE)
+        return HTML_NONE
     if bool(value):
-        return mark_safe(HTML_TRUE)
-    return mark_safe(HTML_FALSE)
+        return HTML_TRUE
+    return HTML_FALSE
 
 
 @library.filter()
@@ -180,7 +181,7 @@ def render_markdown(value):
     # Render Markdown
     html = markdown(value, extensions=["fenced_code", "tables"])
 
-    return mark_safe(html)
+    return mark_safe(html)  # noqa: S308
 
 
 @library.filter()
@@ -707,8 +708,10 @@ def custom_branding_or_static(branding_asset, static_asset):
     branding has been configured in settings, else it returns stock branding via static.
     """
     if settings.BRANDING_FILEPATHS.get(branding_asset):
-        return f"{ settings.MEDIA_URL }{ settings.BRANDING_FILEPATHS.get(branding_asset) }"
-    return StaticNode.handle_simple(static_asset)
+        url = f"{ settings.MEDIA_URL }{ settings.BRANDING_FILEPATHS.get(branding_asset) }"
+    else:
+        url = StaticNode.handle_simple(static_asset)
+    return add_nautobot_version_query_param_to_url(url)
 
 
 @register.simple_tag
@@ -723,6 +726,13 @@ def support_message():
     if not message:
         message = DEFAULT_SUPPORT_MESSAGE
     return render_markdown(message)
+
+
+@register.simple_tag
+def versioned_static(file_path):
+    """Returns a versioned static file URL with a query parameter containing the version number."""
+    url = static(file_path)
+    return add_nautobot_version_query_param_to_url(url)
 
 
 @library.filter()

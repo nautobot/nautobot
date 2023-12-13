@@ -1,6 +1,8 @@
 import re
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from django import forms
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.http import QueryDict
@@ -171,3 +173,11 @@ def normalize_querydict(querydict, form_class=None):
                 # Only a single value in the querydict for this key, and no guidance otherwise, so make it single
                 result[key] = value_list[0]
     return result
+
+
+def add_nautobot_version_query_param_to_url(url):
+    parsed_url = urlparse(url)
+    params = parse_qs(parsed_url.query)
+    params["version"] = settings.VERSION
+    updated_query = urlencode(params, doseq=True)
+    return parsed_url._replace(query=updated_query).geturl()

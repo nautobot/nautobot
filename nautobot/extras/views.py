@@ -13,9 +13,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import TemplateDoesNotExist, get_template
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.html import escape
-from django.utils.http import is_safe_url
-from django.utils.safestring import mark_safe
+from django.utils.encoding import iri_to_uri
+from django.utils.html import format_html
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
@@ -31,10 +31,11 @@ from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.core.views.mixins import ObjectPermissionRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
-from nautobot.dcim.models import Device
-from nautobot.dcim.tables import DeviceTable
+from nautobot.dcim.models import Device, Rack
+from nautobot.dcim.tables import DeviceTable, RackTable
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_worker_count
+from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import VirtualMachineTable
@@ -412,11 +413,11 @@ class CustomFieldEditView(generic.ObjectEditView):
                 verb = "Created" if object_created else "Modified"
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                if hasattr(obj, "get_absolute_url"):
-                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
-                else:
-                    msg = f"{msg} {escape(obj)}"
-                messages.success(request, mark_safe(msg))
+                try:
+                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+                except AttributeError:
+                    msg = format_html("{} {}", msg, obj)
+                messages.success(request, msg)
 
                 if "_addanother" in request.POST:
                     # If the object has clone_fields, pre-populate a new instance of the form
@@ -427,8 +428,8 @@ class CustomFieldEditView(generic.ObjectEditView):
                     return redirect(request.get_full_path())
 
                 return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(return_url)
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
                 else:
                     return redirect(self.get_return_url(request, obj))
 
@@ -650,11 +651,11 @@ class DynamicGroupEditView(generic.ObjectEditView):
                 verb = "Created" if object_created else "Modified"
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                if hasattr(obj, "get_absolute_url"):
-                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
-                else:
-                    msg = f"{msg} {escape(obj)}"
-                messages.success(request, mark_safe(msg))
+                try:
+                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+                except AttributeError:
+                    msg = format_html("{} {}", msg, obj)
+                messages.success(request, msg)
 
                 if "_addanother" in request.POST:
                     # If the object has clone_fields, pre-populate a new instance of the form
@@ -665,8 +666,8 @@ class DynamicGroupEditView(generic.ObjectEditView):
                     return redirect(request.get_full_path())
 
                 return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(return_url)
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
                 else:
                     return redirect(self.get_return_url(request, obj))
 
@@ -903,6 +904,7 @@ def check_and_call_git_repository_function(request, pk, func):
     # Allow execution only if a worker process is running.
     if not get_worker_count():
         messages.error(request, "Unable to run job: Celery worker process not running.")
+        return redirect(request.get_full_path(), permanent=False)
     else:
         repository = get_object_or_404(GitRepository, pk=pk)
         job_result = func(repository, request.user)
@@ -1560,8 +1562,8 @@ class JobButtonRunView(ObjectPermissionRequiredMixin, View):
             object_pk=post_data["object_pk"],
             object_model_name=post_data["object_model_name"],
         )
-        msg = f'Job enqueued. <a href="{result.get_absolute_url()}">Click here for the results.</a>'
-        messages.info(request=request, message=mark_safe(msg))
+        msg = format_html('Job enqueued. <a href="{}">Click here for the results.</a>', result.get_absolute_url())
+        messages.info(request=request, message=msg)
         return redirect(post_data["redirect_path"])
 
 
@@ -1673,6 +1675,18 @@ class ObjectChangeLogView(View):
 
 class NoteView(generic.ObjectView):
     queryset = Note.objects.all()
+
+
+class NoteListView(generic.ObjectListView):
+    """
+    List Notes
+    """
+
+    queryset = Note.objects.all()
+    filterset = filters.NoteFilterSet
+    filterset_form = forms.NoteFilterForm
+    table = tables.NoteTable
+    action_buttons = ()
 
 
 class NoteEditView(generic.ObjectEditView):
@@ -1806,74 +1820,88 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
         if self.action == "retrieve":
             context["content_types"] = instance.content_types.order_by("app_label", "model")
 
-            devices = instance.devices.select_related(
-                "status",
-                "location",
-                "tenant",
-                "role",
-                "rack",
-                "device_type",
-            )
-            ipaddress = instance.ip_addresses.select_related("status", "tenant").annotate(
-                interface_count=Count("interfaces"),
-                interface_parent_count=(Count("interfaces__device", distinct=True)),
-                vm_interface_count=Count("vm_interfaces"),
-                vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
-                assigned_count=Count("interfaces") + Count("vm_interfaces"),
-            )
-            prefixes = instance.prefixes.select_related(
-                "location",
-                "status",
-                "tenant",
-                "vlan",
-                # "vrf",
-                "namespace",
-            )
-            virtual_machines = instance.virtual_machines.select_related(
-                "cluster",
-                "role",
-                "status",
-                "tenant",
-            )
-            vlans = instance.vlans.select_related(
-                "vlan_group",
-                "location",
-                "status",
-                "tenant",
-            )
-
-            device_table = DeviceTable(devices)
-            device_table.columns.hide("role")
-            ipaddress_table = IPAddressTable(ipaddress)
-            ipaddress_table.columns.hide("role")
-            prefix_table = PrefixTable(prefixes)
-            prefix_table.columns.hide("role")
-            virtual_machine_table = VirtualMachineTable(virtual_machines)
-            virtual_machine_table.columns.hide("role")
-            vlan_table = VLANTable(vlans)
-            vlan_table.columns.hide("role")
-
             paginate = {
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request),
             }
 
-            RequestConfig(request, paginate).configure(device_table)
-            RequestConfig(request, paginate).configure(ipaddress_table)
-            RequestConfig(request, paginate).configure(prefix_table)
-            RequestConfig(request, paginate).configure(virtual_machine_table)
-            RequestConfig(request, paginate).configure(vlan_table)
+            if ContentType.objects.get_for_model(Device) in context["content_types"]:
+                devices = instance.devices.select_related(
+                    "status",
+                    "location",
+                    "tenant",
+                    "role",
+                    "rack",
+                    "device_type",
+                ).restrict(request.user, "view")
+                device_table = DeviceTable(devices)
+                device_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(device_table)
+                context["device_table"] = device_table
 
-            context.update(
-                {
-                    "device_table": device_table,
-                    "ipaddress_table": ipaddress_table,
-                    "prefix_table": prefix_table,
-                    "virtual_machine_table": virtual_machine_table,
-                    "vlan_table": vlan_table,
-                }
-            )
+            if ContentType.objects.get_for_model(IPAddress) in context["content_types"]:
+                ipaddress = (
+                    instance.ip_addresses.select_related("status", "tenant")
+                    .restrict(request.user, "view")
+                    .annotate(
+                        interface_count=Count("interfaces"),
+                        interface_parent_count=(Count("interfaces__device", distinct=True)),
+                        vm_interface_count=Count("vm_interfaces"),
+                        vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+                        assigned_count=Count("interfaces") + Count("vm_interfaces"),
+                    )
+                )
+                ipaddress_table = IPAddressTable(ipaddress)
+                ipaddress_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(ipaddress_table)
+                context["ipaddress_table"] = ipaddress_table
 
+            if ContentType.objects.get_for_model(Prefix) in context["content_types"]:
+                prefixes = instance.prefixes.select_related(
+                    "location",
+                    "status",
+                    "tenant",
+                    "vlan",
+                    "namespace",
+                ).restrict(request.user, "view")
+                prefix_table = PrefixTable(prefixes)
+                prefix_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(prefix_table)
+                context["prefix_table"] = prefix_table
+            if ContentType.objects.get_for_model(Rack) in context["content_types"]:
+                racks = instance.racks.select_related(
+                    "location",
+                    "status",
+                    "tenant",
+                    "rack_group",
+                ).restrict(request.user, "view")
+                rack_table = RackTable(racks)
+                rack_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(rack_table)
+                context["rack_table"] = rack_table
+            if ContentType.objects.get_for_model(VirtualMachine) in context["content_types"]:
+                virtual_machines = instance.virtual_machines.select_related(
+                    "cluster",
+                    "role",
+                    "status",
+                    "tenant",
+                ).restrict(request.user, "view")
+                virtual_machine_table = VirtualMachineTable(virtual_machines)
+                virtual_machine_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(virtual_machine_table)
+                context["virtual_machine_table"] = virtual_machine_table
+
+            if ContentType.objects.get_for_model(VLAN) in context["content_types"]:
+                vlans = instance.vlans.select_related(
+                    "vlan_group",
+                    "location",
+                    "status",
+                    "tenant",
+                ).restrict(request.user, "view")
+                vlan_table = VLANTable(vlans)
+                vlan_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(vlan_table)
+                context["vlan_table"] = vlan_table
         return context
 
 
@@ -2008,11 +2036,11 @@ class SecretsGroupEditView(generic.ObjectEditView):
                 verb = "Created" if object_created else "Modified"
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                if hasattr(obj, "get_absolute_url"):
-                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
-                else:
-                    msg = f"{msg} {escape(obj)}"
-                messages.success(request, mark_safe(msg))
+                try:
+                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+                except AttributeError:
+                    msg = format_html("{} {}", msg, obj)
+                messages.success(request, msg)
 
                 if "_addanother" in request.POST:
                     # If the object has clone_fields, pre-populate a new instance of the form
@@ -2023,8 +2051,8 @@ class SecretsGroupEditView(generic.ObjectEditView):
                     return redirect(request.get_full_path())
 
                 return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(return_url)
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
                 else:
                     return redirect(self.get_return_url(request, obj))
 

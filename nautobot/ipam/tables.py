@@ -32,8 +32,9 @@ from .models import (
     VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
+from nautobot.virtualization.tables import VMInterfaceTable
 
-AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')
+AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')  # noqa: S308
 
 UTILIZATION_GRAPH = """
 {% load helpers %}
@@ -552,7 +553,7 @@ class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
     List IP addresses assigned to a specific Interface.
     """
 
-    address = tables.TemplateColumn(template_code=IPADDRESS_ASSIGN_COPY_LINK, verbose_name="IP Address")
+    address = tables.TemplateColumn(template_code=IPADDRESS_COPY_LINK, verbose_name="IP Address")
     # vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
 
@@ -618,6 +619,13 @@ class IPAddressInterfaceTable(InterfaceTable):
         ]
         row_attrs = {
             "style": cable_status_color_css,
+            "data-name": lambda record: record.name,
+        }
+
+
+class IPAddressVMInterfaceTable(VMInterfaceTable):
+    class Meta(VMInterfaceTable.Meta):
+        row_attrs = {
             "data-name": lambda record: record.name,
         }
 

@@ -294,7 +294,19 @@ Feature requests will follow our published workflow from inbound triage to ultim
 
 #### Creating Changelog Fragments
 
-All pull requests to `next` or `develop` must include a changelog fragment file in the `./changes` directory. To create a fragment, use your github issue number and fragment type as the filename. For example, `2362.added`. Valid fragment types are `added`, `changed`, `dependencies`, `deprecated`, `fixed`, `housekeeping`, `removed`, and `security`. The change summary is added to the file in plain text. Change summaries should be complete sentences, starting with a capital letter and ending with a period, and be in past tense. Each line of the change fragment will generate a single change entry in the release notes. Use multiple lines in the same file if your change needs to generate multiple release notes in the same category. If the change needs to create multiple entries in separate categories, create multiple files.
+All pull requests to `next` or `develop` must include a changelog fragment file in the `./changes` directory. To create a fragment, use your github issue number and fragment type as the filename. For example, `2362.added`. Valid fragment types are:
+
+* `added`
+* `changed`
+* `dependencies`
+* `deprecated`
+* `documentation`
+* `fixed`
+* `housekeeping`
+* `removed`
+* `security`
+
+The change summary is added to the file in plain text. Change summaries should be complete sentences, starting with a capital letter and ending with a period, and be in past tense. Each line of the change fragment will generate a single change entry in the release notes. Use multiple lines in the same file if your change needs to generate multiple release notes in the same category. If the change needs to create multiple entries in separate categories, create multiple files.
 
 !!! example
 

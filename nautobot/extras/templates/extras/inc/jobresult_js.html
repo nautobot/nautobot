@@ -9,5 +9,5 @@ var pending_result_id = null;
 {% endif %}
 
 </script>
-<script src="{% static 'js/job_result.js' %}?v{{ settings.VERSION }}"
+<script src="{% versioned_static 'js/job_result.js' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=js/job_result.js'"></script>

@@ -18,9 +18,9 @@ from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import select_template, TemplateDoesNotExist
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
-from django.utils.http import is_safe_url
-from django.utils.html import escape
-from django.utils.safestring import mark_safe
+from django.utils.encoding import iri_to_uri
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.html import format_html
 from django.views.generic.edit import FormView
 
 from rest_framework import mixins, exceptions
@@ -179,8 +179,8 @@ class GetReturnURLMixin:
         # First, see if `return_url` was specified as a query parameter or form data. Use this URL only if it's
         # considered safe.
         query_param = request.GET.get("return_url") or request.POST.get("return_url")
-        if query_param and is_safe_url(url=query_param, allowed_hosts=request.get_host()):
-            return query_param
+        if url_has_allowed_host_and_scheme(url=query_param, allowed_hosts=request.get_host()):
+            return iri_to_uri(query_param)
 
         # Next, check if the object being modified (if any) has an absolute URL.
         # Note that the use of both `obj.present_in_database` and `obj.pk` is correct here because this conditional
@@ -622,7 +622,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             if not self.filterset.is_valid():
                 messages.error(
                     self.request,
-                    mark_safe(f"Invalid filters were specified: {self.filterset.errors}"),
+                    format_html("Invalid filters were specified: {}", self.filterset.errors),
                 )
                 queryset = queryset.none()
         return queryset
@@ -747,11 +747,11 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
 
             msg = f'{"Created" if object_created else "Modified"} {queryset.model._meta.verbose_name}'
             self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
-            if hasattr(obj, "get_absolute_url"):
-                msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
-            else:
-                msg = f"{msg} { escape(obj)}"
-            messages.success(request, mark_safe(msg))
+            try:
+                msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+            except AttributeError:
+                msg = format_html("{} {}", msg, obj)
+            messages.success(request, msg)
             if "_addanother" in request.POST:
                 # If the object has clone_fields, pre-populate a new instance of the form
                 if hasattr(obj, "clone_fields"):
@@ -760,8 +760,8 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
                 self.success_url = request.get_full_path()
             else:
                 return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    self.success_url = return_url
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    self.success_url = iri_to_uri(return_url)
                 else:
                     self.success_url = self.get_return_url(request, obj)
 
