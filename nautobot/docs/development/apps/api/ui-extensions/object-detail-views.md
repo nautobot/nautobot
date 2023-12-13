@@ -2,7 +2,7 @@
 
 ## Extending Object Detail Views
 
-Apps can inject custom content into certain areas of the detail views of applicable models. This is accomplished by subclassing `TemplateExtension`, designating a particular Nautobot model, and defining the desired methods to render custom content. Four methods are available:
+Apps can inject custom content into certain areas of the detail views of applicable models. This is accomplished by subclassing `TemplateExtension`, designating a particular Nautobot model, and defining the desired methods to render custom content. Five methods are available:
 
 * `left_page()` - Inject content on the left side of the page
 * `right_page()` - Inject content on the right side of the page
