@@ -1,1 +1,1 @@
-Added DynamicRoute() to NautbotUIViewSet and added a custom view using DynamicRoute() in Example App.
+Added DynamicRoute() to NautobotUIViewSet to support custom actions.
