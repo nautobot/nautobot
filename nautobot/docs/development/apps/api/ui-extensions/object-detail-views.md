@@ -96,7 +96,7 @@ urlpatterns = [
 !!! note
     For added tab views, we recommend for consistency that you follow the URL pattern established by the base model detail view and tabs (if any). For example, `nautobot/dcim/urls.py` references Device tab views with the URL pattern `devices/<uuid:pk>/TAB-NAME/`, so above we have followed that same pattern.
 
-See the example [below](#example-adding-object-details-and-tabs).
+In addition, you must also add the `detail_tabs` method in the `template_content.py` file as shown in the [below example](#example-adding-object-details-and-tabs).
 
 ## Example Adding Object Details and Tabs
 
