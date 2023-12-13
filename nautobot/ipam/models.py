@@ -1050,6 +1050,9 @@ class IPAddress(PrimaryModel):
         if namespace is None and self.parent is not None:
             namespace = self.parent.namespace
 
+        if namespace is None:
+            namespace = get_default_namespace()
+
         self._namespace = namespace
 
         self._deconstruct_address(address)

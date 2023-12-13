@@ -11,7 +11,7 @@ class InstalledPluginsTable(tables.Table):
     """
 
     name = tables.Column(
-        linkify=lambda record: reverse("plugins:plugin_detail", kwargs={"plugin": record["package_name"]})
+        linkify=lambda record: reverse("plugins:plugin_detail", kwargs={"plugin": record["app_label"]})
     )
     package_name = tables.Column()
     author = tables.Column()

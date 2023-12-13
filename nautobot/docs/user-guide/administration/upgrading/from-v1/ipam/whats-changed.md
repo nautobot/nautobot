@@ -10,7 +10,7 @@ For more details please refer to the [Namespace model documentation](../../../..
 
 ### Sample Namespace Implementation Diagram
 
-![IPAM Namespace Example](../../../../core-data-model/ipam/media/ipam_namespace_documentation.drawio.svg)
+![IPAM Namespace Example](../../../../core-data-model/ipam/media/ipam_namespace_documentation.drawio.png)
 
 ### Default Namespace
 
