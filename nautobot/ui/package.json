@@ -1,6 +1,6 @@
 {
     "name": "nautobot",
-    "version": "2.1.0-b1",
+    "version": "2.1.0-b2",
     "private": true,
     "dependencies": {
         "@chakra-ui/icons": "^2.0.0",
