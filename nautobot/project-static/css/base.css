@@ -55,23 +55,6 @@ footer p {
     }
 }
 
-/* Navigation menu */
-ul.dropdown-menu {
-    min-width: 250px;
-}
-ul.dropdown-menu.edge {
-    right: 0;
-    left: auto;
-}
-ul.dropdown-menu div.buttons {
-    padding-right: 10px;
-    padding-top: 2px;
-}
-ul.dropdown-menu > li > a {
-    clear: left;
-    margin-right: 80px
-}
-
 /* Forms */
 label {
     font-weight: normal;
@@ -310,6 +293,15 @@ table.report th a {
 .panel .list-group {
     max-height: 400px;
     overflow: auto;
+    border-bottom-left-radius: 9px;
+    border-bottom-right-radius: 9px;
+}
+.panel-heading {
+    font-weight: 700;
+}
+.panel-body {
+    border-bottom-left-radius: 9px;
+    border-bottom-right-radius: 9px;
 }
 ul.nav-tabs, ul.nav-pills {
     margin-bottom: 20px;
@@ -318,6 +310,17 @@ ul.nav-tabs li a {
     padding: 8px 10px;
     border: none;
 }
+ul.nav-tabs li a:hover,
+ul.nav-tabs li a:focus,
+ul.nav-pills li a:hover,
+ul.nav-pills li.active a:hover,
+ul.nav-pills li a:focus {
+    background-color: #d2d2d2;
+}
+ul.nav-pills li.active a {
+    background-color: #eaf2f9;
+}
+ul.nav-tabs li a:hover,
 .label a {
     color: inherit;
 }
@@ -666,11 +669,16 @@ td span.hover_copy:hover .hover_copy_button {
     text-transform: uppercase;
 }
 
+.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-menu > li > .buttons.pull-right {
+    padding-right: 10px;
+}
+
 .navbar-fixed-left .navbar-nav > .dropdown > .dropdown-menu > li > .buttons.pull-right + a {
-    margin-right: 53px;
+    margin-right: 43px;
 }
 
 .navbar-fixed-left .navbar-nav > .dropdown > .dropdown-menu > li > a {
+    clear: left;
     line-height: 1.285714286;
     margin-right: 0;
     padding: 8px 20px;
@@ -682,24 +690,18 @@ td span.hover_copy:hover .hover_copy_button {
     transition: background-color 200ms ease, color 200ms ease;
 }
 
-.navbar-inverse .navbar-nav > li > a:focus,
-.navbar-inverse .navbar-nav > li > a:hover {
-    background-color: #151e2a;
-}
-
 .navbar-inverse .navbar-nav > .dropdown > .dropdown-menu {
     background-color: #151e2a;
 }
 
 .navbar-inverse .navbar-nav > .dropdown > .dropdown-menu .divider {
-    background-color: #505d68;
+    background-color: #646464;
 }
 
 .navbar-inverse .navbar-nav > .dropdown > .dropdown-menu > li > a {
     transition: background-color 200ms ease;
 }
 
-.navbar-inverse .navbar-nav > .dropdown > .dropdown-menu > li > a,
-.navbar-inverse .navbar-nav > .dropdown > .dropdown-menu > li > a:hover {
+.navbar-inverse .navbar-nav > .dropdown > .dropdown-menu > li > a {
     color: #ffffff;
 }

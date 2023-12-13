@@ -111,6 +111,22 @@ class GraphQLTestCase(TestCase):
         self.assertFalse(resp["data"].get("error"))
         self.assertEqual(len(resp["data"]["query"]), Location.objects.all().count())
 
+    @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_execute_query_with_custom_field_type_json(self):
+        """Test Custom Field with JSON type returns valid JSON object and not string. Fix for bug #4627"""
+        custom_field = CustomField(
+            type=CustomFieldTypeChoices.TYPE_JSON, label="custom_json_field", key="custom_json_field"
+        )
+        custom_field.validated_save()
+        custom_field.content_types.set([ContentType.objects.get_for_model(Location)])
+        custom_field_data = {"custom_json_field": {"name": "Custom Example", "is_customfield": True}}
+        self.locations[0]._custom_field_data = custom_field_data
+        self.locations[0].save()
+        query = "query ($name: [String!]) { locations(name:$name) {name, _custom_field_data, cf_custom_json_field} }"
+        resp = execute_query(query, user=self.user, variables={"name": "Location-1"}).to_dict()
+        self.assertEqual(resp["data"]["locations"]["cf_custom_json_field"], custom_field_data)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_variable(self):
         query = "query ($name: [String!]) { locations(name:$name) {name} }"

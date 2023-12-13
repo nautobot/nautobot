@@ -2361,12 +2361,6 @@ class InterfaceBulkEditForm(
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Interface.objects.all(), widget=forms.MultipleHiddenInput())
-    device = forms.ModelChoiceField(
-        queryset=Device.objects.all(),
-        required=False,
-        disabled=True,
-        widget=forms.HiddenInput(),
-    )
     enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
     parent_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
@@ -2401,6 +2395,11 @@ class InterfaceBulkEditForm(
             "location": "null",
         },
     )
+    vrf = DynamicModelChoiceField(
+        queryset=VRF.objects.all(),
+        label="VRF",
+        required=False,
+    )
 
     class Meta:
         nullable_fields = [
@@ -2414,42 +2413,38 @@ class InterfaceBulkEditForm(
             "mode",
             "untagged_vlan",
             "tagged_vlans",
+            "vrf",
         ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Limit LAG choices to interfaces which belong to the parent device (or VC master)
-        if "device" in self.initial:
-            device = Device.objects.filter(pk=self.initial["device"]).first()
+        if "pk" not in self.initial:
+            return
 
-            # Restrict parent/bridge/LAG interface assignment by device
+        devices = Device.objects.filter(interfaces__in=self.initial["pk"]).only("pk").distinct()
+        locations = Location.objects.without_tree_fields().order_by().filter(devices__in=devices).only("pk").distinct()
+        device_count = devices.count()
+
+        if device_count > 0:
+            device = devices.first()
+
+            # Limit VRF choices to only VRFs available on the first parent device
+            # TODO: The choices for this field should be only VRFs that are associated to every parent device
+            self.fields["vrf"].widget.add_query_param("device", device.pk)
+
+            # Limit VLAN choices by Location
+            if locations.count() == 1:
+                location = locations.first()
+                self.fields["untagged_vlan"].widget.add_query_param("location", location.pk)
+                self.fields["tagged_vlans"].widget.add_query_param("location", location.pk)
+
+        # Restrict parent/bridge/LAG interface assignment by device (or VC master)
+        if device_count == 1:
             self.fields["parent_interface"].widget.add_query_param("device_with_common_vc", device.pk)
             self.fields["bridge"].widget.add_query_param("device_with_common_vc", device.pk)
             self.fields["lag"].widget.add_query_param("device_with_common_vc", device.pk)
-
-            # Add current location to VLANs query params
-            self.fields["untagged_vlan"].widget.add_query_param("location", device.location.pk)
-            self.fields["tagged_vlans"].widget.add_query_param("location", device.location.pk)
         else:
-            # See netbox-community/netbox#4523
-            if "pk" in self.initial:
-                location = None
-                interfaces = Interface.objects.filter(pk__in=self.initial["pk"]).select_related("device__location")
-
-                # Check interface locations.  First interface should set location, further interfaces will either continue the
-                # loop or reset back to no location and break the loop.
-                for interface in interfaces:
-                    if location is None:
-                        location = interface.device.location
-                    elif interface.device.location is not location:
-                        location = None
-                        break
-
-                if location is not None:
-                    self.fields["untagged_vlan"].widget.add_query_param("location", location.pk)
-                    self.fields["tagged_vlans"].widget.add_query_param("location", location.pk)
-
             self.fields["parent_interface"].choices = ()
             self.fields["parent_interface"].widget.attrs["disabled"] = True
             self.fields["bridge"].choices = ()

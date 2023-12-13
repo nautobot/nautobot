@@ -13,27 +13,13 @@ User = get_user_model()
 class UserFactory(BaseModelFactory):
     class Meta:
         model = User
-        exclude = ("has_first_name", "has_last_name", "has_email")
+        exclude = "has_email"
 
-    has_first_name = NautobotBoolIterator()
-    first_name = factory.Maybe("has_first_name", factory.Faker("first_name"), "")
+    first_name = factory.Faker("first_name")
 
-    has_last_name = NautobotBoolIterator()
-    last_name = factory.Maybe("has_last_name", factory.Faker("last_name"), "")
+    last_name = factory.Faker("last_name")
 
-    username = factory.Maybe(
-        "has_first_name",
-        factory.Maybe(
-            "has_last_name",
-            factory.LazyAttribute(lambda u: f"{u.first_name[0].lower()}{u.last_name.lower()}"),
-            factory.LazyAttribute(lambda u: u.first_name.lower()),
-        ),
-        factory.Maybe(
-            "has_last_name",
-            factory.LazyAttribute(lambda u: u.last_name.lower()),
-            factory.Faker("user_name"),
-        ),
-    )
+    username = factory.LazyAttribute(lambda u: f"{u.first_name[0].lower()}{u.last_name.lower()}")
 
     has_email = NautobotBoolIterator()
     email = factory.Maybe("has_email", factory.LazyAttribute(lambda u: f"{u.username}@example.com"), "")
