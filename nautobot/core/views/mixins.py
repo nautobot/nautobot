@@ -1,4 +1,3 @@
-from io import BytesIO
 import logging
 
 from django.contrib import messages
@@ -31,7 +30,6 @@ from rest_framework.viewsets import GenericViewSet
 
 from drf_spectacular.utils import extend_schema
 
-from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -46,6 +44,7 @@ from nautobot.core.utils.requests import get_filterable_params_from_filter_param
 from nautobot.core.views.utils import (
     get_csv_form_fields_from_serializer_class,
     handle_protectederror,
+    import_csv_helper,
     prepare_cloned_fields,
 )
 from nautobot.extras.models import ExportTemplate
@@ -905,31 +904,11 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):
         queryset = self.get_queryset()
         with transaction.atomic():
             if request.FILES:
-                field_name = "csv_file"
                 # Set the bulk_create_active_tab to "csv-file"
                 # In case the form validation fails, the user will be redirected
                 # to the tab with errors rendered on the form.
                 self.bulk_create_active_tab = "csv-file"
-            else:
-                field_name = "csv_data"
-
-            csvtext = form.cleaned_data[field_name]
-            try:
-                data = NautobotCSVParser().parse(
-                    stream=BytesIO(csvtext.encode("utf-8")),
-                    parser_context={"request": request, "serializer_class": self.serializer_class},
-                )
-                serializer = self.serializer_class(data=data, context={"request": request}, many=True)
-                if serializer.is_valid():
-                    new_objs = serializer.save()
-                else:
-                    for row, errors in enumerate(serializer.errors, start=1):
-                        for field, err in errors.items():
-                            form.add_error(field_name, f"Row {row}: {field}: {err[0]}")
-                    raise ValidationError("")
-            except exceptions.ParseError as exc:
-                form.add_error(None, str(exc))
-                raise ValidationError("")
+            new_objs = import_csv_helper(request=request, form=form, serializer_class=self.serializer_class)
 
             # Enforce object-level permissions
             if queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
