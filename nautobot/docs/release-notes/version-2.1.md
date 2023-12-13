@@ -8,7 +8,7 @@ This document describes all new features and changes in Nautobot 2.1.
 
 ### Added
 
-#### UI/API `isnull` Filter on Nullable Fields
+#### UI/API `isnull` Filter on Nullable Fields ([#1905](https://github.com/nautobot/nautobot/issues/1905))
 
 Models with nullable fields (i.e. model fields with `null=True`) can now be filtered in the UI and the API with `<field>__isnull=true/false` filters. These filters are automatically added to all appropriate fields.
 
