@@ -111,5 +111,6 @@
 {% endblock %}
 {% block javascript %}
 {{ block.super }}
-{% include 'inc/homepage_javascript.html' %}
+<script src="{% versioned_static 'js/homepage_layout.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=js/homepagelayout.js'"></script>
 {% endblock %}

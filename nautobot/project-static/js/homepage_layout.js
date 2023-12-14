@@ -7,11 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var collapsibleDiv = document.getElementById(elementId);
 
         // Toggle the collapsed class
-        if (collapsibleDiv.classList.contains('collapsed')) {
-            collapsibleDiv.classList.remove('collapsed');
-        } else {
-            collapsibleDiv.classList.add('collapsed');
-        }
+        var isCollapsed = collapsibleDiv.classList.toggle('collapsed')
 
         // Update the state in localStorage
         var isCollapsed = collapsibleDiv.classList.contains('in');
