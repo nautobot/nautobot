@@ -11,8 +11,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.encoding import iri_to_uri
 from django.utils.decorators import method_decorator
-from django.utils.http import is_safe_url
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
@@ -83,12 +84,12 @@ class LoginView(View):
         else:
             redirect_to = request.GET.get("next", reverse("home"))
 
-        if redirect_to and not is_safe_url(url=redirect_to, allowed_hosts=request.get_host()):
+        if redirect_to and not url_has_allowed_host_and_scheme(url=redirect_to, allowed_hosts=request.get_host()):
             logger.warning(f"Ignoring unsafe 'next' URL passed to login form: {redirect_to}")
             redirect_to = reverse("home")
 
         logger.debug(f"Redirecting user to {redirect_to}")
-        return HttpResponseRedirect(redirect_to)
+        return HttpResponseRedirect(iri_to_uri(redirect_to))
 
 
 class LogoutView(View):
