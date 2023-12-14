@@ -40,6 +40,9 @@ document.addEventListener("DOMContentLoaded", function() {
     draggableHomepagePanels.addEventListener("dragover", handleDragOver, false);
     draggableHomepagePanels.addEventListener("drop", handleDrop, false);
 
+    // Enable panel dragging
+    enablePanelDragging();
+
     // Load saved panel order on page load
     loadSavedPanelOrder();
 
@@ -126,6 +129,19 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (panel) {
                     draggableHomepagePanels.appendChild(panel);
                 }
+            }
+        }
+    }
+
+    // Enable panel dragging
+    function enablePanelDragging() {
+        var panelOrder = Array.from(draggableHomepagePanels.children).map(function(panel) {
+            return panel.id;
+        });
+        for (var i = 0; i < panelOrder.length; i++) {
+            var panel = document.getElementById(panelOrder[i]);
+            if (panel) {
+                panel.draggable = true;
             }
         }
 
