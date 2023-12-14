@@ -99,6 +99,11 @@ def get_rack_reservation_units(obj):
     return [unit for unit in available_units if unit not in unavailable_units][:1]
 
 
+def get_random_platform_for_manufacturer(manufacturer):
+    qs = Platform.objects.filter(manufacturer=manufacturer)
+    return factory.random.randgen.choice(qs) if qs.exists() else None
+
+
 class DeviceFactory(PrimaryModelFactory):
     class Meta:
         model = Device
@@ -131,7 +136,8 @@ class DeviceFactory(PrimaryModelFactory):
     has_platform = NautobotBoolIterator()
     platform = factory.Maybe(
         "has_platform",
-        factory.LazyAttribute(lambda o: Platform.objects.filter(manufacturer=o.device_type.manufacturer).first()),
+        factory.LazyAttribute(lambda o: get_random_platform_for_manufacturer(o.device_type.manufacturer)),
+        None,
     )
 
     has_serial = NautobotBoolIterator()
