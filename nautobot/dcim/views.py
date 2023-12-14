@@ -182,6 +182,7 @@ class LocationTypeView(generic.ObjectView):
         return {
             "children_table": children_table,
             "locations_table": locations_table,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -265,6 +266,7 @@ class LocationView(generic.ObjectView):
             "children_table": children_table,
             "rack_groups": rack_groups,
             "stats": stats,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -328,9 +330,7 @@ class RackGroupView(generic.ObjectView):
         }
         RequestConfig(request, paginate).configure(rack_table)
 
-        return {
-            "rack_table": rack_table,
-        }
+        return {"rack_table": rack_table, **super().get_extra_context(request, instance)}
 
 
 class RackGroupEditView(generic.ObjectEditView):
@@ -453,6 +453,7 @@ class RackView(generic.ObjectView):
             "nonracked_devices": nonracked_devices,
             "next_rack": next_rack,
             "prev_rack": prev_rack,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -569,9 +570,7 @@ class ManufacturerView(generic.ObjectView):
         }
         RequestConfig(request, paginate).configure(device_table)
 
-        return {
-            "device_table": device_table,
-        }
+        return {"device_table": device_table, **super().get_extra_context(request, instance)}
 
 
 class ManufacturerEditView(generic.ObjectEditView):
@@ -669,6 +668,7 @@ class DeviceTypeView(generic.ObjectView):
             "front_port_table": front_port_table,
             "rear_port_table": rear_port_table,
             "devicebay_table": devicebay_table,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -1067,6 +1067,7 @@ class PlatformView(generic.ObjectView):
         return {
             "device_table": device_table,
             "network_driver_tool_names": get_network_driver_mapping_tool_names(),
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -1076,7 +1077,10 @@ class PlatformEditView(generic.ObjectEditView):
     template_name = "dcim/platform_edit.html"
 
     def get_extra_context(self, request, instance):
-        return {"network_driver_names": sorted(get_all_network_driver_mappings().keys())}
+        return {
+            "network_driver_names": sorted(get_all_network_driver_mappings().keys()),
+            **super().get_extra_context(request, instance),
+        }
 
 
 class PlatformDeleteView(generic.ObjectDeleteView):
@@ -1453,7 +1457,7 @@ class ConsolePortView(generic.ObjectView):
     queryset = ConsolePort.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_consoleports"}
+        return {"breadcrumb_url": "dcim:device_consoleports", **super().get_extra_context(request, instance)}
 
 
 class ConsolePortCreateView(generic.ComponentCreateView):
@@ -1516,7 +1520,7 @@ class ConsoleServerPortView(generic.ObjectView):
     queryset = ConsoleServerPort.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_consoleserverports"}
+        return {"breadcrumb_url": "dcim:device_consoleserverports", **super().get_extra_context(request, instance)}
 
 
 class ConsoleServerPortCreateView(generic.ComponentCreateView):
@@ -1579,7 +1583,7 @@ class PowerPortView(generic.ObjectView):
     queryset = PowerPort.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_powerports"}
+        return {"breadcrumb_url": "dcim:device_powerports", **super().get_extra_context(request, instance)}
 
 
 class PowerPortCreateView(generic.ComponentCreateView):
@@ -1642,7 +1646,7 @@ class PowerOutletView(generic.ObjectView):
     queryset = PowerOutlet.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_poweroutlets"}
+        return {"breadcrumb_url": "dcim:device_poweroutlets", **super().get_extra_context(request, instance)}
 
 
 class PowerOutletCreateView(generic.ComponentCreateView):
@@ -1737,6 +1741,7 @@ class InterfaceView(generic.ObjectView):
             "breadcrumb_url": "dcim:device_interfaces",
             "child_interfaces_table": child_interfaces_tables,
             "redundancy_table": redundancy_table,
+            **super().get_extra_context(request, instance),
         }
 
     def _get_interface_redundancy_groups_table(self, request, instance):
@@ -1824,7 +1829,7 @@ class FrontPortView(generic.ObjectView):
     queryset = FrontPort.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_frontports"}
+        return {"breadcrumb_url": "dcim:device_frontports", **super().get_extra_context(request, instance)}
 
 
 class FrontPortCreateView(generic.ComponentCreateView):
@@ -1887,7 +1892,7 @@ class RearPortView(generic.ObjectView):
     queryset = RearPort.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_rearports"}
+        return {"breadcrumb_url": "dcim:device_rearports", **super().get_extra_context(request, instance)}
 
 
 class RearPortCreateView(generic.ComponentCreateView):
@@ -1950,7 +1955,7 @@ class DeviceBayView(generic.ObjectView):
     queryset = DeviceBay.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_devicebays"}
+        return {"breadcrumb_url": "dcim:device_devicebays", **super().get_extra_context(request, instance)}
 
 
 class DeviceBayCreateView(generic.ComponentCreateView):
@@ -2094,7 +2099,7 @@ class InventoryItemView(generic.ObjectView):
     queryset = InventoryItem.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_inventory"}
+        return {"breadcrumb_url": "dcim:device_inventory", **super().get_extra_context(request, instance)}
 
 
 class InventoryItemEditView(generic.ObjectEditView):
@@ -2300,6 +2305,7 @@ class PathTraceView(generic.ObjectView):
             "path": path,
             "related_paths": related_paths,
             "total_length": path.get_total_length() if path else None,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -2509,9 +2515,7 @@ class VirtualChassisView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         members = Device.objects.restrict(request.user).filter(virtual_chassis=instance)
 
-        return {
-            "members": members,
-        }
+        return {"members": members, **super().get_extra_context(request, instance)}
 
 
 class VirtualChassisCreateView(generic.ObjectEditView):
@@ -2751,9 +2755,7 @@ class PowerPanelView(generic.ObjectView):
         powerfeed_table = tables.PowerFeedTable(data=power_feeds, orderable=False)
         powerfeed_table.exclude = ["power_panel"]
 
-        return {
-            "powerfeed_table": powerfeed_table,
-        }
+        return {"powerfeed_table": powerfeed_table, **super().get_extra_context(request, instance)}
 
 
 class PowerPanelEditView(generic.ObjectEditView):

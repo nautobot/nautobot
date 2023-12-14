@@ -53,9 +53,7 @@ class ClusterTypeView(generic.ObjectView):
         }
         RequestConfig(request, paginate).configure(cluster_table)
 
-        return {
-            "cluster_table": cluster_table,
-        }
+        return {"cluster_table": cluster_table, **super().get_extra_context(request, instance)}
 
 
 class ClusterTypeEditView(generic.ObjectEditView):
@@ -112,9 +110,7 @@ class ClusterGroupView(generic.ObjectView):
         }
         RequestConfig(request, paginate).configure(cluster_table)
 
-        return {
-            "cluster_table": cluster_table,
-        }
+        return {"cluster_table": cluster_table, **super().get_extra_context(request, instance)}
 
 
 class ClusterGroupEditView(generic.ObjectEditView):
@@ -166,9 +162,7 @@ class ClusterView(generic.ObjectView):
         if request.user.has_perm("virtualization.change_cluster"):
             device_table.columns.show("pk")
 
-        return {
-            "device_table": device_table,
-        }
+        return {"device_table": device_table, **super().get_extra_context(request, instance)}
 
 
 class ClusterEditView(generic.ObjectEditView):
@@ -335,6 +329,7 @@ class VirtualMachineView(generic.ObjectView):
             "vminterface_table": vminterface_table,
             "services": services,
             "vrf_table": vrf_table,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -423,6 +418,7 @@ class VMInterfaceView(generic.ObjectView):
             "ipaddress_table": ipaddress_table,
             "child_interfaces_table": child_interfaces_tables,
             "vlan_table": vlan_table,
+            **super().get_extra_context(request, instance),
         }
 
 

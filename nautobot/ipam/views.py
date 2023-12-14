@@ -329,6 +329,7 @@ class RouteTargetView(generic.ObjectView):
         return {
             "importing_vrfs_table": importing_vrfs_table,
             "exporting_vrfs_table": exporting_vrfs_table,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -386,9 +387,7 @@ class RIRView(generic.ObjectView):
         }
         RequestConfig(request, paginate).configure(assigned_prefix_table)
 
-        return {
-            "assigned_prefix_table": assigned_prefix_table,
-        }
+        return {"assigned_prefix_table": assigned_prefix_table, **super().get_extra_context(request, instance)}
 
 
 class RIREditView(generic.ObjectEditView):
@@ -462,6 +461,7 @@ class PrefixView(generic.ObjectView):
         return {
             "vrf_table": vrf_table,
             "parent_prefix_table": parent_prefix_table,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -771,6 +771,7 @@ class IPAddressView(generic.ObjectView):
         return {
             "parent_prefixes_table": parent_prefixes_table,
             "related_ips_table": related_ips_table,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -1245,6 +1246,7 @@ class VLANGroupView(generic.ObjectView):
             "vlan_table": vlan_table,
             "permissions": permissions,
             "vlans_count": vlans_count,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -1303,9 +1305,7 @@ class VLANView(generic.ObjectView):
         prefix_table = tables.PrefixTable(list(prefixes))
         prefix_table.exclude = ("vlan",)
 
-        return {
-            "prefix_table": prefix_table,
-        }
+        return {"prefix_table": prefix_table, **super().get_extra_context(request, instance)}
 
 
 class VLANInterfacesView(generic.ObjectView):

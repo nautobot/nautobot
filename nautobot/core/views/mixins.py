@@ -483,7 +483,9 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         request: The current request
         instance: The object being viewed
         """
-        return {}
+        return {
+            "active_tab": request.GET.get("tab", "main"),
+        }
 
     def get_template_name(self):
         # Use "<app>/<model>_<action> if available, else fall back to generic templates
