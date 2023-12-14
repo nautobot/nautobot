@@ -500,31 +500,25 @@ class ExampleModelCustomActionViewTest(TestCase):
         ExampleModel.objects.create(name="Example 1", number=100)
         ExampleModel.objects.create(name="Example 2", number=200)
         ExampleModel.objects.create(name="Example 3", number=300)
-
-    def get_list_url(self):
-        return reverse(helpers.validated_viewname(self.model, "list"))
+        cls.custom_view_url = reverse("plugins:example_plugin:examplemodel_all-names")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_custom_action_view_anonymous(self):
         self.client.logout()
-        custom_view_url = self.get_list_url() + "all_names/"
-        response = self.client.get(custom_view_url)
+        response = self.client.get(self.custom_view_url)
         self.assertHttpStatus(response, 302)
 
     def test_custom_action_view_without_permission(self):
-        custom_view_url = self.get_list_url() + "all_names/"
-
         with disable_warnings("django.request"):
-            response = self.client.get(custom_view_url)
+            response = self.client.get(self.custom_view_url)
             self.assertHttpStatus(response, 403)
             response_body = response.content.decode(response.charset)
             self.assertNotIn("/login/", response_body, msg=response_body)
 
     def test_custom_action_view_with_permission(self):
-        custom_view_url = self.get_list_url() + "all_names/"
         self.add_permissions(f"{self.model._meta.app_label}.all_names_{self.model._meta.model_name}")
 
-        response = self.client.get(custom_view_url)
+        response = self.client.get(self.custom_view_url)
         self.assertHttpStatus(response, 200)
 
         response_body = extract_page_body(response.content.decode(response.charset))
@@ -534,20 +528,17 @@ class ExampleModelCustomActionViewTest(TestCase):
 
     def test_custom_action_view_with_constrained_permission(self):
         instance1 = self.model.objects.first()
-        custom_view_url = self.get_list_url() + "all_names/"
         # Add object-level permission
         obj_perm = ObjectPermission(
             name="Test permission",
             constraints={"pk": instance1.pk},
-            # To get a different rendering flow than the `test_get_object_with_permission` test above,
-            # enable additional permissions for this object so that add/edit/delete buttons are rendered.
             actions=["all_names"],
         )
         obj_perm.save()
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-        response = self.client.get(custom_view_url)
+        response = self.client.get(self.custom_view_url)
         self.assertHttpStatus(response, 200)
 
         response_body = extract_page_body(response.content.decode(response.charset))
