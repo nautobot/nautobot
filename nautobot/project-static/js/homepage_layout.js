@@ -57,17 +57,52 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to handle a drop event
     function handleDrop(e) {
         e.preventDefault();
-        var draggedId = e.dataTransfer.getData('text/plain');
-        var droppedOn = e.target.closest('.panel'); // Get the closest panel to the drop location
 
-        if (droppedOn) { // Check if a panel was found
-            var droppedOnId = droppedOn.id;
-            swapElements(document.getElementById(draggedId), document.getElementById(droppedOnId));
-            savePanelOrder();
+        let dragged = document.getElementById(e.dataTransfer.getData("text/plain"));
+        let insertBefore = null;
+
+        /* Were we dropped onto another panel? */
+        let droppedOn = e.target.closest(".panel");
+        if (droppedOn) {
+            /* Were we dropped in the top half or the bottom half of the target panel? */
+            boundingClientRect = droppedOn.getBoundingClientRect();
+            if (e.clientY < boundingClientRect.top + (boundingClientRect.height / 2)) {
+                /* Top half - insert before that panel */
+                insertBefore = droppedOn;
+            } else {
+                /* Bottom half - insert after that panel */
+                insertBefore = droppedOn.nextSibling;
+            }
+        } else {
+            /* We were dropped into empty space - find the closest panel by geometry */
+            for (let child of this.children) {
+                /* Are we in the correct column? */
+                if (child.offsetLeft > e.offsetX) {
+                    /* Found the first child that is too far to the right, so we insert before that child */
+                    insertBefore = child;
+                    break;
+                } else if (child.offsetLeft + child.offsetWidth >= e.offsetX) {
+                    /* Child is in the correct column */
+                    if (child.offsetTop >= e.offsetY) {
+                        /* Found the first child in this column we were dropped above, so we insert before that child */
+                        insertBefore = child;
+                        break;
+                    }
+                }
+            }
         }
-        
+
+        if (insertBefore) {
+            this.insertBefore(dragged, insertBefore);
+        } else {
+            /* Add to end of the list */
+            this.append(dragged);
+        }
+
+        savePanelOrder();
+
         // Remove the "dragging" class from the panel that was dragged
-        document.getElementById(draggedId).classList.remove('dragging');
+        dragged.classList.remove("dragging");
     }
 
     // Function to swap two elements
@@ -97,7 +132,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Append the panels in the saved order
             for (var i = 0; i < savedOrder.length; i++) {
                 var panel = document.getElementById(savedOrder[i]);
-                draggableHomepagePanels.appendChild(panel);
+                if (panel) {
+                    draggableHomepagePanels.appendChild(panel);
+                }
             }
         }
 
