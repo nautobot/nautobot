@@ -10,7 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
 from django.forms.widgets import TextInput
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 
 from nautobot.core.forms import (
     add_blank_choice,
@@ -111,6 +111,10 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
         except Exception as exc:
             logger.warning("Failed to render computed field %s: %s", self.key, exc)
             return self.fallback_value
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     def clean(self):
         super().clean()
@@ -408,11 +412,16 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
     def __str__(self):
         return self.label
 
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
     def clean(self):
         super().clean()
 
         if self.key != "":
             check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
+
         if self.present_in_database:
             # Check immutable fields
             database_object = self.__class__.objects.get(pk=self.pk)
@@ -517,7 +526,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                 field.validators = [
                     RegexValidator(
                         regex=self.validation_regex,
-                        message=mark_safe(f"Values must match this regex: <code>{self.validation_regex}</code>"),
+                        message=format_html("Values must match this regex: <code>{}</code>", self.validation_regex),
                     )
                 ]
 

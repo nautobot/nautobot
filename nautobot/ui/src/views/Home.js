@@ -44,7 +44,9 @@ export default function Home() {
     if (isLoading) {
         return (
             <GenericView>
-                <LoadingWidget />
+                <NautobotGridItem colSpan="4">
+                    <LoadingWidget />
+                </NautobotGridItem>
             </GenericView>
         );
     }
@@ -52,7 +54,9 @@ export default function Home() {
     if (isError) {
         return (
             <GenericView>
-                <Text>Error loading.</Text>
+                <NautobotGridItem colSpan="4">
+                    <Text textAlign="center">Error loading.</Text>
+                </NautobotGridItem>
             </GenericView>
         );
     }
@@ -105,13 +109,13 @@ export default function Home() {
                                                     </TagLabel>
                                                 </Tag>
                                             </Tab>
-                                            <Tab>
+                                            <Tab hidden={true}>
                                                 Schedule{" "}
                                                 <Tag size="sm" variant="info">
                                                     <TagLabel>7</TagLabel>
                                                 </Tag>
                                             </Tab>
-                                            <Tab>
+                                            <Tab hidden={true}>
                                                 Approvals{" "}
                                                 <Tag size="sm" variant="info">
                                                     <TagLabel>3</TagLabel>

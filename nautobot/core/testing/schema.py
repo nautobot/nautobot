@@ -106,7 +106,7 @@ class OpenAPISchemaTestCases:
             - The property's referenced component is polymorphic and has the expected set of model content-types.
 
             Returns:
-                tuple: (ref_component_name, ref_component_schema)
+                (Tuple[ref_component_name, ref_component_schema]): The referenced component's name and schema.
             """
             component_schema = self.get_component_schema(component_name)
 

@@ -1,6 +1,7 @@
 import time
 import uuid
 
+from unittest import skip
 from unittest.mock import patch
 
 from django.core.cache import cache
@@ -11,7 +12,7 @@ from django.test.utils import isolate_apps
 from nautobot.core.models import BaseModel
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
 from nautobot.core.testing import TestCase
-from nautobot.dcim.models import DeviceType, Manufacturer
+from nautobot.dcim.models import DeviceType, Location, Manufacturer
 
 
 @isolate_apps("nautobot.core.tests")
@@ -26,6 +27,7 @@ class BaseModelTest(TestCase):
 
 
 class ModelUtilsTestCase(TestCase):
+    @skip("Composite keys aren't being supported at this time")
     def test_construct_deconstruct_composite_key(self):
         """Test that construct_composite_key() and deconstruct_composite_key() work and are symmetric."""
         for values, expected_composite_key in (
@@ -70,6 +72,7 @@ class NaturalKeyTestCase(BaseModelTest):
         dt = DeviceType.objects.first()
         self.assertEqual(dt.natural_key(), [dt.manufacturer.name, dt.model])
 
+    @skip("Composite keys aren't being supported at this time")
     def test_composite_key(self):
         """Test the composite_key default implementation with some representative models."""
         mfr = Manufacturer.objects.first()
@@ -139,3 +142,29 @@ class NaturalKeyTestCase(BaseModelTest):
             self.FakeBaseModel._content_type_cached
             self.FakeBaseModel._content_type_cached
             self.assertEqual(mock__content_type.call_count, 2)
+
+
+class TreeModelTestCase(TestCase):
+    """Tests for the behavior of tree models, using Location as a representative model."""
+
+    def test_values(self):
+        """Test that `.values()` works properly (https://github.com/nautobot/nautobot/issues/4812)."""
+        queryset = Location.objects.filter(name="Campus-01")
+        instance = queryset.first()
+        values_dict = queryset.values().first()
+        model_dict = queryset.first().__dict__
+        values_subset_dict = queryset.values("id", "name", "last_updated").first()
+
+        for key, value in values_dict.items():
+            with self.subTest(description="values()", key=key):
+                self.assertEqual(value, getattr(instance, key))
+
+        for key, value in model_dict.items():
+            if key.startswith("_"):
+                continue
+            with self.subTest(description="__dict__", key=key):
+                self.assertEqual(value, getattr(instance, key))
+
+        for key, value in values_subset_dict.items():
+            with self.subTest(description="values(key, key, key...)", key=key):
+                self.assertEqual(value, getattr(instance, key))

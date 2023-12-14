@@ -506,6 +506,13 @@ class RackTest(APIViewTestCases.APIViewTestCase):
                 "role": rack_roles[1].pk,
                 "status": statuses[1].pk,
             },
+            # Make sure rack_group is not interpreted as a required field
+            {
+                "name": "Test Rack 7",
+                "location": locations[1].pk,
+                "role": rack_roles[1].pk,
+                "status": statuses[1].pk,
+            },
         ]
         cls.bulk_update_data = {
             "status": statuses[1].pk,
@@ -594,31 +601,54 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         response = self.client.options(url, **self.header)
         detail_view_schema = response.data["view_options"]["retrieve"]
 
-        expected_schema = [
-            {
-                "Rack": {"fields": ["name", "location", "rack_group"]},
-                "Other Fields": {
-                    "fields": [
-                        "asset_tag",
-                        "desc_units",
-                        "device_count",
-                        "facility_id",
-                        "outer_depth",
-                        "outer_unit",
-                        "outer_width",
-                        "power_feed_count",
-                        "role",
-                        "serial",
-                        "tenant",
-                        "type",
-                        "u_height",
-                        "width",
-                    ]
-                },
-            },
-            {"Comments": {"fields": ["comments"]}},
-        ]
+        expected_schema = {
+            "tabs": {
+                "Rack": [
+                    {
+                        "Rack": {"fields": ["name", "location", "rack_group"]},
+                        "Other Fields": {
+                            "fields": [
+                                "asset_tag",
+                                "desc_units",
+                                "device_count",
+                                "facility_id",
+                                "outer_depth",
+                                "outer_unit",
+                                "outer_width",
+                                "power_feed_count",
+                                "role",
+                                "serial",
+                                "tenant",
+                                "type",
+                                "u_height",
+                                "width",
+                            ]
+                        },
+                    },
+                    {
+                        "Comments": {"fields": ["comments"]},
+                        "Tags": {"fields": ["tags"]},
+                    },
+                ],
+                "Advanced": [
+                    {
+                        "Object Details": {
+                            "fields": [
+                                "id",
+                                "url",
+                                "object_type",
+                                "created",
+                                "last_updated",
+                                "natural_slug",
+                            ]
+                        }
+                    },
+                ],
+            }
+        }
+
         self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.maxDiff = None
         self.assertEqual(expected_schema, detail_view_schema)
 
 

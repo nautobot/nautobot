@@ -13,6 +13,7 @@ A number of settings can alternatively be configured via the Nautobot Admin UI. 
 * [DEPLOYMENT_ID](#deployment_id)
 * [DEVICE_NAME_AS_NATURAL_KEY](#device_name_as_natural_key)
 * [DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT](#dynamic_groups_member_cache_timeout)
+* [FEEDBACK_BUTTON_ENABLED](#feedback_button_enabled)
 * [HIDE_RESTRICTED_UI](#hide_restricted_ui)
 * [LOCATION_NAME_AS_NATURAL_KEY](#location_name_as_natural_key)
 * [MAX_PAGE_SIZE](#max_page_size)
@@ -24,6 +25,7 @@ A number of settings can alternatively be configured via the Nautobot Admin UI. 
 * [RACK_ELEVATION_DEFAULT_UNIT_WIDTH](#rack_elevation_default_unit_width)
 * [RELEASE_CHECK_TIMEOUT](#release_check_timeout)
 * [RELEASE_CHECK_URL](#release_check_url)
+* [SUPPORT_MESSAGE](#support_message)
 
 ## Extra Applications
 
@@ -378,8 +380,6 @@ A later release of Nautobot will address the underlying performance issues, and 
 
 Default: `0` (disabled)
 
-Environment Variable: `NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT`
-
 The number of seconds to cache the member list of dynamic groups. With large datasets (those in scope of a Dynamic Group and number of Dynamic Groups themselves), users will encounter a performance penalty using or accessing the membership lists. This setting allows users to accept a cached list for common use cases (particularly in the UI) that expires after the configured time. Set this to `0` to disable caching.
 
 ---
@@ -474,6 +474,16 @@ Please see [the object permissions page](../guides/permissions.md) for more info
 
 ---
 
+### FEEDBACK_BUTTON_ENABLED
+
++++ 2.0.0
+
+Default: `True`
+
+If set to `True`, a "Submit Feedback" button is added to the New UI sidebar secondary menu, which is used to collect user feedback.
+
+---
+
 ## GIT_ROOT
 
 Default: `os.path.join(NAUTOBOT_ROOT, "git")`
@@ -565,8 +575,8 @@ Environment Variable: `NAUTOBOT_JOBS_ROOT`
 
 The file path to a directory where [Jobs](../../platform-functionality/jobs/index.md) can be discovered.
 
-!!! caution
-    This directory **must** contain an `__init__.py` file.
++/- 2.0.0
+    This directory no longer requires an `__init__.py` file.
 
 ---
 
@@ -883,6 +893,23 @@ If set to `False`, unknown/unrecognized filter parameters will be discarded and 
 
 !!! warning
     Setting this to `False` can result in unexpected filtering results in the case of user error, for example `/dcim/devices/?has_primry_ip=false` (note the typo `primry`) will result in a list of all devices, rather than the intended list of only devices that lack a primary IP address. In the case of Jobs or external automation making use of such a filter, this could have wide-ranging consequences.
+
+---
+
+## SUPPORT_MESSAGE
+
++++ 1.6.4
+
++++ 2.0.2
+
+Default: `""`
+
+A message to include on error pages (status code 403, 404, 500, etc.) when an error occurs. You can configure this to direct users to the appropriate contact(s) within your organization that provide support for Nautobot. Markdown formatting is supported within this message (raw HTML is not).
+
+If unset, the default message that will appear is `If further assistance is required, please join the #nautobot channel on [Network to Code's Slack community](https://slack.networktocode.com) and post your question.`
+
+!!! tip
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -1273,9 +1300,3 @@ Environment Variable: `NAUTOBOT_TIME_ZONE`
 The time zone Nautobot will use when dealing with dates and times. It is recommended to use UTC time unless you have a specific need to use a local time zone. Please see the [list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
 
 Please see the [official Django documentation on `TIME_ZONE`](https://docs.djangoproject.com/en/stable/ref/settings/#time-zone) for more information.
-
-### FEEDBACK_BUTTON_ENABLED
-
-Default: `True`
-
-If set to `True`, a "Submit Feedback" button is added to the New UI sidebar secondary menu, which is used to collect user feedback.

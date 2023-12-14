@@ -62,12 +62,7 @@ export default function ObjectRetrieve({ api_url }) {
 
     // NOTE: This acts as a schema that would be gotten form an OPTIONS call,
     // which loads the tabs and its layout schema.
-    const objectRetrieveTabSchema = {
-        tabs: {
-            [`${schemaData.name}`]: schemaData.view_options.retrieve,
-            Advanced: schemaData.view_options.advanced,
-        },
-    };
+    const objectRetrieveTabSchema = schemaData.view_options.retrieve;
 
     return (
         <GenericView

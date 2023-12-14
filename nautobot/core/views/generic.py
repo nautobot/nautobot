@@ -16,9 +16,9 @@ from django.db.models import ManyToManyField, ProtectedError
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.html import escape
-from django.utils.http import is_safe_url
-from django.utils.safestring import mark_safe
+from django.utils.encoding import iri_to_uri
+from django.utils.html import format_html
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from rest_framework.exceptions import ParseError
@@ -209,7 +209,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             if not filterset.is_valid():
                 messages.error(
                     request,
-                    mark_safe(f"Invalid filters were specified: {filterset.errors}"),
+                    format_html("Invalid filters were specified: {}", filterset.errors),
                 )
                 self.queryset = self.queryset.none()
 
@@ -352,11 +352,11 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         Return any additional context data for the template.
 
         Args:
-            request: The current request
-            instance: The object being edited
+            request (HttpRequest): The current request
+            instance (Model): The object being edited
 
         Returns:
-            dict
+            (dict): Additional context data
         """
         return {}
 
@@ -396,11 +396,11 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         verb = "Created" if created else "Modified"
         msg = f"{verb} {self.queryset.model._meta.verbose_name}"
         logger.info(f"{msg} {obj} (PK: {obj.pk})")
-        if hasattr(obj, "get_absolute_url"):
-            msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
-        else:
-            msg = f"{msg} {escape(obj)}"
-        messages.success(request, mark_safe(msg))
+        try:
+            msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+        except AttributeError:
+            msg = format_html("{} {}", msg, obj)
+        messages.success(request, msg)
 
     def post(self, request, *args, **kwargs):
         logger = logging.getLogger(__name__ + ".ObjectEditView")
@@ -433,8 +433,8 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                     return redirect(request.get_full_path())
 
                 return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(return_url)
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
                 else:
                     return redirect(self.get_return_url(request, obj))
 
@@ -517,8 +517,8 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             messages.success(request, msg)
 
             return_url = form.cleaned_data.get("return_url")
-            if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                return redirect(return_url)
+            if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                return redirect(iri_to_uri(return_url))
             else:
                 return redirect(self.get_return_url(request, obj))
 
@@ -752,15 +752,15 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 logger.info(f"Import object {obj} (PK: {obj.pk})")
                 messages.success(
                     request,
-                    mark_safe(f'Imported object: <a href="{obj.get_absolute_url()}">{obj}</a>'),
+                    format_html('Imported object: <a href="{}">{}</a>', obj.get_absolute_url(), obj),
                 )
 
                 if "_addanother" in request.POST:
                     return redirect(request.get_full_path())
 
                 return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(return_url)
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
                 else:
                     return redirect(self.get_return_url(request, obj))
 
@@ -1170,8 +1170,13 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         """
         Return selected_objects parent name.
 
+        This method is intended to be overridden by child classes to return the parent name of the selected objects.
+
         Args:
-            selected_objects: The objects being renamed
+            selected_objects (list[BaseModel]): The objects being renamed
+
+        Returns:
+            (str): The parent name of the selected objects
         """
 
         return ""

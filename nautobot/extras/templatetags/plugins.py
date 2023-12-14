@@ -52,7 +52,7 @@ def _get_registered_content(obj, method, template_context, return_html=True):
     if not return_html:
         return objects
 
-    return mark_safe(html)
+    return mark_safe(html)  # noqa: S308
 
 
 @register.simple_tag(takes_context=True)

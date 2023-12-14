@@ -128,6 +128,7 @@ __all__ = (
     "LocalContextModelForm",
     "LocalContextModelBulkEditForm",
     "NoteForm",
+    "NoteFilterForm",
     "ObjectChangeFilterForm",
     "PasswordInputWithPlaceholder",
     "RelationshipForm",
@@ -1045,6 +1046,20 @@ class NoteForm(BootstrapMixin, forms.ModelForm):
             "assigned_object_type": forms.HiddenInput,
             "assigned_object_id": forms.HiddenInput,
         }
+
+
+class NoteFilterForm(BootstrapMixin, forms.Form):
+    model = Note
+    q = forms.CharField(required=False, label="Search")
+
+    assigned_object_type_id = DynamicModelMultipleChoiceField(
+        queryset=ContentType.objects.all(),
+        required=False,
+        label="Object Type",
+        widget=APISelectMultiple(
+            api_url="/api/extras/content-types/",
+        ),
+    )
 
 
 #

@@ -573,7 +573,8 @@ class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
         "lag",
         "status",
         "cable",
-    ).prefetch_related("tags", "_path__destination", "_cable_peer", "ip_addresses")
+        "untagged_vlan",
+    ).prefetch_related("tags", "_path__destination", "_cable_peer", "ip_addresses", "tagged_vlans")
     serializer_class = serializers.InterfaceSerializer
     filterset_class = filters.InterfaceFilterSet
 

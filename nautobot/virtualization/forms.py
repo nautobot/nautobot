@@ -384,17 +384,20 @@ class VirtualMachineFilterForm(
 
 
 class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
+    virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
     parent_interface = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(),
         required=False,
         label="Parent interface",
         help_text="Assigned parent VMinterface",
+        query_params={"virtual_machine": "$virtual_machine"},
     )
     bridge = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(),
         required=False,
         label="Bridge interface",
         help_text="Assigned bridge VMinterface",
+        query_params={"virtual_machine": "$virtual_machine"},
     )
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
@@ -436,7 +439,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "tagged_vlans",
             "status",
         ]
-        widgets = {"virtual_machine": forms.HiddenInput(), "mode": StaticSelect2()}
+        widgets = {"mode": StaticSelect2()}
         labels = {
             "mode": "802.1Q Mode",
         }
@@ -446,11 +449,10 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        vm_id = self.initial.get("virtual_machine") or self.data.get("virtual_machine")
 
-        # Restrict parent interface assignment by VM
-        self.fields["parent_interface"].widget.add_query_param("virtual_machine_id", vm_id)
-        self.fields["bridge"].widget.add_query_param("virtual_machine_id", vm_id)
+        # Disallow changing the virtual_machine of an existing vminterface
+        if self.instance is not None and self.instance.present_in_database:
+            self.fields["virtual_machine"].disabled = True
 
         virtual_machine = VirtualMachine.objects.get(
             pk=self.initial.get("virtual_machine") or self.data.get("virtual_machine")

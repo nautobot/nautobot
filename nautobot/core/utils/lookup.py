@@ -2,6 +2,7 @@
 
 import inspect
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
@@ -36,7 +37,6 @@ def get_model_from_name(model_name):
 
     :return: Found model.
     """
-    from django.apps import apps
 
     try:
         return apps.get_model(model_name)
@@ -55,7 +55,7 @@ def get_route_for_model(model, action, api=False):
         api (bool): If set, return an API route.
 
     Returns:
-        str: return the name of the view for the model/action provided.
+        (str): return the name of the view for the model/action provided.
 
     Examples:
         >>> get_route_for_model(Device, "list")
@@ -90,7 +90,7 @@ def get_route_for_model(model, action, api=False):
         sep = "_" if not api else "-"
     viewname = f"{prefix}{sep}{action}"
 
-    if model._meta.app_label in settings.PLUGINS:
+    if apps.get_app_config(app_label).name in settings.PLUGINS:
         viewname = f"plugins{suffix}:{viewname}"
 
     return viewname
@@ -107,8 +107,13 @@ def get_related_class_for_model(model, module_name, object_suffix):
 
     If a matching class is not found, this will return `None`.
 
+    Args:
+        model (Union[BaseModel, str]): A model class, instance, or dotted representation
+        module_name (str): The name of the module to search for the object class
+        object_suffix (str): The suffix to append to the model name to find the object class
+
     Returns:
-        Either the matching object class or None
+        (Union[BaseModel, str]): Either the matching object class or None
     """
     if isinstance(model, str):
         model = get_model_from_name(model)
@@ -120,11 +125,9 @@ def get_related_class_for_model(model, module_name, object_suffix):
         raise TypeError(f"{model!r} is not a subclass of a Django Model class")
 
     # e.g. "nautobot.dcim.forms.DeviceFilterForm"
-    app_label = model._meta.app_label
+    app_config = apps.get_app_config(model._meta.app_label)
     object_name = f"{model.__name__}{object_suffix}"
-    object_path = f"{app_label}.{module_name}.{object_name}"
-    if app_label not in settings.PLUGINS:
-        object_path = f"nautobot.{object_path}"
+    object_path = f"{app_config.name}.{module_name}.{object_name}"
 
     try:
         return import_string(object_path)
@@ -143,8 +146,11 @@ def get_filterset_for_model(model):
 
     If a matching `FilterSet` is not found, this will return `None`.
 
+    Args:
+        model (BaseModel): A model class
+
     Returns:
-        Either the `FilterSet` class or `None`
+        (Union[FilterSet,None]): Either the `FilterSet` class or `None`
     """
     return get_related_class_for_model(model, module_name="filters", object_suffix="FilterSet")
 
@@ -163,7 +169,7 @@ def get_form_for_model(model, form_prefix=""):
             `FooFilterForm`) that will come after the model name.
 
     Returns:
-        Either the `Form` class or `None`
+        (Union[Form, None]): Either the `Form` class or `None`
     """
     object_suffix = f"{form_prefix}Form"
     return get_related_class_for_model(model, module_name="forms", object_suffix=object_suffix)
@@ -177,7 +183,10 @@ def get_table_for_model(model):
 
     If a matching `Table` is not found, this will return `None`.
 
+    Args:
+        model (BaseModel): A model class
+
     Returns:
-        Either the `Table` class or `None`
+        (Union[Table, None]): Either the `Table` class or `None`
     """
     return get_related_class_for_model(model, module_name="tables", object_suffix="Table")

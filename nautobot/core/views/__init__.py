@@ -3,12 +3,14 @@ import platform
 import sys
 import time
 
+from db_file_storage.views import get_file
 from django.apps import apps
 import prometheus_client
 from django.conf import settings
+from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin
 from django.http import HttpResponseServerError, JsonResponse, HttpResponseForbidden, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import resolve, reverse
@@ -27,7 +29,8 @@ from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_route_for_model
-from nautobot.extras.models import GraphQLQuery
+from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.extras.models import GraphQLQuery, FileProxy
 from nautobot.extras.registry import registry
 from nautobot.extras.forms import GraphQLQueryForm
 
@@ -211,17 +214,14 @@ def server_error(request, template_name=ERROR_500_TEMPLATE_NAME):
     except TemplateDoesNotExist:
         return HttpResponseServerError("<h1>Server Error (500)</h1>", content_type="text/html")
     type_, error, _traceback = sys.exc_info()
+    context = {
+        "error": error,
+        "exception": str(type_),
+        "nautobot_version": settings.VERSION,
+        "python_version": platform.python_version(),
+    }
 
-    return HttpResponseServerError(
-        template.render(
-            {
-                "error": error,
-                "exception": str(type_),
-                "nautobot_version": settings.VERSION,
-                "python_version": platform.python_version(),
-            }
-        )
-    )
+    return HttpResponseServerError(template.render(context, request))
 
 
 def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
@@ -234,7 +234,12 @@ def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
     if settings.DEBUG:
         return _csrf_failure(request, reason=reason)
     t = loader.get_template(template_name)
-    context = {"settings": settings, "reason": reason}
+    context = {
+        "reason": reason,
+        "settings": settings,
+        "nautobot_version": settings.VERSION,
+        "python_version": platform.python_version(),
+    }
     return HttpResponseForbidden(t.render(context), content_type="text/html")
 
 
@@ -292,3 +297,13 @@ def nautobot_metrics_view(request):
         pass
     metrics_page = prometheus_client.generate_latest(prometheus_registry)
     return HttpResponse(metrics_page, content_type=prometheus_client.CONTENT_TYPE_LATEST)
+
+
+@permission_required(get_permission_for_model(FileProxy, "view"), raise_exception=True)
+def get_file_with_authorization(request, *args, **kwargs):
+    """Patch db_file_storage view with authentication."""
+    # Make sure user has permissions
+    queryset = FileProxy.objects.restrict(request.user, "view")
+    get_object_or_404(queryset, file=request.GET.get("name"))
+
+    return get_file(request, *args, **kwargs)

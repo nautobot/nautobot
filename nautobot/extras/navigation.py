@@ -318,6 +318,14 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="extras:note_list",
+                        name="Notes",
+                        weight=300,
+                        permissions=[
+                            "extras.view_note",
+                        ],
+                    ),
                 ),
             ),
             NavMenuGroup(

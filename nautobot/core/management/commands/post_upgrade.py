@@ -30,11 +30,11 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--no-build-ui",
-            action="store_false",
+            "--build-ui",
+            action="store_true",
             dest="build_ui",
-            default=True,
-            help="Do not automatically build the user interface.",
+            default=False,
+            help="Build the user interface.",
         )
         parser.add_argument(
             "--no-clearsessions",

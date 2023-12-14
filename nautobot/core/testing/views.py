@@ -3,6 +3,7 @@ from typing import Optional, Sequence
 from unittest import skipIf
 import uuid
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
@@ -21,6 +22,7 @@ from nautobot.core.testing import mixins
 from nautobot.core.utils import lookup
 from nautobot.extras import choices as extras_choices
 from nautobot.extras import models as extras_models
+from nautobot.extras import querysets as extras_querysets
 from nautobot.users import models as users_models
 
 __all__ = (
@@ -88,7 +90,9 @@ class ModelViewTestCase(ModelTestCase):
         Override this if needed for testing of views that don't correspond directly to self.model,
         for example the DCIM "interface-connections" and "console-connections" view tests.
         """
-        if self.model._meta.app_label in settings.PLUGINS:
+        app_name = apps.get_app_config(app_label=self.model._meta.app_label).name
+        # AppConfig.name accounts for NautobotApps that are not built at the root of the package
+        if app_name in settings.PLUGINS:
             return f"plugins:{self.model._meta.app_label}:{self.model._meta.model_name}_{{}}"
         return f"{self.model._meta.app_label}:{self.model._meta.model_name}_{{}}"
 
@@ -530,12 +534,29 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_delete_object_with_permission(self):
             instance = self.get_deletable_object()
+            instance_note_pk_list = []
+            assigned_object_type = ContentType.objects.get_for_model(self.model)
+            if hasattr(self.model, "notes") and isinstance(instance.notes, extras_querysets.NotesQuerySet):
+                notes = (
+                    extras_models.Note(
+                        assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 1"
+                    ),
+                    extras_models.Note(
+                        assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 2"
+                    ),
+                    extras_models.Note(
+                        assigned_object_type=assigned_object_type, assigned_object_id=instance.id, note="hello 3"
+                    ),
+                )
+                for note in notes:
+                    note.validated_save()
+                    instance_note_pk_list.append(note.pk)
 
             # Assign model-level permission
             obj_perm = users_models.ObjectPermission(name="Test permission", actions=["delete"])
             obj_perm.save()
             obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            obj_perm.object_types.add(assigned_object_type)
 
             # Try GET with model-level permission
             self.assertHttpStatus(self.client.get(self._get_url("delete", instance)), 200)
@@ -554,6 +575,18 @@ class ViewTestCases:
                 objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
+
+            if hasattr(self.model, "notes") and isinstance(instance.notes, extras_querysets.NotesQuerySet):
+                # Verify Notes deletion
+                with self.assertRaises(ObjectDoesNotExist):
+                    extras_models.Note.objects.get(assigned_object_id=instance.pk)
+
+                note_objectchanges = extras_models.ObjectChange.objects.filter(
+                    changed_object_id__in=instance_note_pk_list
+                )
+                self.assertEqual(note_objectchanges.count(), 3)
+                for object_change in note_objectchanges:
+                    self.assertEqual(object_change.action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_delete_object_with_permission_and_xwwwformurlencoded(self):
@@ -1061,9 +1094,12 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
             pk_iter = iter(self._get_queryset().values_list("pk", flat=True))
-            first_pk = next(pk_iter)
-            second_pk = next(pk_iter)
-            third_pk = next(pk_iter)
+            try:
+                first_pk = next(pk_iter)
+                second_pk = next(pk_iter)
+                third_pk = next(pk_iter)
+            except StopIteration:
+                self.fail(f"Test requires at least three instances of {self.model._meta.model_name} to be defined.")
 
             post_data = testing.post_data(self.bulk_edit_data)
 
@@ -1219,9 +1255,12 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
 
             pk_iter = iter(self._get_queryset().values_list("pk", flat=True))
-            first_pk = next(pk_iter)
-            second_pk = next(pk_iter)
-            third_pk = next(pk_iter)
+            try:
+                first_pk = next(pk_iter)
+                second_pk = next(pk_iter)
+                third_pk = next(pk_iter)
+            except StopIteration:
+                self.fail(f"Test requires at least three instances of {self.model._meta.model_name} to be defined.")
 
             # Open bulk delete form with first two objects
             selected_data = {
