@@ -1,17 +1,17 @@
 // Enables panels on homepage to be collapsed and expanded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener("DOMContentLoaded", function() {
     // Function to toggle and save state for a specific collapsible element
     function toggleAndSaveState(elementId) {
-        // Remove 'toggle-' in the ID to get the localStorage key the toggle btn references
+        // Remove "toggle-" in the ID to get the localStorage key the toggle btn references
         elementId = elementId.replace("toggle-", "");
         var collapsibleDiv = document.getElementById(elementId);
 
         // Toggle the collapsed class
-        var isCollapsed = collapsibleDiv.classList.toggle('collapsed')
+        var isCollapsed = collapsibleDiv.classList.toggle("collapsed")
 
         // Update the state in localStorage
-        var isCollapsed = collapsibleDiv.classList.contains('in');
-        localStorage.setItem(elementId, isCollapsed ? 'collapsed' : 'expanded');
+        var isCollapsed = collapsibleDiv.classList.contains("in");
+        localStorage.setItem(elementId, isCollapsed ? "collapsed" : "expanded");
         // Set Cookie value based on isCollapsed
         if (isCollapsed) {
             document.cookie = elementId + "=True; path=/";
@@ -21,9 +21,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Add event listener to each collapsible div
-    var collapseIcons = document.querySelectorAll('.collapse-icon');
+    var collapseIcons = document.querySelectorAll(".collapse-icon");
     collapseIcons.forEach(function(icon) {
-        icon.addEventListener('click', function() {
+        icon.addEventListener("click", function() {
             var elementId = this.id;
             toggleAndSaveState(elementId);
         });
@@ -31,22 +31,22 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Enables panels on homepage to be rearranged via drag and drop
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener("DOMContentLoaded", function() {
     // Get the container element
-    var draggableHomepagePanels = document.getElementById('draggable-homepage-panels');
+    var draggableHomepagePanels = document.getElementById("draggable-homepage-panels");
 
     // Add event listeners for drag and drop events
-    draggableHomepagePanels.addEventListener('dragstart', handleDragStart, false);
-    draggableHomepagePanels.addEventListener('dragover', handleDragOver, false);
-    draggableHomepagePanels.addEventListener('drop', handleDrop, false);
+    draggableHomepagePanels.addEventListener("dragstart", handleDragStart, false);
+    draggableHomepagePanels.addEventListener("dragover", handleDragOver, false);
+    draggableHomepagePanels.addEventListener("drop", handleDrop, false);
 
     // Load saved panel order on page load
     loadSavedPanelOrder();
 
     // Function to handle the start of a drag event
     function handleDragStart(e) {
-        e.dataTransfer.setData('text/plain', e.target.id);
-        e.target.classList.add('dragging');
+        e.dataTransfer.setData("text/plain", e.target.id);
+        e.target.classList.add("dragging");
     }
 
     // Function to handle a drag over event
@@ -119,12 +119,12 @@ document.addEventListener('DOMContentLoaded', function() {
         var panelOrder = Array.from(draggableHomepagePanels.children).map(function(panel) {
             return panel.id;
         });
-        localStorage.setItem('homepage-panels-order', JSON.stringify(panelOrder));
+        localStorage.setItem("homepage-panels-order", JSON.stringify(panelOrder));
     }
 
     // Function to load the saved order of panels from localStorage
     function loadSavedPanelOrder() {
-        var savedOrder = localStorage.getItem('homepage-panels-order');
+        var savedOrder = localStorage.getItem("homepage-panels-order");
 
         if (savedOrder) {
             savedOrder = JSON.parse(savedOrder);
