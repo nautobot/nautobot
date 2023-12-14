@@ -105,15 +105,6 @@ document.addEventListener("DOMContentLoaded", function() {
         dragged.classList.remove("dragging");
     }
 
-    // Function to swap two elements
-    function swapElements(obj1, obj2) {
-        var temp = document.createElement("div");
-        obj2.parentNode.insertBefore(temp, obj2);
-        obj1.parentNode.insertBefore(obj2, obj1);
-        temp.parentNode.insertBefore(obj1, temp);
-        temp.parentNode.removeChild(temp);
-    }
-
     // Function to save the order of panels in localStorage
     function savePanelOrder() {
         var panelOrder = Array.from(draggableHomepagePanels.children).map(function(panel) {
