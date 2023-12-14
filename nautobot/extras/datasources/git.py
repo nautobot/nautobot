@@ -112,7 +112,7 @@ def get_repo_url(repository_record):
             from_url = re.sub("//", f"//{quote(user, safe='')}:{quote(token, safe='')}@", from_url)
         else:
             from_url = re.sub("//", f"//{quote(token, safe='')}@", from_url)
-    return from_url, repository_record.remote_url
+    return from_url
 
 
 def get_repo_from_url_to_path_and_from_branch(repository_record):
@@ -124,7 +124,7 @@ def get_repo_from_url_to_path_and_from_branch(repository_record):
         from_branch (str): current git repo branch
     )
     """
-    from_url, _ = get_repo_url(repository_record)
+    from_url = get_repo_url(repository_record)
 
     to_path = repository_record.filesystem_path
     from_branch = repository_record.branch
