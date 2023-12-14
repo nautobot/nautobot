@@ -169,10 +169,7 @@ class DeviceFactory(PrimaryModelFactory):
     has_platform = NautobotBoolIterator()
     platform = factory.Maybe(
         "has_platform",
-        factory.SubFactory(
-            PlatformFactory,
-            manufacturer=factory.LazyAttribute(lambda o: o.factory_parent.device_type.manufacturer),
-        ),
+        factory.LazyAttribute(lambda o: Platform.objects.filter(manufacturer=o.device_type.manufacturer).first()),
     )
 
     has_serial = NautobotBoolIterator()
