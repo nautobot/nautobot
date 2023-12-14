@@ -18,7 +18,7 @@
                 <tr>
                     <td>Tenants</td>
                     <td>
-                        <a href="{% url 'tenancy:tenant_list' %}?group={{ object.name }}">{{ tenant_table.rows|length }}</a>
+                        <a href="{% url 'tenancy:tenant_list' %}?tenant_group={{ object.name }}">{{ tenant_table.rows|length }}</a>
                     </td>
                 </tr>
             </table>

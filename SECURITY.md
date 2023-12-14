@@ -44,7 +44,6 @@ Disclosures, regardless of outcome, [will be published on GitHub](https://github
 
 Below are the current team members responsible for receiving and triaging Nautobot security issues.
 
-- Jathan McCollum (**[@jathanism](https://github.com/jathanism)**) `<jathan.mccollum@networktocode.com>` [[4096R/9B1EC9E6D0B1B49F64C2F97AA539DE2F671694A8]](https://keybase.io/jathanism/pgp_keys.asc)
 - Glenn Matthews (**[@glennmatthews](https://github.com/glennmatthews)**) `<glenn.matthews@networktocode.com>` [[4096R/C3DF1C5D9727F82ACF8F743238BF0D0E68B9F76C]](https://keybase.io/glennmatthews/pgp_keys.asc)
 - Bryan Culver (**[@bryanculver](https://github.com/bryanculver)**) `<bryan.culver@networktocode.com>` [[4096R/810BA9FC788A8B2C9EB9559C834D7494DEDB1DD8]](https://keybase.io/bryanculver/pgp_keys.asc)
 - John Anderson (**[@lampwins](https://github.com/lampwins)**) `<john.anderson@networktocode.com>`

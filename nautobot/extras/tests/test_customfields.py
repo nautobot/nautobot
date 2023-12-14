@@ -408,14 +408,14 @@ class CustomFieldDataAPITest(APITestCase):
 
         # Text custom field
         cls.cf_text = CustomField(
-            type=CustomFieldTypeChoices.TYPE_TEXT, label="Text Field", key="text_cf", default="foo"
+            type=CustomFieldTypeChoices.TYPE_TEXT, label="Text Field", key="text_cf", default="FOO"
         )
         cls.cf_text.save()
         cls.cf_text.content_types.set([content_type])
 
         # Integer custom field
         cls.cf_integer = CustomField(
-            type=CustomFieldTypeChoices.TYPE_INTEGER, label="Number Field", key="number_cf", default=123
+            type=CustomFieldTypeChoices.TYPE_INTEGER, label="Number Field", key="number_cf", default=12
         )
         cls.cf_integer.save()
         cls.cf_integer.content_types.set([content_type])

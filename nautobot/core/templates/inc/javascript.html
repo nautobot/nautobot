@@ -14,9 +14,9 @@
         onerror="window.location='{% url 'media_failure' %}?filename=clipboard.js-2.0.9/clipboard.min.js'"></script>
 <script src="{% static 'flatpickr-4.6.9/flatpickr.min.js' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/flatpickr.min.js'"></script>
-<script src="{% static 'js/forms.js' %}?v{{ settings.VERSION }}"
+<script src="{% versioned_static 'js/forms.js' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=js/forms.js'"></script>
-<script src="{% static 'js/theme.js' %}"
+<script src="{% versioned_static 'js/theme.js' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=js/theme.js'"></script>
 <script type="text/javascript">
     var nautobot_api_path = "{% url 'api-root' %}";
