@@ -295,7 +295,7 @@ def ensure_git_repository(
         with suppress(InvalidGitRepositoryError):
             if (
                 Path(repository_record.filesystem_path).exists()
-                and Repo(repository_record.filesystem_path).head == head
+                and Repo(repository_record.filesystem_path).rev_parse("HEAD") == head
             ):
                 return
 
