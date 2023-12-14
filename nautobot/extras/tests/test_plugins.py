@@ -499,7 +499,7 @@ class ExampleModelCustomActionViewTest(TestCase):
         ExampleModel.objects.create(name="Example 1", number=100)
         ExampleModel.objects.create(name="Example 2", number=200)
         ExampleModel.objects.create(name="Example 3", number=300)
-        cls.custom_view_url = reverse("plugins:example_plugin:examplemodel_all-names")
+        cls.custom_view_url = reverse("plugins:example_plugin:examplemodel_all_names")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_custom_action_view_anonymous(self):
