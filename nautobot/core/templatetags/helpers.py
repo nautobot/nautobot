@@ -19,6 +19,7 @@ from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.utils import color, config, data, lookup
 from nautobot.core.utils.navigation import is_route_new_ui_ready
+from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
 HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
 HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')  # noqa: S308
@@ -707,8 +708,10 @@ def custom_branding_or_static(branding_asset, static_asset):
     branding has been configured in settings, else it returns stock branding via static.
     """
     if settings.BRANDING_FILEPATHS.get(branding_asset):
-        return f"{ settings.MEDIA_URL }{ settings.BRANDING_FILEPATHS.get(branding_asset) }"
-    return StaticNode.handle_simple(static_asset)
+        url = f"{ settings.MEDIA_URL }{ settings.BRANDING_FILEPATHS.get(branding_asset) }"
+    else:
+        url = StaticNode.handle_simple(static_asset)
+    return add_nautobot_version_query_param_to_url(url)
 
 
 @register.simple_tag
@@ -723,6 +726,13 @@ def support_message():
     if not message:
         message = DEFAULT_SUPPORT_MESSAGE
     return render_markdown(message)
+
+
+@register.simple_tag
+def versioned_static(file_path):
+    """Returns a versioned static file URL with a query parameter containing the version number."""
+    url = static(file_path)
+    return add_nautobot_version_query_param_to_url(url)
 
 
 @library.filter()

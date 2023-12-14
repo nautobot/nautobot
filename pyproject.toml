@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.1.0b1"
+version = "2.1.0b2"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -74,7 +74,7 @@ django-taggit = "~4.0.0"
 # NOTE: django-timezone-field 4.2.x is available but appears to break our initial migrations?
 django-timezone-field = "~5.1"
 # Tree database structures based on Common Table Expressions
-django-tree-queries = "~0.15.0"
+django-tree-queries = "~0.16.1"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework

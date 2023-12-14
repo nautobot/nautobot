@@ -193,35 +193,14 @@ class ConfigContextModel(models.Model, ConfigContextSchemaValidationMixin):
         """
         Return the rendered configuration context for a device or VM.
         """
-
         if not hasattr(self, "config_context_data"):
             # Annotation not available, so fall back to manually querying for the config context
             config_context_data = ConfigContext.objects.get_for_object(self).values_list("data", flat=True)
         else:
             config_context_data = self.config_context_data or []
-            # Device and VirtualMachine's Location has its own ConfigContext and its parent Locations' ConfigContext, if any, should
-            # also be applied. However, since moving from mptt to django-tree-queries https://github.com/nautobot/nautobot/issues/510,
-            # we lost the ability to query the ancestors for a particular tree node for subquery https://github.com/matthiask/django-tree-queries/issues/54.
-            # So instead of constructing the location related query in ConfigContextModelQueryset._get_config_context_filters(), which is complicated across databases
-            # We append the missing parent location query here as a patch.
-            location_config_context_queryset = ConfigContext.objects.none()
-            if self._meta.model_name == "device":
-                location_config_context_queryset = ConfigContext.objects.filter(
-                    locations__in=self.location.ancestors(include_self=True)
-                ).distinct()
-            else:
-                if self.cluster and self.cluster.location:
-                    location_config_context_queryset = ConfigContext.objects.filter(
-                        locations__in=self.cluster.location.ancestors(include_self=True)
-                    ).distinct()
-
-            # Annotation has keys "weight" and "name" (used for ordering) and "data" (the actual config context data)
-            for cc in location_config_context_queryset:
-                config_context_data.append({"data": cc.data, "name": cc.name, "weight": cc.weight})
             config_context_data = [
                 c["data"] for c in sorted(config_context_data, key=lambda k: (k["weight"], k["name"]))
             ]
-
         # Compile all config data, overwriting lower-weight values with higher-weight values where a collision occurs
         data = OrderedDict()
         for context in config_context_data:
@@ -489,12 +468,71 @@ class ExternalIntegration(PrimaryModel):
         null=True,
         help_text="Optional user-defined JSON data for this integration",
     )
+    http_method = models.CharField(
+        max_length=10,
+        choices=WebhookHttpMethodChoices,
+        verbose_name="HTTP method",
+        blank=True,
+    )
+    headers = models.JSONField(
+        encoder=DjangoJSONEncoder,
+        blank=True,
+        null=True,
+        help_text="Headers for the HTTP request",
+    )
+    ca_file_path = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="CA file path",
+        verbose_name="CA file path",
+    )
 
     def __str__(self):
         return f"{self.name} ({self.remote_url})"
 
     class Meta:
         ordering = ["name"]
+
+    def render_headers(self, context):
+        """
+        Render headers and return a dict of Header: Value pairs.
+
+        Raises:
+            TemplateAssertionError: Raised when an invalid template helper function exists in headers.
+            TemplateSyntaxError: Raised when an invalid template variable exists in headers.
+            json.decoder.JSONDecodeError: Raised when invalid JSON data exists in context.
+        """
+        if not self.headers:
+            return {}
+
+        data = json.loads(render_jinja2(json.dumps(self.headers, ensure_ascii=False), context))
+        return data
+
+    def render_extra_config(self, context):
+        """
+        Render extra_config and return a dict of Key: Value pairs.
+
+        Raises:
+            TemplateAssertionError: Raised when an invalid template helper function exists in extra_config.
+            TemplateSyntaxError: Raised when an invalid template variable exists in extra_config.
+            json.decoder.JSONDecodeError: Raised when invalid JSON data exists in context.
+        """
+        if not self.extra_config:
+            return {}
+
+        data = json.loads(render_jinja2(json.dumps(self.extra_config, ensure_ascii=False), context))
+        return data
+
+    def render_remote_url(self, context):
+        """
+        Render remote_url in jinja2 templates.
+
+        Raises:
+            TemplateAssertionError: Raised when an invalid template helper function exists in remote_url.
+            TemplateSyntaxError: Raised when an invalid template variable exists in remote_url.
+        """
+        data = render_jinja2(self.remote_url, context)
+        return data
 
 
 #

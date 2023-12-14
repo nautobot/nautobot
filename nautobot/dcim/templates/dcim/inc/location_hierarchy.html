@@ -1,5 +1,6 @@
 {% load helpers %}
 {% if location is not None %}
+{% with ancestors=location.ancestors %}
     <style>
         .location-hierarchy {
             list-style-type: none;
@@ -12,16 +13,17 @@
         }
     </style>
     <ul class="location-hierarchy">
-        {% for ancestor in location.ancestors %}
+        {% for ancestor in ancestors %}
             <li>{{ ancestor|hyperlinked_object:"name" }} ({{ ancestor.location_type|hyperlinked_object:"name" }})
                 <ul>
         {% endfor %}
         <li><strong>{{ location|hyperlinked_object:"name" }} ({{ location.location_type|hyperlinked_object:"name" }})</strong></li>
-        {% for ancestor in location.ancestors %}
+        {% for ancestor in ancestors %}
                 </ul>
             </li>
         {% endfor %}
     </ul>
+{% endwith %}
 {% else %}
     {{ location|placeholder }}
 {% endif %}

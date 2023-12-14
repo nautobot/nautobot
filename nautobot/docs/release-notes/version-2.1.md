@@ -8,6 +8,19 @@ This document describes all new features and changes in Nautobot 2.1.
 
 ### Added
 
+#### Django Admin Log Entries ([#4646](https://github.com/nautobot/nautobot/pull/4646))
+
+Django Admin Log Entries record administrative changes made under the "Admin" section of the user interface. Changes (add/delete/update) to Objects like Users, Group, Object Permissions, etc. in the "Admin" user interface are now displayed as "Log Entries" under the "Administration" section of the Admin UI.
+
+!!! info
+    Django Admin Log Entries are automatically created when adminstrative changes happen and have always existed natively in Django Admin. This feature is simply providung a read-only UI view for admin/privileged users to access them with more ease.
+
+See [Administrative Change-logging](../user-guide/platform-functionality/change-logging.md#administrative-changes) for more details.
+
+#### External Integration Model ([#4694](https://github.com/nautobot/nautobot/issues/4694))
+
+A new [`ExternalIntegration` model](../user-guide/platform-functionality/externalintegration.md) has been added which provides a centralized store for data such as URLs and credentials that are used to access systems external to Nautobot. This information can then be used by jobs or apps to perform actions such as creating DNS records or updating configuration management tickets.
+
 #### Job File Outputs ([#3352](https://github.com/nautobot/nautobot/issues/3352), [#4820](https://github.com/nautobot/nautobot/issues/4820))
 
 The `Job` base class now includes a [`create_file(filename, content)`](../development/jobs/index.md#file-output) method which can be called by a Job to create a persistent file with the provided content when run. This file will be linked from the Job Result detail view for subsequent downloading by users, and can also be downloaded via the REST API (`/api/extras/file-proxies/<id>/download/`) as desired.
@@ -18,9 +31,12 @@ The `Job` base class now includes a [`create_file(filename, content)`](../develo
 !!! tip
     Users must have permission to `view` the `extras > file proxy` object type in order to list and download files from the REST API.
 
-#### External Integration Model ([#4694](https://github.com/nautobot/nautobot/issues/4694))
+#### UI/API `isnull` Filter on Nullable Fields ([#1905](https://github.com/nautobot/nautobot/issues/1905))
 
-A new [`ExternalIntegration` model](../user-guide/platform-functionality/externalintegration.md) has been added which provides a centralized store for data such as URLs and credentials that are used to access systems external to Nautobot. This information can then be used by jobs or apps to perform actions such as creating DNS records or updating configuration management tickets.
+Models with nullable fields (i.e. model fields with `null=True`) can now be filtered in the UI and the API with `<field>__isnull=true/false` filters. These filters are automatically added to all appropriate fields.
+
+!!! note
+    Model fields that have the value `""` (i.e. blank) will not match with `__isnull=True`. Instead, they will match with `__isnull=False`.
 
 ### Changed
 

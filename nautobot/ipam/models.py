@@ -1050,6 +1050,9 @@ class IPAddress(PrimaryModel):
         if namespace is None and self.parent is not None:
             namespace = self.parent.namespace
 
+        if namespace is None:
+            namespace = get_default_namespace()
+
         self._namespace = namespace
 
         self._deconstruct_address(address)
@@ -1193,7 +1196,7 @@ class IPAddress(PrimaryModel):
 
 @extras_features("graphql")
 class IPAddressToInterface(BaseModel):
-    ip_address = models.ForeignKey("ipam.IPAddress", on_delete=models.CASCADE, related_name="+")
+    ip_address = models.ForeignKey("ipam.IPAddress", on_delete=models.CASCADE, related_name="interface_assignments")
     interface = models.ForeignKey(
         "dcim.Interface", blank=True, null=True, on_delete=models.CASCADE, related_name="ip_address_assignments"
     )

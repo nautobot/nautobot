@@ -605,8 +605,8 @@ Environment Variable: `NAUTOBOT_JOBS_ROOT`
 
 The file path to a directory where [Jobs](../../platform-functionality/jobs/index.md) can be discovered.
 
-!!! caution
-    This directory **must** contain an `__init__.py` file.
++/- 2.0.0
+    This directory no longer requires an `__init__.py` file.
 
 ---
 

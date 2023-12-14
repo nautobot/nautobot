@@ -38,6 +38,7 @@ from nautobot.extras.choices import (
     JobResultStatusChoices,
     ObjectChangeActionChoices,
     RelationshipTypeChoices,
+    WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.datasources import get_datasource_content_choices
@@ -591,8 +592,22 @@ class ExternalIntegrationForm(NautobotModelForm):
                     "Content-Type": "application/json",
                 },
             }</code></pre>
+            You can render the field value in Jinja2 template as well with the .render_extra_config() helper method.
         """
-        help_texts = {"extra_config": inspect.cleandoc(EXTRA_CONFIG_HELP_TEXT)}
+        EXTRA_HEADERS_TEXT = """
+            Optional user-defined <a href="https://json.org/">JSON</a> data for this integration. Example:
+            <pre><code>{
+                "headers": {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                },
+            }</code></pre>
+            You can render the field value in Jinja2 template as well with the .render_headers() helper method.
+        """
+        help_texts = {
+            "extra_config": inspect.cleandoc(EXTRA_CONFIG_HELP_TEXT),
+            "headers": inspect.cleandoc(EXTRA_HEADERS_TEXT),
+        }
 
 
 class ExternalIntegrationBulkEditForm(NautobotBulkEditForm):
@@ -605,10 +620,16 @@ class ExternalIntegrationBulkEditForm(NautobotBulkEditForm):
     verify_ssl = forms.NullBooleanField(required=False, label="Verify SSL", widget=BulkEditNullBooleanSelect)
     timeout = forms.IntegerField(required=False, min_value=0)
     extra_config = forms.JSONField(required=False)
+    http_method = forms.ChoiceField(
+        required=False,
+        label="HTTP Method",
+        choices=add_blank_choice(WebhookHttpMethodChoices),
+    )
+    headers = forms.JSONField(required=False, label="HTTP Request headers")
 
     class Meta:
         model = ExternalIntegration
-        nullable_fields = ["extra_config", "secrets_group"]
+        nullable_fields = ["extra_config", "secrets_group", "headers"]
 
 
 #

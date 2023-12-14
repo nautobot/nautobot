@@ -3,6 +3,7 @@ from typing import Optional, Sequence
 from unittest import skipIf
 import uuid
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -90,7 +91,9 @@ class ModelViewTestCase(ModelTestCase):
         Override this if needed for testing of views that don't correspond directly to self.model,
         for example the DCIM "interface-connections" and "console-connections" view tests.
         """
-        if self.model._meta.app_label in settings.PLUGINS:
+        app_name = apps.get_app_config(app_label=self.model._meta.app_label).name
+        # AppConfig.name accounts for NautobotApps that are not built at the root of the package
+        if app_name in settings.PLUGINS:
             return f"plugins:{self.model._meta.app_label}:{self.model._meta.model_name}_{{}}"
         return f"{self.model._meta.app_label}:{self.model._meta.model_name}_{{}}"
 
