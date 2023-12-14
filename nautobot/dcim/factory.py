@@ -99,44 +99,6 @@ def get_rack_reservation_units(obj):
     return [unit for unit in available_units if unit not in unavailable_units][:1]
 
 
-class PlatformFactory(OrganizationalModelFactory):
-    class Meta:
-        model = Platform
-        exclude = ("has_manufacturer", "has_description", "has_napalm_args")
-
-    # This dictates `name` and `napalm_driver`.
-    has_manufacturer = NautobotBoolIterator()
-
-    name = factory.Maybe(
-        "has_manufacturer",
-        factory.LazyAttributeSequence(lambda o, n: f"{o.manufacturer.name} Platform {n + 1}"),
-        factory.Sequence(lambda n: f"Fake Platform {n}"),
-    )
-
-    manufacturer = factory.Maybe("has_manufacturer", random_instance(Manufacturer), None)
-
-    # If it has a manufacturer, it *might* have a napalm_driver.
-    napalm_driver = factory.Maybe(
-        "has_manufacturer",
-        factory.LazyAttribute(lambda o: random.choice(NAPALM_DRIVERS.get(o.manufacturer.name, [""]))),
-        "",
-    )
-
-    has_napalm_args = NautobotBoolIterator()
-    napalm_args = factory.Maybe(
-        "has_napalm_args", factory.Faker("pydict", nb_elements=2, value_types=[str, bool, int]), None
-    )
-
-    has_description = NautobotBoolIterator()
-    network_driver = factory.Maybe(
-        "has_manufacturer",
-        factory.LazyAttribute(lambda o: random.choice(NETWORK_DRIVERS.get(o.manufacturer.name, [""]))),
-        "",
-    )
-
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
-
-
 class DeviceFactory(PrimaryModelFactory):
     class Meta:
         model = Device
@@ -277,6 +239,44 @@ class DeviceTypeFactory(PrimaryModelFactory):
 
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
+
+
+class PlatformFactory(OrganizationalModelFactory):
+    class Meta:
+        model = Platform
+        exclude = ("has_manufacturer", "has_description", "has_napalm_args")
+
+    # This dictates `name` and `napalm_driver`.
+    has_manufacturer = NautobotBoolIterator()
+
+    name = factory.Maybe(
+        "has_manufacturer",
+        factory.LazyAttributeSequence(lambda o, n: f"{o.manufacturer.name} Platform {n + 1}"),
+        factory.Sequence(lambda n: f"Fake Platform {n}"),
+    )
+
+    manufacturer = factory.Maybe("has_manufacturer", random_instance(Manufacturer), None)
+
+    # If it has a manufacturer, it *might* have a napalm_driver.
+    napalm_driver = factory.Maybe(
+        "has_manufacturer",
+        factory.LazyAttribute(lambda o: random.choice(NAPALM_DRIVERS.get(o.manufacturer.name, [""]))),
+        "",
+    )
+
+    has_napalm_args = NautobotBoolIterator()
+    napalm_args = factory.Maybe(
+        "has_napalm_args", factory.Faker("pydict", nb_elements=2, value_types=[str, bool, int]), None
+    )
+
+    has_description = NautobotBoolIterator()
+    network_driver = factory.Maybe(
+        "has_manufacturer",
+        factory.LazyAttribute(lambda o: random.choice(NETWORK_DRIVERS.get(o.manufacturer.name, [""]))),
+        "",
+    )
+
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
 
 class DeviceRedundancyGroupFactory(PrimaryModelFactory):
