@@ -11,7 +11,6 @@ import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.celery import app
-from nautobot.core.templatetags import helpers
 from nautobot.core.testing import APIViewTestCases, TestCase, ViewTestCases, disable_warnings, extract_page_body
 from nautobot.dcim.models import Device, DeviceType, Manufacturer, Location, LocationType
 from nautobot.dcim.tests.test_views import create_test_device
