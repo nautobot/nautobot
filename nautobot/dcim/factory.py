@@ -241,6 +241,38 @@ class DeviceTypeFactory(PrimaryModelFactory):
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
 
+class DeviceRedundancyGroupFactory(PrimaryModelFactory):
+    class Meta:
+        model = DeviceRedundancyGroup
+        exclude = ("has_description", "has_comments")
+
+    name = factory.LazyFunction(
+        lambda: "".join(word.title() for word in Faker().words(nb=2, part_of_speech="adjective", unique=True))
+    )
+    status = random_instance(lambda: Status.objects.get_for_model(DeviceRedundancyGroup), allow_null=False)
+
+    failover_strategy = factory.Iterator(
+        DeviceRedundancyGroupFailoverStrategyChoices.CHOICES, getter=lambda choice: choice[0]
+    )
+
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+
+    has_comments = NautobotBoolIterator()
+    comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
+
+
+class ManufacturerFactory(OrganizationalModelFactory):
+    class Meta:
+        model = Manufacturer
+        exclude = ("has_description",)
+
+    name = UniqueFaker("word", ext_word_list=MANUFACTURER_NAMES)
+
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+
+
 class PlatformFactory(OrganizationalModelFactory):
     class Meta:
         model = Platform
@@ -276,38 +308,6 @@ class PlatformFactory(OrganizationalModelFactory):
         "",
     )
 
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
-
-
-class DeviceRedundancyGroupFactory(PrimaryModelFactory):
-    class Meta:
-        model = DeviceRedundancyGroup
-        exclude = ("has_description", "has_comments")
-
-    name = factory.LazyFunction(
-        lambda: "".join(word.title() for word in Faker().words(nb=2, part_of_speech="adjective", unique=True))
-    )
-    status = random_instance(lambda: Status.objects.get_for_model(DeviceRedundancyGroup), allow_null=False)
-
-    failover_strategy = factory.Iterator(
-        DeviceRedundancyGroupFailoverStrategyChoices.CHOICES, getter=lambda choice: choice[0]
-    )
-
-    has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
-
-    has_comments = NautobotBoolIterator()
-    comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
-
-
-class ManufacturerFactory(OrganizationalModelFactory):
-    class Meta:
-        model = Manufacturer
-        exclude = ("has_description",)
-
-    name = UniqueFaker("word", ext_word_list=MANUFACTURER_NAMES)
-
-    has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
 
