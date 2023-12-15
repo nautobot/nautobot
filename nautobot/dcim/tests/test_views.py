@@ -571,6 +571,7 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
+        Device.objects.all().delete()
         DeviceType.objects.all().delete()
         Platform.objects.all().delete()
 
@@ -603,6 +604,7 @@ class DeviceTypeTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        Device.objects.all().delete()
         manufacturers = Manufacturer.objects.all()[:2]
 
         DeviceType.objects.create(model="Test Device Type 1", manufacturer=manufacturers[0])
@@ -1181,6 +1183,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        Device.objects.all().delete()
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
         rack_group = RackGroup.objects.create(location=locations[0], name="Rack Group 1")
@@ -1388,7 +1391,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_interfaces(self):
-        device = Device.objects.first()
+        device = Device.objects.filter(interfaces__isnull=False).first()
         self.add_permissions("ipam.add_ipaddress", "dcim.change_interface")
 
         url = reverse("dcim:device_interfaces", kwargs={"pk": device.pk})
@@ -1540,8 +1543,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.add_permissions("dcim.change_device")
 
         # Create an interface and assign an IP to it.
-        device = Device.objects.first()
-        interface = Interface.objects.first()
+        device = Device.objects.filter(interfaces__isnull=False).first()
+        interface = device.interfaces.first()
         namespace = Namespace.objects.first()
         Prefix.objects.create(prefix="1.2.3.0/24", namespace=namespace, status=self.prefix_status)
         ip_address = IPAddress.objects.create(address="1.2.3.4/32", namespace=namespace, status=self.ipaddr_status)

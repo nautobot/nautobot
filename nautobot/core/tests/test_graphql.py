@@ -693,8 +693,9 @@ class GraphQLQueryTest(TestCase):
         super().setUpTestData()
         cls.user = User.objects.create(username="Super User", is_active=True, is_superuser=True)
 
-        # Remove random IPAddress fixtures for this custom test
+        # Remove random IPAddress and Device fixtures for this custom test
         IPAddress.objects.all().delete()
+        Device.objects.all().delete()
 
         # Initialize fake request that will be required to execute GraphQL query
         cls.request = RequestFactory().request(SERVER_NAME="WebRequestContext")

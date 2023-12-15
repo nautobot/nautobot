@@ -58,6 +58,7 @@ class Command(BaseCommand):
                 ProviderNetworkFactory,
             )
             from nautobot.dcim.factory import (
+                DeviceFactory,
                 DeviceRedundancyGroupFactory,
                 DeviceTypeFactory,
                 ManufacturerFactory,
@@ -146,6 +147,8 @@ class Command(BaseCommand):
         ManufacturerFactory.create_batch(2, using=db_name)  # Last 2 hard-coded Manufacturers
         self.stdout.write("Creating DeviceRedundancyGroups...")
         DeviceRedundancyGroupFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating Devices...")
+        DeviceFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating CircuitTypes...")
         CircuitTypeFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Providers...")
