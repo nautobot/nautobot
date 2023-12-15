@@ -1145,7 +1145,10 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             messages.error(request, "Unable to run or schedule job: Job is not presently installed.")
         elif not job_model.enabled:
             messages.error(request, "Unable to run or schedule job: Job is not enabled to be run.")
-        elif job_model.has_sensitive_variables and request.POST["_schedule_type"] != JobExecutionType.TYPE_IMMEDIATELY:
+        elif (
+            job_model.has_sensitive_variables
+            and request.POST.get("_schedule_type") != JobExecutionType.TYPE_IMMEDIATELY
+        ):
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
         elif job_model.has_sensitive_variables and job_model.approval_required:
             messages.error(
@@ -1222,6 +1225,19 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     task_queue=task_queue,
                     **job_model.job_class.serialize_data(job_kwargs),
                 )
+
+                return_url = request.POST.get("_return_url")
+                if return_url is not None and url_has_allowed_host_and_scheme(
+                    url=return_url, allowed_hosts=request.get_host()
+                ):
+                    messages.info(
+                        request,
+                        format_html(
+                            'Job enqueued. <a href="{}">Click here for the results.</a>',
+                            job_result.get_absolute_url(),
+                        ),
+                    )
+                    return redirect(iri_to_uri(return_url))
 
                 return redirect("extras:jobresult", pk=job_result.pk)
 
@@ -1540,31 +1556,6 @@ class JobButtonUIViewSet(NautobotUIViewSet):
     queryset = JobButton.objects.all()
     serializer_class = serializers.JobButtonSerializer
     table_class = tables.JobButtonTable
-
-
-class JobButtonRunView(ObjectPermissionRequiredMixin, View):
-    """
-    View to run the Job linked to the Job Button.
-    """
-
-    queryset = JobButton.objects.all()
-
-    def get_required_permission(self):
-        return "extras.run_job"
-
-    def post(self, request, pk):
-        post_data = request.POST
-        job_button = JobButton.objects.get(pk=pk)
-        job_model = job_button.job
-        result = JobResult.enqueue_job(
-            job_model=job_model,
-            user=request.user,
-            object_pk=post_data["object_pk"],
-            object_model_name=post_data["object_model_name"],
-        )
-        msg = format_html('Job enqueued. <a href="{}">Click here for the results.</a>', result.get_absolute_url())
-        messages.info(request=request, message=msg)
-        return redirect(post_data["redirect_path"])
 
 
 #
