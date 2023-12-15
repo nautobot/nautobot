@@ -77,7 +77,7 @@ def enqueue_pull_git_repository_and_refresh_data(repository, user):
 def get_repo_access_url(repository_record):
     """Returns the repo url with and without token when present
     Returns:
-        str: The url used to connect to the git repo, with credentials as applicable.
+        (str): The url used to connect to the git repo, with credentials as applicable.
     """
     # Inject username and/or token into source URL if necessary
     from_url = repository_record.remote_url
