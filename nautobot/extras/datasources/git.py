@@ -74,10 +74,10 @@ def enqueue_pull_git_repository_and_refresh_data(repository, user):
     return enqueue_git_repository_helper(repository, user, GitRepositorySync)
 
 
-def get_repo_url(repository_record):
+def get_repo_access_url(repository_record):
     """Returns the repo url with and without token when present
     Returns:
-        (str, str)
+        str: The url used to connect to the git repo, with credentials as applicable.
     """
     # Inject username and/or token into source URL if necessary
     from_url = repository_record.remote_url
@@ -124,7 +124,7 @@ def get_repo_from_url_to_path_and_from_branch(repository_record):
         from_branch (str): current git repo branch
     )
     """
-    from_url = get_repo_url(repository_record)
+    from_url = get_repo_access_url(repository_record)
 
     to_path = repository_record.filesystem_path
     from_branch = repository_record.branch
