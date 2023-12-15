@@ -30,7 +30,12 @@ class ConfigContextQuerySet(RestrictedQuerySet):
 
         # Get the group of the assigned tenant, if any
         tenant_group = obj.tenant.tenant_group if obj.tenant else None
+        tenant = obj.tenant if obj.tenant else None
 
+        if tenant_group:
+            tenant_groups = tenant_group.ancestors(include_self=True)
+        else:
+            tenant_groups = []
         # Match against the directly assigned location as well as any parent locations
         location = getattr(obj, "location", None)
         if location:
@@ -46,8 +51,8 @@ class ConfigContextQuerySet(RestrictedQuerySet):
             Q(cluster_groups=cluster_group) | Q(cluster_groups=None),
             Q(clusters=cluster) | Q(clusters=None),
             Q(device_redundancy_groups=device_redundancy_group) | Q(device_redundancy_groups=None),
-            Q(tenant_groups=tenant_group) | Q(tenant_groups=None),
-            Q(tenants=obj.tenant) | Q(tenants=None),
+            Q(tenant_groups__in=tenant_groups) | Q(tenant_groups=None),
+            Q(tenants=tenant) | Q(tenants=None),
             Q(tags__name__in=obj.tags.names()) | Q(tags=None),
         ]
         if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
@@ -122,27 +127,39 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
             Q(platforms=OuterRef("platform")) | Q(platforms=None),
             Q(cluster_groups=OuterRef("cluster__cluster_group")) | Q(cluster_groups=None),
             Q(clusters=OuterRef("cluster")) | Q(clusters=None),
-            Q(tenant_groups=OuterRef("tenant__tenant_group")) | Q(tenant_groups=None),
             Q(tenants=OuterRef("tenant")) | Q(tenants=None),
             Q(tags__pk__in=Subquery(TaggedItem.objects.filter(**tag_query_filters).values_list("tag_id", flat=True)))
             | Q(tags=None),
             is_active=True,
         )
         base_query.add((Q(roles=OuterRef("role")) | Q(roles=None)), Q.AND)
+
+        from nautobot.dcim.models import Location
+        from nautobot.tenancy.models import TenantGroup
+
         if self.model._meta.model_name == "device":
+            location_query_string = "location"
             base_query.add((Q(device_types=OuterRef("device_type")) | Q(device_types=None)), Q.AND)
             base_query.add(
                 (Q(device_redundancy_groups=OuterRef("device_redundancy_group")) | Q(device_redundancy_groups=None)),
                 Q.AND,
             )
-            # This is necessary to prevent location related config context to be applied now.
-            # The location hierarchy cannot be processed by the database and must be added by `ConfigContextModel.get_config_context`
-            base_query.add((Q(locations=None)), Q.AND)
-        elif self.model._meta.model_name == "virtualmachine":
-            # This is necessary to prevent location related config context to be applied now.
-            # The location hierarchy cannot be processed by the database and must be added by `ConfigContextModel.get_config_context`
-            base_query.add((Q(locations=None)), Q.AND)
+        else:
+            location_query_string = "cluster__location"
 
+        location_query = Q(locations=None) | Q(locations=OuterRef(location_query_string))
+        for _ in range(Location.objects.max_tree_depth() + 1):
+            location_query_string += "__parent"
+            location_query |= Q(locations=OuterRef(location_query_string))
+
+        base_query.add((location_query), Q.AND)
+
+        tenant_group_query_string = "tenant__tenant_group"
+        tenant_group_query = Q(tenant_groups=None) | Q(tenant_groups=OuterRef(tenant_group_query_string))
+        for _ in range(TenantGroup.objects.max_tree_depth() + 1):
+            tenant_group_query_string += "__parent"
+            tenant_group_query |= Q(tenant_groups=OuterRef(tenant_group_query_string))
+        base_query.add((tenant_group_query), Q.AND)
         return base_query
 
 

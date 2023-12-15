@@ -54,6 +54,7 @@ from nautobot.dcim.models import (
     Interface,
     InterfaceTemplate,
     InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     Manufacturer,
     InventoryItem,
     Location,
@@ -570,6 +571,7 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
+        Device.objects.all().delete()
         DeviceType.objects.all().delete()
         Platform.objects.all().delete()
 
@@ -602,6 +604,7 @@ class DeviceTypeTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        Device.objects.all().delete()
         manufacturers = Manufacturer.objects.all()[:2]
 
         DeviceType.objects.create(model="Test Device Type 1", manufacturer=manufacturers[0])
@@ -1180,6 +1183,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        Device.objects.all().delete()
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
         rack_group = RackGroup.objects.create(location=locations[0], name="Rack Group 1")
@@ -1387,7 +1391,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_interfaces(self):
-        device = Device.objects.first()
+        device = Device.objects.filter(interfaces__isnull=False).first()
         self.add_permissions("ipam.add_ipaddress", "dcim.change_interface")
 
         url = reverse("dcim:device_interfaces", kwargs={"pk": device.pk})
@@ -1539,8 +1543,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.add_permissions("dcim.change_device")
 
         # Create an interface and assign an IP to it.
-        device = Device.objects.first()
-        interface = Interface.objects.first()
+        device = Device.objects.filter(interfaces__isnull=False).first()
+        interface = device.interfaces.first()
         namespace = Namespace.objects.first()
         Prefix.objects.create(prefix="1.2.3.0/24", namespace=namespace, status=self.prefix_status)
         ip_address = IPAddress.objects.create(address="1.2.3.4/32", namespace=namespace, status=self.ipaddr_status)
@@ -2910,7 +2914,7 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             SecretsGroup.objects.create(name="Secrets Group 3"),
         )
 
-        interface_redundancy_groups = (
+        cls.interface_redundancy_groups = (
             InterfaceRedundancyGroup(
                 name="Interface Redundancy Group 1",
                 protocol="hsrp",
@@ -2944,13 +2948,41 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             ),
         )
 
-        for group in interface_redundancy_groups:
+        for group in cls.interface_redundancy_groups:
             group.validated_save()
+
+        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
+
+        devicetypes = DeviceType.objects.all()[:2]
+
+        deviceroles = Role.objects.get_for_model(Device)[:2]
+
+        device_statuses = Status.objects.get_for_model(Device)
+        status_active = device_statuses[0]
+        device = Device.objects.create(
+            name="Device 1",
+            location=locations[0],
+            device_type=devicetypes[0],
+            role=deviceroles[0],
+            status=status_active,
+        )
+        intf_status = Status.objects.get_for_model(Interface).first()
+
+        cls.interfaces = (
+            Interface.objects.create(device=device, name="Interface 1", status=intf_status),
+            Interface.objects.create(device=device, name="Interface 2", status=intf_status),
+            Interface.objects.create(device=device, name="Interface 3", status=intf_status),
+        )
 
         cls.form_data = {
             "name": "IRG χ",
             "protocol": InterfaceRedundancyGroupProtocolChoices.GLBP,
             "status": statuses[3].pk,
+        }
+        cls.interface_add_form_data = {
+            "interface_redundancy_group": cls.interface_redundancy_groups[0].pk,
+            "interface": cls.interfaces[0].pk,
+            "priority": 100,
         }
 
         cls.csv_data = (
@@ -2967,3 +2999,29 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "virtual_ip": cls.ips[0].pk,
             "secrets_group": cls.secrets_groups[1].pk,
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_adding_interfaces_to_group(self):
+        initial_count = InterfaceRedundancyGroupAssociation.objects.all().count()
+
+        # Assign unconstrained permission
+        self.add_permissions("dcim.add_interfaceredundancygroupassociation")
+        return_url = reverse("dcim:interfaceredundancygroup", kwargs={"pk": self.interface_redundancy_groups[0].pk})
+        url = reverse("dcim:interfaceredundancygroupassociation_add")
+        url = url + f"?interface_redundancy_group={self.interface_redundancy_groups[0].pk}&return_url={return_url}"
+        self.assertHttpStatus(self.client.get(url), 200)
+
+        # Try POST with model-level permission
+        request = {
+            "path": url,
+            "data": post_data(self.interface_add_form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_count + 1, InterfaceRedundancyGroupAssociation.objects.all().count())
+        self.interface_add_form_data["interface"] = self.interfaces[1]
+        request = {
+            "path": url,
+            "data": post_data(self.interface_add_form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_count + 2, InterfaceRedundancyGroupAssociation.objects.all().count())

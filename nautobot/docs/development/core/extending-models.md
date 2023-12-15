@@ -64,6 +64,9 @@ All filtersets should inherit from `BaseFilterSet` or `NautobotFilterSet` as app
 
 If the new field will be included in the object list view, add a column to the model's table. For simple fields, adding the field name to `Meta.fields` will be sufficient. More complex fields may require declaring a custom column.
 
+!!! tip
+    In the vast majority of cases, a table's `Meta.fields` should have `"pk"` as the first entry and (if present as a column) `"actions"` as the last entry, so that these two columns appear correctly at the far left and far right of the table. When adding new entries to `Meta.fields` please be sure to follow this pattern.
+
 ## Update the UI templates
 
 Edit the object's view template to display the new field. There may also be a custom add/edit form template that needs to be updated.
