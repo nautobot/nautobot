@@ -833,6 +833,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         manufacturers = dcim_models.Manufacturer.objects.all()[:3]
+        Device.objects.all().delete()
 
         device_types = (
             dcim_models.DeviceType(
