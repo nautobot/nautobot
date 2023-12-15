@@ -1,3 +1,5 @@
+{% load helpers %}
+
 {% if object.pk %}
     <div class="panel panel-default">
         <div class="panel-heading">
@@ -52,6 +54,16 @@
                     <tr>
                         <td>Updated</td>
                         <td>{{ object.last_updated }}</td>
+                    </tr>
+                {% endif %}
+                {% if object|validated_api_viewname:'detail' %}
+                    <tr>
+                        <td>View in API Browser</td>
+                        <td>
+                            <a href="{% url object|api_viewname:'detail' object.id %}" target="_blank">
+                                <span class="mdi mdi-open-in-new"></span>
+                            </a>
+                        </td>
                     </tr>
                 {% endif %}
             </tbody>
