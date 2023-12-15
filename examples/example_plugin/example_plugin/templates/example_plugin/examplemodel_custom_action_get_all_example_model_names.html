@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    {% for model_name in data %}
+        <h1>{{model_name}}</h1>
+    {% endfor %}
+{% endblock %}
