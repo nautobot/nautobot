@@ -26,8 +26,8 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 | **[next](https://github.com/nautobot/nautobot/tree/next)** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml/badge.svg?branch=next)](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml) |
 
 ## Screenshots
-
-![Gif of main page](/nautobot/nautobot/develop/nautobot/docs/media/nautobot_mainpage.gif?raw=true "Main page")
+nautobot/docs/media/nautobot_mainpage.gif
+![Gif of main page](/nautobot/docs/media/nautobot_mainpage.gif?raw=true "Main page")
 
 ---
 
