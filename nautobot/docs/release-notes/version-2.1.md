@@ -38,6 +38,10 @@ Models with nullable fields (i.e. model fields with `null=True`) can now be filt
 !!! note
     Model fields that have the value `""` (i.e. blank) will not match with `__isnull=True`. Instead, they will match with `__isnull=False`.
 
+#### Homepage cards can be customized ([#2149](https://github.com/nautobot/nautobot/issues/2149))
+
+The cards displayed on the homepage have been modified to enable a more personalized user experienced. Individual panels can now be collapsed, hiding the contents from view. Additionally, panels can be reordered by dragging and dropping the panels to the desired orderß.
+
 ### Changed
 
 #### Data Exports as a System Job ([#4745](https://github.com/nautobot/nautobot/issues/4745))
