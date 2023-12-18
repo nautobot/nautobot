@@ -99,6 +99,121 @@ def get_rack_reservation_units(obj):
     return [unit for unit in available_units if unit not in unavailable_units][:1]
 
 
+def get_random_platform_for_manufacturer(manufacturer):
+    qs = Platform.objects.filter(manufacturer=manufacturer)
+    return factory.random.randgen.choice(qs) if qs.exists() else None
+
+
+class DeviceFactory(PrimaryModelFactory):
+    class Meta:
+        model = Device
+        exclude = (
+            "has_tenant",
+            "has_platform",
+            "has_serial",
+            "has_asset_tag",
+            "has_device_redundancy_group",
+            "has_comments",
+        )
+
+    device_type = random_instance(DeviceType, allow_null=False)
+    status = random_instance(
+        lambda: Status.objects.get_for_model(Device),
+        allow_null=False,
+    )
+    role = random_instance(
+        lambda: Role.objects.get_for_model(Device),
+        allow_null=False,
+    )
+    location = random_instance(
+        lambda: Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(Device)),
+        allow_null=False,
+    )
+    name = factory.LazyAttributeSequence(lambda o, n: f"{o.device_type.model} Device - {o.location} - {n + 1}")
+
+    has_tenant = NautobotBoolIterator()
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant))
+    has_platform = NautobotBoolIterator()
+    platform = factory.Maybe(
+        "has_platform",
+        factory.LazyAttribute(lambda o: get_random_platform_for_manufacturer(o.device_type.manufacturer)),
+        None,
+    )
+
+    has_serial = NautobotBoolIterator()
+    serial = factory.Maybe("has_serial", factory.Faker("ean", length=8), "")
+
+    has_asset_tag = NautobotBoolIterator()
+    asset_tag = factory.Maybe("has_asset_tag", UniqueFaker("uuid4"), None)
+
+    has_device_redundancy_group = NautobotBoolIterator()
+    device_redundancy_group = factory.Maybe(
+        "has_device_redundancy_group",
+        random_instance(DeviceRedundancyGroup),
+    )
+    device_redundancy_group_priority = factory.Maybe(
+        "has_device_redundancy_group",
+        factory.Faker("pyint", min_value=1, max_value=500),
+    )
+
+    has_comments = NautobotBoolIterator()
+    comments = factory.Maybe("has_comments", factory.Faker("bs"))
+
+    # TODO to be done after these model factories are done.
+    # has_cluster = NautobotBoolIterator()
+    # cluster = factory.Maybe(
+    #     "has_cluster",
+    #     random_instance(Cluster),
+    # )
+
+    # has_virtual_chassis = NautobotBoolIterator()
+    # virtual_chassis = factory.Maybe(
+    #     "has_virtual_chassis",
+    #     random_instance(VirtualChassis),
+    # )
+    # has_vc_position = NautobotBoolIterator()
+    # vc_position = factory.Maybe(
+    #     "has_vc_position",
+    #     factory.Faker("pyint", min_value=1, max_value=256),
+    # )
+    # has_vc_priority = NautobotBoolIterator()
+    # vc_priority = factory.Maybe(
+    #     "has_vc_priority",
+    #     factory.Faker("pyint", min_value=1, max_value=256),
+    # )
+
+    # has_secrets_group = NautobotBoolIterator()
+    # secrets_group = factory.Maybe(
+    #     "has_secrets_group",
+    #     random_instance(SecretsGroup),
+    # )
+
+    # has_rack = NautobotBoolIterator()
+    # rack = factory.Maybe(
+    #     "has_rack",
+    #     random_instance(Rack),
+    # )
+    # has_position = NautobotBoolIterator()
+    # position = factory.Maybe("has_position", factory.Faker("pyint", min_value=1, max_value=256))
+    # has_face = NautobotBoolIterator()
+    # face = factory.Maybe(
+    #     "has_face",
+    #     factory.Iterator(DeviceFaceChoices.CHOICES, getter=lambda choice: choice[0]),
+    #     None,
+    # )
+    # has_primary_ip4 = NautobotBoolIterator()
+    # primary_ip4 = factory.Maybe(
+    #     "has_primary_ip4",
+    #     random_instance(lambda: IPAddress.objects.filter(ip_version=4), allow_null=False),
+    # )
+
+    # has_primary_ip6 = NautobotBoolIterator()
+    # primary_ip6 = factory.Maybe(
+    #     "has_primary_ip6",
+    #     random_instance(lambda: IPAddress.objects.filter(ip_version=6), allow_null=False),
+    # )
+
+
 class DeviceTypeFactory(PrimaryModelFactory):
     class Meta:
         model = DeviceType

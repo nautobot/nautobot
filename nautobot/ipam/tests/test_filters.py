@@ -310,10 +310,9 @@ class PrefixFilterCustomDataTestCase(TestCase):
     def test_contains(self):
         matches_ipv4 = self.queryset.filter(network__in=["10.0.0.0", "10.0.1.0"])
         matches_ipv6 = self.queryset.filter(network__in=["2001:db8::", "2001:db8:0:1::"])
-        params = {"contains": "10.0.1.0/24"}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, matches_ipv4)
-        params = {"contains": "2001:db8:0:1::/64"}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, matches_ipv6)
+
+        params = {"contains": ["10.0.1.0/24", "2001:db8:0:1::"]}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, matches_ipv4 | matches_ipv6)
 
     def test_vrfs(self):
         prefixes = self.queryset[:2]
@@ -664,14 +663,11 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     def test_prefix(self):
         ipv4_parent = self.queryset.filter(ip_version=4).first().address.supernet()[-1]
-        params = {"prefix": str(ipv4_parent)}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.net_host_contained(ipv4_parent)
-        )
         ipv6_parent = self.queryset.filter(ip_version=6).first().address.supernet()[-1]
-        params = {"prefix": str(ipv6_parent)}
+
+        params = {"prefix": [str(ipv4_parent), str(ipv6_parent)]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.net_host_contained(ipv6_parent)
+            self.filterset(params, self.queryset).qs, self.queryset.net_host_contained(ipv4_parent, ipv6_parent)
         )
 
     def test_filter_address(self):

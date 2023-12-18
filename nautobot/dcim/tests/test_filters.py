@@ -102,6 +102,7 @@ User = get_user_model()
 
 
 def common_test_data(cls):
+    Device.objects.all().delete()
     tenants = Tenant.objects.filter(tenant_group__isnull=False)
     cls.tenants = tenants
 
@@ -1261,7 +1262,7 @@ class PlatformTestCase(FilterTestCases.NameOnlyFilterTestCase):
         )
 
     def test_devices(self):
-        devices = [Device.objects.first(), Device.objects.last()]
+        devices = Device.objects.filter(platform__isnull=False)[:2]
         params = {"devices": [devices[0].pk, devices[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(devices))
 

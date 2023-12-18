@@ -6,6 +6,8 @@ import mimetypes
 import os
 import re
 import sys
+from contextlib import suppress
+from pathlib import Path
 from urllib.parse import quote
 
 from django.conf import settings
@@ -13,6 +15,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
 import yaml
+from git import Repo, InvalidGitRepositoryError
 
 from nautobot.core.celery import app as celery_app
 from nautobot.core.utils.git import GitRepo
@@ -74,16 +77,11 @@ def enqueue_pull_git_repository_and_refresh_data(repository, user):
     return enqueue_git_repository_helper(repository, user, GitRepositorySync)
 
 
-def get_repo_from_url_to_path_and_from_branch(repository_record):
-    """Returns the from_url, to_path and from_branch of a Git Repo
+def get_repo_access_url(repository_record):
+    """Returns the repo url with and without token when present
     Returns:
-        namedtuple (GitRepoInfo): (
-        from_url (str): git repo url with token or user if available,
-        to_path (Path): path to location of git repo on local machine
-        from_branch (str): current git repo branch
-    )
+        (str): The url used to connect to the git repo, with credentials as applicable.
     """
-
     # Inject username and/or token into source URL if necessary
     from_url = repository_record.remote_url
 
@@ -117,6 +115,19 @@ def get_repo_from_url_to_path_and_from_branch(repository_record):
             from_url = re.sub("//", f"//{quote(user, safe='')}:{quote(token, safe='')}@", from_url)
         else:
             from_url = re.sub("//", f"//{quote(token, safe='')}@", from_url)
+    return from_url
+
+
+def get_repo_from_url_to_path_and_from_branch(repository_record):
+    """Returns the from_url, to_path and from_branch of a Git Repo
+    Returns:
+        namedtuple (GitRepoInfo): (
+        from_url (str): git repo url with token or user if available,
+        to_path (Path): path to location of git repo on local machine
+        from_branch (str): current git repo branch
+    )
+    """
+    from_url = get_repo_access_url(repository_record)
 
     to_path = repository_record.filesystem_path
     from_branch = repository_record.branch
@@ -136,9 +147,19 @@ def ensure_git_repository(repository_record, logger=None, head=None):  # pylint:
     Returns:
         (bool): Whether any change to the local repo actually occurred.
     """
+    # We want to check if the repo is already checked out at head. We also want to avoid calling
+    # get_repo_from_utl_to_path_and_from_branch, because it will cause the URL to be rebuilt causing calls to a secrets
+    # backend. As such, if head is None, we can't perform these checks.
+    if head is not None:
+        # If the repo exists and has HEAD already checked out, the repo is present and has the correct branch selected.
+        with suppress(InvalidGitRepositoryError):
+            if (
+                Path(repository_record.filesystem_path).exists()
+                and Repo(repository_record.filesystem_path).head == head
+            ):
+                return False
 
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
-
     try:
         repo_helper = GitRepo(to_path, from_url)
         head, changed = repo_helper.checkout(from_branch, head)
