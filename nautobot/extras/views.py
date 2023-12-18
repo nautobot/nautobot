@@ -13,8 +13,9 @@ from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
-from django.utils.http import is_safe_url
+from django.utils.http import is_safe_url, url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django.template.loader import get_template, TemplateDoesNotExist
 from django_tables2 import RequestConfig
