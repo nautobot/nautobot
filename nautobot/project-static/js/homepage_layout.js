@@ -153,7 +153,7 @@ document.addEventListener("DOMContentLoaded", function() {
     window.onload = fadeIn; 
       
     function fadeIn() { 
-        setInterval(show, 50); 
+        intervalID = setInterval(show, 50); 
     } 
       
     function show() { 
