@@ -56,16 +56,18 @@
                         <td>{{ object.last_updated }}</td>
                     </tr>
                 {% endif %}
-                {% if object|validated_api_viewname:'detail' %}
-                    <tr>
-                        <td>View in API Browser</td>
-                        <td>
-                            <a href="{% url object|api_viewname:'detail' object.id %}" target="_blank">
-                                <span class="mdi mdi-open-in-new"></span>
-                            </a>
-                        </td>
-                    </tr>
-                {% endif %}
+                {% with api_view=object|validated_api_viewname:'detail' %}
+                    {% if api_view %}
+                        <tr>
+                            <td>View in API Browser</td>
+                            <td>
+                                <a href="{% url api_view object.id %}" target="_blank">
+                                    <span class="mdi mdi-open-in-new"></span>
+                                </a>
+                            </td>
+                        </tr>
+                    {% endif %}
+                {% endwith %}
             </tbody>
         </table>
     </div>
