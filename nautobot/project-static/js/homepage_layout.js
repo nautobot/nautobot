@@ -135,14 +135,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Enable panel dragging
     function enablePanelDragging() {
-        var panelOrder = Array.from(draggableHomepagePanels.children).map(function(panel) {
-            return panel.id;
-        });
-        for (var i = 0; i < panelOrder.length; i++) {
-            var panel = document.getElementById(panelOrder[i]);
-            if (panel) {
-                panel.draggable = true;
-            }
+        for (let panel of draggableHomepagePanels.children) {
+            panel.draggable = true;
         }
 
     }
