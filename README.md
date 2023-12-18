@@ -27,7 +27,7 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 ## Screenshots
 
-![Gif of main page](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_mainpage.gif?raw=true "Main page")
+![Gif of main page](/nautobot/nautobot/develop/nautobot/docs/media/nautobot_mainpage.gif?raw=true "Main page")
 
 ---
 
