@@ -125,7 +125,7 @@ tzdata = ["tzdata"]
 name = "bcrypt"
 version = "4.0.1"
 description = "Modern password hashing for your software and your servers"
-optional = true
+optional = false
 python-versions = ">=3.6"
 files = [
     {file = "bcrypt-4.0.1-cp36-abi3-macosx_10_10_universal2.whl", hash = "sha256:b1023030aec778185a6c16cf70f359cbb6e0c289fd564a7cfa29e727a1c38f8f"},
@@ -2322,13 +2322,13 @@ files = [
 
 [[package]]
 name = "paramiko"
-version = "3.3.1"
+version = "3.4.0"
 description = "SSH2 protocol library"
-optional = true
+optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "paramiko-3.3.1-py3-none-any.whl", hash = "sha256:b7bc5340a43de4287bbe22fe6de728aa2c22468b2a849615498dd944c2f275eb"},
-    {file = "paramiko-3.3.1.tar.gz", hash = "sha256:6a3777a961ac86dbef375c5f5b8d50014a1a96d0fd7f054a43bc880134b0ff77"},
+    {file = "paramiko-3.4.0-py3-none-any.whl", hash = "sha256:43f0b51115a896f9c00f59618023484cb3a14b98bbceab43394a39c6739b7ee7"},
+    {file = "paramiko-3.4.0.tar.gz", hash = "sha256:aac08f26a31dc4dffd92821527d1682d99d52f9ef6851968114a8728f3c274d3"},
 ]
 
 [package.dependencies]
@@ -2760,7 +2760,7 @@ extra = ["pygments (>=2.12)"]
 name = "pynacl"
 version = "1.5.0"
 description = "Python binding to the Networking and Cryptography (NaCl) library"
-optional = true
+optional = false
 python-versions = ">=3.6"
 files = [
     {file = "PyNaCl-1.5.0-cp36-abi3-macosx_10_10_universal2.whl", hash = "sha256:401002a4aaa07c9414132aaed7f6836ff98f59277a234704ff66878c2ee4a0d1"},
