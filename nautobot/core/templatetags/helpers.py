@@ -240,25 +240,6 @@ def viewname(model, action):
 
 @library.filter()
 @register.filter()
-def api_viewname(model, action):
-    """
-    Return the API view name for the given model and action. Does not perform any validation.
-
-    Args:
-        model (models.Model): Class or Instance of a Django Model
-        action (str): name of the action in the viewname
-
-    Returns:
-        (str): return the name of the API view for the model/action provided.
-    Examples:
-        >>> api_viewname(Device, "list")
-        "dcim-api:device-list"
-    """
-    return lookup.get_route_for_model(model, action, api=True)
-
-
-@library.filter()
-@register.filter()
 def validated_viewname(model, action):
     """
     Return the view name for the given model and action if valid, or None if invalid.

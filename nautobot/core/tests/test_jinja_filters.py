@@ -28,7 +28,6 @@ class NautobotJinjaFilterTest(TestCase):
             "render_markdown",
             "meta",
             "viewname",
-            "api_viewname",
             "validated_viewname",
             "validated_api_viewname",
             "bettertitle",

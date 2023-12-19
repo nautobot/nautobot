@@ -316,15 +316,3 @@ Return the view name for the given model and action. Does not perform any valida
 # Jinja
 {{ obj | viewname('list') }}
 ```
-
-### api_viewname
-
-Return the API view name for the given model and action. Does not perform any validation.
-
-```django
-# Django Template
-{{ obj | viewname:'add' }}
-
-# Jinja
-{{ obj | viewname('add') }}
-```
