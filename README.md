@@ -26,8 +26,8 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 | **[next](https://github.com/nautobot/nautobot/tree/next)** | [![Build Status](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml/badge.svg?branch=next)](https://github.com/nautobot/nautobot/actions/workflows/ci_integration.yml) |
 
 ## Screenshots
-nautobot/docs/media/nautobot_mainpage.gif
-![Gif of main page](/nautobot/docs/media/nautobot_mainpage.gif?raw=true "Main page")
+
+![Gif of main page](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_mainpage.gif?raw=true "Main page")
 
 ---
 
@@ -40,6 +40,10 @@ nautobot/docs/media/nautobot_mainpage.gif
 ---
 
 ![Gif of GraphQL](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_graphql.gif?raw=true "GraphQL API")
+
+---
+
+![Gif of Modes](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_modes.gif?raw=true "Modes")
 
 ## Installation
 
@@ -66,6 +70,10 @@ There are many plugins available within the Nautobot Apps ecosystem. The below s
 #### ChatOps Plugin
 
 ![Gif of chatops](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_chatops.gif?raw=true "ChatOps")
+
+#### Device Lifecycle Management Plugin
+
+![Gif of DLM](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_device_lifecycle_management.gif?raw=true "Device Lifecycle Management")
 
 ## Providing Feedback
 
