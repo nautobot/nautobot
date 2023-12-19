@@ -29,6 +29,7 @@ class NautobotJinjaFilterTest(TestCase):
             "meta",
             "viewname",
             "validated_viewname",
+            "validated_api_viewname",
             "bettertitle",
             "humanize_speed",
             "tzoffset",

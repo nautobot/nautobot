@@ -118,6 +118,20 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.validated_viewname(ExampleModel, "list"), "plugins:example_plugin:examplemodel_list")
         self.assertIsNone(helpers.validated_viewname(ExampleModel, "notvalid"))
 
+    def test_validated_api_viewname(self):
+        location = models.Location.objects.first()
+
+        self.assertEqual(helpers.validated_api_viewname(location, "list"), "dcim-api:location-list")
+        self.assertIsNone(helpers.validated_api_viewname(models.Location, "notvalid"))
+
+        self.assertEqual(
+            helpers.validated_api_viewname(ExampleModel, "list"), "plugins-api:example_plugin-api:examplemodel-list"
+        )
+        self.assertIsNone(helpers.validated_api_viewname(ExampleModel, "notvalid"))
+
+        # Assert detail views get validated as well
+        self.assertEqual(helpers.validated_api_viewname(location, "detail"), "dcim-api:location-detail")
+
     def test_bettertitle(self):
         self.assertEqual(helpers.bettertitle("myTITle"), "MyTITle")
         self.assertEqual(helpers.bettertitle("mytitle"), "Mytitle")
