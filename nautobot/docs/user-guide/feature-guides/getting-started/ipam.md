@@ -18,7 +18,7 @@ Nautobot requires any IP allocation be attributed to a RIR.
 
 To create a RIR:
 
-1. Click on **IPAM** in the top-level navigation menu
+1. Click on **IPAM** in the left sidebar menu
 2. Find **RIRs** and click on the **+**; this takes you to the `Add a new RIR` form
 3. Specify the RIR `Name`
 4. There is a checkbox to flag `Private` (internal use) only
@@ -33,11 +33,11 @@ Each Prefix can be assigned to a particular Location, an RIR and virtual routing
 
 To create a prefix:
 
-1. Click on **IPAM** in the top-level navigation menu
+1. Click on **IPAM** in the left sidebar menu
 2. Look for **Prefixes** and click on the **+**
     * This will take you to the `Add a new prefix` form
 3. Populate the `Prefix` in CIDR notation
-4. If all addresses in the Prefix are usable, change the type to "Pool"
+4. If all addresses in the Prefix are usable, change the `Type` to "Pool"
 5. Select a `Status` from the drop-down selector
 6. Optionally select a `RIR` from the drop-down selector
 7. Click on the `Create` button (not shown)
@@ -55,8 +55,10 @@ To create an IP address:
 4. Populate an Address pattern
     * This example uses `10.10.10.[0-1,2-3,6-7]/31` to create 3 non-contiguous /31's
     * The specified mask should be exactly as would be configured on the Device's Interface
-5. Select `Active` for `Status` from the drop-down selector
-6. Click on the `Create` button
+5. Select `Global` for `Namespace` from the drop-down selector
+6. Select `Host` for `Type` from the drop-down selector
+7. Select `Active` for `Status` from the drop-down selector
+8. Click on the `Create` button
 
 ![Add IP address](../images/getting-started-nautobot-ui/32-add-ip-addr.png)
 
