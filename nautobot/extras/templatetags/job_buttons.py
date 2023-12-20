@@ -70,7 +70,7 @@ CONFIRM_MODAL = """
 </div>
 """
 
-SAFE_EMPTY = mark_safe("")  # noqa: S308
+SAFE_EMPTY_STR = mark_safe("")  # noqa: S308
 
 
 def _render_job_button_for_obj(job_button, obj, context, content_type):
@@ -98,11 +98,11 @@ def _render_job_button_for_obj(job_button, obj, context, content_type):
                 exc,
                 job_button.name,
             ),
-            SAFE_EMPTY,
+            SAFE_EMPTY_STR,
         )
 
     if not text_rendered:
-        return (SAFE_EMPTY, SAFE_EMPTY)
+        return (SAFE_EMPTY_STR, SAFE_EMPTY_STR)
 
     # Disable buttons if the user doesn't have permission to run the underlying Job.
     has_run_perm = Job.objects.check_perms(context["user"], instance=job_button.job, action="run")
@@ -145,9 +145,9 @@ def job_buttons(context, obj):
     # We will enforce "run" permission later in deciding which buttons to show as disabled.
     buttons = JobButton.objects.filter(content_types=content_type)
     if not buttons:
-        return SAFE_EMPTY
+        return SAFE_EMPTY_STR
 
-    buttons_html = forms_html = SAFE_EMPTY
+    buttons_html = forms_html = SAFE_EMPTY_STR
     group_names = OrderedDict()
 
     for jb in buttons:
@@ -165,7 +165,7 @@ def job_buttons(context, obj):
     for group_name, buttons in group_names.items():
         group_button_class = buttons[0].button_class
 
-        buttons_rendered = SAFE_EMPTY
+        buttons_rendered = SAFE_EMPTY_STR
 
         for jb in buttons:
             # Render grouped buttons as list items
