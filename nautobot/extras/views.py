@@ -1132,6 +1132,12 @@ class JobView(ObjectPermissionRequiredMixin, View):
         schedule_form = forms.JobScheduleForm(request.POST)
         task_queue = request.POST.get("_task_queue")
 
+        return_url = request.POST.get("_return_url")
+        if return_url is not None and url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+            return_url = iri_to_uri(return_url)
+        else:
+            return_url = None
+
         # Allow execution only if a worker process is running and the job is runnable.
         if not get_worker_count(queue=task_queue):
             messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
@@ -1213,10 +1219,10 @@ class JobView(ObjectPermissionRequiredMixin, View):
 
                 if job_model.approval_required:
                     messages.success(request, f"Job {schedule_name} successfully submitted for approval")
-                    return redirect("extras:scheduledjob_approval_queue_list")
+                    return redirect(return_url if return_url else "extras:scheduledjob_approval_queue_list")
                 else:
                     messages.success(request, f"Job {schedule_name} successfully scheduled")
-                    return redirect("extras:scheduledjob_list")
+                    return redirect(return_url if return_url else "extras:scheduledjob_list")
 
             else:
                 # Enqueue job for immediate execution
@@ -1234,10 +1240,7 @@ class JobView(ObjectPermissionRequiredMixin, View):
                     task_queue=job_form.cleaned_data.get("_task_queue", None),
                 )
 
-                return_url = request.POST.get("_return_url")
-                if return_url is not None and url_has_allowed_host_and_scheme(
-                    url=return_url, allowed_hosts=request.get_host()
-                ):
+                if return_url:
                     messages.info(
                         request,
                         format_html(
@@ -1245,9 +1248,12 @@ class JobView(ObjectPermissionRequiredMixin, View):
                             job_result.get_absolute_url(),
                         ),
                     )
-                    return redirect(iri_to_uri(return_url))
+                    return redirect(return_url)
 
                 return redirect("extras:jobresult", pk=job_result.pk)
+
+        if return_url:
+            return redirect(return_url)
 
         template_name = "extras/job.html"
         if job_model.job_class is not None and hasattr(job_model.job_class, "template_name"):
