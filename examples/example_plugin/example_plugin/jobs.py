@@ -113,12 +113,13 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
                 self.log_failure(obj=obj, message=f"User '{user}' does not have permission to add a Site.")
             else:
                 self._run_site_job(obj)
-        if isinstance(obj, Device):
+        elif isinstance(obj, Device):
             if not user.has_perm("dcim.add_device"):
                 self.log_failure(obj=obj, message=f"User '{user}' does not have permission to add a Device.")
             else:
                 self._run_device_job(obj)
-        self.log_failure(obj=obj, message=f"Unable to run Job Button for type {type(obj).__name__}.")
+        else:
+            self.log_failure(obj=obj, message=f"Unable to run Job Button for type {type(obj).__name__}.")
 
 
 jobs = (
