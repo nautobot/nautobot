@@ -356,9 +356,9 @@ Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on
 !!! important
     Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background Celery worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server celery worker` separately. For production use, Nautobot and the worker processes should be managed by `systemd` rather than started manually, as described in the next section of this documentation.
 
-Note that the initial user interface will be locked down for non-authenticated users.
+Unauthenticated users will be presented with a login page:
 
-![Nautobot UI as seen by a non-authenticated user](../../../media/installation/nautobot_ui_guest.png)
+![Nautobot UI as seen by a non-authenticated user](../../../media/installation/nautobot_ui_login.png)
 
 Try logging in using the superuser account we just created. Once authenticated, you'll be able to access all areas of the UI:
 
