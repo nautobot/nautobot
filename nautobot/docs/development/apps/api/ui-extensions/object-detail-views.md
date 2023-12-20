@@ -27,7 +27,7 @@ Declared subclasses should be gathered into a list or tuple for integration with
 
 +++ 1.4.0
 
-The `detail_tabs()` method should return a list of dicts, each of which has the keys `"title"` and `"url"`. In order for tabs to work properly:
+The `TemplateExtension.detail_tabs()` method should return a list of dicts, each of which has the keys `"title"` and `"url"`. In addition, in order for tabs to work properly:
 
 * The `"url"` key should typically be a URL that includes `self.context["object"].pk` in some form (so that the URL may know which object is being referenced)
 * The view referenced by the `"url"` must inherit from the `nautobot.apps.views.ObjectView` class
@@ -95,8 +95,6 @@ urlpatterns = [
 
 !!! note
     For added tab views, we recommend for consistency that you follow the URL pattern established by the base model detail view and tabs (if any). For example, `nautobot/dcim/urls.py` references Device tab views with the URL pattern `devices/<uuid:pk>/TAB-NAME/`, so above we have followed that same pattern.
-
-In addition, you must also add the `detail_tabs` method in the `template_content.py` file as shown in the [below example](#example-adding-object-details-and-tabs).
 
 ## Example Adding Object Details and Tabs
 
