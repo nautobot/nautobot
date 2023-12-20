@@ -37,6 +37,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Add event listeners for drag and drop events
     draggableHomepagePanels.addEventListener("dragstart", handleDragStart, false);
+    draggableHomepagePanels.addEventListener("dragend", handleDragEnd, false);
     draggableHomepagePanels.addEventListener("dragover", handleDragOver, false);
     draggableHomepagePanels.addEventListener("drop", handleDrop, false);
 
@@ -48,8 +49,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Function to handle the start of a drag event
     function handleDragStart(e) {
+        e.dataTransfer.clearData("text/plain");
         e.dataTransfer.setData("text/plain", e.target.id);
         e.target.classList.add("dragging");
+    }
+
+    function handleDragEnd(e) {
+        e.target.classList.remove("dragging");
     }
 
     // Function to handle a drag over event
