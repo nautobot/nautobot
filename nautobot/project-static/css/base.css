@@ -9,7 +9,7 @@ html, body {
     height: 100%;
 }
 body {
-    padding-left: 220px;  /* same as width of .navbar-fixed-left */
+    padding-left: 240px;  /* same as width of .navbar-fixed-left */
     padding-top: 20px;
 }
 .wrapper {
@@ -591,7 +591,7 @@ td span.hover_copy:hover .hover_copy_button {
     overflow: auto;
     position: fixed;
     top: 0;
-    width: 220px;  /* same as body padding-left */
+    width: 240px;  /* same as body padding-left */
     z-index: 1030; /* `1030` is taken from Bootstrap's `navbar-fixed-top` */
 }
 
@@ -628,6 +628,12 @@ td span.hover_copy:hover .hover_copy_button {
     width: 100%;
 }
 
+.navbar-fixed-left .navbar-nav .nav-divider {
+    margin: 11px 17px;
+    width: 206px;
+    background-color: #999999;
+}
+
 .navbar-fixed-left .navbar-nav > li {
     width: 100%;
 }
@@ -648,9 +654,9 @@ td span.hover_copy:hover .hover_copy_button {
     margin-right: 10px;
 }
 
-.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-toggle > #navbar_user {
+.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-toggle > #dropdown_title {
     display: inline-block;
-    max-width: calc(100% - 48px); /* 48px = 27px of user icon + 14px of caret + 7px of whitespaces between inline elements */
+    max-width: calc(100% - 51px); /* 51px = 30px of chevron + 14px of caret + 7px of whitespaces between inline elements */
     overflow: hidden;
     text-overflow: ellipsis;
     vertical-align: middle;
