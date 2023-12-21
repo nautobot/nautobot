@@ -349,6 +349,7 @@ target-version = "py38"
 
 [tool.ruff.lint]
 select = [
+    "DJ",  # flake8-django
     "E",  # pycodestyle
     "F",  # pyflakes
     # "I",  # isort
