@@ -359,6 +359,10 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #
 # JOB_FILE_IO_STORAGE = os.getenv("NAUTOBOT_JOB_FILE_IO_STORAGE", "db_file_storage.storage.DatabaseFileStorage")
 
+# Maximum size in bytes of any single file created by Job.create_file().
+#
+# JOB_CREATE_FILE_MAX_SIZE = 10 << 20
+
 # Directory where Jobs can be discovered.
 #
 # JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))

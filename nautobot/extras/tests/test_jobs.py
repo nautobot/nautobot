@@ -7,6 +7,7 @@ from unittest import mock
 import uuid
 import tempfile
 
+from constance.test import override_config
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -619,6 +620,34 @@ class JobFileOutputTest(TransactionTestCase):
     # It would be great to also test the output-to-filesystem case when using JOB_FILE_IO_STORAGE=FileSystemStorage;
     # unfortunately with FileField(storage=callable), the callable gets evaluated only at declaration time, not at
     # usage/runtime, so override_settings(JOB_FILE_IO_STORAGE) doesn't work the way you'd hope it would.
+
+    def test_output_file_too_large(self):
+        module = "file_output"
+        name = "FileOutputJob"
+        data = {"lines": 1}
+
+        # Exactly JOB_CREATE_FILE_MAX_SIZE bytes should be okay:
+        with override_config(JOB_CREATE_FILE_MAX_SIZE=len("Hello world!\n")):
+            job_result = create_job_result_and_run_job(module, name, **data)
+            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS, job_result.traceback)
+            self.assertEqual(1, job_result.files.count())
+            self.assertEqual(job_result.files.first().name, "output.txt")
+            self.assertEqual(job_result.files.first().file.read().decode("utf-8"), "Hello World!\n")
+
+        # Even one byte over is too much:
+        with override_config(JOB_CREATE_FILE_MAX_SIZE=len("Hello world!\n") - 1):
+            job_result = create_job_result_and_run_job(module, name, **data)
+            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+            self.assertIn("ValueError", job_result.traceback)
+            self.assertEqual(0, job_result.files.count())
+
+        # settings takes precedence over constance config
+        with override_config(JOB_CREATE_FILE_MAX_SIZE=10 << 20):
+            with override_settings(JOB_CREATE_FILE_MAX_SIZE=len("Hello world!\n") - 1):
+                job_result = create_job_result_and_run_job(module, name, **data)
+                self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+                self.assertIn("ValueError", job_result.traceback)
+                self.assertEqual(0, job_result.files.count())
 
 
 class RunJobManagementCommandTest(TransactionTestCase):

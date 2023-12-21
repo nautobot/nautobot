@@ -540,6 +540,8 @@ class MyJob(Job):
 
 The above Job when run will create two files, "greeting.txt" and "farewell.txt", that will be made available for download from the JobResult detail view's "Additional Data" tab and via the REST API. These files will persist indefinitely, but can automatically be deleted if the JobResult itself is deleted; they can also be deleted manually by an administrator via the "File Proxies" link in the Admin UI.
 
+The maximum size of any single created file (or in other words, the maximum number of bytes that can be passed to `self.create_file()`) is controlled by the [`JOB_CREATE_FILE_MAX_SIZE`](../../user-guide/administration/configuration/optional-settings.md#job_create_file_max_size) system setting. A `ValueError` exception will be raised if `create_file()` is called with an overly large `content` value.
+
 ### Marking a Job as Failed
 
 To mark a job as failed, raise an exception from within the `run()` method. The exception message will be logged to the traceback of the job result. The job result status will be set to `failed`. To output a job log message you can use the `self.logger.error()` method.
