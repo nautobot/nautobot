@@ -80,7 +80,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
         # Retrieve home page
         self.browser.visit(self.live_server_url)
 
-        tab_xpath = "//*[@id='navbar']//*[normalize-space()='Example Menu']"
+        tab_xpath = "//*[@id='navbar']//span[normalize-space()='Example Menu']/.."
         tab = self.browser.find_by_xpath(tab_xpath)
         tab.click()
         self.assertTrue(bool(tab["aria-expanded"]))

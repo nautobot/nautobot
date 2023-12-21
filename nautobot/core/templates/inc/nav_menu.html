@@ -31,7 +31,8 @@
                             <li class="dropdown">
                                 <a href="#" class="dropdown-toggle" data-tab-weight="{{ tab_details.weight }}" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                     <img src="{% custom_branding_or_static 'nav_bullet' 'img/nautobot_chevron.svg' %}" height="20px" />
-                                    {{ tab_name }} <span class="caret"></span>
+                                    <span id="dropdown_title" title="{{ tab_name }}">{{ tab_name }}</span>
+                                    <span class="caret"></span>
                                 </a>
                                 <ul class="dropdown-menu">
                                     {% for group_name, group_details in tab_details.groups.items %}
@@ -82,11 +83,12 @@
                             </li>
                         {% endif %}
                     {% endfor %}
+                    <li class="nav-divider"></li>
                     <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
                            aria-haspopup="true" aria-expanded="false">
                             <i class="mdi mdi-account"></i>
-                            <span id="navbar_user" title="{{ request.user }}">{{ request.user }}</span>
+                            <span id="dropdown_title" title="{{ request.user }}">{{ request.user }}</span>
                             <span class="caret"></span>
                         </a>
                         <ul class="dropdown-menu">
