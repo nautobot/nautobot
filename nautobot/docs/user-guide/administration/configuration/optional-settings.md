@@ -14,6 +14,7 @@ A number of settings can alternatively be configured via the Nautobot Admin UI. 
 * [DEVICE_NAME_AS_NATURAL_KEY](#device_name_as_natural_key)
 * [DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT](#dynamic_groups_member_cache_timeout)
 * [FEEDBACK_BUTTON_ENABLED](#feedback_button_enabled)
+* [JOB_CREATE_FILE_MAX_SIZE](#job_create_file_max_size)
 * [LOCATION_NAME_AS_NATURAL_KEY](#location_name_as_natural_key)
 * [MAX_PAGE_SIZE](#max_page_size)
 * [NETWORK_DRIVERS](#network_drivers)
@@ -593,7 +594,21 @@ If you have neither a common `MEDIA_ROOT` filesystem nor an appropriate remote s
 !!! caution
     It's typically safe to change this setting when initially updating to Nautobot 2.1.0 or later, as there should be no pre-existing Job output files, although any existing scheduled Jobs that have file _inputs_ may need to be deleted and recreated after doing so. However, once you've run any Jobs that output to a file, changing storage backends will of course break any existing links to Job output files in the previous storage backend. Migrating Job stored files from one backend to another is out of scope for this document.
 
-> See also: [`STORAGE_BACKEND`](#storage_backend)
+> See also: [`STORAGE_BACKEND`](#storage_backend) and [`JOB_CREATE_FILE_MAX_SIZE`](#job_create_file_max_size).
+
+---
+
+## JOB_CREATE_FILE_MAX_SIZE
+
++++ 2.1.0
+
+Default: `10485760` (10 MiB)
+
+The maximum file size (in bytes) that a running Job will be allowed to create in a single call to `Job.create_file()`.
+
+If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value in `nautobot_config.py`, it will override any dynamically configured value.
+
+> See also: [`JOB_FILE_IO_STORAGE`](#job_file_io_storage)
 
 ---
 
