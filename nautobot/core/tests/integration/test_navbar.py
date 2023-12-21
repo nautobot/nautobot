@@ -92,8 +92,8 @@ class NavBarTestCase(SeleniumTestCase):
                         tab_flag = True
 
             # XPath to find tabs using the tab name
-            tabs = self.browser.find_by_xpath(f"//*[@id='navbar']//*[normalize-space()='{tab_name}']")
+            tabs = self.browser.find_by_xpath(f"//*[@id='navbar']//span[normalize-space()='{tab_name}']/..")
             if tab_flag:
-                self.assertEqual(len(tabs), 2)
+                self.assertEqual(len(tabs), 1)
             else:
                 self.assertEqual(len(tabs), 0)
