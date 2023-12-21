@@ -293,6 +293,18 @@ Return the view name for the given model and action if valid, or None if invalid
 {{ obj | validated_viewname('list') }}
 ```
 
+### validated_api_viewname
+
+Return the API view name for the given model and action if valid, or None if invalid.
+
+```django
+# Django Template
+{{ obj | validated_api_viewname:'detail' }}
+
+# Jinja
+{{ obj | validated_api_viewname('detail') }}
+```
+
 ### viewname
 
 Return the view name for the given model and action. Does not perform any validation.
