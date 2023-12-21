@@ -11,6 +11,7 @@ from nautobot.apps.jobs import (
     Job,
     JobButtonReceiver,
     JobHookReceiver,
+    JSONVar,
     register_jobs,
 )
 from nautobot.dcim.models import Device, Location
@@ -46,6 +47,8 @@ class ExampleDryRunJob(Job):
 
 
 class ExampleJob(Job):
+    some_json_data = JSONVar(label="JSON", description="Example JSONVar for a job.", default={})
+
     # specify template_name to override the default job scheduling template
     template_name = "example_plugin/example_with_custom_template.html"
 
@@ -57,7 +60,8 @@ class ExampleJob(Job):
             *This is italicized*
         """
 
-    def run(self):
+    def run(self, some_json_data):
+        # some_json_data is passed to the run method as a Python object (e.g. dictionary)
         pass
 
 

@@ -35,6 +35,10 @@ The `Job` base class now includes a [`create_file(filename, content)`](../develo
 !!! tip
     Users must have permission to `view` the `extras > file proxy` object type in order to list and download files from the REST API.
 
+#### Job JSONVar inputs ([#4926](https://github.com/nautobot/nautobot/issues/4926))
+
+Provides the ability to have native JSON data inputs for Jobs, this is provided by a multi-line text input on the Job form and the provided JSON data is serialized prior to passing to the `run()` method of the Job.
+
 #### UI/API `isnull` Filter on Nullable Fields ([#1905](https://github.com/nautobot/nautobot/issues/1905))
 
 Models with nullable fields (i.e. model fields with `null=True`) can now be filtered in the UI and the API with `<field>__isnull=true/false` filters. These filters are automatically added to all appropriate fields.
