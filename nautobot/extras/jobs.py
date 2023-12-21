@@ -38,7 +38,9 @@ from nautobot.core.celery.task import Task
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    JSONField,
 )
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_model_from_name
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
@@ -71,6 +73,7 @@ __all__ = [
     "IPAddressVar",
     "IPAddressWithMaskVar",
     "IPNetworkVar",
+    "JSONVar",
     "MultiChoiceVar",
     "MultiObjectVar",
     "ObjectVar",
@@ -289,15 +292,13 @@ class BaseJob(Task):
         """
         Handler called after the task returns.
 
-        Parameters
-            status - Current task state.
-            retval - Task return value/exception.
-            task_id - Unique id of the task.
-            args - Original arguments for the task that returned.
-            kwargs - Original keyword arguments for the task that returned.
-
-        Keyword Arguments
-            einfo - ExceptionInfo instance, containing the traceback (if any).
+        Arguments:
+            status (str): Current task state.
+            retval (Any): Task return value/exception.
+            task_id (str): Unique id of the task.
+            args (tuple):  Original arguments for the task that returned.
+            kwargs (dict): Original keyword arguments for the task that returned.
+            einfo (ExceptionInfo): ExceptionInfo instance, containing the traceback (if any).
 
         Returns:
             (None): The return value of this handler is ignored.
@@ -398,10 +399,10 @@ class BaseJob(Task):
         Unique identifier of a specific Job class, in the form <module_name>.<ClassName>.
 
         Examples:
-        my_script.MyScript - Local Job
-        nautobot.core.jobs.MySystemJob - System Job
-        my_plugin.jobs.MyPluginJob - App-provided Job
-        git_repository.jobs.myjob.MyJob - GitRepository Job
+        - my_script.MyScript - Local Job
+        - nautobot.core.jobs.MySystemJob - System Job
+        - my_plugin.jobs.MyPluginJob - App-provided Job
+        - git_repository.jobs.myjob.MyJob - GitRepository Job
         """
         return f"{cls.__module__}.{cls.__name__}"
 
@@ -835,11 +836,18 @@ class BaseJob(Task):
             filename (str): Name of the file to create, including extension
             content (str, bytes): Content to populate the created file with.
 
+        Raises:
+            (ValueError): if the provided content exceeds JOB_CREATE_FILE_MAX_SIZE in length
+
         Returns:
             (FileProxy): record that was created
         """
         if isinstance(content, str):
             content = content.encode("utf-8")
+        max_size = get_settings_or_config("JOB_CREATE_FILE_MAX_SIZE")
+        actual_size = len(content)
+        if actual_size > max_size:
+            raise ValueError(f"Provided {actual_size} bytes of content, but JOB_CREATE_FILE_MAX_SIZE is {max_size}")
         fp = FileProxy.objects.create(
             name=filename, job_result=self.job_result, file=ContentFile(content, name=filename)
         )
@@ -920,7 +928,7 @@ class StringVar(ScriptVariable):
 
 class TextVar(ScriptVariable):
     """
-    Free-form text data. Renders as a <textarea>.
+    Free-form text data. Renders as a `<textarea>`.
     """
 
     form_field = forms.CharField
@@ -1013,10 +1021,11 @@ class ObjectVar(ScriptVariable):
     """
     A single object within Nautobot.
 
-    :param model: The Nautobot model being referenced
-    :param display_field: The attribute of the returned object to display in the selection list (default: 'name')
-    :param query_params: A dictionary of additional query parameters to attach when making REST API requests (optional)
-    :param null_option: The label to use as a "null" selection option (optional)
+    Args:
+        model (Model): The Nautobot model being referenced
+        display_field (str): The attribute of the returned object to display in the selection list
+        query_params (dict): Additional query parameters to attach when making REST API requests
+        null_option (str): The label to use as a "null" selection option
     """
 
     form_field = DynamicModelChoiceField
@@ -1109,6 +1118,14 @@ class IPNetworkVar(ScriptVariable):
             self.field_attrs["validators"].append(MaxPrefixLengthValidator(max_prefix_length))
 
 
+class JSONVar(ScriptVariable):
+    """
+    Like TextVar but with native serializing of JSON data.
+    """
+
+    form_field = JSONField
+
+
 class JobHookReceiver(Job):
     """
     Base class for job hook receivers. Job hook receivers are jobs that are initiated
@@ -1129,9 +1146,10 @@ class JobHookReceiver(Job):
         """
         Method to be implemented by concrete JobHookReceiver subclasses.
 
-        :param change: an instance of `nautobot.extras.models.ObjectChange`
-        :param action: a string with the action performed on the changed object ("create", "update" or "delete")
-        :param changed_object: an instance of the object that was changed, or `None` if the object has been deleted
+        Args:
+            change (ObjectChange): an instance of `nautobot.extras.models.ObjectChange`
+            action (str): a string with the action performed on the changed object ("create", "update" or "delete")
+            changed_object (Model): an instance of the object that was changed, or `None` if the object has been deleted
         """
         raise NotImplementedError
 
@@ -1156,7 +1174,8 @@ class JobButtonReceiver(Job):
         """
         Method to be implemented by concrete JobButtonReceiver subclasses.
 
-        :param obj: an instance of the object
+        Args:
+            obj (Model): an instance of the object that triggered this job
         """
         raise NotImplementedError
 
@@ -1180,7 +1199,7 @@ def is_variable(obj):
 
 def get_job(class_path):
     """
-    Retrieve a specific job class by its class_path (<module_name>.<JobClassName>).
+    Retrieve a specific job class by its class_path (`<module_name>.<JobClassName>`).
 
     May return None if the job isn't properly registered with Celery at this time.
     """
