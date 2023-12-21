@@ -705,3 +705,24 @@ td span.hover_copy:hover .hover_copy_button {
 .navbar-inverse .navbar-nav > .dropdown > .dropdown-menu > li > a {
     color: #ffffff;
 }
+
+/* Collapse icon on homepage panels */
+.collapse-icon {
+    float: right;
+    cursor: pointer !important;
+}
+
+/* Draggable homepage panels fade in effect on page load */
+#draggable-homepage-panels {
+    opacity: 0;
+}
+
+/* Change cursor when hovering over panel headings on homepage */
+#draggable-homepage-panels .panel-heading {
+    cursor: move;
+}
+
+/* Make panel being dragged opaque */
+.dragging {
+    opacity: 0.5;
+}

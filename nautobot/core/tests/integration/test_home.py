@@ -101,7 +101,7 @@ class HomeTestCase(SeleniumTestCase):
                         f"/div[@class='panel-heading']"
                         f"/strong[contains(text(), '{panel_name}')]"
                         f"/../.."
-                        f"/div[@class='list-group']"
+                        f"/div[@class='list-group collapse in collapsible-div']"
                     )
                     links = panel_element_to_search.links.find_by_text(item_name)
                     if item_details["permission"] in user_permissions:
