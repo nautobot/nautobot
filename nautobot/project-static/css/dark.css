@@ -226,3 +226,8 @@ html[data-theme="dark"] .table-responsive>table>tbody>tr>td,
 html[data-theme="dark"] .table-headings>tbody>tr {
     border-top: 1px solid rgb(195, 195, 195);
 }
+
+/* Make panel being dragged opaque */
+html[data-theme="dark"] .dragging {
+  opacity: 0.5;
+}

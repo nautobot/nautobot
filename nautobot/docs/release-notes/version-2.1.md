@@ -21,6 +21,10 @@ See [Administrative Change-logging](../user-guide/platform-functionality/change-
 
 A new [`ExternalIntegration` model](../user-guide/platform-functionality/externalintegration.md) has been added which provides a centralized store for data such as URLs and credentials that are used to access systems external to Nautobot. This information can then be used by jobs or apps to perform actions such as creating DNS records or updating configuration management tickets.
 
+#### Home Page Panels Can Be Customized ([#2149](https://github.com/nautobot/nautobot/issues/2149))
+
+The panels displayed on the Nautobot home page have been modified to enable a more personalized user experience. Individual panels can now be collapsed, hiding the contents from view. Additionally, panels can be reordered by dragging and dropping the panels to the desired order.
+
 #### Job File Outputs ([#3352](https://github.com/nautobot/nautobot/issues/3352), [#4820](https://github.com/nautobot/nautobot/issues/4820))
 
 The `Job` base class now includes a [`create_file(filename, content)`](../development/jobs/index.md#file-output) method which can be called by a Job to create a persistent file with the provided content when run. This file will be linked from the Job Result detail view for subsequent downloading by users, and can also be downloaded via the REST API (`/api/extras/file-proxies/<id>/download/`) as desired.
