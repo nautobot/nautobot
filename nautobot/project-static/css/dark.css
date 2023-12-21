@@ -41,6 +41,7 @@ html[data-theme="dark"] .container-fluid.wrapper {
 
 /* Lighter than the background */
 html[data-theme="dark"] .navbar,                          /* Top menu navbar */
+html[data-theme="dark"] .navbar-nav > li > a,
 html[data-theme="dark"] .navbar-nav > li > a:hover,
 html[data-theme="dark"] .navbar-nav > li > a:focus,
 html[data-theme="dark"] .footer,                          /* Bottom footer bar */
@@ -145,7 +146,7 @@ html[data-theme="dark"] .swagger-ui textarea {            /* Swagger docs item t
 }
 
 /* Swagger docs table item background */
-html[data-theme="dark"] .swagger-ui table {                
+html[data-theme="dark"] .swagger-ui table {
   background: transparent !important;
 }
 

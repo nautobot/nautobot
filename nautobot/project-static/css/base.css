@@ -628,6 +628,12 @@ td span.hover_copy:hover .hover_copy_button {
     width: 100%;
 }
 
+.navbar-fixed-left .navbar-nav .nav-divider {
+    margin: 11px 17px;
+    width: 206px;
+    background-color: #999999;
+}
+
 .navbar-fixed-left .navbar-nav > li {
     width: 100%;
 }
