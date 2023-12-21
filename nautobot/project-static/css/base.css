@@ -9,7 +9,7 @@ html, body {
     height: 100%;
 }
 body {
-    padding-left: 220px;  /* same as width of .navbar-fixed-left */
+    padding-left: 240px;  /* same as width of .navbar-fixed-left */
     padding-top: 20px;
 }
 .wrapper {
@@ -591,7 +591,7 @@ td span.hover_copy:hover .hover_copy_button {
     overflow: auto;
     position: fixed;
     top: 0;
-    width: 220px;  /* same as body padding-left */
+    width: 240px;  /* same as body padding-left */
     z-index: 1030; /* `1030` is taken from Bootstrap's `navbar-fixed-top` */
 }
 
