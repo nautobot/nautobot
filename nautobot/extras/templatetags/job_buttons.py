@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from nautobot.extras.models import JobButton
+from nautobot.extras.models import Job, JobButton
 from nautobot.core.utils.data import render_jinja2
 
 
@@ -27,7 +27,8 @@ HIDDEN_INPUTS = """
 <input type="hidden" name="csrfmiddlewaretoken" value="{csrf_token}">
 <input type="hidden" name="object_pk" value="{object_pk}">
 <input type="hidden" name="object_model_name" value="{object_model_name}">
-<input type="hidden" name="redirect_path" value="{redirect_path}">
+<input type="hidden" name="_schedule_type" value="immediately">
+<input type="hidden" name="_return_url" value="{redirect_path}">
 """
 
 NO_CONFIRM_BUTTON = """
@@ -69,18 +70,17 @@ CONFIRM_MODAL = """
 </div>
 """
 
+SAFE_EMPTY_STR = mark_safe("")  # noqa: S308
 
-@register.simple_tag(takes_context=True)
-def job_buttons(context, obj):
-    """
-    Render all applicable job buttons for the given object.
-    """
-    content_type = ContentType.objects.get_for_model(obj)
-    buttons = JobButton.objects.filter(content_types=content_type)
-    if not buttons:
-        return ""
 
-    # Pass select context data when rendering the JobButton
+def _render_job_button_for_obj(job_button, obj, context, content_type):
+    """
+    Helper method for job_buttons templatetag to reduce repetition of code.
+
+    Returns:
+       (str, str): (button_html, form_html)
+    """
+    # Pass select context data when rendering the JobButton text as Jinja2
     button_context = {
         "obj": obj,
         "debug": context.get("debug", False),  # django.template.context_processors.debug
@@ -88,9 +88,24 @@ def job_buttons(context, obj):
         "user": context["user"],  # django.contrib.auth.context_processors.auth
         "perms": context["perms"],  # django.contrib.auth.context_processors.auth
     }
-    buttons_html = forms_html = mark_safe("")  # noqa: S308
-    group_names = OrderedDict()
+    try:
+        text_rendered = render_jinja2(job_button.text, button_context)
+    except Exception as exc:
+        return (
+            format_html(
+                '<a class="btn btn-sm btn-{}" disabled="disabled" title="{}"><i class="mdi mdi-alert"></i> {}</a>\n',
+                "default" if not job_button.group_name else "link",
+                exc,
+                job_button.name,
+            ),
+            SAFE_EMPTY_STR,
+        )
 
+    if not text_rendered:
+        return (SAFE_EMPTY_STR, SAFE_EMPTY_STR)
+
+    # Disable buttons if the user doesn't have permission to run the underlying Job.
+    has_run_perm = Job.objects.check_perms(context["user"], instance=job_button.job, action="run")
     hidden_inputs = format_html(
         HIDDEN_INPUTS,
         csrf_token=context["csrf_token"],
@@ -98,86 +113,65 @@ def job_buttons(context, obj):
         object_model_name=f"{content_type.app_label}.{content_type.model}",
         redirect_path=context["request"].path,
     )
+    template_args = {
+        "button_id": job_button.pk,
+        "button_text": text_rendered,
+        "button_class": job_button.button_class if not job_button.group_name else "link",
+        "button_url": reverse("extras:job_run", kwargs={"pk": job_button.job.pk}),
+        "object": obj,
+        "job": job_button.job,
+        "hidden_inputs": hidden_inputs,
+        "disabled": "" if has_run_perm else "disabled",
+    }
+
+    if job_button.confirmation:
+        return (
+            format_html(CONFIRM_BUTTON, **template_args),
+            format_html(CONFIRM_MODAL, **template_args),
+        )
+    else:
+        return (
+            format_html(NO_CONFIRM_BUTTON, **template_args),
+            format_html(NO_CONFIRM_FORM, **template_args),
+        )
+
+
+@register.simple_tag(takes_context=True)
+def job_buttons(context, obj):
+    """
+    Render all applicable job buttons for the given object.
+    """
+    content_type = ContentType.objects.get_for_model(obj)
+    # We will enforce "run" permission later in deciding which buttons to show as disabled.
+    buttons = JobButton.objects.filter(content_types=content_type)
+    if not buttons:
+        return SAFE_EMPTY_STR
+
+    buttons_html = forms_html = SAFE_EMPTY_STR
+    group_names = OrderedDict()
 
     for jb in buttons:
-        template_args = {
-            "button_id": jb.pk,
-            "button_text": jb.text,
-            "button_class": jb.button_class,
-            "button_url": reverse("extras:jobbutton_run", kwargs={"pk": jb.pk}),
-            "object": obj,
-            "job": jb.job,
-            "hidden_inputs": hidden_inputs,
-            "disabled": "" if context["user"].has_perms(("extras.run_jobbutton", "extras.run_job")) else "disabled",
-        }
-
-        # Organize job buttons by group
+        # Organize job buttons by group for later processing
         if jb.group_name:
-            group_names.setdefault(jb.group_name, [])
-            group_names[jb.group_name].append(jb)
+            group_names.setdefault(jb.group_name, []).append(jb)
 
-        # Add non-grouped buttons
+        # Render and add non-grouped buttons
         else:
-            try:
-                text_rendered = render_jinja2(jb.text, button_context)
-                if text_rendered:
-                    template_args["button_text"] = text_rendered
-                    if jb.confirmation:
-                        buttons_html += format_html(CONFIRM_BUTTON, **template_args)
-                        forms_html += format_html(CONFIRM_MODAL, **template_args)
-                    else:
-                        buttons_html += format_html(NO_CONFIRM_BUTTON, **template_args)
-                        forms_html += format_html(NO_CONFIRM_FORM, **template_args)
-            except Exception as e:
-                buttons_html += format_html(
-                    '<a class="btn btn-sm btn-default" disabled="disabled" title="{}">'
-                    '<i class="mdi mdi-alert"></i> {}</a>\n',
-                    e,
-                    jb.name,
-                )
+            button_html, form_html = _render_job_button_for_obj(jb, obj, context, content_type)
+            buttons_html += button_html
+            forms_html += form_html
 
     # Add grouped buttons to template
     for group_name, buttons in group_names.items():
         group_button_class = buttons[0].button_class
 
-        buttons_rendered = mark_safe("")  # noqa: S308
+        buttons_rendered = SAFE_EMPTY_STR
 
         for jb in buttons:
-            template_args = {
-                "button_id": jb.pk,
-                "button_text": jb.text,
-                "button_class": "link",
-                "button_url": reverse("extras:jobbutton_run", kwargs={"pk": jb.pk}),
-                "object": obj,
-                "job": jb.job,
-                "hidden_inputs": hidden_inputs,
-                "disabled": "" if context["user"].has_perms(("extras.run_jobbutton", "extras.run_job")) else "disabled",
-            }
-            try:
-                text_rendered = render_jinja2(jb.text, button_context)
-                if text_rendered:
-                    template_args["button_text"] = text_rendered
-                    if jb.confirmation:
-                        buttons_rendered += (
-                            mark_safe("<li>")  # noqa: S308
-                            + format_html(CONFIRM_BUTTON, **template_args)
-                            + mark_safe("</li>")  # noqa: S308
-                        )
-                        forms_html += format_html(CONFIRM_MODAL, **template_args)
-                    else:
-                        buttons_rendered += (
-                            mark_safe("<li>")  # noqa: S308
-                            + format_html(NO_CONFIRM_BUTTON, **template_args)
-                            + mark_safe("</li>")  # noqa: S308
-                        )
-                        forms_html += format_html(NO_CONFIRM_FORM, **template_args)
-            except Exception as e:
-                buttons_rendered += format_html(
-                    '<li><a disabled="disabled" title="{}"><span class="text-muted">'
-                    '<i class="mdi mdi-alert"></i> {}</span></a></li>',
-                    e,
-                    jb.name,
-                )
+            # Render grouped buttons as list items
+            button_html, form_html = _render_job_button_for_obj(jb, obj, context, content_type)
+            buttons_rendered += format_html("<li>{}</li>", button_html)
+            forms_html += form_html
 
         if buttons_rendered:
             buttons_html += format_html(
