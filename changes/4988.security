@@ -1,2 +1,0 @@
-Fixed missing object-level permissions enforcement when running a JobButton.
-Removed the requirement for users to have both `extras.run_job` and `extras.run_jobbutton` permissions to run a Job via a Job Button. Only `extras.run_job` permission is now required.
