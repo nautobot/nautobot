@@ -84,7 +84,6 @@ As soon as you click on **Create & Sync**, Nautobot will clone and sync the repo
     If you are using a self-signed Git repository, the Server Administrator will need to ensure the [`GIT_SSL_NO_VERIFY`](../administration/configuration/optional-settings.md#git_ssl_no_verify) environment variable is set to permit this.
 
 ![View of Synchronization Status](./images/git-as-data-source/04-git-data-source.png)
-![Status of Export-Templates](./images/git-as-data-source/06-git-data-source.png)
 
 The repository will now be displayed on the main Git Repository page.
 
@@ -92,7 +91,7 @@ The repository will now be displayed on the main Git Repository page.
 
 Once the repository is synced each template will now be available in the Export Templates section.  **Extensibility -> Export Templates**.
 
-![List of Loaded Export-Templates](./images/git-as-data-source/07-git-data-source.png)
+![List of Loaded Export-Templates](./images/git-as-data-source/06-git-data-source.png)
 
 !!! note
     If the templates don't populate, make sure the Git directory is named `export_templates` and the sub-directory and sub-sub-directory names correctly match the Nautobot `content type`.
@@ -149,10 +148,10 @@ The updated template is now:
 Once the contributor updates the Git repository via normal Git processes and it is reviewed and merged into the branch that was used, a sync process from Nautobot needs to be completed.  This can be done from the default Git view, or within a specific detailed view of a Git repository.
 
 From the default Git repositories view:
-![Sync Repository from Default Menu](./images/git-as-data-source/08-git-data-source.png)
+![Sync Repository from Default Menu](./images/git-as-data-source/07-git-data-source.png)
 
 From the detailed view:
-![Sync Repository from Detailed Menu](./images/git-as-data-source/09-git-data-source.png)
+![Sync Repository from Detailed Menu](./images/git-as-data-source/08-git-data-source.png)
 
 !!! tip
     Once the repository has been synced it's easy to check the history for the templates.
@@ -187,18 +186,19 @@ jobs
     As shown in the above example, the `/jobs/` directory must contain a file called `__init__.py`.
 
 Once the repository is created in Nautobot.
-![Example Details Jobs](./images/git-as-data-source/10-git-data-source.png)
+
+![Example Details Jobs](./images/git-as-data-source/09-git-data-source.png)
 
 !!! tip
     The same repository and branch can be used for the different `provides` methods.  Nautobot Git as a data source will look for specific root directory names.
 
 Once the scripts have been pushed into the repository, a sync needs to be executed, after which navigating to Jobs via **Jobs -> Jobs** will show the new jobs loaded from the Git repository.
 
-![Default Repository Menu](./images/git-as-data-source/11-git-data-source.png)
+![Default Repository Menu](./images/git-as-data-source/10-git-data-source.png)
 
 Jobs now shows the job from the Git repository.
 
-![List of Loaded Jobs](./images/git-as-data-source/12-git-data-source.png)
+![List of Loaded Jobs](./images/git-as-data-source/11-git-data-source.png)
 
 At this point all changes, and history can be kept using Git.  A simple `sync` operation can be done from Nautobot to pulldown any changes.
 
@@ -219,11 +219,11 @@ A few simple examples of Configuration Context data might be:
 
 Similar to the other data sources, the repository can be added by navigating to **Extensibility -> Git repositories**. Click on **Add**, and fill out the repository details.
 
-![Example Details Config Contexts](./images/git-as-data-source/13-git-data-source.png)
+![Example Details Config Contexts](./images/git-as-data-source/12-git-data-source.png)
 
 Once the repository syncs the details can be found in the **Synchronization Status** tab.  For example, the platform specifics were synced:
 
-![Synchronization Menu With Loaded Contexts](./images/git-as-data-source/14-git-data-source.png)
+![Synchronization Menu With Loaded Contexts](./images/git-as-data-source/13-git-data-source.png)
 
 The repository structure is:
 
@@ -258,7 +258,7 @@ Configuration Context details:
 
 Here's an example, with some of the details omitted for brevity.
 
-![Config Contexts Display Pane](./images/git-as-data-source/15-git-data-source.png)
+![Config Contexts Display Pane](./images/git-as-data-source/14-git-data-source.png)
 
 There is a huge benefit to having `config contexts` managed by a Git workflow.  This type of data can be modified often, especially platform specifics, or new device roles.  Utilizing a standard Git workflow allows for all the proper reviews and approvals to be accomplished before accepting the changes into Nautobot for use.
 
@@ -295,13 +295,13 @@ For more information for the Golden Configuration specific data sources, navigat
     - Config Contexts -> `config_contexts`.
 2. Synchronization Status Failures.
     - Validate branch is correct and exists in the remote repository.
-    ![Error Branch Doesn't Exist](./images/git-as-data-source/16-git-data-source.png)
+    ![Error Branch Doesn't Exist](./images/git-as-data-source/15-git-data-source.png)
     - Validate the remote url is correct and is the `http(s)` url.  `ssh` urls are not currently supported.
-    ![Error Remote URL Incorrect](./images/git-as-data-source/17-git-data-source.png)
+    ![Error Remote URL Incorrect](./images/git-as-data-source/16-git-data-source.png)
 3. Authentication Issues.
     - Check repository permissions.
     - Ensure the password is the Personal Access Token (PAT) for the username supplied.
     - Ensure the PAT permissions are setup properly.
       - At a minimum the `repo` option should be checked or access.
 
-    ![Error Authentication Issue](./images/git-as-data-source/18-git-data-source.png)
+    ![Error Authentication Issue](./images/git-as-data-source/17-git-data-source.png)
