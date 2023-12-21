@@ -73,7 +73,7 @@ def generate_settings(config_template=CONFIG_TEMPLATE, **kwargs):
     }
 
     with open(config_template) as fh:
-        environment = Environment(loader=BaseLoader, keep_trailing_newline=True)
+        environment = Environment(loader=BaseLoader, keep_trailing_newline=True)  # noqa: S701
         config = environment.from_string(fh.read())
 
     return config.render(**template_vars)

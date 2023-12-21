@@ -28,9 +28,9 @@ class PluginWebhookTest(SeleniumTestCase):
 
     def setUp(self):
         super().setUp()
-        for f in os.listdir("/tmp"):
+        for f in os.listdir("/tmp"):  # noqa: S108
             if f.startswith("test_plugin_webhook_"):
-                os.remove(os.path.join("/tmp", f))
+                os.remove(os.path.join("/tmp", f))  # noqa: S108
 
         self.url = f"http://localhost:{self.server_thread.port}" + reverse(
             "plugins-api:example_plugin-api:examplemodel_webhook"

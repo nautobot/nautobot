@@ -485,9 +485,7 @@ class JobResult(BaseModel, CustomFieldModel):
     task_args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
     task_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
     celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
-    traceback = models.TextField(  # noqa: DJ001
-        blank=True, null=True  # TODO: can we remove null=True?
-    )
+    traceback = models.TextField(blank=True, null=True)  # noqa: DJ001  # TODO: can we remove null=True?
     meta = models.JSONField(null=True, default=None, editable=False)
     scheduled_job = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
 

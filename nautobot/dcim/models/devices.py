@@ -412,7 +412,7 @@ class Device(PrimaryModel, ConfigContextModel):
         max_length=64,
         blank=True,
         null=True,  # because name is part of uniqueness constraint but is optional
-        db_index=True
+        db_index=True,
     )
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, null=True, db_index=True)
     serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number", db_index=True)

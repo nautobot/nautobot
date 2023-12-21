@@ -127,7 +127,7 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
 
     # Housekeeping: 0.1% chance of clearing out expired ObjectChanges
     changelog_retention = get_settings_or_config("CHANGELOG_RETENTION")
-    if changelog_retention and random.randint(1, 1000) == 1:
+    if changelog_retention and random.randint(1, 1000) == 1:  # noqa: S311
         cutoff = timezone.now() - timedelta(days=changelog_retention)
         ObjectChange.objects.filter(time__lt=cutoff).delete()
 

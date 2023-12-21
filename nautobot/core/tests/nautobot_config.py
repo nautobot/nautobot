@@ -22,7 +22,7 @@ PLUGINS = [
 ]
 
 # Hard-code the SECRET_KEY for simplicity
-SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"  # noqa: S105
 
 # Redis variables
 

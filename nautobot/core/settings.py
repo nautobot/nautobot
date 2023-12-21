@@ -181,7 +181,8 @@ REST_FRAMEWORK_VERSION = VERSION.rsplit(".", 1)[0]  # Use major.minor as API ver
 VERSION_MAJOR, VERSION_MINOR = [int(v) for v in REST_FRAMEWORK_VERSION.split(".")]
 # We support all major.minor API versions from 2.0 to the present latest version.
 # Similar logic exists in tasks.py, please keep them in sync!
-assert VERSION_MAJOR == 2, f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {VERSION_MAJOR}"
+if VERSION_MAJOR != 2:
+    raise RuntimeError(f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {VERSION_MAJOR}")
 REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{VERSION_MAJOR}.{minor}" for minor in range(0, VERSION_MINOR + 1)]
 
 REST_FRAMEWORK = {

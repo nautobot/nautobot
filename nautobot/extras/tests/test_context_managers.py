@@ -17,11 +17,13 @@ User = get_user_model()
 
 class WebRequestContextTestCase(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="jacob", email="jacob@example.com", password="top_secret")
+        self.user = User.objects.create_user(
+            username="jacob", email="jacob@example.com", password="top_secret"  # noqa: S106
+        )
 
         location_ct = ContentType.objects.get_for_model(Location)
         MOCK_URL = "http://localhost/"
-        MOCK_SECRET = "LOOKATMEIMASECRETSTRING"
+        MOCK_SECRET = "LOOKATMEIMASECRETSTRING"  # noqa: S105
 
         webhooks = Webhook.objects.bulk_create(
             (

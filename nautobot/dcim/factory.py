@@ -298,7 +298,7 @@ class PlatformFactory(OrganizationalModelFactory):
     # If it has a manufacturer, it *might* have a napalm_driver.
     napalm_driver = factory.Maybe(
         "has_manufacturer",
-        factory.LazyAttribute(lambda o: random.choice(NAPALM_DRIVERS.get(o.manufacturer.name, [""]))),
+        factory.LazyAttribute(lambda o: random.choice(NAPALM_DRIVERS.get(o.manufacturer.name, [""]))),  # noqa: S311
         "",
     )
 
@@ -310,7 +310,7 @@ class PlatformFactory(OrganizationalModelFactory):
     has_description = NautobotBoolIterator()
     network_driver = factory.Maybe(
         "has_manufacturer",
-        factory.LazyAttribute(lambda o: random.choice(NETWORK_DRIVERS.get(o.manufacturer.name, [""]))),
+        factory.LazyAttribute(lambda o: random.choice(NETWORK_DRIVERS.get(o.manufacturer.name, [""]))),  # noqa: S311
         "",
     )
 

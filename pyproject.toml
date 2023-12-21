@@ -353,7 +353,7 @@ select = [
     "E",  # pycodestyle
     "F",  # pyflakes
     # "I",  # isort
-    "S308",  # flake8-bandit: suspicious-mark-safe-usage
+    "S",  # flake8-bandit
     "W",  # pycodestyle
 ]
 ignore = [

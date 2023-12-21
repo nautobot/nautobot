@@ -685,7 +685,8 @@ def check_schema(context, api_version=None):
         nautobot_version = get_nautobot_version()
         # logic equivalent to nautobot.core.settings REST_FRAMEWORK_ALLOWED_VERSIONS - keep them in sync!
         current_major, current_minor = [int(v) for v in nautobot_version.split(".")[:2]]
-        assert current_major == 2, f"check_schemas version calc must be updated to handle version {current_major}"
+        if current_major != 2:
+            raise RuntimeError(f"check_schemas version calc must be updated to handle version {current_major}")
         api_versions = [f"{current_major}.{minor}" for minor in range(0, current_minor + 1)]
 
     for api_vers in api_versions:

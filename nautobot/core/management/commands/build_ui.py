@@ -221,7 +221,7 @@ class Command(BaseCommand):
 
         try:
             result = subprocess.run(
-                shlex.split(command),
+                shlex.split(command),  # noqa: S603
                 check=False,
                 cwd=cwd,
                 env={**os.environ.copy()},

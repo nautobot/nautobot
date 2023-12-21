@@ -20,7 +20,7 @@ def ensure_note_created_timestamps_are_unique(apps, schema_editor):
         duplicate_record.pop("count")
         duplicate_notes = Note.objects.filter(**duplicate_record)
         for note in duplicate_notes:
-            random_milliseconds = random.randint(1, 1000)
+            random_milliseconds = random.randint(1, 1000)  # noqa: S311
             note.created += timedelta(milliseconds=random_milliseconds)
             note.save()
 
