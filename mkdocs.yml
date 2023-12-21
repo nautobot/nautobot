@@ -145,6 +145,7 @@ plugins:
         'core-functionality/virtualization.md': 'user-guide/core-data-model/virtualization/virtualmachine.md'
         'core-functionality/vlans.md': 'user-guide/core-data-model/ipam/vlan.md'
         'development/application-registry.md': 'development/core/application-registry.md'
+        'development/apps/api/ui-extensions/tabs.md': 'development/apps/api/ui-extensions/object-detail-views.md'
         'development/best-practices.md': 'development/core/best-practices.md'
         'development/docker-compose-advanced-use-cases.md': 'development/core/docker-compose-advanced-use-cases.md'
         'development/extending-models.md': 'development/core/extending-models.md'
@@ -471,8 +472,7 @@ nav:
         - Home Page: "development/apps/api/ui-extensions/home-page.md"
         - Links in the Installed Apps View: "development/apps/api/configuration-view.md"
         - Navigation: "development/apps/api/ui-extensions/navigation.md"
-        - Object Detail Views: "development/apps/api/ui-extensions/object-detail-views.md"
-        - Tabs: "development/apps/api/ui-extensions/tabs.md"
+        - Object Detail Views and Tabs: "development/apps/api/ui-extensions/object-detail-views.md"
       - Testing: "development/apps/api/testing.md"
       - Code Reference:
         - nautobot.apps: "code-reference/nautobot/apps/__init__.md"
