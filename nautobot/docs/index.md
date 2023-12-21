@@ -17,7 +17,7 @@ Welcome to the Nautobot Core Documentation! Use the top navigation bar to read a
 <img src="assets/nautobot_logo.svg" class="logo">
 <!-- markdownlint-enable MD033 -->
 
-Nautobot is an open source Network Source of Truth and Network Automation Platform. Nautobot was initially developed as a fork of NetBox (v2.10.4), which was originally created by Jeremy Stretch at DigitalOcean and by the NetBox open source community.
+Nautobot is an open source Network Source of Truth and Network Automation Platform built as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database.
 
 ## Key Use Cases
 
@@ -37,6 +37,22 @@ Nautobot enables three (3) key use cases.
     - [Circuit Maintenance](https://github.com/nautobot/nautobot-plugin-circuit-maintenance)
     - [Capacity Metrics](https://github.com/nautobot/nautobot-plugin-capacity-metrics)
     - [Device Onboarding](https://github.com/nautobot/nautobot-plugin-device-onboarding)
+
+## Screenshots
+
+![Main Page](media/ss_main_page.png)
+
+![Config Contexts](media/ss_config_contexts.png)
+
+![Prefix Hierarchy](media/ss_prefix_hierarchy.png)
+
+![GraphQL API](media/ss_graphiql.png)
+
+### App Screenshots
+
+![Golden Config App](media/ss_plugin_golden_config.png)
+
+![ChatOps App](media/ss_plugin_chatops.png)
 
 ## Design Philosophy
 
@@ -71,7 +87,7 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 | HTTP service       | NGINX                           |
 | WSGI service       | uWSGI or Gunicorn               |
 | Application        | Django/Python                   |
-| Database           | PostgreSQL 9.6+ or MySQL 8.0+   |
+| Database           | PostgreSQL 12.0+ or MySQL 8.0+  |
 | Cache              | Django/Redis                    |
 | Task queuing       | Redis/Celery                    |
 | Live device access | NAPALM                          |
@@ -82,6 +98,9 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 --- 2.0.0
     - `django-rq` support was removed.
     - `django-cacheops` usage was removed and replaced with Django's native caching features.
+
+--- 2.1.0
+    Support for versions of PostgreSQL older than 12.0 was removed.
 
 The following diagram displays how data travels through Nautobot's application stack.
 
@@ -103,3 +122,7 @@ Nautobot supports Python 3.8 through 3.11.
 ## Getting Started
 
 See the [installation guide](user-guide/administration/installation/index.md) for help getting Nautobot up and running quickly.
+
+## Notices
+
+> Nautobot was initially developed as a fork of NetBox (v2.10.4), which was originally created by Jeremy Stretch at DigitalOcean and by the NetBox open source community.

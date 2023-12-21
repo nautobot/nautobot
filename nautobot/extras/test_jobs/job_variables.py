@@ -9,6 +9,7 @@ from nautobot.extras.jobs import (
     IPAddressWithMaskVar,
     IPNetworkVar,
     Job,
+    JSONVar,
     MultiChoiceVar,
     MultiObjectVar,
     ObjectVar,
@@ -68,6 +69,10 @@ class TextVarJob(Job):
     var1 = TextVar()
 
 
+class JSONVarJob(Job):
+    var1 = JSONVar()
+
+
 job_list = [
     BooleanVarJob,
     ChoiceVarJob,
@@ -76,6 +81,7 @@ job_list = [
     IPAddressVarJob,
     IPAddressWithMaskVarJob,
     IPNetworkVarJob,
+    JSONVarJob,
     MultiChoiceVarJob,
     MultiObjectVarJob,
     ObjectVarJob,

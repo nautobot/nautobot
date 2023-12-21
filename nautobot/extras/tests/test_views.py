@@ -23,6 +23,7 @@ from nautobot.extras.choices import (
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
+    WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import (
@@ -33,6 +34,7 @@ from nautobot.extras.models import (
     CustomLink,
     DynamicGroup,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     Job,
@@ -692,6 +694,28 @@ class ExportTemplateTestCase(
             "content_type": obj_type.pk,
             "template_code": "template-4 test4",
         }
+
+
+class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = ExternalIntegration
+    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}", "headers": r"{}"}
+    csv_data = (
+        "name,remote_url,verify_ssl,timeout,http_method",
+        "Test External Integration 1,https://example.com/test1/,False,10,POST",
+        "Test External Integration 2,https://example.com/test2/,True,20,DELETE",
+        "Test External Integration 3,https://example.com/test3/,False,30,PATCH",
+    )
+    form_data = {
+        "name": "Test External Integration",
+        "remote_url": "https://example.com/test1/",
+        "verify_ssl": False,
+        "secrets_group": None,
+        "timeout": 10,
+        "extra_config": '{"foo": "bar"}',
+        "http_method": WebhookHttpMethodChoices.METHOD_GET,
+        "headers": '{"header": "fake header"}',
+        "ca_file_path": "this/is/a/file/path",
+    }
 
 
 class GitRepositoryTestCase(
@@ -1937,7 +1961,7 @@ class JobTestCase(
         content = extract_page_body(response.content.decode(response.charset))
 
         self.assertHttpStatus(response, 200)
-        self.assertIn(f"<h1>{instance.name} - Change Log</h1>", content)
+        self.assertIn(f"{instance.name} - Change Log", content)
 
 
 class JobButtonTestCase(
@@ -2358,7 +2382,7 @@ class RelationshipAssociationTestCase(
             ),
         )
         vlan_status = Status.objects.get_for_model(VLAN).first()
-        vlan_group = VLANGroup.objects.first()
+        vlan_group = VLANGroup.objects.create(name="Test VLANGroup 1")
         vlans = (
             VLAN.objects.create(vid=1, name="VLAN 1", status=vlan_status, vlan_group=vlan_group),
             VLAN.objects.create(vid=2, name="VLAN 2", status=vlan_status, vlan_group=vlan_group),

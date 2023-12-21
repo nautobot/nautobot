@@ -28,7 +28,7 @@ The following example will show:
 
 ### Creating the VLANs
 
-1. Click on **IPAM** in the top navigation menu
+1. Click on **IPAM** in the left sidebar menu
 2. Look for the **VLANS** option and click on the **+** to go to the `Add a new VLAN` form
 3. Populate `ID` with `200`
 4. Populate `Name` with `vlan 200`
@@ -48,7 +48,7 @@ On the `Add a new VLAN` form:
 1. Populate `ID` with `100`
 2. Populate `Name` with `vlan 100`
 3. Select `Status` as `Active`
-4. Select `Vancouver 1` from the `Location` selector drop-down
+4. Select `ANG01` from the `Location` selector drop-down
 5. Click on the `Create and Add Another` button
 
 On the `Add a new VLAN` form:
@@ -56,7 +56,7 @@ On the `Add a new VLAN` form:
 1. Populate `ID` with `100`
 2. Populate `Name` with `vlan 100`
 3. Select `Status` as `Active`
-4. Select `Ottawa 1` from the `Location` selector drop-down
+4. Select `BRE01` from the `Location` selector drop-down
 5. Click on the `Create` button when complete with the second instance
 
 ![Create VLANs 2](../images/getting-started-nautobot-ui/23-create-vlans-2.png)
@@ -71,17 +71,17 @@ you'll see the three VLANs and the Location assignment for each one. Each `vlan 
 
 To assign a VLAN to an Interface:
 
-1. Click on **IPAM** on the top-level navigation menu
+1. Click on **IPAM** on the left sidebar menu
 2. Select **Devices** to go to the Devices main page
-3. Click on the name of the Device you wish to add a VLAN to (`edge2.van1`) in this example
+3. Click on the name of the Device you wish to add a VLAN to (`ang01-edge-01`) in this example
 4. Click on the `Edit` button for the `xe-0/0/0` Interface to go to the `Editing interface xe-0/0/0` page
 5. On the `Editing interface xe-0/0/0` page, set `802.1Q` Mode to `Access` (or whatever mode you need) and then click on the VLAN drop-down selector. Notice that there are two choices:
-    * One choice is the `vlan 100` instance specifically assigned to the `Vancouver 1` Location
+    * One choice is the `vlan 100` instance specifically assigned to the `ANG01` Location
     * The other choice is `vlan 200`, which was not assigned to a Location, and thus has a global scope
 
 ![Add VLAN to interface 1](../images/getting-started-nautobot-ui/25-add-vlan-to-interface.png)
 
 !!! note
-    The `vlan 100` instance that is assigned to the `Ottawa 1` Location does not show up as an option for the `Vancouver1` Location
+    The `vlan 100` instance that is assigned to the `BRE01` Location does not show up as an option for the `ANG01` Location
 
 ![Add VLAN to interface 2](../images/getting-started-nautobot-ui/26-add-vlan-to-interface-2.png)

@@ -6,10 +6,12 @@ from django.db import transaction
 
 from nautobot.apps.jobs import (
     DryRunVar,
+    FileVar,
     IntegerVar,
     Job,
     JobButtonReceiver,
     JobHookReceiver,
+    JSONVar,
     register_jobs,
 )
 from nautobot.dcim.models import Device, Location
@@ -45,6 +47,8 @@ class ExampleDryRunJob(Job):
 
 
 class ExampleJob(Job):
+    some_json_data = JSONVar(label="JSON", description="Example JSONVar for a job.", default={})
+
     # specify template_name to override the default job scheduling template
     template_name = "example_plugin/example_with_custom_template.html"
 
@@ -56,7 +60,8 @@ class ExampleJob(Job):
             *This is italicized*
         """
 
-    def run(self):
+    def run(self, some_json_data):
+        # some_json_data is passed to the run method as a Python object (e.g. dictionary)
         pass
 
 
@@ -95,6 +100,21 @@ class ExampleLoggingJob(Job):
         )
         self.logger.info("Success", extra={"object": self.job_model, "grouping": "job_run_success"})
         return f"Ran for {interval} seconds"
+
+
+class ExampleFileInputOutputJob(Job):
+    input_file = FileVar(description="Text file to transform")
+
+    class Meta:
+        name = "Example File Input/Output job"
+        description = "Takes a file as input and reverses its line order, creating a new file as output."
+
+    def run(self, input_file):
+        # Note that input_file is always opened in binary mode, so we need to decode it to a str
+        text = input_file.read().decode("utf-8")
+        output = "\n".join(reversed(text.split("\n")))
+        # create_file(filename, content) can take either str or bytes as content
+        self.create_file("output.txt", output)
 
 
 class ExampleJobHookReceiver(JobHookReceiver):
@@ -172,6 +192,7 @@ jobs = (
     ExampleJob,
     ExampleHiddenJob,
     ExampleLoggingJob,
+    ExampleFileInputOutputJob,
     ExampleJobHookReceiver,
     ExampleSimpleJobButtonReceiver,
     ExampleComplexJobButtonReceiver,

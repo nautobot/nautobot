@@ -18,7 +18,7 @@ Nautobot requires any IP allocation be attributed to a RIR.
 
 To create a RIR:
 
-1. Click on **IPAM** in the top-level navigation menu
+1. Click on **IPAM** in the left sidebar menu
 2. Find **RIRs** and click on the **+**; this takes you to the `Add a new RIR` form
 3. Specify the RIR `Name`
 4. There is a checkbox to flag `Private` (internal use) only
@@ -33,11 +33,11 @@ Each Prefix can be assigned to a particular Location, an RIR and virtual routing
 
 To create a prefix:
 
-1. Click on **IPAM** in the top-level navigation menu
+1. Click on **IPAM** in the left sidebar menu
 2. Look for **Prefixes** and click on the **+**
     * This will take you to the `Add a new prefix` form
 3. Populate the `Prefix` in CIDR notation
-4. If all addresses in the Prefix are usable, change the type to "Pool"
+4. If all addresses in the Prefix are usable, change the `Type` to "Pool"
 5. Select a `Status` from the drop-down selector
 6. Optionally select a `RIR` from the drop-down selector
 7. Click on the `Create` button (not shown)
@@ -48,15 +48,17 @@ To create a prefix:
 
 To create an IP address:
 
-1. Click on **IPAM** in the top-level navigation menu
+1. Click on **IPAM** in the left side navigation menu
 2. Find **IP Addresses** and click on the **+**
     * This will take you to the `Add a new IP address` form
 3. In this example, we are going to create multiple individual addresses, so click on the `Bulk Create` tab
 4. Populate an Address pattern
     * This example uses `10.10.10.[0-1,2-3,6-7]/31` to create 3 non-contiguous /31's
     * The specified mask should be exactly as would be configured on the Device's Interface
-5. Select `Active` for `Status` from the drop-down selector
-6. Click on the `Create` button
+5. Select `Global` for `Namespace` from the drop-down selector
+6. Select `Host` for `Type` from the drop-down selector
+7. Select `Active` for `Status` from the drop-down selector
+8. Click on the `Create` button
 
 ![Add IP address](../images/getting-started-nautobot-ui/32-add-ip-addr.png)
 
@@ -64,28 +66,29 @@ To create an IP address:
 
 To assign an IP Address to a specific Device and Interface:
 
-1. Click on **IPAM** in the top-level navigation menu
-2. Click on **IP Addresses** to go to the main IP Addresses page
-3. Find the IP address you wish to assign to an Interface and click on it
-4. On the main page for the Address, click on the `Edit` button to go to the `Editing IP address` page
+1. Click on **Devices** in the left side navigation menu
+2. Click on **Devices** to go to the main page for Devices
+3. Find the Device whose Interface you wish to associate to an IP Address and click on it
+4. Go to the `Interfaces` tab and look for the row with the Interface you are interested in
+5. Click on the edit button for the Interface (a pencil icon)
+
 ![Assign IP address 1](../images/getting-started-nautobot-ui/33-assign-address.png)
 
 ![Assign IP address 2](../images/getting-started-nautobot-ui/34-assign-address-2.png)
 
-Once on the `Editing IP address` page:
+Once on the `Editing Interface` page:
 
-1. Select a `Device` from the drop-down selector
-2. Select an `Interface` on the Device
-3. Click on the `Update` button
-    * This will take you back to the main page for the IP Address, where you will see the assignment shown as `device (interface)`
+1. Select an `IP Address` from the drop-down selector
+2. Click on the `Update` button
+    * This will take you back to the Interfaces page for the Device, where you will see the assignment shown under the `IP Addresses` column
 
 ![Assign IP address 3](../images/getting-started-nautobot-ui/35-assign-address-3.png)
 
 ## Finding an IP Address for an Interface
 
-1. Click on **Devices** on the top-level navigation menu
+1. Click on **Devices** in the left side navigation menu
 2. Click on **Devices** to go to the main page for Devices
-3. Search for the Device you are interested in (`edge2.van1` in this example) and click on the link to go to the main page for the Device
+3. Search for the Device you are interested in (`ams01-edge-01` in this example) and click on the link to go to the main page for the Device
 4. Go to the `Interfaces` tab and look for the row with the Interface you are interested in; find the IP Address(es) in the **IP Addresses** column in the row
 
 ![Verify IP address](../images/getting-started-nautobot-ui/36-verify-address.png)
@@ -94,7 +97,7 @@ Once on the `Editing IP address` page:
 
 To find information on a particular Prefix:
 
-1. Click on **IPAM** in the top-level drop-down menu
+1. Click on **IPAM** in the left side navigation menu
 2. Click on **Prefixes** to get to the Prefixes main page
 3. Find the Prefix you are interested in and click on the link
 4. To view the available and allocated IP Addresses, click on the `IP Addresses` tab

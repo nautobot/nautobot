@@ -77,16 +77,11 @@ def enqueue_pull_git_repository_and_refresh_data(repository, user):
     return enqueue_git_repository_helper(repository, user, GitRepositorySync)
 
 
-def get_repo_from_url_to_path_and_from_branch(repository_record):
-    """Returns the from_url, to_path and from_branch of a Git Repo
+def get_repo_access_url(repository_record):
+    """Returns the repo url with and without token when present
     Returns:
-        namedtuple (GitRepoInfo): (
-        from_url (str): git repo url with token or user if available,
-        to_path (Path): path to location of git repo on local machine
-        from_branch (str): current git repo branch
-    )
+        (str): The url used to connect to the git repo, with credentials as applicable.
     """
-
     # Inject username and/or token into source URL if necessary
     from_url = repository_record.remote_url
 
@@ -120,6 +115,19 @@ def get_repo_from_url_to_path_and_from_branch(repository_record):
             from_url = re.sub("//", f"//{quote(user, safe='')}:{quote(token, safe='')}@", from_url)
         else:
             from_url = re.sub("//", f"//{quote(token, safe='')}@", from_url)
+    return from_url
+
+
+def get_repo_from_url_to_path_and_from_branch(repository_record):
+    """Returns the from_url, to_path and from_branch of a Git Repo
+    Returns:
+        namedtuple (GitRepoInfo): (
+        from_url (str): git repo url with token or user if available,
+        to_path (Path): path to location of git repo on local machine
+        from_branch (str): current git repo branch
+    )
+    """
+    from_url = get_repo_access_url(repository_record)
 
     to_path = repository_record.filesystem_path
     from_branch = repository_record.branch

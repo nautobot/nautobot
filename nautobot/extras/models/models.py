@@ -1,13 +1,15 @@
-import json
 from collections import OrderedDict
+import json
 
 from db_file_storage.model_utils import delete_file, delete_file_if_needed
 from db_file_storage.storage import DatabaseFileStorage
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.core.serializers.json import DjangoJSONEncoder
+from django.core.files.storage import get_storage_class
 from django.core.exceptions import ValidationError
+from django.core.serializers.json import DjangoJSONEncoder
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.http import HttpResponse
 from graphene_django.settings import graphene_settings
@@ -20,7 +22,8 @@ from rest_framework.utils.encoders import JSONEncoder
 
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName
-from nautobot.core.models.generics import OrganizationalModel
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.validators import EnhancedURLValidator
 from nautobot.core.utils.data import deepmerge, render_jinja2
 from nautobot.extras.choices import (
     ButtonClassChoices,
@@ -430,6 +433,108 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin
 
 
 #
+# External integrations
+#
+
+
+class ExternalIntegration(PrimaryModel):
+    """Model for tracking integrations with external applications."""
+
+    name = models.CharField(max_length=255, unique=True)
+    remote_url = models.CharField(
+        max_length=500,
+        verbose_name="Remote URL",
+        validators=[EnhancedURLValidator()],
+    )
+    secrets_group = models.ForeignKey(
+        null=True,
+        blank=True,
+        to="extras.SecretsGroup",
+        on_delete=models.PROTECT,
+        help_text="Credentials used for authenticating with the remote system",
+    )
+    verify_ssl = models.BooleanField(
+        default=True,
+        verbose_name="Verify SSL",
+        help_text="Verify SSL certificates when connecting to the remote system",
+    )
+    timeout = models.IntegerField(
+        default=30,
+        validators=[MinValueValidator(0)],
+        help_text="Number of seconds to wait for a response",
+    )
+    extra_config = models.JSONField(
+        blank=True,
+        null=True,
+        help_text="Optional user-defined JSON data for this integration",
+    )
+    http_method = models.CharField(
+        max_length=10,
+        choices=WebhookHttpMethodChoices,
+        verbose_name="HTTP method",
+        blank=True,
+    )
+    headers = models.JSONField(
+        encoder=DjangoJSONEncoder,
+        blank=True,
+        null=True,
+        help_text="Headers for the HTTP request",
+    )
+    ca_file_path = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="CA file path",
+    )
+
+    def __str__(self):
+        return f"{self.name} ({self.remote_url})"
+
+    class Meta:
+        ordering = ["name"]
+
+    def render_headers(self, context):
+        """
+        Render headers and return a dict of Header: Value pairs.
+
+        Raises:
+            TemplateAssertionError: Raised when an invalid template helper function exists in headers.
+            TemplateSyntaxError: Raised when an invalid template variable exists in headers.
+            json.decoder.JSONDecodeError: Raised when invalid JSON data exists in context.
+        """
+        if not self.headers:
+            return {}
+
+        data = json.loads(render_jinja2(json.dumps(self.headers, ensure_ascii=False), context))
+        return data
+
+    def render_extra_config(self, context):
+        """
+        Render extra_config and return a dict of Key: Value pairs.
+
+        Raises:
+            TemplateAssertionError: Raised when an invalid template helper function exists in extra_config.
+            TemplateSyntaxError: Raised when an invalid template variable exists in extra_config.
+            json.decoder.JSONDecodeError: Raised when invalid JSON data exists in context.
+        """
+        if not self.extra_config:
+            return {}
+
+        data = json.loads(render_jinja2(json.dumps(self.extra_config, ensure_ascii=False), context))
+        return data
+
+    def render_remote_url(self, context):
+        """
+        Render remote_url in jinja2 templates.
+
+        Raises:
+            TemplateAssertionError: Raised when an invalid template helper function exists in remote_url.
+            TemplateSyntaxError: Raised when an invalid template variable exists in remote_url.
+        """
+        data = render_jinja2(self.remote_url, context)
+        return data
+
+
+#
 # File attachments
 #
 
@@ -455,29 +560,55 @@ class FileAttachment(BaseModel):
 
 
 def database_storage():
-    """Returns storage backend used by `FileProxy.file` to store files in the database."""
+    """
+    Returns an instance of DatabaseFileStorage() unconditionally.
+
+    This is kept around to support legacy migrations; it shouldn't generally be used outside that.
+    Use `_job_storage()` instead.
+    """
     return DatabaseFileStorage()
 
 
+def _job_storage():
+    return get_storage_class(settings.JOB_FILE_IO_STORAGE)()
+
+
+def _upload_to(instance, filename):
+    """
+    Returns the upload path for attaching the given filename to the given FileProxy instance.
+
+    Because django-db-file-storage has specific requirements for this path to configure the FileAttachment model,
+    this needs to inspect which storage backend is in use in order to make the right determination.
+    """
+    if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+        # must be a string of the form
+        # "<app_label>.<ModelName>/<data field name>/<filename field name>/<mimetype field name>/filename"
+        return f"extras.FileAttachment/bytes/filename/mimetype/{filename}"
+    else:
+        return f"files/{instance.pk}-{filename}"
+
+
 class FileProxy(BaseModel):
-    """An object to store a file in the database.
+    """A database object to reference and index a file, such as a Job input file or a Job output file.
 
-    The `file` field can be used like a file handle. The file contents are stored and retrieved from
-    `FileAttachment` objects.
+    The `file` field can be used like a file handle.
 
-    The associated `FileAttachment` is removed when `delete()` is called. For this reason, one
-    should never use bulk delete operations on `FileProxy` objects, unless `FileAttachment` objects
-    are also bulk-deleted, because a model's `delete()` method is not called during bulk operations.
+    The file contents are stored and retrieved from `FileAttachment` objects,
+    if `settings.JOB_FILE_IO_STORAGE` is set to use DatabaseFileStorage,
+    otherwise they're written to whatever other file storage backend is in use.
+
+    When using DatabaseFileStorage, the associated `FileAttachment` is removed when `delete()` is called.
+    For this reason, one should never use bulk delete operations on `FileProxy` objects,
+    unless `FileAttachment` objects are also bulk-deleted,
+    because a model's `delete()` method is not called during bulk operations.
     In most cases, it is better to iterate over a queryset of `FileProxy` objects and call
     `delete()` on each one individually.
     """
 
     name = models.CharField(max_length=255)
-    file = models.FileField(
-        upload_to="extras.FileAttachment/bytes/filename/mimetype",
-        storage=database_storage,  # Use only this backend
-    )
+    file = models.FileField(upload_to=_upload_to, storage=_job_storage)
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    job_result = models.ForeignKey(to=JobResult, null=True, blank=True, on_delete=models.CASCADE, related_name="files")
 
     def __str__(self):
         return self.name
@@ -493,12 +624,19 @@ class FileProxy(BaseModel):
     natural_key_field_names = ["name", "uploaded_at"]
 
     def save(self, *args, **kwargs):
-        delete_file_if_needed(self, "file")
+        if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+            delete_file_if_needed(self, "file")
+        else:
+            # TODO check whether there's an existing file with a different filename and delete it if so?
+            pass
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
+        if get_storage_class(settings.JOB_FILE_IO_STORAGE) != DatabaseFileStorage:
+            self.file.delete()
         super().delete(*args, **kwargs)
-        delete_file(self, "file")
+        if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+            delete_file(self, "file")
 
 
 #
@@ -711,7 +849,7 @@ class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
         blank=True,
         help_text="User-supplied HTTP headers to be sent with the request in addition to the HTTP content type. "
         "Headers should be defined in the format <code>Name: Value</code>. Jinja2 template processing is "
-        "support with the same context as the request body (below).",
+        "supported with the same context as the request body (below).",
     )
     body_template = models.TextField(
         blank=True,

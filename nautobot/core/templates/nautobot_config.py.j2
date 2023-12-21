@@ -230,6 +230,10 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     "icon_mask": os.getenv(
 #         "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None
 #     ),  # mono-chrome icon used for the mask-icon header
+#     "header_bullet": os.getenv(
+#         "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
+#     ),  # bullet image used for various view headers
+#     "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None),  # bullet image used for nav menu headers
 # }
 
 # Prepended to CSV, YAML and export template filenames (i.e. `nautobot_device.yml`)
@@ -338,10 +342,6 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # GRAPHQL_CUSTOM_FIELD_PREFIX = "cf"
 # GRAPHQL_RELATIONSHIP_PREFIX = "rel"
 
-# Set to True to hide rather than disabling UI elements that a user doesn't have permission to access.
-#
-# HIDE_RESTRICTED_UI = False
-
 # HTTP proxies Nautobot should use when sending outbound HTTP requests (e.g. for webhooks).
 #
 # HTTP_PROXIES = {
@@ -352,6 +352,16 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # Send anonymized installation metrics when `nautobot-server post_upgrade` command is run.
 #
 INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "{{ installation_metrics_enabled | default(True) }}"))
+
+# Storage backend to use for Job input files and Job output files.
+#
+# Note: the default is for backwards compatibility and it is recommended to change it if possible for your deployment.
+#
+# JOB_FILE_IO_STORAGE = os.getenv("NAUTOBOT_JOB_FILE_IO_STORAGE", "db_file_storage.storage.DatabaseFileStorage")
+
+# Maximum size in bytes of any single file created by Job.create_file().
+#
+# JOB_CREATE_FILE_MAX_SIZE = 10 << 20
 
 # Directory where Jobs can be discovered.
 #

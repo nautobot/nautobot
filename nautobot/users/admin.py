@@ -1,11 +1,14 @@
 from django import forms
 from django.contrib import admin
+from django.contrib.admin.models import DELETION, LogEntry
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as UserAdmin_
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldError, ValidationError
 from django.db import models
+from django.urls import reverse
+from django.utils.html import escape, format_html
 
 from nautobot.core.admin import NautobotModelAdmin
 from nautobot.extras.admin import order_content_types
@@ -68,6 +71,47 @@ class GroupAdmin(NautobotModelAdmin):
     @staticmethod
     def user_count(obj):
         return obj.user_set.count()
+
+
+@admin.register(LogEntry)
+class LogEntryAdmin(NautobotModelAdmin):
+    """ModelAdmin for Django admin log entries that is read-only."""
+
+    date_hierarchy = "action_time"
+    search_fields = ["change_message", "object_repr", "user__username"]
+    list_display = [
+        "action_time",
+        "user",
+        "content_type",
+        "object_link",
+        "action_flag",
+    ]
+
+    def has_add_permission(self, request):
+        """Disable add permission."""
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        """Disable change permission."""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """Disable delete permission."""
+        return False
+
+    def object_link(self, obj):
+        """Link to the related object, unless it was deleted."""
+        if obj.action_flag == DELETION:
+            link = escape(obj.object_repr)
+        else:
+            ct = obj.content_type
+            change_link = reverse(f"admin:{ct.app_label}_{ct.model}_change", args=[obj.object_id])
+            object_repr = obj.object_repr
+            link = format_html('<a href="{}">{}</a>', change_link, object_repr)
+        return link
+
+    object_link.admin_order_field = "object_repr"
+    object_link.short_description = "object"
 
 
 @admin.register(User)

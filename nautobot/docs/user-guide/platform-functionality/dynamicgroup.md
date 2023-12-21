@@ -82,12 +82,15 @@ A key to understand here is that generally, within a single Dynamic Group, addit
 ```no-highlight
 (
   (
-    location__name='Campus-02' OR location__name='Room-01'
+    location='fa823577-08f3-46b0-92a7-8ad42ba3071d' OR location='df1fa32c-3b34-4d24-9fbd-a0f3eed28f12' OR location='9e39051b-e968-4016-b0cf-63a5607375de' OR location='d1e20b8e-759e-4c20-a65d-a0f3eed28f12'
   ) AND (
     status__name='Offline'
   )
 )
 ```
+
+!!! note
+    Keep in mind that the `Filter Query Logic` will also contain any descendants of the selected model instance.  As we can see above the `Filter Query Logic` uses both location "BKK01" and "AMSO1" and their descendants.
 
 ### Advanced Filtering - Combining Two Dynamic Groups into a Third
 

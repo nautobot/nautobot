@@ -73,45 +73,62 @@ Custom fields can be mixed with built-in fields to further narrow results. When 
 
 ## Lookup Expressions
 
-Certain model fields (including, in Nautobot 1.4.0 and later, custom fields of type `text`, `url`, `select`, `integer`, and `date`) also support filtering using additional lookup expressions. This allows
-for negation and other context-specific filtering.
+Certain model fields (including, in Nautobot 1.4.0 and later, custom fields of type `text`, `url`, `select`, `integer`, and `date`) also support filtering using additional lookup expressions. This allows for negation and other context-specific filtering.
 
 These lookup expressions can be applied by adding a suffix to the desired field's name, e.g. `mac_address__n`. In this case, the filter expression is for negation and it is separated by two underscores. Below are the lookup expressions that are supported across different field types.
 
-### Numeric Fields
+### Nullable Fields
 
-Numeric-based fields (ASN, VLAN ID, etc.) support these lookup expressions:
++++ 2.1.0
 
-- `n` - not equal to (negation)
-- `lt` - less than
-- `lte` - less than or equal
-- `gt` - greater than
-- `gte` - greater than or equal
+Filters corresponding to nullable model fields (that is, `null=True`) of any type support the lookup expression:
+
+- `__isnull` - field has a null value (_not_ blank -- a string-based (char) field with value `""` will match `__isnull=False`, _not_ `__isnull=True`)
+
+### Numeric and Date/Time Fields
+
+Numeric-based fields (ASN, VLAN ID, etc.) as well as date/time fields (`created`, `last_updated`, etc.) support these lookup expressions:
+
+- `__n` - not equal to (negation)
+- `__lt` - less than
+- `__lte` - less than or equal
+- `__gt` - greater than
+- `__gte` - greater than or equal
+
++++ 2.1.0
+    - `__isnull` - as above, only if this field is nullable (most numeric fields in Nautobot are not)
 
 ### String Fields
 
 String-based (char) fields (Name, Address, etc.) support these lookup expressions:
 
-- `n` - not equal to (negation)
-- `ic` - case-insensitive contains
-- `nic` - negated case-insensitive contains
-- `isw` - case-insensitive starts-with
-- `nisw` - negated case-insensitive starts-with
-- `iew` - case-insensitive ends-with
-- `niew` - negated case-insensitive ends-with
-- `ie` - case-insensitive exact match
-- `nie` - negated case-insensitive exact match
+- `__n` - not equal to (negation)
+- `__ic` - case-insensitive contains
+- `__nic` - negated case-insensitive contains
+- `__isw` - case-insensitive starts-with
+- `__nisw` - negated case-insensitive starts-with
+- `__iew` - case-insensitive ends-with
+- `__niew` - negated case-insensitive ends-with
+- `__ie` - case-insensitive exact match
+- `__nie` - negated case-insensitive exact match
 
 +++ 1.3.0
-    - `re` - case-sensitive regular expression match
-    - `nre` - negated case-sensitive regular expression match
-    - `ire` - case-insensitive regular expression match
-    - `nire` - negated case-insensitive regular expression match
+    - `__re` - case-sensitive regular expression match
+    - `__nre` - negated case-sensitive regular expression match
+    - `__ire` - case-insensitive regular expression match
+    - `__nire` - negated case-insensitive regular expression match
+
++++ 2.1.0
+    - `__isnull` - as above, only if this field is nullable (most string fields in Nautobot are not)
 
 ### Foreign Keys & Other Fields
 
-Certain other fields, namely foreign key relationships support just the negation
-expression: `n`.
+Certain other fields, namely foreign key relationships support the lookup expression:
+
+- `__n` - not equal to (negation)
+
++++ 2.1.0
+    - `__isnull` - as above, only if this field is nullable
 
 ### Network and Host Fields
 
