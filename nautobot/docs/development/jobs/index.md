@@ -330,6 +330,23 @@ Note that `min_length` and `max_length` can be set to the same number to effect 
 
 Arbitrary text of any length. Renders as a multi-line text input field.
 
+#### `JSONVar`
+
++++ 2.1.0
+
+Accepts JSON-formatted data of any length. Renders as a multi-line text input field. The variable passed to `run()` method on the job has been serialized to the appropriate Python objects.
+
+```python
+class ExampleJSONVarJob(Job):
+    var1 = JSONVar()
+
+    def run(self, var1):
+        # var1 form data equals '{"key1": "value1"}'
+        self.logger.info("The value of key1 is: %s", var1["key1"])
+```
+
+In the above example `{"key1": "value1"}` is provided to the job form, on submission first the field is validated to be JSON-formatted data then is serialized and passed to the `run()` method as a dictionary without any need for the job developer to post-process the variable into a Python dictionary.
+
 #### `IntegerVar`
 
 Stores a numeric integer. Options include:
@@ -522,6 +539,8 @@ class MyJob(Job):
 ```
 
 The above Job when run will create two files, "greeting.txt" and "farewell.txt", that will be made available for download from the JobResult detail view's "Additional Data" tab and via the REST API. These files will persist indefinitely, but can automatically be deleted if the JobResult itself is deleted; they can also be deleted manually by an administrator via the "File Proxies" link in the Admin UI.
+
+The maximum size of any single created file (or in other words, the maximum number of bytes that can be passed to `self.create_file()`) is controlled by the [`JOB_CREATE_FILE_MAX_SIZE`](../../user-guide/administration/configuration/optional-settings.md#job_create_file_max_size) system setting. A `ValueError` exception will be raised if `create_file()` is called with an overly large `content` value.
 
 ### Marking a Job as Failed
 

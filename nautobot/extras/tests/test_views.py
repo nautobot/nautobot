@@ -53,6 +53,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
+from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
@@ -2019,14 +2020,24 @@ class JobButtonRenderingTestCase(TestCase):
 
     def setUp(self):
         super().setUp()
-        self.job_button = JobButton(
-            name="JobButton",
+        self.job_button_1 = JobButton(
+            name="JobButton 1",
             text="JobButton {{ obj.name }}",
             job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
             confirmation=False,
         )
-        self.job_button.validated_save()
-        self.job_button.content_types.add(ContentType.objects.get_for_model(LocationType))
+        self.job_button_1.validated_save()
+        self.job_button_1.content_types.add(ContentType.objects.get_for_model(LocationType))
+
+        self.job_button_2 = JobButton(
+            name="JobButton 2",
+            text="Click me!",
+            job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+            confirmation=False,
+        )
+        self.job_button_2.validated_save()
+        self.job_button_2.content_types.add(ContentType.objects.get_for_model(LocationType))
+
         self.location_type = LocationType.objects.get(name="Campus")
 
     def test_view_object_with_job_button(self):
@@ -2035,11 +2046,12 @@ class JobButtonRenderingTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn(f"JobButton {self.location_type.name}", content, content)
+        self.assertIn("Click me!", content, content)
 
     def test_view_object_with_unsafe_text(self):
         """Ensure that JobButton text can't be used as a vector for XSS."""
-        self.job_button.text = '<script>alert("Hello world!")</script>'
-        self.job_button.validated_save()
+        self.job_button_1.text = '<script>alert("Hello world!")</script>'
+        self.job_button_1.validated_save()
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
@@ -2047,8 +2059,8 @@ class JobButtonRenderingTestCase(TestCase):
         self.assertIn("&lt;script&gt;alert", content, content)
 
         # Make sure grouped rendering is safe too
-        self.job_button.group = '<script>alert("Goodbye")</script>'
-        self.job_button.validated_save()
+        self.job_button_1.group_name = '<script>alert("Goodbye")</script>'
+        self.job_button_1.validated_save()
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
@@ -2057,14 +2069,79 @@ class JobButtonRenderingTestCase(TestCase):
 
     def test_view_object_with_unsafe_name(self):
         """Ensure that JobButton names can't be used as a vector for XSS."""
-        self.job_button.text = "JobButton {{ obj"
-        self.job_button.name = '<script>alert("Yo")</script>'
-        self.job_button.validated_save()
+        self.job_button_1.text = "JobButton {{ obj"
+        self.job_button_1.name = '<script>alert("Yo")</script>'
+        self.job_button_1.validated_save()
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertNotIn("<script>alert", content, content)
         self.assertIn("&lt;script&gt;alert", content, content)
+
+    def test_render_constrained_run_permissions(self):
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": self.job_button_1.job.pk},
+            actions=["run"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+
+        with self.subTest("Ungrouped buttons"):
+            response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+            self.assertEqual(response.status_code, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertInHTML(
+                NO_CONFIRM_BUTTON.format(
+                    button_id=self.job_button_1.pk,
+                    button_text=f"JobButton {self.location_type.name}",
+                    button_class=self.job_button_1.button_class,
+                    disabled="",
+                ),
+                content,
+            )
+            self.assertInHTML(
+                NO_CONFIRM_BUTTON.format(
+                    button_id=self.job_button_2.pk,
+                    button_text="Click me!",
+                    button_class=self.job_button_2.button_class,
+                    disabled="disabled",
+                ),
+                content,
+            )
+
+        with self.subTest("Grouped buttons"):
+            self.job_button_1.group_name = "Grouping"
+            self.job_button_1.validated_save()
+            self.job_button_2.group_name = "Grouping"
+            self.job_button_2.validated_save()
+
+            response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+            self.assertEqual(response.status_code, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertInHTML(
+                "<li>"
+                + NO_CONFIRM_BUTTON.format(
+                    button_id=self.job_button_1.pk,
+                    button_text=f"JobButton {self.location_type.name}",
+                    button_class="link",
+                    disabled="",
+                )
+                + "</li>",
+                content,
+            )
+            self.assertInHTML(
+                "<li>"
+                + NO_CONFIRM_BUTTON.format(
+                    button_id=self.job_button_2.pk,
+                    button_text="Click me!",
+                    button_class="link",
+                    disabled="disabled",
+                )
+                + "</li>",
+                content,
+            )
 
 
 # TODO: Convert to StandardTestCases.Views

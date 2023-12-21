@@ -264,6 +264,34 @@ def validated_viewname(model, action):
 
 @library.filter()
 @register.filter()
+def validated_api_viewname(model, action):
+    """
+    Return the API view name for the given model and action if valid, or None if invalid.
+
+    Args:
+        model (models.Model): Class or Instance of a Django Model
+        action (str): name of the action in the viewname
+
+    Returns:
+        (Union[str, None]): return the name of the API view for the model/action provided if valid, or None if invalid.
+    """
+    viewname_str = lookup.get_route_for_model(model, action, api=True)
+
+    try:
+        # Validate and return the view name. We don't return the actual URL yet because many of the templates
+        # are written to pass a name to {% url %}.
+        if action == "detail":
+            # Detail views require an argument, so we'll pass a dummy value just for validation
+            reverse(viewname_str, args=["00000000-0000-0000-0000-000000000000"])
+        else:
+            reverse(viewname_str)
+        return viewname_str
+    except NoReverseMatch:
+        return None
+
+
+@library.filter()
+@register.filter()
 def bettertitle(value):
     """
     Alternative to the builtin title(); capitalizes words without replacing letters that are already uppercase.

@@ -1153,6 +1153,12 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         schedule_form = forms.JobScheduleForm(request.POST)
         task_queue = request.POST.get("_task_queue")
 
+        return_url = request.POST.get("_return_url")
+        if return_url is not None and url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+            return_url = iri_to_uri(return_url)
+        else:
+            return_url = None
+
         # Allow execution only if a worker process is running and the job is runnable.
         if not get_worker_count(queue=task_queue):
             messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
@@ -1160,7 +1166,10 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             messages.error(request, "Unable to run or schedule job: Job is not presently installed.")
         elif not job_model.enabled:
             messages.error(request, "Unable to run or schedule job: Job is not enabled to be run.")
-        elif job_model.has_sensitive_variables and request.POST["_schedule_type"] != JobExecutionType.TYPE_IMMEDIATELY:
+        elif (
+            job_model.has_sensitive_variables
+            and request.POST.get("_schedule_type") != JobExecutionType.TYPE_IMMEDIATELY
+        ):
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
         elif job_model.has_sensitive_variables and job_model.approval_required:
             messages.error(
@@ -1222,10 +1231,10 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
                 if job_model.approval_required:
                     messages.success(request, f"Job {schedule_name} successfully submitted for approval")
-                    return redirect("extras:scheduledjob_approval_queue_list")
+                    return redirect(return_url if return_url else "extras:scheduledjob_approval_queue_list")
                 else:
                     messages.success(request, f"Job {schedule_name} successfully scheduled")
-                    return redirect("extras:scheduledjob_list")
+                    return redirect(return_url if return_url else "extras:scheduledjob_list")
 
             else:
                 # Enqueue job for immediate execution
@@ -1238,7 +1247,20 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     **job_model.job_class.serialize_data(job_kwargs),
                 )
 
+                if return_url:
+                    messages.info(
+                        request,
+                        format_html(
+                            'Job enqueued. <a href="{}">Click here for the results.</a>',
+                            job_result.get_absolute_url(),
+                        ),
+                    )
+                    return redirect(return_url)
+
                 return redirect("extras:jobresult", pk=job_result.pk)
+
+        if return_url:
+            return redirect(return_url)
 
         template_name = "extras/job.html"
         if job_model.job_class is not None and hasattr(job_model.job_class, "template_name"):
@@ -1555,31 +1577,6 @@ class JobButtonUIViewSet(NautobotUIViewSet):
     queryset = JobButton.objects.all()
     serializer_class = serializers.JobButtonSerializer
     table_class = tables.JobButtonTable
-
-
-class JobButtonRunView(ObjectPermissionRequiredMixin, View):
-    """
-    View to run the Job linked to the Job Button.
-    """
-
-    queryset = JobButton.objects.all()
-
-    def get_required_permission(self):
-        return "extras.run_job"
-
-    def post(self, request, pk):
-        post_data = request.POST
-        job_button = JobButton.objects.get(pk=pk)
-        job_model = job_button.job
-        result = JobResult.enqueue_job(
-            job_model=job_model,
-            user=request.user,
-            object_pk=post_data["object_pk"],
-            object_model_name=post_data["object_model_name"],
-        )
-        msg = format_html('Job enqueued. <a href="{}">Click here for the results.</a>', result.get_absolute_url())
-        messages.info(request=request, message=msg)
-        return redirect(post_data["redirect_path"])
 
 
 #

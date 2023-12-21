@@ -11,7 +11,6 @@
             {% render_field form.verify_ssl %}
             {% render_field form.secrets_group %}
             {% render_field form.timeout %}
-            {% render_field form.extra_config %}
         </div>
     </div>
     <div class="panel panel-default">
@@ -20,9 +19,10 @@
             {% render_field form.headers %}
             {% render_field form.http_method %}
             {% render_field form.ca_file_path %}
+            {% render_field form.extra_config %}
         </div>
     </div>
-    
+
     {% include 'inc/extras_features_edit_form_fields.html' %}
 
 {% endblock form %}

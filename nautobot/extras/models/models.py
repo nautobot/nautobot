@@ -483,7 +483,6 @@ class ExternalIntegration(PrimaryModel):
     ca_file_path = models.CharField(
         max_length=255,
         blank=True,
-        help_text="CA file path",
         verbose_name="CA file path",
     )
 
@@ -850,7 +849,7 @@ class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
         blank=True,
         help_text="User-supplied HTTP headers to be sent with the request in addition to the HTTP content type. "
         "Headers should be defined in the format <code>Name: Value</code>. Jinja2 template processing is "
-        "support with the same context as the request body (below).",
+        "supported with the same context as the request body (below).",
     )
     body_template = models.TextField(
         blank=True,
