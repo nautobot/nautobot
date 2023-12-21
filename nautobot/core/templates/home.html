@@ -12,6 +12,19 @@
             <a href="https://docs.nautobot.com/projects/core/en/v{{ new_release.version }}/installation/upgrading/">Upgrade instructions</a>
         </div>
     {% endif %}
+    <noscript>
+        <style>
+            #draggable-homepage-panels {
+                opacity: 100 !important;
+            }
+            #draggable-homepage-panels .panel-heading {
+                cursor: default;
+            }
+            .collapse-icon {
+                display: none;
+            }
+        </style>
+    </noscript>
 {% endblock %}
 
 
@@ -22,19 +35,21 @@
     {% endif %}
     <div class="row">
         <div class="col-sm-12">
-            <div class="homepage_column" style="columns: 4 360px">
+            <div class="homepage_column" id="draggable-homepage-panels" style="columns: 4 360px">
                 {% for panel_name, panel_details in registry.homepage_layout.panels.items %}
                     {% if request.user|has_one_or_more_perms:panel_details.permissions %}
-                        <div class="panel panel-default" style="break-inside: avoid" data-panel-weight="{{ panel_details.weight }}">
+                        <div class="panel panel-default" id="{{ panel_name|slugify }}" style="break-inside: avoid" data-panel-weight="{{ panel_details.weight }}">
                             <div class="panel-heading">
-                                <strong>{{ panel_name }}</strong>
+                                <strong>{{ panel_name }}</strong><span id="toggle-homepanel-{{ panel_name|slugify }}" class="glyphicon glyphicon-chevron-down collapse-icon" type="button" data-toggle="collapse" data-target="#homepanel-{{ panel_name|slugify }}" aria-expanded="false" aria-controls="homepanel-{{ panel_name|slugify }}"></span>
                             </div>
-                            <div class="list-group">
-                                {% if  panel_details.rendered_html %}
+                            {% with cookie_key='homepanel-'|add:panel_name|slugify %}
+                                <div class="list-group collapse{% if request.COOKIES|default:''|get_item:cookie_key|default:'False' == 'False' %} in{% endif %} collapsible-div" id="homepanel-{{ panel_name|slugify }}" >
+                            {% endwith %}
+                                {% if panel_details.rendered_html %}
                                     {% autoescape off %}{{ panel_details.rendered_html }}{% endautoescape %}
                                 {% elif panel_details.items %}
                                     {% for item_name, item_details in panel_details.items.items %}
-                                        {% if  item_details.rendered_html %}
+                                        {% if item_details.rendered_html %}
                                             <div class="list-group-item" data-item-weight="{{ item_details.weight }}">
                                                 {% if request.user|has_one_or_more_perms:item_details.permissions %}
                                                     {% autoescape off %}{{ item_details.rendered_html }}{% endautoescape %}
@@ -106,4 +121,9 @@
             </div>
         </div>
     </div>
+{% endblock %}
+{% block javascript %}
+{{ block.super }}
+<script src="{% versioned_static 'js/homepage_layout.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=js/homepagelayout.js'"></script>
 {% endblock %}
