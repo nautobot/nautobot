@@ -38,6 +38,7 @@ from nautobot.core.celery.task import Task
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    JSONField,
 )
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_model_from_name
@@ -72,6 +73,7 @@ __all__ = [
     "IPAddressVar",
     "IPAddressWithMaskVar",
     "IPNetworkVar",
+    "JSONVar",
     "MultiChoiceVar",
     "MultiObjectVar",
     "ObjectVar",
@@ -1114,6 +1116,14 @@ class IPNetworkVar(ScriptVariable):
             self.field_attrs["validators"].append(MinPrefixLengthValidator(min_prefix_length))
         if max_prefix_length is not None:
             self.field_attrs["validators"].append(MaxPrefixLengthValidator(max_prefix_length))
+
+
+class JSONVar(ScriptVariable):
+    """
+    Like TextVar but with native serializing of JSON data.
+    """
+
+    form_field = JSONField
 
 
 class JobHookReceiver(Job):
