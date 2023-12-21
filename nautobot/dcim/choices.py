@@ -1183,6 +1183,7 @@ class CableTypeChoices(ChoiceSet):
     TYPE_MMF_OM2 = "mmf-om2"
     TYPE_MMF_OM3 = "mmf-om3"
     TYPE_MMF_OM4 = "mmf-om4"
+    TYPE_MMF_OM5 = "mmf-om5"
     TYPE_SMF = "smf"
     TYPE_SMF_OS1 = "smf-os1"
     TYPE_SMF_OS2 = "smf-os2"
@@ -1216,6 +1217,7 @@ class CableTypeChoices(ChoiceSet):
                 (TYPE_MMF_OM2, "Multimode Fiber (OM2)"),
                 (TYPE_MMF_OM3, "Multimode Fiber (OM3)"),
                 (TYPE_MMF_OM4, "Multimode Fiber (OM4)"),
+                (TYPE_MMF_OM5, "Multimode Fiber (OM5)"),
                 (TYPE_SMF, "Singlemode Fiber"),
                 (TYPE_SMF_OS1, "Singlemode Fiber (OS1)"),
                 (TYPE_SMF_OS2, "Singlemode Fiber (OS2)"),
