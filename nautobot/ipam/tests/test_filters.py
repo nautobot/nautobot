@@ -165,6 +165,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ["rir", "rir__name"],
         ["role", "role__id"],
         ["role", "role__name"],
+        ["status", "status__id"],
         ["status", "status__name"],
         ["type"],
     )
@@ -792,8 +793,8 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     def test_present_in_vrf(self):
         # clear out all the randomly generated route targets and vrfs before running this custom test
-        test_ip_addresses_pk_list = list(self.queryset.values_list("pk", flat=True)[:10])
-        test_ip_addresses = self.queryset[:10]
+        test_ip_addresses = self.queryset.filter(parent__namespace=self.namespace)
+        test_ip_addresses_pk_list = list(test_ip_addresses.values_list("pk", flat=True))
         # With advent of `IPAddress.parent`, IPAddresses can't just be bulk deleted without clearing their
         # `parent` first in an `update()` query which doesn't call `save()` or `fire `(pre|post)_save` signals.
         unwanted_ips = self.queryset.exclude(pk__in=test_ip_addresses_pk_list)
@@ -811,12 +812,6 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             VRF.objects.create(name="VRF 2", rd="65000:200", namespace=self.namespace),
             VRF.objects.create(name="VRF 3", rd="65000:300", namespace=self.namespace),
         )
-        test_ip_addresses[0].parent.namespace = self.namespace
-        test_ip_addresses[0].validated_save()
-        test_ip_addresses[1].parent.namespace = self.namespace
-        test_ip_addresses[1].validated_save()
-        test_ip_addresses[2].parent.namespace = self.namespace
-        test_ip_addresses[2].validated_save()
         vrfs[0].import_targets.add(route_targets[0], route_targets[1], route_targets[2])
         vrfs[1].export_targets.add(route_targets[1])
         vrfs[2].export_targets.add(route_targets[2])
@@ -851,7 +846,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     def test_status(self):
         statuses = list(Status.objects.get_for_model(IPAddress).filter(ip_addresses__isnull=False)[:2])
-        params = {"status": [statuses[0].name, statuses[1].name]}
+        params = {"status": [statuses[0].name, statuses[1].id]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(status__in=statuses)
         )
@@ -1110,7 +1105,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
 
     def test_status(self):
         statuses = list(Status.objects.get_for_model(VLAN).filter(vlans__isnull=False).distinct())[:2]
-        params = {"status": [statuses[0].name, statuses[1].name]}
+        params = {"status": [statuses[0].name, statuses[1].id]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(status__in=statuses))
 
     def test_search(self):

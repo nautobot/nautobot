@@ -14,6 +14,7 @@ from nautobot.core.forms import (
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
@@ -229,6 +230,10 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "verbose_name_plural": queryset.model._meta.verbose_name_plural,
         }
         if view.action == "retrieve":
+            created_by, last_updated_by = get_created_and_last_updated_usernames_for_model(instance)
+
+            context["created_by"] = created_by
+            context["last_updated_by"] = last_updated_by
             context.update(view.get_extra_context(request, instance))
         else:
             if view.action == "list":

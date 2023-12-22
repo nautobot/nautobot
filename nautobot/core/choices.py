@@ -203,7 +203,7 @@ class ButtonActionColorChoices(ChoiceSet):
     Map standard button actions to Bootstrap color classes.
     """
 
-    ADD = "success"
+    ADD = "info"
     CANCEL = "default"
     CLONE = "success"
     CONFIGURE = "default"

@@ -291,18 +291,12 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
 
 
 class RoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
-    """Limit role choices to the available role choices for self.model"""
+    """Filter field used for filtering Role fields."""
 
     def __init__(self, *args, **kwargs):
-        kwargs.setdefault("field_name", "role")
         kwargs.setdefault("queryset", Role.objects.all())
-        kwargs.setdefault("to_field_name", "name")
         kwargs.setdefault("label", "Role (name or ID)")
-
         super().__init__(*args, **kwargs)
-
-    def get_queryset(self, request):
-        return self.queryset.get_for_model(self.model)
 
 
 class RoleModelFilterSetMixin(django_filters.FilterSet):
@@ -313,34 +307,15 @@ class RoleModelFilterSetMixin(django_filters.FilterSet):
     role = RoleFilter()
 
 
-class StatusFilter(django_filters.ModelMultipleChoiceFilter):
+class StatusFilter(NaturalKeyOrPKMultipleChoiceFilter):
     """
     Filter field used for filtering Status fields.
-
-    Explicitly sets `to_field_name='value'` and dynamically sets queryset to
-    retrieve choices for the corresponding model & field name bound to the
-    filterset.
     """
 
     def __init__(self, *args, **kwargs):
-        kwargs["to_field_name"] = "name"
+        kwargs.setdefault("queryset", Status.objects.all())
+        kwargs.setdefault("label", "Status (name or ID)")
         super().__init__(*args, **kwargs)
-
-    def get_queryset(self, request):
-        self.queryset = Status.objects.all()
-        return super().get_queryset(request)
-
-    def get_filter_predicate(self, value):
-        """Always use the field's name and the `to_field_name` attribute as predicate."""
-        # e.g. `status__name`
-        to_field_name = self.field.to_field_name
-        name = f"{self.field_name}__{to_field_name}"
-        # Sometimes the incoming value is an instance. This block of logic comes from the base
-        # `get_filter_predicate()` and was added here to support this.
-        try:
-            return {name: getattr(value, to_field_name)}
-        except (AttributeError, TypeError):
-            return {name: value}
 
 
 class StatusModelFilterSetMixin(django_filters.FilterSet):

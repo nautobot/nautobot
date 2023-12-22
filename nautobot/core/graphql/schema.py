@@ -23,7 +23,7 @@ from nautobot.core.graphql.generators import (
     generate_schema_type,
     generate_null_choices_resolver,
 )
-from nautobot.core.graphql.types import ContentTypeType
+from nautobot.core.graphql.types import ContentTypeType, JSON
 from nautobot.dcim.graphql.types import (
     CableType,
     CablePathType,
@@ -84,6 +84,7 @@ CUSTOM_FIELD_MAPPING = {
     CustomFieldTypeChoices.TYPE_DATE: graphene.Date(),
     CustomFieldTypeChoices.TYPE_URL: graphene.String(),
     CustomFieldTypeChoices.TYPE_SELECT: graphene.String(),
+    CustomFieldTypeChoices.TYPE_JSON: JSON(),
 }
 
 

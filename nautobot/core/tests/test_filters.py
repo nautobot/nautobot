@@ -1,3 +1,5 @@
+import datetime
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -9,6 +11,8 @@ from django.test.utils import isolate_apps
 import django_filters
 from tree_queries.models import TreeNodeForeignKey
 
+from nautobot.circuits.filters import CircuitFilterSet
+from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core import filters, testing
 from nautobot.core.models import fields as core_fields
 from nautobot.core.utils import lookup
@@ -829,6 +833,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         manufacturers = dcim_models.Manufacturer.objects.all()[:3]
+        Device.objects.all().delete()
 
         device_types = (
             dcim_models.DeviceType(
@@ -1448,6 +1453,129 @@ class SearchFilterTest(TestCase, testing.NautobotTestCaseMixin):
 
             class InvalidLocationFilterSet(dcim_filters.LocationFilterSet):  # pylint: disable=unused-variable
                 q = filters.SearchFilter(filter_predicates={"asn": ["icontains"]})
+
+
+class LookupIsNullTest(TestCase, testing.NautobotTestCaseMixin):
+    """
+    Validate isnull is properly applied and filtering.
+    """
+
+    platform_queryset = dcim_models.Platform.objects.all()
+    platform_filterset = dcim_filters.PlatformFilterSet
+    circuit_queryset = Circuit.objects.all()
+    circuit_filterset = CircuitFilterSet
+    device_queryset = dcim_models.Device.objects.all()
+    device_filterset = dcim_filters.DeviceFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        location_type = dcim_models.LocationType.objects.create(name="Location Type 1")
+        location_status = extras_models.Status.objects.get_for_model(dcim_models.Location).first()
+        location = dcim_models.Location.objects.create(
+            name="Location 1",
+            location_type=location_type,
+            status=location_status,
+        )
+        manufacturer = dcim_models.Manufacturer.objects.create(name="Manufacturer 1")
+        dcim_models.Platform.objects.create(name="Platform 1")
+        platform = dcim_models.Platform.objects.create(name="Platform 2", manufacturer=manufacturer)
+
+        device_type = dcim_models.DeviceType.objects.create(
+            manufacturer=manufacturer,
+            model="Model 1",
+            is_full_depth=True,
+        )
+        device_role = extras_models.Role.objects.create(name="Active Test")
+        device_role.content_types.add(ContentType.objects.get_for_model(dcim_models.Device))
+
+        device_status = extras_models.Status.objects.get_for_model(dcim_models.Device).first()
+
+        dcim_models.Device.objects.create(
+            name="Device 1",
+            device_type=device_type,
+            role=device_role,
+            platform=platform,
+            location=location,
+            status=device_status,
+        )
+        dcim_models.Device.objects.create(
+            device_type=device_type,
+            role=device_role,
+            platform=platform,
+            location=location,
+            status=device_status,
+        )
+
+        provider = Provider.objects.create(name="provider 1", asn=1)
+        circuit_type = CircuitType.objects.create(name="Circuit Type 1")
+        circuit_status = extras_models.Status.objects.get_for_model(dcim_models.Location).first()
+
+        Circuit.objects.create(
+            cid="Circuit 1",
+            provider=provider,
+            install_date=datetime.date(2020, 1, 1),
+            commit_rate=1000,
+            circuit_type=circuit_type,
+            status=circuit_status,
+        )
+        Circuit.objects.create(
+            cid="Circuit 2",
+            provider=provider,
+            circuit_type=circuit_type,
+            status=circuit_status,
+        )
+
+    def test_isnull_on_fk(self):
+        """Test that the `isnull` filter is applied for True and False queries on foreign key fields."""
+        params = {"manufacturer__isnull": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            dcim_filters.PlatformFilterSet(params, self.platform_queryset).qs,
+            dcim_models.Platform.objects.filter(manufacturer__isnull=True),
+        )
+        params = {"manufacturer__isnull": False}
+        self.assertQuerysetEqualAndNotEmpty(
+            dcim_filters.PlatformFilterSet(params, self.platform_queryset).qs,
+            dcim_models.Platform.objects.filter(manufacturer__isnull=False),
+        )
+
+    def test_isnull_on_integer(self):
+        """Test that the `isnull` filter is applied for True and False queries on integer fields."""
+        params = {"commit_rate__isnull": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            CircuitFilterSet(params, self.circuit_queryset).qs,
+            Circuit.objects.filter(commit_rate__isnull=True),
+        )
+        params = {"commit_rate__isnull": False}
+        self.assertQuerysetEqualAndNotEmpty(
+            CircuitFilterSet(params, self.circuit_queryset).qs,
+            Circuit.objects.filter(commit_rate__isnull=False),
+        )
+
+    def test_isnull_on_date(self):
+        """Test that the `isnull` filter is applied for True and False queries on datetime fields."""
+        params = {"install_date__isnull": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            CircuitFilterSet(params, self.circuit_queryset).qs,
+            Circuit.objects.filter(install_date__isnull=True),
+        )
+        params = {"install_date__isnull": False}
+        self.assertQuerysetEqualAndNotEmpty(
+            CircuitFilterSet(params, self.circuit_queryset).qs,
+            Circuit.objects.filter(install_date__isnull=False),
+        )
+
+    def test_isnull_on_char(self):
+        """Test that the `isnull` filter is applied for True and False queries on char fields."""
+        params = {"name__isnull": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            dcim_filters.DeviceFilterSet(params, self.device_queryset).qs,
+            dcim_models.Device.objects.filter(name__isnull=True),
+        )
+        params = {"name__isnull": False}
+        self.assertQuerysetEqualAndNotEmpty(
+            dcim_filters.DeviceFilterSet(params, self.device_queryset).qs,
+            dcim_models.Device.objects.filter(name__isnull=False),
+        )
 
 
 class FilterTypeTest(TestCase):

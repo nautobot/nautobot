@@ -23,6 +23,7 @@ from nautobot.extras.choices import (
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
+    WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import (
@@ -33,6 +34,7 @@ from nautobot.extras.models import (
     CustomLink,
     DynamicGroup,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     Job,
@@ -51,6 +53,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
+from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
@@ -691,6 +694,28 @@ class ExportTemplateTestCase(
             "content_type": obj_type.pk,
             "template_code": "template-4 test4",
         }
+
+
+class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = ExternalIntegration
+    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}", "headers": r"{}"}
+    csv_data = (
+        "name,remote_url,verify_ssl,timeout,http_method",
+        "Test External Integration 1,https://example.com/test1/,False,10,POST",
+        "Test External Integration 2,https://example.com/test2/,True,20,DELETE",
+        "Test External Integration 3,https://example.com/test3/,False,30,PATCH",
+    )
+    form_data = {
+        "name": "Test External Integration",
+        "remote_url": "https://example.com/test1/",
+        "verify_ssl": False,
+        "secrets_group": None,
+        "timeout": 10,
+        "extra_config": '{"foo": "bar"}',
+        "http_method": WebhookHttpMethodChoices.METHOD_GET,
+        "headers": '{"header": "fake header"}',
+        "ca_file_path": "this/is/a/file/path",
+    }
 
 
 class GitRepositoryTestCase(
@@ -1936,7 +1961,7 @@ class JobTestCase(
         content = extract_page_body(response.content.decode(response.charset))
 
         self.assertHttpStatus(response, 200)
-        self.assertIn(f"<h1>{instance.name} - Change Log</h1>", content)
+        self.assertIn(f"{instance.name} - Change Log", content)
 
 
 class JobButtonTestCase(
@@ -1995,14 +2020,24 @@ class JobButtonRenderingTestCase(TestCase):
 
     def setUp(self):
         super().setUp()
-        self.job_button = JobButton(
-            name="JobButton",
+        self.job_button_1 = JobButton(
+            name="JobButton 1",
             text="JobButton {{ obj.name }}",
             job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
             confirmation=False,
         )
-        self.job_button.validated_save()
-        self.job_button.content_types.add(ContentType.objects.get_for_model(LocationType))
+        self.job_button_1.validated_save()
+        self.job_button_1.content_types.add(ContentType.objects.get_for_model(LocationType))
+
+        self.job_button_2 = JobButton(
+            name="JobButton 2",
+            text="Click me!",
+            job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+            confirmation=False,
+        )
+        self.job_button_2.validated_save()
+        self.job_button_2.content_types.add(ContentType.objects.get_for_model(LocationType))
+
         self.location_type = LocationType.objects.get(name="Campus")
 
     def test_view_object_with_job_button(self):
@@ -2011,11 +2046,12 @@ class JobButtonRenderingTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn(f"JobButton {self.location_type.name}", content, content)
+        self.assertIn("Click me!", content, content)
 
     def test_view_object_with_unsafe_text(self):
         """Ensure that JobButton text can't be used as a vector for XSS."""
-        self.job_button.text = '<script>alert("Hello world!")</script>'
-        self.job_button.validated_save()
+        self.job_button_1.text = '<script>alert("Hello world!")</script>'
+        self.job_button_1.validated_save()
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
@@ -2023,8 +2059,8 @@ class JobButtonRenderingTestCase(TestCase):
         self.assertIn("&lt;script&gt;alert", content, content)
 
         # Make sure grouped rendering is safe too
-        self.job_button.group = '<script>alert("Goodbye")</script>'
-        self.job_button.validated_save()
+        self.job_button_1.group_name = '<script>alert("Goodbye")</script>'
+        self.job_button_1.validated_save()
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
@@ -2033,14 +2069,79 @@ class JobButtonRenderingTestCase(TestCase):
 
     def test_view_object_with_unsafe_name(self):
         """Ensure that JobButton names can't be used as a vector for XSS."""
-        self.job_button.text = "JobButton {{ obj"
-        self.job_button.name = '<script>alert("Yo")</script>'
-        self.job_button.validated_save()
+        self.job_button_1.text = "JobButton {{ obj"
+        self.job_button_1.name = '<script>alert("Yo")</script>'
+        self.job_button_1.validated_save()
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertNotIn("<script>alert", content, content)
         self.assertIn("&lt;script&gt;alert", content, content)
+
+    def test_render_constrained_run_permissions(self):
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": self.job_button_1.job.pk},
+            actions=["run"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+
+        with self.subTest("Ungrouped buttons"):
+            response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+            self.assertEqual(response.status_code, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertInHTML(
+                NO_CONFIRM_BUTTON.format(
+                    button_id=self.job_button_1.pk,
+                    button_text=f"JobButton {self.location_type.name}",
+                    button_class=self.job_button_1.button_class,
+                    disabled="",
+                ),
+                content,
+            )
+            self.assertInHTML(
+                NO_CONFIRM_BUTTON.format(
+                    button_id=self.job_button_2.pk,
+                    button_text="Click me!",
+                    button_class=self.job_button_2.button_class,
+                    disabled="disabled",
+                ),
+                content,
+            )
+
+        with self.subTest("Grouped buttons"):
+            self.job_button_1.group_name = "Grouping"
+            self.job_button_1.validated_save()
+            self.job_button_2.group_name = "Grouping"
+            self.job_button_2.validated_save()
+
+            response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+            self.assertEqual(response.status_code, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertInHTML(
+                "<li>"
+                + NO_CONFIRM_BUTTON.format(
+                    button_id=self.job_button_1.pk,
+                    button_text=f"JobButton {self.location_type.name}",
+                    button_class="link",
+                    disabled="",
+                )
+                + "</li>",
+                content,
+            )
+            self.assertInHTML(
+                "<li>"
+                + NO_CONFIRM_BUTTON.format(
+                    button_id=self.job_button_2.pk,
+                    button_text="Click me!",
+                    button_class="link",
+                    disabled="disabled",
+                )
+                + "</li>",
+                content,
+            )
 
 
 # TODO: Convert to StandardTestCases.Views
@@ -2281,7 +2382,7 @@ class RelationshipAssociationTestCase(
             ),
         )
         vlan_status = Status.objects.get_for_model(VLAN).first()
-        vlan_group = VLANGroup.objects.first()
+        vlan_group = VLANGroup.objects.create(name="Test VLANGroup 1")
         vlans = (
             VLAN.objects.create(vid=1, name="VLAN 1", status=vlan_status, vlan_group=vlan_group),
             VLAN.objects.create(vid=2, name="VLAN 2", status=vlan_status, vlan_group=vlan_group),

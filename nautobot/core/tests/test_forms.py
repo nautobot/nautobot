@@ -687,7 +687,7 @@ class DynamicFilterFormTest(TestCase):
                     ("racks", "Rack (name or ID)"),
                     ("rack_groups", "Rack groups (name or ID)"),
                     ("shipping_address", "Shipping address"),
-                    ("status", "Status"),
+                    ("status", "Status (name or ID)"),
                     ("vlans", "Tagged VLANs (VID or ID)"),
                     ("tags", "Tags"),
                     ("tenant_id", 'Tenant (ID) (deprecated, use "tenant" filter instead)'),

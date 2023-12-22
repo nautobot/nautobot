@@ -12,7 +12,7 @@
 <body>
     {% include 'inc/nav_menu.html' %}
     <div class="container-fluid wrapper">
-        {% if request.user.is_authenticated or not "HIDE_RESTRICTED_UI"|settings_or_config %}
+        {% if request.user.is_authenticated %}
             {% if "BANNER_TOP"|settings_or_config %}
                 <div class="alert alert-info text-center" role="alert">
                     {{ "BANNER_TOP"|settings_or_config|safe }}
@@ -37,7 +37,7 @@
         {% block header %}{% endblock header %}
         {% block content %}{% endblock content %}
         <div class="push"></div>
-        {% if request.user.is_authenticated or not "HIDE_RESTRICTED_UI"|settings_or_config %}
+        {% if request.user.is_authenticated %}
             {% if "BANNER_BOTTOM"|settings_or_config %}
                 <div class="alert alert-info text-center banner-bottom" role="alert">
                     {{ "BANNER_BOTTOM"|settings_or_config|safe }}

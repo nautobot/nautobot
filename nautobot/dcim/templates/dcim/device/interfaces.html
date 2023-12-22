@@ -24,7 +24,7 @@
                     <button type="submit" name="_rename" formaction="{% url 'dcim:interface_bulk_rename' %}?return_url={% url 'dcim:device_interfaces' pk=object.pk %}" class="btn btn-warning btn-xs">
                         <span class="mdi mdi-pencil" aria-hidden="true"></span> Rename
                     </button>
-                    <button type="submit" name="_edit" formaction="{% url 'dcim:interface_bulk_edit' %}?device={{ object.pk }}&return_url={% url 'dcim:device_interfaces' pk=object.pk %}" class="btn btn-warning btn-xs">
+                    <button type="submit" name="_edit" formaction="{% url 'dcim:interface_bulk_edit' %}?return_url={% url 'dcim:device_interfaces' pk=object.pk %}" class="btn btn-warning btn-xs">
                         <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
                     </button>
                     <button type="submit" name="_disconnect" formaction="{% url 'dcim:interface_bulk_disconnect' %}?return_url={% url 'dcim:device_interfaces' pk=object.pk %}" class="btn btn-danger btn-xs">

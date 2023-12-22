@@ -241,8 +241,6 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         model_permissions = []
         for action in actions:
-            if action not in ("view", "add", "change", "delete"):
-                raise ValueError(f"Unsupported action: {action}")
             model_permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
         return model_permissions
 
@@ -252,7 +250,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         queryset = self.get_queryset()
         try:
-            actions = [PERMISSIONS_ACTION_MAP[self.action]]
+            actions = [self.get_action()]
         except KeyError:
             messages.error(
                 self.request,
@@ -473,7 +471,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         Override the original `get_queryset()` to apply permission specific to the user and action.
         """
         queryset = super().get_queryset()
-        return queryset.restrict(self.request.user, PERMISSIONS_ACTION_MAP[self.action])
+        return queryset.restrict(self.request.user, self.get_action())
+
+    def get_action(self):
+        """Helper method for retrieving action and if action not set defaulting to action name."""
+        return PERMISSIONS_ACTION_MAP.get(self.action, self.action)
 
     def get_extra_context(self, request, instance=None):
         """
@@ -605,7 +607,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
     filterset_class = None
     filterset_form_class = None
     non_filter_params = (
-        "export",  # trigger for CSV/export-template/YAML export
+        "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
@@ -627,6 +629,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
                 queryset = queryset.none()
         return queryset
 
+    # 3.0 TODO: remove, irrelevant after #4746
     def check_for_export(self, request, model, content_type):
         # Check for export template rendering
         queryset = self.filter_queryset(self.get_queryset())
@@ -653,6 +656,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
 
         return None
 
+    # 3.0 TODO: remove, irrelevant after #4746
     def queryset_to_yaml(self):
         """
         Export the queryset of objects as concatenated YAML documents.
@@ -667,7 +671,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         List the model instances.
         """
         context = {"use_new_ui": True}
-        if "export" in request.GET:
+        if "export" in request.GET:  # 3.0 TODO: remove, irrelevant after #4746
             queryset = self.get_queryset()
             model = queryset.model
             content_type = ContentType.objects.get_for_model(model)

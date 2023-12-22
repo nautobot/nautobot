@@ -47,6 +47,8 @@ from nautobot.dcim.models import (
     DeviceType,
     FrontPort,
     Interface,
+    InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     Location,
     LocationType,
     PowerFeed,
@@ -70,7 +72,16 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.registry import registry
 from nautobot.ipam.factory import VLANGroupFactory
-from nautobot.ipam.models import IPAddress, VLAN, Namespace, Prefix
+from nautobot.ipam.models import (
+    IPAddress,
+    IPAddressToInterface,
+    Namespace,
+    Prefix,
+    VLAN,
+    VRF,
+    VRFDeviceAssignment,
+    VRFPrefixAssignment,
+)
 from nautobot.users.models import ObjectPermission, Token
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.factory import ClusterTypeFactory
@@ -99,6 +110,22 @@ class GraphQLTestCase(TestCase):
         resp = execute_query(query, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
         self.assertEqual(len(resp["data"]["query"]), Location.objects.all().count())
+
+    @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_execute_query_with_custom_field_type_json(self):
+        """Test Custom Field with JSON type returns valid JSON object and not string. Fix for bug #4627"""
+        custom_field = CustomField(
+            type=CustomFieldTypeChoices.TYPE_JSON, label="custom_json_field", key="custom_json_field"
+        )
+        custom_field.validated_save()
+        custom_field.content_types.set([ContentType.objects.get_for_model(Location)])
+        custom_field_data = {"custom_json_field": {"name": "Custom Example", "is_customfield": True}}
+        self.locations[0]._custom_field_data = custom_field_data
+        self.locations[0].save()
+        query = "query ($name: [String!]) { locations(name:$name) {name, _custom_field_data, cf_custom_json_field} }"
+        resp = execute_query(query, user=self.user, variables={"name": "Location-1"}).to_dict()
+        self.assertEqual(resp["data"]["locations"]["cf_custom_json_field"], custom_field_data)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_variable(self):
@@ -666,8 +693,9 @@ class GraphQLQueryTest(TestCase):
         super().setUpTestData()
         cls.user = User.objects.create(username="Super User", is_active=True, is_superuser=True)
 
-        # Remove random IPAddress fixtures for this custom test
+        # Remove random IPAddress and Device fixtures for this custom test
         IPAddress.objects.all().delete()
+        Device.objects.all().delete()
 
         # Initialize fake request that will be required to execute GraphQL query
         cls.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
@@ -834,9 +862,55 @@ class GraphQLQueryTest(TestCase):
             device=cls.device1,
             status=interface_status,
         )
+        cls.namespace = Namespace.objects.first()
+        cls.intr_group_status = Status.objects.get_for_model(InterfaceRedundancyGroup).first()
+        cls.interface_redundancy_group_1 = InterfaceRedundancyGroup.objects.create(
+            name="IRGroup 1",
+            status=cls.intr_group_status,
+        )
+        cls.interface_redundancy_group_2 = InterfaceRedundancyGroup.objects.create(
+            name="IRGroup 2",
+            status=cls.intr_group_status,
+        )
+        cls.interface_redundancy_group_3 = InterfaceRedundancyGroup.objects.create(
+            name="IRGroup 3",
+            status=cls.intr_group_status,
+        )
+        cls.irg_associations = (
+            InterfaceRedundancyGroupAssociation.objects.create(
+                interface_redundancy_group=cls.interface_redundancy_group_1,
+                interface=cls.interface11,
+                priority=123,
+            ),
+            InterfaceRedundancyGroupAssociation.objects.create(
+                interface_redundancy_group=cls.interface_redundancy_group_2,
+                interface=cls.interface12,
+                priority=456,
+            ),
+            InterfaceRedundancyGroupAssociation.objects.create(
+                interface_redundancy_group=cls.interface_redundancy_group_3,
+                interface=cls.interface11,
+                priority=789,
+            ),
+            InterfaceRedundancyGroupAssociation.objects.create(
+                interface_redundancy_group=cls.interface_redundancy_group_3,
+                interface=cls.interface12,
+                priority=789,
+            ),
+        )
+        prefixes = Prefix.objects.all()[:2]
+        cls.namespace = prefixes[0].namespace
+        vrfs = (
+            VRF.objects.create(name="VRF 1", rd="65000:100", namespace=cls.namespace),
+            VRF.objects.create(name="VRF 2", rd="65000:200", namespace=cls.namespace),
+        )
+        prefixes[0].vrfs.add(vrfs[0])
+        prefixes[0].vrfs.add(vrfs[1])
+        prefixes[1].vrfs.add(vrfs[0])
+        prefixes[1].vrfs.add(vrfs[1])
+
         cls.ip_statuses = list(Status.objects.get_for_model(IPAddress))[:2]
         cls.prefix_statuses = list(Status.objects.get_for_model(Prefix))[:2]
-        cls.namespace = Namespace.objects.first()
         cls.prefix1 = Prefix.objects.create(
             prefix="10.0.1.0/24", namespace=cls.namespace, status=cls.prefix_statuses[0]
         )
@@ -855,6 +929,10 @@ class GraphQLQueryTest(TestCase):
             tenant=cls.tenant2,
             face="rear",
         )
+        cls.device2.vrfs.add(vrfs[0])
+        cls.device2.vrfs.add(vrfs[1])
+        cls.device2.vrfs.add(vrfs[0])
+        cls.device2.vrfs.add(vrfs[1])
 
         cls.interface21 = Interface.objects.create(
             name="Int1",
@@ -1177,6 +1255,108 @@ query {
 
             # Assert GraphQL returned properties match those expected
             self.assertEqual(console_port_entry["connected_console_server_port"], connected_console_server_port)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_interface_redundancy_group_associations(self):
+        """Test graphql functionality for InterfaceRedundancyGroupAssociation"""
+
+        query = """\
+query {
+    interface_redundancy_group_associations {
+        id
+        interface { id }
+        interface_redundancy_group { id }
+        priority
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(
+            len(InterfaceRedundancyGroupAssociation.objects.all()),
+            len(result.data["interface_redundancy_group_associations"]),
+        )
+        for association in result.data["interface_redundancy_group_associations"]:
+            association_obj = InterfaceRedundancyGroupAssociation.objects.get(id=association["id"])
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(association["interface"]["id"], str(association_obj.interface.pk))
+            self.assertEqual(
+                association["interface_redundancy_group"]["id"], str(association_obj.interface_redundancy_group.pk)
+            )
+            self.assertEqual(association["priority"], association_obj.priority)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_ip_address_to_interface(self):
+        """Test graphql functionality for IPAddressToInterface"""
+
+        query = """\
+query {
+    ip_address_assignments {
+        id
+        interface { id }
+        vm_interface { id }
+        ip_address { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(
+            len(IPAddressToInterface.objects.all()),
+            len(result.data["ip_address_assignments"]),
+        )
+        for association in result.data["ip_address_assignments"]:
+            association_obj = IPAddressToInterface.objects.get(id=association["id"])
+            # Assert GraphQL returned properties match those expected
+            if association_obj.interface:
+                self.assertEqual(association["interface"]["id"], str(association_obj.interface.pk))
+            else:
+                self.assertEqual(association["interface"], None)
+            if association_obj.vm_interface:
+                self.assertEqual(association["vm_interface"]["id"], str(association_obj.vm_interface.pk))
+            else:
+                self.assertEqual(association["vm_interface"], None)
+            self.assertEqual(association["ip_address"]["id"], str(association_obj.ip_address.pk))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_vrf_assignments(self):
+        """Test graphql functionality for VRFDeviceAssignment and VRFPrefixAssignment"""
+
+        query = """\
+query {
+    vrf_device_assignments {
+        id
+        vrf { id }
+        device { id }
+    }
+    vrf_prefix_assignments {
+        id
+        vrf { id }
+        prefix { id }
+    }
+}"""
+
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        self.assertEqual(
+            len(VRFDeviceAssignment.objects.all()),
+            len(result.data["vrf_device_assignments"]),
+        )
+        self.assertEqual(
+            len(VRFPrefixAssignment.objects.all()),
+            len(result.data["vrf_prefix_assignments"]),
+        )
+        for assignment in result.data["vrf_device_assignments"]:
+            assignment_obj = VRFDeviceAssignment.objects.get(id=assignment["id"])
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(assignment["vrf"]["id"], str(assignment_obj.vrf.pk))
+            self.assertEqual(assignment["device"]["id"], str(assignment_obj.device.pk))
+
+        for assignment in result.data["vrf_prefix_assignments"]:
+            assignment_obj = VRFPrefixAssignment.objects.get(id=assignment["id"])
+            # Assert GraphQL returned properties match those expected
+            self.assertEqual(assignment["vrf"]["id"], str(assignment_obj.vrf.pk))
+            self.assertEqual(assignment["prefix"]["id"], str(assignment_obj.prefix.pk))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_console_server_ports_cable_peer(self):
