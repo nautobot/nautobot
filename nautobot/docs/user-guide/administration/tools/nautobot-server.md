@@ -686,7 +686,7 @@ Done.
 
 ### `runjob`
 
-`nautobot-server runjob [job]`
+`nautobot-server runjob --username <username> [--local] [--data <data>] <job>`
 
 Run a job (script, report) to validate or update data in Nautobot. The Job name must be in the Python module form: `<module_name>.<JobClassName>`.
 
