@@ -21,7 +21,7 @@ def get_saml_idp():
     value = ""
     if idp_map is not None:
         try:
-            idp = list(idp_map.keys())[0]
+            idp = next(iter(idp_map.keys()))
         except IndexError:
             pass
         else:

@@ -8,7 +8,7 @@ import django.forms
 from django.utils.safestring import mark_safe
 
 from nautobot import __version__
-from nautobot.core.settings_funcs import is_truthy, parse_redis_connection, ConstanceConfigItem  # noqa: F401
+from nautobot.core.settings_funcs import is_truthy, parse_redis_connection, ConstanceConfigItem
 
 #
 # Environment setup
@@ -29,7 +29,7 @@ AUTH_USER_MODEL = "users.User"
 
 # Set the default AutoField for 3rd party apps
 # N.B. Ideally this would be a `UUIDField`, but due to Django restrictions
-#      we can’t do that yet
+#      we can't do that yet
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
@@ -780,7 +780,7 @@ CELERY_RESULT_EXPIRES = None
 # Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
 CELERY_TASK_TRACK_STARTED = True
 
-# If enabled, a `task-sent` event will be sent for every task so tasks can be tracked before they’re consumed by a worker.
+# If enabled, a `task-sent` event will be sent for every task so tasks can be tracked before they're consumed by a worker.
 CELERY_TASK_SEND_SENT_EVENT = True
 
 # If enabled stdout and stderr of running jobs will be redirected to the task logger.

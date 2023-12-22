@@ -170,7 +170,7 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
             Token.objects.create(user=self.user),
         ]
 
-        self.tokens = tokens + [self.token]
+        self.tokens = [*tokens, self.token]
 
         self.basic_auth_user_password = "abc123"  # noqa: S105
         self.basic_auth_user_granted = User.objects.create_user(

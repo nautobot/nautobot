@@ -353,11 +353,13 @@ select = [
     "E",  # pycodestyle
     "F",  # pyflakes
     # "I",  # isort
+    "RUF",  # ruff itself
     "S",  # flake8-bandit
     "W",  # pycodestyle
 ]
 ignore = [
     "E501",  # pycodestyle: line-too-long
+    "RUF012",  # mutable-class-default - see https://github.com/astral-sh/ruff/issues/5243
 ]
 
 [tool.ruff.lint.isort]

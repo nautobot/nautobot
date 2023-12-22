@@ -200,7 +200,7 @@ class PluginTabsTestCase(SeleniumTestCase):
         self.browser.links.find_by_partial_text("Example App Tab")[0].click()
         self.assertTrue(
             self.browser.is_text_present(
-                f"I am some content for the example plugin's circuit ({str(circuit.pk)}) detail tab."
+                f"I am some content for the example plugin's circuit ({circuit.pk!s}) detail tab."
             )
         )
 
@@ -218,6 +218,6 @@ class PluginTabsTestCase(SeleniumTestCase):
             self.browser.links.find_by_partial_text(f"Example App Tab {tab_i}")[0].click()
             self.assertTrue(
                 self.browser.is_text_present(
-                    f"I am some content for the example plugin's device ({str(device.pk)}) detail tab {tab_i}."
+                    f"I am some content for the example plugin's device ({device.pk!s}) detail tab {tab_i}."
                 )
             )

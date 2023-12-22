@@ -1155,7 +1155,7 @@ class ViewTestCases:
         def test_bulk_edit_objects_with_constrained_permission(self):
             # Select some objects that are *not* already set to match the first value in self.bulk_edit_data or null.
             # We have to exclude null cases because Django filter()/exclude() doesn't like `__in=[None]` as a case.
-            attr_name = list(self.bulk_edit_data.keys())[0]
+            attr_name = next(iter(self.bulk_edit_data.keys()))
             objects = (
                 self._get_queryset()
                 .exclude(**{attr_name: self.bulk_edit_data[attr_name]})

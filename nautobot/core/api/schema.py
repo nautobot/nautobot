@@ -153,7 +153,7 @@ class NautobotAutoSchema(AutoSchema):
             if re.search(r"<drf_format_suffix\w*:\w+>", self.path_regex):
                 tokenized_path.append("formatted")
 
-            return "_".join(tokenized_path + [action])
+            return "_".join([*tokenized_path, action])
 
         # For all other view actions, operation-id is the same as in the base class
         return super().get_operation_id()

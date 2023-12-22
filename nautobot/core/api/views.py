@@ -488,7 +488,7 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
 
         format = "openapi"
 
-    renderer_classes = SpectacularSwaggerView.renderer_classes + [FakeOpenAPIRenderer]
+    renderer_classes = [*SpectacularSwaggerView.renderer_classes, FakeOpenAPIRenderer]
 
     template_name = "swagger_ui.html"
 
