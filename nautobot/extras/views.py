@@ -42,7 +42,7 @@ from nautobot.virtualization.tables import VirtualMachineTable
 
 from . import filters, forms, tables
 from .api import serializers
-from .choices import JobExecutionType, JobResultStatusChoices
+from .choices import JobExecutionType, JobResultStatusChoices, LogLevelChoices
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
     enqueue_pull_git_repository_and_refresh_data,
@@ -65,6 +65,7 @@ from .models import (
     ImageAttachment,
     JobButton,
     JobHook,
+    JobLogEntry,
     JobResult,
     Note,
     ObjectChange,
@@ -1512,7 +1513,18 @@ class JobResultListView(generic.ObjectListView):
     List JobResults
     """
 
-    queryset = JobResult.objects.defer("result").select_related("job_model", "user").prefetch_related("logs")
+    queryset = (
+        JobResult.objects.defer("result")
+        .select_related("job_model", "user")
+        .annotate(
+            debug_log_count=count_related(JobLogEntry, "job_result", {"log_level": LogLevelChoices.LOG_DEBUG}),
+            info_log_count=count_related(JobLogEntry, "job_result", {"log_level": LogLevelChoices.LOG_INFO}),
+            warning_log_count=count_related(JobLogEntry, "job_result", {"log_level": LogLevelChoices.LOG_WARNING}),
+            error_log_count=count_related(
+                JobLogEntry, "job_result", {"log_level__in": [LogLevelChoices.LOG_ERROR, LogLevelChoices.LOG_CRITICAL]}
+            ),
+        )
+    )
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable

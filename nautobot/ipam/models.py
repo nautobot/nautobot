@@ -1046,16 +1046,18 @@ class IPAddress(PrimaryModel):
         namespace = kwargs.pop("namespace", None)
         super().__init__(*args, **kwargs)
 
-        # If namespace wasn't provided, but parent was, we'll use the parent's namespace.
-        if namespace is None and self.parent is not None:
-            namespace = self.parent.namespace
+        # Avoid unnessary queries when existing model instances are initialized
+        if address:
+            # If namespace wasn't provided, but parent was, we'll use the parent's namespace.
+            if namespace is None and self.parent is not None:
+                namespace = self.parent.namespace
 
-        if namespace is None:
-            namespace = get_default_namespace()
+            if namespace is None:
+                namespace = get_default_namespace()
 
-        self._namespace = namespace
+            self._namespace = namespace
 
-        self._deconstruct_address(address)
+            self._deconstruct_address(address)
 
     def __str__(self):
         return str(self.address)
