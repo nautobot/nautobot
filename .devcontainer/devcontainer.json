@@ -25,7 +25,6 @@
                 "ms-python.black-formatter",
                 "ms-python.flake8",
                 "ms-python.isort",
-                "ms-python.pylint",
                 "samuelcolvin.jinjahtml",
                 "tamasfe.even-better-toml"
             ],
@@ -65,12 +64,7 @@
                     "--settings-file",
                     "${workspaceFolder}/pyproject.toml"
                 ],
-                "isort.importStrategy": "fromEnvironment",
-                "pylint.args": [
-                    "--rcfile=${workspaceFolder}/pyproject.toml",
-                    "--disable=django-not-configured"
-                ],
-                "pylint.importStrategy": "fromEnvironment"
+                "isort.importStrategy": "fromEnvironment"
             }
         }
     },
