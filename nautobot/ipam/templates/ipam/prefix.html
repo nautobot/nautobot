@@ -9,15 +9,6 @@
     <li>{{ object|hyperlinked_object }}</li>
 {% endblock breadcrumbs %}
 
-{% block masthead %}
-<h1>
-<span class="hover_copy"><span id="copy_title">{{ object }}</span><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_title">
-    <span class="mdi mdi-content-copy"></span>
-</button>
-</span>
-</h1>
-{% endblock masthead %}
-
 {% block extra_buttons %}
         {% if perms.ipam.add_prefix and active_tab == 'prefixes' and first_available_prefix %}
         <a href="{% url 'ipam:prefix_add' %}?prefix={{ first_available_prefix }}&namespace={{ object.namespace.pk }}&location={{ object.location.pk }}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}" class="btn btn-success">

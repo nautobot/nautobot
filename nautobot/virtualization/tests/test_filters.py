@@ -492,7 +492,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_status(self):
-        params = {"status": [self.statuses[0].name, self.statuses[1].name]}
+        params = {"status": [self.statuses[0].name, self.statuses[1].id]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(status__in=[self.statuses[0], self.statuses[1]]),

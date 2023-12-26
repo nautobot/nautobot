@@ -21,6 +21,7 @@ from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
 from django.db.models import Model
@@ -37,7 +38,9 @@ from nautobot.core.celery.task import Task
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    JSONField,
 )
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_model_from_name
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
@@ -70,6 +73,7 @@ __all__ = [
     "IPAddressVar",
     "IPAddressWithMaskVar",
     "IPNetworkVar",
+    "JSONVar",
     "MultiChoiceVar",
     "MultiObjectVar",
     "ObjectVar",
@@ -288,15 +292,13 @@ class BaseJob(Task):
         """
         Handler called after the task returns.
 
-        Parameters
-            status - Current task state.
-            retval - Task return value/exception.
-            task_id - Unique id of the task.
-            args - Original arguments for the task that returned.
-            kwargs - Original keyword arguments for the task that returned.
-
-        Keyword Arguments
-            einfo - ExceptionInfo instance, containing the traceback (if any).
+        Arguments:
+            status (str): Current task state.
+            retval (Any): Task return value/exception.
+            task_id (str): Unique id of the task.
+            args (tuple):  Original arguments for the task that returned.
+            kwargs (dict): Original keyword arguments for the task that returned.
+            einfo (ExceptionInfo): ExceptionInfo instance, containing the traceback (if any).
 
         Returns:
             (None): The return value of this handler is ignored.
@@ -306,7 +308,7 @@ class BaseJob(Task):
         file_fields = list(self._get_file_vars())
         file_ids = [kwargs[f] for f in file_fields]
         if file_ids:
-            self.delete_files(*file_ids)
+            self._delete_file_proxies(*file_ids)
 
         self.logger.info("Job completed", extra={"grouping": "post_run"})
 
@@ -397,10 +399,10 @@ class BaseJob(Task):
         Unique identifier of a specific Job class, in the form <module_name>.<ClassName>.
 
         Examples:
-        my_script.MyScript - Local Job
-        nautobot.core.jobs.MySystemJob - System Job
-        my_plugin.jobs.MyPluginJob - App-provided Job
-        git_repository.jobs.myjob.MyJob - GitRepository Job
+        - my_script.MyScript - Local Job
+        - nautobot.core.jobs.MySystemJob - System Job
+        - my_plugin.jobs.MyPluginJob - App-provided Job
+        - git_repository.jobs.myjob.MyJob - GitRepository Job
         """
         return f"{cls.__module__}.{cls.__name__}"
 
@@ -531,8 +533,10 @@ class BaseJob(Task):
     @classmethod
     def _get_vars(cls):
         """
-        Return dictionary of ScriptVariable attributes defined on this class and any base classes to the top of the inheritance chain.
-        The variables are sorted in the order that they were defined, with variables defined on base classes appearing before subclass variables.
+        Return dictionary of ScriptVariable attributes defined on this class or any of its base parent classes.
+
+        The variables are sorted in the order that they were defined,
+        with variables defined on base classes appearing before subclass variables.
         """
         cls_vars = {}
         # get list of base classes, including cls, in reverse method resolution order: [BaseJob, Job, cls]
@@ -661,7 +665,7 @@ class BaseJob(Task):
                 return_data[field_name] = value.pk
             # FileVar (Save each FileVar as a FileProxy)
             elif isinstance(value, InMemoryUploadedFile):
-                return_data[field_name] = BaseJob.save_file(value)
+                return_data[field_name] = BaseJob._save_file_to_proxy(value)
             # IPAddressVar, IPAddressWithMaskVar, IPNetworkVar
             elif isinstance(value, netaddr.ip.BaseIP):
                 return_data[field_name] = str(value)
@@ -721,7 +725,7 @@ class BaseJob(Task):
                 else:
                     return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
             elif isinstance(var, FileVar):
-                return_data[field_name] = cls.load_file(value)
+                return_data[field_name] = cls._load_file_from_proxy(value)
             # IPAddressVar is a netaddr.IPAddress object
             elif isinstance(var, IPAddressVar):
                 return_data[field_name] = netaddr.IPAddress(value)
@@ -758,20 +762,20 @@ class BaseJob(Task):
         return {k: v for k, v in job_kwargs.items() if k in job_vars}
 
     @staticmethod
-    def load_file(pk):
+    def _load_file_from_proxy(pk):
         """Load a file proxy stored in the database by primary key.
 
         Args:
             pk (uuid): Primary key of the `FileProxy` to retrieve
 
         Returns:
-            (FileProxy): A File-like object
+            (File): A File-like object
         """
         fp = FileProxy.objects.get(pk=pk)
         return fp.file
 
     @staticmethod
-    def save_file(uploaded_file):
+    def _save_file_to_proxy(uploaded_file):
         """
         Save an uploaded file to the database as a file proxy and return the
         primary key.
@@ -785,7 +789,7 @@ class BaseJob(Task):
         fp = FileProxy.objects.create(name=uploaded_file.name, file=uploaded_file)
         return fp.pk
 
-    def delete_files(self, *files_to_delete):
+    def _delete_file_proxies(self, *files_to_delete):
         """Given an unpacked list of primary keys for `FileProxy` objects, delete them.
 
         Args:
@@ -823,6 +827,32 @@ class BaseJob(Task):
             data = json.load(datafile)
 
         return data
+
+    def create_file(self, filename, content):
+        """
+        Create a file that can later be downloaded by users.
+
+        Args:
+            filename (str): Name of the file to create, including extension
+            content (str, bytes): Content to populate the created file with.
+
+        Raises:
+            (ValueError): if the provided content exceeds JOB_CREATE_FILE_MAX_SIZE in length
+
+        Returns:
+            (FileProxy): record that was created
+        """
+        if isinstance(content, str):
+            content = content.encode("utf-8")
+        max_size = get_settings_or_config("JOB_CREATE_FILE_MAX_SIZE")
+        actual_size = len(content)
+        if actual_size > max_size:
+            raise ValueError(f"Provided {actual_size} bytes of content, but JOB_CREATE_FILE_MAX_SIZE is {max_size}")
+        fp = FileProxy.objects.create(
+            name=filename, job_result=self.job_result, file=ContentFile(content, name=filename)
+        )
+        self.logger.info("Created file [%s](%s)", filename, fp.file.url)
+        return fp
 
 
 class Job(BaseJob):
@@ -898,7 +928,7 @@ class StringVar(ScriptVariable):
 
 class TextVar(ScriptVariable):
     """
-    Free-form text data. Renders as a <textarea>.
+    Free-form text data. Renders as a `<textarea>`.
     """
 
     form_field = forms.CharField
@@ -991,10 +1021,11 @@ class ObjectVar(ScriptVariable):
     """
     A single object within Nautobot.
 
-    :param model: The Nautobot model being referenced
-    :param display_field: The attribute of the returned object to display in the selection list (default: 'name')
-    :param query_params: A dictionary of additional query parameters to attach when making REST API requests (optional)
-    :param null_option: The label to use as a "null" selection option (optional)
+    Args:
+        model (Model): The Nautobot model being referenced
+        display_field (str): The attribute of the returned object to display in the selection list
+        query_params (dict): Additional query parameters to attach when making REST API requests
+        null_option (str): The label to use as a "null" selection option
     """
 
     form_field = DynamicModelChoiceField
@@ -1087,6 +1118,14 @@ class IPNetworkVar(ScriptVariable):
             self.field_attrs["validators"].append(MaxPrefixLengthValidator(max_prefix_length))
 
 
+class JSONVar(ScriptVariable):
+    """
+    Like TextVar but with native serializing of JSON data.
+    """
+
+    form_field = JSONField
+
+
 class JobHookReceiver(Job):
     """
     Base class for job hook receivers. Job hook receivers are jobs that are initiated
@@ -1107,9 +1146,10 @@ class JobHookReceiver(Job):
         """
         Method to be implemented by concrete JobHookReceiver subclasses.
 
-        :param change: an instance of `nautobot.extras.models.ObjectChange`
-        :param action: a string with the action performed on the changed object ("create", "update" or "delete")
-        :param changed_object: an instance of the object that was changed, or `None` if the object has been deleted
+        Args:
+            change (ObjectChange): an instance of `nautobot.extras.models.ObjectChange`
+            action (str): a string with the action performed on the changed object ("create", "update" or "delete")
+            changed_object (Model): an instance of the object that was changed, or `None` if the object has been deleted
         """
         raise NotImplementedError
 
@@ -1134,7 +1174,8 @@ class JobButtonReceiver(Job):
         """
         Method to be implemented by concrete JobButtonReceiver subclasses.
 
-        :param obj: an instance of the object
+        Args:
+            obj (Model): an instance of the object that triggered this job
         """
         raise NotImplementedError
 
@@ -1158,7 +1199,7 @@ def is_variable(obj):
 
 def get_job(class_path):
     """
-    Retrieve a specific job class by its class_path (<module_name>.<JobClassName>).
+    Retrieve a specific job class by its class_path (`<module_name>.<JobClassName>`).
 
     May return None if the job isn't properly registered with Celery at this time.
     """

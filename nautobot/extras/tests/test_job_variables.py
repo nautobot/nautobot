@@ -13,6 +13,7 @@ from nautobot.extras.test_jobs.job_variables import (
     IPAddressVarJob,
     IPAddressWithMaskVarJob,
     IPNetworkVarJob,
+    JSONVarJob,
     MultiChoiceVarJob,
     MultiObjectVarJob,
     ObjectVarJob,
@@ -200,3 +201,22 @@ class JobVariablesTest(TestCase):
         form = IPNetworkVarJob().as_form(data)
         self.assertTrue(form.is_valid())
         self.assertEqual(form.cleaned_data["var1"], IPNetwork(data["var1"]))
+
+    def test_jsonvar(self):
+        # Valid JSON value as dictionary
+        data = {"var1": {"key1": "value1"}}
+        form = JSONVarJob().as_form(data)
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["var1"], {"key1": "value1"})
+
+        # Valid JSON value as jsonified dictionary
+        data = {"var1": '{"key1": "value1"}'}
+        form = JSONVarJob().as_form(data)
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["var1"], {"key1": "value1"})
+
+        # Invalid JSON value
+        data = {"var1": '{"key1": True}'}
+        form = JSONVarJob().as_form(data)
+        self.assertFalse(form.is_valid())
+        self.assertIn("var1", form.errors)

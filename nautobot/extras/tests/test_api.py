@@ -37,6 +37,7 @@ from nautobot.extras.choices import (
     RelationshipTypeChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
+    WebhookHttpMethodChoices,
 )
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
@@ -48,6 +49,8 @@ from nautobot.extras.models import (
     DynamicGroup,
     DynamicGroupMembership,
     ExportTemplate,
+    ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -811,6 +814,103 @@ class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
             name="Export Template 3",
             template_code="{% for obj in queryset %}{{ obj.name }}\n{% endfor %}",
         )
+
+
+class ExternalIntegrationTest(APIViewTestCases.APIViewTestCase):
+    model = ExternalIntegration
+    create_data = [
+        {
+            "name": "Test External Integration 1",
+            "remote_url": "ssh://example.com/test1/",
+            "verify_ssl": False,
+            "timeout": 5,
+            "extra_config": "{'foo': 'bar'}",
+            "http_method": WebhookHttpMethodChoices.METHOD_DELETE,
+            "headers": "{'header': 'fake header'}",
+            "ca_file_path": "/this/is/a/file/path",
+        },
+        {
+            "name": "Test External Integration 2",
+            "remote_url": "http://example.com/test2/",
+            "http_method": WebhookHttpMethodChoices.METHOD_POST,
+        },
+        {
+            "name": "Test External Integration 3",
+            "remote_url": "https://example.com/test3/",
+            "verify_ssl": True,
+            "timeout": 30,
+            "extra_config": "{'foo': ['bat', 'baz']}",
+            "headers": "{'new_header': 'fake header'}",
+            "ca_file_path": "/this/is/a/new/file/path",
+        },
+    ]
+    bulk_update_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}"}
+    choices_fields = ["http_method"]
+
+
+class FileProxyTest(
+    APIViewTestCases.GetObjectViewTestCase,
+    APIViewTestCases.ListObjectsViewTestCase,
+):
+    model = FileProxy
+
+    @classmethod
+    def setUpTestData(cls):
+        job = Job.objects.first()
+        job_results = (
+            JobResult.objects.create(
+                job_model=job,
+                name=job.class_path,
+                date_done=now(),
+                status=JobResultStatusChoices.STATUS_SUCCESS,
+            ),
+            JobResult.objects.create(
+                job_model=job,
+                name=job.class_path,
+                date_done=now(),
+                status=JobResultStatusChoices.STATUS_SUCCESS,
+            ),
+            JobResult.objects.create(
+                job_model=job,
+                name=job.class_path,
+                date_done=now(),
+                status=JobResultStatusChoices.STATUS_SUCCESS,
+            ),
+        )
+        cls.file_proxies = []
+        for i, job_result in enumerate(job_results):
+            file = SimpleUploadedFile(name=f"Output {i}.txt", content=f"Content {i}\n".encode("utf-8"))
+            file_proxy = FileProxy.objects.create(name=file.name, file=file, job_result=job_result)
+            cls.file_proxies.append(file_proxy)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_download_file_without_permission(self):
+        """Test `download` action without permission."""
+        url = reverse("extras-api:fileproxy-download", kwargs={"pk": self.file_proxies[0].pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_download_file_with_permission(self):
+        """Test `download` action with permission."""
+        obj_perm = ObjectPermission(
+            name="Test permission", constraints={"pk": self.file_proxies[0].pk}, actions=["view"]
+        )
+        obj_perm.validated_save()
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+        obj_perm.users.add(self.user)
+
+        # FileProxy permitted by permission
+        url = reverse("extras-api:fileproxy-download", kwargs={"pk": self.file_proxies[0].pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = b"".join(data for data in response)
+        self.assertEqual(content.decode("utf-8"), "Content 0\n")
+
+        # FileProxy not permitted by permission
+        url = reverse("extras-api:fileproxy-download", kwargs={"pk": self.file_proxies[1].pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
 
 class GitRepositoryTest(APIViewTestCases.APIViewTestCase):

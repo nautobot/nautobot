@@ -5,6 +5,7 @@ import logging
 import os
 
 from git import Repo
+from nautobot.core.utils.logging import sanitize
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +64,8 @@ class GitRepo:
             url (str): git repo url
             clone_initially (bool): True if the repo needs to be cloned
         """
+        self.url = url
+        self.sanitized_url = sanitize(url)
         if os.path.isdir(path) and os.path.isdir(os.path.join(path, ".git")):
             self.repo = Repo(path=path)
         elif clone_initially:

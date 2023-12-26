@@ -3,9 +3,55 @@ import factory
 import faker
 
 from nautobot.core.choices import ColorChoices
-from nautobot.core.factory import NautobotBoolIterator, OrganizationalModelFactory, get_random_instances
-from nautobot.extras.models import Role, Status, Tag
+from nautobot.core.factory import (
+    get_random_instances,
+    NautobotBoolIterator,
+    OrganizationalModelFactory,
+    PrimaryModelFactory,
+    UniqueFaker,
+)
+from nautobot.extras.models import ExternalIntegration, Role, Status, Tag
 from nautobot.extras.utils import FeatureQuery, RoleModelsQuery, TaggableClassesQuery
+from nautobot.extras.choices import WebhookHttpMethodChoices
+
+
+class ExternalIntegrationFactory(PrimaryModelFactory):
+    """ExternalIntegration model factory."""
+
+    class Meta:
+        model = ExternalIntegration
+
+    class Params:
+        has_extra_config = NautobotBoolIterator()
+        has_http_method = NautobotBoolIterator()
+        has_headers = NautobotBoolIterator()
+        has_ca_file_path = NautobotBoolIterator()
+
+    name = UniqueFaker("bs")
+    remote_url = factory.Faker("url", schemes=["http", "https", "ssh"])
+    verify_ssl = factory.Faker("boolean")
+    timeout = factory.Faker("pyint", min_value=0, max_value=300)
+    extra_config = factory.Maybe(
+        "has_extra_config",
+        factory.Faker("pydict", allowed_types=[bool, int, str]),
+        None,
+    )
+
+    http_method = factory.Maybe(
+        "has_http_method",
+        factory.Iterator(WebhookHttpMethodChoices.CHOICES, getter=lambda choice: choice[0]),
+        "",
+    )
+    headers = factory.Maybe(
+        "has_headers",
+        factory.Faker("pydict", allowed_types=[bool, int, str]),
+        None,
+    )
+    ca_file_path = factory.Maybe(
+        "has_ca_file_path",
+        factory.LazyAttributeSequence(lambda o, n: f"{o.name}/file/path/{n + 1}"),
+        "",
+    )
 
 
 class RoleFactory(OrganizationalModelFactory):

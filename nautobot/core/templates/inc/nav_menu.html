@@ -2,60 +2,71 @@
 {% load registry %}
 {% load helpers %}
 {% registry %}
-<nav class="navbar navbar-default navbar-fixed-top">
+<nav class="navbar navbar-default navbar-fixed-left navbar-inverse">
     <div class="container-fluid">
         <div class="navbar-header">
-            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false">
-                <span class="sr-only">Toggle navigation</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
             <a class="navbar-brand" href="{% url 'home' %}">
                 <img src="{% custom_branding_or_static 'logo' 'img/nautobot_logo.svg' %}" height="30" />
             </a>
         </div>
 
-        <div id="navbar" class="navbar-collapse collapse">
+        <div id="navbar">
             {% if request.user.is_authenticated %}
-                <ul class="nav navbar-nav">
+                <form action="{% url 'search' %}" method="get" class="navbar-form" id="navbar_search" role="search">
+                    <div class="input-group">
+                        <input type="text" name="q" class="form-control" placeholder="Search {{ settings.BRANDING_TITLE }}">
+                        <span class="input-group-btn">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="mdi mdi-magnify"></i>
+                            </button>
+                        </span>
+                    </div>
+                </form>
+            {% endif %}
+
+            <ul class="nav navbar-nav">
+                {% if request.user.is_authenticated %}
                     {% for tab_name, tab_details in registry.nav_menu.tabs.items %}
-                        {% if request.user|has_one_or_more_perms:tab_details.permissions or not "HIDE_RESTRICTED_UI"|settings_or_config %}
+                        {% if request.user|has_one_or_more_perms:tab_details.permissions  %}
                             <li class="dropdown">
                                 <a href="#" class="dropdown-toggle" data-tab-weight="{{ tab_details.weight }}" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
-                                    {{ tab_name }} <span class="caret"></span>
+                                    <img src="{% custom_branding_or_static 'nav_bullet' 'img/nautobot_chevron.svg' %}" height="20px" />
+                                    <span id="dropdown_title" title="{{ tab_name }}">{{ tab_name }}</span>
+                                    <span class="caret"></span>
                                 </a>
                                 <ul class="dropdown-menu">
                                     {% for group_name, group_details in tab_details.groups.items %}
-                                        {% if request.user|has_one_or_more_perms:group_details.permissions or not "HIDE_RESTRICTED_UI"|settings_or_config %}
+                                        {% if request.user|has_one_or_more_perms:group_details.permissions  %}
                                             <li class="dropdown-header" data-group-weight="{{ group_details.weight }}">{{ group_name }}</li>
                                             {% for item_link, item_details in group_details.items.items %}
-                                                {% if request.user|has_one_or_more_perms:item_details.permissions or not "HIDE_RESTRICTED_UI"|settings_or_config %}
+                                                {% if request.user|has_one_or_more_perms:item_details.permissions  %}
                                                     <li {% if not request.user|has_perms:item_details.permissions %} class="disabled"{% endif %}>
-                                                        <div class="buttons pull-right">
-                                                            {% for button_title, button_details in item_details.buttons.items %}
-                                                                {% if request.user|has_perms:button_details.permissions %}
-                                                                    {% comment %}
-                                                                        Use 'url xxx as variable' so that an invalid
-                                                                        link doesn't throw a NoReverseMatch exception.
-                                                                    {% endcomment %}
-                                                                    {% url button_details.link as button_url %}
-                                                                    {% if button_url %}
-                                                                        <a href="{{ button_url }}"
-                                                                           data-button-weight="{{ button_details.weight }}"
-                                                                           class="btn btn-xs btn-{{ button_details.button_class }}"
-                                                                           title="{{ button_title }}">
-                                                                            <i class="mdi {{ button_details.icon_class }}"></i>
-                                                                        </a>
-                                                                    {% else %}
-                                                                        <a class="btn btn-xs btn-danger"
-                                                                           title="ERROR: Invalid link!">
-                                                                            <i class="mdi mdi-alert"></i>
-                                                                        </a>
+                                                        {% if item_details.buttons.items|length > 0 %}
+                                                            <div class="buttons pull-right">
+                                                                {% for button_title, button_details in item_details.buttons.items %}
+                                                                    {% if request.user|has_perms:button_details.permissions %}
+                                                                        {% comment %}
+                                                                            Use 'url xxx as variable' so that an invalid
+                                                                            link doesn't throw a NoReverseMatch exception.
+                                                                        {% endcomment %}
+                                                                        {% url button_details.link as button_url %}
+                                                                        {% if button_url %}
+                                                                            <a href="{{ button_url }}"
+                                                                               data-button-weight="{{ button_details.weight }}"
+                                                                               class="btn btn-xs btn-{{ button_details.button_class }}"
+                                                                               title="{{ button_title }}">
+                                                                                <i class="mdi {{ button_details.icon_class }}"></i>
+                                                                            </a>
+                                                                        {% else %}
+                                                                            <a class="btn btn-xs btn-danger"
+                                                                               title="ERROR: Invalid link!">
+                                                                                <i class="mdi mdi-alert"></i>
+                                                                            </a>
+                                                                        {% endif %}
                                                                     {% endif %}
-                                                                {% endif %}
-                                                            {% endfor %}
-                                                        </div>
+                                                                {% endfor %}
+                                                            </div>
+                                                        {% endif %}
                                                         <a href="{{ item_link }}"
                                                             data-item-weight="{{ item_details.weight }}">
                                                             {{ item_details.name }}
@@ -72,15 +83,12 @@
                             </li>
                         {% endif %}
                     {% endfor %}
-                </ul>
-            {% endif %}
-
-            <ul class="nav navbar-nav navbar-right">
-                {% if request.user.is_authenticated %}
+                    <li class="nav-divider"></li>
                     <li class="dropdown">
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" title="{{ request.user }}" role="button" aria-haspopup="true" aria-expanded="false">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
+                           aria-haspopup="true" aria-expanded="false">
                             <i class="mdi mdi-account"></i>
-                            <span id="navbar_user">{{ request.user|truncatechars:"30" }}</span>
+                            <span id="dropdown_title" title="{{ request.user }}">{{ request.user }}</span>
                             <span class="caret"></span>
                         </a>
                         <ul class="dropdown-menu">
@@ -93,21 +101,13 @@
                         </ul>
                     </li>
                 {% else %}
-                    <li><a href="{% url settings.LOGIN_URL %}?next={{ request.get_full_path | urlencode }}"><i class="mdi mdi-login"></i> Log in</a></li>
+                    <li>
+                        <a href="{% url settings.LOGIN_URL %}?next={{ request.get_full_path | urlencode }}">
+                            <i class="mdi mdi-login"></i> Log in
+                        </a>
+                    </li>
                 {% endif %}
             </ul>
-            {% if request.user.is_authenticated or not "HIDE_RESTRICTED_UI"|settings_or_config %}
-                <form action="{% url 'search' %}" method="get" class="navbar-form navbar-right" id="navbar_search" role="search">
-                    <div class="input-group">
-                        <input type="text" name="q" class="form-control" placeholder="Search {{ settings.BRANDING_TITLE }}">
-                        <span class="input-group-btn">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="mdi mdi-magnify"></i>
-                            </button>
-                        </span>
-                    </div>
-                </form>
-            {% endif %}
         </div>
     </div>
 </nav>

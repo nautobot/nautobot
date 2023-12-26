@@ -1,3 +1,5 @@
+{% load helpers %}
+
 {% if object.pk %}
     <div class="panel panel-default">
         <div class="panel-heading">
@@ -42,6 +44,15 @@
                         </td>
                     </tr>
                 {% endif %}
+            </tbody>
+        </table>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Data Provenance</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tbody>
                 {% if object.created %}
                     <tr>
                         <td>Created</td>
@@ -54,6 +65,26 @@
                         <td>{{ object.last_updated }}</td>
                     </tr>
                 {% endif %}
+                <tr>
+                    <td>Created By</td>
+                    <td>{{ created_by | placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Last Updated By</td>
+                    <td>{{ last_updated_by | placeholder }}</td>
+                </tr>
+                {% with api_view=object|validated_api_viewname:'detail' %}
+                    {% if api_view %}
+                        <tr>
+                            <td>View in API Browser</td>
+                            <td>
+                                <a href="{% url api_view object.id %}" target="_blank">
+                                    <span class="mdi mdi-open-in-new"></span>
+                                </a>
+                            </td>
+                        </tr>
+                    {% endif %}
+                {% endwith %}
             </tbody>
         </table>
     </div>

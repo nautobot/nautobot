@@ -1,9 +1,18 @@
 from django.conf import settings
-from django.conf.urls import include
+from django.conf.urls import include, url
 from django.urls import path
+from django.views.generic import TemplateView
 from django.views.static import serve
 
-from nautobot.core.views import CustomGraphQLView, HomeView, StaticMediaFailureView, SearchView, nautobot_metrics_view
+from nautobot.core.views import (
+    CustomGraphQLView,
+    HomeView,
+    StaticMediaFailureView,
+    SearchView,
+    ThemePreviewView,
+    nautobot_metrics_view,
+    get_file_with_authorization,
+)
 from nautobot.extras.plugins.urls import (
     plugin_admin_patterns,
     plugin_patterns,
@@ -31,7 +40,7 @@ urlpatterns = [
     path("api/", include("nautobot.core.api.urls")),
     # GraphQL
     path("graphql/", CustomGraphQLView.as_view(graphiql=True), name="graphql"),
-    # Serving static media in Django
+    # Serving static media in Django (TODO: should be DEBUG mode only - "This view is NOT hardened for production use")
     path("media/<path:path>", serve, {"document_root": settings.MEDIA_ROOT}),
     # Admin
     path("admin/", admin_site.urls),
@@ -45,7 +54,22 @@ urlpatterns = [
     # django-health-check
     path(r"health/", include("health_check.urls")),
     # FileProxy attachments download/get URLs used in admin views only
-    path("files/", include("db_file_storage.urls")),
+    url(
+        "files/download/",
+        get_file_with_authorization,
+        {"add_attachment_headers": True},
+        name="db_file_storage.download_file",
+    ),
+    url(
+        "files/get/",
+        get_file_with_authorization,
+        {"add_attachment_headers": False},
+        name="db_file_storage.get_file",
+    ),
+    # Templated css file
+    path(
+        "template.css", TemplateView.as_view(template_name="template.css", content_type="text/css"), name="template_css"
+    ),
 ]
 
 
@@ -55,6 +79,7 @@ if settings.DEBUG:
 
         urlpatterns += [
             path("__debug__/", include(debug_toolbar.urls)),
+            path("theme-preview/", ThemePreviewView.as_view(), name="theme_preview"),
         ]
     except ImportError:
         pass

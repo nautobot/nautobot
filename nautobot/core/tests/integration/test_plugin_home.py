@@ -1,4 +1,3 @@
-from django.test.utils import override_settings
 from django.conf import settings
 from unittest import skipIf
 
@@ -89,7 +88,6 @@ class PluginHomeTestCase(SeleniumTestCase):
                 counter_html = int(item_html.find_by_xpath("./../../span")["innerHTML"])
                 self.assertEqual(counter, counter_html)
 
-    @override_settings(HIDE_RESTRICTED_UI=False)
     def test_homepage_render_no_permissions(self):
         """
         Render homepage with no permissions.
@@ -101,7 +99,8 @@ class PluginHomeTestCase(SeleniumTestCase):
             columns_html.first.find_by_xpath(f".//strong[text()='{panel_name}']")
             for item_name, _ in panel_details.items():
                 item_html = columns_html.first.find_by_xpath(f".//h4[contains(text(), '{item_name}')]")
-                self.assertTrue("mdi mdi-lock" in item_html.find_by_xpath("./../span")["innerHTML"])
+                # Assert Panel items without permissions are not shown in DOM
+                self.assertFalse(item_html)
 
     def test_examplemodel_custom_panel(self):
         """
@@ -118,7 +117,6 @@ class PluginHomeTestCase(SeleniumTestCase):
         for item_name in self.custom_panel_examplemodel["items"]:
             columns_html.first.find_by_xpath(f".//a[contains(text(), '{item_name}')]")
 
-    @override_settings(HIDE_RESTRICTED_UI=False)
     def test_homepage_render_limit_permissions(self):
         """
         Render homepage with limited permissions.
@@ -142,4 +140,5 @@ class PluginHomeTestCase(SeleniumTestCase):
                         self.assertEqual(counter, counter_html)
                 else:
                     item_html = columns_html.first.find_by_xpath(f".//h4[contains(text(), '{item_name}')]")
-                    self.assertTrue("mdi mdi-lock" in item_html.find_by_xpath("./../span")["innerHTML"])
+                    # Assert Layout items without permission is not visible in DOM
+                    self.assertFalse(item_html)

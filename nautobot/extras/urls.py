@@ -26,6 +26,7 @@ from nautobot.extras.models import (
 app_name = "extras"
 
 router = NautobotUIViewSetRouter()
+router.register("external-integrations", views.ExternalIntegrationUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("roles", views.RoleUIViewSet)
 
@@ -479,8 +480,6 @@ urlpatterns = [
         views.JobResultDeleteView.as_view(),
         name="jobresult_delete",
     ),
-    # Job Button Run
-    path("job-button/<uuid:pk>/run/", views.JobButtonRunView.as_view(), name="jobbutton_run"),
     # Notes
     path("notes/", views.NoteListView.as_view(), name="note_list"),
     path("notes/add/", views.NoteEditView.as_view(), name="note_add"),

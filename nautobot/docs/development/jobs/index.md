@@ -330,6 +330,23 @@ Note that `min_length` and `max_length` can be set to the same number to effect 
 
 Arbitrary text of any length. Renders as a multi-line text input field.
 
+#### `JSONVar`
+
++++ 2.1.0
+
+Accepts JSON-formatted data of any length. Renders as a multi-line text input field. The variable passed to `run()` method on the job has been serialized to the appropriate Python objects.
+
+```python
+class ExampleJSONVarJob(Job):
+    var1 = JSONVar()
+
+    def run(self, var1):
+        # var1 form data equals '{"key1": "value1"}'
+        self.logger.info("The value of key1 is: %s", var1["key1"])
+```
+
+In the above example `{"key1": "value1"}` is provided to the job form, on submission first the field is validated to be JSON-formatted data then is serialized and passed to the `run()` method as a dictionary without any need for the job developer to post-process the variable into a Python dictionary.
+
 #### `IntegerVar`
 
 Stores a numeric integer. Options include:
@@ -506,11 +523,28 @@ Markdown rendering is supported for log messages.
 +/- 2.0.0
     The `AbortTransaction` class was moved from the `nautobot.utilities.exceptions` module to `nautobot.core.exceptions`.
 
+### File Output
+
++++ 2.1.0
+
+A Job can create files that will be saved and can later be downloaded by a user. (The specifics of how and where these files are stored will depend on your system's [`JOB_FILE_IO_STORAGE`](../../user-guide/administration/configuration/optional-settings.md#job_file_io_storage) configuration.) To do so, use the `Job.create_file(filename, content)` method:
+
+```python
+from nautobot.extras.jobs import Job
+
+class MyJob(Job):
+    def run(self):
+        self.create_file("greeting.txt", "Hello world!")
+        self.create_file("farewell.txt", b"Goodbye for now!")  # content can be a str or bytes
+```
+
+The above Job when run will create two files, "greeting.txt" and "farewell.txt", that will be made available for download from the JobResult detail view's "Additional Data" tab and via the REST API. These files will persist indefinitely, but can automatically be deleted if the JobResult itself is deleted; they can also be deleted manually by an administrator via the "File Proxies" link in the Admin UI.
+
+The maximum size of any single created file (or in other words, the maximum number of bytes that can be passed to `self.create_file()`) is controlled by the [`JOB_CREATE_FILE_MAX_SIZE`](../../user-guide/administration/configuration/optional-settings.md#job_create_file_max_size) system setting. A `ValueError` exception will be raised if `create_file()` is called with an overly large `content` value.
+
 ### Marking a Job as Failed
 
 To mark a job as failed, raise an exception from within the `run()` method. The exception message will be logged to the traceback of the job result. The job result status will be set to `failed`. To output a job log message you can use the `self.logger.error()` method.
-
-```python
 
 As an example, the following job will fail if the user does not put the word "Taco" in `var1`:
 

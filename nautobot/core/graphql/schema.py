@@ -4,6 +4,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.validators import ValidationError
 from django.db.models.fields.reverse_related import ManyToOneRel, OneToOneRel
 
 import graphene
@@ -22,7 +23,7 @@ from nautobot.core.graphql.generators import (
     generate_schema_type,
     generate_null_choices_resolver,
 )
-from nautobot.core.graphql.types import ContentTypeType
+from nautobot.core.graphql.types import ContentTypeType, JSON
 from nautobot.dcim.graphql.types import (
     CableType,
     CablePathType,
@@ -43,6 +44,7 @@ from nautobot.extras.registry import registry
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
 from nautobot.extras.graphql.types import TagType, DynamicGroupType
+from nautobot.extras.utils import check_if_key_is_graphql_safe
 from nautobot.ipam.graphql.types import IPAddressType, PrefixType
 from nautobot.virtualization.graphql.types import VirtualMachineType, VMInterfaceType
 
@@ -82,6 +84,7 @@ CUSTOM_FIELD_MAPPING = {
     CustomFieldTypeChoices.TYPE_DATE: graphene.Date(),
     CustomFieldTypeChoices.TYPE_URL: graphene.String(),
     CustomFieldTypeChoices.TYPE_SELECT: graphene.String(),
+    CustomFieldTypeChoices.TYPE_JSON: JSON(),
 }
 
 
@@ -278,6 +281,17 @@ def extend_schema_type_computed_field(schema_type, model):
 
     for field in cfs:
         field_name = f"{prefix}{field.key}"
+        try:
+            check_if_key_is_graphql_safe("Computed Field", field.key)
+        except ValidationError:
+            logger.warning(
+                'Unable to add the computed field "%s" to %s because computed field key "%s" is not GraphQL safe',
+                field,
+                schema_type._meta.name,
+                field_name,
+            )
+            continue
+
         resolver_name = f"resolve_{field_name}"
 
         if hasattr(schema_type, resolver_name):
