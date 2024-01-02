@@ -72,6 +72,71 @@ Support for versions of PostgreSQL prior to 12.0 has been removed as these versi
 Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specific permissions will now always be hidden from users lacking those permissions. Additionally, users not logged in will now be automatically redirected to the login page.
 
 <!-- towncrier release notes start -->
+## v2.1.0 (2023-12-22)
+
+### Security
+
+- [#4988](https://github.com/nautobot/nautobot/issues/4988) - Fixed missing object-level permissions enforcement when running a JobButton ([GHSA-vf5m-xrhm-v999](https://github.com/nautobot/nautobot/security/advisories/GHSA-vf5m-xrhm-v999)).
+- [#4988](https://github.com/nautobot/nautobot/issues/4988) - Removed the requirement for users to have both `extras.run_job` and `extras.run_jobbutton` permissions to run a Job via a Job Button. Only `extras.run_job` permission is now required.
+- [#5002](https://github.com/nautobot/nautobot/issues/5002) - Updated `paramiko` to `3.4.0` due to CVE-2023-48795. As this is not a direct dependency of Nautobot, it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+### Added
+
+- [#2149](https://github.com/nautobot/nautobot/issues/2149) - Added customizable panels on the homepage.
+- [#4708](https://github.com/nautobot/nautobot/issues/4708) - Added VRF to interface bulk edit form.
+- [#4757](https://github.com/nautobot/nautobot/issues/4757) - Added system check for minimum PostgreSQL version.
+- [#4893](https://github.com/nautobot/nautobot/issues/4893) - Added reverse capability from `IPAddress` to the custom through table `IPAddressToInterface`.
+- [#4895](https://github.com/nautobot/nautobot/issues/4895) - Added `http_method`, `headers`, and `ca_file_path` fields, as well as `render_headers`, `render_extra_config`, and `render_remote_url` APIs, to the `ExternalIntegration` model.
+- [#4926](https://github.com/nautobot/nautobot/issues/4926) - Added support for a JSONVar in Nautobot Jobs.
+- [#4942](https://github.com/nautobot/nautobot/issues/4942) - Added DynamicRoute() to NautobotUIViewSet to support custom actions.
+- [#4965](https://github.com/nautobot/nautobot/issues/4965) - Added MMF OM5 cable type to cable type choices.
+- [#4973](https://github.com/nautobot/nautobot/issues/4973) - Created convenience methods to access Git with and without secrets.
+- [#4984](https://github.com/nautobot/nautobot/issues/4984) - Added `JOB_CREATE_FILE_MAX_SIZE` setting.
+- [#4989](https://github.com/nautobot/nautobot/issues/4989) - Added a link to the Advanced tab on detail views to easily open the object in the API browser.
+
+### Changed
+
+- [#4884](https://github.com/nautobot/nautobot/issues/4884) - Added Bootstrap tooltips for all HTML elements with a `title` attribute.
+- [#4888](https://github.com/nautobot/nautobot/issues/4888) - Moved username and user actions menu from the top of the nav bar to the bottom.
+- [#4896](https://github.com/nautobot/nautobot/issues/4896) - Updated UI colors to match updated Nautobot branding guidelines.
+- [#4897](https://github.com/nautobot/nautobot/issues/4897) - Changed screenshots in docs to reflect UI changes.
+- [#4961](https://github.com/nautobot/nautobot/issues/4961) - Widened left navigation menu and made longer menus truncate instead of overflowing into the next line.
+- [#4961](https://github.com/nautobot/nautobot/issues/4961) - Inserted a divider in between the standard navigation menus and the user menu at the bottom.
+- [#4996](https://github.com/nautobot/nautobot/issues/4996) - Changed the order and help text of fields in the External Integration create and edit forms.
+- [#5003](https://github.com/nautobot/nautobot/issues/5003) - Updated gifs to showcase new Nautobot 2.1 interface.
+
+### Removed
+
+- [#4757](https://github.com/nautobot/nautobot/issues/4757) - Dropped support for PostgreSQL versions before 12.0.
+- [#4988](https://github.com/nautobot/nautobot/issues/4988) - Removed redundant `/extras/job-button/<uuid>/run/` URL endpoint; Job Buttons now use `/extras/jobs/<uuid>/run/` endpoint like any other job.
+
+### Fixed
+
+- [#4620](https://github.com/nautobot/nautobot/issues/4620) - Ensure UI build directory is created on init of nautobot-server.
+- [#4627](https://github.com/nautobot/nautobot/issues/4627) - Fixed JSON custom field being returned as a `repr()` string when using GraphQL.
+- [#4834](https://github.com/nautobot/nautobot/issues/4834) - Fixed display of custom field choices when editing a CustomField.
+- [#4834](https://github.com/nautobot/nautobot/issues/4834) - Fixed display of child groups when editing a DynamicGroup.
+- [#4835](https://github.com/nautobot/nautobot/issues/4835) - Fixed incorrect (too dark) color for disabled text fields in forms.
+- [#4835](https://github.com/nautobot/nautobot/issues/4835) - Fixed incorrect (too low contrast) color for text fields and select menus in forms in dark theme.
+- [#4917](https://github.com/nautobot/nautobot/issues/4917) - Improved performance of location hierarchy HTML template.
+- [#4961](https://github.com/nautobot/nautobot/issues/4961) - Fixed bug in dark mode where the left navigation menu top level items would turn white when losing focus.
+- [#4968](https://github.com/nautobot/nautobot/issues/4968) - Fixed some cases in which the `ipam.0025` data migration might throw an exception due to invalid data.
+- [#4977](https://github.com/nautobot/nautobot/issues/4977) - Fixed early return conditional in `ensure_git_repository`.
+
+### Documentation
+
+- [#4735](https://github.com/nautobot/nautobot/issues/4735) - Documented Django Admin Log Entries in v2.1 Release Overview.
+- [#4736](https://github.com/nautobot/nautobot/issues/4736) - Documented `isnull` filter expression in v2.1 Release Overview.
+- [#4766](https://github.com/nautobot/nautobot/issues/4766) - Updated documentation for registering tab views.
+- [#4984](https://github.com/nautobot/nautobot/issues/4984) - Fixed up docstrings for a number of Job-related classes and methods.
+
+### Housekeeping
+
+- [#4647](https://github.com/nautobot/nautobot/issues/4647) - Added DeviceFactory.
+- [#4896](https://github.com/nautobot/nautobot/issues/4896) - Added `/theme-preview/` view (only when `settings.DEBUG` is enabled) to preview various UI elements and layouts.
+- [#4942](https://github.com/nautobot/nautobot/issues/4942) - Added example of a custom action on a NautobotUIViewSet to the Example App.
+- [#4988](https://github.com/nautobot/nautobot/issues/4988) - Fixed some bugs in `example_plugin.jobs.ExampleComplexJobButtonReceiver`.
+
 ## v2.1.0-beta.1 (2023-11-30)
 
 ### Added
