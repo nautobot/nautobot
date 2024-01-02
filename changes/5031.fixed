@@ -1,0 +1,1 @@
+Updated the default sanitizer pattern to include secret(s) and to be flexible with python dictionaries.

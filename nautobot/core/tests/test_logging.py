@@ -21,6 +21,14 @@ class LoggingUtilitiesTest(testing.TestCase):
         ("Password: is1234", "Password: (redacted)"),
         ("Password is: is1234", "Password is: (redacted)"),
         ("Password is is1234", "Password is (redacted)"),
+        ("secret is: is1234", "secret is: (redacted)"),
+        ("Secret is is1234", "Secret is (redacted)"),
+        ("secrets is: is1234", "secrets is: (redacted)"),
+        ("Secrets is is1234", "Secrets is (redacted)"),
+        ({"username": "is1234"}, {"username": "(redacted)"}),
+        ({"password": "is1234"}, {"password": "(redacted)"}),
+        ({"secret": "is1234"}, {"secret": "(redacted)"}),
+        ({"secrets": "is1234"}, {"secrets": "(redacted)"}),
     )
 
     def test_sanitize_default_coverage(self):
