@@ -1,1 +1,0 @@
-Added `/theme-preview/` view (only when `settings.DEBUG` is enabled) to preview various UI elements and layouts.
