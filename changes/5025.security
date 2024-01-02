@@ -1,0 +1,1 @@
+Updated alpha-UI dependency `axios` to `^1.6.3` due to [SNYK-JS-AXIOS-6124857](https://security.snyk.io/vuln/SNYK-JS-AXIOS-6124857).
