@@ -689,7 +689,6 @@ Done.
 `nautobot-server runjob --username <username> [--local] [--data <data>] <job>`
 
 Run a job (script, report) to validate or update data in Nautobot. The Job name must be in the Python module form: `<module_name>.<JobClassName>`. You can find this under the Job's detail view on the "Class Path" row.
---
 
 `--username <username>`  
 User account to impersonate as the requester of this job.
