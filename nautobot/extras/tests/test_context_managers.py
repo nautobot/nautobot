@@ -18,7 +18,9 @@ User = get_user_model()
 class WebRequestContextTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            username="jacob", email="jacob@example.com", password="top_secret"  # noqa: S106
+            username="jacob",
+            email="jacob@example.com",
+            password="top_secret",  # noqa: S106
         )
 
         location_ct = ContentType.objects.get_for_model(Location)

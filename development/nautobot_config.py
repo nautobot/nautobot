@@ -64,9 +64,7 @@ if is_truthy(os.getenv("ENABLE_OIDC", "False")):
         "public_key"
     ]
     SOCIAL_AUTH_KEYCLOAK_AUTHORIZATION_URL = "http://localhost:8087/realms/nautobot/protocol/openid-connect/auth"
-    SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL = (
-        "http://keycloak:8087/realms/nautobot/protocol/openid-connect/token"  # noqa: S105
-    )
+    SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL = "http://keycloak:8087/realms/nautobot/protocol/openid-connect/token"  # noqa: S105
     SOCIAL_AUTH_KEYCLOAK_VERIFY_SSL = False
 
 METRICS_ENABLED = True

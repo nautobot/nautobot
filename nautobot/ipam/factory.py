@@ -201,9 +201,7 @@ class VLANFactory(PrimaryModelFactory):
                     ),
                 )
             ]
-        )[
-            :255
-        ]  # truncate to max VLAN.name length just to be safe
+        )[:255]  # truncate to max VLAN.name length just to be safe
     )
 
     status = random_instance(lambda: Status.objects.get_for_model(VLAN), allow_null=False)

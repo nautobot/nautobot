@@ -480,7 +480,9 @@ class JobResult(BaseModel, CustomFieldModel):
         help_text="The data returned by the task",
     )
     worker = models.CharField(  # noqa: DJ001
-        max_length=100, default=None, null=True  # TODO: should this be default="", blank=True instead?
+        max_length=100,
+        default=None,
+        null=True,  # TODO: should this be default="", blank=True instead?
     )
     task_args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
     task_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)

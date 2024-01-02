@@ -96,7 +96,10 @@ def render_app_label(context, app, fallback=""):
 
 @register.simple_tag(takes_context=True)
 def render_app_description(
-    context, app, fallback="", template="/admin_app_description.html"  # pylint: disable=redefined-outer-name
+    context,
+    app,
+    fallback="",
+    template="/admin_app_description.html",  # pylint: disable=redefined-outer-name
 ):
     """Render the application description using the default template name. If it cannot find a
     template matching the given path, fallback to the fallback argument.

@@ -246,7 +246,8 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         Test the behavior of the token create view when an invalid password is supplied
         """
         auth = self._create_basic_authentication_header(
-            username=self.basic_auth_user_granted.username, password="hunter2"  # noqa: S106
+            username=self.basic_auth_user_granted.username,
+            password="hunter2",  # noqa: S106
         )
         response = self.client.post(self._get_list_url(), HTTP_AUTHORIZATION=auth)
 
