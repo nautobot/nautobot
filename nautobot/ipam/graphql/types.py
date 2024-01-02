@@ -2,7 +2,7 @@ import graphene
 
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.extras.models import DynamicGroup
-from nautobot.ipam import models, filters
+from nautobot.ipam import filters, models
 
 
 class IPAddressType(OptimizedNautobotObjectType):

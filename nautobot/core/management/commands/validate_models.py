@@ -1,7 +1,7 @@
 from django.apps import apps
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand, CommandError
 from django.core.exceptions import ValidationError
+from django.core.management.base import BaseCommand, CommandError
 
 
 class Command(BaseCommand):

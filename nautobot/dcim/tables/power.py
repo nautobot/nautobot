@@ -9,6 +9,7 @@ from nautobot.core.tables import (
 )
 from nautobot.dcim.models import PowerFeed, PowerPanel
 from nautobot.extras.tables import StatusTableMixin
+
 from .devices import CableTerminationTable
 
 __all__ = (

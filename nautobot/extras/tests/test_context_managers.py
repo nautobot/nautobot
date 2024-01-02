@@ -10,7 +10,6 @@ from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEvent
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Status, Webhook
 
-
 # Use the proper swappable User model
 User = get_user_model()
 

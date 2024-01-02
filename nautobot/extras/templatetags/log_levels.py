@@ -2,7 +2,6 @@ from django import template
 
 from nautobot.extras.choices import LogLevelChoices
 
-
 register = template.Library()
 
 

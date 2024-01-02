@@ -16,3 +16,14 @@ python = ">=3.8,<3.12"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 120
+target-version = "py38"
+
+[tool.ruff.lint.isort]
+known-first-party = ["example_plugin"]
+section-order = ["future", "standard-library", "nautobot", "first-party", "local-folder", "third-party"]
+
+[tool.ruff.lint.isort.sections]
+"nautobot" = ["nautobot"]

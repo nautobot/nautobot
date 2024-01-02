@@ -39,8 +39,8 @@ from nautobot.extras.filters import (
     GitRepositoryFilterSet,
     GraphQLQueryFilterSet,
     ImageAttachmentFilterSet,
-    JobFilterSet,
     JobButtonFilterSet,
+    JobFilterSet,
     JobHookFilterSet,
     JobLogEntryFilterSet,
     JobResultFilterSet,
@@ -85,7 +85,7 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.ipam.filters import VLANFilterSet
-from nautobot.ipam.models import IPAddress, VLAN, VLANGroup, Namespace, Prefix
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
 

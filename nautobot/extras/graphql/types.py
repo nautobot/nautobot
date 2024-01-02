@@ -1,6 +1,6 @@
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
-from nautobot.extras.models import Status, Tag, DynamicGroup
-from nautobot.extras.filters import StatusFilterSet, TagFilterSet, DynamicGroupFilterSet
+from nautobot.extras.filters import DynamicGroupFilterSet, StatusFilterSet, TagFilterSet
+from nautobot.extras.models import DynamicGroup, Status, Tag
 
 
 class TagType(OptimizedNautobotObjectType):

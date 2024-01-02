@@ -1,12 +1,12 @@
 import uuid
 
+from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.urls import NoReverseMatch, reverse
 from django.utils.encoding import is_protected_type
-from django.conf import settings
-from django.contrib.contenttypes.models import ContentType
-from django.core.cache import cache
 from django.utils.functional import classproperty
 
 from nautobot.core.models.managers import BaseManager

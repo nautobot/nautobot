@@ -1,36 +1,34 @@
+from collections import OrderedDict
 import itertools
 import logging
 import platform
-from collections import OrderedDict
 
 from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
+from django.http.response import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import NoReverseMatch, reverse as django_reverse
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.reverse import reverse
-from rest_framework.views import APIView
-from rest_framework.viewsets import ModelViewSet as ModelViewSet_
-from rest_framework.viewsets import ReadOnlyModelViewSet as ReadOnlyModelViewSet_
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.exceptions import PermissionDenied, ParseError
 from drf_spectacular.plumbing import get_relative_url, set_query_parameters
 from drf_spectacular.renderers import OpenApiJsonRenderer
 from drf_spectacular.utils import extend_schema
-from drf_spectacular.views import SpectacularSwaggerView, SpectacularRedocView
-
+from drf_spectacular.views import SpectacularRedocView, SpectacularSwaggerView
+from graphene_django.settings import graphene_settings
+from graphene_django.views import GraphQLView, HttpError, instantiate_middleware
 from graphql import get_default_backend
 from graphql.execution import ExecutionResult
-from graphql.type.schema import GraphQLSchema
 from graphql.execution.middleware import MiddlewareManager
-from graphene_django.settings import graphene_settings
-from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
+from graphql.type.schema import GraphQLSchema
+from rest_framework import status
+from rest_framework.exceptions import ParseError, PermissionDenied
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.reverse import reverse
+from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet as ModelViewSet_, ReadOnlyModelViewSet as ReadOnlyModelViewSet_
 
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.celery import app as celery_app
@@ -41,6 +39,7 @@ from nautobot.core.utils.lookup import get_form_for_model, get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
 from nautobot.extras.registry import registry
+
 from . import serializers
 
 HTTP_ACTIONS = {

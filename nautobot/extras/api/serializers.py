@@ -30,15 +30,15 @@ from nautobot.dcim.api.serializers import (
     RackSerializer,
 )
 from nautobot.extras import choices, models
+from nautobot.extras.api.mixins import (
+    TaggedModelSerializerMixin,
+)
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
     JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
-)
-from nautobot.extras.api.mixins import (
-    TaggedModelSerializerMixin,
 )
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (

@@ -6,27 +6,26 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import ValidationError
 from django.db.models.fields.reverse_related import ManyToOneRel, OneToOneRel
-
 import graphene
 from graphene.types import generic
 
 from nautobot.circuits.graphql.types import CircuitTerminationType
-from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.graphql.generators import (
     generate_attrs_for_schema_type,
     generate_computed_field_resolver,
     generate_custom_field_resolver,
     generate_filter_resolver,
     generate_list_search_parameters,
+    generate_null_choices_resolver,
     generate_relationship_resolver,
     generate_restricted_queryset,
     generate_schema_type,
-    generate_null_choices_resolver,
 )
 from nautobot.core.graphql.types import ContentTypeType, JSON
+from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.dcim.graphql.types import (
-    CableType,
     CablePathType,
+    CableType,
     ConsolePortType,
     ConsoleServerPortType,
     DeviceType,
@@ -40,10 +39,10 @@ from nautobot.dcim.graphql.types import (
     RackType,
     RearPortType,
 )
-from nautobot.extras.registry import registry
-from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
-from nautobot.extras.graphql.types import TagType, DynamicGroupType
+from nautobot.extras.graphql.types import DynamicGroupType, TagType
+from nautobot.extras.models import ComputedField, CustomField, Relationship
+from nautobot.extras.registry import registry
 from nautobot.extras.utils import check_if_key_is_graphql_safe
 from nautobot.ipam.graphql.types import IPAddressType, PrefixType
 from nautobot.virtualization.graphql.types import VirtualMachineType, VMInterfaceType

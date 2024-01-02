@@ -1,7 +1,6 @@
 from nautobot.core.apps import HomePageItem, HomePagePanel
 from nautobot.virtualization.models import Cluster, VirtualMachine
 
-
 layout = (
     HomePagePanel(
         name="Virtualization",

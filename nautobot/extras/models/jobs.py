@@ -41,9 +41,9 @@ from nautobot.extras.constants import (
     JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
+from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.models import ChangeLoggedModel, GitRepository
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -51,7 +51,6 @@ from nautobot.extras.utils import (
 )
 
 from .customfields import CustomFieldModel
-
 
 logger = logging.getLogger(__name__)
 

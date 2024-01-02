@@ -2,8 +2,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 import netaddr
 
-from .formfields import IPNetworkFormField
 from . import lookups
+from .formfields import IPNetworkFormField
 
 
 class VarbinaryIPField(models.BinaryField):

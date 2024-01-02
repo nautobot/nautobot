@@ -24,8 +24,8 @@ from nautobot.dcim.form_mixins import (
 from nautobot.dcim.models import Device, Location, Rack
 from nautobot.extras.forms import (
     NautobotBulkEditForm,
-    NautobotModelForm,
     NautobotFilterForm,
+    NautobotModelForm,
     RoleModelBulkEditFormMixin,
     RoleModelFilterFormMixin,
     StatusModelBulkEditFormMixin,
@@ -35,10 +35,11 @@ from nautobot.extras.forms import (
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
-from .choices import IPAddressVersionChoices, IPAddressTypeChoices, ServiceProtocolChoices, PrefixTypeChoices
+
+from .choices import IPAddressTypeChoices, IPAddressVersionChoices, PrefixTypeChoices, ServiceProtocolChoices
 from .constants import (
-    IPADDRESS_MASK_LENGTH_MIN,
     IPADDRESS_MASK_LENGTH_MAX,
+    IPADDRESS_MASK_LENGTH_MIN,
     PREFIX_LENGTH_MAX,
     PREFIX_LENGTH_MIN,
     SERVICE_PORT_MAX,

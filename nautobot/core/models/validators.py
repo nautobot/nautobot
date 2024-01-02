@@ -2,7 +2,7 @@ import re
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import BaseValidator, RegexValidator, URLValidator, _lazy_re_compile
+from django.core.validators import _lazy_re_compile, BaseValidator, RegexValidator, URLValidator
 
 
 class EnhancedURLValidator(URLValidator):

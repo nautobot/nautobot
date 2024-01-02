@@ -10,8 +10,8 @@ from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.text import slugify
 from rest_framework import status
-from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 from rest_framework.relations import ManyRelatedField
+from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.core import testing
 from nautobot.core.api.utils import get_serializer_for_model
@@ -21,9 +21,7 @@ from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import mixins, views
 from nautobot.core.utils import lookup
 from nautobot.core.utils.data import is_uuid
-from nautobot.extras import choices as extras_choices
-from nautobot.extras import models as extras_models
-from nautobot.extras import registry
+from nautobot.extras import choices as extras_choices, models as extras_models, registry
 from nautobot.users import models as users_models
 
 __all__ = (
