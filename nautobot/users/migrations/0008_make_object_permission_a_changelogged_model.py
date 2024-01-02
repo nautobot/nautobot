@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('users', '0007_alter_objectpermission_object_types'),
+        ("users", "0007_alter_objectpermission_object_types"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='objectpermission',
-            name='created',
+            model_name="objectpermission",
+            name="created",
             field=models.DateTimeField(auto_now_add=True, null=True),
         ),
         migrations.AddField(
-            model_name='objectpermission',
-            name='last_updated',
+            model_name="objectpermission",
+            name="last_updated",
             field=models.DateTimeField(auto_now=True, null=True),
         ),
     ]
