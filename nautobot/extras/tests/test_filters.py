@@ -2,6 +2,7 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import Q
 from django.test import override_settings
 
@@ -33,6 +34,8 @@ from nautobot.extras.filters import (
     CustomFieldChoiceFilterSet,
     CustomLinkFilterSet,
     ExportTemplateFilterSet,
+    ExternalIntegrationFilterSet,
+    FileProxyFilterSet,
     GitRepositoryFilterSet,
     GraphQLQueryFilterSet,
     ImageAttachmentFilterSet,
@@ -59,6 +62,8 @@ from nautobot.extras.models import (
     CustomFieldChoice,
     CustomLink,
     ExportTemplate,
+    ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -498,6 +503,64 @@ class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
     def test_search(self):
         params = {"q": "export"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+
+class FileProxyTestCase(FilterTestCases.FilterTestCase):
+    queryset = FileProxy.objects.all()
+    filterset = FileProxyFilterSet
+
+    generic_filter_tests = (
+        ["job", "job_result__job_model__id"],
+        ["job", "job_result__job_model__name"],
+        ["job_result_id"],
+        ["name"],
+        ["uploaded_at"],
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        jobs = Job.objects.all()[:3]
+        job_results = (JobResult.objects.create(job_model=job) for job in jobs)
+        for i, job_result in enumerate(job_results):
+            FileProxy.objects.create(
+                name=f"File {i}.txt", file=SimpleUploadedFile(name=f"File {i}.txt", content=b""), job_result=job_result
+            )
+
+
+class ExternalIntegrationTestCase(FilterTestCases.FilterTestCase):
+    queryset = ExternalIntegration.objects.all()
+    filterset = ExternalIntegrationFilterSet
+
+    generic_filter_tests = (
+        ["name"],
+        ["remote_url"],
+        ["timeout"],
+        ["secrets_group", "secrets_group__id"],
+        ["secrets_group", "secrets_group__name"],
+        ["http_method"],
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        secrets_groups = (
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
+        )
+        external_integrations = list(ExternalIntegration.objects.all()[:2])
+        external_integrations[0].secrets_group = secrets_groups[0]
+        external_integrations[1].secrets_group = secrets_groups[1]
+        for ei in external_integrations:
+            ei.validated_save()
+
+    def test_verify_ssl(self):
+        params = {"verify_ssl": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(verify_ssl=True)
+        )
+        params = {"verify_ssl": False}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(verify_ssl=False)
+        )
 
 
 class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
@@ -1170,7 +1233,7 @@ class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
             ),
         )
         vlan_status = Status.objects.get_for_model(VLAN).first()
-        vlan_group = VLANGroup.objects.first()
+        vlan_group = VLANGroup.objects.create(name="Test VLANGroup 1")
         cls.vlans = (
             VLAN.objects.create(vid=1, name="VLAN 1", status=vlan_status, vlan_group=vlan_group),
             VLAN.objects.create(vid=2, name="VLAN 2", status=vlan_status, vlan_group=vlan_group),
@@ -1297,7 +1360,7 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
             ),
         )
         vlan_status = Status.objects.get_for_model(VLAN).first()
-        vlan_group = VLANGroup.objects.first()
+        vlan_group = VLANGroup.objects.create(name="Test VLANGroup 1")
         cls.vlans = (
             VLAN.objects.create(vid=1, name="VLAN 1", status=vlan_status, vlan_group=vlan_group),
             VLAN.objects.create(vid=2, name="VLAN 2", status=vlan_status, vlan_group=vlan_group),

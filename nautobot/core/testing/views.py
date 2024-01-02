@@ -6,8 +6,9 @@ import uuid
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.validators import URLValidator
 from django.test import TestCase as _TestCase
 from django.test import override_settings, tag
 from django.urls import NoReverseMatch, reverse
@@ -337,7 +338,22 @@ class ViewTestCases:
                 # Verify ObjectChange creation
                 objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
+                # Assert that Created By table row is updated with the user that created the object
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_CREATE)
+                # Validate if detail view exists
+                validate = URLValidator()
+                detail_url = instance.get_absolute_url()
+                try:
+                    validate(detail_url)
+                    response = self.client.get(detail_url)
+                    response_body = testing.extract_page_body(response.content.decode(response.charset))
+                    advanced_tab_href = f"{detail_url}#advanced"
+                    self.assertIn(advanced_tab_href, response_body)
+                    self.assertIn("<td>Created By</td>", response_body)
+                    self.assertIn("<td>nautobotuser</td>", response_body)
+                except ValidationError:
+                    # Instance does not have a valid detail view, do nothing here.
+                    pass
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_create_object_with_constrained_permission(self):
@@ -463,6 +479,20 @@ class ViewTestCases:
                 objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
+                # Validate if detail view exists
+                validate = URLValidator()
+                detail_url = instance.get_absolute_url()
+                try:
+                    validate(detail_url)
+                    response = self.client.get(detail_url)
+                    response_body = testing.extract_page_body(response.content.decode(response.charset))
+                    advanced_tab_href = f"{detail_url}#advanced"
+                    self.assertIn(advanced_tab_href, response_body)
+                    self.assertIn("<td>Last Updated By</td>", response_body)
+                    self.assertIn("<td>nautobotuser</td>", response_body)
+                except ValidationError:
+                    # Instance does not have a valid detail view, do nothing here.
+                    pass
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_edit_object_with_constrained_permission(self):
@@ -707,7 +737,7 @@ class ViewTestCases:
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             self.assertIn("Unknown filter field", content, msg=content)
             # There should be no table rows displayed except for the empty results row
-            self.assertIn(f"No {self.model._meta.verbose_name_plural} found", content, msg=content)
+            self.assertIn("None", content, msg=content)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=False)
         def test_list_objects_unknown_filter_no_strict_filtering(self):
@@ -732,7 +762,7 @@ class ViewTestCases:
             content = testing.extract_page_body(response.content.decode(response.charset))
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             self.assertNotIn("Unknown filter field", content, msg=content)
-            self.assertNotIn(f"No {self.model._meta.verbose_name_plural} found", content, msg=content)
+            self.assertIn("None", content, msg=content)
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(instance1.name) + r"\s*<", msg=content)
                 self.assertRegex(content, r">\s*" + re.escape(instance2.name) + r"\s*<", msg=content)
@@ -1117,7 +1147,7 @@ class ViewTestCases:
             # Check if the first and second pk is passed into the form.
             self.assertIn(f'<input type="hidden" name="pk" value="{first_pk}"', response_body)
             self.assertIn(f'<input type="hidden" name="pk" value="{second_pk}"', response_body)
-            self.assertIn("<h1>Editing 2 ", response_body)
+            self.assertIn("Editing 2 ", response_body)
             # Check if the third pk is not passed into the form.
             self.assertNotIn(f'<input type="hidden" name="pk" value="{third_pk}"', response_body)
 

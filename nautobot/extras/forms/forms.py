@@ -1,3 +1,5 @@
+import inspect
+
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -36,6 +38,7 @@ from nautobot.extras.choices import (
     JobResultStatusChoices,
     ObjectChangeActionChoices,
     RelationshipTypeChoices,
+    WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.datasources import get_datasource_content_choices
@@ -49,6 +52,7 @@ from nautobot.extras.models import (
     DynamicGroup,
     DynamicGroupMembership,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -108,6 +112,8 @@ __all__ = (
     "DynamicGroupMembershipFormSet",
     "ExportTemplateForm",
     "ExportTemplateFilterForm",
+    "ExternalIntegrationForm",
+    "ExternalIntegrationBulkEditForm",
     "GitRepositoryForm",
     "GitRepositoryBulkEditForm",
     "GitRepositoryFilterForm",
@@ -566,6 +572,61 @@ class ExportTemplateFilterForm(BootstrapMixin, forms.Form):
         required=False,
         label="Content Type",
     )
+
+
+#
+# External integrations
+#
+
+
+class ExternalIntegrationForm(NautobotModelForm):
+    class Meta:
+        model = ExternalIntegration
+        fields = "__all__"
+
+        HEADERS_HELP_TEXT = """
+            Optional user-defined <a href="https://json.org/">JSON</a> data for this integration. Example:
+            <pre>{
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            }</pre>
+        """
+        EXTRA_CONFIG_HELP_TEXT = """
+            Optional user-defined <a href="https://json.org/">JSON</a> data for this integration. Example:
+            <pre>{
+                "key": "value",
+                "key2": [
+                    "value1",
+                    "value2"
+                ]
+            }</pre>
+        """
+        help_texts = {
+            "headers": inspect.cleandoc(HEADERS_HELP_TEXT),
+            "extra_config": inspect.cleandoc(EXTRA_CONFIG_HELP_TEXT),
+        }
+
+
+class ExternalIntegrationBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        widget=forms.MultipleHiddenInput(),
+    )
+    remote_url = forms.CharField(required=False, label="Remote URL")
+    secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
+    verify_ssl = forms.NullBooleanField(required=False, label="Verify SSL", widget=BulkEditNullBooleanSelect)
+    timeout = forms.IntegerField(required=False, min_value=0)
+    extra_config = forms.JSONField(required=False)
+    http_method = forms.ChoiceField(
+        required=False,
+        label="HTTP Method",
+        choices=add_blank_choice(WebhookHttpMethodChoices),
+    )
+    headers = forms.JSONField(required=False, label="HTTP Request headers")
+
+    class Meta:
+        model = ExternalIntegration
+        nullable_fields = ["extra_config", "secrets_group", "headers"]
 
 
 #

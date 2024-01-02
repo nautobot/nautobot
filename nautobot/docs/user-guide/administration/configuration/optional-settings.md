@@ -14,7 +14,7 @@ A number of settings can alternatively be configured via the Nautobot Admin UI. 
 * [DEVICE_NAME_AS_NATURAL_KEY](#device_name_as_natural_key)
 * [DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT](#dynamic_groups_member_cache_timeout)
 * [FEEDBACK_BUTTON_ENABLED](#feedback_button_enabled)
-* [HIDE_RESTRICTED_UI](#hide_restricted_ui)
+* [JOB_CREATE_FILE_MAX_SIZE](#job_create_file_max_size)
 * [LOCATION_NAME_AS_NATURAL_KEY](#location_name_as_natural_key)
 * [MAX_PAGE_SIZE](#max_page_size)
 * [NETWORK_DRIVERS](#network_drivers)
@@ -84,6 +84,8 @@ This defines custom content to be displayed on the login page above the login fo
 
 ## BRANDING_FILEPATHS
 
++++ 1.2.0
+
 Default:
 
 ```python
@@ -95,6 +97,8 @@ Default:
     "icon_180": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_180", None),  # 180x180px icon - used for the apple-touch-icon header
     "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192px icon
     "icon_mask": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None),  # mono-chrome icon used for the mask-icon header
+    "header_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None),  # bullet image used for various view headers
+    "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None)   # bullet image used for nav menu headers
 }
 ```
 
@@ -109,6 +113,12 @@ These environment variables may be used to specify the values:
 * `NAUTOBOT_BRANDING_FILEPATHS_ICON_180`
 * `NAUTOBOT_BRANDING_FILEPATHS_ICON_192`
 * `NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK`
+
++++ 2.1.0
+    <!-- markdownlint-disable MD037 -->
+    * `NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET`
+    * `NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET`
+    <!-- markdownlint-enable MD037 -->
 
 If a custom image asset is not provided for any of the above options, the stock Nautobot asset is used.
 
@@ -128,6 +138,8 @@ Defines the prefix of the filename when exporting to CSV/YAML or export template
 
 ## BRANDING_TITLE
 
++++ 1.2.0
+
 Default: `"Nautobot"`
 
 Environment Variable: `NAUTOBOT_BRANDING_TITLE`
@@ -137,6 +149,8 @@ The defines the custom branding title that should be used in place of "Nautobot"
 ---
 
 ## BRANDING_URLS
+
++++ 1.2.0
 
 Default:
 
@@ -520,20 +534,6 @@ By default, all relationship associations in GraphQL will be prefixed with `rel`
 
 ---
 
-## HIDE_RESTRICTED_UI
-
-Default: `False`
-
-When set to `True`, users with limited permissions will only be able to see items in the UI they have access to.
-
-+++ 1.2.0
-    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
-
-+++ 1.3.10
-    When this setting is set to `True`, logged out users will be redirected to the login page when navigating to the Nautobot home page.
-
----
-
 ## HTTP_PROXIES
 
 Default: `None` (Disabled)
@@ -566,6 +566,51 @@ Default: `True` for existing Nautobot deployments, user-specified when running `
 Environment Variable: `NAUTOBOT_INSTALLATION_METRICS_ENABLED`
 
 When set to `True`, Nautobot will send anonymized installation metrics to the Nautobot maintainers when running the [`post_upgrade`](../tools/nautobot-server.md#post_upgrade) or [`send_installation_metrics`](../tools/nautobot-server.md#send_installation_metrics) management commands. See the documentation for the [`send_installation_metrics`](../tools/nautobot-server.md#send_installation_metrics) management command for more details.
+
+---
+
+## JOB_FILE_IO_STORAGE
+
++++ 2.1.0
+
+Default: `"db_file_storage.storage.DatabaseFileStorage"`
+
+Environment Variable: `NAUTOBOT_JOB_FILE_IO_STORAGE`
+
+The backend storage engine for handling files provided as input to Jobs and files generated as output by Jobs.
+
+!!! warning
+    For backwards compatibility with storage of Job inputs in prior versions of Nautobot, this currently defaults to using `DatabaseFileStorage` to store such files directly in Nautobot's database, however this is not typically the best option (see below) and may change in a future major release.
+
+If your Nautobot server instance(s) and your Celery worker instance(s) share a common [`MEDIA_ROOT`](#media_root) filesystem (as would typically be the case in a single-server installation of Nautobot) then we recommend changing this to `"django.core.files.storage.FileSystemStorage"` to store Job files on the filesystem (which will place them into a `files/` subdirectory under [`MEDIA_ROOT`](#media_root)) instead of in the database.
+
+If your Nautobot server instance(s) and Celery worker instance(s) do _not_ share a common filesystem, we recommend using one of the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) options such as S3 to provide a storage backend that can be accessed by the server(s) and worker(s) alike.
+
+!!! tip
+    For an example of using `django-storages` with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md) user-guide.
+
+If you have neither a common `MEDIA_ROOT` filesystem nor an appropriate remote storage option, then it's permissible to leave this at its default, but know that storing files in the database is provided here as a "least-worst" option only.
+
+!!! caution
+    It's typically safe to change this setting when initially updating to Nautobot 2.1.0 or later, as there should be no pre-existing Job output files, although any existing scheduled Jobs that have file _inputs_ may need to be deleted and recreated after doing so. However, once you've run any Jobs that output to a file, changing storage backends will of course break any existing links to Job output files in the previous storage backend. Migrating Job stored files from one backend to another is out of scope for this document.
+
+> See also: [`STORAGE_BACKEND`](#storage_backend) and [`JOB_CREATE_FILE_MAX_SIZE`](#job_create_file_max_size).
+
+---
+
+## JOB_CREATE_FILE_MAX_SIZE
+
++++ 2.1.0
+
+Default: `10485760` (10 MiB)
+
+The maximum file size (in bytes) that a running Job will be allowed to create in a single call to `Job.create_file()`.
+
+If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value in `nautobot_config.py`, it will override any dynamically configured value.
+
+> See also: [`JOB_FILE_IO_STORAGE`](#job_file_io_storage)
+
+---
 
 ## JOBS_ROOT
 
@@ -863,9 +908,12 @@ Default: `None` (local storage)
 
 The backend storage engine for handling uploaded files (e.g. image attachments). Nautobot supports integration with the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) package, which provides backends for several popular file storage services. If not configured, local filesystem storage will be used.
 
-An example of using django-storages with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md) user-guide.
+!!! tip
+    For an example of using `django-storages` with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md) user-guide.
 
 The configuration parameters for the specified storage backend are defined under the [`STORAGE_CONFIG`](#storage_config) setting.
+
+> See also: [`JOB_FILE_IO_STORAGE`](#job_file_io_storage)
 
 ---
 

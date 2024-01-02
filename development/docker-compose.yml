@@ -1,5 +1,7 @@
 ---
 version: "3.9"
+volumes:
+  media_root:
 services:
   nautobot:
     build:
@@ -11,6 +13,8 @@ services:
     image: "local/nautobot-dev:local-py${PYTHON_VER}"
     ports:
       - "8080:8080"
+    volumes:
+      - media_root:/opt/nautobot/media
     depends_on:
       redis:
         condition: service_started
@@ -35,6 +39,8 @@ services:
     image: "local/nautobot-dev:local-py${PYTHON_VER}"
     ports:
       - "8081:8080"
+    volumes:
+      - media_root:/opt/nautobot/media
     entrypoint: "watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events"
     healthcheck:
       interval: 60s
@@ -47,8 +53,10 @@ services:
         - "-c"
         - "nautobot-server celery inspect ping --destination celery@$$HOSTNAME"
     depends_on:
-      - nautobot
-      - redis
+      nautobot:
+        condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - ./dev.env
     tty: true
@@ -63,8 +71,10 @@ services:
     #   retries: 3
     #   test: ["CMD", "nautobot-server", "health_check"]
     depends_on:
-      - nautobot
-      - redis
+      nautobot:
+        condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - ./dev.env
     tty: true

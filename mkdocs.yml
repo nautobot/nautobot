@@ -145,6 +145,7 @@ plugins:
         'core-functionality/virtualization.md': 'user-guide/core-data-model/virtualization/virtualmachine.md'
         'core-functionality/vlans.md': 'user-guide/core-data-model/ipam/vlan.md'
         'development/application-registry.md': 'development/core/application-registry.md'
+        'development/apps/api/ui-extensions/tabs.md': 'development/apps/api/ui-extensions/object-detail-views.md'
         'development/best-practices.md': 'development/core/best-practices.md'
         'development/docker-compose-advanced-use-cases.md': 'development/core/docker-compose-advanced-use-cases.md'
         'development/extending-models.md': 'development/core/extending-models.md'
@@ -396,6 +397,7 @@ nav:
       - Custom Links: "user-guide/platform-functionality/customlink.md"
       - Dynamic Groups: "user-guide/platform-functionality/dynamicgroup.md"
       - Export Templates: "user-guide/platform-functionality/exporttemplate.md"
+      - External Integrations: "user-guide/platform-functionality/externalintegration.md"
       - Git Repositories: "user-guide/platform-functionality/gitrepository.md"
       - GraphQL:
         - "user-guide/platform-functionality/graphql.md"
@@ -471,8 +473,7 @@ nav:
         - Home Page: "development/apps/api/ui-extensions/home-page.md"
         - Links in the Installed Apps View: "development/apps/api/configuration-view.md"
         - Navigation: "development/apps/api/ui-extensions/navigation.md"
-        - Object Detail Views: "development/apps/api/ui-extensions/object-detail-views.md"
-        - Tabs: "development/apps/api/ui-extensions/tabs.md"
+        - Object Detail Views and Tabs: "development/apps/api/ui-extensions/object-detail-views.md"
       - Testing: "development/apps/api/testing.md"
       - Code Reference:
         - nautobot.apps: "code-reference/nautobot/apps/__init__.md"
@@ -513,6 +514,7 @@ nav:
       - Getting Started: "development/core/getting-started.md"
       - Advanced Docker Compose Usage: "development/core/docker-compose-advanced-use-cases.md"
       - Application Registry: "development/core/application-registry.md"
+      - Bootstrap UI: "development/core/bootstrap-ui.md"
       - Best Practices: "development/core/best-practices.md"
       - Extending Models: "development/core/extending-models.md"
       - Generic Views: "development/core/generic-views.md"
@@ -529,6 +531,7 @@ nav:
       - Release Checklist: "development/core/release-checklist.md"
   - Release Notes:
     - "release-notes/index.md"
+    - Version 2.1: "release-notes/version-2.1.md"
     - Version 2.0: "release-notes/version-2.0.md"
     - Version 1.6: "release-notes/version-1.6.md"
     - Version 1.5: "release-notes/version-1.5.md"

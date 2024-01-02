@@ -6,7 +6,7 @@
         <div class="container-fluid">
             <div class="row">
                 <div class="col-xs-4">
-                    {% if request.user.is_authenticated or not "HIDE_RESTRICTED_UI"|settings_or_config %}
+                    {% if request.user.is_authenticated  %}
                         <p class="text-muted">
                             {% if settings.BRANDING_FILEPATHS.logo and settings.BRANDING_POWERED_BY_URL %}<a href="{{ settings.BRANDING_POWERED_BY_URL }}"><img src="{% static 'img/nautobot_logo.svg' %}" height="20" /> Powered</a> &middot;{% endif %}
                             {{ settings.HOSTNAME }} {% if request.user.is_authenticated %} (v{{ settings.VERSION }}) {% endif %}
@@ -17,7 +17,7 @@
                     <p class="text-muted">{% now 'Y-m-d H:i:s T' %}</p>
                 </div>
                 <div class="col-xs-4 text-right noprint">
-                    {% if request.user.is_authenticated or not "HIDE_RESTRICTED_UI"|settings_or_config %}
+                    {% if request.user.is_authenticated  %}
                     <p class="text-muted">
                         {% if "ENABLE_ALPHA_UI"|settings_or_config %}
                             {% if request.path|is_new_ui_ready %}

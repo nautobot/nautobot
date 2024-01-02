@@ -58,12 +58,13 @@ class Command(BaseCommand):
                 ProviderNetworkFactory,
             )
             from nautobot.dcim.factory import (
+                DeviceFactory,
                 DeviceRedundancyGroupFactory,
                 DeviceTypeFactory,
                 ManufacturerFactory,
                 PlatformFactory,
             )
-            from nautobot.extras.factory import RoleFactory, StatusFactory, TagFactory
+            from nautobot.extras.factory import ExternalIntegrationFactory, RoleFactory, StatusFactory, TagFactory
             from nautobot.extras.management import populate_status_choices
             from nautobot.dcim.factory import (
                 LocationTypeFactory,
@@ -146,6 +147,8 @@ class Command(BaseCommand):
         ManufacturerFactory.create_batch(2, using=db_name)  # Last 2 hard-coded Manufacturers
         self.stdout.write("Creating DeviceRedundancyGroups...")
         DeviceRedundancyGroupFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating Devices...")
+        DeviceFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating CircuitTypes...")
         CircuitTypeFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Providers...")
@@ -172,6 +175,9 @@ class Command(BaseCommand):
             has_description=True,
             using=db_name,
         )
+        self.stdout.write("Creating ExternalIntegrations...")
+        ExternalIntegrationFactory.create_batch(20, using=db_name)
+        # make sure we have some tenants that have null relationships to make filter tests happy
         self.stdout.write("Creating Tenants without Circuits, Locations, IPAddresses, or Prefixes...")
         TenantFactory.create_batch(10, using=db_name)
         # TODO: nautobot.tenancy.tests.test_filters currently calls the following additional factories:
