@@ -23,7 +23,7 @@ ARG PYTHON_VER
 #
 # To create the above targets, we use the following intermediate stages to allow for parallelization and caching:
 #
-# - "system-dependencies" - system-level production dependencies (DB clients, Git, OpenSSL, NodeJS(*), etc.)
+# - "system-dependencies" - system-level production dependencies (DB clients, Git, OpenSSL, etc.)
 #   - "system-dev-dependencies" - system-level development dependencies (Poetry, dev versions of libraries, etc.)
 #     - "system-dev-dependencies-$TARGETARCH" - system-level architecture-specific development dependencies (hadolint)
 #       - "python-dependencies" - Python production dependencies (+ Poetry, though not included in the 'final' image)

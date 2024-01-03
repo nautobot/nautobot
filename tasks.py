@@ -932,8 +932,7 @@ def tests(context, lint_only=False, keepdb=False):
 @task(help={"version": "The version number or the rule to update the version."})
 def version(context, version=None):  # pylint: disable=redefined-outer-name
     """
-    Show the version of Nautobot Python and NPM packages or bump them when a valid bump rule is
-    provided.
+    Show the version of Nautobot Python package or bump it when a valid bump rule is provided.
 
     The version number or rules are those supported by `poetry version`.
     """
