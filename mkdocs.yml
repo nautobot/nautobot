@@ -193,6 +193,7 @@ plugins:
         'models/dcim/devicetype.md': 'user-guide/core-data-model/dcim/devicetype.md'
         'models/dcim/frontport.md': 'user-guide/core-data-model/dcim/frontport.md'
         'models/dcim/frontporttemplate.md': 'user-guide/core-data-model/dcim/frontporttemplate.md'
+        'models/dcim/hardwarefamily.md': 'user-guide/core-data-model/dcim/hardwarefamily.md'
         'models/dcim/interface.md': 'user-guide/core-data-model/dcim/interface.md'
         'models/dcim/interfacetemplate.md': 'user-guide/core-data-model/dcim/interfacetemplate.md'
         'models/dcim/inventoryitem.md': 'user-guide/core-data-model/dcim/inventoryitem.md'
