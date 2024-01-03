@@ -7,15 +7,9 @@
 	"extensions": {
 		"recommendations": [
 			"ms-python.python",
-			"esbenp.prettier-vscode",
-			"dbaeumer.vscode-eslint"
 		]
 	},
 	"settings": {
-		"eslint.format.enable": true,
-		"editor.codeActionsOnSave": {
-			"source.fixAll.eslint": true
-		},
 		"python.formatting.provider": "black",
 		"python.linting.enabled": true,
 		"python.linting.flake8Enabled": true,
@@ -23,9 +17,6 @@
 			"editor.formatOnSave": true
 		},
 		"[javascript]": {
-			"editor.formatOnSave": true
-		},
-		"[javascriptreact]": {
 			"editor.formatOnSave": true
 		},
 		"[jsx-tags]": {
