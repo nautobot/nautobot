@@ -1,0 +1,4 @@
+Fixed an error when attempting to "Save Changes" to an existing GraphQL saved query via the GraphiQL UI.
+Fixed incorrect positioning of the "Save Changes" button in the "Queries" menu in the GraphiQL UI.
+Fixed incorrect specification of the "variables" field in the GraphQL saved query REST API.
+Fixed a display glitch in the detail view for GraphQL saved queries.
