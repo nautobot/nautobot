@@ -53,6 +53,7 @@ from .models import (
     DeviceType,
     FrontPort,
     FrontPortTemplate,
+    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
@@ -2909,3 +2910,11 @@ class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDe
     form_class = forms.InterfaceRedundancyGroupAssociationForm
     template_name = "dcim/interfaceredundancygroupassociation_create.html"
     lookup_field = "pk"
+
+
+class HardwareFamilyUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.HardwareFamilyFilterSet
+    form_class = forms.HardwareFamilyForm
+    queryset = HardwareFamily.objects.annotate(device_type_count=count_related(DeviceType, "hardware_family"))
+    serializer_class = serializers.HardwareFamilySerializer
+    table_class = tables.HardwareFamilyTable

@@ -98,6 +98,7 @@ from .models import (
     DeviceType,
     FrontPort,
     FrontPortTemplate,
+    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
@@ -657,6 +658,19 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
 class ManufacturerForm(NautobotModelForm):
     class Meta:
         model = Manufacturer
+        fields = [
+            "name",
+            "description",
+        ]
+
+#
+# Hardware Family
+#
+
+
+class HardwareFamilyForm(NautobotModelForm):
+    class Meta:
+        model = HardwareFamily
         fields = [
             "name",
             "description",

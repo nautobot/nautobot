@@ -48,6 +48,7 @@ from nautobot.dcim.models import (
     DeviceType,
     FrontPort,
     FrontPortTemplate,
+    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
@@ -100,6 +101,7 @@ __all__ = (
     "DeviceTypeFilterSet",
     "FrontPortFilterSet",
     "FrontPortTemplateFilterSet",
+    "HardwareFamilyFilterSet",
     "InterfaceConnectionFilterSet",
     "InterfaceFilterSet",
     "InterfaceRedundancyGroupFilterSet",
@@ -488,6 +490,22 @@ class ManufacturerFilterSet(NautobotFilterSet, NameSearchFilterSet):
 
     class Meta:
         model = Manufacturer
+        fields = ["id", "name", "description"]
+
+
+class HardwareFamilyFilterSet(NautobotFilterSet, NameSearchFilterSet):
+    device_types = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DeviceType.objects.all(),
+        to_field_name="model",
+        label="Device types (model or ID)",
+    )
+    has_device_types = RelatedMembershipBooleanFilter(
+        field_name="device_types",
+        label="Has device types",
+    )
+
+    class Meta:
+        model = HardwareFamily
         fields = ["id", "name", "description"]
 
 

@@ -14,6 +14,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceType,
     FrontPortTemplate,
+    HardwareFamily,
     InterfaceTemplate,
     Manufacturer,
     PowerOutletTemplate,
@@ -27,6 +28,7 @@ __all__ = (
     "DeviceBayTemplateTable",
     "DeviceTypeTable",
     "FrontPortTemplateTable",
+    "HardwareFamilyTable",
     "InterfaceTemplateTable",
     "ManufacturerTable",
     "PowerOutletTemplateTable",
@@ -56,6 +58,28 @@ class ManufacturerTable(BaseTable):
             "device_type_count",
             "inventory_item_count",
             "platform_count",
+            "description",
+            "actions",
+        )
+
+
+#
+# Hardware Family
+#
+
+
+class HardwareFamilyTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+    device_type_count = tables.Column(verbose_name="Device Types")
+    actions = ButtonsColumn(HardwareFamily)
+
+    class Meta(BaseTable.Meta):
+        model = HardwareFamily
+        fields = (
+            "pk",
+            "name",
+            "device_type_count",
             "description",
             "actions",
         )

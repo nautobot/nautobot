@@ -76,6 +76,28 @@ class Manufacturer(OrganizationalModel):
     "graphql",
     "webhooks",
 )
+class HardwareFamily(PrimaryModel):
+    """
+    A Hardware Family is a model that represents a group of similar DeviceTypes.
+    """
+
+    name = models.CharField(max_length=100, unique=True)
+    description = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
 class DeviceType(PrimaryModel):
     """
     A DeviceType represents a particular make (Manufacturer) and model of device. It specifies rack height and depth, as
@@ -93,6 +115,13 @@ class DeviceType(PrimaryModel):
     """
 
     manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="device_types")
+    hardware_family = models.ForeignKey(
+        to="dcim.HardwareFamily",
+        on_delete=models.PROTECT,
+        related_name="device_types",
+        blank=True,
+        null=True,
+    )
     model = models.CharField(max_length=100)
     part_number = models.CharField(max_length=50, blank=True, help_text="Discrete part number (optional)")
     # 2.0 TODO: Profile filtering on this field if it could benefit from an index
@@ -124,7 +153,7 @@ class DeviceType(PrimaryModel):
     ]
 
     class Meta:
-        ordering = ["manufacturer", "model"]
+        ordering = ["manufacturer", "model", "hardware_family"]
         unique_together = [
             ["manufacturer", "model"],
         ]
