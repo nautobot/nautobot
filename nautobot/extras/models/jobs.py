@@ -453,7 +453,7 @@ class JobResult(BaseModel, CustomFieldModel):
         to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="job_results"
     )
     name = models.CharField(max_length=255, db_index=True)
-    task_name = models.CharField(  # noqa: DJ001
+    task_name = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field
         max_length=255,
         null=True,  # TODO: should this be blank=True instead?
         db_index=True,
@@ -479,7 +479,7 @@ class JobResult(BaseModel, CustomFieldModel):
         verbose_name="Result Data",
         help_text="The data returned by the task",
     )
-    worker = models.CharField(  # noqa: DJ001
+    worker = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field
         max_length=100,
         default=None,
         null=True,  # TODO: should this be default="", blank=True instead?
@@ -487,7 +487,7 @@ class JobResult(BaseModel, CustomFieldModel):
     task_args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
     task_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
     celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
-    traceback = models.TextField(blank=True, null=True)  # noqa: DJ001  # TODO: can we remove null=True?
+    traceback = models.TextField(blank=True, null=True)  # noqa: DJ001  # django-nullable-model-string-field -- TODO: can we remove null=True?
     meta = models.JSONField(null=True, default=None, editable=False)
     scheduled_job = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
 

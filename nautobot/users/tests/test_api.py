@@ -172,7 +172,7 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
 
         self.tokens = [*tokens, self.token]
 
-        self.basic_auth_user_password = "abc123"  # noqa: S105
+        self.basic_auth_user_password = "abc123"  # noqa: S105  # hardcoded-password-string -- OK as this is test code
         self.basic_auth_user_granted = User.objects.create_user(
             username="basicusergranted", password=self.basic_auth_user_password
         )
@@ -247,7 +247,7 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         """
         auth = self._create_basic_authentication_header(
             username=self.basic_auth_user_granted.username,
-            password="hunter2",  # noqa: S106
+            password="hunter2",  # noqa: S106  # hardcoded-password-func-arg -- OK as this is test code
         )
         response = self.client.post(self._get_list_url(), HTTP_AUTHORIZATION=auth)
 
@@ -257,7 +257,7 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         """
         Test the behavior of the token create view when the user supplied is not a valid user
         """
-        auth = self._create_basic_authentication_header(username="iamnotreal", password="P1n0cc#10")  # noqa: S106
+        auth = self._create_basic_authentication_header(username="iamnotreal", password="P1n0cc#10")  # noqa: S106  # hardcoded-password-func-arg -- OK as this is test code
         response = self.client.post(self._get_list_url(), HTTP_AUTHORIZATION=auth)
 
         self.assertEqual(response.status_code, 403)

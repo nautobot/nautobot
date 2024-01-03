@@ -53,7 +53,7 @@ class NautobotJinjaFilterTest(TestCase):
                 data.render_jinja2("{{ data | " + helper + " }}", {"data": None})
             except TemplateAssertionError:
                 raise
-            except Exception:  # noqa: S110
+            except Exception:  # noqa: S110  # try-except-pass -- an antipattern in general, but OK here
                 pass
 
     def test_netutils_filters_in_jinja(self):
@@ -65,7 +65,7 @@ class NautobotJinjaFilterTest(TestCase):
                 data.render_jinja2("{{ data | " + filter_ + " }}", {"data": None})
             except TemplateAssertionError:
                 raise
-            except Exception:  # noqa: S110
+            except Exception:  # noqa: S110  # try-except-pass -- an antipattern in general, but OK here
                 pass
 
     def test_sandboxed_render(self):

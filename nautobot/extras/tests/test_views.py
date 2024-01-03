@@ -921,9 +921,9 @@ class SecretsGroupTestCase(
         )
 
         secrets = (
-            Secret.objects.create(name="secret 1", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108
-            Secret.objects.create(name="secret 2", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108
-            Secret.objects.create(name="secret 3", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108
+            Secret.objects.create(name="secret 1", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file
+            Secret.objects.create(name="secret 2", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file
+            Secret.objects.create(name="secret 3", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file
         )
 
         SecretsGroupAssociation.objects.create(

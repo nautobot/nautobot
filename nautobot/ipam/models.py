@@ -101,7 +101,7 @@ class VRF(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, db_index=True)
-    rd = models.CharField(  # noqa: DJ001
+    rd = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- see below
         max_length=constants.VRF_RD_MAX_LENGTH,
         blank=True,
         null=True,  # because rd is optional but part of a uniqueness constraint
@@ -266,7 +266,7 @@ class VRFDeviceAssignment(BaseModel):
     virtual_machine = models.ForeignKey(
         "virtualization.VirtualMachine", null=True, blank=True, on_delete=models.CASCADE, related_name="vrf_assignments"
     )
-    rd = models.CharField(  # noqa: DJ001
+    rd = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- see below
         max_length=constants.VRF_RD_MAX_LENGTH,
         blank=True,
         null=True,  # because rd is optional but (will be) part of a uniqueness constraint

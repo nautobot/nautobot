@@ -115,5 +115,5 @@ def generate_random_device_asset_tag_of_specified_size(size):
     """
     For testing purposes only; it returns a random string of size 100 consisting of letters and numbers.
     """
-    asset_tag = "".join(random.choices(string.ascii_letters + string.digits, k=size))  # noqa: S311
+    asset_tag = "".join(random.choices(string.ascii_letters + string.digits, k=size))  # noqa: S311  # suspicious-non-cryptographic-random-usage
     return asset_tag

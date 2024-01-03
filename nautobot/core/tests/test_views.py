@@ -41,7 +41,7 @@ class GetReturnURLMixinTestCase(TestCase):
         self.assertEqual(self.mixin.get_return_url(request=request, obj=None), reverse("home"))
 
     def test_get_return_url_explicit_punycode(self):
-        request = self.factory.get("/", {"return_url": "/dcım/devices/"})  # noqa: RUF001
+        request = self.factory.get("/", {"return_url": "/dcım/devices/"})  # noqa: RUF001  # ambiguous-unicode-character-string -- fully intentional here!
         self.assertEqual(self.mixin.get_return_url(request=request, obj=None), "/dc%C4%B1m/devices/")
 
     def test_get_return_url_default_with_obj(self):

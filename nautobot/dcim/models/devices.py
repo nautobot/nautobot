@@ -408,7 +408,7 @@ class Device(PrimaryModel, ConfigContextModel):
         blank=True,
         null=True,
     )
-    name = models.CharField(  # noqa: DJ001
+    name = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- intentional, see below
         max_length=64,
         blank=True,
         null=True,  # because name is part of uniqueness constraint but is optional

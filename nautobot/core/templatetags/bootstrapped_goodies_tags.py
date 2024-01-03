@@ -16,7 +16,7 @@ def render_with_template_if_exist(context, template, fallback):  # pylint: disab
     text = fallback
     try:
         text = render_to_string(template, context)
-    except Exception:  # noqa: S110
+    except Exception:  # noqa: S110  # try-except-pass --  generally an antipattern, but it's intentional here
         pass
     return text
 
@@ -36,7 +36,7 @@ def language_selector(context):
         context["i18n_is_set"] = True
         try:
             output = render_to_string(template_, context)
-        except Exception:  # noqa: S110
+        except Exception:  # noqa: S110  # try-except-pass --  generally an antipattern, but it's intentional here
             pass
     return output
 
