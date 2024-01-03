@@ -1,0 +1,1 @@
+Updated the LocationType clone process to pre-populate the original object's parent, nestable and content type fields.
