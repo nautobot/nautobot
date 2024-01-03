@@ -1,7 +1,1 @@
-Added database indexes to the ObjectChange model:
-
-- Added index on field `user_name`
-- Added `changed_object_double_idx` index on fields: `changed_object_type`, `changed_object_id`
-- Added `related_object_double_idx` index on fields: `related_object_type`, `related_object_id`
-- Added `user_changed_object_triple_idx` index on fields: `user`, `changed_object_type`, `changed_object_id`
-- Added `name_changed_object_triple_idx` index on fields: `user_name`, `changed_object_type`, `changed_object_id`
+Added database indexes to the ObjectChange model to improve performance when filtering by `user_name`, `changed_object`, or `related_object`, and also by `changed_object` in combination with `user` or `user_name`.
