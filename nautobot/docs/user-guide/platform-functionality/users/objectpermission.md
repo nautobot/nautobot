@@ -56,5 +56,4 @@ To achieve a logical OR with a different set of constraints, define multiple obj
 Additionally, where multiple permissions have been assigned for an object type, their collective constraints will be merged using a logical "OR" operation.
 
 +++ 2.1.1
-
-The ObjectPermission model now has changelogging capabilities. If an admin user modifies ObjectPermission instances from the django admin page, change logs will be automatically generated and will be accessible from the Nautobot main menu > Extensibility > Change Log.
+    The ObjectPermission model now has change-logging capabilities. When object permissions are created, updated, or deleted, change logs will be automatically generated and will be viewable by users with the appropriate permissions.
