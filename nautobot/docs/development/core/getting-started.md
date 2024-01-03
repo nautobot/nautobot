@@ -243,7 +243,7 @@ Available tasks:
   unittest               Run Nautobot unit tests.
   unittest-coverage      Report on code test coverage as measured by 'invoke unittest'.
   unittest-ui            Run Nautobot UI unit tests.
-  version                Show the version of Nautobot Python and NPM packages or bump them when a valid bump rule is
+  version                Show the version of Nautobot Python and NPM packages or bump them when a valid bump rule is provided.
   vscode                 Launch Visual Studio Code with the appropriate Environment variables to run in a container.
   yamllint               Run yamllint to validate formatting applies to YAML standards.
 ```
