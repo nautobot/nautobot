@@ -642,8 +642,11 @@ def hadolint(context):
 @task
 def markdownlint(context):
     """Lint Markdown files."""
-    command = (
-        "markdownlint "
+    if is_truthy(context.nautobot.local) and not context.run("command -v markdownlint", warn=True):
+        command = "npm exec -- markdownlint "
+    else:
+        command = "markdownlint "
+    command += (
         "--ignore nautobot/project-static "
         "--config .markdownlint.yml --rules scripts/use-relative-md-links.js "
         "nautobot examples *.md"
