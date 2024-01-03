@@ -40,6 +40,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "ordering": ["name"],
+                "verbose_name_plural": "Hardware Families",
             },
             bases=(
                 models.Model,
