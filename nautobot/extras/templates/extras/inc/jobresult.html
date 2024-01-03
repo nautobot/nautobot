@@ -81,8 +81,8 @@
 <div class="panel panel-default">
     <div class="panel-heading">
         <strong>Logs</strong>
-        <div class="pull-right col-md-2 noprint">
-            <input class="form-control log-filter" type="text" placeholder="Filter log level or message" title="Filter log level or message (regular expressions supported)" style="height: 23px" />
+        <div class="pull-right noprint">
+            <input class="form-control" id="log-filter" type="text" placeholder="Filter log level or message" title="Filter log level or message" style="height: 23px" />
         </div>
     </div>
     {% ajax_table "log_table" "extras:jobresult_log-table" pk=result.pk %}

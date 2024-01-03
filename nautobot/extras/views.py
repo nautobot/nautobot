@@ -1561,7 +1561,9 @@ class JobLogEntryTableView(View):
         instance = self.queryset.get(pk=pk)
         filter_q = request.GET.get("q")
         if filter_q:
-            queryset = instance.job_log_entries.filter(Q(message__iregex=filter_q) | Q(log_level__iregex=filter_q))
+            queryset = instance.job_log_entries.filter(
+                Q(message__icontains=filter_q) | Q(log_level__icontains=filter_q)
+            )
         else:
             queryset = instance.job_log_entries.all()
         log_table = tables.JobLogEntryTable(data=queryset, user=request.user)
