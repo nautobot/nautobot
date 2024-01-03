@@ -134,19 +134,19 @@ class ObjectChange(BaseModel):
                 fields=["-time"],
             ),
             models.Index(
-                name="changed_object_double_idx",
+                name="changed_object_idx",
                 fields=["changed_object_type", "changed_object_id"],
             ),
             models.Index(
-                name="related_object_double_idx",
+                name="related_object_idx",
                 fields=["related_object_type", "related_object_id"],
             ),
             models.Index(
-                name="user_changed_object_triple_idx",
+                name="user_changed_object_idx",
                 fields=["user", "changed_object_type", "changed_object_id"],
             ),
             models.Index(
-                name="name_changed_object_triple_idx",
+                name="user_name_changed_object_idx",
                 fields=["user_name", "changed_object_type", "changed_object_id"],
             ),
         ]
