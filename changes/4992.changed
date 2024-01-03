@@ -1,1 +1,1 @@
-Make ObjectPermission a Changelogged model.
+Added change-logging (ObjectChange support) for the ObjectPermission model.
