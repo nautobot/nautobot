@@ -221,7 +221,7 @@ class Command(BaseCommand):
 
         try:
             result = subprocess.run(
-                shlex.split(command),
+                shlex.split(command),  # noqa: S603  # subprocess-without-shell-equals-true -- we control the input here
                 check=False,
                 cwd=cwd,
                 env={**os.environ.copy()},

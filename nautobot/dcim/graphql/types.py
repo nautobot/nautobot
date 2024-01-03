@@ -35,7 +35,6 @@ from nautobot.dcim.filters import (
     RearPortFilterSet,
     LocationFilterSet,
 )
-from nautobot.extras.graphql.types import TagType  # noqa: F401
 from nautobot.extras.models import DynamicGroup
 
 

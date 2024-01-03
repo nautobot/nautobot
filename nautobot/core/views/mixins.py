@@ -305,9 +305,10 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         elif self.action == "changelog":
             return ObjectChangeTable
 
-        assert (
-            self.table_class is not None
-        ), f"'{self.__class__.__name__}' should include a `table_class` attribute for bulk operations"
+        if self.table_class is None:
+            raise NotImplementedError(
+                f"'{self.__class__.__name__}' should include a `table_class` attribute for bulk operations"
+            )
 
         return self.table_class
 

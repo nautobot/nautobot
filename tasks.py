@@ -562,28 +562,6 @@ def build_example_plugin_docs(context):
 # ------------------------------------------------------------------------------
 # TESTS
 # ------------------------------------------------------------------------------
-@task(
-    help={
-        "autoformat": "Apply formatting recommendations automatically, rather than failing if formatting is incorrect.",
-    }
-)
-def black(context, autoformat=False):
-    """Check Python code style with Black."""
-    if autoformat:
-        black_command = "black"
-    else:
-        black_command = "black --check --diff"
-
-    command = f"{black_command} development/ examples/ nautobot/ tasks.py"
-
-    run_command(context, command)
-
-
-@task
-def flake8(context):
-    """Check for PEP8 compliance and other style issues."""
-    command = "flake8 development/ examples/ nautobot/ tasks.py"
-    run_command(context, command)
 
 
 @task(
@@ -611,11 +589,28 @@ def pylint(context, target=None, recursive=False):
         run_command(context, command)
 
 
-@task
-def ruff(context, output_format="text"):
-    """Run ruff to perform static analysis and linting."""
-    command = f"ruff --output-format {output_format} development/ examples/ nautobot/ tasks.py"
-    run_command(context, command)
+@task(
+    help={
+        "action": "One of 'lint', 'format', or 'both'",
+        "autoformat": "Automatically apply formatting recommendations, rather than failing if formatting is incorrect.",
+        "fix": "Automatically apply linting recommendations where possible. May not be able to fix all.",
+        "output_format": "see https://docs.astral.sh/ruff/settings/#output-format",
+    },
+)
+def ruff(context, action="both", autoformat=False, fix=False, output_format="text"):
+    """Run ruff to perform code formatting and/or linting."""
+    if action != "lint":
+        command = "ruff format"
+        if not autoformat:
+            command += " --check"
+        command += " development/ examples/ nautobot/ tasks.py"
+        run_command(context, command)
+    if action != "format":
+        command = "ruff check"
+        if fix:
+            command += " --fix"
+        command += f" --output-format {output_format} development/ examples/ nautobot/ tasks.py"
+        run_command(context, command)
 
 
 @task
@@ -685,7 +680,8 @@ def check_schema(context, api_version=None):
         nautobot_version = get_nautobot_version()
         # logic equivalent to nautobot.core.settings REST_FRAMEWORK_ALLOWED_VERSIONS - keep them in sync!
         current_major, current_minor = [int(v) for v in nautobot_version.split(".")[:2]]
-        assert current_major == 2, f"check_schemas version calc must be updated to handle version {current_major}"
+        if current_major != 2:
+            raise RuntimeError(f"check_schemas version calc must be updated to handle version {current_major}")
         api_versions = [f"{current_major}.{minor}" for minor in range(0, current_minor + 1)]
 
     for api_vers in api_versions:
@@ -998,8 +994,6 @@ def eslint(context, autoformat=False):
 )
 def tests(context, lint_only=False, keepdb=False):
     """Run all linters and unit tests."""
-    black(context)
-    flake8(context)
     prettier(context)
     eslint(context)
     hadolint(context)

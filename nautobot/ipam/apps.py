@@ -16,7 +16,7 @@ class IPAMConfig(NautobotConfig):
 
         from graphene_django.converter import convert_django_field, convert_field_to_string
         from nautobot.ipam.fields import VarbinaryIPField
-        import nautobot.ipam.signals  # noqa: F401
+        import nautobot.ipam.signals  # noqa: F401  # unused-import -- but this import installs the signals
 
         # Register VarbinaryIPField to be converted to a string type
         convert_django_field.register(VarbinaryIPField)(convert_field_to_string)
