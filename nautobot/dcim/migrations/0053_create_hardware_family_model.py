@@ -15,10 +15,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterModelOptions(
-            name="devicetype",
-            options={"ordering": ["manufacturer", "model", "hardware_family"]},
-        ),
         migrations.CreateModel(
             name="HardwareFamily",
             fields=[
@@ -40,7 +36,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "ordering": ["name"],
-                "verbose_name_plural": "Hardware Families",
+                "verbose_name_plural": "hardware families",
             },
             bases=(
                 models.Model,

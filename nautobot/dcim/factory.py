@@ -273,7 +273,7 @@ class DeviceRedundancyGroupFactory(PrimaryModelFactory):
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
 
-class HardwareFamilyFactory(OrganizationalModelFactory):
+class HardwareFamilyFactory(PrimaryModelFactory):
     class Meta:
         model = HardwareFamily
         exclude = ("has_description",)

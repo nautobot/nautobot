@@ -86,7 +86,7 @@ class HardwareFamily(PrimaryModel):
 
     class Meta:
         ordering = ["name"]
-        verbose_name_plural = "Hardware Families"
+        verbose_name_plural = "hardware families"
 
     def __str__(self):
         return self.name
@@ -154,7 +154,7 @@ class DeviceType(PrimaryModel):
     ]
 
     class Meta:
-        ordering = ["manufacturer", "model", "hardware_family"]
+        ordering = ["manufacturer", "model"]
         unique_together = [
             ["manufacturer", "model"],
         ]
