@@ -86,6 +86,7 @@ class HardwareFamily(PrimaryModel):
 
     class Meta:
         ordering = ["name"]
+        verbose_name_plural = "Hardware Families"
 
     def __str__(self):
         return self.name

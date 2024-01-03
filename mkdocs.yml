@@ -340,6 +340,7 @@ nav:
         - Rack Group: "user-guide/core-data-model/dcim/rackgroup.md"
         - Rack: "user-guide/core-data-model/dcim/rack.md"
         - Manufacturer: "user-guide/core-data-model/dcim/manufacturer.md"
+        - Hardware Family: "user-guide/core-data-model/dcim/hardwarefamily.md"
         - Platform: "user-guide/core-data-model/dcim/platform.md"
         - Device Type:
           - "user-guide/core-data-model/dcim/devicetype.md"

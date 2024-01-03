@@ -246,7 +246,7 @@ menu_items = (
                     NavMenuItem(
                         link="dcim:hardwarefamily_list",
                         name="Hardware Families",
-                        weight=200,
+                        weight=300,
                         permissions=[
                             "dcim.view_hardwarefamily",
                         ],

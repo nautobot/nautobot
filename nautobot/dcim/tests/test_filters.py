@@ -33,6 +33,7 @@ from nautobot.dcim.filters import (
     DeviceTypeFilterSet,
     FrontPortFilterSet,
     FrontPortTemplateFilterSet,
+    HardwareFamilyFilterSet,
     InterfaceFilterSet,
     InterfaceRedundancyGroupFilterSet,
     InterfaceRedundancyGroupAssociationFilterSet,
@@ -69,6 +70,7 @@ from nautobot.dcim.models import (
     DeviceType,
     FrontPort,
     FrontPortTemplate,
+    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
@@ -873,6 +875,16 @@ class ManufacturerTestCase(FilterTestCases.NameOnlyFilterTestCase):
         InventoryItem.objects.create(device=devices[0], name="Inventory Item 1", manufacturer=cls.manufacturers[0])
         InventoryItem.objects.create(device=devices[1], name="Inventory Item 2", manufacturer=cls.manufacturers[1])
         InventoryItem.objects.create(device=devices[2], name="Inventory Item 3", manufacturer=cls.manufacturers[2])
+
+
+class HardwareFamilyTestCase(FilterTestCases.NameOnlyFilterTestCase):
+    queryset = HardwareFamily.objects.all()
+    filterset = HardwareFamilyFilterSet
+    generic_filter_tests = [
+        ("description",),
+        ("device_types", "device_types__id"),
+        ("device_types", "device_types__model"),
+    ]
 
 
 class DeviceTypeTestCase(FilterTestCases.FilterTestCase):

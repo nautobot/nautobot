@@ -31,6 +31,7 @@ from nautobot.dcim.models import (
     DeviceType,
     FrontPort,
     FrontPortTemplate,
+    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceTemplate,
@@ -693,6 +694,35 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
                 "description": "Reservation #6",
             },
         ]
+
+
+class HardwareFamilyTest(APIViewTestCases.APIViewTestCase):
+    model = HardwareFamily
+    create_data = [
+        {
+            "name": "Hardware Family 4",
+        },
+        {
+            "name": "Hardware Family 5",
+        },
+        {
+            "name": "Hardware Family 6",
+        },
+        {
+            "name": "Hardware Family 7",
+        },
+    ]
+    bulk_update_data = {
+        "description": "New description",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
+        # `get_deletable_object_pks` but this is a workaround just so all of these objects are
+        # deletable for now.
+        Device.objects.all().delete()
+        DeviceType.objects.all().delete()
 
 
 class ManufacturerTest(APIViewTestCases.APIViewTestCase):

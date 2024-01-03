@@ -2918,3 +2918,4 @@ class HardwareFamilyUIViewSet(NautobotUIViewSet):
     queryset = HardwareFamily.objects.annotate(device_type_count=count_related(DeviceType, "hardware_family"))
     serializer_class = serializers.HardwareFamilySerializer
     table_class = tables.HardwareFamilyTable
+    lookup_field = "pk"

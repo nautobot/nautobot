@@ -418,6 +418,11 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             ],
             "include_others": True,
         }
+        extra_kwargs = {
+            "hardware_family": {
+                "required": False,
+            },
+        }
 
 
 class ConsolePortTemplateSerializer(NautobotModelSerializer):
