@@ -921,9 +921,9 @@ class SecretsGroupTestCase(
         )
 
         secrets = (
-            Secret.objects.create(name="secret 1", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file
-            Secret.objects.create(name="secret 2", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file
-            Secret.objects.create(name="secret 3", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file
+            Secret.objects.create(name="secret 1", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file -- false positive
+            Secret.objects.create(name="secret 2", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file -- false positive
+            Secret.objects.create(name="secret 3", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file -- false positive
         )
 
         SecretsGroupAssociation.objects.create(
@@ -2294,7 +2294,7 @@ class RelationshipTestCase(
             "relationship &quot;VLANs require at least one Device&quot;",
         )
         for vlan in vlans[:3]:
-            self.assertContains(response, f"{vlan!s}")
+            self.assertContains(response, str(vlan))
 
         # Try editing 6 VLANs and adding the required device (succeeds):
         response = self.client.post(

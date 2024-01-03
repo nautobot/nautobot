@@ -8,6 +8,7 @@
 		"recommendations": [
 			"ms-python.python",
 			"esbenp.prettier-vscode",
+			"charliermarsh.ruff",
 			"dbaeumer.vscode-eslint"
 		]
 	},
