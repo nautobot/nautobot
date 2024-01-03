@@ -416,7 +416,7 @@ class BaseFilterSetTest(TestCase):
     class TestFilterSet(filters.BaseFilterSet):
         """Filterset for testing various fields."""
 
-        class TestModel(django_models.Model):
+        class TestModel(django_models.Model):  # noqa: DJ008  # django-model-without-dunder-str -- fine since this isn't a "real" model
             """
             Test model used by BaseFilterSetTest for filter validation. Should never appear in a schema migration.
             """

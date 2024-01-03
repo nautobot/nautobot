@@ -189,10 +189,6 @@ mkdocstrings = "~0.22.0"
 mkdocstrings-python = "~1.3.0"
 
 [tool.poetry.group.linting.dependencies]
-# Code style enforcement
-black = "~23.7.0"
-# Code style checking and limited static analysis
-flake8 = {version = "~6.0.0", python = ">=3.8.1"}
 # Code style checking for python import statements
 isort = "~5.12.0"
 # Code static analysis
@@ -200,7 +196,7 @@ pylint = "~2.17.7"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
 # Combination linter and code formatter
-ruff = "~0.1.6"
+ruff = "~0.1.10"
 # YAML linting
 yamllint = "~1.30.0"
 
@@ -223,28 +219,6 @@ nautobot-server = "nautobot.core.cli:main"
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.black]
-line-length = 120
-target-version = ['py38', 'py39', 'py310', 'py311']
-include = '\.pyi?$'
-exclude = '''
-(
-  /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | _build
-    | buck-out
-    | build
-    | dist
-    | node_modules
-  )/
-)
-'''
-
 [tool.isort]
 profile = "black"
 line_length = 120
@@ -266,7 +240,7 @@ good-names = """_,i,j,k,pk"""
 
 [tool.pylint.message_control]
 # TODO: re-enable and fix these as time permits
-# unused-import is already covered by flake8
+# unused-import is already covered by ruff
 disable=""",
     abstract-method,
     arguments-differ,
@@ -349,14 +323,19 @@ target-version = "py38"
 
 [tool.ruff.lint]
 select = [
+    "DJ",  # flake8-django
     "E",  # pycodestyle
     "F",  # pyflakes
     # "I",  # isort
-    "S308",  # flake8-bandit: suspicious-mark-safe-usage
+    "PIE",  # flake8-pie
+    "RUF",  # ruff itself
+    "S",  # flake8-bandit
     "W",  # pycodestyle
 ]
 ignore = [
     "E501",  # pycodestyle: line-too-long
+    "PIE808",  # unnecessary-range-start
+    "RUF012",  # mutable-class-default - see https://github.com/astral-sh/ruff/issues/5243
 ]
 
 [tool.ruff.lint.isort]

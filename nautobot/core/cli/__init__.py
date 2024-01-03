@@ -73,7 +73,8 @@ def generate_settings(config_template=CONFIG_TEMPLATE, **kwargs):
     }
 
     with open(config_template) as fh:
-        environment = Environment(loader=BaseLoader, keep_trailing_newline=True)
+        # We don't need autoescape=True since we control the template file
+        environment = Environment(loader=BaseLoader, keep_trailing_newline=True)  # noqa: S701  # jinja2-autoescape-false
         config = environment.from_string(fh.read())
 
     return config.render(**template_vars)

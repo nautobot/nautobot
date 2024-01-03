@@ -20,6 +20,7 @@ from nautobot.core import forms
 from nautobot.core.utils import color, config, data, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
+# S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
 HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
 HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')  # noqa: S308
 HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')  # noqa: S308
@@ -123,7 +124,7 @@ def add_html_id(element_str, id_str):
     match = re.match(r"^(.*?<\w+) ?(.*)$", element_str, flags=re.DOTALL)
     if not match:
         return element_str
-    return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))  # noqa: S308
+    return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))  # noqa: S308  # suspicious-mark-safe-usage
 
 
 @library.filter()
@@ -180,7 +181,7 @@ def render_markdown(value):
     # Render Markdown
     html = markdown(value, extensions=["fenced_code", "tables"])
 
-    return mark_safe(html)  # noqa: S308
+    return mark_safe(html)  # noqa: S308  # suspicious-mark-safe-usage, OK here since we sanitized the string earlier
 
 
 @library.filter()

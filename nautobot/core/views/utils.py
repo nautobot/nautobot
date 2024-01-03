@@ -97,6 +97,8 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
     """From the given serializer class, build a list of field dicts suitable for rendering in the CSV import form."""
     serializer = serializer_class(context={"request": None, "depth": 0})
     fields = []
+    # Note lots of "noqa: S308" in this function. That's `suspicious-mark-safe-usage`, but in all of the below cases
+    # we control the input string and it's known to be safe, so mark_safe() is being used correctly here.
     for field_name, field in serializer.fields.items():
         if field.read_only:
             continue

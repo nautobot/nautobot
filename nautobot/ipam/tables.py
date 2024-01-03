@@ -34,7 +34,7 @@ from .models import (
 )
 from nautobot.virtualization.tables import VMInterfaceTable
 
-AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')  # noqa: S308
+AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')  # noqa: S308  # suspicious-mark-safe-usage -- known safe string here
 
 UTILIZATION_GRAPH = """
 {% load helpers %}
