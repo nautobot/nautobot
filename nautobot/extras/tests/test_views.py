@@ -921,9 +921,9 @@ class SecretsGroupTestCase(
         )
 
         secrets = (
-            Secret.objects.create(name="secret 1", provider="text-file", parameters={"path": "/tmp"}),
-            Secret.objects.create(name="secret 2", provider="text-file", parameters={"path": "/tmp"}),
-            Secret.objects.create(name="secret 3", provider="text-file", parameters={"path": "/tmp"}),
+            Secret.objects.create(name="secret 1", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file -- false positive
+            Secret.objects.create(name="secret 2", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file -- false positive
+            Secret.objects.create(name="secret 3", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file -- false positive
         )
 
         SecretsGroupAssociation.objects.create(
@@ -1038,7 +1038,7 @@ class ScheduledJobTestCase(
     def test_only_enabled_is_listed(self):
         self.add_permissions("extras.view_scheduledjob")
 
-        # this should not appear, since it’s not enabled
+        # this should not appear, since it's not enabled
         ScheduledJob.objects.create(
             enabled=False,
             name="test4",
@@ -2294,7 +2294,7 @@ class RelationshipTestCase(
             "relationship &quot;VLANs require at least one Device&quot;",
         )
         for vlan in vlans[:3]:
-            self.assertContains(response, f"{str(vlan)}")
+            self.assertContains(response, str(vlan))
 
         # Try editing 6 VLANs and adding the required device (succeeds):
         response = self.client.post(

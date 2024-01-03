@@ -305,7 +305,7 @@ class PrefixQuerySet(BaseNetworkQuerySet):
             return super().delete(*args, **kwargs)
         except ProtectedError as err:
             # This will be either IPAddress or Prefix.
-            protected_instance = tuple(err.protected_objects)[0]
+            protected_instance = next(iter(err.protected_objects))
             protected_model = protected_instance._meta.model
             protected_parent = protected_instance.parent
             new_parent = protected_parent.parent_id

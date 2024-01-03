@@ -32,7 +32,7 @@ class WebhookTest(APITestCase):
     def setUpTestData(cls):
         location_ct = ContentType.objects.get_for_model(Location)
         MOCK_URL = "http://localhost/"
-        MOCK_SECRET = "LOOKATMEIMASECRETSTRING"
+        MOCK_SECRET = "LOOKATMEIMASECRETSTRING"  # noqa: S105  # hardcoded-password-string -- OK as this is test code
 
         webhooks = (
             Webhook.objects.create(

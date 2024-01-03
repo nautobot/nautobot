@@ -208,7 +208,6 @@ Example output:
 ```no-highlight
 Available tasks:
 
-  black                  Check Python code style with Black.
   build                  Build Nautobot docker image.
   build-and-check-docs   Build docs for use within Nautobot.
   build-dependencies
@@ -223,7 +222,6 @@ Available tasks:
   docker-push            Tags and pushes docker images to the appropriate repos, intended for release use only.
   dumpdata               Dump data from database to db_output file.
   eslint                 Check for ESLint rule compliance and other style issues.
-  flake8                 Check for PEP8 compliance and other style issues.
   hadolint               Check Dockerfile for hadolint compliance and other style issues.
   integration-test       Run Nautobot integration tests.
   loaddata               Load data from file.
@@ -237,6 +235,7 @@ Available tasks:
   prettier               Check Node.JS code style with Prettier.
   pylint                 Perform static analysis of Nautobot code.
   restart                Gracefully restart containers.
+  ruff                   Run ruff to perform code formatting and/or linting.
   serve-docs             Runs local instance of mkdocs serve (ctrl-c to stop).
   start                  Start Nautobot and its dependencies in detached mode.
   stop                   Stop Nautobot and its dependencies.
@@ -244,7 +243,9 @@ Available tasks:
   unittest               Run Nautobot unit tests.
   unittest-coverage      Report on code test coverage as measured by 'invoke unittest'.
   unittest-ui            Run Nautobot UI unit tests.
+  version                Show the version of Nautobot Python and NPM packages or bump them when a valid bump rule is provided.
   vscode                 Launch Visual Studio Code with the appropriate Environment variables to run in a container.
+  yamllint               Run yamllint to validate formatting applies to YAML standards.
 ```
 
 #### Using Docker with Invoke
@@ -727,23 +728,24 @@ The following environment variables can be provided when running tests to custom
 
 ### Verifying the REST API Schema
 
-If you make changes to the REST API, you should verify that the REST API OpenAPI schema renders correctly without errors. To verify that there are no errors, you can run the `invoke check-schema` command (if using the Docker development environment) or the `nautobot-server spectacular` command. In the latter case you should run the command for each supported REST API version that Nautobot provides (e.g. "1.2", "1.3")
+If you make changes to the REST API, you should verify that the REST API OpenAPI schema renders correctly without errors. To verify that there are no errors, you can run the `invoke check-schema` command (if using the Docker development environment) or the `nautobot-server spectacular` command. In the latter case you should run the command for each supported REST API version that Nautobot provides (e.g. "2.0", "2.1")
 
 | Docker Compose Workflow | Virtual Environment Workflow                                                               |
 | ----------------------- | ------------------------------------------------------------------------------------------ |
-| `invoke check-schema`   | `nautobot-server spectacular --api-version 1.2 --validate --fail-on-warn --file /dev/null` |
+| `invoke check-schema`   | `nautobot-server spectacular --api-version 2.0 --validate --fail-on-warn --file /dev/null` |
 
 ### Verifying Code Style and Static Analysis
 
-To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Flake8](https://flake8.pycqa.org/),  [Black](https://black.readthedocs.io/), [ESLint](https://eslint.org), and [Prettier](https://prettier.io). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
+To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Ruff](https://docs.astral.sh/ruff), [ESLint](https://eslint.org), and [Prettier](https://prettier.io). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by Ruff and [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
 
+<!-- markdownlint-disable no-inline-html -->
 | Docker Compose Workflow | Virtual Environment Workflow                                                                            |
-| ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| `invoke flake8`         | `flake8`                                                                                                |
-| `invoke black`          | `black`                                                                                                 |
-| `invoke eslint`         | `npx eslint .`                                                                                          |
-| `invoke prettier`       | `npx prettier -c .`                                                                                     |
-| `invoke pylint`         | `nautobot-server pylint nautobot tasks.py && nautobot-server pylint --recursive development/ examples/` |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `invoke ruff`           | `ruff format --check nautobot/ development/ examples/ tasks.py`<br>and<br>`ruff check nautobot/ development/ examples/ tasks.py` |
+| `invoke eslint`         | `npx eslint .`                                                                                                                   |
+| `invoke prettier`       | `npx prettier -c .`                                                                                                              |
+| `invoke pylint`         | `nautobot-server pylint nautobot tasks.py`<br>and<br>`nautobot-server pylint --recursive development/ examples/`                 |
+<!-- markdownlint-enable no-inline-html -->
 
 ### Handling Migrations
 
@@ -768,7 +770,7 @@ If your branch modifies a Django model (and as a result requires a database sche
 * If you have yet to run `invoke makemigrations`, you can pass in a name for the migration with the `-n` option, example `invoke makemigrations -n provider_increase_account_length`.
 * If you have already run `invoke makemigrations`, rename the generated migration files, for example `0004_provider_increase_account_length` instead of `0004_auto_20211220_2104`.
 
-You’ll also want to run `black` against the generated migration file as the autogenerated code doesn’t follow our style guide by default.
+You’ll also want to run `invoke ruff --autoformat` (or `ruff format`) against the generated migration file as the autogenerated code doesn’t follow our style guide by default.
 
 When modifying model field attributes, modify the test data in the tests too to reflect these changes and also any forms which refer to the model.
 

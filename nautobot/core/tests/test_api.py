@@ -495,7 +495,7 @@ class NautobotCSVRendererTest(TestCase):
 
         # Make sure a) it's well-constructed parsable CSV and b) it contains what we expect it to, within reason
         reader = csv.DictReader(StringIO(csv_text))
-        read_data = list(reader)[0]
+        read_data = next(iter(reader))
         self.assertIn("id", read_data)
         self.assertEqual(read_data["id"], str(location_type.id))
         self.assertIn("display", read_data)

@@ -12,4 +12,4 @@ class CircuitsConfig(NautobotConfig):
 
     def ready(self):
         super().ready()
-        import nautobot.circuits.signals  # noqa: F401
+        import nautobot.circuits.signals  # noqa: F401  # unused-import -- but this import installs the signals

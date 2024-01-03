@@ -22,7 +22,7 @@ def order_content_types(field):
 class FileProxyForm(forms.ModelForm):
     class Meta:
         model = FileProxy
-        exclude = []
+        fields = ["name", "file"]
         widgets = {
             "file": DBAdminClearableFileInput,
         }
