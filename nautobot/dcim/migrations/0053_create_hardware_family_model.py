@@ -9,36 +9,53 @@ import uuid
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('extras', '0102_set_null_objectchange_contenttype'),
-        ('dcim', '0052_fix_interface_redundancy_group_created'),
+        ("extras", "0102_set_null_objectchange_contenttype"),
+        ("dcim", "0052_fix_interface_redundancy_group_created"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='devicetype',
-            options={'ordering': ['manufacturer', 'model', 'hardware_family']},
+            name="devicetype",
+            options={"ordering": ["manufacturer", "model", "hardware_family"]},
         ),
         migrations.CreateModel(
-            name='HardwareFamily',
+            name="HardwareFamily",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created', models.DateTimeField(auto_now_add=True, null=True)),
-                ('last_updated', models.DateTimeField(auto_now=True, null=True)),
-                ('_custom_field_data', models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder)),
-                ('name', models.CharField(max_length=100, unique=True)),
-                ('description', models.CharField(blank=True, max_length=200)),
-                ('tags', nautobot.core.models.fields.TagsField(through='extras.TaggedItem', to='extras.Tag')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
+                (
+                    "_custom_field_data",
+                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                ),
+                ("name", models.CharField(max_length=100, unique=True)),
+                ("description", models.CharField(blank=True, max_length=200)),
+                ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
-                'ordering': ['name'],
+                "ordering": ["name"],
             },
-            bases=(models.Model, nautobot.extras.models.mixins.DynamicGroupMixin, nautobot.extras.models.mixins.NotesMixin),
+            bases=(
+                models.Model,
+                nautobot.extras.models.mixins.DynamicGroupMixin,
+                nautobot.extras.models.mixins.NotesMixin,
+            ),
         ),
         migrations.AddField(
-            model_name='devicetype',
-            name='hardware_family',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='device_types', to='dcim.hardwarefamily'),
+            model_name="devicetype",
+            name="hardware_family",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="device_types",
+                to="dcim.hardwarefamily",
+            ),
         ),
     ]
