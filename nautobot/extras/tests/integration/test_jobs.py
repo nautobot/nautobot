@@ -1,4 +1,3 @@
-import time
 from django.utils import timezone
 from selenium.webdriver.common.keys import Keys
 
@@ -76,7 +75,8 @@ class JobResultTest(SeleniumTestCase):
         # Test for message (one row should be visible)
         filter_element.fill("")
         filter_element.type(log_entries[0].message)
-        time.sleep(1) # Wait for API call to return a response
+
+        self.browser.is_text_not_present(log_entries[3].message, 10)  # Wait for API call to return a response
         self.assertEqual(1, len(visible_rows()))
         # Check whether the filtered row is visible
         self.assertEqual(log_entries[0].log_level.title(), get_cell_value(1, log_level_column))
@@ -85,7 +85,7 @@ class JobResultTest(SeleniumTestCase):
         # Test for log level (one row should be visible)
         filter_element.fill("")
         filter_element.type(log_entries[3].log_level.title())
-        time.sleep(1) # Wait for API call to return a response
+        self.browser.is_text_not_present(log_entries[2].log_level.title(), 10)  # Wait for API call to return a response
         self.assertEqual(1, len(visible_rows()))
         # Check whether the filtered row is visible
         self.assertEqual(log_entries[3].log_level.title(), get_cell_value(1, log_level_column))
@@ -94,7 +94,7 @@ class JobResultTest(SeleniumTestCase):
         # Test for log level or message with regex (two rows should be visible)
         filter_element.fill("")
         filter_element.type(f"{log_entries[1].message}|{log_entries[2].log_level[:3].title()}")
-        time.sleep(1) # Wait for API call to return a response
+        self.browser.is_text_not_present(log_entries[3].log_level.title(), 10)  # Wait for API call to return a response
         self.assertEqual(2, len(visible_rows()))
         # Check whether the filtered rows are visible
         self.assertEqual(log_entries[1].log_level.title(), get_cell_value(1, log_level_column))
