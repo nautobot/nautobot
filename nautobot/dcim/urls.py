@@ -12,7 +12,6 @@ from .models import (
     DeviceBay,
     DeviceType,
     FrontPort,
-    HardwareFamily,
     Interface,
     InventoryItem,
     Location,

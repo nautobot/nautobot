@@ -663,6 +663,7 @@ class ManufacturerForm(NautobotModelForm):
             "description",
         ]
 
+
 #
 # Hardware Family
 #
