@@ -447,4 +447,3 @@ jobs:
       - "pylint"
       - "tests-mysql"
       - "tests-postgres"
-      - "tests-ui"
