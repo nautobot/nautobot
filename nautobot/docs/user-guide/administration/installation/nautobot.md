@@ -281,20 +281,6 @@ Nautobot does not come with any predefined user accounts. You'll need to create 
 nautobot-server createsuperuser
 ```
 
-## Build Nautobot 2.0 UI
-
-Nautobot 2.0 introduces a new user interface. This interface is built using [React](https://react.dev/) and requires Node.js version 18 or higher to build the UI.
-
-### Build the UI
-
-Nautobot provides a management command to install the required Node.js packages and build the UI:
-
-```no-highlight
-nautobot-server build_ui --npm-install
-```
-
-This only needs to be performed manually the first time Nautobot v2 is installed. The [`post_upgrade`](../tools/nautobot-server.md#post_upgrade) command that must be ran after any Nautobot upgrade will automatically re-run this command.
-
 ## Create Static Directories
 
 Nautobot relies upon many static files including:

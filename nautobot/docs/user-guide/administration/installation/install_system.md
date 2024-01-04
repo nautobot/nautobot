@@ -17,22 +17,12 @@ This will install:
 - Python 3
 - Pip
 - Redis server and client
-- Node.JS and NPM
 
 === "Ubuntu/Debian"
 
     ```bash
     sudo apt update -y
-    sudo apt install -y ca-certificates curl gnupg # Pre-requisites for adding the NodeSource Node.js repository
-
-    # NodeSource Node.js Repository Setup
-    sudo mkdir -p /etc/apt/keyrings  # Create the keyring directory if it doesn't exist
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg  # Add the Node.js signing key
-    NODE_MAJOR=18  # Nautobot requires Node.js 18, the latest LTS release
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list  # Add the Node.js repository
-    
-    sudo apt update -y
-    sudo apt install -y git python3 python3-pip python3-venv python3-dev redis-server nodejs
+    sudo apt install -y git python3 python3-pip python3-venv python3-dev redis-server
     ```
 
 === "RHEL8 + Derivatives"
@@ -40,9 +30,6 @@ This will install:
     ```bash
     sudo dnf check-update
     sudo dnf install -y git python38 python38-devel python38-pip redis
-    sudo dnf module reset -y nodejs # Reset the nodejs modules to ensure we get the desired version
-    sudo dnf module enable -y nodejs:18 # Enable the Node.js 18.x module
-    sudo dnf module install -y nodejs:18/common # Install Node.js 18.x
     ```
 
 ## Database Setup
