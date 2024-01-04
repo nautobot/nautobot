@@ -2,7 +2,7 @@ from django.db.models import Q
 from django.forms import IntegerField
 import django_filters
 
-from nautobot.core.filters import (
+from nautobot.core.filters.filters import (
     MultiValueCharFilter,
     MultiValueDateFilter,
     MultiValueNumberFilter,
