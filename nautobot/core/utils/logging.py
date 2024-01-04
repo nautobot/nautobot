@@ -17,7 +17,8 @@ def sanitize(string, replacement="(redacted)"):
     Uses settings.SANITIZER_PATTERNS as the list of (regexp, repl) tuples to apply.
     """
     # Don't allow regex match groups to be referenced in the replacement string!
-    assert not re.search(r"\\\d|\\g<\d+>", replacement)
+    if re.search(r"\\\d|\\g<\d+>", replacement):
+        raise RuntimeError("Invalid replacement string! Must not contain regex match group references.")
 
     for sanitizer, repl in settings.SANITIZER_PATTERNS:
         try:

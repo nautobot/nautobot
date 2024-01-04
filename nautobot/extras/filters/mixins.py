@@ -213,7 +213,7 @@ class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
             # unioned queryset is also distinct. We also need to conditionally check if the incoming
             # `qs` is distinct in the case that a caller is manually passing in a queryset that may
             # not be distinct. (Ref: https://github.com/nautobot/nautobot/issues/2963)
-            union_qs = self.get_method(self.qs)(Q(**{"id__in": values}))
+            union_qs = self.get_method(self.qs)(Q(id__in=values))
             if qs.query.distinct:
                 union_qs = union_qs.distinct()
 

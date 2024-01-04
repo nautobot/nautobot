@@ -17,7 +17,7 @@ class ExtrasConfig(NautobotConfig):
 
     def ready(self):
         super().ready()
-        import nautobot.extras.signals  # noqa
+        import nautobot.extras.signals  # noqa: F401  # unused-import -- but this import installs the signals
         from nautobot.extras.signals import refresh_job_models
 
         nautobot_database_ready.connect(refresh_job_models, sender=self)

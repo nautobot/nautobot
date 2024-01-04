@@ -9,4 +9,4 @@ class NautobotTask(Task):
     """Nautobot extensions to tasks for integrating with Job machinery."""
 
 
-Task = NautobotTask  # noqa: So that the class path resolves.
+Task = NautobotTask  # So that the class path resolves.

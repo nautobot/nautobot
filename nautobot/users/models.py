@@ -13,6 +13,7 @@ from django.utils import timezone
 from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.utils.data import flatten_dict
+from nautobot.extras.models.change_logging import ChangeLoggedModel
 
 
 __all__ = (
@@ -221,7 +222,7 @@ class Token(BaseModel):
 #
 
 
-class ObjectPermission(BaseModel):
+class ObjectPermission(BaseModel, ChangeLoggedModel):
     """
     A mapping of view, add, change, and/or delete permission for users and/or groups to an arbitrary set of objects
     identified by ORM query parameters.

@@ -52,7 +52,7 @@ class Command(BaseCommand):
             if options.get("data"):
                 data = json.loads(options["data"])
         except json.decoder.JSONDecodeError as error:
-            raise CommandError(f"Invalid JSON data:\n{str(error)}")
+            raise CommandError(f"Invalid JSON data:\n{error!s}")
 
         job_model = Job.objects.get_for_class_path(options["job"])
 

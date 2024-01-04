@@ -67,7 +67,7 @@ class NautobotTestRunner(DiscoverRunner):
             for connection in result:
                 db_name = connection[0].alias
                 print(f'Pre-populating test database "{db_name}" with factory data...')
-                db_command = command + ["--database", db_name]
+                db_command = [*command, "--database", db_name]
                 call_command(*db_command)
 
         return result
