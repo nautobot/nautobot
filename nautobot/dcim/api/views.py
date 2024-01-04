@@ -468,9 +468,9 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         # Get NAPALM enable-secret from the device if present
         if device.secrets_group:
             # Work around inconsistent enable password arg in NAPALM drivers
-            enable_password_arg = "secret"
+            enable_password_arg = "secret"  # noqa: S105  # hardcoded-password-string -- false positive
             if device.platform.napalm_driver.lower() == "eos":
-                enable_password_arg = "enable_password"
+                enable_password_arg = "enable_password"  # noqa: S105  # hardcoded-password-string -- false positive
             try:
                 optional_args[enable_password_arg] = device.secrets_group.get_secret_value(
                     SecretsGroupAccessTypeChoices.TYPE_GENERIC,

@@ -185,7 +185,7 @@ class ObjectPermissionForm(forms.ModelForm):
 
     class Meta:
         model = ObjectPermission
-        exclude = []
+        fields = ["name", "description", "enabled", "object_types", "groups", "users", "actions", "constraints"]
         help_texts = {
             "actions": "Actions granted in addition to those listed above",
             "constraints": "JSON expression of a queryset filter that will return only permitted objects. Leave null "

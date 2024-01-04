@@ -3206,7 +3206,7 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
             test_secret = Secret.objects.create(
                 name="secret-check-test-not-accessible",
                 provider="text-file",
-                parameters={"path": "/tmp/does-not-matter"},
+                parameters={"path": "/tmp/does-not-matter"},  # noqa: S108  # hardcoded-temp-file -- false positive
             )
             response = self.client.get(reverse("extras-api:secret-check", kwargs={"pk": test_secret.pk}), **self.header)
             self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
@@ -3231,7 +3231,7 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
             test_secret = Secret.objects.create(
                 name="secret-check-test-failed",
                 provider="text-file",
-                parameters={"path": "/tmp/does-not-exist"},
+                parameters={"path": "/tmp/does-not-exist"},  # noqa: S108  # hardcoded-temp-file -- false positive
             )
             response = self.client.get(reverse("extras-api:secret-check", kwargs={"pk": test_secret.pk}), **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)

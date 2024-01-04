@@ -408,7 +408,12 @@ class Device(PrimaryModel, ConfigContextModel):
         blank=True,
         null=True,
     )
-    name = models.CharField(max_length=64, blank=True, null=True, db_index=True)
+    name = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- intentional, see below
+        max_length=64,
+        blank=True,
+        null=True,  # because name is part of uniqueness constraint but is optional
+        db_index=True,
+    )
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, null=True, db_index=True)
     serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number", db_index=True)
     asset_tag = models.CharField(
