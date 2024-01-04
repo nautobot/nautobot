@@ -7,7 +7,7 @@ Device Redundancy Groups are created first, before the devices are assigned to t
 
 A failover strategy represents intended operation mode of the group. Supported failover strategy are: Active/Active and Active/Standby.
 
-Secrets groups could be used to inform store secret information used by failover or a cluster of devices.
+Secrets groups could be used to store secret information used by failover or a cluster of devices.
 
 Device Redundancy Group Priority is a Device attribute defined during assigning a Device to a Device Redundancy Group. This field represents the priority the device has in the device redundancy group.
 

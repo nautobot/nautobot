@@ -262,7 +262,9 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         fields = [
             field
             for field in model._meta.get_fields()
-            if field.is_relation and not field.many_to_many and not field.one_to_many
+            if field.is_relation
+            and not field.many_to_many
+            and not field.one_to_many
             # Ignore GenericRel since its `fk` and `content_type` would be used.
             and not isinstance(field, GenericRel)
         ]

@@ -634,7 +634,7 @@ class BaseFilterSet(django_filters.FilterSet):
         if getattr(field, "null", None):
             # Use this method vs extend as the `lookup_map` variable is generally one of
             # the constants which we do not want to update
-            lookup_map = dict(lookup_map, **{"isnull": "isnull"})
+            lookup_map = dict(lookup_map, isnull="isnull")
 
         # Create new filters for each lookup expression in the map
         for lookup_name, lookup_expr in lookup_map.items():

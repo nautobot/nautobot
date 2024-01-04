@@ -108,10 +108,10 @@ class Rack(PrimaryModel):
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
     status = StatusField(blank=False, null=False)
     role = RoleField(blank=True, null=True)
-    facility_id = models.CharField(
+    facility_id = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- intentional, see below
         max_length=50,
         blank=True,
-        null=True,
+        null=True,  # because facility_id is optional but is part of a uniqueness constraint
         verbose_name="Facility ID",
         help_text="Locally-assigned identifier",
     )
