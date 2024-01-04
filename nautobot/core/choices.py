@@ -43,8 +43,8 @@ class ChoiceSet(metaclass=ChoiceSetMeta):
     Example:
         ```python
         class GreekCapitalLetterChoices(ChoiceSet):
-            ALPHA = "Α"
-            BETA = "Β"
+            ALPHA = "A"
+            BETA = "B"
             GAMMA = "Γ"
 
             CHOICES = (

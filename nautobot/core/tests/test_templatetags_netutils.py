@@ -47,6 +47,6 @@ class NautobotTemplateTagsNetutilsTest(TestCase):
                 except ConnectionError:
                     # Yes, some netutils functions such as tcp_ping actually make network calls when invoked. Eeek.
                     pass
-                except Exception:
+                except Exception:  # noqa: S110  # try-except-pass -- an antipattern in general, but OK here
                     # Catch-all - at least it wasn't a TemplateSyntaxError, so good enough for now.
                     pass

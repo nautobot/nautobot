@@ -1,7 +1,6 @@
 import factory
 import logging
 import pytz
-import random
 
 from faker import Faker
 
@@ -298,7 +297,7 @@ class PlatformFactory(OrganizationalModelFactory):
     # If it has a manufacturer, it *might* have a napalm_driver.
     napalm_driver = factory.Maybe(
         "has_manufacturer",
-        factory.LazyAttribute(lambda o: random.choice(NAPALM_DRIVERS.get(o.manufacturer.name, [""]))),
+        factory.LazyAttribute(lambda o: factory.random.randgen.choice(NAPALM_DRIVERS.get(o.manufacturer.name, [""]))),
         "",
     )
 
@@ -310,7 +309,7 @@ class PlatformFactory(OrganizationalModelFactory):
     has_description = NautobotBoolIterator()
     network_driver = factory.Maybe(
         "has_manufacturer",
-        factory.LazyAttribute(lambda o: random.choice(NETWORK_DRIVERS.get(o.manufacturer.name, [""]))),
+        factory.LazyAttribute(lambda o: factory.random.randgen.choice(NETWORK_DRIVERS.get(o.manufacturer.name, [""]))),
         "",
     )
 
