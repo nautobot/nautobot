@@ -336,7 +336,7 @@ class DynamicGroup(OrganizationalModel):
         try:
             cached_query = cache.get(self.members_cache_key)
             if cached_query is not None:
-                unpickled_query = pickle.loads(cached_query)
+                unpickled_query = pickle.loads(cached_query)  # noqa: S301  # suspicious-pickle-usage -- we know, but we control what's in the DB
         except pickle.UnpicklingError:
             logger.warning("Failed to unpickle cached members for %s", self)
         finally:

@@ -67,7 +67,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
     so there is no need to run `collectstatic` prior to running tests.
     """
 
-    host = "0.0.0.0"  # Always listen publicly
+    host = "0.0.0.0"  # noqa: S104  # hardcoded-bind-all-interfaces -- false positive
     selenium_host = SELENIUM_HOST  # Docker: `nautobot`; else `host.docker.internal`
 
     @classmethod
@@ -86,7 +86,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
     def setUp(self):
         super().setUpNautobot(populate_status=True)
 
-        self.password = "testpassword"
+        self.password = "testpassword"  # noqa: S105  # hardcoded-password-string
         self.user.set_password(self.password)
         self.user.save()
 

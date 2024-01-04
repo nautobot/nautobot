@@ -39,7 +39,7 @@ class FilterTestCases:
             values_with_count = queryset.values(field_name).annotate(count=Count(field_name)).order_by("count")
             for value in values_with_count:
                 # randomly break out of loop after 2 values have been selected
-                if len(test_values) > 1 and random.choice([True, False]):
+                if len(test_values) > 1 and random.choice([True, False]):  # noqa: S311  # suspicious-non-cryptographic-random-usage
                     break
                 if value[field_name] and value["count"] < qs_count:
                     qs_count -= value["count"]

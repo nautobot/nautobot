@@ -179,10 +179,11 @@ class ModelViewSetMixin:
         queryset = self.filter_queryset(self.get_queryset())
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
 
-        assert lookup_url_kwarg in self.kwargs, (
-            f"Expected view {self.__class__.__name__} to be called with a URL keyword argument named "
-            f'"{lookup_url_kwarg}". Fix your URL conf, or set the `.lookup_field` attribute on the view correctly.'
-        )
+        if lookup_url_kwarg not in self.kwargs:
+            raise RuntimeError(
+                f"Expected view {self.__class__.__name__} to be called with a URL keyword argument named "
+                f'"{lookup_url_kwarg}". Fix your URL conf, or set the `.lookup_field` attribute on the view correctly.'
+            )
 
         if lookup_url_kwarg == "pk" and hasattr(queryset.model, "composite_key"):
             # Support lookup by either PK (UUID) or composite_key
@@ -487,7 +488,7 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
 
         format = "openapi"
 
-    renderer_classes = SpectacularSwaggerView.renderer_classes + [FakeOpenAPIRenderer]
+    renderer_classes = [*SpectacularSwaggerView.renderer_classes, FakeOpenAPIRenderer]
 
     template_name = "swagger_ui.html"
 
@@ -602,7 +603,8 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
         self.executor = self.executor
         self.root_value = self.root_value
 
-        assert isinstance(self.graphql_schema, GraphQLSchema), "A Schema is required to be provided to GraphQLAPIView."
+        if not isinstance(self.graphql_schema, GraphQLSchema):
+            raise ValueError("A Schema is required to be provided to GraphQLAPIView.")
 
     def get_response(self, request, data):
         """Extract the information from the request, execute the GraphQL query and form the response.
