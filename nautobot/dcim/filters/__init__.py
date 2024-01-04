@@ -506,7 +506,7 @@ class HardwareFamilyFilterSet(NautobotFilterSet, NameSearchFilterSet):
 
     class Meta:
         model = HardwareFamily
-        fields = ["id", "name", "description"]
+        fields = ["id", "name", "description", "tags"]
 
 
 class DeviceTypeFilterSet(NautobotFilterSet):

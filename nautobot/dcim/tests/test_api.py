@@ -701,12 +701,14 @@ class HardwareFamilyTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "Hardware Family 4",
+            "description": "Fourth Hardware Family",
         },
         {
             "name": "Hardware Family 5",
         },
         {
             "name": "Hardware Family 6",
+            "description": "Sixth Hardware Family",
         },
         {
             "name": "Hardware Family 7",
@@ -718,7 +720,7 @@ class HardwareFamilyTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
+        # FIXME: This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
         Device.objects.all().delete()
@@ -747,7 +749,7 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
+        # FIXME: This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
         Device.objects.all().delete()
@@ -765,15 +767,18 @@ class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         manufacturer_id = Manufacturer.objects.first().pk
+        hardware_family_id = HardwareFamily.objects.first().pk
 
         cls.create_data = [
             {
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 4",
+                "hardware_family": hardware_family_id,
             },
             {
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 5",
+                "hardware_family": hardware_family_id,
             },
             {
                 "manufacturer": manufacturer_id,
