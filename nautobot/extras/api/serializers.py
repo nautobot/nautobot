@@ -45,6 +45,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -72,6 +73,7 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
 from nautobot.extras.models.mixins import NotesMixin
@@ -173,6 +175,16 @@ class ConfigContextSchemaSerializer(NautobotModelSerializer):
             return None
         depth = get_nested_serializer_depth(self)
         return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.owner, "owner")
+
+
+#
+# Contacts
+#
+
+class ContactSerializer(NautobotModelSerializer):
+    class Meta:
+        model = Contact
+        fields = "__all__"
 
 
 #
@@ -876,6 +888,17 @@ class TagSerializer(NautobotModelSerializer):
                 raise serializers.ValidationError(errors)
 
         return data
+
+
+#
+# Teams
+#
+
+
+class TeamSerializer(NautobotModelSerializer):
+    class Meta:
+        model = Team
+        fields = "__all__"
 
 
 #

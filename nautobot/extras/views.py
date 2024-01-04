@@ -55,6 +55,7 @@ from .models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
     CustomField,
     CustomLink,
     DynamicGroup,
@@ -78,6 +79,7 @@ from .models import (
     Status,
     Tag,
     TaggedItem,
+    Team,
     Webhook,
 )
 from .models import Job as JobModel
@@ -353,6 +355,32 @@ class ConfigContextSchemaBulkDeleteView(generic.BulkDeleteView):
     queryset = ConfigContextSchema.objects.all()
     table = tables.ConfigContextSchemaTable
     filterset = filters.ConfigContextSchemaFilterSet
+
+
+#
+# Contacts
+#
+
+
+class ContactUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ContactBulkEditForm
+    filterset_class = filters.ContactFilterSet
+    filterset_form_class = forms.ContactFilterForm
+    form_class = forms.ContactForm
+    queryset = Contact.objects.all()
+    serializer_class = serializers.ContactSerializer
+    table_class = tables.ContactTable
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            teams = instance.teams.restrict(request.user, "view")
+            teams_table = tables.TeamTable(teams)
+            teams_table.columns.hide("actions")
+            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            RequestConfig(request, paginate).configure(teams_table)
+            context["teams_table"] = teams_table
+        return context
 
 
 #
@@ -2232,6 +2260,31 @@ class TagBulkDeleteView(generic.BulkDeleteView):
     table = tables.TagTable
     filterset = filters.TagFilterSet
 
+
+#
+# Teams
+#
+
+
+class TeamUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.TeamBulkEditForm
+    filterset_class = filters.TeamFilterSet
+    filterset_form_class = forms.TeamFilterForm
+    form_class = forms.TeamForm
+    queryset = Team.objects.all()
+    serializer_class = serializers.TeamSerializer
+    table_class = tables.TeamTable
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            contacts = instance.contacts.restrict(request.user, "view")
+            contacts_table = tables.ContactTable(contacts)
+            contacts_table.columns.hide("actions")
+            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            RequestConfig(request, paginate).configure(contacts_table)
+            context["contacts_table"] = contacts_table
+        return context
 
 #
 # Webhooks

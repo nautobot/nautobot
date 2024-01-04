@@ -3,7 +3,7 @@ from django import forms
 from nautobot.core.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceField
 from nautobot.extras.models.contacts import Contact, Team
 
-from .base import NautobotBulkEditForm, NautobotModelForm
+from .base import NautobotBulkEditForm, NautobotFilterForm, NautobotModelForm
 from .mixins import RoleModelBulkEditFormMixin, TagsBulkEditFormMixin
 
 
@@ -34,6 +34,11 @@ class ContactBulkEditForm(TagsBulkEditFormMixin, RoleModelBulkEditFormMixin, Nau
         model = Contact
 
 
+class ContactFilterForm(NautobotFilterForm):
+    model = Contact
+    q = forms.CharField(required=False, label="Search")
+
+
 class TeamForm(NautobotModelForm):
     contacts = DynamicModelMultipleChoiceField(
         queryset=Contact.objects.all(),
@@ -59,3 +64,9 @@ class TeamBulkEditForm(TagsBulkEditFormMixin, RoleModelBulkEditFormMixin, Nautob
 
     class Meta:
         model = Team
+
+
+class TeamFilterForm(NautobotFilterForm):
+    model = Team
+    q = forms.CharField(required=False, label="Search")
+

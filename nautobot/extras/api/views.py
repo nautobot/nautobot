@@ -38,6 +38,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -66,6 +67,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
     TaggedItem,
+    Team,
     Webhook,
 )
 from nautobot.extras.secrets.exceptions import SecretError
@@ -257,6 +259,17 @@ class NautobotModelViewSet(NotesViewSetMixin, CustomFieldModelViewSet):
 
     Can also be used for models derived from BaseModel, so long as they support Notes.
     """
+
+
+#
+# Contacts
+#
+
+
+class ContactViewSet(NautobotModelViewSet):
+    queryset = Contact.objects.all()
+    serializer_class = serializers.ContactSerializer
+    filterset_class = filters.ContactFilterSet
 
 
 #
@@ -1102,6 +1115,17 @@ class TagViewSet(NautobotModelViewSet):
     queryset = Tag.objects.annotate(tagged_items=count_related(TaggedItem, "tag"))
     serializer_class = serializers.TagSerializer
     filterset_class = filters.TagFilterSet
+
+
+#
+# Teams
+#
+
+
+class TeamViewSet(NautobotModelViewSet):
+    queryset = Team.objects.all()
+    serializer_class = serializers.TeamSerializer
+    filterset_class = filters.TeamFilterSet
 
 
 #

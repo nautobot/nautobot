@@ -21,6 +21,7 @@ from .models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
     CustomField,
     CustomLink,
     DynamicGroup,
@@ -45,6 +46,7 @@ from .models import (
     Status,
     Tag,
     TaggedItem,
+    Team,
     Webhook,
 )
 from .registry import registry
@@ -203,6 +205,34 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
 
         # Return a green check (like a boolean column)
         return render_boolean(True)
+
+
+class ContactTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    tags = TagColumn(url_name="extras:contact_list")
+    actions = ButtonsColumn(Contact)
+
+    class Meta(BaseTable.Meta):
+        model = Contact
+        fields = (
+            "pk",
+            "name",
+            "phone",
+            "email",
+            "address",
+            "comments",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "phone",
+            "email",
+            "tags",
+            "actions",
+        )
 
 
 class CustomFieldTable(BaseTable):
@@ -1019,6 +1049,34 @@ class TaggedItemTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = TaggedItem
         fields = ("content_object", "content_type")
+
+
+class TeamTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    tags = TagColumn(url_name="extras:team_list")
+    actions = ButtonsColumn(Team)
+
+    class Meta(BaseTable.Meta):
+        model = Team
+        fields = (
+            "pk",
+            "name",
+            "phone",
+            "email",
+            "address",
+            "comments",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "phone",
+            "email",
+            "tags",
+            "actions",
+        )
 
 
 class WebhookTable(BaseTable):

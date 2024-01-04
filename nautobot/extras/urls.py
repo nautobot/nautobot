@@ -26,9 +26,11 @@ from nautobot.extras.models import (
 app_name = "extras"
 
 router = NautobotUIViewSetRouter()
+router.register("contacts", views.ContactUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("roles", views.RoleUIViewSet)
+router.register("teams", views.TeamUIViewSet)
 
 urlpatterns = [
     # Change logging
