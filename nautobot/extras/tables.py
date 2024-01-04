@@ -16,7 +16,6 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from .choices import LogLevelChoices
 from .models import (
     ComputedField,
     ConfigContext,
