@@ -1,5 +1,7 @@
 import netaddr
 
+from django.core.exceptions import ValidationError
+
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import RelationshipAssociation
 from nautobot.ipam.constants import VLAN_VID_MAX, VLAN_VID_MIN
@@ -271,5 +273,5 @@ def retrieve_interface_or_vminterface_from_request(request):
     try:
         obj = interface_model.objects.restrict(request.user, "change").get(id=interface_id)
         return obj, None
-    except interface_model.DoesNotExist:
+    except (interface_model.DoesNotExist, ValidationError):
         return None, f'{interface_model.__name__} with id "{interface_id}" not found.'
