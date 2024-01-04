@@ -53,6 +53,10 @@ add "&raw" to the end of the URL within a browser.
       margin: 0;
       width: 100%;
     }
+    .toolbar .dropdown-menu > li > a {
+        clear: left;
+        margin-right: 120px;  /* leave room for the "Save Changes" button if present */
+    }
   </style>
   <!-- As Nautobot may be run without internet access, we source these files locally rather than from an online CDN -->
   <link rel="stylesheet"
@@ -163,7 +167,6 @@ add "&raw" to the end of the URL within a browser.
     }
 
     function save() {
-      graphql_data = getHashParams();
       var url = new URL(window.location.href);
       var id = url.searchParams.get("id");
       var result_window = $(".result-window").find(".CodeMirror-code");
@@ -179,10 +182,13 @@ add "&raw" to the end of the URL within a browser.
         return
       };
 
+      var graphql_data = JSON.stringify({"query": getHashParams().query});
+
       $.ajax({
         url: `{% url 'extras-api:graphqlquery-list' %}${id}/`,
         method: "PATCH",
         headers: {"X-CSRFTOKEN": "{{ csrf_token }}"},
+        contentType: "application/json",
         dataType: "json",
         data: graphql_data,
         success: function(data) {
