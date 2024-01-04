@@ -18,7 +18,6 @@ import yaml
 from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.utils import color, config, data, lookup
-from nautobot.core.utils.navigation import is_route_new_ui_ready
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
 # S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
@@ -780,14 +779,3 @@ def queryset_to_pks(obj):
     result = list(obj.values_list("pk", flat=True)) if obj else []
     result = [str(entry) for entry in result]
     return ",".join(result)
-
-
-#
-# Navigation
-#
-
-
-@register.filter()
-def is_new_ui_ready(url_path):
-    """Return True if url_path is NewUI Ready else False"""
-    return is_route_new_ui_ready(url_path)
