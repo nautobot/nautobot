@@ -81,7 +81,7 @@ class ObjectChange(BaseModel):
         blank=True,
         null=True,
     )
-    user_name = models.CharField(max_length=150, editable=False)
+    user_name = models.CharField(max_length=150, editable=False, db_index=True)
     request_id = models.UUIDField(editable=False, db_index=True)
     action = models.CharField(max_length=50, choices=ObjectChangeActionChoices)
     changed_object_type = models.ForeignKey(to=ContentType, on_delete=models.SET_NULL, null=True, related_name="+")
@@ -132,6 +132,22 @@ class ObjectChange(BaseModel):
             models.Index(
                 name="extras_objectchange_rtime_idx",
                 fields=["-time"],
+            ),
+            models.Index(
+                name="changed_object_idx",
+                fields=["changed_object_type", "changed_object_id"],
+            ),
+            models.Index(
+                name="related_object_idx",
+                fields=["related_object_type", "related_object_id"],
+            ),
+            models.Index(
+                name="user_changed_object_idx",
+                fields=["user", "changed_object_type", "changed_object_id"],
+            ),
+            models.Index(
+                name="user_name_changed_object_idx",
+                fields=["user_name", "changed_object_type", "changed_object_id"],
             ),
         ]
 
