@@ -116,7 +116,6 @@ def _configure_settings(config):
     os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
     os.makedirs(os.path.join(settings.MEDIA_ROOT, "devicetype-images"), exist_ok=True)
     os.makedirs(os.path.join(settings.MEDIA_ROOT, "image-attachments"), exist_ok=True)
-    os.makedirs(os.path.join(settings.NAUTOBOT_UI_DIR, "build", "static"), exist_ok=True)
     os.makedirs(settings.STATIC_ROOT, exist_ok=True)
 
     #

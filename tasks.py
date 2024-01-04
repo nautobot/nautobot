@@ -34,9 +34,6 @@ except ModuleNotFoundError:
 # Base directory path from this file.
 BASE_DIR = os.path.join(os.path.dirname(__file__))
 
-# Base directory path for Nautobot UI.
-NAUTOBOT_UI_DIR = os.path.join(BASE_DIR, "nautobot/ui")
-
 
 def is_truthy(arg):
     """
@@ -640,23 +637,16 @@ def hadolint(context):
 @task
 def markdownlint(context):
     """Lint Markdown files."""
-    if is_truthy(context.nautobot.local):
-        command = (
-            "cd nautobot/ui && npx -- markdownlint-cli "
-            "--ignore ../../nautobot/project-static --ignore ../../nautobot/ui/node_modules "
-            "--config ../../.markdownlint.yml --rules ../../scripts/use-relative-md-links.js "
-            "../../nautobot ../../examples ../../*.md"
-        )
-        run_command(context, command)
+    if is_truthy(context.nautobot.local) and not context.run("command -v markdownlint", warn=True):
+        command = "npm exec -- markdownlint "
     else:
-        command = (
-            "npx -- markdownlint-cli "
-            "--ignore /source/nautobot/project-static --ignore /source/nautobot/ui/node_modules "
-            "--config /source/.markdownlint.yml --rules /source/scripts/use-relative-md-links.js "
-            "/source/nautobot /source/examples /source/*.md"
-        )
-        docker_command = f"run --workdir='/opt/nautobot/ui' --entrypoint '{command}' nautobot"
-        docker_compose(context, docker_command, pty=True)
+        command = "markdownlint "
+    command += (
+        "--ignore nautobot/project-static "
+        "--config .markdownlint.yml --rules scripts/use-relative-md-links.js "
+        "nautobot examples *.md"
+    )
+    run_command(context, command)
 
 
 @task
@@ -918,84 +908,12 @@ def performance_test(
 
 @task(
     help={
-        "label": "Specify a directory to test instead of running all Nautobot UI tests.",
-    },
-)
-def unittest_ui(
-    context,
-    label=None,
-):
-    """Run Nautobot UI unit tests."""
-    command = "npm run test -- --watchAll=false"
-    if label:
-        command += f" {label}"
-    run_command(context, command, service="nodejs")
-
-
-@task(
-    help={
-        "autoformat": "Apply formatting recommendations automatically, rather than failing if formatting is incorrect.",
-    }
-)
-def prettier(context, autoformat=False):
-    """Check Node.JS code style with Prettier."""
-    prettier_command = "npx prettier"
-
-    if autoformat:
-        arg = "--write"
-    else:
-        arg = "--check"
-
-    if is_truthy(context.nautobot.local):
-        run_command(context, f"cd nautobot/ui && {prettier_command} {arg} .")
-    else:
-        docker_compose(
-            context,
-            f"run --workdir='/opt/nautobot/ui' --entrypoint '{prettier_command} {arg} /source/nautobot/ui' nautobot",
-        )
-
-
-@task(
-    help={
-        "autoformat": "Apply some recommendations automatically, rather than failing if formatting is incorrect. Not all issues can be fixed automatically.",
-    }
-)
-def eslint(context, autoformat=False):
-    """Check for ESLint rule compliance and other style issues."""
-    eslint_command = "npx eslint --max-warnings 0"
-
-    if autoformat:
-        eslint_command += " --fix"
-
-    if is_truthy(context.nautobot.local):
-        # babel-preset-react-app / eslint requires setting environment variable for either
-        # `NODE_ENV` or `BABEL_ENV` to 'test'|'development'|'production'
-        run_command(context, f"cd nautobot/ui && NODE_ENV=test {eslint_command} .")
-    else:
-        # TODO: we should really run against /source/nautobot/ui, not /opt/nautobot/ui, but eslint aborts if we do:
-        #   ESLint couldn't find the config "@react-app" to extend from.
-        #   Please check that the name of the config is correct.
-        # Probably this is because we don't install node_modules under /source/nautobot/ui normally...?
-        #
-        # babel-preset-react-app / eslint requires setting environment variable for either
-        # `NODE_ENV` or `BABEL_ENV` to 'test'|'development'|'production'
-        docker_compose(
-            context,
-            "run --workdir='/opt/nautobot/ui' -e NODE_ENV=test "
-            f"--entrypoint '{eslint_command} /opt/nautobot/ui' nodejs",
-        )
-
-
-@task(
-    help={
         "lint-only": "Only run linters; unit tests will be excluded.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
     }
 )
 def tests(context, lint_only=False, keepdb=False):
     """Run all linters and unit tests."""
-    prettier(context)
-    eslint(context)
     hadolint(context)
     markdownlint(context)
     yamllint(context)
@@ -1011,8 +929,7 @@ def tests(context, lint_only=False, keepdb=False):
 @task(help={"version": "The version number or the rule to update the version."})
 def version(context, version=None):  # pylint: disable=redefined-outer-name
     """
-    Show the version of Nautobot Python and NPM packages or bump them when a valid bump rule is
-    provided.
+    Show the version of Nautobot Python package or bump it when a valid bump rule is provided.
 
     The version number or rules are those supported by `poetry version`.
     """
@@ -1020,4 +937,3 @@ def version(context, version=None):  # pylint: disable=redefined-outer-name
         version = ""
 
     run_command(context, f"poetry version --short {version}")
-    run_command(context, f"npm --prefix nautobot/ui version {version}")
