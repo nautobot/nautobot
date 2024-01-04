@@ -158,6 +158,8 @@ class VRF(PrimaryModel):
         verbose_name = "VRF"
         verbose_name_plural = "VRFs"
 
+    natural_key_field_names = ["namespace", "name"]
+
     def __str__(self):
         return self.display or super().__str__()
 
