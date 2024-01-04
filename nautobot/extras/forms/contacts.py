@@ -1,15 +1,18 @@
 from django import forms
 
-from nautobot.core.models.contacts import Contact, Team
-from nautobot.extras.forms import (
-    NautobotBulkEditForm,
-    NautobotModelForm,
-    RoleModelBulkEditFormMixin,
-    TagsBulkEditFormMixin,
-)
+from nautobot.core.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceField
+from nautobot.extras.models.contacts import Contact, Team
+
+from .base import NautobotBulkEditForm, NautobotModelForm
+from .mixins import RoleModelBulkEditFormMixin, TagsBulkEditFormMixin
 
 
 class ContactForm(NautobotModelForm):
+    teams = DynamicModelMultipleChoiceField(
+        queryset=Team.objects.all(),
+        required=False,
+        label = "Team(s)",
+    )
     class Meta:
         model = Contact
         fields = [
@@ -32,6 +35,11 @@ class ContactBulkEditForm(TagsBulkEditFormMixin, RoleModelBulkEditFormMixin, Nau
 
 
 class TeamForm(NautobotModelForm):
+    contacts = DynamicModelMultipleChoiceField(
+        queryset=Contact.objects.all(),
+        required=False,
+        label="Contact(s)",
+    )
     class Meta:
         model = Team
         fields = [

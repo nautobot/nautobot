@@ -16,6 +16,17 @@ from nautobot.core.models.utils import construct_composite_key, construct_natura
 from nautobot.core.utils.lookup import get_route_for_model
 
 
+__all__ = (
+    "BaseManager",
+    "BaseModel",
+    "CompositeKeyQuerySetMixin",
+    "RestrictedQuerySet",
+    "construct_composite_key",
+    "construct_natural_slug",
+    "deconstruct_composite_key",
+)
+
+
 class BaseModel(models.Model):
     """
     Base model class that all models should inherit from.
@@ -38,7 +49,7 @@ class BaseModel(models.Model):
 
     # Reverse relation so that deleting a BaseModel automatically deletes any ContactAssociations related to it.
     associated_contacts = GenericRelation(
-        "core.ContactAssociation",
+        "extras.ContactAssociation",
         content_type_field="associated_object_type",
         object_id_field="associated_object_id",
         related_query_name="associated_contacts_%(app_label)s_%(class)s",  # e.g. 'associated_contacts_dcim_device'
@@ -284,20 +295,3 @@ class BaseModel(models.Model):
                 f"expected no more than {len(natural_key_field_lookups)} but got {len(args)}."
             )
         return dict(zip(natural_key_field_lookups, args))
-
-
-from nautobot.core.models.contacts import Contact, ContactAssociation, Team  # noqa: E402 -- avoiding circular imports
-
-
-__all__ = (
-    "BaseManager",
-    "BaseModel",
-    "CompositeKeyQuerySetMixin",
-    "Contact",
-    "ContactAssociation",
-    "RestrictedQuerySet",
-    "Team",
-    "construct_composite_key",
-    "construct_natural_slug",
-    "deconstruct_composite_key",
-)

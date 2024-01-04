@@ -6,10 +6,11 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ColorField
 from nautobot.core.models.querysets import RestrictedQuerySet
-from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel
-from nautobot.extras.models.mixins import NotesMixin
-from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.utils import extras_features, TaggableClassesQuery
+from .change_logging import ChangeLoggedModel
+from .customfields import CustomFieldModel
+from .mixins import NotesMixin
+from .relationships import RelationshipModel
 
 
 #

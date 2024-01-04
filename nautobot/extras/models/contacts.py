@@ -3,7 +3,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
 from nautobot.extras.utils import extras_features
-from nautobot.extras.models import RoleField, StatusField
+from .roles import RoleField
+from .statuses import StatusField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel  # isort: off
 
 

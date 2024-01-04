@@ -1,4 +1,5 @@
 from .change_logging import ChangeLoggedModel, ObjectChange
+from .contacts import Contact, Team, ContactAssociation
 from .roles import Role, RoleField
 from .statuses import Status, StatusField, StatusModel
 from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel
@@ -39,6 +40,8 @@ __all__ = (
     "ConfigContext",
     "ConfigContextModel",
     "ConfigContextSchema",
+    "Contact",
+    "ContactAssociation",
     "CustomField",
     "CustomFieldChoice",
     "CustomFieldModel",
@@ -75,5 +78,6 @@ __all__ = (
     "StatusModel",
     "Tag",
     "TaggedItem",
+    "Team",
     "Webhook",
 )

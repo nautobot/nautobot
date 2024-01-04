@@ -3,6 +3,16 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 
+from nautobot.core.filters import (
+    BaseFilterSet,
+    ContentTypeFilter,
+    ContentTypeMultipleChoiceFilter,
+    MultiValueUUIDFilter,
+    NameSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
+    RelatedMembershipBooleanFilter,
+    SearchFilter,
+)
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
@@ -38,6 +48,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -65,25 +76,18 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup
-from nautobot.core.filters.filtersets import BaseFilterSet
-from nautobot.core.filters.filters import (
-    ContentTypeFilter,
-    ContentTypeMultipleChoiceFilter,
-    MultiValueUUIDFilter,
-    NaturalKeyOrPKMultipleChoiceFilter,
-    RelatedMembershipBooleanFilter,
-    SearchFilter,
-)
 
 
 __all__ = (
     "ComputedFieldFilterSet",
     "ConfigContextFilterSet",
+    "ContactFilterSet",
     "ContentTypeFilterSet",
     "ContentTypeMultipleChoiceFilter",
     "CreatedUpdatedFilterSet",
@@ -129,6 +133,7 @@ __all__ = (
     "StatusFilterSet",
     "StatusModelFilterSetMixin",
     "TagFilterSet",
+    "TeamFilterSet",
     "WebhookFilterSet",
 )
 
@@ -387,6 +392,17 @@ class NautobotFilterSet(
     BaseFilterSet, CreatedUpdatedModelFilterSetMixin, RelationshipModelFilterSetMixin and CustomFieldModelFilterSetMixin
     are needed.
     """
+
+
+#
+# Contacts
+#
+
+
+class ContactFilterSet(NameSearchFilterSet, RoleModelFilterSetMixin, NautobotFilterSet):
+    class Meta:
+        model = Contact
+        fields = "__all__"
 
 
 #
@@ -1005,6 +1021,17 @@ class TagFilterSet(NautobotFilterSet):
     class Meta:
         model = Tag
         fields = ["id", "name", "color", "content_types"]
+
+
+#
+# Teams
+#
+
+
+class TeamFilterSet(NameSearchFilterSet, RoleModelFilterSetMixin, NautobotFilterSet):
+    class Meta:
+        model = Team
+        fields = "__all__"
 
 
 #
