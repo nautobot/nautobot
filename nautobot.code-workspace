@@ -11,16 +11,11 @@
 		]
 	},
 	"settings": {
-		"python.formatting.provider": "black",
-		"python.linting.enabled": true,
-		"python.linting.flake8Enabled": true,
 		"[python]": {
-			"editor.formatOnSave": true
+			"editor.formatOnSave": true,
+			"editor.defaultFormatter": "charliermarsh.ruff"
 		},
 		"[javascript]": {
-			"editor.formatOnSave": true
-		},
-		"[jsx-tags]": {
 			"editor.formatOnSave": true
 		}
 	},
