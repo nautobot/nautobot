@@ -1319,6 +1319,12 @@ class VLAN(PrimaryModel):
         blank=True,
         null=True,
     )
+    locations = models.ManyToManyField(
+        to="dcim.Location",
+        related_name="vlan",
+        blank=True,
+        null=True,
+    )
     vlan_group = models.ForeignKey(
         to="ipam.VLANGroup",
         on_delete=models.PROTECT,

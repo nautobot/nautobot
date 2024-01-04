@@ -32,6 +32,16 @@
                         <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
                     </tr>
                     <tr>
+                        <td>Locations</td>
+                        <td>
+                            {% for location in object.locations.all %}
+                                {{ location|hyperlinked_object }}<br>
+                            {% empty %}
+                                <span class="text-muted">None</span>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    <tr>
                         <td>VLAN Group</td>
                         <td>{{ object.vlan_group|hyperlinked_object }}</td>
                     </tr>

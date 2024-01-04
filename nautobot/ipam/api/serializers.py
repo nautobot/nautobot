@@ -113,6 +113,7 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         list_display_fields = [
             "vid",
             "location",
+            "locations",
             "vlan_group",
             "name",
             "prefixes",
