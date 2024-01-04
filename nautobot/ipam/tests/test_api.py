@@ -695,6 +695,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         statuses = Status.objects.get_for_model(VLAN)
         vlan_groups = VLANGroup.objects.filter(location__isnull=False)[:2]
+        locations = Location.objects.all()
 
         cls.create_data = [
             {
@@ -703,6 +704,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "vlan_group": vlan_groups[0].pk,
                 "status": statuses[0].pk,
                 "location": vlan_groups[0].location.pk,
+                "locations": [locations[0].pk, locations[1].pk],
             },
             {
                 "vid": 5,
@@ -710,6 +712,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "vlan_group": vlan_groups[0].pk,
                 "status": statuses[0].pk,
                 "location": vlan_groups[0].location.pk,
+                "locations": [locations[2].pk, locations[3].pk],
             },
             {
                 "vid": 6,
@@ -717,6 +720,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "vlan_group": vlan_groups[0].pk,
                 "status": statuses[0].pk,
                 "location": vlan_groups[0].location.pk,
+                "locations": [locations[0].pk, locations[3].pk],
             },
         ]
         cls.bulk_update_data = {

@@ -1203,6 +1203,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": None,
             "status": status_2.pk,
             "role": roles[1].pk,
+            "locations": list(cls.locations.values_list("pk", flat=True)),
             "description": "A new VLAN",
             "tags": [t.pk for t in Tag.objects.get_for_model(VLAN)],
         }

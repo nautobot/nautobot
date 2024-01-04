@@ -1067,6 +1067,8 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         )
         vlans[0].tags.set(Tag.objects.all()[:2])
         vlans[1].tags.set(Tag.objects.all()[:2])
+        vlans[0].locations.set(cls.locations)
+        vlans[1].locations.set(cls.locations)
 
     def test_name(self):
         names = list(VLAN.objects.all().values_list("name", flat=True)[:2])
@@ -1086,6 +1088,17 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         params = {"location": [self.locations[0].name, self.locations[1].name]}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(location__name__in=params["location"])
+        )
+
+    def test_locations(self):
+        params = {"locations": [self.locations[0].pk, self.locations[1].pk]}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(locations__in=params["locations"]).distinct()
+        )
+        params = {"locations": [self.locations[0].name, self.locations[1].name]}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(locations__name__in=params["locations"]).distinct(),
         )
 
     def test_vlan_group(self):
