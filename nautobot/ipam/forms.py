@@ -687,7 +687,6 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         required=False,
         label="Locations",
         null_option="None",
-        # query_params={"location": "$location"},
     )
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
