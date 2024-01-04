@@ -60,9 +60,6 @@ ALLOWED_URL_SCHEMES = (
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
-# The directory where the Nautobot UI packaging is stored.
-NAUTOBOT_UI_DIR = os.path.join(NAUTOBOT_ROOT, "ui")
-
 # Disable linking of Config Context objects via Dynamic Groups by default. This could cause performance impacts
 # when a large number of dynamic groups are present
 CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED", "False"))
@@ -511,10 +508,7 @@ X_FRAME_OPTIONS = "DENY"
 # Static files (CSS, JavaScript, Images)
 STATIC_ROOT = os.path.join(NAUTOBOT_ROOT, "static")
 STATIC_URL = "static/"
-STATICFILES_DIRS = (
-    os.path.join(BASE_DIR, "project-static"),
-    os.path.join(NAUTOBOT_UI_DIR, "build", "static"),
-)
+STATICFILES_DIRS = (os.path.join(BASE_DIR, "project-static"),)
 
 # Media
 MEDIA_URL = "media/"
@@ -610,11 +604,6 @@ CONSTANCE_CONFIG = {
         "member list. This cache is invalidated when a Dynamic Group is saved. Set to 0 to disable caching.",
         field_type=int,
     ),
-    "FEEDBACK_BUTTON_ENABLED": ConstanceConfigItem(
-        default=True,
-        help_text="Whether to show the Feedback button in the new UI sidebar.",
-        field_type=bool,
-    ),
     "JOB_CREATE_FILE_MAX_SIZE": ConstanceConfigItem(
         default=10 << 20,
         help_text=mark_safe(  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
@@ -705,7 +694,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Performance": ["DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT", "JOB_CREATE_FILE_MAX_SIZE"],
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["FEEDBACK_BUTTON_ENABLED", "SUPPORT_MESSAGE"],
+    "User Interface": ["SUPPORT_MESSAGE"],
 }
 
 #
@@ -921,6 +910,3 @@ DRF_REACT_TEMPLATE_TYPE_MAP = {
     "TimeZoneSerializerField": {"type": "string"},
     "UUIDField": {"type": "string", "format": "uuid"},
 }
-
-# Turn on or off new ui feature
-ENABLE_ALPHA_UI = is_truthy(os.getenv("NAUTOBOT_ENABLE_ALPHA_UI", "False"))

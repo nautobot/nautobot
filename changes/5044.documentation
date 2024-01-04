@@ -1,0 +1,1 @@
+Updated the documentation on `nautobot_database_ready` signal handlers with a warning.
