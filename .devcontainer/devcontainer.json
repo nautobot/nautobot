@@ -44,7 +44,7 @@
                         "source.organizeImports": "explicit"
                     },
                     // When rebuilding the devcontainer, `Developer: Reload Window` must be
-                    // executed for the Black formatter to be recognized by the settings.
+                    // executed for the Ruff formatter to be recognized by the settings.
                     // See: https://github.com/microsoft/vscode/issues/189839
                     "editor.defaultFormatter": "charliermarsh.ruff",
                     "editor.formatOnSave": true
