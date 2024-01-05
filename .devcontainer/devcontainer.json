@@ -3,8 +3,7 @@
     "dockerComposeFile": [
         "../development/docker-compose.yml",
         "../development/docker-compose.postgres.yml",
-        "../development/docker-compose.dev.yml",
-        "../development/docker-compose.override.yml"
+        "../development/docker-compose.dev.yml"
     ],
     "features": {
         "ghcr.io/devcontainers/features/docker-outside-of-docker:1": { }
