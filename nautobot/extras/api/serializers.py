@@ -342,7 +342,7 @@ class GitRepositorySerializer(NautobotModelSerializer):
 
 
 class GraphQLQuerySerializer(ValidatedModelSerializer, NotesSerializerMixin):
-    variables = serializers.DictField(required=False, allow_null=True, default={})
+    variables = serializers.DictField(read_only=True)
 
     class Meta:
         model = GraphQLQuery

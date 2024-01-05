@@ -1368,7 +1368,7 @@ class RequiredRelationshipTestMixin:
                     # Object is updated with the required relationship data (succeeds)
                     response = self.send_data(
                         from_model,
-                        {**{"name": f'{params["create_data"]["name"]} edited'}, **related_objects_data},
+                        {"name": f'{params["create_data"]["name"]} edited', **related_objects_data},
                         interact_with,
                         action="edit",
                         url_kwargs={"pk": newly_created_object.pk},

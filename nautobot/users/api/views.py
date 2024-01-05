@@ -97,7 +97,7 @@ class TokenViewSet(ModelViewSet):
     def authentication_classes(self):
         """Inherit default authentication_classes and basic authentication."""
         classes = super().authentication_classes
-        return classes + [BasicAuthentication]
+        return [*classes, BasicAuthentication]
 
     # TODO(timizuo): Move authenticate and logout to its own view;
     #  as it is not proper to be on this.

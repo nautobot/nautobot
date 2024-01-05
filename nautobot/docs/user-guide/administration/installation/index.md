@@ -19,7 +19,6 @@ The following minimum versions are required for Nautobot to operate:
 | MySQL      | Database     | 8.0             |
 | Redis      | Cache, Queue | 4.0             |
 | Git        | Additional   | 2.0             |
-| Node.js    | Frontend     | 18.0            |
 
 !!! note
     Either PostgreSQL or MySQL must be selected, but not both.
@@ -63,10 +62,6 @@ Nautobot uses a relational database to store its data. Both MySQL and PostgreSQL
 #### Redis
 
 [Redis](https://redis.io/) is an open source, in-memory data store which Nautobot employs for caching and queuing.
-
-#### Node.js
-
-[Node.js](https://nodejs.org/) is a JavaScript runtime environment that is used to build the Nautobot frontend.
 
 ### Optional dependencies
 

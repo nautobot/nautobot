@@ -31,4 +31,3 @@ htmlcov/*
 /examples/example_plugin/example_plugin/static/example_plugin/docs/
 development/factory_dump.json
 node_modules
-nautobot/ui/generated

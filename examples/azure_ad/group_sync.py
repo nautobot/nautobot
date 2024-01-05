@@ -8,9 +8,7 @@ SUPERUSER_GROUPS = ["Admin"]
 STAFF_GROUPS = ["Admin"]
 
 
-def group_sync(
-    uid, user=None, response=None, *args, **kwargs
-):  # pylint: disable=keyword-arg-before-vararg, unused-argument
+def group_sync(uid, user=None, response=None, *args, **kwargs):  # pylint: disable=keyword-arg-before-vararg, unused-argument
     """Sync the users groups from Azure and set staff/superuser as appropriate."""
     if user and response and response.get(ROLES_GROUP_NAME, False):
         group_memberships = response.get(ROLES_GROUP_NAME)

@@ -45,6 +45,12 @@ class LocationType(TreeModel, OrganizationalModel):
         help_text="Allow Locations of this type to be parents/children of other Locations of this same type",
     )
 
+    clone_fields = [
+        "parent",
+        "nestable",
+        "content_types",
+    ]
+
     class Meta:
         ordering = ("name",)
 

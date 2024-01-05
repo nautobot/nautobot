@@ -17,7 +17,7 @@ from django.utils.module_loading import import_string
 from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 
-from nautobot.core.celery.control import discard_git_repository, refresh_git_repository  # noqa: F401
+from nautobot.core.celery.control import discard_git_repository, refresh_git_repository  # noqa: F401  # unused-import
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.celery.log import NautobotDatabaseHandler
 
