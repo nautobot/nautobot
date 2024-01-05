@@ -1,4 +1,5 @@
 import logging
+from functools import lru_cache
 
 from django import forms
 from django.contrib.contenttypes.models import ContentType
@@ -329,15 +330,53 @@ class RelationshipModel(models.Model):
 class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model):
+    @lru_cache(maxsize=128)
+    def get_for_model(self, model, hidden=False):
         """
         Return all Relationships assigned to the given model.
+
+        Args:
+            model: The django model to which relationships are registered
+            hidden: Boolean to look for hidden relationships
+
+        Returns a tuple of source and destination scoped relationship querysets.
+        """
+        return (
+            self.get_for_model_source(model, hidden=hidden),
+            self.get_for_model_destination(model, hidden=hidden),
+        )
+
+    @lru_cache(maxsize=128)
+    def get_for_model_source(self, model, hidden=False):
+        """
+        Return all Relationships assigned to the given model for the source side only.
+
+        Args:
+            model: The django model to which relationships are registered
+            hidden: Boolean to look for hidden relationships
         """
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
         return (
-            self.get_queryset().filter(source_type=content_type),
-            self.get_queryset().filter(destination_type=content_type),
-        )
+            self.get_queryset()
+            .filter(source_type=content_type, source_hidden=hidden)
+            .select_related("source_type", "destination_type")
+        )  # You almost always want access to the types
+
+    @lru_cache(maxsize=128)
+    def get_for_model_destination(self, model, hidden=False):
+        """
+        Return all Relationships assigned to the given model for the destination side only.
+
+        Args:
+            model: The django model to which relationships are registered
+            hidden: Boolean to look for hidden relationships
+        """
+        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
+        return (
+            self.get_queryset()
+            .filter(destination_type=content_type, destination_hidden=hidden)
+            .select_related("source_type", "destination_type")
+        )  # You almost always want access to the types
 
     def get_required_for_model(self, model):
         """
