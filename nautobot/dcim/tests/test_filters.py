@@ -1090,7 +1090,8 @@ class ConsoleServerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 class PowerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = PowerPortTemplate.objects.all()
     filterset = PowerPortTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("allocated_draw",),
         ("maximum_draw",),
         ("power_outlet_templates", "power_outlet_templates__id"),
@@ -1115,7 +1116,8 @@ class PowerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 class PowerOutletTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = PowerOutletTemplate.objects.all()
     filterset = PowerOutletTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("power_port_template", "power_port_template__id"),
         ("power_port_template", "power_port_template__name"),
     ]
@@ -1173,7 +1175,8 @@ class InterfaceTemplateTestCase(Mixins.ComponentTemplateMixin):
 class FrontPortTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = FrontPortTemplate.objects.all()
     filterset = FrontPortTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("rear_port_position",),
         ("rear_port_template", "rear_port_template__id"),
     ]
@@ -1190,7 +1193,8 @@ class FrontPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 class RearPortTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = RearPortTemplate.objects.all()
     filterset = RearPortTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("front_port_templates", "front_port_templates__id"),
     ]
 

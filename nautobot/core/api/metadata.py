@@ -235,7 +235,7 @@ class NautobotMetadata(SimpleMetadata):
             # include the rest in whatever order.
             # See: https://rjsf-team.github.io/react-jsonschema-form/docs/usage/objects#specifying-property-order
             ui_schema = NautobotUiSchemaProcessor(serializer, request.parser_context).get_ui_schema()
-            ui_schema["ui:order"] = self.get_list_display_fields(serializer) + ["*"]
+            ui_schema["ui:order"] = [*self.get_list_display_fields(serializer), "*"]
             metadata.update(
                 {
                     "schema": NautobotSchemaProcessor(serializer, request.parser_context).get_schema(),

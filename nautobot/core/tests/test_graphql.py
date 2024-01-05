@@ -708,7 +708,7 @@ class GraphQLQueryTest(TestCase):
         roles = Role.objects.get_for_model(Device)
         cls.device_role1 = roles[0]
         cls.device_role2 = roles[1]
-        cls.device_role3 = random.choice(roles)
+        cls.device_role3 = random.choice(roles)  # noqa: S311  # suspicious-non-cryptographic-random-usage
         cls.location_statuses = list(Status.objects.get_for_model(Location))[:2]
         cls.location_type = LocationType.objects.get(name="Campus")
         cls.location1 = Location.objects.filter(location_type=cls.location_type).first()

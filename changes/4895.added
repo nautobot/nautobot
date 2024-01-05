@@ -1,1 +1,0 @@
-Added `http_method`, `headers`, and `ca_file_path` fields, as well as `render_headers`, `render_extra_config`, and `render_remote_url` APIs, to the `ExternalIntegration` model.
