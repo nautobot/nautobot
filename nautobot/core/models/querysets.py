@@ -6,13 +6,13 @@ from nautobot.core.utils import permissions
 from nautobot.core.utils.data import merge_dicts_without_collision
 
 
-def count_related(model, field, filter_dict=None):
+def count_related(model, field, *, filter_dict=None):
     """
     Return a Subquery suitable for annotating a child object count.
 
     Args:
         model: The related model to aggregate
-        field: The file don the related model which points back to the OuterRef model
+        field: The field on the related model which points back to the OuterRef model
         filter_dict: Optional dict of filter key/value pairs to limit the Subquery
     """
     filters = {field: OuterRef("pk")}

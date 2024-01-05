@@ -1517,11 +1517,19 @@ class JobResultListView(generic.ObjectListView):
         JobResult.objects.defer("result")
         .select_related("job_model", "user")
         .annotate(
-            debug_log_count=count_related(JobLogEntry, "job_result", {"log_level": LogLevelChoices.LOG_DEBUG}),
-            info_log_count=count_related(JobLogEntry, "job_result", {"log_level": LogLevelChoices.LOG_INFO}),
-            warning_log_count=count_related(JobLogEntry, "job_result", {"log_level": LogLevelChoices.LOG_WARNING}),
+            debug_log_count=count_related(
+                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_DEBUG}
+            ),
+            info_log_count=count_related(
+                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_INFO}
+            ),
+            warning_log_count=count_related(
+                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_WARNING}
+            ),
             error_log_count=count_related(
-                JobLogEntry, "job_result", {"log_level__in": [LogLevelChoices.LOG_ERROR, LogLevelChoices.LOG_CRITICAL]}
+                JobLogEntry,
+                "job_result",
+                filter_dict={"log_level__in": [LogLevelChoices.LOG_ERROR, LogLevelChoices.LOG_CRITICAL]},
             ),
         )
     )
