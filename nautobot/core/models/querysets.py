@@ -11,9 +11,9 @@ def count_related(model, field, *, filter_dict=None):
     Return a Subquery suitable for annotating a child object count.
 
     Args:
-        model: The related model to aggregate
-        field: The field on the related model which points back to the OuterRef model
-        filter_dict: Optional dict of filter key/value pairs to limit the Subquery
+        model (Model): The related model to aggregate
+        field (str): The field on the related model which points back to the OuterRef model
+        filter_dict (dict): Optional dict of filter key/value pairs to limit the Subquery
     """
     filters = {field: OuterRef("pk")}
     if filter_dict:
