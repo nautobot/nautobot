@@ -16,10 +16,8 @@
             "extensions": [
                 "charliermarsh.ruff",
                 "DavidAnson.vscode-markdownlint",
-                "dbaeumer.vscode-eslint",
                 "eamodio.gitlens",
                 "EditorConfig.EditorConfig",
-                "esbenp.prettier-vscode",
                 "GitHub.vscode-pull-request-github",
                 "ms-python.python",
                 "ms-python.vscode-pylance",
