@@ -7,13 +7,14 @@
         "../development/docker-compose.override.yml"
     ],
     "features": {
-        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": { }
     },
     "service": "nautobot",
     "shutdownAction": "stopCompose",
     "customizations": {
         "vscode": {
             "extensions": [
+                "charliermarsh.ruff",
                 "DavidAnson.vscode-markdownlint",
                 "dbaeumer.vscode-eslint",
                 "eamodio.gitlens",
@@ -22,49 +23,41 @@
                 "GitHub.vscode-pull-request-github",
                 "ms-python.python",
                 "ms-python.vscode-pylance",
-                "ms-python.black-formatter",
-                "ms-python.flake8",
-                "ms-python.isort",
                 "samuelcolvin.jinjahtml",
                 "tamasfe.even-better-toml"
             ],
             "settings": {
                 // Global editor settings
                 "editor.codeActionsOnSave": {
-                    "source.fixAll.eslint": true,
-                    "source.fixAll.markdownlint": true
+                    "source.fixAll.eslint": "explicit",
+                    "source.fixAll.markdownlint": "explicit"
                 },
                 "editor.formatOnPaste": true,
                 "editor.formatOnSave": true,
+                // JSON settings
+                "json.format.keepLines": true,
+                "workbench.settings.useSplitJSON": false,
+                // Markdown settings
+                "[markdown]": {
+                    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
+                },
                 // Python settings
                 "[python]": {
                     "editor.codeActionsOnSave": {
-                        // "source.organizeImports": "explicit"
+                        "source.fixAll": "explicit",
+                        "source.organizeImports": "explicit"
                     },
                     // When rebuilding the devcontainer, `Developer: Reload Window` must be
                     // executed for the Black formatter to be recognized by the settings.
                     // See: https://github.com/microsoft/vscode/issues/189839
-                    "editor.defaultFormatter": "ms-python.black-formatter"
+                    "editor.defaultFormatter": "charliermarsh.ruff",
+                    "editor.formatOnSave": true
                 },
                 "python.analysis.extraPaths": [
                     "${workspaceFolder}"
                 ],
                 "python.defaultInterpreterPath": "/usr/local/bin/python",
-                "python.pythonPath": "/usr/local/bin/python",
-                // Formatters and linters settings
-                "black-formatter.args": [
-                    "--config=${workspaceFolder}/pyproject.toml"
-                ],
-                "black-formatter.importStrategy": "fromEnvironment",
-                "flake8.args": [
-                    "--config=${workspaceFolder}/.flake8"
-                ],
-                "flake8.importStrategy": "fromEnvironment",
-                "isort.args": [
-                    "--settings-file",
-                    "${workspaceFolder}/pyproject.toml"
-                ],
-                "isort.importStrategy": "fromEnvironment"
+                "python.pythonPath": "/usr/local/bin/python"
             }
         }
     },
