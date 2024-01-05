@@ -38,6 +38,7 @@ from nautobot.core.forms import (
     ConfirmationForm,
     CSVDataField,
     CSVFileField,
+    inline_gfk_formset_factory,
     restrict_form_fields,
 )
 from nautobot.core.utils import lookup, permissions
@@ -48,7 +49,8 @@ from nautobot.core.views.utils import (
     handle_protectederror,
     prepare_cloned_fields,
 )
-from nautobot.extras.models import ExportTemplate
+from nautobot.extras.forms.contacts import ContactAssociationFormSetForm
+from nautobot.extras.models import ContactAssociation, ExportTemplate
 from nautobot.extras.tables import ObjectChangeTable, NoteTable
 from nautobot.extras.utils import remove_prefix_from_cf_key
 
@@ -746,6 +748,23 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
 
             if hasattr(form, "save_note") and callable(form.save_note):
                 form.save_note(instance=obj, user=request.user)
+
+            # Process the formset for contacts/teams
+            contact_associations_formset_class = inline_gfk_formset_factory(
+                parent_model=self.queryset.model,
+                model=ContactAssociation,
+                form=ContactAssociationFormSetForm,
+                ct_field_name="associated_object_type",
+                fk_field_name="associated_object_id",
+            )
+            contact_associations_formset = contact_associations_formset_class(instance=obj, data=request.POST)
+            if contact_associations_formset.is_valid():
+                contact_associations_formset.save()
+            else:
+                # TODO this isn't presented helpfully.
+                # We really need to validate this earlier, in `perform_create` and `perform_update`,
+                # and do the right thing in form_valid and form_invalid.
+                raise ValidationError(contact_associations_formset.errors)
 
             msg = f'{"Created" if object_created else "Modified"} {queryset.model._meta.verbose_name}'
             self.logger.info(f"{msg} {obj} (PK: {obj.pk})")

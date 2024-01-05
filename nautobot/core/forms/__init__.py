@@ -43,6 +43,7 @@ from nautobot.core.forms.forms import (
     PrefixFieldMixin,
     ReturnURLForm,
     TableConfigForm,
+    inline_gfk_formset_factory,
 )
 from nautobot.core.forms.search import SearchForm
 from nautobot.core.forms.utils import (

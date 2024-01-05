@@ -3,6 +3,7 @@ import logging
 import re
 
 from django import forms
+from django.contrib.contenttypes.models import ContentType
 from django.forms import formset_factory
 from django.urls import reverse
 import yaml
@@ -12,6 +13,7 @@ from nautobot.ipam import formfields
 
 __all__ = (
     "AddressFieldMixin",
+    "BaseInlineGFKFormSet",
     "BootstrapMixin",
     "BulkEditForm",
     "BulkRenameForm",
@@ -22,6 +24,7 @@ __all__ = (
     "PrefixFieldMixin",
     "ReturnURLForm",
     "TableConfigForm",
+    "inline_gfk_formset_factory",
 )
 
 
@@ -54,6 +57,120 @@ class AddressFieldMixin(forms.ModelForm):
 
         # Need to set instance attribute for `address` to run proper validation on Model.clean()
         self.instance.address = self.cleaned_data.get("address")
+
+
+class BaseInlineGFKFormSet(forms.BaseModelFormSet):
+    """
+    Like forms.BaseInlineFormSet, but for child objects related to a parent by GenericForeignKey rather than ForeignKey.
+    """
+
+    def __init__(self, data=None, files=None, instance=None, save_as_new=False, prefix=None, queryset=None, **kwargs):
+        if instance is None:
+            self.instance = self.ct_field.content_type.model()  # TODO
+        else:
+            self.instance = instance
+        self.save_as_new = save_as_new
+        if queryset is None:
+            queryset = self.model._default_manager
+        if self.instance.present_in_database:
+            qs = queryset.filter(
+                **{
+                    self.ct_field.name: ContentType.objects.get_for_model(self.instance),
+                    self.fk_field.name: self.instance.pk,
+                }
+            )
+        else:
+            qs = queryset.none()
+        self.unique_fields = {self.ct_field.name, self.fk_field.name}
+        super().__init__(data, files, prefix=prefix, queryset=qs, **kwargs)
+
+        # Add the generated fields to form._meta.fields if it's defined to make
+        # sure validation isn't skipped on those fields.
+        if self.form._meta.fields and self.ct_field.name not in self.form._meta.fields:
+            if isinstance(self.form._meta.fields, tuple):
+                self.form._meta.fields = list(self.form._meta.fields)
+            self.form._meta.fields.append(self.ct_field.name)
+        if self.form._meta.fields and self.fk_field.name not in self.form._meta.fields:
+            if isinstance(self.form._meta.fields, tuple):
+                self.form._meta.fields = list(self.form._meta.fields)
+            self.form._meta.fields.append(self.fk_field.name)
+
+    def _construct_form(self, i, **kwargs):
+        form = super()._construct_form(i, **kwargs)
+        if self.save_as_new:
+            mutable = getattr(form.data, "_mutable", None)
+            # Allow modifying an immutable QueryDict
+            if mutable is not None:
+                form.data._mutable = True
+            # Remove the primary key from the form's data, we are only creating new instances
+            form.data[form.add_prefix(self._pk_field.name)] = None
+            # Remove the foreign key from the form's data
+            form.data[form.add_prefix(self.ct_field.name)] = None
+            form.data[form.add_prefix(self.fk_field.name)] = None
+            if mutable is not None:
+                form.data._mutable = mutable
+
+        # Set the GFK value here so that the form can do its validation.
+        setattr(form.instance, self.fk_field.get_attname(), self.instance.pk)
+        setattr(form.instance, self.ct_field.get_attname(), ContentType.objects.get_for_model(self.instance).pk)
+        return form
+
+
+def inline_gfk_formset_factory(
+    parent_model,
+    model,
+    ct_field_name,
+    fk_field_name,
+    form=forms.ModelForm,
+    formset=BaseInlineGFKFormSet,
+    fields=None,
+    exclude=None,
+    extra=3,
+    can_order=False,
+    can_delete=True,
+    max_num=None,
+    formfield_callback=None,
+    widgets=None,
+    validate_max=False,
+    localized_fields=None,
+    labels=None,
+    help_texts=None,
+    error_messages=None,
+    min_num=None,
+    validate_min=False,
+    field_classes=None,
+    absolute_max=None,
+    can_delete_extra=True,
+):
+    """Like django.forms.inlineformset_factory, but for GenericForeignKeys instead of ForeignKeys."""
+    ct_field = [field for field in model._meta.fields if field.name == ct_field_name][0]
+    fk_field = [field for field in model._meta.fields if field.name == fk_field_name][0]
+    kwargs = {
+        "form": form,
+        "formfield_callback": formfield_callback,
+        "formset": formset,
+        "extra": extra,
+        "can_delete": can_delete,
+        "can_order": can_order,
+        "fields": fields,
+        "exclude": exclude,
+        "min_num": min_num,
+        "max_num": max_num,
+        "widgets": widgets,
+        "validate_min": validate_min,
+        "validate_max": validate_max,
+        "localized_fields": localized_fields,
+        "labels": labels,
+        "help_texts": help_texts,
+        "error_messages": error_messages,
+        "field_classes": field_classes,
+        "absolute_max": absolute_max,
+        "can_delete_extra": can_delete_extra,
+    }
+    FormSet = forms.modelformset_factory(model, **kwargs)
+    FormSet.ct_field = ct_field
+    FormSet.fk_field = fk_field
+    return FormSet
 
 
 class BootstrapMixin(forms.BaseForm):

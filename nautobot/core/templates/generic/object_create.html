@@ -51,7 +51,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-6 col-md-offset-3 text-right">
+            <div class="col-md-10 col-md-offset-1 text-right">
                 {% block buttons %}
                     {% if editing %}
                         <button type="submit" name="_update" class="btn btn-primary">Update</button>
@@ -73,10 +73,10 @@
 <script src="{% static 'jquery/jquery.formset.js' %}"></script>
 <script type="text/javascript">
     $('.formset_row-{{ contact_association_formset.prefix }}').formset({
-        addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Contact or Team',
-        addCssClass: 'btn btn-primary add-row',
+        addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Another Row',
+        addCssClass: 'btn btn-primary btn-sm add-row',
         deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
-        deleteCssClass: 'btn btn-danger delete-row',
+        deleteCssClass: 'btn btn-danger btn-sm delete-row',
         prefix: '{{ contact_association_formset.prefix }}',
         formCssClass: 'dynamic-formset-{{ contact_association_formset.prefix }}',
         added: jsify_form
