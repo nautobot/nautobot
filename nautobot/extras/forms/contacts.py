@@ -10,6 +10,7 @@ from .mixins import RoleModelBulkEditFormMixin, TagsBulkEditFormMixin
 
 
 class ContactForm(NautobotModelForm):
+    # TODO: this doesn't work automatically since this is the reverse side of an M2M. Just gets ignored at present.
     teams = DynamicModelMultipleChoiceField(
         queryset=Team.objects.all(),
         required=False,

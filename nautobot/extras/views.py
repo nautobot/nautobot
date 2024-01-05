@@ -375,11 +375,16 @@ class ContactUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
             teams = instance.teams.restrict(request.user, "view")
-            teams_table = tables.TeamTable(teams)
+            teams_table = tables.TeamTable(teams, orderable=False)
             teams_table.columns.hide("actions")
             paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
             RequestConfig(request, paginate).configure(teams_table)
             context["teams_table"] = teams_table
+
+            associations = instance.contact_associations.restrict(request.user, "view")
+            associations_table = tables.ContactAssociationTable(associations, orderable=False)
+            RequestConfig(request, paginate).configure(associations_table)
+            context["contact_associations_table"] = associations_table
         return context
 
 
@@ -2279,11 +2284,16 @@ class TeamUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
             contacts = instance.contacts.restrict(request.user, "view")
-            contacts_table = tables.ContactTable(contacts)
+            contacts_table = tables.ContactTable(contacts, orderable=False)
             contacts_table.columns.hide("actions")
             paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
             RequestConfig(request, paginate).configure(contacts_table)
             context["contacts_table"] = contacts_table
+
+            associations = instance.contact_associations.restrict(request.user, "view")
+            associations_table = tables.ContactAssociationTable(associations, orderable=False)
+            RequestConfig(request, paginate).configure(associations_table)
+            context["contact_associations_table"] = associations_table
         return context
 
 #

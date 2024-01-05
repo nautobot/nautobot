@@ -59,12 +59,22 @@ CONTACT_OR_TEAM = """
 {{ record.contact_or_team|hyperlinked_object:"name"}}
 """
 
-CONTACT_OR_TEAM_PHONE = """
-{{ record.contact_or_team.phone }}
+PHONE = """
+{% if value %}
+    <a href="tel:{{ value }}">{{ value }}</a>
+{% else %}
+    <span class="text-muted">&mdash;</span>
+{% endif %}
 """
 
 CONTACT_OR_TEAM_EMAIL = """
-{{ record.contact_or_team.email }}
+{% with record.contact_or_team.email as email %}
+{% if email %}
+    <a href="mailto:{{ email }}">{{ email }}</a>
+{% else %}
+    <span class="text-muted">&mdash;</span>
+{% endif %}
+{% endwith %}
 """
 
 TAGGED_ITEM = """
@@ -225,6 +235,7 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
 class ContactTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
+    phone = tables.TemplateColumn(PHONE)
     tags = TagColumn(url_name="extras:contact_list")
     actions = ButtonsColumn(Contact)
 
@@ -1069,6 +1080,7 @@ class TaggedItemTable(BaseTable):
 class TeamTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
+    phone = tables.TemplateColumn(PHONE)
     tags = TagColumn(url_name="extras:team_list")
     actions = ButtonsColumn(Team)
 
@@ -1132,10 +1144,18 @@ class WebhookTable(BaseTable):
 
 class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
     contact_or_team = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Contact/Team")
-    contact_or_team_phone = tables.TemplateColumn(CONTACT_OR_TEAM_PHONE, verbose_name="Phone")
+    contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team.phone", verbose_name="Phone")
     contact_or_team_email = tables.TemplateColumn(CONTACT_OR_TEAM_EMAIL, verbose_name="E-Mail")
 
     class Meta(BaseTable.Meta):
         model = ContactAssociation
-        fields = ("contact_or_team", "contact_or_team_phone", "contact_or_team_email", "status", "role")
+        fields = ("contact_or_team", "status", "role", "contact_or_team_phone", "contact_or_team_email")
         orderable = False
+
+
+class ContactAssociationTable(StatusTableMixin, RoleTableMixin, BaseTable):
+    associated_object_type = tables.Column(verbose_name="Object Type")
+    associated_object = tables.Column(linkify=True, verbose_name="Object")
+    class Meta(BaseTable.Meta):
+        model = ContactAssociation
+        fields = ("role", "status", "associated_object_type", "associated_object")

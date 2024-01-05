@@ -63,5 +63,9 @@
 {% endblock %}
 
 {% block content_right_page %}
-    {% include 'panel_table.html' with table=contacts_table heading='Contacts' %}
+    {% include 'panel_table.html' with table=contacts_table heading='Assigned Contacts' %}
+{% endblock %}
+
+{% block content_full_width_page %}
+    {% include 'panel_table.html' with table=contact_associations_table heading='Contact For' %}
 {% endblock %}
