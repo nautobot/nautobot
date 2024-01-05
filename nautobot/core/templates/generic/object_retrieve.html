@@ -122,6 +122,9 @@
                     {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields_advanced_ui=False %}
                     {% include 'inc/relationships_panel.html' %}
                     {% include 'extras/inc/tags_panel.html' %}
+                    {% if associated_contacts_table %}
+                        {% include 'panel_table.html' with table=associated_contacts_table %}
+                    {% endif %}
                     {% plugin_left_page object %}
                 </div>
                 <div class="col-md-6">

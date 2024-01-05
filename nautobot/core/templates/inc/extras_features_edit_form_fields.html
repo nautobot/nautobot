@@ -1,5 +1,49 @@
 {% load form_helpers %}
+{% load helpers %}
 
+{% if contact_association_formset %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Contacts/Teams</strong></div>
+        <div class="panel-body">
+            {{ contact_association_formset.non_field_errors }}
+            <table class="table" id="contact_association">
+                {{ contact_association_formset.management_form }}
+                {% for contact_association_form in contact_association_formset.forms %}
+                    {% if forloop.first %}
+                        <thead>
+                            <tr>
+                                {% for field in contact_association_form.visible_fields %}
+                                    <th>{{ field.label|bettertitle }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                    {% endif %}
+                    <tr class="formset_row-{{ contact_association_formset.prefix }}">
+                        {% for field in contact_association_form.visible_fields %}
+                            <td>
+                                {% if forloop.first %}
+                                    {% for hidden in contact_association_form.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+                                {% endif %}
+                                {{ field }}
+                                {% if field.errors %}
+                                    <ul>
+                                        {% for error in field.errors %}
+                                            {# Embed an HTML comment indicating the error for extraction by tests #}
+                                            <!-- FORM-ERROR {{ field.name }}: {{ error }} -->
+                                            <li class="text-danger">{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+{% endif %}
 {% if form.custom_fields %}
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Custom Fields</strong></div>

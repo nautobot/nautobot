@@ -22,6 +22,7 @@ from .models import (
     ConfigContext,
     ConfigContextSchema,
     Contact,
+    ContactAssociation,
     CustomField,
     CustomLink,
     DynamicGroup,
@@ -51,6 +52,20 @@ from .models import (
 )
 from .registry import registry
 
+
+CONTACT_OR_TEAM = """
+{% load helpers %}
+<i class="mdi {% if record.contact %}mdi-account{% else %}mdi-account-group{% endif %}"></i>
+{{ record.contact_or_team|hyperlinked_object:"name"}}
+"""
+
+CONTACT_OR_TEAM_PHONE = """
+{{ record.contact_or_team.phone }}
+"""
+
+CONTACT_OR_TEAM_EMAIL = """
+{{ record.contact_or_team.email }}
+"""
 
 TAGGED_ITEM = """
 {% if value.get_absolute_url %}
@@ -1113,3 +1128,14 @@ class WebhookTable(BaseTable):
             "http_content_type",
             "enabled",
         )
+
+
+class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
+    contact_or_team = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Contact/Team")
+    contact_or_team_phone = tables.TemplateColumn(CONTACT_OR_TEAM_PHONE, verbose_name="Phone")
+    contact_or_team_email = tables.TemplateColumn(CONTACT_OR_TEAM_EMAIL, verbose_name="E-Mail")
+
+    class Meta(BaseTable.Meta):
+        model = ContactAssociation
+        fields = ("contact_or_team", "contact_or_team_phone", "contact_or_team_email", "status", "role")
+        orderable = False

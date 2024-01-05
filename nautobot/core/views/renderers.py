@@ -22,7 +22,10 @@ from nautobot.core.utils.requests import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import check_filter_for_display, get_csv_form_fields_from_serializer_class
+from nautobot.extras.forms.contacts import inline_gfk_formset_factory, ContactAssociationFormSetForm
 from nautobot.extras.models.change_logging import ObjectChange
+from nautobot.extras.models.contacts import ContactAssociation
+from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import get_base_template
 
 
@@ -234,6 +237,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
             context["created_by"] = created_by
             context["last_updated_by"] = last_updated_by
+            associated_contacts = instance.associated_contacts.all()
+            if associated_contacts.exists():
+                context["associated_contacts_table"] = AssociatedContactsTable(data=associated_contacts)
             context.update(view.get_extra_context(request, instance))
         else:
             if view.action == "list":
@@ -247,9 +253,16 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     }
                 )
             elif view.action in ["create", "update"]:
+                formset_class = inline_gfk_formset_factory(
+                    parent_model=model,
+                    model=ContactAssociation,
+                    form=ContactAssociationFormSetForm,
+                )
+                formset = formset_class(instance=instance)
                 context.update(
                     {
                         "editing": instance.present_in_database,
+                        "contact_association_formset": formset,
                     }
                 )
             elif view.action == "bulk_create":

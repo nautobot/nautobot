@@ -1,5 +1,6 @@
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from nautobot.extras.utils import extras_features
@@ -97,3 +98,24 @@ class ContactAssociation(OrganizationalModel):
             ("contact", "associated_object_type", "associated_object_id", "role"),
             ("team", "associated_object_type", "associated_object_id", "role"),
         )
+
+    def __str__(self):
+        if self.contact is not None:
+            return f"Contact {self.contact} for {self.associated_object}"
+        else:
+            return f"Team contact {self.team} for {self.associated_object}"
+
+    def clean(self):
+        if self.contact is None and self.team is None:
+            raise ValidationError("Either a contact or a team must be specified")
+        if self.contact is not None and self.team is not None:
+            raise ValidationError("A contact and a team cannot be both specified at once")
+        if self.associated_object is None:
+            raise ValidationError("The associated object must be valid")
+
+    @property
+    def contact_or_team(self):
+        if self.contact is not None:
+            return self.contact
+        else:
+            return self.team
