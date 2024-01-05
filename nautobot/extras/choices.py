@@ -375,9 +375,9 @@ class SecretsGroupAccessTypeChoices(ChoiceSet):
 
 class SecretsGroupSecretTypeChoices(ChoiceSet):
     TYPE_KEY = "key"
-    TYPE_PASSWORD = "password"
-    TYPE_SECRET = "secret"
-    TYPE_TOKEN = "token"
+    TYPE_PASSWORD = "password"  # noqa: S105  # hardcoded-password-string -- false positive
+    TYPE_SECRET = "secret"  # noqa: S105  # hardcoded-password-string -- false positive
+    TYPE_TOKEN = "token"  # noqa: S105  # hardcoded-password-string -- false positive
     TYPE_USERNAME = "username"
 
     CHOICES = (
