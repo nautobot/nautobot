@@ -651,10 +651,10 @@ class RelationshipModelFilterFormMixin(forms.Form):
         relationships = Relationship.objects.get_for_model(model=self.model, hidden=False)
 
         for rel in relationships[0]:
-            self._append_relationships_side([rel], RelationshipSideChoices.SIDE_SOURCE, self.model)
+            self._append_relationships_side([rel], RelationshipSideChoices.SIDE_SOURCE)
 
         for rel in relationships[1]:
-            self._append_relationships_side([rel], RelationshipSideChoices.SIDE_DESTINATION, self.model)
+            self._append_relationships_side([rel], RelationshipSideChoices.SIDE_DESTINATION)
 
     def _append_relationships_side(self, relationships, initial_side):
         """
