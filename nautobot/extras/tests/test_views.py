@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest import mock
 import urllib.parse
 import uuid
 
@@ -9,13 +10,12 @@ from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
-from unittest import mock
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
-from nautobot.core.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
+from nautobot.core.testing import extract_form_failures, extract_page_body, TestCase, ViewTestCases
 from nautobot.core.testing.utils import disable_warnings, post_data
-from nautobot.dcim.models import ConsolePort, Device, DeviceType, Interface, Manufacturer, Location, LocationType
+from nautobot.dcim.models import ConsolePort, Device, DeviceType, Interface, Location, LocationType, Manufacturer
 from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
@@ -59,7 +59,6 @@ from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMix
 from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
-
 
 # Use the proper swappable User model
 User = get_user_model()

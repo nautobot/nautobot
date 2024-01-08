@@ -6,20 +6,20 @@ from django.views.static import serve
 
 from nautobot.core.views import (
     CustomGraphQLView,
-    HomeView,
-    StaticMediaFailureView,
-    SearchView,
-    ThemePreviewView,
-    nautobot_metrics_view,
     get_file_with_authorization,
+    HomeView,
+    nautobot_metrics_view,
+    SearchView,
+    StaticMediaFailureView,
+    ThemePreviewView,
 )
 from nautobot.extras.plugins.urls import (
     plugin_admin_patterns,
     plugin_patterns,
 )
 from nautobot.users.views import LoginView, LogoutView
-from .admin import admin_site
 
+from .admin import admin_site
 
 urlpatterns = [
     # Base views

@@ -17,7 +17,6 @@ from nautobot.apps.jobs import (
 from nautobot.dcim.models import Device, Location
 from nautobot.extras.choices import ObjectChangeActionChoices
 
-
 name = "ExamplePlugin jobs"
 
 

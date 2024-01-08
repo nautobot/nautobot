@@ -4,8 +4,8 @@ from nautobot.core.models.querysets import count_related
 from nautobot.dcim.models import Device
 from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,
-    NautobotModelViewSet,
     ModelViewSet,
+    NautobotModelViewSet,
     NotesViewSetMixin,
 )
 from nautobot.virtualization import filters
@@ -16,6 +16,7 @@ from nautobot.virtualization.models import (
     VirtualMachine,
     VMInterface,
 )
+
 from . import serializers
 
 

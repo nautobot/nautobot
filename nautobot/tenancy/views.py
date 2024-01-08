@@ -6,10 +6,10 @@ from nautobot.core.views import generic
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.dcim.models import Device, Location, Rack, RackReservation
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
-from nautobot.virtualization.models import VirtualMachine, Cluster
+from nautobot.virtualization.models import Cluster, VirtualMachine
+
 from . import filters, forms, tables
 from .models import Tenant, TenantGroup
-
 
 #
 # Tenant groups

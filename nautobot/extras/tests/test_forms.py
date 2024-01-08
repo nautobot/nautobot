@@ -1,18 +1,18 @@
 import json
 import warnings
 
-from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from django.test import TestCase, override_settings
+from django.test import override_settings, TestCase
 
 from nautobot.dcim.forms import DeviceForm, LocationBulkEditForm, LocationForm
 import nautobot.dcim.models as dcim_models
 from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.forms import (
-    ConfigContextForm,
     ConfigContextFilterForm,
+    ConfigContextForm,
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelFilterFormMixin,
     CustomFieldModelFormMixin,
@@ -37,9 +37,8 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.ipam.choices import IPAddressTypeChoices
-from nautobot.ipam.forms import IPAddressForm, IPAddressBulkEditForm, VLANGroupForm
+from nautobot.ipam.forms import IPAddressBulkEditForm, IPAddressForm, VLANGroupForm
 import nautobot.ipam.models as ipam_models
-
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -1088,8 +1087,8 @@ class DeprecatedAliasesTestCase(TestCase):
         # Importing these mixin classes doesn't directly warn, but subclassing them does.
         from nautobot.extras.forms import (
             AddRemoveTagsForm,
-            CustomFieldBulkEditForm,
             CustomFieldBulkCreateForm,
+            CustomFieldBulkEditForm,
             CustomFieldFilterForm,
             CustomFieldModelForm,
             RelationshipModelForm,

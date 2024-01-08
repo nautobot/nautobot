@@ -3,7 +3,6 @@ import inspect
 from django.template import Context, Engine
 from django.template.exceptions import TemplateSyntaxError
 from django.test import TestCase
-
 from netutils.utils import jinja2_convenience_function
 
 

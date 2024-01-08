@@ -3,16 +3,14 @@ import re
 from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-
 from django.db.models import Q
-
 from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import Circuit, CircuitTermination, Provider
 from nautobot.core.forms import (
+    add_blank_choice,
     APISelect,
     APISelectMultiple,
-    add_blank_choice,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
     ColorSelect,
@@ -38,13 +36,13 @@ from nautobot.dcim.form_mixins import (
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
-    NautobotBulkEditForm,
-    NautobotModelForm,
-    NautobotFilterForm,
-    NoteModelFormMixin,
     LocalContextFilterForm,
-    LocalContextModelForm,
     LocalContextModelBulkEditForm,
+    LocalContextModelForm,
+    NautobotBulkEditForm,
+    NautobotFilterForm,
+    NautobotModelForm,
+    NoteModelFormMixin,
     RoleModelBulkEditFormMixin,
     RoleModelFilterFormMixin,
     StatusModelBulkEditFormMixin,
@@ -57,6 +55,7 @@ from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup
+
 from .choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
@@ -84,17 +83,16 @@ from .constants import (
     REARPORT_POSITIONS_MAX,
     REARPORT_POSITIONS_MIN,
 )
-
 from .models import (
     Cable,
-    DeviceBay,
-    DeviceBayTemplate,
-    DeviceRedundancyGroup,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
     Device,
+    DeviceBay,
+    DeviceBayTemplate,
+    DeviceRedundancyGroup,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -102,10 +100,10 @@ from .models import (
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
+    InventoryItem,
     Location,
     LocationType,
     Manufacturer,
-    InventoryItem,
     Platform,
     PowerFeed,
     PowerOutlet,

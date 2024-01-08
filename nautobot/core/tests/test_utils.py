@@ -8,23 +8,19 @@ from django.db.models import Q
 from django.http import QueryDict
 from django.test import TestCase
 
-from example_plugin.models import ExampleModel
-
 from nautobot.circuits import models as circuits_models
 from nautobot.core import exceptions, forms, settings_funcs
 from nautobot.core.api import utils as api_utils
 from nautobot.core.models import fields as core_fields, utils as models_utils
 from nautobot.core.utils import data as data_utils, filtering, lookup, requests
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
-from nautobot.dcim import filters as dcim_filters
-from nautobot.dcim import forms as dcim_forms
-from nautobot.dcim import models as dcim_models
-from nautobot.dcim import tables
-from nautobot.extras import models as extras_models
-from nautobot.extras import utils as extras_utils
+from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models, tables
+from nautobot.extras import models as extras_models, utils as extras_utils
 from nautobot.extras.choices import ObjectChangeActionChoices, RelationshipTypeChoices
 from nautobot.extras.models import ObjectChange
 from nautobot.extras.registry import registry
+
+from example_plugin.models import ExampleModel
 
 
 class DictToFilterParamsTest(TestCase):
