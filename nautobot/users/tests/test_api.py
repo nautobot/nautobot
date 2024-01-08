@@ -1,5 +1,6 @@
 import base64
 from unittest import skip
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
@@ -7,11 +8,10 @@ from django.urls import reverse
 from django.utils.timezone import now
 from rest_framework import HTTP_HEADER_ENCODING, status
 
-from nautobot.core.testing import APIViewTestCases, APITestCase, get_deletable_objects
+from nautobot.core.testing import APITestCase, APIViewTestCases, get_deletable_objects
 from nautobot.core.utils.data import deepmerge
 from nautobot.users.filters import GroupFilterSet
 from nautobot.users.models import ObjectPermission, Token
-
 
 # Use the proper swappable User model
 User = get_user_model()

@@ -4,7 +4,7 @@ import urllib.parse
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import RequestFactory, override_settings
+from django.test import override_settings, RequestFactory
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families

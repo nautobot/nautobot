@@ -9,9 +9,9 @@ import sys
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
 
-from .exceptions import PluginNotFound, PluginImproperlyConfigured
 from nautobot.core.settings_funcs import ConstanceConfigItem
 
+from .exceptions import PluginImproperlyConfigured, PluginNotFound
 
 # Logging object
 logger = logging.getLogger(__name__)

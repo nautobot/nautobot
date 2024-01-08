@@ -1,10 +1,8 @@
 from django.core.cache import cache
-
 from tree_queries.models import TreeNode
-from tree_queries.query import TreeManager as TreeManager_
-from tree_queries.query import TreeQuerySet as TreeQuerySet_
+from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as TreeQuerySet_
 
-from nautobot.core.models import querysets, BaseManager
+from nautobot.core.models import BaseManager, querysets
 
 
 class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):

@@ -189,8 +189,6 @@ mkdocstrings = "~0.22.0"
 mkdocstrings-python = "~1.3.0"
 
 [tool.poetry.group.linting.dependencies]
-# Code style checking for python import statements
-isort = "~5.12.0"
 # Code static analysis
 pylint = "~2.17.7"
 # Pylint extensions for Django
@@ -218,11 +216,6 @@ nautobot-server = "nautobot.core.cli:main"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.isort]
-profile = "black"
-line_length = 120
-force_sort_within_sections = true
 
 [tool.pylint.master]
 load-plugins = "pylint_django"
@@ -326,7 +319,7 @@ select = [
     "DJ",  # flake8-django
     "E",  # pycodestyle
     "F",  # pyflakes
-    # "I",  # isort
+    "I",  # isort
     "PIE",  # flake8-pie
     "RUF",  # ruff itself
     "S",  # flake8-bandit
@@ -339,8 +332,10 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-lines-after-imports = 2
+combine-as-imports = true
 force-sort-within-sections = true
+known-local-folder = ["example_plugin"]
+order-by-type = false
 
 [tool.towncrier]
 package = "nautobot"

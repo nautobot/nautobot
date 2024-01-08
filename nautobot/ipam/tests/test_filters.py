@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
-from nautobot.core.testing import TestCase, FilterTestCases
+from nautobot.core.testing import FilterTestCases, TestCase
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import (
     Device,
@@ -27,6 +27,7 @@ from nautobot.ipam.filters import (
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
+    Namespace,
     Prefix,
     RIR,
     RouteTarget,
@@ -34,7 +35,6 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
-    Namespace,
 )
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import (

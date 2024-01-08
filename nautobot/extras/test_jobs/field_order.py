@@ -1,5 +1,5 @@
 from nautobot.core.celery import register_jobs
-from nautobot.extras.jobs import Job, FileVar, StringVar
+from nautobot.extras.jobs import FileVar, Job, StringVar
 
 
 class TestFieldOrder(Job):

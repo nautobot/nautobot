@@ -1,7 +1,6 @@
 from nautobot.core.celery import register_jobs
 from nautobot.dcim.models import Device, Location
-from nautobot.extras.jobs import JobButtonReceiver, get_task_logger
-
+from nautobot.extras.jobs import get_task_logger, JobButtonReceiver
 
 logger = get_task_logger(__name__)
 

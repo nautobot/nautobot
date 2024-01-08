@@ -1,5 +1,6 @@
 """Additional functions to process an Azure user."""
 import logging
+
 from django.contrib.auth.models import Group
 
 logger = logging.getLogger(__name__)
