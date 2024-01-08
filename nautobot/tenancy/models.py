@@ -4,7 +4,6 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.extras.utils import extras_features
 
-
 __all__ = (
     "Tenant",
     "TenantGroup",

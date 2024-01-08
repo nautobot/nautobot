@@ -4,7 +4,6 @@ from django.dispatch import receiver
 from nautobot.dcim.utils import validate_interface_tagged_vlans
 from nautobot.virtualization.models import VMInterface
 
-
 #
 # VMInterface tagged VLAMs
 #

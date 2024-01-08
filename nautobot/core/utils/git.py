@@ -5,6 +5,7 @@ import logging
 import os
 
 from git import Repo
+
 from nautobot.core.utils.logging import sanitize
 
 logger = logging.getLogger(__name__)

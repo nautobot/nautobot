@@ -1,21 +1,20 @@
-import factory
 import logging
-import pytz
-
-from faker import Faker
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+import factory
+from faker import Faker
+import pytz
 
+from nautobot.circuits.models import CircuitTermination
 from nautobot.core.factory import (
     NautobotBoolIterator,
     OrganizationalModelFactory,
     PrimaryModelFactory,
-    UniqueFaker,
     random_instance,
+    UniqueFaker,
 )
-from nautobot.circuits.models import CircuitTermination
 from nautobot.dcim.choices import (
     DeviceRedundancyGroupFailoverStrategyChoices,
     RackDimensionUnitChoices,
@@ -27,21 +26,20 @@ from nautobot.dcim.models import (
     Device,
     DeviceRedundancyGroup,
     DeviceType,
-    Manufacturer,
-    Platform,
     Location,
     LocationType,
+    Manufacturer,
+    Platform,
+    PowerPanel,
     Rack,
     RackGroup,
     RackReservation,
-    PowerPanel,
 )
 from nautobot.extras.models import Role, Status
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster
-
 
 logger = logging.getLogger(__name__)
 

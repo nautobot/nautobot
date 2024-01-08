@@ -34,8 +34,8 @@ from nautobot.dcim.filters import (
     FrontPortFilterSet,
     FrontPortTemplateFilterSet,
     InterfaceFilterSet,
-    InterfaceRedundancyGroupFilterSet,
     InterfaceRedundancyGroupAssociationFilterSet,
+    InterfaceRedundancyGroupFilterSet,
     InterfaceTemplateFilterSet,
     InventoryItemFilterSet,
     LocationFilterSet,
@@ -43,11 +43,11 @@ from nautobot.dcim.filters import (
     ManufacturerFilterSet,
     PlatformFilterSet,
     PowerFeedFilterSet,
+    PowerOutletFilterSet,
+    PowerOutletTemplateFilterSet,
     PowerPanelFilterSet,
     PowerPortFilterSet,
     PowerPortTemplateFilterSet,
-    PowerOutletFilterSet,
-    PowerOutletTemplateFilterSet,
     RackFilterSet,
     RackGroupFilterSet,
     RackReservationFilterSet,
@@ -55,7 +55,6 @@ from nautobot.dcim.filters import (
     RearPortTemplateFilterSet,
     VirtualChassisFilterSet,
 )
-
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,
@@ -79,11 +78,11 @@ from nautobot.dcim.models import (
     Manufacturer,
     Platform,
     PowerFeed,
+    PowerOutlet,
+    PowerOutletTemplate,
     PowerPanel,
     PowerPort,
     PowerPortTemplate,
-    PowerOutlet,
-    PowerOutletTemplate,
     Rack,
     RackGroup,
     RackReservation,
@@ -92,10 +91,9 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.models import Role, SecretsGroup, Status, Tag
-from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN, VLANGroup, Namespace
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
-
 
 # Use the proper swappable User model
 User = get_user_model()

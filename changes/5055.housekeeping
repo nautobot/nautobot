@@ -1,0 +1,2 @@
+Enabled `I` Ruff rules (`isort`) and addressed all warnings raised.
+Removed `isort` as a development dependency as it's fully replaced by `ruff` now.

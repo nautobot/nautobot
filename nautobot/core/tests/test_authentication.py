@@ -12,9 +12,8 @@ from nautobot.core.settings_funcs import sso_auth_enabled
 from nautobot.core.testing import NautobotTestClient, TestCase
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.models import Status
-from nautobot.ipam.models import Prefix, Namespace
+from nautobot.ipam.models import Namespace, Prefix
 from nautobot.users.models import ObjectPermission, Token
-
 
 # Use the proper swappable User model
 User = get_user_model()

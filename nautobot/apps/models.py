@@ -15,9 +15,9 @@ from nautobot.core.models.fields import (
     slugify_dots_to_dashes,
     TagsField,
 )
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.managers import BaseManager, TagsManager
 from nautobot.core.models.name_color_content_types import ContentTypeRelatedQuerySet, NameColorContentTypesModel
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize, naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar, EmptyGroupByJSONBAgg, JSONBAgg
 from nautobot.core.models.querysets import CompositeKeyQuerySetMixin, count_related, RestrictedQuerySet
@@ -49,7 +49,6 @@ from nautobot.extras.plugins import CustomValidator
 from nautobot.extras.utils import extras_features
 from nautobot.ipam.fields import VarbinaryIPField
 from nautobot.ipam.models import get_default_namespace, get_default_namespace_pk
-
 
 __all__ = (
     "array_to_string",

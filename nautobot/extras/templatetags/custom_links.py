@@ -8,7 +8,6 @@ from django.utils.safestring import mark_safe
 from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.models import CustomLink
 
-
 register = template.Library()
 
 LINK_BUTTON = '<a href="{}"{} class="btn btn-sm btn-{}">{}</a>\n'
