@@ -173,7 +173,7 @@ class GetReturnURLMixin:
 
     default_return_url = None
 
-    def get_return_url(self, request, obj=None):
+    def get_return_url(self, request, obj=None, default_return_url=None):
         # First, see if `return_url` was specified as a query parameter or form data. Use this URL only if it's
         # considered safe.
         query_param = request.GET.get("return_url") or request.POST.get("return_url")
@@ -190,6 +190,9 @@ class GetReturnURLMixin:
         except AttributeError:
             # Model has no get_absolute_url() method or no reverse match
             pass
+
+        if default_return_url is not None:
+            return reverse(default_return_url)
 
         # Fall back to the default URL (if specified) for the view.
         if self.default_return_url is not None:
