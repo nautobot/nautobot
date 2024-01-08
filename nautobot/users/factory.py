@@ -1,11 +1,9 @@
 from datetime import timezone
 
 from django.contrib.auth import get_user_model
-
 import factory
 
-from nautobot.core.factory import NautobotBoolIterator, BaseModelFactory
-
+from nautobot.core.factory import BaseModelFactory, NautobotBoolIterator
 
 User = get_user_model()
 

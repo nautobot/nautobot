@@ -1,10 +1,10 @@
-import socket
 from collections import OrderedDict
+import socket
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F
-from django.http import HttpResponseForbidden, HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from drf_spectacular.types import OpenApiTypes
@@ -39,10 +39,10 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
+    InventoryItem,
     Location,
     LocationType,
     Manufacturer,
-    InventoryItem,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -65,6 +65,7 @@ from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupS
 from nautobot.extras.secrets.exceptions import SecretError
 from nautobot.ipam.models import Prefix, VLAN
 from nautobot.virtualization.models import VirtualMachine
+
 from . import serializers
 from .exceptions import MissingFilterException
 

@@ -1,7 +1,7 @@
-import django_filters
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+import django_filters
 
 from nautobot.core.filters import (
     BaseFilterSet,
@@ -34,8 +34,8 @@ from nautobot.extras.filters.customfields import (
 )
 from nautobot.extras.filters.mixins import (
     ConfigContextRoleFilter,
-    CustomFieldModelFilterSetMixin,
     CreatedUpdatedModelFilterSetMixin,
+    CustomFieldModelFilterSetMixin,
     LocalContextModelFilterSetMixin,
     RelationshipFilter,
     RelationshipModelFilterSetMixin,
@@ -79,7 +79,6 @@ from nautobot.extras.models import (
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup
-
 
 __all__ = (
     "ComputedFieldFilterSet",

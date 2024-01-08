@@ -10,8 +10,8 @@ import importlib.machinery
 import importlib.util
 import os
 import sys
-from django.conf import settings as django_settings
 
+from django.conf import settings as django_settings
 
 __all__ = ("create_default_settings", "load_settings")
 

@@ -1,10 +1,9 @@
-import django_tables2 as tables
 from django.conf import settings
 from django.utils.html import format_html
+import django_tables2 as tables
 from django_tables2.utils import Accessor
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
-from nautobot.core.templatetags.helpers import render_boolean, render_markdown
 from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
@@ -16,6 +15,8 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
+from nautobot.core.templatetags.helpers import render_boolean, render_markdown
+
 from .models import (
     ComputedField,
     ConfigContext,
@@ -31,8 +32,8 @@ from .models import (
     Job as JobModel,
     JobButton,
     JobHook,
-    JobResult,
     JobLogEntry,
+    JobResult,
     Note,
     ObjectChange,
     Relationship,
@@ -47,7 +48,6 @@ from .models import (
     Webhook,
 )
 from .registry import registry
-
 
 TAGGED_ITEM = """
 {% if value.get_absolute_url %}

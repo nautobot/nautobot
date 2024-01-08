@@ -7,9 +7,9 @@ from django.db.models import ProtectedError
 from django.forms import ChoiceField, IntegerField, NumberInput
 from django.urls import reverse
 from rest_framework import status
-from nautobot.core.forms.widgets import MultiValueCharInput, StaticSelect2
 
 from nautobot.circuits.models import Provider
+from nautobot.core.forms.widgets import MultiValueCharInput, StaticSelect2
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.tables import CustomFieldColumn
 from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
@@ -19,7 +19,7 @@ from nautobot.dcim.filters import LocationFilterSet
 from nautobot.dcim.forms import RackFilterForm
 from nautobot.dcim.models import Device, Location, LocationType, Rack
 from nautobot.dcim.tables import LocationTable
-from nautobot.extras.choices import CustomFieldTypeChoices, CustomFieldFilterLogicChoices
+from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
 from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import VirtualMachine

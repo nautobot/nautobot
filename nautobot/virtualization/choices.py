@@ -1,6 +1,5 @@
 from nautobot.core.choices import ChoiceSet
 
-
 #
 # VirtualMachines
 #

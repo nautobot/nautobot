@@ -1,5 +1,6 @@
-from django.test import TestCase
 from unittest.mock import patch
+
+from django.test import TestCase
 
 from nautobot.core.apps import NAV_CONTEXT_NAMES, NavContext, NavGrouping, NavItem, register_new_ui_menu_items
 

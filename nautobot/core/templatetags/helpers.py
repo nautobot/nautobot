@@ -6,11 +6,11 @@ import re
 from django import template
 from django.conf import settings
 from django.contrib.staticfiles.finders import find
-from django.templatetags.static import StaticNode, static
+from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, strip_tags
-from django.utils.text import slugify as django_slugify
 from django.utils.safestring import mark_safe
+from django.utils.text import slugify as django_slugify
 from django_jinja import library
 from markdown import markdown
 import yaml

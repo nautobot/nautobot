@@ -1,13 +1,13 @@
 import logging
 import operator
 
-import netaddr
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError, MultipleObjectsReturned
+from django.core.exceptions import MultipleObjectsReturned, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 from django.utils.functional import cached_property
+import netaddr
 
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField
@@ -19,10 +19,10 @@ from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices, constants
 from nautobot.virtualization.models import VMInterface
+
 from .fields import VarbinaryIPField
 from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet
 from .validators import DNSValidator
-
 
 __all__ = (
     "IPAddress",

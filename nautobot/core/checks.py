@@ -1,11 +1,10 @@
 import re
 
 from django.conf import settings
-from django.core.checks import register, Error, Tags, Warning  # pylint: disable=redefined-builtin
+from django.core.checks import Error, register, Tags, Warning  # pylint: disable=redefined-builtin
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import connections
-
 
 E002 = Error(
     "'nautobot.core.authentication.ObjectPermissionBackend' must be included in AUTHENTICATION_BACKENDS",

@@ -1,5 +1,5 @@
-import django_tables2 as tables
 from django.utils.safestring import mark_safe
+import django_tables2 as tables
 from django_tables2.utils import Accessor
 
 from nautobot.core.tables import (
@@ -18,6 +18,8 @@ from nautobot.dcim.utils import cable_status_color_css
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
 from nautobot.virtualization.models import VMInterface
+from nautobot.virtualization.tables import VMInterfaceTable
+
 from .models import (
     IPAddress,
     IPAddressToInterface,
@@ -32,7 +34,6 @@ from .models import (
     VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
-from nautobot.virtualization.tables import VMInterfaceTable
 
 AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')  # noqa: S308  # suspicious-mark-safe-usage -- known safe string here
 

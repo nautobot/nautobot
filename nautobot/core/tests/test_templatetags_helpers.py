@@ -3,12 +3,13 @@ from unittest import skipIf
 from constance.test import override_config
 from django.conf import settings
 from django.templatetags.static import static
-from django.test import TestCase, override_settings
-from example_plugin.models import AnotherExampleModel, ExampleModel
+from django.test import override_settings, TestCase
 
 from nautobot.core.templatetags import helpers
 from nautobot.dcim import models
 from nautobot.ipam.models import VLAN
+
+from example_plugin.models import AnotherExampleModel, ExampleModel
 
 
 @skipIf(
