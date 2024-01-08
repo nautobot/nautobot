@@ -1,7 +1,6 @@
 from celery import states
 from django.db import migrations
 
-
 LEGACY_TO_NEW_JOB_RESULT_STATUS_MAPPING = [
     ["pending", states.PENDING],
     ["running", states.STARTED],

@@ -1,8 +1,7 @@
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.management.base import BaseCommand
-
-from django.contrib.contenttypes.models import ContentType
 
 
 class Command(BaseCommand):

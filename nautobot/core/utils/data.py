@@ -1,4 +1,4 @@
-from collections import OrderedDict, namedtuple
+from collections import namedtuple, OrderedDict
 from decimal import Decimal
 import uuid
 
@@ -6,7 +6,6 @@ from django.core import validators
 from django.template import engines
 
 from nautobot.dcim import choices  # TODO move dcim.choices.CableLengthUnitChoices into core
-
 
 # Setup UtilizationData named tuple for use by multiple methods
 UtilizationData = namedtuple("UtilizationData", ["numerator", "denominator"])

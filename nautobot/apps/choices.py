@@ -57,7 +57,6 @@ from nautobot.ipam.choices import (
     ServiceProtocolChoices,
 )
 
-
 __all__ = (
     "BannerClassChoices",
     "ButtonActionColorChoices",

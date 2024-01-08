@@ -1,24 +1,23 @@
 import datetime
 import logging
+import math
 
 import factory
 import faker
-import math
 
 from nautobot.core.factory import (
+    get_random_instances,
     NautobotBoolIterator,
     OrganizationalModelFactory,
     PrimaryModelFactory,
-    UniqueFaker,
-    get_random_instances,
     random_instance,
+    UniqueFaker,
 )
 from nautobot.dcim.models import Location
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import PrefixTypeChoices
-from nautobot.ipam.models import IPAddress, Prefix, RIR, RouteTarget, VLAN, VLANGroup, VRF, Namespace
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, RIR, RouteTarget, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
-
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +50,7 @@ def random_route_distinguisher():
     fake = faker.Faker()
     branch = fake.pyint(0, 2)
     if branch == 0:
-        # 16-bit ASNs 64496–64511 are reserved for documentation and sample code
+        # 16-bit ASNs 64496-64511 are reserved for documentation and sample code
         return f"{fake.pyint(64496, 64511)}:{fake.pyint(0, 2**32 - 1)}"
     if branch == 1:
         return f"{fake.ipv4_private()}:{fake.pyint(0, 2**16 - 1)}"
@@ -201,9 +200,7 @@ class VLANFactory(PrimaryModelFactory):
                     ),
                 )
             ]
-        )[
-            :255
-        ]  # truncate to max VLAN.name length just to be safe
+        )[:255]  # truncate to max VLAN.name length just to be safe
     )
 
     status = random_instance(lambda: Status.objects.get_for_model(VLAN), allow_null=False)

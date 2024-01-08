@@ -3,8 +3,7 @@ import logging
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
-
-from jinja2.exceptions import UndefinedError, TemplateSyntaxError
+from jinja2.exceptions import TemplateSyntaxError, UndefinedError
 
 from nautobot.core.models import BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -13,7 +12,6 @@ from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupS
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretError, SecretParametersError, SecretProviderError
 from nautobot.extras.utils import extras_features
-
 
 logger = logging.getLogger(__name__)
 

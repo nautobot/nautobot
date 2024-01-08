@@ -3,7 +3,6 @@ from django.test import TestCase
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.views.utils import check_filter_for_display
-
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, InventoryItem, Location, Manufacturer
 from nautobot.extras.models import Role, Status

@@ -2,6 +2,8 @@ import contextlib
 from copy import deepcopy
 import logging
 import uuid
+
+from django.contrib.contenttypes.fields import GenericRel
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
@@ -10,7 +12,6 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError as DjangoValidationError,
 )
-from django.contrib.contenttypes.fields import GenericRel
 from django.db import models
 from django.db.models.fields.related_descriptors import ManyToManyDescriptor
 from django.db.models.functions import Cast
@@ -18,27 +19,26 @@ from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field, PolymorphicProxySerializer as _PolymorphicProxySerializer
 from rest_framework import relations as drf_relations, serializers
-from rest_framework.fields import CreateOnlyDefault
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.fields import CreateOnlyDefault
 from rest_framework.reverse import reverse
 from rest_framework.serializers import SerializerMethodField
-from rest_framework.utils.model_meta import RelationInfo, _get_to_field
+from rest_framework.utils.model_meta import _get_to_field, RelationInfo
 
-
+from nautobot.core import constants
 from nautobot.core.api.fields import NautobotHyperlinkedRelatedField, ObjectTypeField
 from nautobot.core.api.utils import (
     dict_to_filter_params,
     nested_serializer_factory,
 )
-from nautobot.core import constants
 from nautobot.core.exceptions import ViewConfigException
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.requests import normalize_querydict
+from nautobot.extras.api.customfields import CustomFieldDefaultValues, CustomFieldsDataField
 from nautobot.extras.api.relationships import RelationshipsDataField
-from nautobot.extras.api.customfields import CustomFieldsDataField, CustomFieldDefaultValues
 from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import RelationshipAssociation, Tag
 from nautobot.ipam.fields import VarbinaryIPField
@@ -262,7 +262,9 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         fields = [
             field
             for field in model._meta.get_fields()
-            if field.is_relation and not field.many_to_many and not field.one_to_many
+            if field.is_relation
+            and not field.many_to_many
+            and not field.one_to_many
             # Ignore GenericRel since its `fk` and `content_type` would be used.
             and not isinstance(field, GenericRel)
         ]

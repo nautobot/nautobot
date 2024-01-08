@@ -1,6 +1,7 @@
 from db_file_storage.form_widgets import DBAdminClearableFileInput
 from django import forms
 from django.contrib import admin
+
 from nautobot.core.admin import NautobotModelAdmin
 
 from .models import FileProxy, JobResult
@@ -22,7 +23,7 @@ def order_content_types(field):
 class FileProxyForm(forms.ModelForm):
     class Meta:
         model = FileProxy
-        exclude = []
+        fields = ["name", "file"]
         widgets = {
             "file": DBAdminClearableFileInput,
         }

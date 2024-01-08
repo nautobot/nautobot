@@ -6,9 +6,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Count, Sum, Q
+from django.db.models import Count, Q, Sum
 
-from nautobot.core.models.fields import NaturalOrderingField, JSONArrayField
+from nautobot.core.models.fields import JSONArrayField, NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.models.utils import array_to_string
@@ -19,6 +19,7 @@ from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_
 from nautobot.dcim.elevations import RackElevationSVG
 from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
+
 from .device_components import PowerOutlet, PowerPort
 from .devices import Device
 from .power import PowerFeed
@@ -108,10 +109,10 @@ class Rack(PrimaryModel):
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
     status = StatusField(blank=False, null=False)
     role = RoleField(blank=True, null=True)
-    facility_id = models.CharField(
+    facility_id = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- intentional, see below
         max_length=50,
         blank=True,
-        null=True,
+        null=True,  # because facility_id is optional but is part of a uniqueness constraint
         verbose_name="Facility ID",
         help_text="Locally-assigned identifier",
     )
