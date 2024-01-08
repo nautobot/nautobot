@@ -5,9 +5,9 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
-from nautobot.extras.choices import LogLevelChoices, JobResultStatusChoices
-from nautobot.extras.models import Job, JobLogEntry, JobResult
+from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.jobs import get_job
+from nautobot.extras.models import Job, JobLogEntry, JobResult
 
 
 class Command(BaseCommand):
@@ -52,7 +52,7 @@ class Command(BaseCommand):
             if options.get("data"):
                 data = json.loads(options["data"])
         except json.decoder.JSONDecodeError as error:
-            raise CommandError(f"Invalid JSON data:\n{str(error)}")
+            raise CommandError(f"Invalid JSON data:\n{error!s}")
 
         job_model = Job.objects.get_for_class_path(options["job"])
 

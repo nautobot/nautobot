@@ -2,6 +2,7 @@ from django.urls import path
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
+
 from . import views
 from .models import (
     IPAddress,

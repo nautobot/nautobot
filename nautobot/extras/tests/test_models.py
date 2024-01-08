@@ -1,6 +1,6 @@
 import os
 import tempfile
-from unittest import mock, expectedFailure
+from unittest import expectedFailure, mock
 import uuid
 import warnings
 
@@ -29,8 +29,8 @@ from nautobot.dcim.models import (
     Platform,
 )
 from nautobot.extras.choices import (
-    LogLevelChoices,
     JobResultStatusChoices,
+    LogLevelChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
     SecretsGroupAccessTypeChoices,

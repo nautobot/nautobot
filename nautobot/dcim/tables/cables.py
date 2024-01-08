@@ -9,6 +9,7 @@ from nautobot.core.tables import (
 )
 from nautobot.dcim.models import Cable
 from nautobot.extras.tables import StatusTableMixin
+
 from .template_code import CABLE_LENGTH, CABLE_TERMINATION_PARENT
 
 __all__ = ("CableTable",)

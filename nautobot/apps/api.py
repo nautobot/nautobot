@@ -48,7 +48,6 @@ from nautobot.extras.api.fields import MultipleChoiceJSONField
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.extras.api.views import CustomFieldModelViewSet, NautobotModelViewSet, NotesViewSetMixin
 
-
 __all__ = (
     "APIRootView",
     "BaseModelSerializer",

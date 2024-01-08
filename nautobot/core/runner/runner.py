@@ -15,9 +15,9 @@ from django.core import management
 
 from nautobot import __version__
 from nautobot.core.settings_funcs import is_truthy
+
 from . import importer
 from .settings import create_default_settings
-
 
 __configured = False
 
@@ -294,7 +294,7 @@ def run_app(**kwargs):
         parser.exit(status=2, message=str(err) + "\n")
 
     # Call Django management command
-    management.execute_from_command_line([runner_name, command] + command_args)
+    management.execute_from_command_line([runner_name, command, *command_args])
 
     # Exit cleanly
     sys.exit(0)

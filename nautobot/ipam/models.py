@@ -1,13 +1,13 @@
 import logging
 import operator
 
-import netaddr
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError, MultipleObjectsReturned
+from django.core.exceptions import MultipleObjectsReturned, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 from django.utils.functional import cached_property
+import netaddr
 
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField
@@ -19,10 +19,10 @@ from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices, constants
 from nautobot.virtualization.models import VMInterface
+
 from .fields import VarbinaryIPField
 from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet
 from .validators import DNSValidator
-
 
 __all__ = (
     "IPAddress",
@@ -101,10 +101,10 @@ class VRF(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, db_index=True)
-    rd = models.CharField(
+    rd = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- see below
         max_length=constants.VRF_RD_MAX_LENGTH,
         blank=True,
-        null=True,
+        null=True,  # because rd is optional but part of a uniqueness constraint
         verbose_name="Route distinguisher",
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
@@ -266,10 +266,10 @@ class VRFDeviceAssignment(BaseModel):
     virtual_machine = models.ForeignKey(
         "virtualization.VirtualMachine", null=True, blank=True, on_delete=models.CASCADE, related_name="vrf_assignments"
     )
-    rd = models.CharField(
+    rd = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- see below
         max_length=constants.VRF_RD_MAX_LENGTH,
         blank=True,
-        null=True,
+        null=True,  # because rd is optional but (will be) part of a uniqueness constraint
         verbose_name="Route distinguisher",
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )

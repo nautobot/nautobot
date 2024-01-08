@@ -1,25 +1,22 @@
+from abc import ABC, abstractmethod
+from collections import OrderedDict
 import logging
 import os
 
-from abc import ABC, abstractmethod
-from collections import OrderedDict
-
+from constance.apps import ConstanceConfig
 from django.apps import AppConfig, apps as global_apps
 from django.contrib.admin.sites import NotRegistered
-from django.db.models import JSONField, BigIntegerField, BinaryField
+from django.db.models import BigIntegerField, BinaryField, JSONField
 from django.db.models.signals import post_migrate
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.module_loading import import_string
-
-from constance.apps import ConstanceConfig
 from graphene.types import generic, String
 
 from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
 from nautobot.core.signals import nautobot_database_ready
 from nautobot.core.utils.navigation import get_all_new_ui_ready_routes
 from nautobot.extras.registry import registry
-
 
 logger = logging.getLogger(__name__)
 registry["nav_menu"] = {"tabs": {}}
@@ -816,6 +813,7 @@ class CoreConfig(NautobotConfig):
             library.filter(name=name, fn=func)
 
         from graphene_django.converter import convert_django_field
+
         from nautobot.core.graphql import BigInteger
 
         @convert_django_field.register(JSONField)

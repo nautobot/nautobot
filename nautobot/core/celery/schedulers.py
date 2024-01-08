@@ -2,11 +2,10 @@ from collections.abc import Mapping
 import logging
 
 from celery import current_app
-from django_celery_beat.schedulers import ModelEntry, DatabaseScheduler
+from django_celery_beat.schedulers import DatabaseScheduler, ModelEntry
 from kombu.utils.json import loads
 
 from nautobot.extras.models import ScheduledJob, ScheduledJobs
-
 
 logger = logging.getLogger(__name__)
 

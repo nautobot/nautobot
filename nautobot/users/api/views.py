@@ -1,8 +1,8 @@
 from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.models import Group
 from django.db.models import Count
-from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiTypes
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.decorators import action
@@ -17,6 +17,7 @@ from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import deepmerge
 from nautobot.users import filters
 from nautobot.users.models import ObjectPermission, Token
+
 from . import serializers
 
 
@@ -48,9 +49,10 @@ class UserViewSet(ModelViewSet):
     @action(methods=["GET"], detail=False, permission_classes=[AllowAny])
     def session(self, request):
         from django.conf import settings as django_settings
-        from nautobot.core.settings_funcs import sso_auth_enabled
-        from social_django.context_processors import backends
         from django.urls import reverse
+        from social_django.context_processors import backends
+
+        from nautobot.core.settings_funcs import sso_auth_enabled
 
         serializer = self.serializer_class(instance=request.user, context={"request": request})
 
@@ -97,7 +99,7 @@ class TokenViewSet(ModelViewSet):
     def authentication_classes(self):
         """Inherit default authentication_classes and basic authentication."""
         classes = super().authentication_classes
-        return classes + [BasicAuthentication]
+        return [*classes, BasicAuthentication]
 
     # TODO(timizuo): Move authenticate and logout to its own view;
     #  as it is not proper to be on this.

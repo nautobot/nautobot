@@ -6,9 +6,9 @@ from nautobot.apps import views
 from nautobot.circuits.models import Circuit
 from nautobot.dcim.models import Device
 
-from example_plugin.models import AnotherExampleModel, ExampleModel
 from example_plugin import filters, forms, tables
 from example_plugin.api import serializers
+from example_plugin.models import AnotherExampleModel, ExampleModel
 
 
 class CircuitDetailPluginTabView(views.ObjectView):

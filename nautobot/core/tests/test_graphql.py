@@ -8,18 +8,17 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from django.test import TestCase, override_settings
+from django.test import override_settings, TestCase
 from django.test.client import RequestFactory
 from django.urls import reverse
-from graphql import GraphQLError
 import graphene.types
-from graphene_django.settings import graphene_settings
 from graphene_django.registry import get_global_registry
+from graphene_django.settings import graphene_settings
+from graphql import get_default_backend, GraphQLError
 from graphql.error.located_error import GraphQLLocatedError
-from graphql import get_default_backend
 from rest_framework import status
 
-from nautobot.circuits.models import Provider, CircuitTermination
+from nautobot.circuits.models import CircuitTermination, Provider
 from nautobot.core.graphql import execute_query, execute_saved_query
 from nautobot.core.graphql.generators import (
     generate_list_search_parameters,
@@ -27,16 +26,16 @@ from nautobot.core.graphql.generators import (
 )
 from nautobot.core.graphql.schema import (
     extend_schema_type,
-    extend_schema_type_custom_field,
-    extend_schema_type_tags,
     extend_schema_type_config_context,
-    extend_schema_type_relationships,
+    extend_schema_type_custom_field,
     extend_schema_type_null_field_choice,
+    extend_schema_type_relationships,
+    extend_schema_type_tags,
 )
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import str_to_var_name
-from nautobot.core.testing import NautobotTestClient, create_test_user
-from nautobot.dcim.choices import InterfaceTypeChoices, InterfaceModeChoices, PortTypeChoices, ConsolePortTypeChoices
+from nautobot.core.testing import create_test_user, NautobotTestClient
+from nautobot.dcim.choices import ConsolePortTypeChoices, InterfaceModeChoices, InterfaceTypeChoices, PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, LocationFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
 from nautobot.dcim.models import (
@@ -52,17 +51,17 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     PowerFeed,
-    PowerPort,
     PowerOutlet,
     PowerPanel,
+    PowerPort,
     Rack,
     RearPort,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import (
     ChangeLoggedModel,
-    CustomField,
     ConfigContext,
+    CustomField,
     GraphQLQuery,
     Relationship,
     RelationshipAssociation,
@@ -82,8 +81,8 @@ from nautobot.ipam.models import (
     VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
-from nautobot.users.models import ObjectPermission, Token
 from nautobot.tenancy.models import Tenant
+from nautobot.users.models import ObjectPermission, Token
 from nautobot.virtualization.factory import ClusterTypeFactory
 from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 
@@ -708,7 +707,7 @@ class GraphQLQueryTest(TestCase):
         roles = Role.objects.get_for_model(Device)
         cls.device_role1 = roles[0]
         cls.device_role2 = roles[1]
-        cls.device_role3 = random.choice(roles)
+        cls.device_role3 = random.choice(roles)  # noqa: S311  # suspicious-non-cryptographic-random-usage
         cls.location_statuses = list(Status.objects.get_for_model(Location))[:2]
         cls.location_type = LocationType.objects.get(name="Campus")
         cls.location1 = Location.objects.filter(location_type=cls.location_type).first()

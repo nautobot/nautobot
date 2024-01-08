@@ -11,7 +11,6 @@ from nautobot.core.forms import NullableDateField
 from nautobot.core.forms.widgets import StaticSelect2Multiple
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 
-
 EXACT_FILTER_TYPES = (
     CustomFieldTypeChoices.TYPE_BOOLEAN,
     CustomFieldTypeChoices.TYPE_DATE,

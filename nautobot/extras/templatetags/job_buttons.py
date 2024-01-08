@@ -6,9 +6,8 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from nautobot.extras.models import Job, JobButton
 from nautobot.core.utils.data import render_jinja2
-
+from nautobot.extras.models import Job, JobButton
 
 register = template.Library()
 
@@ -70,7 +69,7 @@ CONFIRM_MODAL = """
 </div>
 """
 
-SAFE_EMPTY_STR = mark_safe("")  # noqa: S308
+SAFE_EMPTY_STR = mark_safe("")  # noqa: S308  # suspicious-mark-safe-usage -- this one is safe
 
 
 def _render_job_button_for_obj(job_button, obj, context, content_type):
