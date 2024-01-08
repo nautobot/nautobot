@@ -10,7 +10,7 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError,
 )
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import ManyToManyField, ProtectedError
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
@@ -227,6 +227,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     create_form_class = None
     update_form_class = None
     parser_classes = [FormParser, MultiPartParser]
+    is_contact_model = True
     queryset = None
     # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
     serializer_class = None
@@ -750,21 +751,25 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
                 form.save_note(instance=obj, user=request.user)
 
             # Process the formset for contacts/teams
-            contact_associations_formset_class = inline_gfk_formset_factory(
-                parent_model=self.queryset.model,
-                model=ContactAssociation,
-                form=ContactAssociationFormSetForm,
-                ct_field_name="associated_object_type",
-                fk_field_name="associated_object_id",
-            )
-            contact_associations_formset = contact_associations_formset_class(instance=obj, data=request.POST)
-            if contact_associations_formset.is_valid():
-                contact_associations_formset.save()
-            else:
-                # TODO this isn't presented helpfully.
-                # We really need to validate this earlier, in `perform_create` and `perform_update`,
-                # and do the right thing in form_valid and form_invalid.
-                raise ValidationError(contact_associations_formset.errors)
+            if self.is_contact_model:
+                contact_associations_formset_class = inline_gfk_formset_factory(
+                    parent_model=self.queryset.model,
+                    model=ContactAssociation,
+                    form=ContactAssociationFormSetForm,
+                    ct_field_name="associated_object_type",
+                    fk_field_name="associated_object_id",
+                )
+                contact_associations_formset = contact_associations_formset_class(instance=obj, data=request.POST)
+                if contact_associations_formset.is_valid():
+                    try:
+                        contact_associations_formset.save()
+                    except IntegrityError as e:
+                        raise ValidationError(e)
+                else:
+                    # TODO this isn't presented helpfully.
+                    # We really need to validate this earlier, in `perform_create` and `perform_update`,
+                    # and do the right thing in form_valid and form_invalid.
+                    raise ValidationError(contact_associations_formset.errors)
 
             msg = f'{"Created" if object_created else "Modified"} {queryset.model._meta.verbose_name}'
             self.logger.info(f"{msg} {obj} (PK: {obj.pk})")

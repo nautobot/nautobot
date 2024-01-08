@@ -370,6 +370,7 @@ class ContactUIViewSet(NautobotUIViewSet):
     queryset = Contact.objects.all()
     serializer_class = serializers.ContactSerializer
     table_class = tables.ContactTable
+    is_contact_model = False
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -2280,6 +2281,7 @@ class TeamUIViewSet(NautobotUIViewSet):
     queryset = Team.objects.all()
     serializer_class = serializers.TeamSerializer
     table_class = tables.TeamTable
+    is_contact_model = False
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

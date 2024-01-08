@@ -140,6 +140,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         view = renderer_context["view"]
         request = renderer_context["request"]
         # Check if queryset attribute is set before doing anything
+        is_contact_model = view.is_contact_model
         queryset = view.alter_queryset(request)
         model = queryset.model
         form_class = view.get_form_class()
@@ -242,7 +243,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             # TODO: move to separate view / detail-view tab?
             # TODO: provide some consistent ordering of ContactAssociations?
             associated_contacts = instance.associated_contacts.all()
-            if associated_contacts.exists():
+            if is_contact_model and associated_contacts.exists():
                 context["associated_contacts_table"] = AssociatedContactsTable(data=associated_contacts)
             context.update(view.get_extra_context(request, instance))
         else:
@@ -259,20 +260,27 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             elif view.action in ["create", "update"]:
                 # TODO: need to add this to generic ObjectEditView class as well
                 # TODO: need an option for some models to opt-out of this, e.g. editing a Contact shouldn't have this
-                formset_class = inline_gfk_formset_factory(
-                    parent_model=model,
-                    model=ContactAssociation,
-                    form=ContactAssociationFormSetForm,
-                    ct_field_name="associated_object_type",
-                    fk_field_name="associated_object_id",
-                )
-                formset = formset_class(instance=instance)
-                context.update(
-                    {
-                        "editing": instance.present_in_database,
-                        "contact_association_formset": formset,
-                    }
-                )
+                if is_contact_model:
+                    formset_class = inline_gfk_formset_factory(
+                        parent_model=model,
+                        model=ContactAssociation,
+                        form=ContactAssociationFormSetForm,
+                        ct_field_name="associated_object_type",
+                        fk_field_name="associated_object_id",
+                    )
+                    formset = formset_class(instance=instance)
+                    context.update(
+                        {
+                            "editing": instance.present_in_database,
+                            "contact_association_formset": formset,
+                        }
+                    )
+                else:
+                    context.update(
+                        {
+                            "editing": instance.present_in_database,
+                        }
+                    )
             elif view.action == "bulk_create":
                 context.update(
                     {
