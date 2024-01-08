@@ -1508,12 +1508,8 @@ class JobHookBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class JobResultListView(generic.ObjectListView):
-    """
-    List JobResults
-    """
-
-    queryset = (
+def get_annotated_jobresult_queryset():
+    return (
         JobResult.objects.defer("result")
         .select_related("job_model", "user")
         .annotate(
@@ -1533,6 +1529,14 @@ class JobResultListView(generic.ObjectListView):
             ),
         )
     )
+
+
+class JobResultListView(generic.ObjectListView):
+    """
+    List JobResults
+    """
+
+    queryset = get_annotated_jobresult_queryset()
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -1544,7 +1548,7 @@ class JobResultDeleteView(generic.ObjectDeleteView):
 
 
 class JobResultBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobResult.objects.defer("result").all()
+    queryset = get_annotated_jobresult_queryset()
     table = tables.JobResultTable
     filterset = filters.JobResultFilterSet
 
