@@ -249,8 +249,8 @@ Available tasks:
 
 #### Using Docker with Invoke
 
-+/- 2.0.7
-    The docker dev environment creates a superuser account by default with the username and password "admin". To disable this behavior, you must set the environment variable `NAUTOBOT_CREATE_SUPERUSER=false` using an [override file](./docker-compose-advanced-use-cases.md#docker-compose-overrides).
++/- 2.1.2
+    The Docker dev environment creates a superuser account by default with the username and password "admin". To disable this behavior, you must set the environment variable `NAUTOBOT_CREATE_SUPERUSER=false` using an [override file](./docker-compose-advanced-use-cases.md#docker-compose-overrides).
 
 A development environment can be easily started up from the root of the project using the following commands:
 
@@ -471,8 +471,8 @@ Below are common commands for working your development environment.
 
 ### Creating a Superuser
 
-+/- 2.0.7
-    The docker dev environment creates a superuser account by default with the username and password "admin". To disable this behavior, you must set the environment variable `NAUTOBOT_CREATE_SUPERUSER=false` using an [override file](./docker-compose-advanced-use-cases.md#docker-compose-overrides).
++/- 2.1.2
+    The Docker dev environment creates a superuser account by default with the username and password "admin". To disable this behavior, you must set the environment variable `NAUTOBOT_CREATE_SUPERUSER=false` using an [override file](./docker-compose-advanced-use-cases.md#docker-compose-overrides).
 
 You'll need to create a administrative superuser account to be able to log into the Nautobot Web UI for the first time. Specifying an email address for the user is not required, but be sure to use a very strong password.
 

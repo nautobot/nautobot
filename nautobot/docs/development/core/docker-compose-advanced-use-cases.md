@@ -85,7 +85,7 @@ This file can be used to add new environment variables or override default envir
 
 ### Automatically Creating a Superuser
 
-+/- 2.0.7
++/- 2.1.2
 
 The Nautobot docker compose development environment automatically bootstraps the database with a default superuser with a static password and API token. This is performed by the `docker-entrypoint.sh` script. The `docker-entrypoint.sh` script is copied in during the Docker image build and will read from the default `dev.env` as the `env_file` until you override it as seen above.
 
@@ -156,11 +156,11 @@ For users of Microsoft Visual Studio Code, several files are included to ease de
 
 ### Dev Containers Setup
 
-+/- 2.0.7
++/- 2.1.2
 
 #### ARM64 Build Argument
 
-Due to a bug in Dev Containers, when using VS Code to build your docker containers, docker cannot automatically determine the CPU architecture. To work around this bug, We have set a default value of `amd64` (x86_64). If you're running on another architecture like Apple Silicon or Raspberry Pi you will need to override this setting.
+Due to a bug in Dev Containers, when using VS Code to build your docker containers, docker cannot automatically determine the CPU architecture. To work around this bug, we have set a default value of `amd64` (x86_64). If you're running on another architecture like Apple Silicon or Raspberry Pi you will need to override this setting.
 
 !!! info
     If you're unsure what architecture you're using you can run `uname -m` in a terminal. If this command outputs `x86_64` you're on an `amd64` architecture. If it outputs `aarch64` or `arm64`, you're on `arm64`. These are the only supported CPU architectures for VS Code Dev Containers.
