@@ -74,6 +74,7 @@ class JobResultTest(SeleniumTestCase):
         # Test for message (one row should be visible)
         filter_element.fill("")
         filter_element.type(log_entries[0].message)
+        self.browser.execute_script("document.querySelector('input#log-filter').dispatchEvent(new Event('input'));")
 
         self.browser.is_text_not_present(log_entries[3].message, 10)  # Wait for API call to return a response
         self.assertEqual(1, len(visible_rows()))
@@ -84,6 +85,7 @@ class JobResultTest(SeleniumTestCase):
         # Test for log level (one row should be visible)
         filter_element.fill("")
         filter_element.type(log_entries[3].log_level.title())
+        self.browser.execute_script("document.querySelector('input#log-filter').dispatchEvent(new Event('input'));")
         self.browser.is_text_not_present(log_entries[2].log_level.title(), 10)  # Wait for API call to return a response
         self.assertEqual(1, len(visible_rows()))
         # Check whether the filtered row is visible
