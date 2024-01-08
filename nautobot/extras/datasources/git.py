@@ -293,10 +293,9 @@ def ensure_git_repository(
     if head is not None:
         # If the repo exists and has HEAD already checked out, the repo is present and has the correct branch selected.
         with suppress(InvalidGitRepositoryError):
-            if (
-                Path(repository_record.filesystem_path).exists()
-                and Repo(repository_record.filesystem_path).rev_parse("HEAD") == head
-            ):
+            if Path(repository_record.filesystem_path).exists() and str(
+                Repo(repository_record.filesystem_path).rev_parse("HEAD")
+            ) == str(head):
                 return
 
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(
