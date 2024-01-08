@@ -39,6 +39,7 @@ from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
     Contact,
+    ContactAssociation,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -272,7 +273,10 @@ class ContactViewSet(NautobotModelViewSet):
     filterset_class = filters.ContactFilterSet
 
 
-# TODO: ContactAssociationViewSet
+class ContactAssociationViewSet(NautobotModelViewSet):
+    queryset = ContactAssociation.objects.all()
+    serializer_class = serializers.ContactAssociationSerializer
+    filterset_class = filters.ContactAssociationFilterSet
 
 
 #

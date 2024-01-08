@@ -49,6 +49,7 @@ from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
     Contact,
+    ContactAssociation,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -405,7 +406,10 @@ class ContactFilterSet(NameSearchFilterSet, RoleModelFilterSetMixin, NautobotFil
         fields = "__all__"
 
 
-# TODO: ContactAssociationFilterSet?
+class ContactAssociationFilterSet(NautobotFilterSet):
+    class Meta:
+        model = ContactAssociation
+        fields = "__all__"
 
 
 #

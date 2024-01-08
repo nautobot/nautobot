@@ -46,6 +46,7 @@ from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
     Contact,
+    ContactAssociation,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -188,7 +189,10 @@ class ContactSerializer(NautobotModelSerializer):
         fields = "__all__"
 
 
-# TODO: ContactAssociationSerializer
+class ContactAssociationSerializer(NautobotModelSerializer):
+    class Meta:
+        model = ContactAssociation
+        fields = "__all__"
 
 
 #

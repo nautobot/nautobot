@@ -16,8 +16,7 @@ router.register("config-context-schemas", views.ConfigContextSchemaViewSet)
 
 # Contacts
 router.register("contacts", views.ContactViewSet)
-
-# TODO: contact-associations
+router.register("contact-associations", views.ContactAssociationViewSet)
 
 # ContentTypes
 router.register("content-types", views.ContentTypeViewSet)
