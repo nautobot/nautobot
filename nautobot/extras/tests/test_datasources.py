@@ -13,9 +13,9 @@ import yaml
 
 from nautobot.core.jobs import GitRepositoryDryRun, GitRepositorySync
 from nautobot.core.testing import (
-    TransactionTestCase,
     create_job_result_and_run_job,
     run_job_for_testing,
+    TransactionTestCase,
 )
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.choices import (

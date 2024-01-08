@@ -7,6 +7,7 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
+
 from .models import Tenant, TenantGroup
 
 TREE_LINK = """

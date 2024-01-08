@@ -4,8 +4,8 @@ from nautobot.core.factory import (
     NautobotBoolIterator,
     OrganizationalModelFactory,
     PrimaryModelFactory,
-    UniqueFaker,
     random_instance,
+    UniqueFaker,
 )
 from nautobot.dcim.models import Location, Platform
 from nautobot.extras.models import Role, Status

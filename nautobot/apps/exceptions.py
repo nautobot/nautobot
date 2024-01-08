@@ -15,7 +15,6 @@ from nautobot.extras.secrets.exceptions import (
     SecretValueNotFoundError,
 )
 
-
 __all__ = (
     "AbortTransaction",
     "CeleryWorkerNotRunningException",

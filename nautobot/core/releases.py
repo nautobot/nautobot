@@ -2,8 +2,8 @@ import logging
 
 from django.core.cache import cache
 
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.tasks import get_releases
+from nautobot.core.utils.config import get_settings_or_config
 
 logger = logging.getLogger(__name__)
 

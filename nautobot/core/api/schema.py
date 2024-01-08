@@ -15,7 +15,6 @@ from nautobot.core.api import (
     WritableNestedSerializer,
 )
 
-
 logger = logging.getLogger(__name__)
 
 

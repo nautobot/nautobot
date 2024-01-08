@@ -8,7 +8,6 @@ from nautobot.core.apps import (
     NavMenuTab,
 )
 
-
 menu_items = (
     NavMenuTab(
         name="Organization",

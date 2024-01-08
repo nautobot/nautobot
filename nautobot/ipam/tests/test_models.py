@@ -1,11 +1,11 @@
 from unittest import skipIf
 
-import netaddr
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import connection, IntegrityError
 from django.db.models import ProtectedError
 from django.test import TestCase
+import netaddr
 
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim import choices as dcim_choices
@@ -13,6 +13,7 @@ from nautobot.dcim.models import Device, DeviceType, Interface, Location, Locati
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
+    get_default_namespace,
     IPAddress,
     IPAddressToInterface,
     Namespace,
@@ -23,7 +24,6 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
-    get_default_namespace,
 )
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 

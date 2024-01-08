@@ -1,4 +1,5 @@
 from contextlib import suppress
+
 from django.db import migrations
 
 

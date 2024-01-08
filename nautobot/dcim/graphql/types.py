@@ -3,6 +3,21 @@ import graphene
 from nautobot.circuits.graphql.types import CircuitTerminationType
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import construct_resolver
+from nautobot.dcim.filters import (
+    CableFilterSet,
+    ConsolePortFilterSet,
+    ConsoleServerPortFilterSet,
+    DeviceFilterSet,
+    FrontPortFilterSet,
+    InterfaceFilterSet,
+    LocationFilterSet,
+    PlatformFilterSet,
+    PowerFeedFilterSet,
+    PowerOutletFilterSet,
+    PowerPortFilterSet,
+    RackFilterSet,
+    RearPortFilterSet,
+)
 from nautobot.dcim.graphql.mixins import CableTerminationMixin, PathEndpointMixin
 from nautobot.dcim.models import (
     Cable,
@@ -11,29 +26,14 @@ from nautobot.dcim.models import (
     ConsoleServerPort,
     Device,
     FrontPort,
-    Location,
     Interface,
+    Location,
     Platform,
     PowerFeed,
     PowerOutlet,
     PowerPort,
     Rack,
     RearPort,
-)
-from nautobot.dcim.filters import (
-    CableFilterSet,
-    ConsoleServerPortFilterSet,
-    ConsolePortFilterSet,
-    DeviceFilterSet,
-    FrontPortFilterSet,
-    InterfaceFilterSet,
-    PlatformFilterSet,
-    PowerFeedFilterSet,
-    PowerOutletFilterSet,
-    PowerPortFilterSet,
-    RackFilterSet,
-    RearPortFilterSet,
-    LocationFilterSet,
 )
 from nautobot.extras.models import DynamicGroup
 

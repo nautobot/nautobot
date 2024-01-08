@@ -15,9 +15,9 @@ from django.core import management
 
 from nautobot import __version__
 from nautobot.core.settings_funcs import is_truthy
+
 from . import importer
 from .settings import create_default_settings
-
 
 __configured = False
 

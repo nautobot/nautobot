@@ -14,7 +14,6 @@ from nautobot.core.admin import NautobotModelAdmin
 from nautobot.extras.admin import order_content_types
 from nautobot.users.models import AdminGroup, ObjectPermission, Token, User
 
-
 #
 # Inline models
 #

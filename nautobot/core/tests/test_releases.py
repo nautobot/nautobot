@@ -2,11 +2,11 @@ from io import BytesIO
 from logging import ERROR
 from unittest.mock import Mock, patch
 
-import requests
 from django.conf import settings
 from django.core.cache import cache
-from django.test import SimpleTestCase, override_settings
+from django.test import override_settings, SimpleTestCase
 from packaging import version
+import requests
 from requests import Response
 
 from nautobot.core.tasks import get_releases

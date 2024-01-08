@@ -6,8 +6,8 @@ from db_file_storage.storage import DatabaseFileStorage
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.core.files.storage import get_storage_class
 from django.core.exceptions import ValidationError
+from django.core.files.storage import get_storage_class
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -37,7 +37,7 @@ from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
 
 # Avoid breaking backward compatibility on anything that might expect these to still be defined here:
-from .jobs import JOB_LOGS, Job, JobLogEntry, JobResult, ScheduledJob, ScheduledJobs  # noqa: F401  # unused-import
+from .jobs import Job, JOB_LOGS, JobLogEntry, JobResult, ScheduledJob, ScheduledJobs  # noqa: F401  # unused-import
 
 #
 # Config contexts

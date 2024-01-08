@@ -84,6 +84,9 @@ New dependencies can be added to the project via the `poetry add` command. This 
 
 To prevent circular dependency errors and improve code readability, the following standards should be followed when importing from other python modules.
 
+!!! tip
+    Some of the below rules will be applied automatically when running the `ruff` linter/formatter against your code. Specifically, you can run `invoke ruff --fix` to automatically reorder imports.
+
 ### PEP8 Style Guide
 
 Nautobot follows the [PEP8 style guide's](https://peps.python.org/pep-0008/#imports) standard for importing modules. Libraries should be imported in these groups: standard library, third party libraries, then `nautobot` packages and finally try/except imports. The groups should be separated by a single blank line. Within these groups,import lines should be sorted alphanumerically by the package name. Lists of of names imported from packages should also be sorted alphanumerically.

@@ -9,11 +9,10 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.validators import URLValidator
-from django.test import TestCase as _TestCase
-from django.test import override_settings, tag
+from django.test import override_settings, tag, TestCase as _TestCase
 from django.urls import NoReverseMatch, reverse
-from django.utils.http import urlencode
 from django.utils.html import escape
+from django.utils.http import urlencode
 from django.utils.text import slugify
 from tree_queries.models import TreeNode
 
@@ -21,9 +20,7 @@ from nautobot.core import testing
 from nautobot.core.templatetags import helpers
 from nautobot.core.testing import mixins
 from nautobot.core.utils import lookup
-from nautobot.extras import choices as extras_choices
-from nautobot.extras import models as extras_models
-from nautobot.extras import querysets as extras_querysets
+from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
 from nautobot.users import models as users_models
 
 __all__ = (

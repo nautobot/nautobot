@@ -9,6 +9,7 @@ from nautobot.core.tables import (
 )
 from nautobot.extras.tables import StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
+
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 CIRCUIT_TERMINATION_PARENT = """

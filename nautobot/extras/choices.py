@@ -3,7 +3,6 @@ from celery import states
 from nautobot.core.choices import ChoiceSet
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 
-
 #
 # Banners (currently plugin-specific)
 #
