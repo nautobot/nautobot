@@ -1108,6 +1108,7 @@ class IPAddress(PrimaryModel):
                     }
                 )
             self.parent = closest_parent
+            self._namespace = None
 
     def save(self, *args, **kwargs):
         # 3.0 TODO: uncomment the below to enforce this constraint
@@ -1123,6 +1124,7 @@ class IPAddress(PrimaryModel):
         closest_parent = self._get_closest_parent()
         if closest_parent is not None:
             self.parent = closest_parent
+            self._namespace = None
         super().save(*args, **kwargs)
 
     @property
