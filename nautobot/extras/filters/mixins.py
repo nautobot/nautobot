@@ -232,12 +232,12 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
         """
         Append form fields for all Relationships assigned to this model.
         """
-        relationships = Relationship.objects.get_for_model(model=model, hidden=False)
+        src_relationships, dst_relationships = Relationship.objects.get_for_model(model=model, hidden=False)
 
-        for rel in relationships[0]:
+        for rel in src_relationships:
             self._append_relationships_side([rel], RelationshipSideChoices.SIDE_SOURCE, model)
 
-        for rel in relationships[1]:
+        for rel in dst_relationships:
             self._append_relationships_side([rel], RelationshipSideChoices.SIDE_DESTINATION, model)
 
     def _append_relationships_side(self, relationships, initial_side, model):

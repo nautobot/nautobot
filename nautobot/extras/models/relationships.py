@@ -330,13 +330,13 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
     @lru_cache(maxsize=128)
-    def get_for_model(self, model, hidden=False):
+    def get_for_model(self, model, hidden=None):
         """
         Return all Relationships assigned to the given model.
 
         Args:
-            model: The django model to which relationships are registered
-            hidden: Boolean to look for hidden relationships
+            model (Model): The django model to which relationships are registered
+            hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
 
         Returns a tuple of source and destination scoped relationship querysets.
         """
@@ -346,36 +346,38 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
         )
 
     @lru_cache(maxsize=128)
-    def get_for_model_source(self, model, hidden=False):
+    def get_for_model_source(self, model, hidden=None):
         """
         Return all Relationships assigned to the given model for the source side only.
 
         Args:
-            model: The django model to which relationships are registered
-            hidden: Boolean to look for hidden relationships
+            model (Model): The django model to which relationships are registered
+            hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
         """
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        return (
-            self.get_queryset()
-            .filter(source_type=content_type, source_hidden=hidden)
-            .select_related("source_type", "destination_type")
-        )  # You almost always want access to the types
+        result = (
+            self.get_queryset().filter(source_type=content_type).select_related("source_type", "destination_type")
+        )  # You almost always will want access to the source_type/destination_type
+        if hidden is not None:
+            result = result.filter(source_hidden=hidden)
+        return result
 
     @lru_cache(maxsize=128)
-    def get_for_model_destination(self, model, hidden=False):
+    def get_for_model_destination(self, model, hidden=None):
         """
         Return all Relationships assigned to the given model for the destination side only.
 
         Args:
-            model: The django model to which relationships are registered
-            hidden: Boolean to look for hidden relationships
+            model (Model): The django model to which relationships are registered
+            hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
         """
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        return (
-            self.get_queryset()
-            .filter(destination_type=content_type, destination_hidden=hidden)
-            .select_related("source_type", "destination_type")
-        )  # You almost always want access to the types
+        result = (
+            self.get_queryset().filter(destination_type=content_type).select_related("source_type", "destination_type")
+        )  # You almost always will want access to the source_type/destination_type
+        if hidden is not None:
+            result = result.filter(destination_hidden=hidden)
+        return result
 
     def get_required_for_model(self, model):
         """
