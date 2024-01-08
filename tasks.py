@@ -182,7 +182,7 @@ def run_command(context, command, service="nautobot", **kwargs):
         env = kwargs.pop("env", {})
         if "hide" not in kwargs:
             print_command(command, env=env)
-        context.run(command, pty=True, env=env, **kwargs)
+        return context.run(command, pty=True, env=env, **kwargs)
     else:
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
         docker_compose_status = "ps --services --filter status=running"
@@ -194,7 +194,7 @@ def run_command(context, command, service="nautobot", **kwargs):
         else:
             compose_command = f"run {'--user=root ' if root else ''}--rm --entrypoint '{command}' {service}"
 
-        docker_compose(context, compose_command, pty=True)
+        return docker_compose(context, compose_command, pty=True, **kwargs)
 
 
 # ------------------------------------------------------------------------------
@@ -588,26 +588,35 @@ def pylint(context, target=None, recursive=False):
 
 @task(
     help={
-        "action": "One of 'lint', 'format', or 'both'",
-        "autoformat": "Automatically apply formatting recommendations, rather than failing if formatting is incorrect.",
-        "fix": "Automatically apply linting recommendations where possible. May not be able to fix all.",
-        "output_format": "see https://docs.astral.sh/ruff/settings/#output-format",
+        "fix": "Automatically apply formatting and linting recommendations. May not be able to fix all linting issues.",
+        "target": "File or directory to inspect, repeatable (default: all files in the project will be inspected)",
+        "output_format": "For CI purposes, can be ignored otherwise.",
     },
+    iterable=["target"],
 )
-def ruff(context, action="both", autoformat=False, fix=False, output_format="text"):
-    """Run ruff to perform code formatting and/or linting."""
-    if action != "lint":
-        command = "ruff format"
-        if not autoformat:
-            command += " --check"
-        command += " development/ examples/ nautobot/ tasks.py"
-        run_command(context, command)
-    if action != "format":
-        command = "ruff check"
-        if fix:
-            command += " --fix"
-        command += f" --output-format {output_format} development/ examples/ nautobot/ tasks.py"
-        run_command(context, command)
+def ruff(context, fix=False, target=None, output_format="text"):
+    """Run ruff to perform code formatting and linting."""
+    if not target:
+        target = ["development", "examples", "nautobot", "tasks.py"]
+
+    command = "ruff format "
+    if not fix:
+        command += "--check "
+    command += " ".join(target)
+    format_result = run_command(context, command, warn=True)
+
+    command = "ruff check "
+    if fix:
+        command += "--fix "
+    command += f"--output-format {output_format} "
+    command += " ".join(target)
+    lint_result = run_command(context, command, warn=True)
+
+    if not (format_result and lint_result):
+        if not fix:
+            raise Exit("'ruff format' and/or 'ruff check' failed; you may want to run 'invoke ruff --fix'", code=1)
+        raise Exit("'ruff format` and/or 'ruff check' failed; please see above for specifics", code=1)
+    print("ruff successful!")
 
 
 @task

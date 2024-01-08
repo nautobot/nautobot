@@ -1,4 +1,4 @@
-from unittest import mock, skipIf, skip
+from unittest import mock, skip, skipIf
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -6,25 +6,24 @@ from django.core.exceptions import ValidationError
 from django.template import engines
 from django.test import override_settings
 from django.urls import NoReverseMatch, reverse
-
 import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.celery import app
-from nautobot.core.testing import APIViewTestCases, TestCase, ViewTestCases, disable_warnings, extract_page_body
-from nautobot.dcim.models import Device, DeviceType, Manufacturer, Location, LocationType
+from nautobot.core.testing import APIViewTestCases, disable_warnings, extract_page_body, TestCase, ViewTestCases
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.tenancy.filters import TenantFilterSet
-from nautobot.tenancy.forms import TenantFilterForm
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import CustomField, Relationship, RelationshipAssociation, Role, Secret, Status
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
-from nautobot.extras.registry import registry, DatasourceContent
-from nautobot.ipam.models import Prefix, IPAddress, Namespace
+from nautobot.extras.registry import DatasourceContent, registry
+from nautobot.ipam.models import IPAddress, Namespace, Prefix
+from nautobot.tenancy.filters import TenantFilterSet
+from nautobot.tenancy.forms import TenantFilterForm
+from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.users.models import ObjectPermission
 
 from example_plugin import config as example_config

@@ -1,10 +1,7 @@
 import json
 
-from nautobot.extras.jobs import get_task_logger
-
 from nautobot.core.celery import register_jobs
-from nautobot.extras.jobs import Job, IPAddressVar, IPAddressWithMaskVar
-
+from nautobot.extras.jobs import get_task_logger, IPAddressVar, IPAddressWithMaskVar, Job
 
 logger = get_task_logger(__name__)
 name = "IP Addresses"

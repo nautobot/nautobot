@@ -8,15 +8,13 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
 from django.db.models import Q
-from django.forms.fields import BoundField, InvalidJSONInput
-from django.forms.fields import JSONField as _JSONField
+from django.forms.fields import BoundField, InvalidJSONInput, JSONField as _JSONField
 from django.urls import reverse
 import django_filters
 from netaddr import EUI
 from netaddr.core import AddrFormatError
 
-from nautobot.core import choices as core_choices
-from nautobot.core import forms
+from nautobot.core import choices as core_choices, forms
 from nautobot.core.forms import widgets
 from nautobot.core.models import validators
 from nautobot.core.utils import data as data_utils, lookup

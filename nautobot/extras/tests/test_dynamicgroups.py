@@ -1,14 +1,13 @@
 import random
 import time
-
 from unittest.mock import patch
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
-from django.urls import reverse
 from django.test import override_settings
+from django.urls import reverse
 
 from nautobot.core.forms.fields import MultiMatchModelMultipleChoiceField, MultiValueCharField
 from nautobot.core.forms.widgets import APISelectMultiple, MultiValueCharInput

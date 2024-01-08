@@ -1,6 +1,5 @@
 import logging
 
-
 from nautobot.core.api import (
     BaseModelSerializer,
 )

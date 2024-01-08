@@ -2,15 +2,14 @@ import factory
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.testing import FilterTestCases
-from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Platform, Rack, RackReservation
-from nautobot.extras.models import Role, Status, Tag
-from nautobot.ipam.models import IPAddress, Prefix, RouteTarget, VLAN, VRF
-from nautobot.tenancy.filters import TenantGroupFilterSet, TenantFilterSet
-from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.virtualization.models import Cluster, VirtualMachine
 
 # TODO: move this to nautobot.core.management.commands.generate_test_data and update all impacted tests
 from nautobot.dcim.factory import RackFactory, RackReservationFactory
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Platform, Rack, RackReservation
+from nautobot.extras.models import Role, Status, Tag
+from nautobot.ipam.models import IPAddress, Prefix, RouteTarget, VLAN, VRF
+from nautobot.tenancy.filters import TenantFilterSet, TenantGroupFilterSet
+from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.users.factory import UserFactory
 from nautobot.virtualization.factory import (
     ClusterFactory,
@@ -18,6 +17,7 @@ from nautobot.virtualization.factory import (
     ClusterTypeFactory,
     VirtualMachineFactory,
 )
+from nautobot.virtualization.models import Cluster, VirtualMachine
 
 
 class TenantGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):

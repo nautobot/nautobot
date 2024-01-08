@@ -5,22 +5,22 @@ import time
 
 from db_file_storage.views import get_file
 from django.apps import apps
-import prometheus_client
 from django.conf import settings
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
-from django.http import HttpResponseServerError, JsonResponse, HttpResponseForbidden, HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden, HttpResponseServerError, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import resolve, reverse
+from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
-from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.generic import TemplateView, View
-from packaging import version
 from graphene_django.views import GraphQLView
+from packaging import version
+import prometheus_client
 from prometheus_client import multiprocess
 from prometheus_client.metrics_core import GaugeMetricFamily
 from prometheus_client.registry import Collector
@@ -30,9 +30,9 @@ from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.extras.models import FileProxy, GraphQLQuery, Status
 from nautobot.extras.registry import registry
-from nautobot.extras.forms import GraphQLQueryForm
 
 
 class HomeView(AccessMixin, TemplateView):

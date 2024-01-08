@@ -2,5 +2,4 @@
 
 from nautobot.extras.secrets import SecretsProvider
 
-
 __all__ = ("SecretsProvider",)

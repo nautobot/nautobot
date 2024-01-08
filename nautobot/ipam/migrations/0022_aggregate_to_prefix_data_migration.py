@@ -8,8 +8,7 @@ from django.utils.timezone import make_aware
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import serialize_object
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
-from nautobot.extras import choices as extras_choices
-from nautobot.extras import models as extras_models
+from nautobot.extras import choices as extras_choices, models as extras_models
 from nautobot.extras.constants import CHANGELOG_MAX_OBJECT_REPR
 from nautobot.ipam.choices import PrefixTypeChoices
 

@@ -6,11 +6,10 @@ logan.importer
 :license: Apache License 2.0, see LICENSE for more details.
 """
 
+from importlib import import_module
 import sys
 
-from importlib import import_module
-from .settings import load_settings, create_module
-
+from .settings import create_module, load_settings
 
 installed = False
 

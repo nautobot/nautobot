@@ -5,7 +5,6 @@ from django.core.exceptions import FieldError
 from django.db.models import ForeignKey
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
-
 from rest_framework import serializers
 
 from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField

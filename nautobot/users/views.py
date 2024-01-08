@@ -11,16 +11,16 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils.encoding import iri_to_uri
 from django.utils.decorators import method_decorator
+from django.utils.encoding import iri_to_uri
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
 from nautobot.core.forms import ConfirmationForm
+
 from .forms import LoginForm, PasswordChangeForm, TokenForm
 from .models import Token
-
 
 #
 # Login/logout

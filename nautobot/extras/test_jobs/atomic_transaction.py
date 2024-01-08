@@ -1,9 +1,8 @@
 from django.db import transaction
 
 from nautobot.core.celery import register_jobs
-from nautobot.extras.jobs import Job, BooleanVar, get_task_logger
+from nautobot.extras.jobs import BooleanVar, get_task_logger, Job
 from nautobot.extras.models import Status
-
 
 logger = get_task_logger(__name__)
 
