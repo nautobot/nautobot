@@ -114,6 +114,8 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#5039](https://github.com/nautobot/nautobot/issues/5039) - Enabled remaining `S` Ruff rules (`flake8-bandit`) and addressed all warnings raised.
 - [#5049](https://github.com/nautobot/nautobot/issues/5049) - Fixed an intermittent timing-related failure in `DynamicGroupModelTest.test_member_caching_enabled` test case.
 - [#5053](https://github.com/nautobot/nautobot/issues/5053) - Removed reference to develop-1.6 branch in CI workflow.
+- [#5055](https://github.com/nautobot/nautobot/issues/5055) - Enabled `I` Ruff rules (`isort`) and addressed all warnings raised.
+- [#5055](https://github.com/nautobot/nautobot/issues/5055) - Removed `isort` as a development dependency as it's fully replaced by `ruff` now.
 
 ## v2.1.0 (2023-12-22)
 
