@@ -1,5 +1,5 @@
-import django_filters
 from django.db.models import Q
+import django_filters
 
 from nautobot.core.filters import (
     BaseFilterSet,
@@ -17,6 +17,7 @@ from nautobot.dcim.filters import (
 from nautobot.dcim.models import Location
 from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
+
 from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 __all__ = (

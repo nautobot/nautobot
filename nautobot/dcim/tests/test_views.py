@@ -1,19 +1,18 @@
 from decimal import Decimal
 import unittest
 
-import pytz
-import yaml
-
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.test import override_settings
 from django.urls import reverse
 from netaddr import EUI
+import pytz
+import yaml
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
-from nautobot.core.testing import ViewTestCases, extract_page_body, ModelViewTestCase, post_data
+from nautobot.core.testing import extract_page_body, ModelViewTestCase, post_data, ViewTestCases
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
@@ -52,20 +51,20 @@ from nautobot.dcim.models import (
     FrontPort,
     FrontPortTemplate,
     Interface,
-    InterfaceTemplate,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
-    Manufacturer,
+    InterfaceTemplate,
     InventoryItem,
     Location,
     LocationType,
+    Manufacturer,
     Platform,
     PowerFeed,
-    PowerPort,
-    PowerPortTemplate,
     PowerOutlet,
     PowerOutletTemplate,
     PowerPanel,
+    PowerPort,
+    PowerPortTemplate,
     Rack,
     RackGroup,
     RackReservation,

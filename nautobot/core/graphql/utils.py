@@ -1,6 +1,6 @@
 import logging
 
-from django_filters.filters import BooleanFilter, NumberFilter, MultipleChoiceFilter
+from django_filters.filters import BooleanFilter, MultipleChoiceFilter, NumberFilter
 import graphene
 
 from nautobot.core.filters import (
@@ -11,7 +11,6 @@ from nautobot.core.filters import (
 )
 from nautobot.core.graphql import BigInteger
 from nautobot.core.models.fields import slugify_dashes_to_underscores
-
 
 logger = logging.getLogger(__name__)
 

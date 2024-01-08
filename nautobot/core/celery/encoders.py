@@ -2,7 +2,6 @@ import logging
 
 from rest_framework.utils.encoders import JSONEncoder
 
-
 logger = logging.getLogger(__name__)
 
 

@@ -15,7 +15,6 @@ from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.utils.data import flatten_dict
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 
-
 __all__ = (
     "AdminGroup",
     "ObjectPermission",

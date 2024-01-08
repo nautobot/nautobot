@@ -3,8 +3,8 @@ import time
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.circuits.models import Provider
-from nautobot.extras.models import Tag
 from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.extras.models import Tag
 
 
 class TagFilterTestCase(SeleniumTestCase):

@@ -1,5 +1,4 @@
 import logging
-import netaddr
 
 from django.conf import settings
 from django.contrib import messages
@@ -7,27 +6,29 @@ from django.core.cache import cache
 from django.db import models, transaction
 from django.db.models import Count, Prefetch, ProtectedError, Q
 from django.forms.models import model_to_dict
-from django.templatetags.static import static
 from django.shortcuts import get_object_or_404, redirect, render
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.http import urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
+import netaddr
 
-from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import handle_protectederror
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import Role, Status, Tag
+from nautobot.ipam import choices, constants
+from nautobot.ipam.api import serializers
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
+
 from . import filters, forms, tables
-from nautobot.ipam.api import serializers
-from nautobot.ipam import choices, constants
 from .models import (
     IPAddress,
     IPAddressToInterface,
@@ -47,7 +48,6 @@ from .utils import (
     handle_relationship_changes_when_merging_ips,
     retrieve_interface_or_vminterface_from_request,
 )
-
 
 logger = logging.getLogger(__name__)
 

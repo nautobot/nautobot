@@ -3,7 +3,6 @@ import argparse
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
-
 HELP_TEXT = """
 Performs Nautobot common server upgrade operations using a single entrypoint.
 

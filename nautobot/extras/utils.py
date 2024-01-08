@@ -25,7 +25,6 @@ from nautobot.extras.constants import (
 )
 from nautobot.extras.registry import registry
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -338,9 +337,9 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
     and in that case we need to not import models ourselves.
     """
     from nautobot.extras.jobs import (
-        JobHookReceiver,
         JobButtonReceiver,
-    )  # imported here to prevent circular import problem
+        JobHookReceiver,
+    )
 
     # Unrecoverable errors
     if len(job_class.__module__) > JOB_MAX_NAME_LENGTH:

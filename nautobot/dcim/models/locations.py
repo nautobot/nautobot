@@ -3,7 +3,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.functional import classproperty
-
 from timezone_field import TimeZoneField
 
 from nautobot.core.models.fields import NaturalOrderingField

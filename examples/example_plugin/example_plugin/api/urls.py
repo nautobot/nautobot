@@ -1,8 +1,8 @@
 from django.urls import include, path
 
 from nautobot.apps.api import OrderedDefaultRouter
-from example_plugin.api.views import AnotherExampleModelViewSet, ExampleModelViewSet, ExampleModelWebhook
 
+from example_plugin.api.views import AnotherExampleModelViewSet, ExampleModelViewSet, ExampleModelWebhook
 
 router = OrderedDefaultRouter()
 router.register("models", ExampleModelViewSet)

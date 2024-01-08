@@ -6,7 +6,6 @@ import logging
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.dispatch import receiver, Signal
 
-
 nautobot_database_ready = Signal()
 """
 Signal sent to all installed apps and plugins after the database is ready.

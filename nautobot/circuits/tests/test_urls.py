@@ -1,8 +1,8 @@
 from django.urls import reverse
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
-from nautobot.extras.models import Status
 from nautobot.core.testing.views import TestCase
+from nautobot.extras.models import Status
 
 
 class URLTestCase(TestCase):

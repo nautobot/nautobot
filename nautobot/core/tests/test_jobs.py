@@ -3,7 +3,7 @@ from pathlib import Path
 from django.contrib.contenttypes.models import ContentType
 import yaml
 
-from nautobot.core.testing import TransactionTestCase, create_job_result_and_run_job
+from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.dcim.models import DeviceType, Manufacturer
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.models import ExportTemplate, JobLogEntry, Status
