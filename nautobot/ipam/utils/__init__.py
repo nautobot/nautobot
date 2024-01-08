@@ -1,6 +1,5 @@
-import netaddr
-
 from django.core.exceptions import ValidationError
+import netaddr
 
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import RelationshipAssociation
