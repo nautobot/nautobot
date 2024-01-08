@@ -181,10 +181,14 @@ class ConfigContextSchemaSerializer(NautobotModelSerializer):
 # Contacts
 #
 
+
 class ContactSerializer(NautobotModelSerializer):
     class Meta:
         model = Contact
         fields = "__all__"
+
+
+# TODO: ContactAssociationSerializer
 
 
 #

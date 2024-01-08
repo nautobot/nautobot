@@ -67,14 +67,12 @@ PHONE = """
 {% endif %}
 """
 
-CONTACT_OR_TEAM_EMAIL = """
-{% with record.contact_or_team.email as email %}
-{% if email %}
-    <a href="mailto:{{ email }}">{{ email }}</a>
+EMAIL = """
+{% if value %}
+    <a href="mailto:{{ value }}">{{ value }}</a>
 {% else %}
     <span class="text-muted">&mdash;</span>
 {% endif %}
-{% endwith %}
 """
 
 TAGGED_ITEM = """
@@ -1145,7 +1143,7 @@ class WebhookTable(BaseTable):
 class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
     contact_or_team = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Contact/Team")
     contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team.phone", verbose_name="Phone")
-    contact_or_team_email = tables.TemplateColumn(CONTACT_OR_TEAM_EMAIL, verbose_name="E-Mail")
+    contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team.email", verbose_name="E-Mail")
 
     class Meta(BaseTable.Meta):
         model = ContactAssociation
@@ -1156,6 +1154,7 @@ class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
 class ContactAssociationTable(StatusTableMixin, RoleTableMixin, BaseTable):
     associated_object_type = tables.Column(verbose_name="Object Type")
     associated_object = tables.Column(linkify=True, verbose_name="Object")
+
     class Meta(BaseTable.Meta):
         model = ContactAssociation
         fields = ("role", "status", "associated_object_type", "associated_object")

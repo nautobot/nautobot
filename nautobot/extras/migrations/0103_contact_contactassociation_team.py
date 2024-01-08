@@ -11,75 +11,173 @@ import uuid
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('contenttypes', '0002_remove_content_type_name'),
-        ('extras', '0102_set_null_objectchange_contenttype'),
+        ("contenttypes", "0002_remove_content_type_name"),
+        ("extras", "0102_set_null_objectchange_contenttype"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Contact',
+            name="Contact",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created', models.DateTimeField(auto_now_add=True, null=True)),
-                ('last_updated', models.DateTimeField(auto_now=True, null=True)),
-                ('_custom_field_data', models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder)),
-                ('name', models.CharField(db_index=True, max_length=100)),
-                ('phone', models.CharField(blank=True, db_index=True, max_length=100)),
-                ('email', models.EmailField(blank=True, db_index=True, max_length=254)),
-                ('address', models.TextField(blank=True)),
-                ('comments', models.TextField(blank=True)),
-                ('role', nautobot.extras.models.roles.RoleField(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='contacts', to='extras.role')),
-                ('tags', nautobot.core.models.fields.TagsField(through='extras.TaggedItem', to='extras.Tag')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
+                (
+                    "_custom_field_data",
+                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                ),
+                ("name", models.CharField(db_index=True, max_length=100)),
+                ("phone", models.CharField(blank=True, db_index=True, max_length=100)),
+                ("email", models.EmailField(blank=True, db_index=True, max_length=254)),
+                ("address", models.TextField(blank=True)),
+                ("comments", models.TextField(blank=True)),
+                (
+                    "role",
+                    nautobot.extras.models.roles.RoleField(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="contacts",
+                        to="extras.role",
+                    ),
+                ),
+                ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
-                'ordering': ('name',),
-                'abstract': False,
-                'unique_together': {('name', 'phone', 'email')},
+                "ordering": ("name",),
+                "abstract": False,
+                "unique_together": {("name", "phone", "email")},
             },
-            bases=(models.Model, nautobot.extras.models.mixins.DynamicGroupMixin, nautobot.extras.models.mixins.NotesMixin),
+            bases=(
+                models.Model,
+                nautobot.extras.models.mixins.DynamicGroupMixin,
+                nautobot.extras.models.mixins.NotesMixin,
+            ),
         ),
         migrations.CreateModel(
-            name='Team',
+            name="Team",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created', models.DateTimeField(auto_now_add=True, null=True)),
-                ('last_updated', models.DateTimeField(auto_now=True, null=True)),
-                ('_custom_field_data', models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder)),
-                ('name', models.CharField(db_index=True, max_length=100)),
-                ('phone', models.CharField(blank=True, db_index=True, max_length=100)),
-                ('email', models.EmailField(blank=True, db_index=True, max_length=254)),
-                ('address', models.TextField(blank=True)),
-                ('comments', models.TextField(blank=True)),
-                ('contacts', models.ManyToManyField(related_name='teams', to='extras.Contact')),
-                ('role', nautobot.extras.models.roles.RoleField(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='teams', to='extras.role')),
-                ('tags', nautobot.core.models.fields.TagsField(through='extras.TaggedItem', to='extras.Tag')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
+                (
+                    "_custom_field_data",
+                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                ),
+                ("name", models.CharField(db_index=True, max_length=100)),
+                ("phone", models.CharField(blank=True, db_index=True, max_length=100)),
+                ("email", models.EmailField(blank=True, db_index=True, max_length=254)),
+                ("address", models.TextField(blank=True)),
+                ("comments", models.TextField(blank=True)),
+                ("contacts", models.ManyToManyField(related_name="teams", to="extras.Contact")),
+                (
+                    "role",
+                    nautobot.extras.models.roles.RoleField(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="teams",
+                        to="extras.role",
+                    ),
+                ),
+                ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
-                'ordering': ('name',),
-                'abstract': False,
-                'unique_together': {('name', 'phone', 'email')},
+                "ordering": ("name",),
+                "abstract": False,
+                "unique_together": {("name", "phone", "email")},
             },
-            bases=(models.Model, nautobot.extras.models.mixins.DynamicGroupMixin, nautobot.extras.models.mixins.NotesMixin),
+            bases=(
+                models.Model,
+                nautobot.extras.models.mixins.DynamicGroupMixin,
+                nautobot.extras.models.mixins.NotesMixin,
+            ),
         ),
         migrations.CreateModel(
-            name='ContactAssociation',
+            name="ContactAssociation",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created', models.DateTimeField(auto_now_add=True, null=True)),
-                ('last_updated', models.DateTimeField(auto_now=True, null=True)),
-                ('_custom_field_data', models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder)),
-                ('associated_object_id', models.UUIDField(db_index=True)),
-                ('associated_object_type', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to='contenttypes.contenttype')),
-                ('contact', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='contact_associations', to='extras.contact')),
-                ('role', nautobot.extras.models.roles.RoleField(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='contact_associations', to='extras.role')),
-                ('status', nautobot.extras.models.statuses.StatusField(on_delete=django.db.models.deletion.PROTECT, related_name='contact_associations', to='extras.status')),
-                ('team', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='contact_associations', to='extras.team')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
+                (
+                    "_custom_field_data",
+                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                ),
+                ("associated_object_id", models.UUIDField(db_index=True)),
+                (
+                    "associated_object_type",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="+",
+                        to="contenttypes.contenttype",
+                    ),
+                ),
+                (
+                    "contact",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="contact_associations",
+                        to="extras.contact",
+                    ),
+                ),
+                (
+                    "role",
+                    nautobot.extras.models.roles.RoleField(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="contact_associations",
+                        to="extras.role",
+                    ),
+                ),
+                (
+                    "status",
+                    nautobot.extras.models.statuses.StatusField(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="contact_associations",
+                        to="extras.status",
+                    ),
+                ),
+                (
+                    "team",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="contact_associations",
+                        to="extras.team",
+                    ),
+                ),
             ],
             options={
-                'unique_together': {('team', 'associated_object_type', 'associated_object_id', 'role'), ('contact', 'associated_object_type', 'associated_object_id', 'role')},
+                "unique_together": {
+                    ("team", "associated_object_type", "associated_object_id", "role"),
+                    ("contact", "associated_object_type", "associated_object_id", "role"),
+                },
             },
-            bases=(models.Model, nautobot.extras.models.mixins.DynamicGroupMixin, nautobot.extras.models.mixins.NotesMixin),
+            bases=(
+                models.Model,
+                nautobot.extras.models.mixins.DynamicGroupMixin,
+                nautobot.extras.models.mixins.NotesMixin,
+            ),
         ),
     ]

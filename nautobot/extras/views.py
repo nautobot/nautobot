@@ -381,6 +381,7 @@ class ContactUIViewSet(NautobotUIViewSet):
             RequestConfig(request, paginate).configure(teams_table)
             context["teams_table"] = teams_table
 
+            # TODO: need some consistent ordering of contact_associations
             associations = instance.contact_associations.restrict(request.user, "view")
             associations_table = tables.ContactAssociationTable(associations, orderable=False)
             RequestConfig(request, paginate).configure(associations_table)
@@ -2290,11 +2291,13 @@ class TeamUIViewSet(NautobotUIViewSet):
             RequestConfig(request, paginate).configure(contacts_table)
             context["contacts_table"] = contacts_table
 
+            # TODO: need some consistent ordering of contact_associations
             associations = instance.contact_associations.restrict(request.user, "view")
             associations_table = tables.ContactAssociationTable(associations, orderable=False)
             RequestConfig(request, paginate).configure(associations_table)
             context["contact_associations_table"] = associations_table
         return context
+
 
 #
 # Webhooks

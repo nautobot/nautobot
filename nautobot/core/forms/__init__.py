@@ -110,6 +110,7 @@ __all__ = (
     "ExpandableNameField",
     "form_from_model",
     "ImportForm",
+    "inline_gfk_formset_factory",
     "IP4_EXPANSION_PATTERN",
     "IP6_EXPANSION_PATTERN",
     "JSONArrayFormField",

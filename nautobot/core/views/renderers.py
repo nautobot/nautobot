@@ -237,6 +237,10 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
             context["created_by"] = created_by
             context["last_updated_by"] = last_updated_by
+            # TODO: need to add this to generic ObjectView class as well
+            # TODO: need an option for some models to opt-out of this, e.g. a Contact shouldn't have associated contacts
+            # TODO: move to separate view / detail-view tab?
+            # TODO: provide some consistent ordering of ContactAssociations?
             associated_contacts = instance.associated_contacts.all()
             if associated_contacts.exists():
                 context["associated_contacts_table"] = AssociatedContactsTable(data=associated_contacts)
@@ -253,6 +257,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     }
                 )
             elif view.action in ["create", "update"]:
+                # TODO: need to add this to generic ObjectEditView class as well
+                # TODO: need an option for some models to opt-out of this, e.g. editing a Contact shouldn't have this
                 formset_class = inline_gfk_formset_factory(
                     parent_model=model,
                     model=ContactAssociation,

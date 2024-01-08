@@ -10,7 +10,7 @@
             {{ field }}
         {% endfor %}
         <div class="row">
-            <div class="col-md-10 col-md-offset-1">
+            <div class="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
                 <h1>
                     {% if obj %}
                         {% with obj|get_docs_url as docs_url %}
@@ -51,7 +51,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-10 col-md-offset-1 text-right">
+            <div class="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2 text-right">
                 {% block buttons %}
                     {% if editing %}
                         <button type="submit" name="_update" class="btn btn-primary">Update</button>

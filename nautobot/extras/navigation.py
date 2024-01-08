@@ -15,7 +15,7 @@ menu_items = (
         weight=100,
         groups=(
             NavMenuGroup(
-                name="Metadata",
+                name="Metadata",  # TODO: is there a better name for this grouping?
                 weight=400,
                 items=(
                     NavMenuItem(

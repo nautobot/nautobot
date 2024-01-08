@@ -1,5 +1,4 @@
 from django import forms
-from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceField
 from nautobot.extras.models.contacts import Contact, ContactAssociation, Team
@@ -14,8 +13,9 @@ class ContactForm(NautobotModelForm):
     teams = DynamicModelMultipleChoiceField(
         queryset=Team.objects.all(),
         required=False,
-        label = "Team(s)",
+        label="Team(s)",
     )
+
     class Meta:
         model = Contact
         fields = [
@@ -48,6 +48,7 @@ class TeamForm(NautobotModelForm):
         required=False,
         label="Contact(s)",
     )
+
     class Meta:
         model = Team
         fields = [
@@ -76,6 +77,7 @@ class TeamFilterForm(NautobotFilterForm):
 
 class ContactAssociationFormSetForm(forms.ModelForm):
     """Form used for rows in the Contacts/Teams formset when editing related objects."""
+
     contact = DynamicModelChoiceField(queryset=Contact.objects.all(), required=False)
     team = DynamicModelChoiceField(queryset=Team.objects.all(), required=False)
     status = DynamicModelChoiceField(
