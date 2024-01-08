@@ -102,6 +102,7 @@ User = get_user_model()
 
 
 def common_test_data(cls):
+    Device.objects.all().delete()
     tenants = Tenant.objects.filter(tenant_group__isnull=False)
     cls.tenants = tenants
 
@@ -137,12 +138,13 @@ def common_test_data(cls):
     CircuitTermination.objects.create(circuit=circuit, location=loc0, term_side="A")
     CircuitTermination.objects.create(circuit=circuit, location=loc1, term_side="Z")
 
-    manufacturers = list(Manufacturer.objects.all()[:3])
+    manufacturers = list(
+        Manufacturer.objects.filter(device_types__isnull=False, platforms__isnull=False).distinct()[:3]
+    )
     cls.manufacturers = manufacturers
 
-    platforms = Platform.objects.all()[:3]
+    platforms = Platform.objects.filter(manufacturer__in=manufacturers)[:3]
     for num, platform in enumerate(platforms):
-        platform.manufacturer = manufacturers[num]
         platform.napalm_driver = f"driver-{num}"
         platform.napalm_args = ["--test", f"--arg{num}"]
         platform.network_driver = f"driver_{num}"
@@ -651,6 +653,7 @@ class LocationFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTe
         ("racks", "racks__id"),
         ("racks", "racks__name"),
         ("shipping_address",),
+        ("status", "status__id"),
         ("status", "status__name"),
         ("time_zone",),
         ("vlan_groups", "vlan_groups__id"),
@@ -765,7 +768,9 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         ("rack_group", "rack_group__name"),
         ("rack_reservations", "rack_reservations__id"),
         ("role", "role__name"),
+        ("role", "role__id"),
         ("serial",),
+        ("status", "status__id"),
         ("status", "status__name"),
         ("type",),
         ("u_height",),
@@ -1085,7 +1090,8 @@ class ConsoleServerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 class PowerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = PowerPortTemplate.objects.all()
     filterset = PowerPortTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("allocated_draw",),
         ("maximum_draw",),
         ("power_outlet_templates", "power_outlet_templates__id"),
@@ -1110,7 +1116,8 @@ class PowerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 class PowerOutletTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = PowerOutletTemplate.objects.all()
     filterset = PowerOutletTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("power_port_template", "power_port_template__id"),
         ("power_port_template", "power_port_template__name"),
     ]
@@ -1168,7 +1175,8 @@ class InterfaceTemplateTestCase(Mixins.ComponentTemplateMixin):
 class FrontPortTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = FrontPortTemplate.objects.all()
     filterset = FrontPortTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("rear_port_position",),
         ("rear_port_template", "rear_port_template__id"),
     ]
@@ -1185,7 +1193,8 @@ class FrontPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 class RearPortTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = RearPortTemplate.objects.all()
     filterset = RearPortTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("front_port_templates", "front_port_templates__id"),
     ]
 
@@ -1257,7 +1266,7 @@ class PlatformTestCase(FilterTestCases.NameOnlyFilterTestCase):
         )
 
     def test_devices(self):
-        devices = [Device.objects.first(), Device.objects.last()]
+        devices = Device.objects.filter(platform__isnull=False)[:2]
         params = {"devices": [devices[0].pk, devices[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(devices))
 
@@ -1331,6 +1340,7 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ("role", "role__name"),
         ("secrets_group", "secrets_group__id"),
         ("secrets_group", "secrets_group__name"),
+        ("status", "status__id"),
         ("status", "status__name"),
         ("vc_position",),
         ("vc_priority",),
@@ -1824,6 +1834,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         ("name",),
         ("parent_interface", "parent_interface__id"),
         ("parent_interface", "parent_interface__name"),
+        ("status", "status__id"),
         ("status", "status__name"),
         ("type",),
         ("tagged_vlans", "tagged_vlans__id"),
@@ -2579,6 +2590,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         ("color",),
         ("label",),
         ("length",),
+        ("status", "status__id"),
         ("status", "status__name"),
         ("termination_a_id",),
         ("termination_b_id",),
@@ -2869,6 +2881,7 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
         ("power_panel", "power_panel__name"),
         ("rack", "rack__id"),
         ("rack", "rack__name"),
+        ("status", "status__id"),
         ("status", "status__name"),
         ("voltage",),
     ]

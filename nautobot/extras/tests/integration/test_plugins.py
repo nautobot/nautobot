@@ -28,9 +28,10 @@ class PluginWebhookTest(SeleniumTestCase):
 
     def setUp(self):
         super().setUp()
-        for f in os.listdir("/tmp"):
+        tempdir = tempfile.gettempdir()
+        for f in os.listdir(tempdir):
             if f.startswith("test_plugin_webhook_"):
-                os.remove(os.path.join("/tmp", f))
+                os.remove(os.path.join(tempdir, f))
 
         self.url = f"http://localhost:{self.server_thread.port}" + reverse(
             "plugins-api:example_plugin-api:examplemodel_webhook"
@@ -200,7 +201,7 @@ class PluginTabsTestCase(SeleniumTestCase):
         self.browser.links.find_by_partial_text("Example App Tab")[0].click()
         self.assertTrue(
             self.browser.is_text_present(
-                f"I am some content for the example plugin's circuit ({str(circuit.pk)}) detail tab."
+                f"I am some content for the example plugin's circuit ({circuit.pk!s}) detail tab."
             )
         )
 
@@ -218,6 +219,6 @@ class PluginTabsTestCase(SeleniumTestCase):
             self.browser.links.find_by_partial_text(f"Example App Tab {tab_i}")[0].click()
             self.assertTrue(
                 self.browser.is_text_present(
-                    f"I am some content for the example plugin's device ({str(device.pk)}) detail tab {tab_i}."
+                    f"I am some content for the example plugin's device ({device.pk!s}) detail tab {tab_i}."
                 )
             )

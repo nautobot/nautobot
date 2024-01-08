@@ -59,6 +59,7 @@ from .models import (
     CustomLink,
     DynamicGroup,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -791,6 +792,20 @@ class ExportTemplateDeleteView(generic.ObjectDeleteView):
 class ExportTemplateBulkDeleteView(generic.BulkDeleteView):
     queryset = ExportTemplate.objects.all()
     table = tables.ExportTemplateTable
+
+
+#
+# External integrations
+#
+
+
+class ExternalIntegrationUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ExternalIntegrationBulkEditForm
+    filterset_class = filters.ExternalIntegrationFilterSet
+    form_class = forms.ExternalIntegrationForm
+    queryset = ExternalIntegration.objects.select_related("secrets_group")
+    serializer_class = serializers.ExternalIntegrationSerializer
+    table_class = tables.ExternalIntegrationTable
 
 
 #

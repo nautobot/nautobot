@@ -1,0 +1,7 @@
+Updated `ruff` development dependency to `~0.1.10`.
+Removed `black` and `flake8` as development dependencies as they're fully replaced by `ruff` now.
+Removed `black` and `flake8` steps from CI.
+Enabled `DJ` Ruff rules (`flake8-django`) and addressed all warnings raised.
+Enabled `PIE` Ruff rules except for `PIE808` (`flake8-pie`) and addressed all warnings raised.
+Enabled `RUF` Ruff rules except for `RUF012` and addressed all warnings raised.
+Enabled remaining `S` Ruff rules (`flake8-bandit`) and addressed all warnings raised.

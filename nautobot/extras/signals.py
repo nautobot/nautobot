@@ -1,13 +1,17 @@
 import contextvars
 import os
-import random
+import secrets
 import shutil
 import logging
 from datetime import timedelta
 
+from db_file_storage.model_utils import delete_file
+from db_file_storage.storage import DatabaseFileStorage
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.core.files.storage import get_storage_class
 from django.db import transaction
 from django.db.models.signals import m2m_changed, pre_delete, post_save, pre_save, post_delete
 from django.dispatch import receiver
@@ -123,7 +127,7 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
 
     # Housekeeping: 0.1% chance of clearing out expired ObjectChanges
     changelog_retention = get_settings_or_config("CHANGELOG_RETENTION")
-    if changelog_retention and random.randint(1, 1000) == 1:
+    if changelog_retention and secrets.randbelow(1000) == 0:
         cutoff = timezone.now() - timedelta(days=changelog_retention)
         ObjectChange.objects.filter(time__lt=cutoff).delete()
 
@@ -344,6 +348,17 @@ post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroupMember
 #
 # Jobs
 #
+
+
+@receiver(pre_delete, sender=JobResult)
+def job_result_delete_associated_files(instance, **kwargs):
+    """For each related FileProxy, make sure its file gets deleted correctly from disk or database."""
+    if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+        for file_proxy in instance.files.all():
+            delete_file(file_proxy, "file")
+    else:
+        for file_proxy in instance.files.all():
+            file_proxy.file.delete()
 
 
 def refresh_job_models(sender, *, apps, **kwargs):

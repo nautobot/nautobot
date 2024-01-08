@@ -50,6 +50,30 @@
             {% endif %}
             </td>
         </tr>
+        {% if result.files.exists %}
+            <tr>
+                <td>File Output(s)</td>
+                <td>
+                    <ul>
+                        {% for file_proxy in result.files.all %}
+                            {% if file_proxy.file %}
+                                <li>
+                                    <a
+                                    {% if settings.JOB_FILE_IO_STORAGE == "db_file_storage.storage.DatabaseFileStorage" %}
+                                        href="{% url "db_file_storage.download_file" %}?name={{ file_proxy.file }}"
+                                    {% else %}
+                                        href="{{ file_proxy.file.url }}"
+                                    {% endif %}
+                                        download="{{ file_proxy.name }}">
+                                        {{ file_proxy.name }}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
+                </td>
+            </tr>
+        {% endif %}
     </table>
 </div>
 

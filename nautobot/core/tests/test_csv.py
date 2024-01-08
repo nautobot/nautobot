@@ -25,7 +25,7 @@ class CSVParsingRelatedTestCase(TestCase):
         devicerole = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).first()
         tags = Tag.objects.get_for_model(Device).all()[:3]
-
+        Device.objects.all().delete()
         self.device = Device.objects.create(
             device_type=devicetype,
             role=devicerole,

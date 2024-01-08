@@ -49,6 +49,7 @@ from nautobot.tenancy.models import Tenant
 class DynamicGroupTestBase(TestCase):
     @classmethod
     def setUpTestData(cls):
+        Device.objects.all().delete()
         cls.device_ct = ContentType.objects.get_for_model(Device)
         cls.dynamicgroup_ct = ContentType.objects.get_for_model(DynamicGroup)
         cls.lt = LocationType.objects.get(name="Campus")
@@ -1010,7 +1011,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
             group.members_cached
             self.assertEqual(mock_get_queryset.call_count, 1)
 
-            time.sleep(2)  # Let the cache expire
+            time.sleep(5)  # Let the cache expire
 
             group.members_cached
             self.assertEqual(mock_get_queryset.call_count, 2)
