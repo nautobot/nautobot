@@ -1043,21 +1043,11 @@ class IPAddress(PrimaryModel):
 
     def __init__(self, *args, **kwargs):
         address = kwargs.pop("address", None)
-        namespace = kwargs.pop("namespace", None)
+        # TODO: Invalidate self._namespace when self.parent is changed
+        self._namespace = kwargs.pop("namespace", None)
         super().__init__(*args, **kwargs)
 
-        # Avoid unnessary queries when existing model instances are initialized
-        if address:
-            # If namespace wasn't provided, but parent was, we'll use the parent's namespace.
-            if namespace is None and self.parent is not None:
-                namespace = self.parent.namespace
-
-            if namespace is None:
-                namespace = get_default_namespace()
-
-            self._namespace = namespace
-
-            self._deconstruct_address(address)
+        self._deconstruct_address(address)
 
     def __str__(self):
         return str(self.address)
@@ -1104,10 +1094,6 @@ class IPAddress(PrimaryModel):
         # Validate IP status selection
         if self.type == choices.IPAddressTypeChoices.TYPE_SLAAC and self.ip_version != 6:
             raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
-
-        # If neither `parent` or `namespace` was provided; raise this exception
-        if self._namespace is None:
-            raise ValidationError({"parent": "Either a parent or a namespace must be provided."})
 
         closest_parent = self._get_closest_parent()
         # Validate `parent` can be used as the parent for this ipaddress
@@ -1182,6 +1168,19 @@ class IPAddress(PrimaryModel):
             query = query.exclude(id=self.id)
 
         return query
+
+    @property
+    def _namespace(self):
+        # if a namespace was explicitly set, use it
+        if getattr(self, "_provided_namespace", None):
+            return self._provided_namespace
+        if self.parent is not None:
+            return self.parent.namespace
+        return get_default_namespace()
+
+    @_namespace.setter
+    def _namespace(self, namespace):
+        self._provided_namespace = namespace
 
     # 2.0 TODO: Remove exception, getter, setter below when we can safely deprecate previous properties
     class NATOutsideMultipleObjectsReturned(MultipleObjectsReturned):
