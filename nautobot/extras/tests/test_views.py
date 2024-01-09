@@ -765,7 +765,7 @@ class GitRepositoryTestCase(
             "name,slug,remote_url,branch,secrets_group,provided_contents",
             "Git Repository 5,git_repo_5,https://example.com,main,,extras.configcontext",
             "Git Repository 6,git_repo_6,https://example.com,develop,Secrets Group 2,",
-            'Git Repository 7,git_repo_7,https://example.com,next,Secrets Group 2,"extras.job,extras.configcontext"',
+            'Git Repository 7,git_repo_7,https://example.com,next,Secrets Group 2,"extras.job,extras.exporttemplate"',
         )
 
         cls.slug_source = "name"

@@ -152,6 +152,8 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             # ... or as a PK value
             f'Intermediate 4,{lt1.pk},Another intermediate type,"ipam.prefix,dcim.device",false',
             "Root 3,,Another root type,,true",
+            # We also support later rows having back-references to previous rows now
+            "Leaf 3,Intermediate 3,Another leaf type,,FALSE",
         )
 
     def _get_queryset(self):
@@ -201,11 +203,13 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,location_type,parent,status,tenant,description",
+            "name,location_type,parent__name,status,tenant,description",
             # Mix and match composite keys and PKs to confirm that the serializer handles both correctly
-            f'Root 3,"{lt1.name}",,{status.name},,',
-            f'Intermediate 2,"{lt2.pk}",{loc2.composite_key},{status.pk},"{tenant.name}",Hello world!',
-            f'Leaf 2,"{lt3.name}",{loc3.pk},{status.name},"{tenant.name}",',
+            f'Root 3,"{lt1.name}",NoObject,{status.name},,',
+            f'Intermediate 2,"{lt2.pk}",{loc2.name},{status.pk},"{tenant.name}",Hello world!',
+            f'Leaf 2,"{lt3.name}",{loc3.name},{status.name},"{tenant.name}",',
+            # Back-reference to an instance that didn't exist until processing previous lines of this data
+            f'Leaf 3,"{lt3.pk}",Intermediate 2,{status.name},"{tenant.name}",',
         )
 
         cls.bulk_edit_data = {
