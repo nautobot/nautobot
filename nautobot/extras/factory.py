@@ -5,14 +5,38 @@ import faker
 from nautobot.core.choices import ColorChoices
 from nautobot.core.factory import (
     get_random_instances,
+    random_instance,
     NautobotBoolIterator,
     OrganizationalModelFactory,
     PrimaryModelFactory,
     UniqueFaker,
 )
-from nautobot.extras.models import ExternalIntegration, Role, Status, Tag
+from nautobot.extras.models import Contact, ExternalIntegration, Role, Status, Tag, Team
 from nautobot.extras.utils import FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from nautobot.extras.choices import WebhookHttpMethodChoices
+
+
+class ContactFactory(PrimaryModelFactory):
+    class Meta:
+        model = Contact
+
+    class Params:
+        has_phone = NautobotBoolIterator()
+        has_email = NautobotBoolIterator()
+        has_address = NautobotBoolIterator()
+        has_comments = NautobotBoolIterator()
+        has_role = NautobotBoolIterator()
+
+    name = UniqueFaker("bs")
+    phone = factory.Maybe("has_phone", factory.Sequence(lambda n: "210-123-%04d" % n))
+    email = factory.Maybe("has_email", factory.Faker("email"))
+    address = factory.Maybe("has_address", factory.Faker("address"))
+    comments = factory.Maybe("has_comments", factory.Faker("text", max_nb_chars=200))
+    role = factory.Maybe(
+        "has_role",
+        random_instance(lambda: Role.objects.get_for_model(Contact), allow_null=False),
+        None,
+    )
 
 
 class ExternalIntegrationFactory(PrimaryModelFactory):
@@ -109,6 +133,34 @@ class StatusFactory(OrganizationalModelFactory):
                         lambda: ContentType.objects.filter(FeatureQuery("statuses").get_query()), minimum=1
                     )
                 )
+
+
+class TeamFactory(PrimaryModelFactory):
+    class Meta:
+        model = Team
+
+    class Params:
+        has_phone = NautobotBoolIterator()
+        has_email = NautobotBoolIterator()
+        has_address = NautobotBoolIterator()
+        has_comments = NautobotBoolIterator()
+        has_role = NautobotBoolIterator()
+
+    name = factory.Faker("name")
+    phone = factory.Maybe("has_phone", factory.Sequence(lambda n: "210-123-%04d" % n))
+    email = factory.Maybe("has_email", factory.Faker("email"))
+    address = factory.Maybe("has_address", factory.Faker("address"))
+    comments = factory.Maybe("has_comments", factory.Faker("text", max_nb_chars=200))
+    role = factory.Maybe(
+        "has_role",
+        random_instance(lambda: Role.objects.get_for_model(Team), allow_null=False),
+        None,
+    )
+
+    @factory.post_generation
+    def contacts(self, create, extract, **kwargs):
+        """Assign some contacts to a team after generation"""
+        self.contacts.set(get_random_instances(Contact))
 
 
 class TagFactory(OrganizationalModelFactory):
