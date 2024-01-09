@@ -193,6 +193,8 @@ If you run into issues, you may also deliberately tell `pip3` to install into yo
 pip3 install --user invoke
 ```
 
+If you encounter an [`externally-managed-environment`](https://peps.python.org/pep-0668/) error, you may need to install invoke through your OS's package manager. For example, `apt-get install python3-invoke` for Debian.
+
 Please see the [official documentation on Pip user installs](https://pip.pypa.io/en/stable/user_guide/#user-installs) for more information.
 
 #### List Invoke Tasks
@@ -247,11 +249,13 @@ Available tasks:
 
 #### Using Docker with Invoke
 
++/- 2.1.2
+    The Docker dev environment creates a superuser account by default with the username and password "admin". To disable this behavior, you must set the environment variable `NAUTOBOT_CREATE_SUPERUSER=false` using an [override file](./docker-compose-advanced-use-cases.md#docker-compose-overrides).
+
 A development environment can be easily started up from the root of the project using the following commands:
 
 * `invoke build` - Builds Nautobot docker images
 * `invoke migrate` - Performs database migration operation in Django
-* `invoke createsuperuser` - Creates a superuser account for the Nautobot application
 * `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and Celery Beat in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers
 
 Additional useful commands for the development environment:
@@ -259,9 +263,10 @@ Additional useful commands for the development environment:
 * `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, NGINX, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
 * `invoke cli [-s servicename]` - Launch a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
 * `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
+* `invoke createsuperuser` - Creates a superuser account for the Nautobot application
 
 !!! note
-    The `mkdocs` and `storybook` containers (see later) are not started automatically by `invoke start` or `invoke debug`. If desired, these may be started manually with `invoke start -s mkdocs` or `invoke start -s storybook` as appropriate.
+    The `mkdocs` container is not started automatically by `invoke start` or `invoke debug`. If desired, this container may be started manually with `invoke start -s mkdocs`.
 
 !!! tip
     The Nautobot server uses a Django webservice and worker uses watchdog to provide automatic reload of your web and worker servers in **most** cases when using `invoke start` or `invoke debug`.
@@ -465,6 +470,9 @@ A newly created configuration includes sane defaults. If you need to customize t
 Below are common commands for working your development environment.
 
 ### Creating a Superuser
+
++/- 2.1.2
+    The Docker dev environment creates a superuser account by default with the username and password "admin". To disable this behavior, you must set the environment variable `NAUTOBOT_CREATE_SUPERUSER=false` using an [override file](./docker-compose-advanced-use-cases.md#docker-compose-overrides).
 
 You'll need to create a administrative superuser account to be able to log into the Nautobot Web UI for the first time. Specifying an email address for the user is not required, but be sure to use a very strong password.
 
