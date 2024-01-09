@@ -49,6 +49,7 @@ from nautobot.core.views.utils import (
     handle_protectederror,
     prepare_cloned_fields,
 )
+from nautobot.extras.forms import NoteForm
 from nautobot.extras.forms.contacts import ContactAssociationFormSetForm
 from nautobot.extras.models import ContactAssociation, ExportTemplate
 from nautobot.extras.tables import ObjectChangeTable, NoteTable
@@ -232,6 +233,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
     serializer_class = None
     table_class = None
+    notes_form_class = NoteForm
 
     def get_permissions_for_model(self, model, actions):
         """
