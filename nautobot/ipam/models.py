@@ -1041,21 +1041,13 @@ class IPAddress(PrimaryModel):
         verbose_name_plural = "IP addresses"
         unique_together = ["parent", "host"]
 
-    def __init__(self, *args, **kwargs):
-        address = kwargs.pop("address", None)
-        namespace = kwargs.pop("namespace", None)
-        # This check breaks nautobot.ipam.tests.test_api.IPAddressTest.test_creating_ipaddress_with_an_invalid_parent
-        # Should that validation happen on the API serializer and not in the model?
-        # parent = kwargs.get("parent", None)
-        # if parent and namespace:
-        #     raise ValueError("Cannot specify both parent and namespace arguments")
-
+    def __init__(self, *args, address=None, namespace=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if not self.present_in_database and namespace:
+        if namespace is not None and not self.present_in_database:
             self._provided_namespace = namespace
 
-        if not self.present_in_database:
+        if address is not None and not self.present_in_database:
             self._deconstruct_address(address)
 
     def __str__(self):
