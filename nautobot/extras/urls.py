@@ -27,6 +27,7 @@ app_name = "extras"
 
 router = NautobotUIViewSetRouter()
 router.register("contacts", views.ContactUIViewSet)
+router.register("contact-associations", views.ContactAssociationUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("roles", views.RoleUIViewSet)

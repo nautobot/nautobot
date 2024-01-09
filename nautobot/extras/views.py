@@ -28,7 +28,7 @@ from nautobot.core.utils.lookup import get_table_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.core.views.mixins import ObjectPermissionRequiredMixin
+from nautobot.core.views.mixins import ObjectPermissionRequiredMixin, ObjectDestroyViewMixin, ObjectEditViewMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.dcim.models import Device, Rack
@@ -56,6 +56,7 @@ from .models import (
     ConfigContext,
     ConfigContextSchema,
     Contact,
+    ContactAssociation,
     CustomField,
     CustomLink,
     DynamicGroup,
@@ -388,6 +389,13 @@ class ContactUIViewSet(NautobotUIViewSet):
             RequestConfig(request, paginate).configure(associations_table)
             context["contact_associations_table"] = associations_table
         return context
+
+
+class ContactAssociationUIViewSet(ObjectDestroyViewMixin, ObjectEditViewMixin):
+    form_class = forms.ContactAssociationForm
+    queryset = ContactAssociation.objects.all()
+    serializer_class = serializers.ContactAssociationSerializer
+    template_name = "extras/contact_association_add.html"
 
 
 #
