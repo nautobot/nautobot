@@ -46,14 +46,17 @@
     {% block buttons %}
         {% plugin_buttons object %}
         {% block extra_buttons %}{% endblock extra_buttons %}
-        {% if user|can_change:object %}
+        {% if user|can_change:object and is_contact_model %}
             <div class="btn-group">
-                <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contacts <span class="caret"></span>
+                <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="mdi mdi-account" aria-hidden="true"></span> Add Contacts <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu">
                     {% if perms.extras.add_contact %}
-                        <li><a href="{% url 'extras:contact_add' %}">Add a New Contact/Team</a></li>
+                        <li><a href="{% url 'extras:contact_add' %}?return_url={{request.path}}">Add a New Contact</a></li>
+                    {% endif %}
+                    {% if perms.extras.add_team %}
+                        <li><a href="{% url 'extras:team_add' %}?return_url={{request.path}}">Add a New Team</a></li>
                     {% endif %}
                     {% if perms.extras.add_contact %}
                         <li><a href="{% url 'extras:contactassociation_add' %}?associated_object_id={{object.id}}&associated_object_type={{content_type.id}}&return_url={{request.path}}">Add an Existing Contact/Team</a></li>
@@ -102,7 +105,7 @@
                 Advanced
             </a>
         </li>
-        {% if associated_contacts_table %}
+        {% if is_contact_model %}
             <li role="presentation"{% if request.GET.tab == 'contacts' %} class="active"{% endif %}>
                 <a href="{{ object.get_absolute_url }}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">
                     Contacts/Teams
@@ -155,9 +158,6 @@
             <div class="row">
                 <div class="col-md-12">
                     {% block content_full_width_page %}{% endblock content_full_width_page %}
-                    {% if associated_contacts_table %}
-                        {% include 'panel_table.html' with table=associated_contacts_table %}
-                    {% endif %}
                     {% plugin_full_width_page object %}
                 </div>
             </div>
@@ -177,7 +177,7 @@
                 </div>
             </div>
         </div>
-        {% if associated_contacts_table %}
+        {% if is_contact_model %}
             <div id="contacts" role="tabpanel" class="tab-pane {% if request.GET.tab == 'contacts' %}active{% else %}fade{% endif %}">
                 <div class="row">
                     <div class="col-md-12">

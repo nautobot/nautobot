@@ -90,7 +90,7 @@ from .models import (
 )
 from .models import Job as JobModel
 from .registry import registry
-from .tables import RoleTable
+from .tables import AssociatedContactsTable, RoleTable
 
 logger = logging.getLogger(__name__)
 
@@ -400,7 +400,7 @@ class ContactAssociationUIViewSet(ObjectBulkDestroyViewMixin, ObjectDestroyViewM
     form_class = forms.ContactAssociationForm
     queryset = ContactAssociation.objects.all()
     serializer_class = serializers.ContactAssociationSerializer
-    template_name = "extras/contact_association_add.html"
+    table_class = AssociatedContactsTable
 
 
 #

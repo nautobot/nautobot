@@ -1141,6 +1141,7 @@ class WebhookTable(BaseTable):
 
 
 class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
+    pk = ToggleColumn()
     contact_or_team = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Contact/Team")
     contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team.phone", verbose_name="Phone")
     contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team.email", verbose_name="E-Mail")
@@ -1148,7 +1149,24 @@ class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
     class Meta(BaseTable.Meta):
         model = ContactAssociation
-        fields = ("contact_or_team", "status", "role", "contact_or_team_phone", "contact_or_team_email", "actions")
+        fields = (
+            "pk",
+            "contact_or_team",
+            "status",
+            "role",
+            "contact_or_team_phone",
+            "contact_or_team_email",
+            "actions",
+        )
+        default_columns = [
+            "pk",
+            "contact_or_team",
+            "status",
+            "role",
+            "contact_or_team_phone",
+            "contact_or_team_email",
+            "actions",
+        ]
         orderable = False
 
 

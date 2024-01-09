@@ -70,6 +70,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
 
     queryset = None
     template_name = None
+    is_contact_model = True
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -125,25 +126,25 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             resp = {"tabs": plugin_tabs}
             return JsonResponse(resp)
         else:
+            context = {
+                "object": instance,
+                "is_contact_model": self.is_contact_model,
+                "content_type": ContentType.objects.get_for_model(self.queryset.model),
+                "verbose_name": self.queryset.model._meta.verbose_name,
+                "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+                "created_by": created_by,
+                "last_updated_by": last_updated_by,
+                **self.get_extra_context(request, instance),
+            }
             # TODO: need some consistent ordering of contact_associations
-            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-            associations = ContactAssociation.objects.filter(associated_object_id=instance.id)
-            associations_table = AssociatedContactsTable(associations, orderable=False)
-            RequestConfig(request, paginate).configure(associations_table)
-            return render(
-                request,
-                self.get_template_name(),
-                {
-                    "object": instance,
-                    "associated_contacts_table": associations_table,
-                    "content_type": ContentType.objects.get_for_model(self.queryset.model),
-                    "verbose_name": self.queryset.model._meta.verbose_name,
-                    "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                    "created_by": created_by,
-                    "last_updated_by": last_updated_by,
-                    **self.get_extra_context(request, instance),
-                },
-            )
+            if self.is_contact_model:
+                paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+                associations = ContactAssociation.objects.filter(associated_object_id=instance.id)
+                associations_table = AssociatedContactsTable(associations, orderable=False)
+                RequestConfig(request, paginate).configure(associations_table)
+                associations_table.columns.show("pk")
+                context["associated_contacts_table"] = associations_table
+            return render(request, self.get_template_name(), context)
 
 
 class ObjectListView(ObjectPermissionRequiredMixin, View):

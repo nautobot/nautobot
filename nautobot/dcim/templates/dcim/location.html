@@ -12,6 +12,24 @@
 
 {% block buttons %}
         {% plugin_buttons object %}
+        {% if perms.dcim.change_location and is_contact_model %}
+            <div class="btn-group">
+                <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="mdi mdi-account" aria-hidden="true"></span> Add Contacts <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu">
+                    {% if perms.extras.add_contact %}
+                        <li><a href="{% url 'extras:contact_add' %}?return_url={{request.path}}">Add a New Contact</a></li>
+                    {% endif %}
+                    {% if perms.extras.add_team %}
+                        <li><a href="{% url 'extras:team_add' %}?return_url={{request.path}}">Add a New Team</a></li>
+                    {% endif %}
+                    {% if perms.extras.add_contact %}
+                        <li><a href="{% url 'extras:contactassociation_add' %}?associated_object_id={{object.id}}&associated_object_type={{content_type.id}}&return_url={{request.path}}">Add an Existing Contact/Team</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        {% endif %}
         {% if perms.dcim.add_location %}
             {% clone_button object %}
         {% endif %}
