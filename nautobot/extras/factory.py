@@ -10,9 +10,9 @@ from nautobot.core.factory import (
     PrimaryModelFactory,
     UniqueFaker,
 )
+from nautobot.extras.choices import WebhookHttpMethodChoices
 from nautobot.extras.models import ExternalIntegration, Role, Status, Tag
 from nautobot.extras.utils import FeatureQuery, RoleModelsQuery, TaggableClassesQuery
-from nautobot.extras.choices import WebhookHttpMethodChoices
 
 
 class ExternalIntegrationFactory(PrimaryModelFactory):

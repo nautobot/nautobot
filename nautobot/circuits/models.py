@@ -6,10 +6,10 @@ from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
 from nautobot.extras.models import StatusField
 from nautobot.extras.utils import extras_features
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel  # isort: skip - avoid circular imports
 
 from .choices import CircuitTerminationSideChoices
-
 
 __all__ = (
     "Circuit",

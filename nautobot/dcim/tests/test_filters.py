@@ -35,8 +35,8 @@ from nautobot.dcim.filters import (
     FrontPortTemplateFilterSet,
     HardwareFamilyFilterSet,
     InterfaceFilterSet,
-    InterfaceRedundancyGroupFilterSet,
     InterfaceRedundancyGroupAssociationFilterSet,
+    InterfaceRedundancyGroupFilterSet,
     InterfaceTemplateFilterSet,
     InventoryItemFilterSet,
     LocationFilterSet,
@@ -44,11 +44,11 @@ from nautobot.dcim.filters import (
     ManufacturerFilterSet,
     PlatformFilterSet,
     PowerFeedFilterSet,
+    PowerOutletFilterSet,
+    PowerOutletTemplateFilterSet,
     PowerPanelFilterSet,
     PowerPortFilterSet,
     PowerPortTemplateFilterSet,
-    PowerOutletFilterSet,
-    PowerOutletTemplateFilterSet,
     RackFilterSet,
     RackGroupFilterSet,
     RackReservationFilterSet,
@@ -56,7 +56,6 @@ from nautobot.dcim.filters import (
     RearPortTemplateFilterSet,
     VirtualChassisFilterSet,
 )
-
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,
@@ -81,11 +80,11 @@ from nautobot.dcim.models import (
     Manufacturer,
     Platform,
     PowerFeed,
+    PowerOutlet,
+    PowerOutletTemplate,
     PowerPanel,
     PowerPort,
     PowerPortTemplate,
-    PowerOutlet,
-    PowerOutletTemplate,
     Rack,
     RackGroup,
     RackReservation,
@@ -94,10 +93,9 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.models import Role, SecretsGroup, Status, Tag
-from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN, VLANGroup, Namespace
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
-
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -1102,7 +1100,8 @@ class ConsoleServerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 class PowerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = PowerPortTemplate.objects.all()
     filterset = PowerPortTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("allocated_draw",),
         ("maximum_draw",),
         ("power_outlet_templates", "power_outlet_templates__id"),
@@ -1127,7 +1126,8 @@ class PowerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 class PowerOutletTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = PowerOutletTemplate.objects.all()
     filterset = PowerOutletTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("power_port_template", "power_port_template__id"),
         ("power_port_template", "power_port_template__name"),
     ]
@@ -1185,7 +1185,8 @@ class InterfaceTemplateTestCase(Mixins.ComponentTemplateMixin):
 class FrontPortTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = FrontPortTemplate.objects.all()
     filterset = FrontPortTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("rear_port_position",),
         ("rear_port_template", "rear_port_template__id"),
     ]
@@ -1202,7 +1203,8 @@ class FrontPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 class RearPortTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = RearPortTemplate.objects.all()
     filterset = RearPortTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("front_port_templates", "front_port_templates__id"),
     ]
 

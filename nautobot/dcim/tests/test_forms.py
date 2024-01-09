@@ -1,8 +1,7 @@
 from django.test import TestCase
 
-from nautobot.dcim.forms import DeviceForm, DeviceFilterForm, InterfaceCreateForm, RackForm
 from nautobot.dcim.choices import DeviceFaceChoices, InterfaceTypeChoices, RackWidthChoices
-
+from nautobot.dcim.forms import DeviceFilterForm, DeviceForm, InterfaceCreateForm, RackForm
 from nautobot.dcim.models import (
     Device,
     DeviceType,
@@ -13,8 +12,8 @@ from nautobot.dcim.models import (
     Platform,
     Rack,
 )
-from nautobot.tenancy.models import Tenant
 from nautobot.extras.models import Role, SecretsGroup, Status
+from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 
 

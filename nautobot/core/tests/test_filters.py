@@ -7,7 +7,6 @@ from django.db import models as django_models
 from django.shortcuts import reverse
 from django.test import TestCase
 from django.test.utils import isolate_apps
-
 import django_filters
 from tree_queries.models import TreeNodeForeignKey
 
@@ -16,14 +15,11 @@ from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core import filters, testing
 from nautobot.core.models import fields as core_fields
 from nautobot.core.utils import lookup
-from nautobot.dcim import choices as dcim_choices
-from nautobot.dcim import filters as dcim_filters
-from nautobot.dcim import models as dcim_models
+from nautobot.dcim import choices as dcim_choices, filters as dcim_filters, models as dcim_models
 from nautobot.dcim.models import Device
 from nautobot.extras import models as extras_models
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam import factory as ipam_factory
-from nautobot.ipam import models as ipam_models
+from nautobot.ipam import factory as ipam_factory, models as ipam_models
 
 
 class TreeNodeMultipleChoiceFilterTest(TestCase):
@@ -416,7 +412,7 @@ class BaseFilterSetTest(TestCase):
     class TestFilterSet(filters.BaseFilterSet):
         """Filterset for testing various fields."""
 
-        class TestModel(django_models.Model):
+        class TestModel(django_models.Model):  # noqa: DJ008  # django-model-without-dunder-str -- fine since this isn't a "real" model
             """
             Test model used by BaseFilterSetTest for filter validation. Should never appear in a schema migration.
             """

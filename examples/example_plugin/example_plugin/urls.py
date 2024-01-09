@@ -8,7 +8,6 @@ from nautobot.apps.views import ObjectDynamicGroupsView
 from example_plugin import views
 from example_plugin.models import AnotherExampleModel, ExampleModel
 
-
 app_name = "example_plugin"
 router = NautobotUIViewSetRouter()
 # ExampleModel is registered using the ViewSet

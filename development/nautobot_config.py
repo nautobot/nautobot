@@ -1,7 +1,11 @@
 """Nautobot development configuration file."""
 import os
 
-from nautobot.core.settings import *  # noqa: F403
+from nautobot.core.settings import *  # noqa: F403  # undefined-local-with-import-star
+
+# The above results in various F405 undefined-local-with-import-star-usage,
+# "may be undefined, or defined from star imports",
+# which we suppress on a case-by-case basis below
 from nautobot.core.settings_funcs import is_truthy
 
 SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "012345678901234567890123456789012345678901234567890123456789")
@@ -59,12 +63,12 @@ if is_truthy(os.getenv("ENABLE_OIDC", "False")):
         "nautobot.core.authentication.ObjectPermissionBackend",
     )
     SOCIAL_AUTH_KEYCLOAK_KEY = "nautobot"
-    SOCIAL_AUTH_KEYCLOAK_SECRET = "7b1c3527-8702-4742-af69-2b74ee5742e8"
+    SOCIAL_AUTH_KEYCLOAK_SECRET = "7b1c3527-8702-4742-af69-2b74ee5742e8"  # noqa: S105  # hardcoded-password-string
     SOCIAL_AUTH_KEYCLOAK_PUBLIC_KEY = requests.get("http://keycloak:8087/realms/nautobot/", timeout=15).json()[
         "public_key"
     ]
     SOCIAL_AUTH_KEYCLOAK_AUTHORIZATION_URL = "http://localhost:8087/realms/nautobot/protocol/openid-connect/auth"
-    SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL = "http://keycloak:8087/realms/nautobot/protocol/openid-connect/token"
+    SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL = "http://keycloak:8087/realms/nautobot/protocol/openid-connect/token"  # noqa: S105  # hardcoded-password-string
     SOCIAL_AUTH_KEYCLOAK_VERIFY_SSL = False
 
 METRICS_ENABLED = True

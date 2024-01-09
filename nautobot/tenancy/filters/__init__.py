@@ -1,5 +1,6 @@
 import django_filters
 
+from nautobot.circuits.models import Circuit
 from nautobot.core.filters import (
     NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
@@ -8,14 +9,12 @@ from nautobot.core.filters import (
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
-from nautobot.circuits.models import Circuit
 from nautobot.dcim.models import Device, Location, Rack, RackReservation
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.ipam.models import IPAddress, Prefix, RouteTarget, VLAN, VRF
 from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, VirtualMachine
-
 
 __all__ = (
     "TenancyFilterSet",

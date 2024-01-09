@@ -1,8 +1,9 @@
 from django.urls import path
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
-from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView, ImageAttachmentEditView
+from nautobot.extras.views import ImageAttachmentEditView, ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
 from nautobot.ipam.views import ServiceEditView
+
 from . import views
 from .models import (
     Cable,
@@ -19,9 +20,9 @@ from .models import (
     Manufacturer,
     Platform,
     PowerFeed,
+    PowerOutlet,
     PowerPanel,
     PowerPort,
-    PowerOutlet,
     Rack,
     RackGroup,
     RackReservation,

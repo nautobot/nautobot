@@ -2,15 +2,12 @@
 
 Nautobot generally follows the [Django style guide](https://docs.djangoproject.com/en/stable/internals/contributing/writing-code/coding-style/), which is itself based on [PEP 8](https://www.python.org/dev/peps/pep-0008/). The following tools are used to enforce coding style and best practices:
 
-* [Flake8](https://flake8.pycqa.org/) is used to validate code style.
-* [Black](https://black.readthedocs.io/) is used to enforce code formatting conventions.
-* [ESLint](https://eslint.org) is used to validate code style for the UI.
-* [Prettier](https://prettier.io) is used to enforce code formatting conventions for the UI.
+* [Ruff](https://docs.astral.sh/ruff) is used to enforce code formatting conventions as well as perform code analysis.
 * [Pylint](https://pylint.pycqa.org/en/latest/) is used for Python static code analysis.
 * [Hadolint](https://github.com/hadolint/hadolint) is used to lint and validate Docker best practices in the Dockerfile.
 * [MarkdownLint-cli](https://github.com/igorshubovych/markdownlint-cli) is used to lint and validate Markdown (documentation) files.
 
-Nautobot-specific configuration of these tools is maintained in the files `.flake8`, `.markdownlint.yml`, `.prettierrc`, `package.json`, or `pyproject.toml` as appropriate to the individual tool.
+Nautobot-specific configuration of these tools is maintained in the files `.markdownlint.yml` or `pyproject.toml` as appropriate to the individual tool.
 
 It is strongly recommended to include all of the above tools as part of your commit process before opening any pull request. A Git commit hook is provided in the source at `scripts/git-hooks/pre-commit`. Linking to this script from `.git/hooks/` will invoke these tools prior to every commit attempt and abort if the validation fails.
 
@@ -22,14 +19,17 @@ ln -s ../../scripts/git-hooks/pre-commit
 You can also invoke these utilities manually against the development Docker containers by running:
 
 ```no-highlight
-invoke flake8
-invoke black
-invoke eslint
-invoke prettier
 invoke check-migrations
 invoke hadolint
 invoke markdownlint
+invoke ruff
 invoke pylint
+```
+
+or, as a single command:
+
+```no-highlight
+invoke tests --lint-only
 ```
 
 ## Introducing New Dependencies
@@ -83,6 +83,9 @@ New dependencies can be added to the project via the `poetry add` command. This 
 ## Importing Python Packages
 
 To prevent circular dependency errors and improve code readability, the following standards should be followed when importing from other python modules.
+
+!!! tip
+    Some of the below rules will be applied automatically when running the `ruff` linter/formatter against your code. Specifically, you can run `invoke ruff --fix` to automatically reorder imports.
 
 ### PEP8 Style Guide
 

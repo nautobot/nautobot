@@ -208,7 +208,6 @@ Example output:
 ```no-highlight
 Available tasks:
 
-  black                  Check Python code style with Black.
   build                  Build Nautobot docker image.
   build-and-check-docs   Build docs for use within Nautobot.
   build-dependencies
@@ -222,8 +221,6 @@ Available tasks:
   destroy                Destroy all containers and volumes.
   docker-push            Tags and pushes docker images to the appropriate repos, intended for release use only.
   dumpdata               Dump data from database to db_output file.
-  eslint                 Check for ESLint rule compliance and other style issues.
-  flake8                 Check for PEP8 compliance and other style issues.
   hadolint               Check Dockerfile for hadolint compliance and other style issues.
   integration-test       Run Nautobot integration tests.
   loaddata               Load data from file.
@@ -234,17 +231,18 @@ Available tasks:
   nbshell                Launch an interactive Nautobot shell.
   performance-test       Run Nautobot performance tests.
   post-upgrade           Performs Nautobot common post-upgrade operations using a single entrypoint.
-  prettier               Check Node.JS code style with Prettier.
   pylint                 Perform static analysis of Nautobot code.
   restart                Gracefully restart containers.
+  ruff                   Run ruff to perform code formatting and/or linting.
   serve-docs             Runs local instance of mkdocs serve (ctrl-c to stop).
   start                  Start Nautobot and its dependencies in detached mode.
   stop                   Stop Nautobot and its dependencies.
   tests                  Run all linters and unit tests.
   unittest               Run Nautobot unit tests.
   unittest-coverage      Report on code test coverage as measured by 'invoke unittest'.
-  unittest-ui            Run Nautobot UI unit tests.
+  version                Show the version of Nautobot Python and NPM packages or bump them when a valid bump rule is provided.
   vscode                 Launch Visual Studio Code with the appropriate Environment variables to run in a container.
+  yamllint               Run yamllint to validate formatting applies to YAML standards.
 ```
 
 #### Using Docker with Invoke
@@ -258,7 +256,7 @@ A development environment can be easily started up from the root of the project 
 
 Additional useful commands for the development environment:
 
-* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, NGINX, Node.js, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
+* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, NGINX, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
 * `invoke cli [-s servicename]` - Launch a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
 * `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
 
@@ -322,22 +320,6 @@ brew install hadolint
 ```no-highlight
 brew install markdownlint-cli
 ```
-
-#### Install Node.JS and npm
-
-[npm](https://www.npmjs.com/) is the tool used to install and compile the Nautobot front-end UI. On macOS with [Homebrew](https://brew.sh) you can install npm by running:
-
-```no-highlight
-brew install node@18
-```
-
-You should then move to the `nautobot/ui/` subdirectory and run `npm ci` to install all of the JS dependencies for local development of the Nautobot UI:
-
-```no-highlight
-npm ci
-```
-
-Be sure to switch back to the base directory of the repository after you do this.
 
 #### Creating a Python Virtual Environment
 
@@ -526,36 +508,7 @@ Quit the server with CONTROL-C.
 
 Please see the [official Django documentation on `runserver`](https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver) for more information.
 
-!!! note
-    When first started in Docker Compose, the Nautobot development server container will automatically install dependencies for building the React UI for Nautobot, then build this UI. This may take several minutes before the server becomes ready to accept web connections.
-
-You can connect to the development server at `localhost:8080`, but normally you'll want to connect to the Node.js server instead (see below).
-
-### Starting the Node.js Server
-
-In development, you should run a Node.js server instance as well. This will handle automatically rebuilding the UI when you make changes in the `nautobot/ui` directory.
-
-| Docker Compose Workflow | Virtual Environment Workflow    |
-| ----------------------- | ------------------------------- |
-| `invoke start`          | `cd nautobot/ui; npm run start` |
-
-!!! note
-    In the Docker Compose workflow, the Node.js server will delay starting until the Nautobot development server has finished the initial UI build, which may take several minutes. This is normal.
-
-You can connect to the Node.js server at `localhost:3000`.
-
-### Starting the Storybook Server
-
-When working on the UI, you may find it useful to run a [Storybook](https://storybook.js.org/) instance that provides interactive documentation of the `nautobot-ui` library used by Nautobot's user interface.
-
-| Docker Compose Workflow     | Virtual Environment Workflow    |
-| --------------------------- | ------------------------------- |
-| `invoke start -s storybook` | `TODO`                          |
-
-!!! note
-    This container is not started by default when using `invoke start`. You must individually start it using `invoke start -s storybook`.
-
-You can connect to Storybook at `localhost:6006`.
+You can connect to the development server at `localhost:8080`.
 
 ### Starting the Worker Server
 
@@ -727,23 +680,22 @@ The following environment variables can be provided when running tests to custom
 
 ### Verifying the REST API Schema
 
-If you make changes to the REST API, you should verify that the REST API OpenAPI schema renders correctly without errors. To verify that there are no errors, you can run the `invoke check-schema` command (if using the Docker development environment) or the `nautobot-server spectacular` command. In the latter case you should run the command for each supported REST API version that Nautobot provides (e.g. "1.2", "1.3")
+If you make changes to the REST API, you should verify that the REST API OpenAPI schema renders correctly without errors. To verify that there are no errors, you can run the `invoke check-schema` command (if using the Docker development environment) or the `nautobot-server spectacular` command. In the latter case you should run the command for each supported REST API version that Nautobot provides (e.g. "2.0", "2.1")
 
 | Docker Compose Workflow | Virtual Environment Workflow                                                               |
 | ----------------------- | ------------------------------------------------------------------------------------------ |
-| `invoke check-schema`   | `nautobot-server spectacular --api-version 1.2 --validate --fail-on-warn --file /dev/null` |
+| `invoke check-schema`   | `nautobot-server spectacular --api-version 2.0 --validate --fail-on-warn --file /dev/null` |
 
 ### Verifying Code Style and Static Analysis
 
-To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Flake8](https://flake8.pycqa.org/),  [Black](https://black.readthedocs.io/), [ESLint](https://eslint.org), and [Prettier](https://prettier.io). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
+To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Ruff](https://docs.astral.sh/ruff). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by Ruff and [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
 
-| Docker Compose Workflow | Virtual Environment Workflow                                                                            |
-| ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| `invoke flake8`         | `flake8`                                                                                                |
-| `invoke black`          | `black`                                                                                                 |
-| `invoke eslint`         | `npx eslint .`                                                                                          |
-| `invoke prettier`       | `npx prettier -c .`                                                                                     |
-| `invoke pylint`         | `nautobot-server pylint nautobot tasks.py && nautobot-server pylint --recursive development/ examples/` |
+<!-- markdownlint-disable no-inline-html -->
+| Docker Compose Workflow | Virtual Environment Workflow                                                                                                     |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `invoke ruff`           | `ruff format --check nautobot/ development/ examples/ tasks.py`<br>and<br>`ruff check nautobot/ development/ examples/ tasks.py` |
+| `invoke pylint`         | `nautobot-server pylint nautobot tasks.py`<br>and<br>`nautobot-server pylint --recursive development/ examples/`                 |
+<!-- markdownlint-enable no-inline-html -->
 
 ### Handling Migrations
 
@@ -768,7 +720,7 @@ If your branch modifies a Django model (and as a result requires a database sche
 * If you have yet to run `invoke makemigrations`, you can pass in a name for the migration with the `-n` option, example `invoke makemigrations -n provider_increase_account_length`.
 * If you have already run `invoke makemigrations`, rename the generated migration files, for example `0004_provider_increase_account_length` instead of `0004_auto_20211220_2104`.
 
-You’ll also want to run `black` against the generated migration file as the autogenerated code doesn’t follow our style guide by default.
+You’ll also want to run `invoke ruff --autoformat` (or `ruff format`) against the generated migration file as the autogenerated code doesn’t follow our style guide by default.
 
 When modifying model field attributes, modify the test data in the tests too to reflect these changes and also any forms which refer to the model.
 

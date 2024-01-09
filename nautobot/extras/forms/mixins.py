@@ -424,7 +424,7 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
                 ]
                 requires_message = (
                     f"{editing._meta.verbose_name_plural} require a {required_type_verbose_name} "
-                    f'for the required relationship "{str(relationship)}"'
+                    f'for the required relationship "{relationship!s}"'
                 )
                 if len(existing_objects) == 0 and len(relationship_to_check["to_add"]) == 0:
                     relationship_data_errors.setdefault(requires_message, []).append(str(editing))

@@ -1,14 +1,13 @@
 import random
 import time
-
 from unittest.mock import patch
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
-from django.urls import reverse
 from django.test import override_settings
+from django.urls import reverse
 
 from nautobot.core.forms.fields import MultiMatchModelMultipleChoiceField, MultiValueCharField
 from nautobot.core.forms.widgets import APISelectMultiple, MultiValueCharInput
@@ -1011,7 +1010,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
             group.members_cached
             self.assertEqual(mock_get_queryset.call_count, 1)
 
-            time.sleep(2)  # Let the cache expire
+            time.sleep(5)  # Let the cache expire
 
             group.members_cached
             self.assertEqual(mock_get_queryset.call_count, 2)
