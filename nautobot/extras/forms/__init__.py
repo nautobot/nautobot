@@ -5,6 +5,8 @@ from .contacts import (
     ContactBulkEditForm,
     ContactFilterForm,
     ContactForm,
+    ObjectNewContactForm,
+    ObjectNewTeamForm,
     TeamBulkEditForm,
     TeamFilterForm,
     TeamForm,

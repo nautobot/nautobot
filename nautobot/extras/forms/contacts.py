@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceField
 from nautobot.extras.models.contacts import Contact, ContactAssociation, Team
@@ -42,76 +43,80 @@ class ContactFilterForm(NautobotFilterForm):
     q = forms.CharField(required=False, label="Search")
 
 
-class ContactAssociationForm(NautobotModelForm):
-    name = forms.CharField(max_length=100, required=True, widget=forms.TextInput(attrs={"placeholder": "Name"}))
-    phone = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={"placeholder": "Phone"}))
-    email = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={"placeholder": "E-mail"}))
-    address = forms.CharField(required=False, widget=forms.Textarea(attrs={"placeholder": "Address"}))
+class ObjectNewContactForm(NautobotModelForm):
     teams = DynamicModelMultipleChoiceField(
         queryset=Team.objects.all(),
         required=False,
         label="Team(s)",
     )
-    contacts = DynamicModelMultipleChoiceField(
-        queryset=Contact.objects.all(),
-        required=False,
-        label="Contact(s)",
-    )
-    contact_role = DynamicModelChoiceField(
+    associated_object_type = DynamicModelChoiceField(queryset=ContentType.objects.all(), required=True)
+    associated_object_id = forms.CharField(required=True)
+    role = DynamicModelChoiceField(
         queryset=Role.objects.all(),
         required=False,
-        label="Contact Role",
-        query_params={"content_types": Contact._meta.label_lower},
-    )
-    team_role = DynamicModelChoiceField(
-        queryset=Role.objects.all(),
-        required=False,
-        label="Team Role",
-        query_params={"content_types": Team._meta.label_lower},
-    )
-    contact_association_role = DynamicModelChoiceField(
-        queryset=Role.objects.all(),
-        required=False,
-        label="Role",
         query_params={"content_types": ContactAssociation._meta.label_lower},
     )
-    team_association_role = DynamicModelChoiceField(
-        queryset=Role.objects.all(),
-        required=False,
-        label="Role",
-        query_params={"content_types": ContactAssociation._meta.label_lower},
-    )
-    contact_association_status = DynamicModelChoiceField(
+    status = DynamicModelChoiceField(
         queryset=Status.objects.all(),
         required=True,
-        label="Status",
         query_params={"content_types": ContactAssociation._meta.label_lower},
     )
-    team_association_status = DynamicModelChoiceField(
-        queryset=Status.objects.all(),
-        required=True,
-        label="Status",
-        query_params={"content_types": ContactAssociation._meta.label_lower},
-    )
-    comments = forms.CharField(required=False, widget=forms.Textarea(attrs={"placeholder": "Comments"}))
-    contact = DynamicModelChoiceField(queryset=Contact.objects.all(), required=False)
-    team = DynamicModelChoiceField(queryset=Team.objects.all(), required=False)
 
     class Meta:
-        model = ContactAssociation
+        model = Contact
         fields = [
             "name",
             "phone",
             "email",
             "address",
             "teams",
-            "contacts",
-            "contact_role",
-            "contact_association_role",
-            "team_association_role",
-            "contact_association_status",
-            "team_association_status",
             "comments",
+            "associated_object_type",
+            "associated_object_id",
+            "role",
+            "status",
+        ]
+
+
+class ObjectNewTeamForm(NautobotModelForm):
+    contacts = DynamicModelMultipleChoiceField(
+        queryset=Team.objects.all(),
+        required=False,
+        label="Team(s)",
+    )
+    associated_object_type = DynamicModelChoiceField(queryset=ContentType.objects.all(), required=True)
+    associated_object_id = forms.CharField(required=True)
+    role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        required=False,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        required=True,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+
+    class Meta:
+        model = Team
+        fields = [
+            "name",
+            "phone",
+            "email",
+            "address",
+            "contacts",
+            "comments",
+            "associated_object_type",
+            "associated_object_id",
+            "role",
+            "status",
+        ]
+
+
+class ContactAssociationForm(NautobotModelForm):
+    class Meta:
+        model = ContactAssociation
+        fields = [
             "contact",
             "team",
             "associated_object_type",

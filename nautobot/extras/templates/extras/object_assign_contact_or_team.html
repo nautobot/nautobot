@@ -1,0 +1,24 @@
+{% extends 'generic/object_edit.html' %}
+{% load static %}
+{% load form_helpers %}
+{% load helpers %}
+
+{% block tabs %}
+    {% if not editing %}
+        {% include 'extras/inc/object_contact_header.html' with active_tab='assign' %}
+    {% endif %}
+{% endblock %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Contact Association</strong></div>
+        <div class="panel-body">
+            {% render_field form.contact %}
+            {% render_field form.team %}
+            {% render_field form.associated_object_type %}
+            {% render_field form.associated_object_id %}
+            {% render_field form.role %}
+            {% render_field form.status %}
+        </div>
+    </div>
+{% endblock %}

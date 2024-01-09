@@ -48,7 +48,7 @@
         {% block extra_buttons %}{% endblock extra_buttons %}
         {% if user|can_change:object and is_contact_model %}
             <div class="btn-group">
-                <a href="{% url 'extras:object_contact_edit' %}?return_url={{request.path}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" type="button" class="btn btn-info">
+                <a href="{% url 'extras:object_contact_add' %}?return_url={{request.path}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" type="button" class="btn btn-info">
                     <span class="mdi mdi-account" aria-hidden="true"></span> Add Contact </span>
                 </a>
             </div>

@@ -403,6 +403,165 @@ class ContactAssociationUIViewSet(ObjectBulkDestroyViewMixin, ObjectDestroyViewM
     table_class = AssociatedContactsTable
 
 
+class ObjectNewContactView(generic.ObjectEditView):
+    queryset = Contact.objects.all()
+    model_form = forms.ObjectNewContactForm
+    template_name = "extras/object_new_contact.html"
+
+    def post(self, request, *args, **kwargs):
+        logger = logging.getLogger(__name__ + ".ObjectNewContactView")
+        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        restrict_form_fields(form, request.user)
+
+        if form.is_valid():
+            logger.debug("Form validation was successful")
+
+            try:
+                with transaction.atomic():
+                    object_created = not form.instance.present_in_database
+                    obj = form.save()
+
+                    # Check that the new object conforms with any assigned object-level permissions
+                    self.queryset.get(pk=obj.pk)
+
+                if hasattr(form, "save_note") and callable(form.save_note):
+                    form.save_note(instance=obj, user=request.user)
+
+                association = ContactAssociation(
+                    contact=obj,
+                    associated_object_type=ContentType.objects.get(id=request.POST.get("associated_object_type")),
+                    associated_object_id=request.POST.get("associated_object_id"),
+                    status=Status.objects.get(id=request.POST.get("status")),
+                    role=Role.objects.get(id=request.POST.get("role", None)),
+                )
+                association.validated_save()
+                self.successful_post(request, obj, object_created, logger)
+
+                if "_addanother" in request.POST:
+                    # If the object has clone_fields, pre-populate a new instance of the form
+                    if hasattr(obj, "clone_fields"):
+                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
+                        return redirect(url)
+
+                    return redirect(request.get_full_path())
+
+                return_url = form.cleaned_data.get("return_url")
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
+                else:
+                    return redirect(self.get_return_url(request, obj))
+
+            except ObjectDoesNotExist:
+                msg = "Object save failed due to object-level permissions violation"
+                logger.debug(msg)
+                form.add_error(None, msg)
+
+        else:
+            logger.debug("Form validation failed")
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "return_url": self.get_return_url(request, obj),
+                "editing": obj.present_in_database,
+                **self.get_extra_context(request, obj),
+            },
+        )
+
+
+class ObjectNewTeamView(generic.ObjectEditView):
+    queryset = Team.objects.all()
+    model_form = forms.ObjectNewTeamForm
+    template_name = "extras/object_new_team.html"
+
+    def successful_post(self, request, obj, created, logger):
+        """Callback after the form is successfully saved but before redirecting the user."""
+        verb = "Created" if created else "Modified"
+        msg = f"{verb} {self.queryset.model._meta.verbose_name} and Created Contact Association"
+        logger.info(f"{msg} {obj} (PK: {obj.pk})")
+        try:
+            msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+        except AttributeError:
+            msg = format_html("{} {}", msg, obj)
+        messages.success(request, msg)
+
+    def post(self, request, *args, **kwargs):
+        logger = logging.getLogger(__name__ + ".ObjectNewContactView")
+        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        restrict_form_fields(form, request.user)
+
+        if form.is_valid():
+            logger.debug("Form validation was successful")
+
+            try:
+                with transaction.atomic():
+                    object_created = not form.instance.present_in_database
+                    obj = form.save()
+
+                    # Check that the new object conforms with any assigned object-level permissions
+                    self.queryset.get(pk=obj.pk)
+
+                if hasattr(form, "save_note") and callable(form.save_note):
+                    form.save_note(instance=obj, user=request.user)
+
+                association = ContactAssociation(
+                    team=obj,
+                    associated_object_type=ContentType.objects.get(id=request.POST.get("associated_object_type")),
+                    associated_object_id=request.POST.get("associated_object_id"),
+                    status=Status.objects.get(id=request.POST.get("status")),
+                    role=Role.objects.get(id=request.POST.get("role", None)),
+                )
+                association.validated_save()
+                self.successful_post(request, obj, object_created, logger)
+
+                if "_addanother" in request.POST:
+                    # If the object has clone_fields, pre-populate a new instance of the form
+                    if hasattr(obj, "clone_fields"):
+                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
+                        return redirect(url)
+
+                    return redirect(request.get_full_path())
+
+                return_url = form.cleaned_data.get("return_url")
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
+                else:
+                    return redirect(self.get_return_url(request, obj))
+
+            except ObjectDoesNotExist:
+                msg = "Object save failed due to object-level permissions violation"
+                logger.debug(msg)
+                form.add_error(None, msg)
+
+        else:
+            logger.debug("Form validation failed")
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "return_url": self.get_return_url(request, obj),
+                "editing": obj.present_in_database,
+                **self.get_extra_context(request, obj),
+            },
+        )
+
+
+class ObjectAssignView(generic.ObjectEditView):
+    queryset = ContactAssociation.objects.all()
+    model_form = forms.ContactAssociationForm
+    template_name = "extras/object_assign_contact_or_team.html"
+
+
 #
 # Custom fields
 #
