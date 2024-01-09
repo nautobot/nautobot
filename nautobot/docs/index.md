@@ -13,9 +13,7 @@ Welcome to the Nautobot Core Documentation! Use the top navigation bar to read a
 
 ## What is Nautobot?
 
-<!-- markdownlint-disable MD033 -->
-<img src="assets/nautobot_logo.svg" class="logo">
-<!-- markdownlint-enable MD033 -->
+![Nautobot Logo](assets/nautobot_logo.svg)
 
 Nautobot is an open source Network Source of Truth and Network Automation Platform built as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database.
 

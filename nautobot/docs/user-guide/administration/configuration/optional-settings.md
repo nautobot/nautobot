@@ -13,7 +13,6 @@ A number of settings can alternatively be configured via the Nautobot Admin UI. 
 * [DEPLOYMENT_ID](#deployment_id)
 * [DEVICE_NAME_AS_NATURAL_KEY](#device_name_as_natural_key)
 * [DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT](#dynamic_groups_member_cache_timeout)
-* [FEEDBACK_BUTTON_ENABLED](#feedback_button_enabled)
 * [JOB_CREATE_FILE_MAX_SIZE](#job_create_file_max_size)
 * [LOCATION_NAME_AS_NATURAL_KEY](#location_name_as_natural_key)
 * [MAX_PAGE_SIZE](#max_page_size)
@@ -485,16 +484,6 @@ The following example gives a user a reasonable amount of access to add devices 
 ```
 
 Please see [the object permissions page](../guides/permissions.md) for more information.
-
----
-
-### FEEDBACK_BUTTON_ENABLED
-
-+++ 2.0.0
-
-Default: `True`
-
-If set to `True`, a "Submit Feedback" button is added to the New UI sidebar secondary menu, which is used to collect user feedback.
 
 ---
 

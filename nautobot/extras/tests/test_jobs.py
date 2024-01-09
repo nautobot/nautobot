@@ -1027,6 +1027,6 @@ class ScheduledJobIntervalTestCase(TestCase):
         )
 
         requested_weekday = self.datetime_days[start_time.weekday()]
-        schedule_day_of_week = list(scheduled_job.schedule.day_of_week)[0]
+        schedule_day_of_week = next(iter(scheduled_job.schedule.day_of_week))
         scheduled_job_weekday = self.cron_days[schedule_day_of_week]
         self.assertEqual(scheduled_job_weekday, requested_weekday)

@@ -12,11 +12,6 @@ from importlib import import_module
 from .settings import load_settings, create_module
 
 
-def execfile(afile, globalz=None, localz=None):
-    with open(afile, "r") as fh:
-        exec(fh.read(), globalz, localz)
-
-
 installed = False
 
 
@@ -60,19 +55,9 @@ class LoganImporter:
         self.default_settings = default_settings
         self.allow_extras = allow_extras
         self.callback = callback
-        self.validate()
 
     def __repr__(self):
         return f"<{type(self)} for '{self.name}' ({self.config_path})>"
-
-    def validate(self):
-        # TODO(dcramer): is there a better way to handle validation so it
-        # is lazy and actually happens in LoganLoader?
-        try:
-            execfile(self.config_path, {"__file__": self.config_path})
-        except Exception as e:
-            exc_info = sys.exc_info()
-            raise ConfigurationError(str(e), exc_info[2])
 
     def find_module(self, fullname, path=None):
         """Meta path finder API function implementation.
@@ -109,13 +94,6 @@ class LoganLoader:
 
         FIXME(jathan): load_module() API is deprecated, convert this to create_module()/exec_module() instead.
         """
-        try:
-            return self._load_module(fullname)
-        except Exception as e:
-            exc_info = sys.exc_info()
-            raise ConfigurationError(str(e), exc_info[2])
-
-    def _load_module(self, fullname):
         # FIXME(jathan): is this needed?
         if fullname in sys.modules:
             return sys.modules[fullname]  # pragma: no cover

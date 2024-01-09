@@ -2,7 +2,7 @@ from django.contrib.admin import site as admin_site, ModelAdmin
 from django.db import models
 
 from constance.admin import ConstanceAdmin, ConstanceForm, Config
-from django_celery_beat import admin  # noqa: F401
+from django_celery_beat import admin  # noqa: F401  # unused-import -- but this import installs the beat admin
 from django_celery_beat.models import (
     ClockedSchedule,
     CrontabSchedule,

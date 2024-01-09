@@ -11,7 +11,6 @@ This will run the following management commands with default settings, in order:
 
 - migrate
 - trace_paths
-- build_ui --npm-install
 - collectstatic
 - remove_stale_contenttypes
 - clearsessions
@@ -29,13 +28,6 @@ class Command(BaseCommand):
         return parser
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            "--build-ui",
-            action="store_true",
-            dest="build_ui",
-            default=False,
-            help="Build the user interface.",
-        )
         parser.add_argument(
             "--no-clearsessions",
             action="store_false",
@@ -110,12 +102,6 @@ class Command(BaseCommand):
         if options.get("trace_paths"):
             self.stdout.write("Generating cable paths...")
             call_command("trace_paths", no_input=True)
-            self.stdout.write()
-
-        # Run build
-        if options.get("build_ui"):
-            self.stdout.write("Building user interface...")
-            call_command("build_ui", npm_install=True)
             self.stdout.write()
 
         # Run collectstatic
