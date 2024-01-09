@@ -24,7 +24,6 @@ from nautobot.core.testing.utils import (
 )
 from nautobot.core.testing.views import ModelTestCase, ModelViewTestCase, TestCase, ViewTestCases
 
-
 __all__ = (
     "APITestCase",
     "APITransactionTestCase",

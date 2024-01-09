@@ -1,5 +1,6 @@
 import base64
 from unittest import skip
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
@@ -7,11 +8,10 @@ from django.urls import reverse
 from django.utils.timezone import now
 from rest_framework import HTTP_HEADER_ENCODING, status
 
-from nautobot.core.testing import APIViewTestCases, APITestCase, get_deletable_objects
+from nautobot.core.testing import APITestCase, APIViewTestCases, get_deletable_objects
 from nautobot.core.utils.data import deepmerge
 from nautobot.users.filters import GroupFilterSet
 from nautobot.users.models import ObjectPermission, Token
-
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -170,9 +170,9 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
             Token.objects.create(user=self.user),
         ]
 
-        self.tokens = tokens + [self.token]
+        self.tokens = [*tokens, self.token]
 
-        self.basic_auth_user_password = "abc123"
+        self.basic_auth_user_password = "abc123"  # noqa: S105  # hardcoded-password-string -- OK as this is test code
         self.basic_auth_user_granted = User.objects.create_user(
             username="basicusergranted", password=self.basic_auth_user_password
         )
@@ -246,7 +246,8 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         Test the behavior of the token create view when an invalid password is supplied
         """
         auth = self._create_basic_authentication_header(
-            username=self.basic_auth_user_granted.username, password="hunter2"
+            username=self.basic_auth_user_granted.username,
+            password="hunter2",  # noqa: S106  # hardcoded-password-func-arg -- OK as this is test code
         )
         response = self.client.post(self._get_list_url(), HTTP_AUTHORIZATION=auth)
 
@@ -256,7 +257,7 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         """
         Test the behavior of the token create view when the user supplied is not a valid user
         """
-        auth = self._create_basic_authentication_header(username="iamnotreal", password="P1n0cc#10")
+        auth = self._create_basic_authentication_header(username="iamnotreal", password="P1n0cc#10")  # noqa: S106  # hardcoded-password-func-arg -- OK as this is test code
         response = self.client.post(self._get_list_url(), HTTP_AUTHORIZATION=auth)
 
         self.assertEqual(response.status_code, 403)

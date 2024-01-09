@@ -25,7 +25,6 @@ from nautobot.extras.constants import (
 )
 from nautobot.extras.registry import registry
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -338,9 +337,9 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
     and in that case we need to not import models ourselves.
     """
     from nautobot.extras.jobs import (
-        JobHookReceiver,
         JobButtonReceiver,
-    )  # imported here to prevent circular import problem
+        JobHookReceiver,
+    )
 
     # Unrecoverable errors
     if len(job_class.__module__) > JOB_MAX_NAME_LENGTH:
@@ -526,10 +525,17 @@ def migrate_role_data(
         to_role_choiceset (ChoiceSet): If `to_role_field` is a choices field, the corresponding ChoiceSet for it
         is_m2m_field (bool): True if the role fields are both ManyToManyFields, else False
     """
+    if from_role_model is not None and from_role_choiceset is not None:
+        raise RuntimeError("from_role_model and from_role_choiceset are mutually exclusive")
+    if from_role_model is None and from_role_choiceset is None:
+        raise RuntimeError("One of from_role_model or from_role_choiceset must be specified and not None")
+    if to_role_model is not None and to_role_choiceset is not None:
+        raise RuntimeError("to_role_model and to_role_choiceset are mutually exclusive")
+    if to_role_model is None and to_role_choiceset is None:
+        raise RuntimeError("One of to_role_model or to_role_choiceset must be specified and not None")
+
     if from_role_model is not None:
-        assert from_role_choiceset is None
         if to_role_model is not None:
-            assert to_role_choiceset is None
             # Mapping "from" model instances to corresponding "to" model instances
             roles_translation_mapping = {
                 # Use .filter().first(), not .get() because "to" role might not exist, especially on reverse migrations
@@ -537,7 +543,6 @@ def migrate_role_data(
                 for from_role in from_role_model.objects.all()
             }
         else:
-            assert to_role_choiceset is not None
             # Mapping "from" model instances to corresponding "to" choices
             # We need to use `label` to look up the from_role instance, but `value` is what we set for the to_role_field
             inverted_to_role_choiceset = {label: value for value, label in to_role_choiceset.CHOICES}
@@ -546,9 +551,7 @@ def migrate_role_data(
                 for from_role in from_role_model.objects.all()
             }
     else:
-        assert from_role_choiceset is not None
         if to_role_model is not None:
-            assert to_role_choiceset is None
             # Mapping "from" choices to corresponding "to" model instances
             roles_translation_mapping = {
                 # Use .filter().first(), not .get() because "to" role might not exist, especially on reverse migrations
@@ -556,7 +559,6 @@ def migrate_role_data(
                 for from_role_value, from_role_label in from_role_choiceset.CHOICES
             }
         else:
-            assert to_role_choiceset is not None
             # Mapping "from" choices to corresponding "to" choices; we don't currently use this case, but it should work
             # We need to use `label` to look up the from_role instance, but `value` is what we set for the to_role_field
             inverted_to_role_choiceset = {label: value for value, label in to_role_choiceset.CHOICES}

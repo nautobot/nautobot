@@ -5,7 +5,7 @@
 
 import os
 
-from nautobot.core.settings import *  # noqa: F401,F403
+from nautobot.core.settings import *  # noqa: F403  # undefined-local-with-import-star
 from nautobot.core.settings_funcs import parse_redis_connection
 
 ALLOWED_HOSTS = ["nautobot.example.com"]
@@ -22,12 +22,12 @@ PLUGINS = [
 ]
 
 # Hard-code the SECRET_KEY for simplicity
-SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"  # noqa: S105  # hardcoded-password-string
 
 # Redis variables
 
 # Use *different* redis_databases than the ones (0 and 1) used during non-automated-testing operations.
-CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=2)  # noqa: F405
+CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=2)  # noqa: F405  # undefined-local-with-import-star-usage
 
 # Testing storages within cli.py
 STORAGE_CONFIG = {

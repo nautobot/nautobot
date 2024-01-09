@@ -13,8 +13,8 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFormMixin,
 )
 from nautobot.extras.forms import (
-    NautobotFilterForm,
     NautobotBulkEditForm,
+    NautobotFilterForm,
     NautobotModelForm,
     StatusModelBulkEditFormMixin,
     StatusModelFilterFormMixin,
@@ -22,8 +22,8 @@ from nautobot.extras.forms import (
 )
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
-from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
+from .models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 
 #
 # Providers

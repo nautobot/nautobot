@@ -3,7 +3,7 @@ from importlib import metadata
 __version__ = metadata.version(__name__)
 
 
-from nautobot.apps import ConstanceConfigItem, NautobotAppConfig, nautobot_database_ready
+from nautobot.apps import ConstanceConfigItem, nautobot_database_ready, NautobotAppConfig
 
 from example_plugin.signals import nautobot_database_ready_callback
 

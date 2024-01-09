@@ -99,7 +99,7 @@ def disable_warnings(logger_name):
 
 def get_deletable_objects(model, queryset):
     """
-    Returns a queryset of objects in the supplied queryset that have no protected relationships that would prevent deletion.
+    Returns a subset of objects in the given queryset that have no protected relationships that would prevent deletion.
     """
     q = Q()
     for field in model._meta.get_fields(include_parents=True):
@@ -113,7 +113,7 @@ def get_deletable_objects(model, queryset):
 
 def generate_random_device_asset_tag_of_specified_size(size):
     """
-    This function is for testing purposes only and it will return a random string of size 100 consists of letters and numbers.
+    For testing purposes only; it returns a random string of size 100 consisting of letters and numbers.
     """
-    asset_tag = "".join(random.choices(string.ascii_letters + string.digits, k=size))
+    asset_tag = "".join(random.choices(string.ascii_letters + string.digits, k=size))  # noqa: S311  # suspicious-non-cryptographic-random-usage
     return asset_tag

@@ -1,9 +1,8 @@
 from django.conf import settings
 
 from nautobot.core.celery import register_jobs
-from nautobot.extras.jobs import Job, BooleanVar, IntegerVar, StringVar, ObjectVar, get_task_logger
+from nautobot.extras.jobs import BooleanVar, get_task_logger, IntegerVar, Job, ObjectVar, StringVar
 from nautobot.extras.models import Role
-
 
 logger = get_task_logger(__name__)
 

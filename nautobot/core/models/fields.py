@@ -2,7 +2,7 @@ import json
 import re
 
 from django.core import exceptions
-from django.core.validators import RegexValidator, MaxLengthValidator
+from django.core.validators import MaxLengthValidator, RegexValidator
 from django.db import models
 from django.utils.text import slugify
 from django_extensions.db.fields import AutoSlugField as _AutoSlugField

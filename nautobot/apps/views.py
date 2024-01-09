@@ -42,7 +42,6 @@ from nautobot.core.views.utils import (
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.views import check_and_call_git_repository_function, ObjectDynamicGroupsView, ObjectNotesView
 
-
 __all__ = (
     "AdminRequiredMixin",
     "BulkComponentCreateView",

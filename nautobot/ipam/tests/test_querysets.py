@@ -1,13 +1,13 @@
 import re
 from unittest import skipIf
 
-import netaddr
 from django.db import connection
+import netaddr
 
 from nautobot.core.testing import TestCase
 from nautobot.extras.models import Status
 from nautobot.ipam import choices
-from nautobot.ipam.models import Prefix, IPAddress, Namespace
+from nautobot.ipam.models import IPAddress, Namespace, Prefix
 
 
 class IPAddressQuerySet(TestCase):
