@@ -1,15 +1,19 @@
+from io import BytesIO
+
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
 from django.http import QueryDict
+from rest_framework import exceptions as drf_exceptions
 
+from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app, register_jobs
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
 from nautobot.extras.datasources import ensure_git_repository, git_repository_dry_run, refresh_datasource_content
-from nautobot.extras.jobs import ChoiceVar, Job, ObjectVar, RunJobTaskFailed, StringVar
+from nautobot.extras.jobs import ChoiceVar, FileVar, Job, ObjectVar, RunJobTaskFailed, StringVar, TextVar
 from nautobot.extras.models import ExportTemplate, GitRepository
 
 name = "System Jobs"
@@ -181,5 +185,65 @@ class ExportObjectList(Job):
             self.create_file(filename + ".csv", csv_data)
 
 
-jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun]
+class ImportObjectsFromCSV(Job):
+    """System Job to import CSV data to create a set of objects."""
+
+    content_type = ObjectVar(
+        model=ContentType,
+        description="Type of objects to import from CSV",
+    )
+    csv_data = TextVar(label="CSV Data", required=False)
+    csv_file = FileVar(label="CSV File", required=False)
+
+    template_name = "generic/object_bulk_create.html"
+
+    class Meta:
+        name = "Import Objects from CSV"
+        has_sensitive_variables = False
+        # Importing large CSV files may take substantial processing time
+        soft_time_limit = 1800
+        time_limit = 2000
+
+    def run(self,  *, content_type, csv_data=None, csv_file=None):
+        if not self.user.has_perm(f"{content_type.app_label}.add_{content_type.model}"):
+            self.logger.error('User "%s" does not have permission to create %s objects', self.user, content_type.model)
+            raise PermissionDenied("User does not have create permissions on the requested content-type")
+
+        model = content_type.model_class()
+        serializer_class = get_serializer_for_model(model)
+
+        if csv_data is not None and csv_file is not None:
+            raise RuntimeError("csv_data and csv_file arguments are mutually exclusive")
+        if csv_data is None and csv_file is None:
+            raise RuntimeError("Either csv_data or csv_file must be provided")
+        if csv_file is not None:
+            csv_data = csv_file.read()
+
+        try:
+            data = NautobotCSVParser().parse(
+                stream=BytesIO(csv_data.encode("utf-8")),
+                parser_context={"request": None, "serializer_class": serializer_class},
+            )
+            new_objs = []
+            validation_failed = False
+            for row, entry in enumerate(data, start=1):
+                serializer = serializer_class(data=entry, context={"request": None})
+                if serializer.is_valid():
+                    new_objs.append(serializer.save())
+                else:
+                    validation_failed = True
+                    for field, err in serializer.errors.items():
+                        self.logger.error("Row %d: %s: %s", row, field, err[0])
+        except drf_exceptions.ParseError as exc:
+            validation_failed = True
+            self.logger.error("%s", exc)
+
+        if new_objs:
+            self.logger.info("Created %d %s objects", len(new_objs), content_type)
+
+        if validation_failed:
+            raise RuntimeError("Import not fully successful, see logs")
+
+
+jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun, ImportObjectsFromCSV]
 register_jobs(*jobs)
