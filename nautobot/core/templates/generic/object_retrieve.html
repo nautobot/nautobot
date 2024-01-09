@@ -53,16 +53,10 @@
                 </button>
                 <ul class="dropdown-menu">
                     {% if perms.extras.add_contact %}
-                        <li><a href="{% url 'extras:contact_add' %}">Add a New Contact</a></li>
+                        <li><a href="{% url 'extras:contact_add' %}">Add a New Contact/Team</a></li>
                     {% endif %}
                     {% if perms.extras.add_contact %}
-                        <li><a href="{% url 'extras:contactassociation_add' %}?associated_object_id={{object.id}}&associated_object_type={{content_type.id}}&return_url={{request.path}}">Add an Existing Contact</a></li>
-                    {% endif %}
-                    {% if perms.extras.add_team %}
-                        <li><a href="{% url 'extras:team_add' %}">Add a New Team</a></li>
-                    {% endif %}
-                    {% if perms.extras.add_team %}
-                        <li><a href="{% url 'extras:contactassociation_add' %}?associated_object_id={{object.id}}&associated_object_type='{{content_type}}'&return_url={{request.path}}">Add an Existing Team</a></li>
+                        <li><a href="{% url 'extras:contactassociation_add' %}?associated_object_id={{object.id}}&associated_object_type={{content_type.id}}&return_url={{request.path}}">Add an Existing Contact/Team</a></li>
                     {% endif %}
                 </ul>
             </div>
