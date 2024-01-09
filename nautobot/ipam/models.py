@@ -1043,11 +1043,20 @@ class IPAddress(PrimaryModel):
 
     def __init__(self, *args, **kwargs):
         address = kwargs.pop("address", None)
-        # TODO: Invalidate self._namespace when self.parent is changed
-        self._namespace = kwargs.pop("namespace", None)
+        namespace = kwargs.pop("namespace", None)
+        # This check breaks nautobot.ipam.tests.test_api.IPAddressTest.test_creating_ipaddress_with_an_invalid_parent
+        # Should that validation happen on the API serializer and not in the model?
+        # parent = kwargs.get("parent", None)
+        # if parent and namespace:
+        #     raise ValueError("Cannot specify both parent and namespace arguments")
+
         super().__init__(*args, **kwargs)
 
-        self._deconstruct_address(address)
+        if not self.present_in_database and namespace:
+            self._provided_namespace = namespace
+
+        if not self.present_in_database:
+            self._deconstruct_address(address)
 
     def __str__(self):
         return str(self.address)
@@ -1182,6 +1191,9 @@ class IPAddress(PrimaryModel):
 
     @_namespace.setter
     def _namespace(self, namespace):
+        # unset parent when namespace is changed
+        if namespace:
+            self.parent = None
         self._provided_namespace = namespace
 
     # 2.0 TODO: Remove exception, getter, setter below when we can safely deprecate previous properties
