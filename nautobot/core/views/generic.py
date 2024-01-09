@@ -55,7 +55,8 @@ from nautobot.core.views.utils import (
     handle_protectederror,
     prepare_cloned_fields,
 )
-from nautobot.extras.models import ExportTemplate
+from nautobot.extras.models import ContactAssociation, ExportTemplate
+from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import remove_prefix_from_cf_key
 
 
@@ -124,11 +125,18 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             resp = {"tabs": plugin_tabs}
             return JsonResponse(resp)
         else:
+            # TODO: need some consistent ordering of contact_associations
+            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            associations = ContactAssociation.objects.filter(associated_object_id=instance.id)
+            associations_table = AssociatedContactsTable(associations, orderable=False)
+            RequestConfig(request, paginate).configure(associations_table)
             return render(
                 request,
                 self.get_template_name(),
                 {
                     "object": instance,
+                    "associated_contacts_table": associations_table,
+                    "content_type": ContentType.objects.get_for_model(self.queryset.model),
                     "verbose_name": self.queryset.model._meta.verbose_name,
                     "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
                     "created_by": created_by,

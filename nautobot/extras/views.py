@@ -28,7 +28,12 @@ from nautobot.core.utils.lookup import get_table_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.core.views.mixins import ObjectPermissionRequiredMixin, ObjectDestroyViewMixin, ObjectEditViewMixin
+from nautobot.core.views.mixins import (
+    ObjectBulkDestroyViewMixin,
+    ObjectPermissionRequiredMixin,
+    ObjectDestroyViewMixin,
+    ObjectEditViewMixin,
+)
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.dcim.models import Device, Rack
@@ -391,7 +396,7 @@ class ContactUIViewSet(NautobotUIViewSet):
         return context
 
 
-class ContactAssociationUIViewSet(ObjectDestroyViewMixin, ObjectEditViewMixin):
+class ContactAssociationUIViewSet(ObjectBulkDestroyViewMixin, ObjectDestroyViewMixin, ObjectEditViewMixin):
     form_class = forms.ContactAssociationForm
     queryset = ContactAssociation.objects.all()
     serializer_class = serializers.ContactAssociationSerializer

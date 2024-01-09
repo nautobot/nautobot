@@ -243,8 +243,10 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             # TODO: move to separate view / detail-view tab?
             # TODO: provide some consistent ordering of ContactAssociations?
             associated_contacts = instance.associated_contacts.all()
-            if is_contact_model and associated_contacts.exists():
+            if is_contact_model:
                 context["associated_contacts_table"] = AssociatedContactsTable(data=associated_contacts)
+            else:
+                context["associated_contacts_table"] = None
             context.update(view.get_extra_context(request, instance))
         else:
             if view.action == "list":

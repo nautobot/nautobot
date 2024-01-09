@@ -752,27 +752,6 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             if hasattr(form, "save_note") and callable(form.save_note):
                 form.save_note(instance=obj, user=request.user)
 
-            # Process the formset for contacts/teams
-            if self.is_contact_model:
-                contact_associations_formset_class = inline_gfk_formset_factory(
-                    parent_model=self.queryset.model,
-                    model=ContactAssociation,
-                    form=ContactAssociationFormSetForm,
-                    ct_field_name="associated_object_type",
-                    fk_field_name="associated_object_id",
-                )
-                contact_associations_formset = contact_associations_formset_class(instance=obj, data=request.POST)
-                if contact_associations_formset.is_valid():
-                    try:
-                        contact_associations_formset.save()
-                    except IntegrityError as e:
-                        raise ValidationError(e)
-                else:
-                    # TODO this isn't presented helpfully.
-                    # We really need to validate this earlier, in `perform_create` and `perform_update`,
-                    # and do the right thing in form_valid and form_invalid.
-                    raise ValidationError(contact_associations_formset.errors)
-
             msg = f'{"Created" if object_created else "Modified"} {queryset.model._meta.verbose_name}'
             self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
             try:

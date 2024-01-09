@@ -3,6 +3,7 @@
 {% load custom_links %}
 {% load job_buttons %}
 {% load helpers %}
+{% load render_table from django_tables2 %}
 {% load perms %}
 {% load plugins %}
 {% load static %}
@@ -45,6 +46,27 @@
     {% block buttons %}
         {% plugin_buttons object %}
         {% block extra_buttons %}{% endblock extra_buttons %}
+        {% if user|can_change:object %}
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contacts <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu">
+                    {% if perms.extras.add_contact %}
+                        <li><a href="{% url 'extras:contact_add' %}">Add a New Contact</a></li>
+                    {% endif %}
+                    {% if perms.extras.add_contact %}
+                        <li><a href="{% url 'extras:contactassociation_add' %}?associated_object_id={{object.id}}&associated_object_type={{content_type.id}}&return_url={{request.path}}">Add an Existing Contact</a></li>
+                    {% endif %}
+                    {% if perms.extras.add_team %}
+                        <li><a href="{% url 'extras:team_add' %}">Add a New Team</a></li>
+                    {% endif %}
+                    {% if perms.extras.add_team %}
+                        <li><a href="{% url 'extras:contactassociation_add' %}?associated_object_id={{object.id}}&associated_object_type='{{content_type}}'&return_url={{request.path}}">Add an Existing Team</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        {% endif %}
         {% if object.clone_fields and user|can_add:object %}
             {% clone_button object %}
         {% endif %}
@@ -86,6 +108,13 @@
                 Advanced
             </a>
         </li>
+        {% if associated_contacts_table %}
+            <li role="presentation"{% if request.GET.tab == 'contacts' %} class="active"{% endif %}>
+                <a href="{{ object.get_absolute_url }}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">
+                    Contacts/Teams
+                </a>
+            </li>
+        {% endif %}
         {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
         {% if perms.extras.view_note %}
             {% if active_tab != 'notes' and object.get_notes_url or active_tab == 'notes' %}
@@ -153,6 +182,45 @@
                     {% block advanced_content_full_width_page %}{% endblock advanced_content_full_width_page %}
                 </div>
             </div>
+        </div>
+        {% if associated_contacts_table %}
+            <div id="contacts" role="tabpanel" class="tab-pane {% if request.GET.tab == 'contacts' %}active{% else %}fade{% endif %}">
+                <div class="row">
+                    <div class="col-md-12">
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <strong>Contact Associations</strong>
+                                    <div class="pull-right noprint">
+                                        {% if request.user.is_authenticated %}
+                                            <button type="button" class="btn btn-default btn-xs" data-toggle="modal" data-target="#AssociatedContactsTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% render_table associated_contacts_table 'inc/table.html' %}
+                                <div class="panel-footer noprint">
+                                    {% if perms.dcim.delete_contactassociation %}
+                                        <button type="submit" formaction="{% url 'extras:contactassociation_bulk_delete' %}?return_url={{request.path}}" class="btn btn-danger btn-xs">
+                                            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
+                                        </button>
+                                    {% endif %}
+                                    {% if perms.dcim.add_contactassociation %}
+                                        <div class="pull-right">
+                                            <a href="{% url 'extras:contactassociation_add' %}?associated_object_id={{object.id}}&associated_object_type={{content_type.id}}&return_url={{request.path}}" class="btn btn-primary btn-xs">
+                                                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contact Association
+                                            </a>
+                                        </div>
+                                    {% endif %}
+                                    <div class="clearfix"></div>
+                                </div>
+                            </div>
+                        </form>
+                        {% table_config_form associated_contacts_table %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
         </div>
         {% block extra_tab_content %}{% endblock extra_tab_content %}
     </div>

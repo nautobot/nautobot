@@ -42,6 +42,23 @@ class ContactFilterForm(NautobotFilterForm):
     q = forms.CharField(required=False, label="Search")
 
 
+class ContactAssociationForm(NautobotModelForm):
+    contact = DynamicModelChoiceField(queryset=Contact.objects.all(), required=False)
+    team = DynamicModelChoiceField(queryset=Team.objects.all(), required=False)
+    # associated_object_type = DynamicModelChoiceField(queryset=ContentType.objects.all())
+
+    class Meta:
+        model = ContactAssociation
+        fields = [
+            "contact",
+            "team",
+            "associated_object_type",
+            "associated_object_id",
+            "role",
+            "status",
+        ]
+
+
 class TeamForm(NautobotModelForm):
     contacts = DynamicModelMultipleChoiceField(
         queryset=Contact.objects.all(),

@@ -1144,10 +1144,11 @@ class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
     contact_or_team = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Contact/Team")
     contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team.phone", verbose_name="Phone")
     contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team.email", verbose_name="E-Mail")
+    actions = actions = ButtonsColumn(model=ContactAssociation, buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):
         model = ContactAssociation
-        fields = ("contact_or_team", "status", "role", "contact_or_team_phone", "contact_or_team_email")
+        fields = ("contact_or_team", "status", "role", "contact_or_team_phone", "contact_or_team_email", "actions")
         orderable = False
 
 
