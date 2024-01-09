@@ -43,13 +43,75 @@ class ContactFilterForm(NautobotFilterForm):
 
 
 class ContactAssociationForm(NautobotModelForm):
+    name = forms.CharField(max_length=100, required=True, widget=forms.TextInput(attrs={"placeholder": "Name"}))
+    phone = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={"placeholder": "Phone"}))
+    email = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={"placeholder": "E-mail"}))
+    address = forms.CharField(required=False, widget=forms.Textarea(attrs={"placeholder": "Address"}))
+    teams = DynamicModelMultipleChoiceField(
+        queryset=Team.objects.all(),
+        required=False,
+        label="Team(s)",
+    )
+    contacts = DynamicModelMultipleChoiceField(
+        queryset=Contact.objects.all(),
+        required=False,
+        label="Contact(s)",
+    )
+    contact_role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        required=False,
+        label="Contact Role",
+        query_params={"content_types": Contact._meta.label_lower},
+    )
+    team_role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        required=False,
+        label="Team Role",
+        query_params={"content_types": Team._meta.label_lower},
+    )
+    contact_association_role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        required=False,
+        label="Role",
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+    team_association_role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        required=False,
+        label="Role",
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+    contact_association_status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        required=True,
+        label="Status",
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+    team_association_status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        required=True,
+        label="Status",
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+    comments = forms.CharField(required=False, widget=forms.Textarea(attrs={"placeholder": "Comments"}))
     contact = DynamicModelChoiceField(queryset=Contact.objects.all(), required=False)
     team = DynamicModelChoiceField(queryset=Team.objects.all(), required=False)
-    # associated_object_type = DynamicModelChoiceField(queryset=ContentType.objects.all())
 
     class Meta:
         model = ContactAssociation
         fields = [
+            "name",
+            "phone",
+            "email",
+            "address",
+            "teams",
+            "contacts",
+            "contact_role",
+            "contact_association_role",
+            "team_association_role",
+            "contact_association_status",
+            "team_association_status",
+            "comments",
             "contact",
             "team",
             "associated_object_type",

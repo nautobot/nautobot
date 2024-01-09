@@ -169,6 +169,8 @@ urlpatterns = [
         name="configcontextschema_notes",
         kwargs={"model": ConfigContextSchema},
     ),
+    # contacts
+    path("contact-associations/object-edit/", views.ObjectContactEditView.as_view(), name="object_contact_edit"),
     # Custom fields
     path("custom-fields/", views.CustomFieldListView.as_view(), name="customfield_list"),
     path("custom-fields/add/", views.CustomFieldEditView.as_view(), name="customfield_add"),
