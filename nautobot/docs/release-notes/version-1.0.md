@@ -277,7 +277,7 @@ The "Related Devices" table has been removed from the detailed Device view.
 ### Added
 
 - [#242](https://github.com/nautobot/nautobot/issues/242) - Added a production-ready `Dockerfile` for clustered deployment
-- [#356](https://github.com/nautobot/nautobot/issues/356) - Added a new `nautobot-server startplugin` management command to ease plugin development
+- [#356](https://github.com/nautobot/nautobot/issues/356) - Added a new `nautobot-server startplugin` management command to ease plugin development - Deprecated & Removed
 
 ### Fixed
 
