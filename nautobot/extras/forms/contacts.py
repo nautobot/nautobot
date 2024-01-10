@@ -32,6 +32,7 @@ class ContactForm(NautobotModelForm):
 
 class ContactBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Contact.objects.all(), widget=forms.MultipleHiddenInput())
+    address = forms.CharField(required=False, widget=forms.Textarea())
 
     class Meta:
         model = Contact
@@ -147,6 +148,7 @@ class TeamForm(NautobotModelForm):
 
 class TeamBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Team.objects.all(), widget=forms.MultipleHiddenInput())
+    address = forms.CharField(required=False, widget=forms.Textarea())
 
     class Meta:
         model = Team

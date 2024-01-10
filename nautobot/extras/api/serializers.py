@@ -907,6 +907,7 @@ class TeamSerializer(NautobotModelSerializer):
     class Meta:
         model = Team
         fields = "__all__"
+        extra_kwargs = {"contacts": {"required": False}}
 
 
 #

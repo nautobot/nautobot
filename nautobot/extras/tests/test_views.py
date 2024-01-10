@@ -30,6 +30,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
     CustomField,
     CustomLink,
     DynamicGroup,
@@ -51,6 +52,7 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
@@ -352,6 +354,26 @@ class ConfigContextSchemaTestCase(
         cls.bulk_edit_data = {
             "description": "New description",
         }
+
+
+class ContactTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = Contact
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.form_data = {
+            "name": "new contact",
+            "phone": "7181231241",
+            "email": "new-contact@gmail.com",
+            "address": "Rainbow Road, Ramus NJ",
+        }
+        cls.csv_data = (
+            "name,phone,email,address",
+            'new contact 2,210132412,,"Rainbow Road, NJ, USA"',
+            "new contact 3,210132411,newcontact2@gmail.com,",
+            "new contact 4,210132414,,",
+        )
+        cls.bulk_edit_data = {"address": "Carnegie Hall, New York, NY"}
 
 
 class CustomLinkTestCase(
@@ -2467,6 +2489,26 @@ class StatusTestCase(
         cls.bulk_edit_data = {
             "color": "000000",
         }
+
+
+class TeamTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = Team
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.form_data = {
+            "name": "new team",
+            "phone": "7181231241",
+            "email": "new-team@gmail.com",
+            "address": "Rainbow Road, Ramus NJ",
+        }
+        cls.csv_data = (
+            "name,phone,email,address",
+            'new team 2,210132412,,"rainbow road, NJ, USA"',
+            "new team 3,210132411,newteam2@gmail.com,",
+            "new team 4,210132414,,",
+        )
+        cls.bulk_edit_data = {"address": "Carnegie Hall, New York, NY"}
 
 
 class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):

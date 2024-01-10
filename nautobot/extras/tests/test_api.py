@@ -44,6 +44,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
     CustomField,
     CustomLink,
     DynamicGroup,
@@ -68,6 +69,7 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
 from nautobot.extras.models.jobs import JobHook, JobButton
@@ -376,6 +378,41 @@ class ContentTypeTest(APITestCase):
 
         url = reverse("extras-api:contenttype-detail", kwargs={"pk": contenttype.pk})
         self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_200_OK)
+
+
+#
+#  Contacts
+#
+
+
+class ContactTest(APIViewTestCases.APIViewTestCase):
+    model = Contact
+    create_data = [
+        {
+            "name": "Contact 1",
+            "phone": "12345212",
+            "email": "contact1@gmail.com",
+        },
+        {
+            "name": "Contact 2",
+            "phone": "718324121",
+            "email": "contact2@gmail.com",
+            "address": "Bowser's Castle, Staten Island, NY",
+        },
+        {
+            "name": "Contact 3",
+            "phone": "718451231",
+            "email": "",
+        },
+        {
+            "name": "Contact 4",
+            "phone": "",
+            "email": "contact4@gmail.com",
+        },
+    ]
+    bulk_update_data = {
+        "address": "Carnegie Hall, New York, NY",
+    }
 
 
 class CreatedUpdatedFilterTest(APITestCase):
@@ -3464,6 +3501,48 @@ class TagTest(APIViewTestCases.APIViewTestCase):
         tag.refresh_from_db()
         self.assertEqual(tag.color, ColorChoices.COLOR_LIME)
         self.assertEqual(list(tag.content_types.all()), tag_content_types)
+
+
+#
+# Team
+#
+
+
+class TeamTest(APIViewTestCases.APIViewTestCase):
+    model = Team
+    create_data = [
+        {
+            "name": "Team 1",
+            "phone": "12345212",
+            "email": "team1@gmail.com",
+        },
+        {
+            "name": "Team 2",
+            "phone": "718324121",
+            "email": "team2@gmail.com",
+            "address": "Bowser's Castle, Staten Island, NY",
+        },
+        {
+            "name": "Team 3",
+            "phone": "718451231",
+            "email": "",
+        },
+        {
+            "name": "Team 4",
+            "phone": "",
+            "email": "team4@gmail.com",
+            "address": "Rainbow Bridge, Central NJ",
+        },
+    ]
+    bulk_update_data = {
+        "address": "Carnegie Hall, New York, NY",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        contacts = list(Contact.objects.values_list("pk", flat=True))
+        cls.create_data[0]["contacts"] = contacts[:2]
+        cls.create_data[2]["contacts"] = contacts[3:5]
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):
