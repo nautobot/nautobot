@@ -45,6 +45,7 @@ from nautobot.extras.models import (
     ConfigContext,
     ConfigContextSchema,
     Contact,
+    ContactAssociation,
     CustomField,
     CustomLink,
     DynamicGroup,
@@ -413,6 +414,48 @@ class ContactTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "address": "Carnegie Hall, New York, NY",
     }
+
+
+class ContactAssociationTestCase(APIViewTestCases.APIViewTestCase):
+    model = ContactAssociation
+    create_data = []
+
+    @classmethod
+    def setUpTestData(cls):
+        ContactAssociation.objects.create(
+            contact=Contact.objects.first(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=IPAddress.objects.first().pk,
+            status=Status.objects.get_for_model(ContactAssociation).first(),
+        )
+        ContactAssociation.objects.create(
+            contact=Contact.objects.last(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=IPAddress.objects.first().pk,
+            status=Status.objects.get_for_model(ContactAssociation).first(),
+        )
+        ContactAssociation.objects.create(
+            team=Team.objects.first(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=IPAddress.objects.first().pk,
+            status=Status.objects.get_for_model(ContactAssociation).first(),
+        )
+        ContactAssociation.objects.create(
+            team=Team.objects.last(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=IPAddress.objects.first().pk,
+            status=Status.objects.get_for_model(ContactAssociation).first(),
+        )
+        cls.create_data.append(
+            {
+                "contact": Contact.objects.first().pk,
+                "team": None,
+                "associated_object_type": ContentType.objects.get_for_model(IPAddress).pk,
+                "associated_object_id": IPAddress.objects.first().pk,
+                "role": None,
+                "status": Status.objects.get_for_model(ContactAssociation).first().pk,
+            }
+        )
 
 
 class CreatedUpdatedFilterTest(APITestCase):
