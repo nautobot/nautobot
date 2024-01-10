@@ -11,7 +11,7 @@ from nautobot.core.forms import (
     TableConfigForm,
     restrict_form_fields,
 )
-from nautobot.core.forms.forms import DynamicFilterFormSet, inline_gfk_formset_factory
+from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model
@@ -22,7 +22,6 @@ from nautobot.core.utils.requests import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import check_filter_for_display, get_csv_form_fields_from_serializer_class
-from nautobot.extras.forms.contacts import ContactAssociationFormSetForm
 from nautobot.extras.models.change_logging import ObjectChange
 from nautobot.extras.models.contacts import ContactAssociation
 from nautobot.extras.tables import AssociatedContactsTable
@@ -261,29 +260,11 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     }
                 )
             elif view.action in ["create", "update"]:
-                # TODO: need to add this to generic ObjectEditView class as well
-                # TODO: need an option for some models to opt-out of this, e.g. editing a Contact shouldn't have this
-                if is_contact_model:
-                    formset_class = inline_gfk_formset_factory(
-                        parent_model=model,
-                        model=ContactAssociation,
-                        form=ContactAssociationFormSetForm,
-                        ct_field_name="associated_object_type",
-                        fk_field_name="associated_object_id",
-                    )
-                    formset = formset_class(instance=instance)
-                    context.update(
-                        {
-                            "editing": instance.present_in_database,
-                            "contact_association_formset": formset,
-                        }
-                    )
-                else:
-                    context.update(
-                        {
-                            "editing": instance.present_in_database,
-                        }
-                    )
+                context.update(
+                    {
+                        "editing": instance.present_in_database,
+                    }
+                )
             elif view.action == "bulk_create":
                 context.update(
                     {

@@ -408,6 +408,17 @@ class ObjectNewContactView(generic.ObjectEditView):
     model_form = forms.ObjectNewContactForm
     template_name = "extras/object_new_contact.html"
 
+    def successful_post(self, request, obj, created, logger):
+        """Callback after the form is successfully saved but before redirecting the user."""
+        verb = "Created" if created else "Modified"
+        msg = f"{verb} {self.queryset.model._meta.verbose_name} and Created Contact Association"
+        logger.info(f"{msg} {obj} (PK: {obj.pk})")
+        try:
+            msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+        except AttributeError:
+            msg = format_html("{} {}", msg, obj)
+        messages.success(request, msg)
+
     def post(self, request, *args, **kwargs):
         logger = logging.getLogger(__name__ + ".ObjectNewContactView")
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)

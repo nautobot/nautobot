@@ -25,18 +25,12 @@ class ContactFactory(PrimaryModelFactory):
         has_email = NautobotBoolIterator()
         has_address = NautobotBoolIterator()
         has_comments = NautobotBoolIterator()
-        has_role = NautobotBoolIterator()
 
     name = UniqueFaker("bs")
     phone = factory.Maybe("has_phone", factory.Sequence(lambda n: "210-123-%04d" % n))
     email = factory.Maybe("has_email", factory.Faker("email"))
     address = factory.Maybe("has_address", factory.Faker("address"))
     comments = factory.Maybe("has_comments", factory.Faker("text", max_nb_chars=200))
-    role = factory.Maybe(
-        "has_role",
-        random_instance(lambda: Role.objects.get_for_model(Contact), allow_null=False),
-        None,
-    )
 
 
 class ExternalIntegrationFactory(PrimaryModelFactory):
@@ -144,18 +138,12 @@ class TeamFactory(PrimaryModelFactory):
         has_email = NautobotBoolIterator()
         has_address = NautobotBoolIterator()
         has_comments = NautobotBoolIterator()
-        has_role = NautobotBoolIterator()
 
     name = factory.Faker("name")
     phone = factory.Maybe("has_phone", factory.Sequence(lambda n: "210-123-%04d" % n))
     email = factory.Maybe("has_email", factory.Faker("email"))
     address = factory.Maybe("has_address", factory.Faker("address"))
     comments = factory.Maybe("has_comments", factory.Faker("text", max_nb_chars=200))
-    role = factory.Maybe(
-        "has_role",
-        random_instance(lambda: Role.objects.get_for_model(Team), allow_null=False),
-        None,
-    )
 
     @factory.post_generation
     def contacts(self, create, extract, **kwargs):

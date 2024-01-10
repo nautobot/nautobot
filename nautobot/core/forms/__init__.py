@@ -43,7 +43,6 @@ from nautobot.core.forms.forms import (
     PrefixFieldMixin,
     ReturnURLForm,
     TableConfigForm,
-    inline_gfk_formset_factory,
 )
 from nautobot.core.forms.search import SearchForm
 from nautobot.core.forms.utils import (
@@ -110,7 +109,6 @@ __all__ = (
     "ExpandableNameField",
     "form_from_model",
     "ImportForm",
-    "inline_gfk_formset_factory",
     "IP4_EXPANSION_PATTERN",
     "IP6_EXPANSION_PATTERN",
     "JSONArrayFormField",

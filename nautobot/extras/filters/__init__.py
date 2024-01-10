@@ -400,7 +400,7 @@ class NautobotFilterSet(
 #
 
 
-class ContactFilterSet(NameSearchFilterSet, RoleModelFilterSetMixin, NautobotFilterSet):
+class ContactFilterSet(NameSearchFilterSet, NautobotFilterSet):
     class Meta:
         model = Contact
         fields = "__all__"
@@ -1035,7 +1035,7 @@ class TagFilterSet(NautobotFilterSet):
 #
 
 
-class TeamFilterSet(NameSearchFilterSet, RoleModelFilterSetMixin, NautobotFilterSet):
+class TeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
     class Meta:
         model = Team
         fields = "__all__"

@@ -155,20 +155,3 @@ class TeamBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
 class TeamFilterForm(NautobotFilterForm):
     model = Team
     q = forms.CharField(required=False, label="Search")
-
-
-class ContactAssociationFormSetForm(forms.ModelForm):
-    """Form used for rows in the Contacts/Teams formset when editing related objects."""
-
-    contact = DynamicModelChoiceField(queryset=Contact.objects.all(), required=False)
-    team = DynamicModelChoiceField(queryset=Team.objects.all(), required=False)
-    status = DynamicModelChoiceField(
-        queryset=Status.objects.all(), required=True, query_params={"content_types": "extras.contactassociation"}
-    )
-    role = DynamicModelChoiceField(
-        queryset=Role.objects.all(), required=False, query_params={"content_types": "extras.contactassociation"}
-    )
-
-    class Meta:
-        model = ContactAssociation
-        fields = ("contact", "team", "status", "role")

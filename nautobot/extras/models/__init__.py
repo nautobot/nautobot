@@ -1,5 +1,5 @@
 from .change_logging import ChangeLoggedModel, ObjectChange
-from .contacts import Contact, Team, ContactAssociation
+from .contacts import Contact, ContactAssociation, Team
 from .roles import Role, RoleField
 from .statuses import Status, StatusField, StatusModel
 from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel

@@ -38,7 +38,6 @@ from nautobot.core.forms import (
     ConfirmationForm,
     CSVDataField,
     CSVFileField,
-    inline_gfk_formset_factory,
     restrict_form_fields,
 )
 from nautobot.core.utils import lookup, permissions
@@ -50,8 +49,7 @@ from nautobot.core.views.utils import (
     prepare_cloned_fields,
 )
 from nautobot.extras.forms import NoteForm
-from nautobot.extras.forms.contacts import ContactAssociationFormSetForm
-from nautobot.extras.models import ContactAssociation, ExportTemplate
+from nautobot.extras.models import ExportTemplate
 from nautobot.extras.tables import ObjectChangeTable, NoteTable
 from nautobot.extras.utils import remove_prefix_from_cf_key
 
