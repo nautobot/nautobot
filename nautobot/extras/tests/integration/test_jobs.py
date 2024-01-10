@@ -1,3 +1,5 @@
+import time
+
 from django.utils import timezone
 from selenium.webdriver.common.keys import Keys
 
@@ -70,9 +72,8 @@ class JobResultTest(SeleniumTestCase):
 
         # Sanity check
         self.assertEqual(len(LogLevelChoices.values()), len(visible_rows()))
-        
+
         # Trial 1: Give selenium some time to attach event listeners
-        import time
         time.sleep(10)
 
         # Test for message (one row should be visible)
