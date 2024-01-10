@@ -1,0 +1,38 @@
+{
+  "files": {
+    "main.css": "/static/css/main.css",
+    "main.js": "/static/js/main.js",
+    "static/js/264-js": "/static/js/264-6e5113cae1ef62e92e65.js",
+    "static/js/787-js": "/static/js/787-64fe970182683afaa87d.js",
+    "static/media/ubuntu-all-400-normal.woff": "/static/media/ubuntu-all-400-normal..woff",
+    "static/media/ubuntu-all-500-normal.woff": "/static/media/ubuntu-all-500-normal..woff",
+    "static/media/ubuntu-mono-all-400-normal.woff": "/static/media/ubuntu-mono-all-400-normal..woff",
+    "static/media/ubuntu-latin-ext-400-normal.woff2": "/static/media/ubuntu-latin-ext-400-normal..woff2",
+    "static/media/ubuntu-latin-ext-500-normal.woff2": "/static/media/ubuntu-latin-ext-500-normal..woff2",
+    "static/media/ubuntu-latin-400-normal.woff2": "/static/media/ubuntu-latin-400-normal..woff2",
+    "static/media/ubuntu-mono-latin-ext-400-normal.woff2": "/static/media/ubuntu-mono-latin-ext-400-normal..woff2",
+    "static/media/ubuntu-latin-500-normal.woff2": "/static/media/ubuntu-latin-500-normal..woff2",
+    "static/media/ubuntu-mono-latin-400-normal.woff2": "/static/media/ubuntu-mono-latin-400-normal..woff2",
+    "static/media/ubuntu-cyrillic-ext-400-normal.woff2": "/static/media/ubuntu-cyrillic-ext-400-normal..woff2",
+    "static/media/ubuntu-cyrillic-ext-500-normal.woff2": "/static/media/ubuntu-cyrillic-ext-500-normal..woff2",
+    "static/media/ubuntu-cyrillic-400-normal.woff2": "/static/media/ubuntu-cyrillic-400-normal..woff2",
+    "static/media/ubuntu-cyrillic-500-normal.woff2": "/static/media/ubuntu-cyrillic-500-normal..woff2",
+    "static/media/ubuntu-mono-cyrillic-ext-400-normal.woff2": "/static/media/ubuntu-mono-cyrillic-ext-400-normal..woff2",
+    "static/media/ubuntu-greek-400-normal.woff2": "/static/media/ubuntu-greek-400-normal..woff2",
+    "static/media/ubuntu-greek-ext-400-normal.woff2": "/static/media/ubuntu-greek-ext-400-normal..woff2",
+    "static/media/ubuntu-mono-cyrillic-400-normal.woff2": "/static/media/ubuntu-mono-cyrillic-400-normal..woff2",
+    "static/media/ubuntu-greek-500-normal.woff2": "/static/media/ubuntu-greek-500-normal..woff2",
+    "static/media/ubuntu-greek-ext-500-normal.woff2": "/static/media/ubuntu-greek-ext-500-normal..woff2",
+    "static/media/ubuntu-mono-greek-400-normal.woff2": "/static/media/ubuntu-mono-greek-400-normal..woff2",
+    "static/media/ubuntu-mono-greek-ext-400-normal.woff2": "/static/media/ubuntu-mono-greek-ext-400-normal..woff2",
+    "index.html": "/index.html",
+    "main.css.map": "/static/css/main.css.map",
+    "main.js.map": "/static/js/main.js.map",
+    "264-js.map": "/static/js/264-6e5113cae1ef62e92e65.js.map",
+    "787-js.map": "/static/js/787-64fe970182683afaa87d.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.css",
+    "static/js/main.js"
+  ]
+}
