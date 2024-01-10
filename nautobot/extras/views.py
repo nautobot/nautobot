@@ -398,9 +398,11 @@ class ContactUIViewSet(NautobotUIViewSet):
 
 class ContactAssociationUIViewSet(ObjectBulkDestroyViewMixin, ObjectDestroyViewMixin, ObjectEditViewMixin):
     form_class = forms.ContactAssociationForm
+    filterset_class = filters.ContactAssociationFilterSet
     queryset = ContactAssociation.objects.all()
     serializer_class = serializers.ContactAssociationSerializer
     table_class = AssociatedContactsTable
+    non_filter_params = ("export", "page", "per_page", "sort")
 
 
 class ObjectNewContactView(generic.ObjectEditView):
