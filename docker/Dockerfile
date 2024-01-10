@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1
 ARG PYTHON_VER
+# Small hack to make the devcontainer work until https://github.com/devcontainers/cli/issues/275 is fixed.
+ARG ARCH=${TARGETARCH:-amd64}
 
 ################################ Overview
 
@@ -126,7 +128,7 @@ RUN poetry config virtualenvs.create ${POETRY_VIRTUALENVS_CREATE} && \
 ################################ Stage: python-dependencies (intermediate build target)
 
 # hadolint ignore=DL3006
-FROM system-dev-dependencies-$TARGETARCH AS python-dependencies
+FROM system-dev-dependencies-${ARCH} AS python-dependencies
 
 ARG POETRY_HOME=/opt/poetry
 COPY --from=poetry ${POETRY_HOME} ${POETRY_HOME}
