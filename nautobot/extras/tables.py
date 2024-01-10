@@ -53,7 +53,6 @@ from .models import (
 )
 from .registry import registry
 
-
 CONTACT_OR_TEAM = """
 {% load helpers %}
 <i class="mdi {% if record.contact %}mdi-account{% else %}mdi-account-group{% endif %}"></i>

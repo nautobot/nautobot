@@ -23,7 +23,6 @@ from nautobot.core.utils.requests import (
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import check_filter_for_display, get_csv_form_fields_from_serializer_class
 from nautobot.extras.models.change_logging import ObjectChange
-from nautobot.extras.models.contacts import ContactAssociation
 from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import get_base_template
 

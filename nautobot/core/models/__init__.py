@@ -14,7 +14,6 @@ from nautobot.core.models.querysets import CompositeKeyQuerySetMixin, Restricted
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
 from nautobot.core.utils.lookup import get_route_for_model
 
-
 __all__ = (
     "BaseManager",
     "BaseModel",

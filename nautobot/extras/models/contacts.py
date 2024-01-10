@@ -3,10 +3,12 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel  # isort: off
+
 from nautobot.extras.utils import extras_features
+
 from .roles import RoleField
 from .statuses import StatusField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel  # isort: off
 
 
 class ContactTeamSharedBase(PrimaryModel):

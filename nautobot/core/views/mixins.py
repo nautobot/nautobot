@@ -9,7 +9,7 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError,
 )
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.db.models import ManyToManyField, ProtectedError
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse

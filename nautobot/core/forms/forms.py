@@ -3,7 +3,6 @@ import logging
 import re
 
 from django import forms
-from django.contrib.contenttypes.models import ContentType
 from django.forms import formset_factory
 from django.urls import reverse
 import yaml
