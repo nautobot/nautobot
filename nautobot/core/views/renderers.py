@@ -7,9 +7,9 @@ from django_tables2 import RequestConfig
 from rest_framework import renderers
 
 from nautobot.core.forms import (
+    restrict_form_fields,
     SearchForm,
     TableConfigForm,
-    restrict_form_fields,
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname

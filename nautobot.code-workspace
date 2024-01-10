@@ -7,28 +7,15 @@
 	"extensions": {
 		"recommendations": [
 			"ms-python.python",
-			"esbenp.prettier-vscode",
-			"dbaeumer.vscode-eslint"
+			"charliermarsh.ruff"
 		]
 	},
 	"settings": {
-		"eslint.format.enable": true,
-		"editor.codeActionsOnSave": {
-			"source.fixAll.eslint": true
-		},
-		"python.formatting.provider": "black",
-		"python.linting.enabled": true,
-		"python.linting.flake8Enabled": true,
 		"[python]": {
-			"editor.formatOnSave": true
+			"editor.formatOnSave": true,
+			"editor.defaultFormatter": "charliermarsh.ruff"
 		},
 		"[javascript]": {
-			"editor.formatOnSave": true
-		},
-		"[javascriptreact]": {
-			"editor.formatOnSave": true
-		},
-		"[jsx-tags]": {
 			"editor.formatOnSave": true
 		}
 	},

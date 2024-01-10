@@ -1,27 +1,26 @@
 import collections
-import inspect
 from functools import partial
 from importlib import import_module
+import inspect
 from logging import getLogger
-
-from packaging import version
 
 from django.core.exceptions import ValidationError
 from django.template.loader import get_template
 from django.urls import get_resolver, URLPattern
+from packaging import version
 
 from nautobot.core.apps import (
     NautobotConfig,
     NavMenuTab,
-    register_menu_items,
     register_homepage_panels,
+    register_menu_items,
 )
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.signals import nautobot_database_ready
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.choices import BannerClassChoices
-from nautobot.extras.registry import registry, register_datasource_contents
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import import_object
+from nautobot.extras.registry import register_datasource_contents, registry
 from nautobot.extras.secrets import register_secrets_provider
 
 logger = getLogger(__name__)
@@ -462,8 +461,8 @@ def register_filter_extensions(filter_extensions, plugin_name):
     """
     Register a list of FilterExtension classes
     """
-    from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
     from nautobot.core.forms.utils import add_field_to_filter_form_class
+    from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 
     for filter_extension in filter_extensions:
         if not issubclass(filter_extension, FilterExtension):

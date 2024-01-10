@@ -12,7 +12,6 @@ from .customfields import CustomFieldModel
 from .mixins import NotesMixin
 from .relationships import RelationshipModel
 
-
 #
 # Tags
 #

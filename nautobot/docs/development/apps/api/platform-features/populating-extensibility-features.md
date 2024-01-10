@@ -55,4 +55,7 @@ class AnimalSoundsConfig(NautobotAppConfig):
 config = AnimalSoundsConfig
 ```
 
+!!! warning
+    It is crucial that you add the `sender=self` parameter to the `connect` method call - otherwise your signal handler will run as many times as the `NautobotAppConfig.ready` method is called, which may be a lot of times.
+
 After writing this code, run `nautobot-server migrate` or `nautobot-server post_upgrade`, then restart the Nautobot server, and you should see that this custom Relationship has now been automatically created.

@@ -1,5 +1,5 @@
 # flake8: noqa
-from .base import *
+from .base import *  # noqa: F403  # undefined-local-with-import-star
 from .contacts import (
     ContactAssociationForm,
     ContactBulkEditForm,
@@ -11,5 +11,5 @@ from .contacts import (
     TeamFilterForm,
     TeamForm,
 )
-from .forms import *
-from .mixins import *
+from .forms import *  # noqa: F403  # undefined-local-with-import-star
+from .mixins import *  # noqa: F403  # undefined-local-with-import-star

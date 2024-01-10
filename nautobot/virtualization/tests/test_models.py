@@ -7,7 +7,7 @@ from nautobot.extras.models import Status
 from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN
 from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import VirtualMachine, ClusterType, Cluster, VMInterface
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 
 class ClusterTestCase(TestCase):  # TODO: change to BaseModelTestCase

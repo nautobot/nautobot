@@ -1,6 +1,5 @@
 from nautobot.core.celery import register_jobs
-from nautobot.extras.jobs import Job, RunJobTaskFailed, get_task_logger
-
+from nautobot.extras.jobs import get_task_logger, Job, RunJobTaskFailed
 
 logger = get_task_logger(__name__)
 

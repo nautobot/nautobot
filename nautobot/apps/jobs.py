@@ -31,7 +31,6 @@ from nautobot.extras.jobs import (
     TextVar,
 )
 
-
 __all__ = (
     "BaseJob",
     "BooleanVar",

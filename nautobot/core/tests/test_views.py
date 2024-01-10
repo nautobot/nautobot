@@ -4,7 +4,7 @@ import urllib.parse
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import RequestFactory, override_settings
+from django.test import override_settings, RequestFactory
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
@@ -41,7 +41,10 @@ class GetReturnURLMixinTestCase(TestCase):
         self.assertEqual(self.mixin.get_return_url(request=request, obj=None), reverse("home"))
 
     def test_get_return_url_explicit_punycode(self):
-        request = self.factory.get("/", {"return_url": "/dcım/devices/"})
+        """
+        Replace the 'i' in '/dcim/' with a unicode dotless 'ı' and make sure we're not fooled by it.
+        """  # noqa: RUF002  # ambiguous-unicode-character-docstring -- fully intentional here!
+        request = self.factory.get("/", {"return_url": "/dcım/devices/"})  # noqa: RUF001  # ambiguous-unicode-character-string -- fully intentional here!
         self.assertEqual(self.mixin.get_return_url(request=request, obj=None), "/dc%C4%B1m/devices/")
 
     def test_get_return_url_default_with_obj(self):

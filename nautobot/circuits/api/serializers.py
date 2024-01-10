@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from nautobot.circuits.models import Provider, Circuit, CircuitTermination, CircuitType, ProviderNetwork
+from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core.api import NautobotModelSerializer
 from nautobot.dcim.api.serializers import (
     CableTerminationModelSerializerMixin,

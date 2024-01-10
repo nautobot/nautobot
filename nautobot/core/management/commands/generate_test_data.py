@@ -5,7 +5,7 @@ import os
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import DEFAULT_DB_ALIAS, connections
+from django.db import connections, DEFAULT_DB_ALIAS
 from django.utils.crypto import get_random_string
 
 from nautobot.core.settings_funcs import is_truthy
@@ -61,6 +61,8 @@ class Command(BaseCommand):
                 DeviceFactory,
                 DeviceRedundancyGroupFactory,
                 DeviceTypeFactory,
+                LocationFactory,
+                LocationTypeFactory,
                 ManufacturerFactory,
                 PlatformFactory,
             )
@@ -73,10 +75,6 @@ class Command(BaseCommand):
                 TeamFactory,
             )
             from nautobot.extras.management import populate_status_choices
-            from nautobot.dcim.factory import (
-                LocationTypeFactory,
-                LocationFactory,
-            )
             from nautobot.extras.utils import TaggableClassesQuery
             from nautobot.ipam.choices import PrefixTypeChoices
             from nautobot.ipam.factory import (
@@ -85,8 +83,8 @@ class Command(BaseCommand):
                 PrefixFactory,
                 RIRFactory,
                 RouteTargetFactory,
-                VLANGroupFactory,
                 VLANFactory,
+                VLANGroupFactory,
                 VRFFactory,
             )
             from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory

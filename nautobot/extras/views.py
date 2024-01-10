@@ -10,7 +10,7 @@ from django.db.models import Count, ProtectedError, Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import TemplateDoesNotExist, get_template
+from django.template.loader import get_template, TemplateDoesNotExist
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import iri_to_uri
@@ -36,6 +36,7 @@ from nautobot.core.views.mixins import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
+from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device, Rack
 from nautobot.dcim.tables import DeviceTable, RackTable
 from nautobot.extras.tasks import delete_custom_field_data
@@ -70,6 +71,7 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    Job as JobModel,
     JobButton,
     JobHook,
     JobResult,
@@ -88,7 +90,6 @@ from .models import (
     Team,
     Webhook,
 )
-from .models import Job as JobModel
 from .registry import registry
 from .tables import AssociatedContactsTable, RoleTable
 

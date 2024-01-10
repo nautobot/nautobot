@@ -9,13 +9,10 @@ from netaddr import IPNetwork
 
 from nautobot.core import filters, forms, testing
 from nautobot.core.utils import requests
-from nautobot.dcim import filters as dcim_filters, forms as dcim_forms
-from nautobot.dcim import models as dcim_models
+from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models
 from nautobot.dcim.tests import test_views
-from nautobot.extras import filters as extras_filters
-from nautobot.extras import models as extras_models
-from nautobot.ipam import forms as ipam_forms
-from nautobot.ipam import models as ipam_models
+from nautobot.extras import filters as extras_filters, models as extras_models
+from nautobot.ipam import forms as ipam_forms, models as ipam_models
 
 
 class SearchFormTestCase(TestCase):
