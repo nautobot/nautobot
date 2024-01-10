@@ -71,12 +71,14 @@
                             {{ object.model }}<br/>
                         </td>
                     </tr>
-                    <tr>
-                        <td>Hardware Family</td>
-                        <td>
-                            <a href="{% url 'dcim:devicetype_list' %}?hardware_family={{ object.hardware_family.name }}">{{ object.hardware_family }}</a>
-                        </td>
-                    </tr>
+                    {% if object.hardware_family %}
+                        <tr>
+                            <td>Hardware Family</td>
+                            <td>
+                                <a href="{% url 'dcim:devicetype_list' %}?hardware_family={{ object.hardware_family.name }}">{{ object.hardware_family }}</a>
+                            </td>
+                        </tr>
+                    {% endif %}
                     <tr>
                         <td>Part Number</td>
                         <td>{{ object.part_number|placeholder }}</td>

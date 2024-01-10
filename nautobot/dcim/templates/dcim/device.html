@@ -66,12 +66,14 @@
                                             <span><a href="{% url 'dcim:devicetype' pk=object.device_type.pk %}">{{ object.device_type.display }}</a> ({{ object.device_type.u_height }}U)</span>
                                         </td>
                                     </tr>
-                                    <tr>
-                                        <td>Hardware Family</td>
-                                        <td>
-                                            <a href="{% url 'dcim:hardwarefamily' pk=object.device_type.hardware_family.pk %}">{{ object.hardware_family }}</a>
-                                        </td>
-                                    </tr>
+                                    {% if object.device_type.hardware_family %}
+                                        <tr>
+                                            <td>Hardware Family</td>
+                                            <td>
+                                                <a href="{% url 'dcim:hardwarefamily' pk=object.device_type.hardware_family.pk %}">{{ object.hardware_family }}</a>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
                                     <tr>
                                         <td>Serial Number</td>
                                         <td>
