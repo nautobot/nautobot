@@ -67,6 +67,12 @@
                                         </td>
                                     </tr>
                                     <tr>
+                                        <td>Hardware Family</td>
+                                        <td>
+                                            <a href="{% url 'dcim:hardwarefamily' pk=object.device_type.hardware_family.pk %}">{{ object.hardware_family }}</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
                                         <td>Serial Number</td>
                                         <td>
                                             <span class="hover_copy">

@@ -45,4 +45,4 @@ Once component templates have been created, every new device that you create as 
 
 +++ 2.2.0
 
-[Hardware Family](hardwarefamily.md) model has been introduced to represent a group of related device types. A device type can be optionally assigned to a hardware family. Each hardware family must have a unique name and may have a description assigned to it.
+    [Hardware Family](hardwarefamily.md) model has been introduced to represent a group of related device types. A device type can be optionally assigned to a hardware family. Each hardware family must have a unique name and may have a description assigned to it.

@@ -512,6 +512,7 @@ class DeviceTypeFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "manufacturer__name": "icontains",
+            "hardware_family__name": "icontains",
             "model": "icontains",
             "part_number": "icontains",
             "comments": "icontains",
@@ -519,6 +520,9 @@ class DeviceTypeFilterSet(NautobotFilterSet):
     )
     manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Manufacturer.objects.all(), to_field_name="name", label="Manufacturer (name or ID)"
+    )
+    hardware_family = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=HardwareFamily.objects.all(), to_field_name="name", label="Hardware Family (name or ID)"
     )
     console_ports = django_filters.BooleanFilter(
         method="_console_ports",
@@ -813,6 +817,10 @@ class DeviceFilterSet(
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
+            "device_type__hardware_family__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
             "comments": "icontains",
         },
     )
@@ -821,6 +829,12 @@ class DeviceFilterSet(
         queryset=Manufacturer.objects.all(),
         to_field_name="name",
         label="Manufacturer (name or ID)",
+    )
+    hardware_family = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="device_type__hardware_family",
+        queryset=HardwareFamily.objects.all(),
+        to_field_name="name",
+        label="Hardware Family (name or ID)",
     )
     device_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),

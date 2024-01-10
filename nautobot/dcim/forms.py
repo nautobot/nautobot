@@ -676,6 +676,12 @@ class HardwareFamilyForm(NautobotModelForm):
         ]
 
 
+class HardwareFamilyFilterForm(NautobotFilterForm):
+    model = HardwareFamily
+    q = forms.CharField(required=False, label="Search")
+    tags = TagFilterField(model)
+
+
 #
 # Device types
 #

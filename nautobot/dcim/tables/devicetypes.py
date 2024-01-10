@@ -70,9 +70,10 @@ class ManufacturerTable(BaseTable):
 
 class HardwareFamilyTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.LinkColumn()
+    name = tables.Column(linkify=True)
     device_type_count = tables.Column(verbose_name="Device Types")
     actions = ButtonsColumn(HardwareFamily)
+    tags = TagColumn(url_name="dcim:hardwarefamily_list")
 
     class Meta(BaseTable.Meta):
         model = HardwareFamily
@@ -82,6 +83,7 @@ class HardwareFamilyTable(BaseTable):
             "device_type_count",
             "description",
             "actions",
+            "tags",
         )
 
 
