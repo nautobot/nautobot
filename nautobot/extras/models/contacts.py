@@ -17,10 +17,6 @@ class ContactTeamSharedBase(PrimaryModel):
 
     comments = models.TextField(blank=True)
 
-    role = RoleField(blank=True, null=True)
-
-    clone_fields = ["role"]
-
     class Meta:
         abstract = True
         ordering = ("name",)

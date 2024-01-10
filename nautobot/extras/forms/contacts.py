@@ -25,13 +25,12 @@ class ContactForm(NautobotModelForm):
             "email",
             "address",
             "teams",
-            "role",
             "comments",
             "tags",
         ]
 
 
-class ContactBulkEditForm(TagsBulkEditFormMixin, RoleModelBulkEditFormMixin, NautobotBulkEditForm):
+class ContactBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Contact.objects.all(), widget=forms.MultipleHiddenInput())
 
     class Meta:
@@ -141,13 +140,12 @@ class TeamForm(NautobotModelForm):
             "email",
             "address",
             "contacts",
-            "role",
             "comments",
             "tags",
         ]
 
 
-class TeamBulkEditForm(TagsBulkEditFormMixin, RoleModelBulkEditFormMixin, NautobotBulkEditForm):
+class TeamBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Team.objects.all(), widget=forms.MultipleHiddenInput())
 
     class Meta:

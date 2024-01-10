@@ -37,16 +37,6 @@ class Migration(migrations.Migration):
                 ("email", models.EmailField(blank=True, db_index=True, max_length=254)),
                 ("address", models.TextField(blank=True)),
                 ("comments", models.TextField(blank=True)),
-                (
-                    "role",
-                    nautobot.extras.models.roles.RoleField(
-                        blank=True,
-                        null=True,
-                        on_delete=django.db.models.deletion.PROTECT,
-                        related_name="contacts",
-                        to="extras.role",
-                    ),
-                ),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
@@ -81,16 +71,6 @@ class Migration(migrations.Migration):
                 ("address", models.TextField(blank=True)),
                 ("comments", models.TextField(blank=True)),
                 ("contacts", models.ManyToManyField(related_name="teams", to="extras.Contact")),
-                (
-                    "role",
-                    nautobot.extras.models.roles.RoleField(
-                        blank=True,
-                        null=True,
-                        on_delete=django.db.models.deletion.PROTECT,
-                        related_name="teams",
-                        to="extras.role",
-                    ),
-                ),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
