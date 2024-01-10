@@ -385,14 +385,50 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
 
 class CustomFieldManagerTest(TestCase):
     def setUp(self):
-        content_type = ContentType.objects.get_for_model(Location)
+        self.content_type = ContentType.objects.get_for_model(Location)
         custom_field = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Text Field", default="foo")
         custom_field.save()
-        custom_field.content_types.set([content_type])
+        custom_field.content_types.set([self.content_type])
 
     def test_get_for_model(self):
         self.assertEqual(CustomField.objects.get_for_model(Location).count(), 2)
         self.assertEqual(CustomField.objects.get_for_model(VirtualMachine).count(), 0)
+
+    def test_get_for_model_lru_cache(self):
+        """Test that the lru cache is properly invalidated when CustomFields are created or deleted."""
+
+        qs1 = CustomField.objects.get_for_model(Location)
+        self.assertIsNone(qs1._result_cache)
+        list(qs1)  # force queryset evaluation
+        self.assertIsNotNone(qs1._result_cache)
+
+        # Assert that the cache is invalidated on object save
+        custom_field = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Test CF1", default="foo")
+        custom_field.save()
+        qs2 = CustomField.objects.get_for_model(Location)
+        self.assertIsNone(qs2._result_cache)
+        evaluated_qs2 = list(qs2)
+
+        # Assert that the cache is invalidated when adding a CustomField.content_types m2m relationship
+        custom_field.content_types.set([self.content_type])
+        qs3 = CustomField.objects.get_for_model(Location)
+        self.assertIsNone(qs3._result_cache)
+        evaluated_qs3 = list(qs3)
+        self.assertNotEqual(evaluated_qs3, evaluated_qs2)
+
+        # Assert that the cache is invalidated when removing a CustomField.content_types m2m relationship
+        custom_field.content_types.set([])
+        qs4 = CustomField.objects.get_for_model(Location)
+        self.assertIsNone(qs4._result_cache)
+        evaluated_qs4 = list(qs4)
+        self.assertNotEqual(evaluated_qs4, evaluated_qs3)
+
+        # Assert that the cache is invalidated on object delete
+        custom_field.delete()
+        qs5 = CustomField.objects.get_for_model(Location)
+        self.assertIsNone(qs5._result_cache)
+        evaluated_qs5 = list(qs5)
+        self.assertNotEqual(evaluated_qs5, evaluated_qs3)
 
 
 class CustomFieldDataAPITest(APITestCase):

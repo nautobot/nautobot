@@ -23,12 +23,14 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import (
+    ComputedField,
     CustomField,
     DynamicGroup,
     DynamicGroupMembership,
     GitRepository,
     JobResult,
     ObjectChange,
+    Relationship,
 )
 from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
@@ -58,12 +60,32 @@ def _get_user_if_authenticated(user, instance):
         return None
 
 
+def invalidate_lru_cache(sender):
+    """Invalidate the LRU cache for a given class."""
+    cached_methods = (
+        "get_for_model",
+        "get_for_model_source",
+        "get_for_model_destination",
+    )
+    if sender is CustomField.content_types.through:
+        manager = CustomField.objects
+    else:
+        manager = sender.objects
+    for method in cached_methods:
+        if hasattr(manager, method):
+            getattr(manager, method).cache_clear()
+
+
 @receiver(post_save)
 @receiver(m2m_changed)
 def _handle_changed_object(sender, instance, raw=False, **kwargs):
     """
     Fires when an object is created or updated.
     """
+
+    # invalidate lru cache for ComputedFields, CustomFields and Relationships
+    if sender in (ComputedField, CustomField, CustomField.content_types.through, Relationship):
+        invalidate_lru_cache(sender)
 
     if raw:
         return
@@ -136,6 +158,11 @@ def _handle_deleted_object(sender, instance, **kwargs):
     """
     Fires when an object is deleted.
     """
+
+    # invalidate lru cache for ComputedFields, CustomFields and Relationships
+    if sender in (ComputedField, CustomField, Relationship):
+        invalidate_lru_cache(sender)
+
     if change_context_state.get() is None:
         return
 

@@ -606,9 +606,6 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
     def save(self, *args, **kwargs):
         self.clean()
-        RelationshipManager.get_for_model.cache_clear()
-        RelationshipManager.get_for_model_source.cache_clear()
-        RelationshipManager.get_for_model_destination.cache_clear()
         super().save(*args, **kwargs)
 
     def clean(self):

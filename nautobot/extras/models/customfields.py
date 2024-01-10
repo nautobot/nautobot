@@ -116,7 +116,6 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
 
     def save(self, *args, **kwargs):
         self.clean()
-        ComputedFieldManager.get_for_model.cache_clear()
         super().save(*args, **kwargs)
 
     def clean(self):
@@ -425,7 +424,6 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
     def save(self, *args, **kwargs):
         self.clean()
-        CustomFieldManager.get_for_model.cache_clear()
         super().save(*args, **kwargs)
 
     def clean(self):
