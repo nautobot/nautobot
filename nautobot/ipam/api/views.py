@@ -1,9 +1,10 @@
 from django.conf import settings
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 
@@ -24,6 +25,7 @@ from nautobot.ipam.models import (
     VRF,
 )
 from . import serializers
+from ...dcim.models import Location
 
 
 class IPAMRootView(APIRootView):
@@ -310,11 +312,20 @@ class VLANGroupViewSet(NautobotModelViewSet):
 #
 
 
+@extend_schema_view(
+    bulk_update=extend_schema(responses={"200": serializers.VLANLegacySerializer(many=True)}, versions=["2.0"]),
+    bulk_partial_update=extend_schema(responses={"200": serializers.VLANLegacySerializer(many=True)}, versions=["2.0"]),
+    create=extend_schema(responses={"201": serializers.VLANLegacySerializer}, versions=["2.0"]),
+    list=extend_schema(responses={"200": serializers.VLANLegacySerializer(many=True)}, versions=["2.0"]),
+    partial_update=extend_schema(responses={"200": serializers.VLANLegacySerializer}, versions=["2.0"]),
+    retrieve=extend_schema(responses={"200": serializers.VLANLegacySerializer}, versions=["2.0"]),
+    update=extend_schema(responses={"200": serializers.VLANLegacySerializer}, versions=["2.0"]),
+)
 class VLANViewSet(NautobotModelViewSet):
     queryset = (
         VLAN.objects.select_related(
             "vlan_group",
-            "location",
+            "locations",
             "status",
             "role",
             "tenant",
@@ -324,6 +335,37 @@ class VLANViewSet(NautobotModelViewSet):
     )
     serializer_class = serializers.VLANSerializer
     filterset_class = filters.VLANFilterSet
+
+    # 2.0 TODO: Remove exception class and overloaded methods below
+    # Because serializer has nat_outside as read_only, update and create methods do not need to be overloaded
+    class LocationIncompatibleLegacyBehavior(APIException):
+        status_code = 412
+        default_detail = "This object does not conform to pre-2.1 behavior. Please correct data or use API version 2.1"
+        default_code = "precondition_failed"
+
+    def get_serializer_class(self):
+        if not getattr(self, "swagger_fake_view", False) and (
+            not hasattr(self.request, "major_version")
+            or (self.request.major_version == 2 and self.request.minor_version < 1)
+        ):
+            # API version 2.0 or earlier - use the legacy serializer
+            # Note: Generating API docs at this point request doesn't define major_version or minor_version for some reason
+            return serializers.VLANLegacySerializer
+        return super().get_serializer_class()
+
+    def retrieve(self, request, pk=None):
+        try:
+            return super().retrieve(request, pk)
+        except Location.DoesNotExist as e:
+            raise self.LocationIncompatibleLegacyBehavior from e
+
+    def list(self, request):
+        try:
+            return super().list(request)
+        except Location.DoesNotExist as e:
+            raise self.LocationIncompatibleLegacyBehavior(
+                f"At least one object in the resulting list does not conform to pre-2.1 behavior. Please use API version 2.1. Item: {e.obj}, PK: {e.obj.pk}"
+            )
 
 
 #

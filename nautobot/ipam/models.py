@@ -1312,16 +1312,9 @@ class VLAN(PrimaryModel):
     or more Prefixes assigned to it.
     """
 
-    location = models.ForeignKey(
-        to="dcim.Location",
-        on_delete=models.PROTECT,
-        related_name="vlans",
-        blank=True,
-        null=True,
-    )
     locations = models.ManyToManyField(
         to="dcim.Location",
-        related_name="vlan",
+        related_name="vlans",
         blank=True,
         null=True,
     )
@@ -1360,7 +1353,6 @@ class VLAN(PrimaryModel):
 
     class Meta:
         ordering = (
-            "location",
             "vlan_group",
             "vid",
         )  # (location, group, vid) may be non-unique
@@ -1376,22 +1368,49 @@ class VLAN(PrimaryModel):
     def __str__(self):
         return self.display or super().__str__()
 
+    @property
+    def location(self):
+        if self.locations.count() > 1:
+            raise self.locations.model.MultipleObjectsReturned(
+                "Multiple Location objects returned. Please refer to locations."
+            )
+        return self.locations.first()
+
+    @location.setter
+    def location(self, value):
+        if self.locations.count() > 1:
+            raise self.locations.model.MultipleObjectsReturned(
+                "Multiple Location objects returned. Please refer to locations."
+            )
+        self.locations.set([value])
+
+    def location_ancestors(self, include_self=False):
+        return [
+            # TODO(timizuo): This is most-likely not the best/optimal way to archive this
+            location
+            for location_with_ancestors in self.locations.all()
+            for location in location_with_ancestors.ancestors(include_self=include_self)
+        ]
+
     def clean(self):
         super().clean()
 
         # Validate location
-        if self.location is not None:
-            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
-                raise ValidationError(
-                    {"location": f'VLANs may not associate to locations of type "{self.location.location_type}".'}
-                )
+        # TODO: Should we still keep this check:
+        #   refer to Johns comment `https://github.com/nautobot/nautobot/issues/4412#issuecomment-1769311166`
+        #   >> "John will ask around to see if the group location constraint can just be ripped out."
+        # if self.location is not None:
+        #     if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+        #         raise ValidationError(
+        #             {"location": f'VLANs may not associate to locations of type "{self.location.location_type}".'}
+        #         )
 
         # Validate VLAN group
         if (
             self.vlan_group is not None
-            and self.location is not None
+            and self.locations.exists()
             and self.vlan_group.location is not None
-            and self.vlan_group.location not in self.location.ancestors(include_self=True)
+            and self.vlan_group.location not in self.location_ancestors(include_self=True)
         ):
             raise ValidationError(
                 {
