@@ -78,7 +78,7 @@ class Manufacturer(OrganizationalModel):
 )
 class HardwareFamily(PrimaryModel):
     """
-    A Hardware Family is a model that represents a group of similar DeviceTypes.
+    A Hardware Family is a model that represents a grouping of DeviceTypes.
     """
 
     name = models.CharField(max_length=100, unique=True)

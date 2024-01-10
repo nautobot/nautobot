@@ -568,12 +568,6 @@ class HardwareFamilyTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
-        # `get_deletable_object_pks` but this is a workaround just so all of these objects are
-        # deletable for now.
-        Device.objects.all().delete()
-        DeviceType.objects.all().delete()
-
         cls.form_data = {
             "name": "New Hardware Family",
             "description": "A new hardware family",
@@ -585,6 +579,9 @@ class HardwareFamilyTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "Hardware Family 6,Sixth hardware family",
             "Hardware Family 7,Seventh hardware family",
         )
+        HardwareFamily.objects.create(name="Deletable Hardware Family 1")
+        HardwareFamily.objects.create(name="Deletable Hardware Family 2", description="Delete this one")
+        HardwareFamily.objects.create(name="Deletable Hardware Family 3")
 
 
 class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):

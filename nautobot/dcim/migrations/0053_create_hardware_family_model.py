@@ -12,7 +12,7 @@ import nautobot.extras.models.mixins
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0102_set_null_objectchange_contenttype"),
+        ("extras", "0001_initial_part_1"),
         ("dcim", "0052_fix_interface_redundancy_group_created"),
     ]
 
