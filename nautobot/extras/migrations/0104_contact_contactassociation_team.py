@@ -15,7 +15,7 @@ import nautobot.extras.models.statuses
 class Migration(migrations.Migration):
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
-        ("extras", "0102_set_null_objectchange_contenttype"),
+        ("extras", "0103_add_db_indexes_to_object_change"),
     ]
 
     operations = [
