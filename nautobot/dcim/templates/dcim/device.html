@@ -70,7 +70,7 @@
                                         <tr>
                                             <td>Hardware Family</td>
                                             <td>
-                                                <a href="{% url 'dcim:hardwarefamily' pk=object.device_type.hardware_family.pk %}">{{ object.hardware_family }}</a>
+                                                <a href="{% url 'dcim:hardwarefamily' pk=object.device_type.hardware_family.pk %}">{{ object.device_type.hardware_family }}</a>
                                             </td>
                                         </tr>
                                     {% endif %}

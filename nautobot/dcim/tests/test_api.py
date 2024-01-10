@@ -718,11 +718,9 @@ class HardwareFamilyTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        # FIXME: This has to be replaced with# `get_deletable_object` and
-        # `get_deletable_object_pks` but this is a workaround just so all of these objects are
-        # deletable for now.
-        Device.objects.all().delete()
-        DeviceType.objects.all().delete()
+        HardwareFamily.objects.create(name="Deletable Hardware Family 1")
+        HardwareFamily.objects.create(name="Deletable Hardware Family 2", description="Delete this one")
+        HardwareFamily.objects.create(name="Deletable Hardware Family 3")
 
 
 class ManufacturerTest(APIViewTestCases.APIViewTestCase):
