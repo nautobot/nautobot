@@ -123,9 +123,9 @@ class BaseTable(django_tables2.Table):
                             prefetch_path.append(field_name)
                             break
                         else:
-                            # Need to stop processing once field_name is not Related
+                            # Need to stop processing once field is not a RelatedField or GFK
                             # Ex: ["_custom_field_data", "tenant_id"] needs to exit
-                            # the loop as "tenant_id" might cause issues
+                            # the loop as "tenant_id" would be misidentified as a RelatedField.
                             break
                     if prefetch_path:
                         prefetch_fields.append("__".join(prefetch_path))
