@@ -2644,7 +2644,7 @@ class TeamTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
         cls.form_data = {
             "name": "new team",
-            "phone": "555-0121",
+            "phone": "555-0122",
             "email": "new-team@example.com",
             "address": "Rainbow Road, Ramus NJ",
         }
