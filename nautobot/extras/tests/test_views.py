@@ -2879,6 +2879,18 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
                     result = "VLANs"
                 # Assert tables are correctly rendered
                 if content_type not in role_content_types:
-                    self.assertNotIn(f"<strong>{result}</strong>", response_body)
+                    if result == "Contact Associations":
+                        # AssociationContact Table in the contact tab should be there.
+                        self.assertIn(
+                            f'<strong>{result}</strong>\n                                    <div class="pull-right noprint">\n',
+                            response_body,
+                        )
+                        # ContactAssociationTable related to this role instances should not be there.
+                        self.assertNotIn(
+                            f'<strong>{result}</strong>\n            </div>\n            \n\n<table class="table table-hover table-headings">\n',
+                            response_body,
+                        )
+                    else:
+                        self.assertNotIn(f"<strong>{result}</strong>", response_body)
                 else:
                     self.assertIn(f"<strong>{result}</strong>", response_body)

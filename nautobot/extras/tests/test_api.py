@@ -417,6 +417,7 @@ class ContactTest(APIViewTestCases.APIViewTestCase):
 class ContactAssociationTestCase(APIViewTestCases.APIViewTestCase):
     model = ContactAssociation
     create_data = []
+    choices_fields = ["associated_object_type"]
 
     @classmethod
     def setUpTestData(cls):
@@ -424,36 +425,64 @@ class ContactAssociationTestCase(APIViewTestCases.APIViewTestCase):
             contact=Contact.objects.first(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
             associated_object_id=IPAddress.objects.first().pk,
+            role=None,
             status=Status.objects.get_for_model(ContactAssociation).first(),
         )
         ContactAssociation.objects.create(
             contact=Contact.objects.last(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
             associated_object_id=IPAddress.objects.first().pk,
+            role=None,
             status=Status.objects.get_for_model(ContactAssociation).first(),
         )
         ContactAssociation.objects.create(
             team=Team.objects.first(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
             associated_object_id=IPAddress.objects.first().pk,
+            role=Role.objects.get_for_model(ContactAssociation).last(),
             status=Status.objects.get_for_model(ContactAssociation).first(),
         )
         ContactAssociation.objects.create(
             team=Team.objects.last(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
             associated_object_id=IPAddress.objects.first().pk,
+            role=Role.objects.get_for_model(ContactAssociation).last(),
             status=Status.objects.get_for_model(ContactAssociation).first(),
         )
-        cls.create_data.append(
+        cls.create_data = [
             {
                 "contact": Contact.objects.first().pk,
                 "team": None,
-                "associated_object_type": ContentType.objects.get_for_model(IPAddress).pk,
+                "associated_object_type": "ipam.ipaddress",
                 "associated_object_id": IPAddress.objects.first().pk,
                 "role": None,
                 "status": Status.objects.get_for_model(ContactAssociation).first().pk,
-            }
-        )
+            },
+            {
+                "contact": Contact.objects.last().pk,
+                "team": None,
+                "associated_object_type": "dcim.device",
+                "associated_object_id": Device.objects.first().pk,
+                "role": Role.objects.get_for_model(ContactAssociation).first().pk,
+                "status": Status.objects.get_for_model(ContactAssociation).first().pk,
+            },
+            {
+                "contact": None,
+                "team": Team.objects.first().pk,
+                "associated_object_type": "ipam.ipaddress",
+                "associated_object_id": IPAddress.objects.first().pk,
+                "role": Role.objects.get_for_model(ContactAssociation).first().pk,
+                "status": Status.objects.get_for_model(ContactAssociation).first().pk,
+            },
+            {
+                "contact": None,
+                "team": Team.objects.last().pk,
+                "associated_object_type": "dcim.device",
+                "associated_object_id": Device.objects.first().pk,
+                "role": Role.objects.get_for_model(ContactAssociation).first().pk,
+                "status": Status.objects.get_for_model(ContactAssociation).first().pk,
+            },
+        ]
 
 
 class CreatedUpdatedFilterTest(APITestCase):

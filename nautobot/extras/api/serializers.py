@@ -5,6 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 
 from nautobot.core.api import (
     BaseModelSerializer,
@@ -190,9 +191,36 @@ class ContactSerializer(NautobotModelSerializer):
 
 
 class ContactAssociationSerializer(NautobotModelSerializer):
+    associated_object_type = ContentTypeField(queryset=ContentType.objects.all(), many=False)
+
     class Meta:
         model = ContactAssociation
         fields = "__all__"
+        validators = []
+        extra_kwargs = {
+            "role": {"required": False},
+            "contact": {"required": False},
+            "team": {"required": False},
+        }
+
+    def validate(self, data):
+        # Validate uniqueness of (contact/team, role)
+        if data.get("contact") and data.get("role"):
+            validator = UniqueTogetherValidator(
+                queryset=ContactAssociation.objects.all(),
+                fields=("contact", "role"),
+            )
+            validator(data, self)
+        elif data.get("team") and data.get("role"):
+            validator = UniqueTogetherValidator(
+                queryset=ContactAssociation.objects.all(),
+                fields=("team", "role"),
+            )
+            validator(data, self)
+
+        super().validate(data)
+
+        return data
 
 
 #
