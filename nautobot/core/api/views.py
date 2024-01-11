@@ -8,6 +8,7 @@ import platform
 from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.db.models import ProtectedError
@@ -33,6 +34,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet as ModelViewSet_, ReadOnlyModelViewSet as ReadOnlyModelViewSet_
 
 from nautobot.core.api import BulkOperationSerializer
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.utils.data import is_uuid
@@ -40,6 +42,7 @@ from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_fil
 from nautobot.core.utils.lookup import get_form_for_model, get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
+from nautobot.core.views.utils import get_csv_form_fields_from_serializer_class
 from nautobot.extras.registry import registry
 
 from . import serializers
@@ -863,6 +866,19 @@ class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
 
         return Response(object_counts)
 
+
+class CSVFieldsForContentTypeAPIView(NautobotAPIVersionMixin, APIView):
+    """Get information about CSV fields for a given ContentType."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        content_type_id = request.GET.get("content-type-id")
+        content_type = ContentType.objects.get(pk=content_type_id)
+        serializer_class = get_serializer_for_model(content_type.model_class())
+        fields = get_csv_form_fields_from_serializer_class(serializer_class)
+        return Response({"fields": fields})
 
 #
 # Lookup Expr
