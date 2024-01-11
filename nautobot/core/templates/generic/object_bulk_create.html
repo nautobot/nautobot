@@ -5,15 +5,15 @@
 {% block job_form %}
 {% render_field job_form.content_type %}
 <ul class="nav nav-tabs" role="tablist">
-    <li role="presentation" class="active"><a href="#csv-text" role="tab" data-toggle="tab">CSV Data</a></li>
-    <li role="presentation"><a href="#csv-file" role="tab" data-toggle="tab">CSV File Upload</a></li>
+    <li role="presentation" class="active"><a href="#csv-file" role="tab" data-toggle="tab">CSV File Upload</a></li>
+    <li role="presentation"><a href="#csv-text" role="tab" data-toggle="tab">CSV Text Input</a></li>
 </ul>
 <div class="tab-content">
-    <div role="tabpanel" class="tab-pane active" id="csv-text">
-        {% render_field job_form.csv_data %}
-    </div>
-    <div role="tabpanel" class="tab-pane" id="csv-file">
+    <div role="tabpanel" class="tab-pane active" id="csv-file">
         {% render_field job_form.csv_file %}
+    </div>
+    <div role="tabpanel" class="tab-pane" id="csv-text">
+        {% render_field job_form.csv_data %}
     </div>
 </div>
 <table class="table">
