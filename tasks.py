@@ -436,7 +436,7 @@ def nbshell(context):
     """Launch an interactive Nautobot shell."""
     command = "nautobot-server nbshell"
 
-    run_command(context, command, pty=True)
+    run_command(context, command)
 
 
 @task(
@@ -450,7 +450,7 @@ def cli(context, service="nautobot", root=False):
     context.nautobot.local = False
     command = "bash"
 
-    run_command(context, command, service=service, pty=True, root=root)
+    run_command(context, command, service=service, root=root)
 
 
 @task(
