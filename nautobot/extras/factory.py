@@ -26,7 +26,7 @@ class ContactFactory(PrimaryModelFactory):
         has_comments = NautobotBoolIterator()
 
     name = UniqueFaker("bs")
-    phone = factory.Maybe("has_phone", factory.Sequence(lambda n: "210-123-%04d" % n))
+    phone = factory.Maybe("has_phone", factory.Faker("phone_number"))
     email = factory.Maybe("has_email", factory.Faker("email"))
     address = factory.Maybe("has_address", factory.Faker("address"))
     comments = factory.Maybe("has_comments", factory.Faker("text", max_nb_chars=200))
@@ -139,7 +139,7 @@ class TeamFactory(PrimaryModelFactory):
         has_comments = NautobotBoolIterator()
 
     name = factory.Faker("name")
-    phone = factory.Maybe("has_phone", factory.Sequence(lambda n: "210-123-%04d" % n))
+    phone = factory.Maybe("has_phone", factory.Faker("phone_number"))
     email = factory.Maybe("has_email", factory.Faker("email"))
     address = factory.Maybe("has_address", factory.Faker("address"))
     comments = factory.Maybe("has_comments", factory.Faker("text", max_nb_chars=200))
