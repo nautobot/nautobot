@@ -14,7 +14,6 @@ from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEvent
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, CHANGELOG_MAX_OBJECT_REPR
 from nautobot.extras.utils import extras_features
 
-
 #
 # Change logging
 #

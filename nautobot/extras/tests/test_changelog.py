@@ -4,7 +4,6 @@ from django.urls import reverse
 from django.utils.html import escape
 from rest_framework import status
 
-from example_plugin.signals import EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT, EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME
 from nautobot.core.graphql import execute_query
 from nautobot.core.testing import APITestCase, TestCase
 from nautobot.core.testing.utils import post_data
@@ -16,7 +15,9 @@ from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Status, Tag
 from nautobot.ipam.models import VLAN, VLANGroup
-from nautobot.virtualization.models import Cluster, ClusterType, VMInterface, VirtualMachine
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
+
+from example_plugin.signals import EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT, EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME
 
 
 class ChangeLogViewTest(ModelViewTestCase):

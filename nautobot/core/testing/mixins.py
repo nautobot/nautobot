@@ -13,8 +13,7 @@ from rest_framework.test import APIClient, APIRequestFactory
 from nautobot.core import testing
 from nautobot.core.models import fields as core_fields
 from nautobot.core.utils import permissions
-from nautobot.extras import management
-from nautobot.extras import models as extras_models
+from nautobot.extras import management, models as extras_models
 from nautobot.users import models as users_models
 
 # Use the proper swappable User model

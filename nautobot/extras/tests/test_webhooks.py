@@ -1,7 +1,7 @@
-import json
-import uuid
 from copy import deepcopy
+import json
 from unittest.mock import patch
+import uuid
 
 from django.apps import apps
 from django.contrib.auth import get_user_model
@@ -17,12 +17,11 @@ from nautobot.dcim.api.serializers import LocationSerializer
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.context_managers import web_request_context
-from nautobot.extras.models import Webhook, Tag
+from nautobot.extras.models import Tag, Webhook
 from nautobot.extras.models.statuses import Status
 from nautobot.extras.registry import registry
 from nautobot.extras.tasks import process_webhook
 from nautobot.extras.utils import generate_signature
-
 
 User = get_user_model()
 

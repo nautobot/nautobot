@@ -3,7 +3,6 @@ from graphene_django.types import ObjectType
 
 from .schema import generate_query_mixin
 
-
 DynamicGraphQL = generate_query_mixin()
 
 

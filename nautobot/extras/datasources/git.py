@@ -1,21 +1,21 @@
 """Git data source functionality."""
 
 from collections import defaultdict, namedtuple
+from contextlib import suppress
 import logging
 import mimetypes
 import os
+from pathlib import Path
 import re
 import sys
-from contextlib import suppress
-from pathlib import Path
 from urllib.parse import quote
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
+from git import InvalidGitRepositoryError, Repo
 import yaml
-from git import Repo, InvalidGitRepositoryError
 
 from nautobot.core.celery import app as celery_app
 from nautobot.core.utils.git import GitRepo
@@ -38,10 +38,10 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
 from nautobot.extras.utils import refresh_job_model_from_job_class
-from nautobot.tenancy.models import TenantGroup, Tenant
-from nautobot.virtualization.models import ClusterGroup, Cluster, VirtualMachine
-from .utils import files_from_contenttype_directories
+from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 
+from .utils import files_from_contenttype_directories
 
 logger = logging.getLogger(__name__)
 
@@ -153,10 +153,9 @@ def ensure_git_repository(repository_record, logger=None, head=None):  # pylint:
     if head is not None:
         # If the repo exists and has HEAD already checked out, the repo is present and has the correct branch selected.
         with suppress(InvalidGitRepositoryError):
-            if (
-                Path(repository_record.filesystem_path).exists()
-                and Repo(repository_record.filesystem_path).rev_parse("HEAD") == head
-            ):
+            if Path(repository_record.filesystem_path).exists() and str(
+                Repo(repository_record.filesystem_path).rev_parse("HEAD")
+            ) == str(head):
                 return False
 
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)

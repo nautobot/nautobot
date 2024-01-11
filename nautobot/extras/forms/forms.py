@@ -6,10 +6,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models.fields import TextField
-from django.forms import ModelMultipleChoiceField, inlineformset_factory
+from django.forms import inlineformset_factory, ModelMultipleChoiceField
 from django.urls.base import reverse
 
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.forms import (
     add_blank_choice,
     APISelect,
@@ -32,6 +31,7 @@ from nautobot.core.forms import (
     TagFilterField,
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     JobExecutionType,
@@ -77,6 +77,7 @@ from nautobot.extras.registry import registry
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
+
 from .base import (
     NautobotBulkEditForm,
     NautobotFilterForm,
@@ -89,7 +90,6 @@ from .mixins import (
     NoteModelFormMixin,
     RelationshipModelFormMixin,
 )
-
 
 __all__ = (
     "BaseDynamicGroupMembershipFormSet",

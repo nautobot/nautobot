@@ -1,6 +1,6 @@
-import django_filters
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+import django_filters
 from drf_spectacular.utils import extend_schema_field
 from timezone_field import TimeZoneField
 
@@ -71,8 +71,8 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.filters import (
-    NautobotFilterSet,
     LocalContextModelFilterSetMixin,
+    NautobotFilterSet,
     RoleModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
@@ -82,7 +82,6 @@ from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster
-
 
 __all__ = (
     "CableFilterSet",
