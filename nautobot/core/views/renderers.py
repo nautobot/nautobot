@@ -138,7 +138,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         view = renderer_context["view"]
         request = renderer_context["request"]
         # Check if queryset attribute is set before doing anything
-        is_contact_model = view.is_contact_model
+        is_contact_associatable_model = view.is_contact_associatable_model
         queryset = view.alter_queryset(request)
         model = queryset.model
         form_class = view.get_form_class()
@@ -215,7 +215,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
         context = {
             "content_type": content_type,
-            "is_contact_model": is_contact_model,
+            "is_contact_associatable_model": is_contact_associatable_model,
             "form": form,
             "filter_form": filter_form,
             "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset_class=view.filterset_class),
@@ -237,12 +237,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
             context["created_by"] = created_by
             context["last_updated_by"] = last_updated_by
-            # TODO: need to add this to generic ObjectView class as well
-            # TODO: need an option for some models to opt-out of this, e.g. a Contact shouldn't have associated contacts
-            # TODO: move to separate view / detail-view tab?
             # TODO: provide some consistent ordering of ContactAssociations?
             associated_contacts = instance.associated_contacts.all()
-            if is_contact_model:
+            if is_contact_associatable_model:
                 context["associated_contacts_table"] = AssociatedContactsTable(data=associated_contacts)
             else:
                 context["associated_contacts_table"] = None

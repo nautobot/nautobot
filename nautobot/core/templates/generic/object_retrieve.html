@@ -46,7 +46,7 @@
     {% block buttons %}
         {% plugin_buttons object %}
         {% block extra_buttons %}{% endblock extra_buttons %}
-        {% if user|can_change:object and is_contact_model %}
+        {% if user|can_change:object and is_contact_associatable_model %}
             <div class="btn-group">
                 <a href="{% url 'extras:object_contact_add' %}?return_url={{request.path}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" type="button" class="btn btn-info">
                     <span class="mdi mdi-account" aria-hidden="true"></span> Add Contact </span>
@@ -94,7 +94,7 @@
                 Advanced
             </a>
         </li>
-        {% if is_contact_model %}
+        {% if is_contact_associatable_model %}
             <li role="presentation"{% if request.GET.tab == 'contacts' %} class="active"{% endif %}>
                 <a href="{{ object.get_absolute_url }}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">
                     Contacts
@@ -166,7 +166,7 @@
                 </div>
             </div>
         </div>
-        {% if is_contact_model %}
+        {% if is_contact_associatable_model %}
             <div id="contacts" role="tabpanel" class="tab-pane {% if request.GET.tab == 'contacts' %}active{% else %}fade{% endif %}">
                 <div class="row">
                     <div class="col-md-12">

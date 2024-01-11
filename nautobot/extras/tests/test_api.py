@@ -389,24 +389,24 @@ class ContactTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "Contact 1",
-            "phone": "12345212",
-            "email": "contact1@gmail.com",
+            "phone": "555-0121",
+            "email": "contact1@example.com",
         },
         {
             "name": "Contact 2",
-            "phone": "718324121",
-            "email": "contact2@gmail.com",
+            "phone": "555-0122",
+            "email": "contact2@example.com",
             "address": "Bowser's Castle, Staten Island, NY",
         },
         {
             "name": "Contact 3",
-            "phone": "718451231",
+            "phone": "555-0123",
             "email": "",
         },
         {
             "name": "Contact 4",
             "phone": "",
-            "email": "contact4@gmail.com",
+            "email": "contact4@example.com",
         },
     ]
     bulk_update_data = {
@@ -3583,24 +3583,24 @@ class TeamTest(APIViewTestCases.APIViewTestCase):
     create_data = [
         {
             "name": "Team 1",
-            "phone": "12345212",
-            "email": "team1@gmail.com",
+            "phone": "555-0121",
+            "email": "team1@example.com",
         },
         {
             "name": "Team 2",
-            "phone": "718324121",
-            "email": "team2@gmail.com",
+            "phone": "555-0122",
+            "email": "team2@example.com",
             "address": "Bowser's Castle, Staten Island, NY",
         },
         {
             "name": "Team 3",
-            "phone": "718451231",
+            "phone": "555-0123",
             "email": "",
         },
         {
             "name": "Team 4",
             "phone": "",
-            "email": "team4@gmail.com",
+            "email": "team4@example.com",
             "address": "Rainbow Bridge, Central NJ",
         },
     ]

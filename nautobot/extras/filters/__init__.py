@@ -406,6 +406,13 @@ class ContactFilterSet(NameSearchFilterSet, NautobotFilterSet):
 
 
 class ContactAssociationFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "contact__name": "icontains",
+            "team__name": "icontains",
+        },
+    )
+
     class Meta:
         model = ContactAssociation
         fields = "__all__"

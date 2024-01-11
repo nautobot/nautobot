@@ -376,7 +376,7 @@ class ContactUIViewSet(NautobotUIViewSet):
     queryset = Contact.objects.all()
     serializer_class = serializers.ContactSerializer
     table_class = tables.ContactTable
-    is_contact_model = False
+    is_contact_associatable_model = False
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -409,17 +409,6 @@ class ObjectNewContactView(generic.ObjectEditView):
     queryset = Contact.objects.all()
     model_form = forms.ObjectNewContactForm
     template_name = "extras/object_new_contact.html"
-
-    def successful_post(self, request, obj, created, new_logger):
-        """Callback after the form is successfully saved but before redirecting the user."""
-        verb = "Created" if created else "Modified"
-        msg = f"{verb} {self.queryset.model._meta.verbose_name} and Created Contact Association"
-        new_logger.info(f"{msg} {obj} (PK: {obj.pk})")
-        try:
-            msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
-        except AttributeError:
-            msg = format_html("{} {}", msg, obj)
-        messages.success(request, msg)
 
     def post(self, request, *args, **kwargs):
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
@@ -491,17 +480,6 @@ class ObjectNewTeamView(generic.ObjectEditView):
     model_form = forms.ObjectNewTeamForm
     template_name = "extras/object_new_team.html"
 
-    def successful_post(self, request, obj, created, new_logger):
-        """Callback after the form is successfully saved but before redirecting the user."""
-        verb = "Created" if created else "Modified"
-        msg = f"{verb} {self.queryset.model._meta.verbose_name} and Created Contact Association"
-        new_logger.info(f"{msg} {obj} (PK: {obj.pk})")
-        try:
-            msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
-        except AttributeError:
-            msg = format_html("{} {}", msg, obj)
-        messages.success(request, msg)
-
     def post(self, request, *args, **kwargs):
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
         form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
@@ -567,7 +545,7 @@ class ObjectNewTeamView(generic.ObjectEditView):
         )
 
 
-class ObjectAssignView(generic.ObjectEditView):
+class ObjectAssignContactOrTeamView(generic.ObjectEditView):
     queryset = ContactAssociation.objects.all()
     model_form = forms.ContactAssociationForm
     template_name = "extras/object_assign_contact_or_team.html"
@@ -2464,7 +2442,7 @@ class TeamUIViewSet(NautobotUIViewSet):
     queryset = Team.objects.all()
     serializer_class = serializers.TeamSerializer
     table_class = tables.TeamTable
-    is_contact_model = False
+    is_contact_associatable_model = False
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

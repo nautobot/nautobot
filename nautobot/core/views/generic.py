@@ -68,7 +68,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
 
     queryset = None
     template_name = None
-    is_contact_model = True
+    is_contact_associatable_model = True
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -126,7 +126,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         else:
             context = {
                 "object": instance,
-                "is_contact_model": self.is_contact_model,
+                "is_contact_associatable_model": self.is_contact_associatable_model,
                 "content_type": ContentType.objects.get_for_model(self.queryset.model),
                 "verbose_name": self.queryset.model._meta.verbose_name,
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
@@ -134,10 +134,12 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                 "last_updated_by": last_updated_by,
                 **self.get_extra_context(request, instance),
             }
-            # TODO: need some consistent ordering of contact_associations
-            if self.is_contact_model:
+            if self.is_contact_associatable_model:
                 paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-                associations = ContactAssociation.objects.filter(associated_object_id=instance.id)
+                associations = ContactAssociation.objects.filter(
+                    associated_object_id=instance.id,
+                    associated_object_type=ContentType.objects.get_for_model(type(instance)),
+                ).order_by("role__name")
                 associations_table = AssociatedContactsTable(associations, orderable=False)
                 RequestConfig(request, paginate).configure(associations_table)
                 associations_table.columns.show("pk")

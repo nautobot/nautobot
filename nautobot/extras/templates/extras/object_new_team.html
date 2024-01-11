@@ -1,5 +1,4 @@
 {% extends 'generic/object_edit.html' %}
-{% load static %}
 {% load form_helpers %}
 {% load helpers %}
 
@@ -19,15 +18,16 @@
             {% render_field form.address %}
             {% render_field form.contacts %}
             {% render_field form.comments %}
+            {% render_field form.tags %}
         </div>
     </div>
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Contact Association</strong></div>
         <div class="panel-body">
-            {% render_field form.associated_object_type %}
-            {% render_field form.associated_object_id %}
             {% render_field form.role %}
             {% render_field form.status %}
+            {% render_field form.associated_object_type.as_hidden %}
+            {% render_field form.associated_object_id.as_hidden %}
         </div>
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}

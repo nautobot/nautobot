@@ -39,7 +39,6 @@ class ContactTeamSharedBase(PrimaryModel):
     "export_templates",
     "graphql",
     "relationships",
-    # TODO "statuses"?
     "webhooks",
 )
 class Contact(ContactTeamSharedBase):
@@ -55,7 +54,6 @@ class Contact(ContactTeamSharedBase):
     "export_templates",
     "graphql",
     "relationships",
-    # TODO "statuses"?
     "webhooks",
 )
 class Team(ContactTeamSharedBase):

@@ -172,7 +172,11 @@ urlpatterns = [
     # contacts
     path("contact-associations/add-new-contact/", views.ObjectNewContactView.as_view(), name="object_contact_add"),
     path("contact-associations/add-new-team/", views.ObjectNewTeamView.as_view(), name="object_team_add"),
-    path("contact-associations/assign-contact-team/", views.ObjectAssignView.as_view(), name="object_assign"),
+    path(
+        "contact-associations/assign-contact-team/",
+        views.ObjectAssignContactOrTeamView.as_view(),
+        name="object_contact_team_assign",
+    ),
     # Custom fields
     path("custom-fields/", views.CustomFieldListView.as_view(), name="customfield_list"),
     path("custom-fields/add/", views.CustomFieldEditView.as_view(), name="customfield_add"),

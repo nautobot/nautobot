@@ -364,15 +364,15 @@ class ContactTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
         cls.form_data = {
             "name": "new contact",
-            "phone": "7181231241",
-            "email": "new-contact@gmail.com",
+            "phone": "555-0121",
+            "email": "new-contact@example.com",
             "address": "Rainbow Road, Ramus NJ",
         }
         cls.csv_data = (
             "name,phone,email,address",
-            'new contact 2,210132412,,"Rainbow Road, NJ, USA"',
-            "new contact 3,210132411,newcontact2@gmail.com,",
-            "new contact 4,210132414,,",
+            'new contact 2,555-0122,,"Rainbow Road, NJ, USA"',
+            "new contact 3,555-0123,newcontact2@example.com,",
+            "new contact 4,555-0124,,",
         )
         cls.bulk_edit_data = {"address": "Carnegie Hall, New York, NY"}
 
@@ -400,10 +400,10 @@ class ContactTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(self.client.post(**request), 302)
         self.assertEqual(initial_contact_count + 1, Contact.objects.count())
         self.assertEqual(initial_contact_association_count + 1, ContactAssociation.objects.count())
-        contact = Contact.objects.get(name="new contact", phone="7181231241")
+        contact = Contact.objects.get(name="new contact", phone="555-0121")
         self.assertEqual(contact.name, "new contact")
-        self.assertEqual(contact.phone, "7181231241")
-        self.assertEqual(contact.email, "new-contact@gmail.com")
+        self.assertEqual(contact.phone, "555-0121")
+        self.assertEqual(contact.email, "new-contact@example.com")
         self.assertEqual(contact.address, "Rainbow Road, Ramus NJ")
         contact_association = ContactAssociation.objects.get(contact=contact)
         self.assertEqual(contact_association.associated_object_type.pk, self.form_data["associated_object_type"])
@@ -463,7 +463,7 @@ class ContactAssociationTestCase(
         self.add_permissions("extras.add_contactassociation")
 
         # Try GET with model-level permission
-        url = reverse("extras:object_assign")
+        url = reverse("extras:object_contact_team_assign")
         self.assertHttpStatus(self.client.get(url), 200)
         contact_associated_circuit = Circuit.objects.first()
         self.form_data["associated_object_type"] = ContentType.objects.get_for_model(Circuit).pk
@@ -495,7 +495,7 @@ class ContactAssociationTestCase(
         self.add_permissions("extras.add_contactassociation")
 
         # Try GET with model-level permission
-        url = reverse("extras:object_assign")
+        url = reverse("extras:object_contact_team_assign")
         self.assertHttpStatus(self.client.get(url), 200)
         contact_associated_circuit = Circuit.objects.first()
         self.form_data["team"] = team.pk
@@ -2644,15 +2644,15 @@ class TeamTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
         cls.form_data = {
             "name": "new team",
-            "phone": "7181231241",
-            "email": "new-team@gmail.com",
+            "phone": "555-0121",
+            "email": "new-team@example.com",
             "address": "Rainbow Road, Ramus NJ",
         }
         cls.csv_data = (
             "name,phone,email,address",
-            'new team 2,210132412,,"rainbow road, NJ, USA"',
-            "new team 3,210132411,newteam2@gmail.com,",
-            "new team 4,210132414,,",
+            'new team 2,555-0122,,"rainbow road, NJ, USA"',
+            "new team 3,555-0123,newteam2@example.com,",
+            "new team 4,555-0124,,",
         )
         cls.bulk_edit_data = {"address": "Carnegie Hall, New York, NY"}
 
@@ -2680,10 +2680,10 @@ class TeamTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(self.client.post(**request), 302)
         self.assertEqual(initial_team_count + 1, Team.objects.count())
         self.assertEqual(initial_team_association_count + 1, ContactAssociation.objects.count())
-        team = Team.objects.get(name="new team", phone="7181231241")
+        team = Team.objects.get(name="new team", phone="555-0122")
         self.assertEqual(team.name, "new team")
-        self.assertEqual(team.phone, "7181231241")
-        self.assertEqual(team.email, "new-team@gmail.com")
+        self.assertEqual(team.phone, "555-0122")
+        self.assertEqual(team.email, "new-team@example.com")
         self.assertEqual(team.address, "Rainbow Road, Ramus NJ")
         contact_association = ContactAssociation.objects.get(team=team)
         self.assertEqual(contact_association.associated_object_type.pk, self.form_data["associated_object_type"])
