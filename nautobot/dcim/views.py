@@ -602,7 +602,7 @@ class ManufacturerBulkDeleteView(generic.BulkDeleteView):
 
 
 class DeviceTypeListView(generic.ObjectListView):
-    queryset = DeviceType.objects.select_related("manufacturer").annotate(
+    queryset = DeviceType.objects.select_related("manufacturer", "hardware_family").annotate(
         device_count=count_related(Device, "device_type")
     )
     filterset = filters.DeviceTypeFilterSet
@@ -1105,6 +1105,7 @@ class DeviceListView(generic.ObjectListView):
     queryset = Device.objects.select_related(
         "status",
         "device_type",
+        "device_type__hardware_family",
         "role",
         "tenant",
         "location",

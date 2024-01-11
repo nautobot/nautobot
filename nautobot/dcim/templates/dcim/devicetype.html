@@ -74,9 +74,7 @@
                     <tr>
                         <td>Hardware Family</td>
                         <td>
-                            {% if object.hardware_family %}<a href="{% url 'dcim:devicetype_list' %}?hardware_family={{ object.hardware_family.name }}">{% endif %}
-                                {{ object.hardware_family | placeholder }}
-                            {% if object.hardware_family %}</a>{% endif %}
+                            {{ object.hardware_family | hyperlinked_object }}
                         </td>
                     </tr>
                     <tr>
