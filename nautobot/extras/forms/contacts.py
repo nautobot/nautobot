@@ -10,7 +10,6 @@ from .mixins import TagsBulkEditFormMixin
 
 
 class ContactForm(NautobotModelForm):
-    # TODO: this doesn't work automatically since this is the reverse side of an M2M. Just gets ignored at present.
     teams = DynamicModelMultipleChoiceField(
         queryset=Team.objects.all(),
         required=False,
@@ -28,6 +27,17 @@ class ContactForm(NautobotModelForm):
             "comments",
             "tags",
         ]
+
+    def save(self, *args, **kwargs):
+        """
+        Since `teams` field on Contact Model is the reverse side of an M2M,
+        we have to override save() method to explictly set the teams for the Contact instance.
+        """
+        teams = self.cleaned_data.get("teams", [])
+        obj = super().save(*args, **kwargs)
+        obj.teams.set(teams)
+        obj.validated_save()
+        return obj
 
 
 class ContactBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
@@ -77,6 +87,17 @@ class ObjectNewContactForm(NautobotModelForm):
             "role",
             "status",
         ]
+
+    def save(self, *args, **kwargs):
+        """
+        Since `teams` field on Contact Model is the reverse side of an M2M,
+        we have to override save() method to explictly set the teams for the Contact instance.
+        """
+        teams = self.cleaned_data.get("teams", [])
+        obj = super().save(*args, **kwargs)
+        obj.teams.set(teams)
+        obj.validated_save()
+        return obj
 
 
 class ObjectNewTeamForm(NautobotModelForm):

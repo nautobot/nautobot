@@ -434,7 +434,7 @@ class ObjectNewContactView(generic.ObjectEditView):
                     associated_object_type=ContentType.objects.get(id=request.POST.get("associated_object_type")),
                     associated_object_id=request.POST.get("associated_object_id"),
                     status=Status.objects.get(id=request.POST.get("status")),
-                    role=Role.objects.get(id=request.POST.get("role", None)),
+                    role=Role.objects.get(id=request.POST.get("role")) if request.POST.get("role") else None,
                 )
                 association.validated_save()
                 self.successful_post(request, obj, object_created, logger)
@@ -504,7 +504,7 @@ class ObjectNewTeamView(generic.ObjectEditView):
                     associated_object_type=ContentType.objects.get(id=request.POST.get("associated_object_type")),
                     associated_object_id=request.POST.get("associated_object_id"),
                     status=Status.objects.get(id=request.POST.get("status")),
-                    role=Role.objects.get(id=request.POST.get("role", None)),
+                    role=Role.objects.get(id=request.POST.get("role")) if request.POST.get("role") else None,
                 )
                 association.validated_save()
                 self.successful_post(request, obj, object_created, logger)
