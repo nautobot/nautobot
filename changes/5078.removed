@@ -1,1 +1,1 @@
-Removes startplugin Nautobot management command.
+Removed `nautobot-server startplugin` management command.
