@@ -60,17 +60,24 @@ def _get_user_if_authenticated(user, instance):
         return None
 
 
-def invalidate_lru_cache(sender):
-    """Invalidate the LRU cache for a given class."""
+@receiver(post_save)
+@receiver(m2m_changed)
+@receiver(post_delete)
+def invalidate_lru_cache(sender, **kwargs):
+    """Invalidate the LRU cache for ComputedFields, CustomFields and Relationships."""
+    if sender is CustomField.content_types.through:
+        manager = CustomField.objects
+    elif sender in (ComputedField, CustomField, Relationship):
+        manager = sender.objects
+    else:
+        return
+
     cached_methods = (
         "get_for_model",
         "get_for_model_source",
         "get_for_model_destination",
     )
-    if sender is CustomField.content_types.through:
-        manager = CustomField.objects
-    else:
-        manager = sender.objects
+
     for method in cached_methods:
         if hasattr(manager, method):
             getattr(manager, method).cache_clear()
@@ -82,10 +89,6 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
     """
     Fires when an object is created or updated.
     """
-
-    # invalidate lru cache for ComputedFields, CustomFields and Relationships
-    if sender in (ComputedField, CustomField, CustomField.content_types.through, Relationship):
-        invalidate_lru_cache(sender)
 
     if raw:
         return
@@ -158,11 +161,6 @@ def _handle_deleted_object(sender, instance, **kwargs):
     """
     Fires when an object is deleted.
     """
-
-    # invalidate lru cache for ComputedFields, CustomFields and Relationships
-    if sender in (ComputedField, CustomField, Relationship):
-        invalidate_lru_cache(sender)
-
     if change_context_state.get() is None:
         return
 
