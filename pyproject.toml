@@ -93,7 +93,7 @@ drf-spectacular = {version = "~0.26.4", extras = ["sidecar"]}
 # 2.0 TODO: no longer used, but retained for now to avoid breaking plugin expectations
 drf-yasg = {version = "^1.20.0", extras = ["validation"]}
 # Git integrations for Python
-GitPython = "~3.1.36"
+GitPython = "~3.1.41"
 # GraphQL support
 # NOTE: graphene-django 3.x is available but includes breaking changes. Will address in a future release.
 graphene-django = "~2.16.0"
