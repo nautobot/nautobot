@@ -1,12 +1,10 @@
 import logging
-import uuid
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import FieldError, MultipleObjectsReturned, ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator
 
 from nautobot.core.api import (
@@ -20,6 +18,7 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
 )
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.fields import NautobotHyperlinkedRelatedField
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
     get_nested_serializer_depth,
@@ -187,51 +186,17 @@ class ConfigContextSchemaSerializer(NautobotModelSerializer):
 
 
 class ContactSerializer(NautobotModelSerializer):
+    # needed since this is the reverse side of the M2M field.
+    teams = NautobotHyperlinkedRelatedField(queryset=Team.objects.all(), many=True, required=False)
+
     class Meta:
         model = Contact
         fields = "__all__"
 
     def validate(self, data):
-        # Remove custom fields data and tags (if any) prior to model validation
         attrs = data.copy()
-        attrs.pop("custom_fields", None)
-        attrs.pop("relationships", None)
-        attrs.pop("tags", None)
-
-        # Run clean() on an instance of the model
-        if self.instance is None:
-            instance = self.Meta.model(**attrs)
-        else:
-            instance = self.instance
-            for k, v in attrs.items():
-                setattr(instance, k, v)
-        teams = []
-        team_attrs = self.context["request"].data.get("teams", [])
-        params = {}
-        for attr in team_attrs:
-            if isinstance(attr, dict):
-                params = attr
-            else:
-                try:
-                    pk = uuid.UUID(str(attr))
-                except (TypeError, ValueError) as e:
-                    raise ValidationError(
-                        "Related objects must be referenced by ID or by dictionary of attributes. Received an "
-                        f"unrecognized value: {attr}"
-                    ) from e
-                params = {"pk": pk}
-            try:
-                team = Team.objects.get(**params)
-            except ObjectDoesNotExist as e:
-                raise ValidationError(f"Related object not found using the provided attributes: {params}") from e
-            except MultipleObjectsReturned as e:
-                raise ValidationError(f"Multiple objects match the provided attributes: {params}") from e
-            except FieldError as e:
-                raise ValidationError(e) from e
-            teams.append(team.pk)
-
-        instance.teams.set(teams)
-        instance.full_clean()
+        attrs.pop("teams", None)
+        super().validate(attrs)
         return data
 
 

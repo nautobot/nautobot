@@ -386,32 +386,36 @@ class ContentTypeTest(APITestCase):
 
 class ContactTest(APIViewTestCases.APIViewTestCase):
     model = Contact
-    create_data = [
-        {
-            "name": "Contact 1",
-            "phone": "555-0121",
-            "email": "contact1@example.com",
-        },
-        {
-            "name": "Contact 2",
-            "phone": "555-0122",
-            "email": "contact2@example.com",
-            "address": "Bowser's Castle, Staten Island, NY",
-        },
-        {
-            "name": "Contact 3",
-            "phone": "555-0123",
-            "email": "",
-        },
-        {
-            "name": "Contact 4",
-            "phone": "",
-            "email": "contact4@example.com",
-        },
-    ]
     bulk_update_data = {
         "address": "Carnegie Hall, New York, NY",
     }
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_data = [
+            {
+                "name": "Contact 1",
+                "phone": "555-0121",
+                "email": "contact1@example.com",
+                "teams": [Team.objects.first().pk, Team.objects.last().pk],
+            },
+            {
+                "name": "Contact 2",
+                "phone": "555-0122",
+                "email": "contact2@example.com",
+                "address": "Bowser's Castle, Staten Island, NY",
+            },
+            {
+                "name": "Contact 3",
+                "phone": "555-0123",
+                "email": "",
+            },
+            {
+                "name": "Contact 4",
+                "phone": "",
+                "email": "contact4@example.com",
+            },
+        ]
 
 
 class ContactAssociationTestCase(APIViewTestCases.APIViewTestCase):
@@ -3580,39 +3584,37 @@ class TagTest(APIViewTestCases.APIViewTestCase):
 
 class TeamTest(APIViewTestCases.APIViewTestCase):
     model = Team
-    create_data = [
-        {
-            "name": "Team 1",
-            "phone": "555-0121",
-            "email": "team1@example.com",
-        },
-        {
-            "name": "Team 2",
-            "phone": "555-0122",
-            "email": "team2@example.com",
-            "address": "Bowser's Castle, Staten Island, NY",
-        },
-        {
-            "name": "Team 3",
-            "phone": "555-0123",
-            "email": "",
-        },
-        {
-            "name": "Team 4",
-            "phone": "",
-            "email": "team4@example.com",
-            "address": "Rainbow Bridge, Central NJ",
-        },
-    ]
     bulk_update_data = {
         "address": "Carnegie Hall, New York, NY",
     }
 
     @classmethod
     def setUpTestData(cls):
-        contacts = list(Contact.objects.values_list("pk", flat=True))
-        cls.create_data[0]["contacts"] = contacts[:2]
-        cls.create_data[2]["contacts"] = contacts[3:5]
+        cls.create_data = [
+            {
+                "name": "Team 1",
+                "phone": "555-0121",
+                "email": "team1@example.com",
+                "contacts": [Contact.objects.first().pk, Contact.objects.last().pk],
+            },
+            {
+                "name": "Team 2",
+                "phone": "555-0122",
+                "email": "team2@example.com",
+                "address": "Bowser's Castle, Staten Island, NY",
+            },
+            {
+                "name": "Team 3",
+                "phone": "555-0123",
+                "email": "",
+            },
+            {
+                "name": "Team 4",
+                "phone": "",
+                "email": "team4@example.com",
+                "address": "Rainbow Bridge, Central NJ",
+            },
+        ]
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):
