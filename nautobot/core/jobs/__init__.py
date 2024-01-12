@@ -195,7 +195,7 @@ class ImportObjectsFromCSV(Job):
     csv_data = TextVar(label="CSV Data", required=False)
     csv_file = FileVar(label="CSV File", required=False)
 
-    template_name = "generic/object_bulk_create.html"
+    template_name = "system_jobs/csv_import.html"
 
     class Meta:
         name = "Import Objects from CSV"
@@ -212,20 +212,21 @@ class ImportObjectsFromCSV(Job):
         model = content_type.model_class()
         serializer_class = get_serializer_for_model(model)
 
-        if csv_data is not None and csv_file is not None:
-            raise RuntimeError("csv_data and csv_file arguments are mutually exclusive")
-        if csv_data is None and csv_file is None:
-            raise RuntimeError("Either csv_data or csv_file must be provided")
-        if csv_file is not None:
-            csv_data = csv_file.read()
+        if not csv_data and not csv_file:
+            raise RunJobTaskFailed("Either csv_data or csv_file must be provided")
+        if csv_file:
+            csv_bytes = csv_file
+        else:
+            csv_bytes = BytesIO(csv_data.encode("utf-8"))
 
+        new_objs = []
         try:
             data = NautobotCSVParser().parse(
-                stream=BytesIO(csv_data.encode("utf-8")),
+                stream=csv_bytes,
                 parser_context={"request": None, "serializer_class": serializer_class},
             )
-            new_objs = []
             validation_failed = False
+            update_interval = len(data) // 10 if len(data) >= 10 else 1
             for row, entry in enumerate(data, start=1):
                 serializer = serializer_class(data=entry, context={"request": None})
                 if serializer.is_valid():
@@ -233,16 +234,18 @@ class ImportObjectsFromCSV(Job):
                 else:
                     validation_failed = True
                     for field, err in serializer.errors.items():
-                        self.logger.error("Row %d: %s: %s", row, field, err[0])
+                        self.logger.error("Row %d: `%s`: `%s`", row, field, err[0])
+                if row % update_interval == 0:
+                    self.logger.info("Processed %d row(s) of %d total", row, len(data))
         except drf_exceptions.ParseError as exc:
             validation_failed = True
-            self.logger.error("%s", exc)
+            self.logger.error("`%s`", exc)
 
         if new_objs:
             self.logger.info("Created %d %s objects", len(new_objs), content_type)
 
         if validation_failed:
-            raise RuntimeError("Import not fully successful, see logs")
+            raise RunJobTaskFailed("Import not fully successful, see logs")
 
 
 jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun, ImportObjectsFromCSV]
