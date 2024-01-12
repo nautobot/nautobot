@@ -2917,6 +2917,7 @@ class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDe
 class HardwareFamilyUIViewSet(NautobotUIViewSet):
     filterset_class = filters.HardwareFamilyFilterSet
     form_class = forms.HardwareFamilyForm
+    bulk_update_form_class = forms.HardwareFamilyBulkEditForm
     queryset = HardwareFamily.objects.annotate(device_type_count=count_related(DeviceType, "hardware_family"))
     serializer_class = serializers.HardwareFamilySerializer
     table_class = tables.HardwareFamilyTable

@@ -567,13 +567,16 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertContains(response, total_utilization_html, html=True)
 
 
-class HardwareFamilyTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
+class HardwareFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = HardwareFamily
 
     @classmethod
     def setUpTestData(cls):
         cls.form_data = {
             "name": "New Hardware Family",
+            "description": "A new hardware family",
+        }
+        cls.bulk_edit_data = {
             "description": "A new hardware family",
         }
         cls.csv_data = (

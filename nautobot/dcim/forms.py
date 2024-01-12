@@ -682,6 +682,14 @@ class HardwareFamilyFilterForm(NautobotFilterForm):
     tags = TagFilterField(model)
 
 
+class HardwareFamilyBulkEditForm(NautobotBulkEditForm, TagsBulkEditFormMixin):
+    pk = forms.ModelMultipleChoiceField(queryset=HardwareFamily.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(required=False)
+
+    class Meta:
+        nullable_fields = []
+
+
 #
 # Device types
 #
