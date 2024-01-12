@@ -108,6 +108,18 @@ def import_button(url):
     }
 
 
+@register.inclusion_tag("buttons/import.html")
+def csv_import_button(content_type):
+    try:
+        import_url = reverse(
+            "extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjectsFromCSV"}
+        )
+        import_url += f"?content_type={content_type.id}"
+    except NoReverseMatch:
+        import_url = None
+    return {"import_url": import_url}
+
+
 @register.inclusion_tag("buttons/export.html", takes_context=True)
 def export_button(context, content_type=None):
     if content_type is not None:
