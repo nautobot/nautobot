@@ -61,6 +61,7 @@ class Command(BaseCommand):
                 DeviceFactory,
                 DeviceRedundancyGroupFactory,
                 DeviceTypeFactory,
+                HardwareFamilyFactory,
                 LocationFactory,
                 LocationTypeFactory,
                 ManufacturerFactory,
@@ -131,6 +132,8 @@ class Command(BaseCommand):
             PrefixFactory.create(prefix=f"2001:db8:0:{i}::/64", type=PrefixTypeChoices.TYPE_CONTAINER, using=db_name)
         self.stdout.write("Creating Empty Namespaces...")
         NamespaceFactory.create_batch(5, using=db_name)
+        self.stdout.write("Creating Hardware Families...")
+        HardwareFamilyFactory.create_batch(10)
         self.stdout.write("Creating Manufacturers...")
         ManufacturerFactory.create_batch(8, using=db_name)  # First 8 hard-coded Manufacturers
         self.stdout.write("Creating Platforms (with manufacturers)...")

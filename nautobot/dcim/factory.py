@@ -26,6 +26,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceRedundancyGroup,
     DeviceType,
+    HardwareFamily,
     Location,
     LocationType,
     Manufacturer,
@@ -215,10 +216,14 @@ class DeviceTypeFactory(PrimaryModelFactory):
     class Meta:
         model = DeviceType
         exclude = (
+            "has_hardware_family",
             "has_part_number",
             "is_subdevice_child",
             "has_comments",
         )
+
+    has_hardware_family = NautobotBoolIterator()
+    hardware_family = factory.Maybe("has_hardware_family", random_instance(HardwareFamily), None)
 
     manufacturer = random_instance(Manufacturer)
 
@@ -263,6 +268,17 @@ class DeviceRedundancyGroupFactory(PrimaryModelFactory):
 
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
+
+
+class HardwareFamilyFactory(PrimaryModelFactory):
+    class Meta:
+        model = HardwareFamily
+        exclude = ("has_description",)
+
+    name = UniqueFaker("word")
+
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
 
 class ManufacturerFactory(OrganizationalModelFactory):

@@ -96,6 +96,7 @@ from .models import (
     DeviceType,
     FrontPort,
     FrontPortTemplate,
+    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
@@ -662,18 +663,48 @@ class ManufacturerForm(NautobotModelForm):
 
 
 #
+# Hardware Family
+#
+
+
+class HardwareFamilyForm(NautobotModelForm):
+    class Meta:
+        model = HardwareFamily
+        fields = [
+            "name",
+            "description",
+        ]
+
+
+class HardwareFamilyFilterForm(NautobotFilterForm):
+    model = HardwareFamily
+    q = forms.CharField(required=False, label="Search")
+    tags = TagFilterField(model)
+
+
+class HardwareFamilyBulkEditForm(NautobotBulkEditForm, TagsBulkEditFormMixin):
+    pk = forms.ModelMultipleChoiceField(queryset=HardwareFamily.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(required=False)
+
+    class Meta:
+        nullable_fields = []
+
+
+#
 # Device types
 #
 
 
 class DeviceTypeForm(NautobotModelForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all())
+    hardware_family = DynamicModelChoiceField(queryset=HardwareFamily.objects.all(), required=False)
     comments = CommentField()
 
     class Meta:
         model = DeviceType
         fields = [
             "manufacturer",
+            "hardware_family",
             "model",
             "part_number",
             "u_height",
@@ -706,11 +737,15 @@ class DeviceTypeImportForm(BootstrapMixin, forms.ModelForm):
     """
 
     manufacturer = forms.ModelChoiceField(queryset=Manufacturer.objects.all(), to_field_name="name")
+    hardware_family = forms.ModelChoiceField(
+        queryset=HardwareFamily.objects.all(), to_field_name="name", required=False
+    )
 
     class Meta:
         model = DeviceType
         fields = [
             "manufacturer",
+            "hardware_family",
             "model",
             "part_number",
             "u_height",
@@ -723,11 +758,12 @@ class DeviceTypeImportForm(BootstrapMixin, forms.ModelForm):
 class DeviceTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceType.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+    hardware_family = DynamicModelChoiceField(queryset=HardwareFamily.objects.all(), required=False)
     u_height = forms.IntegerField(required=False)
     is_full_depth = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect(), label="Is full depth")
 
     class Meta:
-        nullable_fields = []
+        nullable_fields = ["hardware_family"]
 
 
 class DeviceTypeFilterForm(NautobotFilterForm):
@@ -735,6 +771,9 @@ class DeviceTypeFilterForm(NautobotFilterForm):
     q = forms.CharField(required=False, label="Search")
     manufacturer = DynamicModelMultipleChoiceField(
         queryset=Manufacturer.objects.all(), to_field_name="name", required=False
+    )
+    hardware_family = DynamicModelMultipleChoiceField(
+        queryset=HardwareFamily.objects.all(), to_field_name="name", required=False
     )
     subdevice_role = forms.MultipleChoiceField(
         choices=add_blank_choice(SubdeviceRoleChoices),

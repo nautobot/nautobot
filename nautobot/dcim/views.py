@@ -54,6 +54,7 @@ from .models import (
     DeviceType,
     FrontPort,
     FrontPortTemplate,
+    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
@@ -601,7 +602,7 @@ class ManufacturerBulkDeleteView(generic.BulkDeleteView):
 
 
 class DeviceTypeListView(generic.ObjectListView):
-    queryset = DeviceType.objects.select_related("manufacturer").annotate(
+    queryset = DeviceType.objects.select_related("manufacturer", "hardware_family").annotate(
         device_count=count_related(Device, "device_type")
     )
     filterset = filters.DeviceTypeFilterSet
@@ -1104,6 +1105,7 @@ class DeviceListView(generic.ObjectListView):
     queryset = Device.objects.select_related(
         "status",
         "device_type",
+        "device_type__hardware_family",
         "role",
         "tenant",
         "location",
@@ -2909,4 +2911,14 @@ class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDe
     queryset = InterfaceRedundancyGroupAssociation.objects.all()
     form_class = forms.InterfaceRedundancyGroupAssociationForm
     template_name = "dcim/interfaceredundancygroupassociation_create.html"
+    lookup_field = "pk"
+
+
+class HardwareFamilyUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.HardwareFamilyFilterSet
+    form_class = forms.HardwareFamilyForm
+    bulk_update_form_class = forms.HardwareFamilyBulkEditForm
+    queryset = HardwareFamily.objects.annotate(device_type_count=count_related(DeviceType, "hardware_family"))
+    serializer_class = serializers.HardwareFamilySerializer
+    table_class = tables.HardwareFamilyTable
     lookup_field = "pk"
