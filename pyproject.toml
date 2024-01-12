@@ -113,7 +113,7 @@ netaddr = "~0.8.0"
 #       we permit a looser (^) version constraint here.
 netutils = "^1.6.0"
 # Handling of version numbers
-packaging = "~23.1"
+packaging = ">=23.1"
 # Image processing library
 Pillow = "~10.0.0"
 # Custom prometheus metrics

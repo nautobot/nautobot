@@ -538,7 +538,7 @@ def log_object_link(value, record):
 
 
 def log_entry_color_css(record):
-    if record.log_level.lower() == "failure":
+    if record.log_level.lower() in ("error", "critical"):
         return "danger"
     return record.log_level.lower()
 
