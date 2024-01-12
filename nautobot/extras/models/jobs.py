@@ -663,12 +663,15 @@ class JobResult(BaseModel, CustomFieldModel):
             redirect_logger = get_logger("celery.redirected")
             proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
             with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
-                job_model.job_task.apply(
+                eager_result = job_model.job_task.apply(
                     args=job_args, kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs
                 )
 
             # copy fields from eager result to job result
             job_result.refresh_from_db()
+            job_result.result = eager_result.result
+            job_result.status = eager_result.status
+            job_result.traceback = eager_result.traceback
             job_result.date_done = timezone.now()
             job_result.save()
         else:

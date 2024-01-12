@@ -100,12 +100,14 @@ class Command(BaseCommand):
                     self.stdout.write(f"\t\t{status}: {log_entry.message}")
 
         if job_result.result:
-            self.stdout.write(job_result.result)
+            self.stdout.write(str(job_result.result))
 
         if job_result.status == JobResultStatusChoices.STATUS_FAILURE:
             status = self.style.ERROR("FAILURE")
-        else:
+        elif job_result.status == JobResultStatusChoices.STATUS_SUCCESS:
             status = self.style.SUCCESS("SUCCESS")
+        else:
+            status = self.style.WARNING(job_result.status)
         self.stdout.write(f"[{timezone.now():%H:%M:%S}] {options['job']}: {status}")
 
         # Wrap things up
