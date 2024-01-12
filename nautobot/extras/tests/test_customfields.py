@@ -385,14 +385,44 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
 
 class CustomFieldManagerTest(TestCase):
     def setUp(self):
-        content_type = ContentType.objects.get_for_model(Location)
+        self.content_type = ContentType.objects.get_for_model(Location)
         custom_field = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Text Field", default="foo")
         custom_field.save()
-        custom_field.content_types.set([content_type])
+        custom_field.content_types.set([self.content_type])
 
     def test_get_for_model(self):
         self.assertEqual(CustomField.objects.get_for_model(Location).count(), 2)
         self.assertEqual(CustomField.objects.get_for_model(VirtualMachine).count(), 0)
+
+    def test_get_for_model_lru_cache_invalidation(self):
+        """Test that the lru cache is properly invalidated when CustomFields are created or deleted."""
+
+        qs1 = CustomField.objects.get_for_model(Location)
+
+        # Assert that the cache is used when calling get_for_model a second time
+        qs1_cached = CustomField.objects.get_for_model(Location)
+        self.assertTrue(qs1_cached is qs1)
+
+        # Assert that the cache is invalidated on object save
+        custom_field = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Test CF1", default="foo")
+        custom_field.save()
+        qs2 = CustomField.objects.get_for_model(Location)
+        self.assertFalse(qs2 is qs1)
+
+        # Assert that the cache is invalidated when adding a CustomField.content_types m2m relationship
+        custom_field.content_types.set([self.content_type])
+        qs3 = CustomField.objects.get_for_model(Location)
+        self.assertNotIn(qs3, (qs1, qs2))
+
+        # Assert that the cache is invalidated when removing a CustomField.content_types m2m relationship
+        custom_field.content_types.set([])
+        qs4 = CustomField.objects.get_for_model(Location)
+        self.assertNotIn(qs4, (qs1, qs2, qs3))
+
+        # Assert that the cache is invalidated on object delete
+        custom_field.delete()
+        qs5 = CustomField.objects.get_for_model(Location)
+        self.assertNotIn(qs5, (qs1, qs2, qs3, qs4))
 
 
 class CustomFieldDataAPITest(APITestCase):
