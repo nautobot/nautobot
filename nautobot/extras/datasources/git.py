@@ -742,14 +742,15 @@ def refresh_code_from_repository(repository_slug, consumer=None, skip_reimport=F
             logger.debug("Unloading module %s", module_name)
             if module_name in app.loader.task_modules:
                 app.loader.task_modules.remove(module_name)
-            del sys.modules[module_name]
+            if module_name in sys.modules:
+                del sys.modules[module_name]
 
     # Unregister any previous Celery tasks from this module
     for task_name in list(app.tasks):
         if task_name.startswith(f"{repository_slug}."):
             logger.debug("Unregistering Celery task %s", task_name)
             app.tasks.unregister(task_name)
-            if consumer is not None:
+            if consumer is not None and task_name in consumer.strategies:
                 del consumer.strategies[task_name]
 
     if not skip_reimport:

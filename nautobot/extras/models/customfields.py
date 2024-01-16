@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from datetime import date, datetime
+from functools import lru_cache
 import logging
 import re
 
@@ -45,6 +46,7 @@ logger = logging.getLogger(__name__)
 class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
+    @lru_cache(maxsize=128)
     def get_for_model(self, model):
         """
         Return all ComputedFields assigned to the given model.
@@ -296,12 +298,20 @@ class CustomFieldModel(models.Model):
 class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model):
+    @lru_cache(maxsize=128)
+    def get_for_model(self, model, exclude_filter_disabled=False):
         """
         Return all CustomFields assigned to the given model.
+
+        Args:
+            model: The django model to which custom fields are registered
+            exclude_filter_disabled: Exclude any custom fields which have filter logic disabled
         """
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        return self.get_queryset().filter(content_types=content_type)
+        qs = self.get_queryset().filter(content_types=content_type)
+        if exclude_filter_disabled:
+            qs = qs.exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
+        return qs
 
 
 @extras_features("webhooks")

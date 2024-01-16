@@ -726,7 +726,7 @@ class PrefixBulkDeleteView(generic.BulkDeleteView):
 
 
 class IPAddressListView(generic.ObjectListView):
-    queryset = IPAddress.objects.select_related("tenant", "status", "role").annotate(
+    queryset = IPAddress.objects.select_related("tenant", "status", "role", "parent__namespace").annotate(
         interface_count=Count("interfaces"),
         interface_parent_count=(Count("interfaces__device", distinct=True)),
         vm_interface_count=Count("vm_interfaces"),
