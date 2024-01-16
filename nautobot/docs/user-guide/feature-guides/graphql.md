@@ -85,8 +85,6 @@ Simply querying the `/api/dcim/devices/` API route provides:
     }
     ```
 
-<!-- markdownlint-disable-next-line MD033 -->
-<br />
 There is a lot of useful information in that API call, but there is also a lot of information that is missing; such as interfaces and ip addresses associated with the devices. There is also potentially a lot of information that isn't needed for the specific task. To retrieve the missing information, subsequent API calls would need to be performed; and those API results would need to be correlated to the correct device.
 
 GraphQL reduces the complexity of performing multiple API calls and correlating results by empowering the user to create their own query that provides the user exactly what they want and nothing that they don't, in a single API call.
@@ -128,11 +126,8 @@ query {
 This query will retrieve a list of all devices by their hostname.
 
 ??? info "View GraphQL Query Results"
-    <!-- markdownlint-disable-next-line MD033 -->
-    <img src="../images/graphql/04-graphql-query-01.png">
+    ![GraphQL: Query Results](./images/graphql/04-graphql-query-01.png)
 
-<!-- markdownlint-disable-next-line MD033 -->
-<br />
 Now, let's modify the query to provide interface names for each device. We can do that by modifying the existing query to add `interfaces { name }` as a sub-query of `devices`. GraphiQL makes this process a bit easier, because it has syntax completion built in.
 
 ![GraphQL: Autocompletion](./images/graphql/05-graphiql-autocomplete.png)
@@ -151,11 +146,8 @@ query {
 The result is a list of all the devices by their hostname and associated interfaces by their names.
 
 ??? info "View GraphQL Query Results"
-    <!-- markdownlint-disable-next-line MD033 -->
-    <img src="../images/graphql/06-graphql-query-02.png">
+    ![GraphQL: Query Results](./images/graphql/06-graphql-query-02.png)
 
-<!-- markdownlint-disable-next-line MD033 -->
-<br />
 We can continue iterating on the query until we get exactly what we want from the query. For example, if I wanted to iterate on the previous query to not only display the interfaces of the devices, but also display the interface description, the IP Addresses associated with the interface, and whether or not the interface was a dedicated management interface; I would structure the query like:
 
 ```graphql
@@ -177,8 +169,7 @@ query {
 The results of the query look like:
 
 ??? info "View GraphQL Query Results"
-    <!-- markdownlint-disable-next-line MD033 -->
-    <img src="../images/graphql/07-graphql-query-03.png">
+    ![GraphQL: Query Results](./images/graphql/07-graphql-query-03.png)
 
 ### Filtering Queries
 
@@ -187,11 +178,8 @@ These queries are great, but they are displaying the interface attributes and de
 As an example. We can query devices by their location. This is done by adding `(location: "<location name>")` after `devices`. For example: `query { devices(location: "ams") { name }}` will display all devices in the `ams` location.
 
 ??? info "View GraphQL Query Results"
-    <!-- markdownlint-disable-next-line MD033 -->
-    <img src="../images/graphql/08-graphql-query-04.png">
+    ![GraphQL: Query Results](./images/graphql/08-graphql-query-04.png)
 
-<!-- markdownlint-disable-next-line MD033 -->
-<br />
 GraphQL also allows you to filter by multiple attributes at once if desired. You can use the *Documentation Explorer* to assist you in finding criteria attributes to filter on. In this example, I add the `role` attribute in addition to `location`.
 
 ```graphql
@@ -203,11 +191,8 @@ query {
 ```
 
 ??? info "View GraphQL Query Results"
-    <!-- markdownlint-disable-next-line MD033 -->
-    <img src="../images/graphql/09-graphql-query-05.png">
+    ![GraphQL: Query Results](./images/graphql/09-graphql-query-05.png)
 
-<!-- markdownlint-disable-next-line MD033 -->
-<br />
 You can also filter at deeper levels of the query. On many to one relationships you can filter the results based on an attribute of the field. Any attribute that relates to a GraphQLType can be filtered.
 
 ```graphql
@@ -234,20 +219,20 @@ query {
 }
 ```
 
-??? info "View GraphQL Query Results"
-    <!-- markdownlint-disable-next-line MD033 -->
-    <img src="../images/graphql/11-graphql-query-06.png">
-
 +++ 1.3.0
-    You can also paginate the results returned to you when the data set gets larger. To do so, use the keywords "limit" and "offset". The "limit" keyword will limit the count of results returned after the "offset". If no "offset" is specified, then the default offset is zero.
+
+You can also paginate the results returned to you when the data set gets larger. To do so, use the keywords "limit" and "offset". The "limit" keyword will limit the count of results returned after the "offset". If no "offset" is specified, then the default offset is zero.
 
     ```graphql
     query {
-      devices(location: "ams01", , limit: 1, offset: 1) {
+      devices(location: "ams01", limit: 1, offset: 1) {
         name
       }
     }
     ```
+
+??? info "View GraphQL Query Results"
+    ![GraphQL: Query Results](./images/graphql/11-graphql-query-06.png)
 
 ## Using the GraphQL API in Nautobot
 

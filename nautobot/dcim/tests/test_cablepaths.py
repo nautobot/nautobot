@@ -21,7 +21,6 @@ from nautobot.dcim.models import (
     PowerPort,
     RearPort,
 )
-
 from nautobot.dcim.utils import object_to_path_node
 from nautobot.extras.models import Role, Status
 

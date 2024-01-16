@@ -105,18 +105,6 @@ If your query data is valid, you should see a success message at the end of the 
 >>> All GraphQLQuery queries are validated successfully!
 ```
 
-### `build_ui`
-
-`nautobot-server build_ui`
-
-Build or rebuild the UI for the Nautobot server environment and installed Nautobot Apps.
-
-Here are some commonly used flags:
-
-1. `--npm-install` - Install UI packages.
-2. `--no-render-apps` - Do not render Nautobot App imports.
-3. `--no-npm-build` - Do not compile UI.
-
 ### `celery`
 
 `nautobot-server celery`
@@ -528,7 +516,6 @@ This will run the following management commands with default settings, in order:
 
 - `migrate`
 - `trace_paths`
-- `build_ui`
 - `collectstatic`
 - `remove_stale_contenttypes`
 - `clearsessions`
@@ -543,13 +530,13 @@ This will run the following management commands with default settings, in order:
     With the removal of `django-cacheops` from Nautobot, this command no longer runs `invalidate all`.
 
 +++ 2.0.0
-    Added [`build_ui`](#build_ui) to this command's default behavior.
+    Added `build_ui` to this command's default behavior.
 
 +/- 2.0.3
-    Changed the [`build_ui`](#build_ui) flag's value to be False by default.
+    Changed the `--build_ui` flag's value to be False by default.
 
-`--build-ui`
-Build or rebuild the new UI.
+--- 2.1.1
+    Removed the `--build_ui` flag.
 
 `--no-clearsessions`  
 Do not automatically clean out expired sessions.
@@ -686,21 +673,26 @@ Done.
 
 ### `runjob`
 
-`nautobot-server runjob [job]`
+`nautobot-server runjob --username <username> [--local] [--data <data>] <job>`
 
-Run a job (script, report) to validate or update data in Nautobot.
-
-`--commit`  
-Commit changes to DB (defaults to dry-run if unset). `--username` is mandatory if using this argument.
+Run a job (script, report) to validate or update data in Nautobot. The Job name must be in the Python module form: `<module_name>.<JobClassName>`. You can find this under the Job's detail view on the "Class Path" row.
 
 `--username <username>`  
 User account to impersonate as the requester of this job.
 
 ```no-highlight
-nautobot-server runjob --commit --username someuser local/example/MyJobWithNoVars
+nautobot-server runjob --username someuser example_plugin.jobs.MyJobWithNoVars
 ```
 
-Note that there is presently no option to provide input parameters (`data`) for jobs via the CLI.
+`--local`
+Run the job on the local system and not on a worker.
+
+`--data <data>`
+JSON string that populates the `data` variable of the job.
+
+```no-highlight
+nautobot-server runjob --username someuser --local --data '{"my_boolvar": false}' example_plugin.jobs.MyJobWithVars
+```
 
 Please see the [guide on Jobs](../../platform-functionality/jobs/index.md) for more information on working with and running jobs.
 

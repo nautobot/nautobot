@@ -19,12 +19,6 @@ fi
 echo "Validating branch name..."
 [[ $(git branch --show-current) =~ ^u/ ]] || echo "! Your branch name does not conform to the 'u/' prefix convention."
 
-echo "Validating PEP8 compliance..."
-invoke flake8 || EXIT=1
-
-echo "Check that all files conform to Black..."
-invoke black || EXIT=1
-
 echo "Check that YAML files conform to best practices..."
 invoke yamllint || EXIT=1
 
@@ -45,7 +39,7 @@ else
     invoke markdownlint || EXIT=1
 fi
 
-echo "Check static analysis via ruff..."
+echo "Check formatting and static analysis via ruff..."
 invoke ruff || EXIT=1
 
 echo "Check static analysis via pylint..."

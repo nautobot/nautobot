@@ -12,8 +12,6 @@ Example one:
     * This takes you to a search results page
 2. **Prefix** search result `10.10.10.0/24`
 3. **IP Address** search result `10.10.10.0/31`
-4. Interface related to `10.10.10.0/31`
-5. Interface Parent (Device) for `10.10.10.0/31`
 
 Clicking on any of these objects takes you to the main page for that object.
 This example shows the result of clicking on the **IP Address** object (4).
@@ -32,8 +30,8 @@ Example two shows a Device-specific search:
 
 Clicking on an of the links for the results takes you to the main page for that object. For example:
 
-* Clicking on the `Vancouver 1` Location takes you to the main page for the Location.
-* Clicking on the `edge2.van1` Device takes you to the main page for the Device
+* Clicking on the `ANG01` Location takes you to the main page for the Location.
+* Clicking on the `ang01-edge-02` Device takes you to the main page for the Device
 
 ![Device search results](../images/getting-started-nautobot-ui/41-device-search-results.png)
 

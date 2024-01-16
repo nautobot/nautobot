@@ -3,9 +3,7 @@ import os
 import shutil
 
 from celery.worker.control import control_command
-
 from django.conf import settings
-
 
 logger = logging.getLogger(__name__)
 

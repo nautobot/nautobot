@@ -1,48 +1,45 @@
+from collections import OrderedDict
 import itertools
 import logging
 import platform
-from collections import OrderedDict
-import re
 
 from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.http.response import HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import ProtectedError
+from django.http.response import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import NoReverseMatch, reverse as django_reverse
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.reverse import reverse
-from rest_framework.views import APIView
-from rest_framework.viewsets import ModelViewSet as ModelViewSet_
-from rest_framework.viewsets import ReadOnlyModelViewSet as ReadOnlyModelViewSet_
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.exceptions import PermissionDenied, ParseError
 from drf_spectacular.plumbing import get_relative_url, set_query_parameters
 from drf_spectacular.renderers import OpenApiJsonRenderer
 from drf_spectacular.utils import extend_schema
-from drf_spectacular.views import SpectacularSwaggerView, SpectacularRedocView
-
+from drf_spectacular.views import SpectacularRedocView, SpectacularSwaggerView
+from graphene_django.settings import graphene_settings
+from graphene_django.views import GraphQLView, HttpError, instantiate_middleware
 from graphql import get_default_backend
 from graphql.execution import ExecutionResult
-from graphql.type.schema import GraphQLSchema
 from graphql.execution.middleware import MiddlewareManager
-from graphene_django.settings import graphene_settings
-from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
+from graphql.type.schema import GraphQLSchema
+from rest_framework import status
+from rest_framework.exceptions import ParseError, PermissionDenied
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.reverse import reverse
+from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet as ModelViewSet_, ReadOnlyModelViewSet as ReadOnlyModelViewSet_
 
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
 from nautobot.core.utils.lookup import get_form_for_model, get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
 from nautobot.extras.registry import registry
+
 from . import serializers
 
 HTTP_ACTIONS = {
@@ -179,10 +176,11 @@ class ModelViewSetMixin:
         queryset = self.filter_queryset(self.get_queryset())
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
 
-        assert lookup_url_kwarg in self.kwargs, (
-            f"Expected view {self.__class__.__name__} to be called with a URL keyword argument named "
-            f'"{lookup_url_kwarg}". Fix your URL conf, or set the `.lookup_field` attribute on the view correctly.'
-        )
+        if lookup_url_kwarg not in self.kwargs:
+            raise RuntimeError(
+                f"Expected view {self.__class__.__name__} to be called with a URL keyword argument named "
+                f'"{lookup_url_kwarg}". Fix your URL conf, or set the `.lookup_field` attribute on the view correctly.'
+            )
 
         if lookup_url_kwarg == "pk" and hasattr(queryset.model, "composite_key"):
             # Support lookup by either PK (UUID) or composite_key
@@ -487,14 +485,14 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
 
         format = "openapi"
 
-    renderer_classes = SpectacularSwaggerView.renderer_classes + [FakeOpenAPIRenderer]
+    renderer_classes = [*SpectacularSwaggerView.renderer_classes, FakeOpenAPIRenderer]
 
     template_name = "swagger_ui.html"
 
     @extend_schema(exclude=True)
     def get(self, request, *args, **kwargs):
         """Fix up the rendering of the Swagger UI to work with Nautobot's UI."""
-        if not request.user.is_authenticated and get_settings_or_config("HIDE_RESTRICTED_UI"):
+        if not request.user.is_authenticated:
             doc_url = reverse("api_docs")
             login_url = reverse(settings.LOGIN_URL)
             return redirect(f"{login_url}?next={doc_url}")
@@ -602,7 +600,8 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
         self.executor = self.executor
         self.root_value = self.root_value
 
-        assert isinstance(self.graphql_schema, GraphQLSchema), "A Schema is required to be provided to GraphQLAPIView."
+        if not isinstance(self.graphql_schema, GraphQLSchema):
+            raise ValueError("A Schema is required to be provided to GraphQLAPIView.")
 
     def get_response(self, request, data):
         """Extract the information from the request, execute the GraphQL query and form the response.
@@ -721,18 +720,16 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def format_and_remove_hidden_menu(self, request, data, hide_restricted_ui):
+    def format_and_remove_hidden_menu(self, request, data):
         """
         Formats the menu data and removes hidden menu items based on user permissions.
 
         Args:
             request (HttpRequest): The request object.
-            data (Union[dict, str]): The menu data to format and filter. Can be either a dictionary or a string.
-            hide_restricted_ui (bool): Flag indicating whether to hide restricted menu items.
+            data (dict): The menu data to format and filter.
 
         Returns:
-            (Union[dict, str]): The formatted menu data without hidden items. Returns a dict if `data` is a
-                `dict`, otherwise returns a string.
+            (dict): The formatted menu data without hidden items.
 
         Example:
             Input:
@@ -747,15 +744,18 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
             Output:
             {"Devices": "data value"}
         """
-        if isinstance(data, dict):
-            return_value = {}
-            for name, value in data.items():
-                if not hide_restricted_ui or any(
-                    request.user.has_perm(permission) for permission in value["permissions"]
-                ):
-                    return_value[name] = self.format_and_remove_hidden_menu(request, value["data"], hide_restricted_ui)
-            return return_value
-        return data
+        return_value = {}
+        for name, value in data.items():
+            if "permissions" in value:
+                permissions = value["permissions"]
+                user_has_permission = any(request.user.has_perm(permission) for permission in permissions)
+                if user_has_permission:
+                    return_value[name] = value["data"]
+            else:
+                return_data = self.format_and_remove_hidden_menu(request, value["data"])
+                if return_data:
+                    return_value[name] = return_data
+        return return_value
 
     @extend_schema(exclude=True)
     def get(self, request):
@@ -796,8 +796,7 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
         }
         """
         base_menu = registry["new_ui_nav_menu"]
-        HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
-        formatted_data = self.format_and_remove_hidden_menu(request, base_menu, HIDE_RESTRICTED_UI)
+        formatted_data = self.format_and_remove_hidden_menu(request, base_menu)
         return Response(formatted_data)
 
 
@@ -838,13 +837,12 @@ class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
                 {"model": "extras.role"},
             ],
         }
-        HIDE_RESTRICTED_UI = get_settings_or_config("HIDE_RESTRICTED_UI")
 
         for entry in itertools.chain(*object_counts.values()):
             app_label, model_name = entry["model"].split(".")
             model = apps.get_model(app_label, model_name)
             permission = get_permission_for_model(model, "view")
-            if HIDE_RESTRICTED_UI and not request.user.has_perm(permission):
+            if not request.user.has_perm(permission):
                 continue
             data = {"name": model._meta.verbose_name_plural}
             try:
@@ -862,42 +860,6 @@ class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
             entry.update(data)
 
         return Response(object_counts)
-
-
-class GetSettingsView(NautobotAPIVersionMixin, APIView):
-    """
-    This view exposes Nautobot settings.
-
-    Get settings by providing one or more `name` in the query parameters.
-
-    Example:
-
-    - /api/settings/?name=FOO            # Returns the setting with name 'FOO'
-    - /api/settings/?name=FOO&name=BAR   # Returns the setting with these names 'FOO' and 'BAR
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(exclude=True)
-    def get(self, request):
-        # As of now, we just have `allowed_settings` settings. Because the purpose of this API is limited for the time being,
-        # we may need more access to serializable and non-serializable settings data as the new UI expands. As a result,
-        # exposing all settings data would be desirable in the future.
-        # NOTE: When exposing all settings, include a way to limit settings which can be exposed for security concerns
-        # e.g `SECRET_KEY`, `NAPALM_PASSWORD` e.t.c. also `allowed_settings` can be moved into settings.py
-        allowed_settings = ["FEEDBACK_BUTTON_ENABLED"]
-        # Filter out settings_names not allowed to be exposed to the API
-        valid_settings = [name for name in request.GET.getlist("name") if name in allowed_settings]
-
-        invalid_settings = [name for name in request.GET.getlist("name") if name not in allowed_settings]
-        if invalid_settings:
-            return Response(
-                {"error": f"Invalid settings names specified: {', '.join(invalid_settings)}."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        res = {settings_name: get_settings_or_config(settings_name) for settings_name in valid_settings}
-        return Response(res)
 
 
 #
@@ -978,35 +940,3 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
         else:
             data = bound_field.as_widget()
         return Response(data)
-
-
-class NewUIReadyRoutesAPIView(NautobotAPIVersionMixin, APIView):
-    """API View that returns a list of new UI-ready routes."""
-
-    permission_classes = [IsAuthenticated]
-
-    def to_javascript_regex(self, regex_pattern):
-        """
-        Convert a Python regex pattern into JavaScript regex format.
-
-        Args:
-            regex_pattern (str): The Python regex pattern to convert.
-
-        Returns:
-            str: The JavaScript-compatible regex pattern.
-        """
-        # Remove named groups (?P<...>)
-        pattern = re.sub(r"\?P<[a-z]+>", "", regex_pattern)
-
-        # Escape `/` with `\`
-        pattern = pattern.replace("/", "\\/")
-
-        # Replace `/Z` with `$`
-        pattern = pattern.replace(r"\Z", "$")
-
-        return pattern
-
-    @extend_schema(exclude=True)
-    def get(self, request):
-        url_regex_patterns = registry["new_ui_ready_routes"]
-        return Response([self.to_javascript_regex(pattern) for pattern in url_regex_patterns])

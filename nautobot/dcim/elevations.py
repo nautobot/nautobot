@@ -1,8 +1,7 @@
-import svgwrite
-
 from django.conf import settings
 from django.urls import reverse
 from django.utils.http import urlencode
+import svgwrite
 
 from .choices import DeviceFaceChoices
 from .constants import RACK_ELEVATION_BORDER_WIDTH

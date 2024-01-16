@@ -1,8 +1,7 @@
 import time
-import uuid
-
 from unittest import skip
 from unittest.mock import patch
+import uuid
 
 from django.core.cache import cache
 from django.core.exceptions import ValidationError

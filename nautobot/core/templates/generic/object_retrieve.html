@@ -58,7 +58,14 @@
     </div>
 
     {% block masthead %}
-        <h1>{% block title %}{{ object }}{% endblock %}</h1>
+        <h1>
+            <span class="hover_copy">
+                <span id="copy_title">{% block title %}{{object.display|default:object}}{% endblock %}</span>
+                <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_title">
+                    <span class="mdi mdi-content-copy"></span>
+                </button>
+            </span>
+        </h1>
     {% endblock masthead %}
     {% include 'inc/created_updated.html' %}
     <div class="pull-right noprint">

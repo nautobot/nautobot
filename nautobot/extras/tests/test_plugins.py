@@ -1,4 +1,4 @@
-from unittest import mock, skipIf, skip
+from unittest import mock, skip, skipIf
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -6,25 +6,24 @@ from django.core.exceptions import ValidationError
 from django.template import engines
 from django.test import override_settings
 from django.urls import NoReverseMatch, reverse
-
 import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.celery import app
-from nautobot.core.testing import APIViewTestCases, TestCase, ViewTestCases, extract_page_body
-from nautobot.dcim.models import Device, DeviceType, Manufacturer, Location, LocationType
+from nautobot.core.testing import APIViewTestCases, disable_warnings, extract_page_body, TestCase, ViewTestCases
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.tenancy.filters import TenantFilterSet
-from nautobot.tenancy.forms import TenantFilterForm
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import CustomField, Relationship, RelationshipAssociation, Role, Secret, Status
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
-from nautobot.extras.registry import registry, DatasourceContent
-from nautobot.ipam.models import Prefix, IPAddress, Namespace
+from nautobot.extras.registry import DatasourceContent, registry
+from nautobot.ipam.models import IPAddress, Namespace, Prefix
+from nautobot.tenancy.filters import TenantFilterSet
+from nautobot.tenancy.forms import TenantFilterForm
+from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.users.models import ObjectPermission
 
 from example_plugin import config as example_config
@@ -483,6 +482,69 @@ class PluginCustomValidationTest(TestCase):
         relationship_assoc = RelationshipAssociation(relationship=relationship, source=prefix, destination=ipaddress)
         with self.assertRaises(ValidationError):
             relationship_assoc.clean()
+
+
+@skipIf(
+    "example_plugin" not in settings.PLUGINS,
+    "example_plugin not in settings.PLUGINS",
+)
+class ExampleModelCustomActionViewTest(TestCase):
+    """Test for custom action view `all_names` added to Example App"""
+
+    model = ExampleModel
+
+    @classmethod
+    def setUpTestData(cls):
+        ExampleModel.objects.create(name="Example 1", number=100)
+        ExampleModel.objects.create(name="Example 2", number=200)
+        ExampleModel.objects.create(name="Example 3", number=300)
+        cls.custom_view_url = reverse("plugins:example_plugin:examplemodel_all_names")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_custom_action_view_anonymous(self):
+        self.client.logout()
+        response = self.client.get(self.custom_view_url)
+        self.assertHttpStatus(response, 302)
+
+    def test_custom_action_view_without_permission(self):
+        with disable_warnings("django.request"):
+            response = self.client.get(self.custom_view_url)
+            self.assertHttpStatus(response, 403)
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn("/login/", response_body, msg=response_body)
+
+    def test_custom_action_view_with_permission(self):
+        self.add_permissions(f"{self.model._meta.app_label}.all_names_{self.model._meta.model_name}")
+
+        response = self.client.get(self.custom_view_url)
+        self.assertHttpStatus(response, 200)
+
+        response_body = extract_page_body(response.content.decode(response.charset))
+
+        for example_model in self.model.objects.all():
+            self.assertIn(example_model.name, response_body, msg=response_body)
+
+    def test_custom_action_view_with_constrained_permission(self):
+        instance1 = self.model.objects.first()
+        # Add object-level permission
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance1.pk},
+            actions=["all_names"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        response = self.client.get(self.custom_view_url)
+        self.assertHttpStatus(response, 200)
+
+        response_body = extract_page_body(response.content.decode(response.charset))
+
+        self.assertIn(instance1.name, response_body, msg=response_body)
+
+        for example_model in self.model.objects.exclude(pk=instance1.pk):
+            self.assertNotIn(example_model.name, response_body, msg=response_body)
 
 
 class FilterExtensionTest(TestCase):

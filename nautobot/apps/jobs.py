@@ -21,6 +21,7 @@ from nautobot.extras.jobs import (
     Job,
     JobButtonReceiver,
     JobHookReceiver,
+    JSONVar,
     MultiChoiceVar,
     MultiObjectVar,
     ObjectVar,
@@ -29,7 +30,6 @@ from nautobot.extras.jobs import (
     StringVar,
     TextVar,
 )
-
 
 __all__ = (
     "BaseJob",
@@ -51,6 +51,7 @@ __all__ = (
     "Job",
     "JobButtonReceiver",
     "JobHookReceiver",
+    "JSONVar",
     "MultiChoiceVar",
     "MultiObjectVar",
     "NautobotKombuJSONEncoder",

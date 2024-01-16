@@ -1,14 +1,15 @@
+from collections import OrderedDict
+from datetime import date, datetime
+from functools import lru_cache
 import logging
 import re
-from collections import OrderedDict
-from datetime import datetime, date
 
 from django import forms
-from django.db import models, transaction
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
+from django.db import models, transaction
 from django.forms.widgets import TextInput
 from django.utils.html import format_html
 
@@ -37,7 +38,7 @@ from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTy
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
-from nautobot.extras.utils import check_if_key_is_graphql_safe, FeatureQuery, extras_features
+from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,7 @@ logger = logging.getLogger(__name__)
 class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
+    @lru_cache(maxsize=128)
     def get_for_model(self, model):
         """
         Return all ComputedFields assigned to the given model.
@@ -296,12 +298,20 @@ class CustomFieldModel(models.Model):
 class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model):
+    @lru_cache(maxsize=128)
+    def get_for_model(self, model, exclude_filter_disabled=False):
         """
         Return all CustomFields assigned to the given model.
+
+        Args:
+            model: The django model to which custom fields are registered
+            exclude_filter_disabled: Exclude any custom fields which have filter logic disabled
         """
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        return self.get_queryset().filter(content_types=content_type)
+        qs = self.get_queryset().filter(content_types=content_type)
+        if exclude_filter_disabled:
+            qs = qs.exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
+        return qs
 
 
 @extras_features("webhooks")

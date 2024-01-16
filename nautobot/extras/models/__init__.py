@@ -1,6 +1,4 @@
 from .change_logging import ChangeLoggedModel, ObjectChange
-from .roles import Role, RoleField
-from .statuses import Status, StatusField, StatusModel
 from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel
 from .datasources import GitRepository
 from .groups import DynamicGroup, DynamicGroupMembership
@@ -19,6 +17,7 @@ from .models import (
     ConfigContextSchema,
     CustomLink,
     ExportTemplate,
+    ExternalIntegration,
     FileAttachment,
     FileProxy,
     GraphQLQuery,
@@ -28,9 +27,10 @@ from .models import (
     Webhook,
 )
 from .relationships import Relationship, RelationshipAssociation, RelationshipModel
+from .roles import Role, RoleField
 from .secrets import Secret, SecretsGroup, SecretsGroupAssociation
+from .statuses import Status, StatusField, StatusModel
 from .tags import Tag, TaggedItem
-
 
 __all__ = (
     "ChangeLoggedModel",
@@ -45,6 +45,7 @@ __all__ = (
     "DynamicGroup",
     "DynamicGroupMembership",
     "ExportTemplate",
+    "ExternalIntegration",
     "FileAttachment",
     "FileProxy",
     "GitRepository",
