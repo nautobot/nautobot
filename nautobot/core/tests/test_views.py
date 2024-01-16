@@ -424,20 +424,17 @@ class DBFileStorageViewTestCase(TestCase):
 
     def test_get_file_anonymous(self):
         self.client.logout()
-        with self.subTest(self.url):
-            response = self.client.get(self.url)
-            self.assertHttpStatus(response, 403)
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 403)
 
     def test_get_file_without_permission(self):
-        with self.subTest(self.url):
-            response = self.client.get(self.url)
-            self.assertHttpStatus(response, 403)
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 403)
 
     def test_get_object_with_permission(self):
         self.add_permissions(get_permission_for_model(FileProxy, "view"))
-        with self.subTest(self.url):
-            response = self.client.get(self.url)
-            self.assertHttpStatus(response, 200)
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
 
     def test_get_object_with_constrained_permission(self):
         obj_perm = ObjectPermission(
