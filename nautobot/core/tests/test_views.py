@@ -452,10 +452,8 @@ class DBFileStorageViewTestCase(TestCase):
         obj_perm.save()
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(FileProxy))
-        with self.subTest(self.url):
-            response = self.client.get(self.url)
-            self.assertHttpStatus(response, 200)
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
         url = f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_2.file.name}"
-        with self.subTest(url):
-            response = self.client.get(url)
-            self.assertHttpStatus(response, 404)
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 404)
