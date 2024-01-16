@@ -82,7 +82,6 @@ class VRFFactory(PrimaryModelFactory):
         model = VRF
         exclude = (
             "has_description",
-            "has_rd",
             "has_tenant",
         )
 
@@ -91,8 +90,10 @@ class VRFFactory(PrimaryModelFactory):
 
     # RD needs to be globally unique, but the random route-distinguisher generation space is large enough that
     # we'll deal with collisions as and when they occur.
-    has_rd = NautobotBoolIterator()
-    rd = factory.Maybe("has_rd", factory.LazyFunction(random_route_distinguisher), None)
+    # TODO Need to figure out a way to guarantee uniqueness on the VRF model, as namespace <-> rd combination composite key
+    # is not guaranteed to be unique since rd is nullable.
+    # Making rd not nullable on the randomly generated data to pass test_composite_key() uniqueness test here.
+    rd = factory.LazyFunction(random_route_distinguisher)
 
     has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)

@@ -242,6 +242,22 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="dcim:hardwarefamily_list",
+                        name="Hardware Families",
+                        weight=300,
+                        permissions=[
+                            "dcim.view_hardwarefamily",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:hardwarefamily_add",
+                                permissions=[
+                                    "dcim.add_hardwarefamily",
+                                ],
+                            ),
+                        ),
+                    ),
                 ),
             ),
             NavMenuGroup(

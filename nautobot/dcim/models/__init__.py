@@ -25,7 +25,7 @@ from .device_components import (
     PowerPort,
     RearPort,
 )
-from .devices import Device, DeviceRedundancyGroup, DeviceType, Manufacturer, Platform, VirtualChassis
+from .devices import Device, DeviceRedundancyGroup, DeviceType, HardwareFamily, Manufacturer, Platform, VirtualChassis
 from .locations import Location, LocationType
 from .power import PowerFeed, PowerPanel
 from .racks import Rack, RackGroup, RackReservation
@@ -46,6 +46,7 @@ __all__ = (
     "DeviceType",
     "FrontPort",
     "FrontPortTemplate",
+    "HardwareFamily",
     "Interface",
     "InterfaceRedundancyGroup",
     "InterfaceRedundancyGroupAssociation",
