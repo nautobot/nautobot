@@ -672,7 +672,8 @@ class JobResult(BaseModel, CustomFieldModel):
             # Emulate prepare_exception() behavior
             if isinstance(eager_result.result, Exception):
                 job_result.result = {
-                    "exc_type": type(eager_result.result).__name__, "exc_message": sanitize(str(eager_result.result))
+                    "exc_type": type(eager_result.result).__name__,
+                    "exc_message": sanitize(str(eager_result.result)),
                 }
             else:
                 job_result.result = sanitize(eager_result.result)
