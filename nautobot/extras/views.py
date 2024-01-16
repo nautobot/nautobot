@@ -1906,7 +1906,6 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
             if ContentType.objects.get_for_model(VLAN) in context["content_types"]:
                 vlans = instance.vlans.select_related(
                     "vlan_group",
-                    "location",
                     "status",
                     "tenant",
                 ).restrict(request.user, "view")

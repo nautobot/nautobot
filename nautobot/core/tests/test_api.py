@@ -621,7 +621,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "location": self.location1.pk,
+            "locations": [self.location1.pk],
             "status": self.statuses.first().pk,
             "vlan_group": self.vlan_group1.pk,
         }
@@ -630,7 +630,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(str(response.data["location"]["url"]), self.absolute_api_url(self.location1))
+        self.assertEqual(str(response.data["locations"][0]["url"]), self.absolute_api_url(self.location1))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.status, self.statuses.first())
         self.assertEqual(vlan.location, self.location1)
@@ -639,7 +639,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
         data = {
             "vid": 160,
             "name": "Test VLAN 160",
-            "location": "00000000-0000-0000-0000-0000000009eb",
+            "locations": ["00000000-0000-0000-0000-0000000009eb"],
             "status": self.statuses.first().pk,
         }
         url = reverse("ipam-api:vlan-list")
@@ -649,14 +649,14 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["location"][0].startswith("Related object not found"))
+        self.assertTrue(response.data["locations"][0].startswith("Related object not found"))
 
     def test_related_by_attributes(self):
         data = {
             "vid": 110,
             "name": "Test VLAN 110",
             "status": self.statuses.first().pk,
-            "location": {"name": "Location 1"},
+            "locations": [{"name": "Location 1"}],
             "vlan_group": self.vlan_group1.pk,
         }
         url = reverse("ipam-api:vlan-list")
@@ -664,16 +664,16 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(str(response.data["location"]["url"]), self.absolute_api_url(self.location1))
+        self.assertEqual(str(response.data["locations"][0]["url"]), self.absolute_api_url(self.location1))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
-        self.assertEqual(vlan.location, self.location1)
+        self.assertEqual(vlan.locations.first(), self.location1)
 
     def test_related_by_attributes_no_match(self):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
             "status": self.statuses.first().pk,
-            "location": {"name": "Location X"},
+            "locations": [{"name": "Location X"}],
             "vlan_group": self.vlan_group1.pk,
         }
         url = reverse("ipam-api:vlan-list")
@@ -683,18 +683,18 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["location"][0].startswith("Related object not found"))
+        self.assertTrue(response.data["locations"][0].startswith("Related object not found"))
 
     def test_related_by_attributes_multiple_matches(self):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
             "status": self.statuses.first().pk,
-            "location": {
+            "locations": [{
                 "parent": {
                     "name": self.location1.name,
                 },
-            },
+            }],
             "vlan_group": self.vlan_group1.pk,
         }
         url = reverse("ipam-api:vlan-list")
@@ -704,7 +704,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["location"][0].startswith("Multiple objects match"))
+        self.assertTrue(response.data["locations"][0].startswith("Multiple objects match"))
 
     @skip("Composite keys aren't being supported at this time")
     def test_related_by_composite_key(self):
@@ -712,7 +712,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "vid": 100,
             "name": "Test VLAN 100",
             "status": self.statuses.first().composite_key,
-            "location": self.location1.composite_key,
+            "locations": [self.location1.composite_key],
             "vlan_group": self.vlan_group1.composite_key,
         }
         url = reverse("ipam-api:vlan-list")
@@ -720,9 +720,9 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(str(response.data["location"]["url"]), self.absolute_api_url(self.location1))
+        self.assertEqual(str(response.data["locations"][0]["url"]), self.absolute_api_url(self.location1))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
-        self.assertEqual(vlan.location, self.location1)
+        self.assertEqual(vlan.locations.first(), self.location1)
 
     @skip("Composite keys aren't being supported at this time")
     def test_related_by_composite_key_no_match(self):
@@ -730,7 +730,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "vid": 100,
             "name": "Test VLAN 100",
             "status": self.statuses.first().composite_key + COMPOSITE_KEY_SEPARATOR + "xyz",
-            "location": self.location1.composite_key + COMPOSITE_KEY_SEPARATOR + "hello" + COMPOSITE_KEY_SEPARATOR,
+            "locations": [self.location1.composite_key + COMPOSITE_KEY_SEPARATOR + "hello" + COMPOSITE_KEY_SEPARATOR],
             "vlan_group": self.vlan_group1.composite_key[1:-1],
         }
         url = reverse("ipam-api:vlan-list")
@@ -741,14 +741,14 @@ class WritableNestedSerializerTest(testing.APITestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["status"][0].startswith("Related object not found"))
-        self.assertTrue(response.data["location"][0].startswith("Related object not found"))
+        self.assertTrue(response.data["locations"][0].startswith("Related object not found"))
         self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
 
     def test_related_by_invalid(self):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "location": "XXX",
+            "locations": ["XXX"],
             "status": self.statuses.first().pk,
             "vlan_group": self.vlan_group2.pk,
         }

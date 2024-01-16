@@ -776,7 +776,6 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
 
     vid = tables.LinkColumn(viewname="ipam:vlan", args=[Accessor("pk")], verbose_name="ID")
     tagged = BooleanColumn()
-    location = tables.Column(linkify=True)
     vlan_group = tables.Column(accessor=Accessor("vlan_group__name"), verbose_name="Group")
     tenant = TenantColumn()
     role = tables.TemplateColumn(template_code=VLAN_ROLE_LINK)
@@ -786,7 +785,6 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
         fields = (
             "vid",
             "tagged",
-            "location",
             "vlan_group",
             "name",
             "tenant",

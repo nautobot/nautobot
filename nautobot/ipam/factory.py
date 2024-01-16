@@ -175,7 +175,6 @@ class VLANFactory(PrimaryModelFactory):
         exclude = (
             "has_description",
             "has_vlan_group",
-            "has_location",
             "has_role",
             "has_tenant",
         )
@@ -197,7 +196,6 @@ class VLANFactory(PrimaryModelFactory):
                         f"{o.vid:04d}",  # "0001" rather than "1", for more consistent names
                         faker.Faker().word(part_of_speech="adjective"),
                         o.vlan_group,  # may be None
-                        o.location,  # may be None
                     ),
                 )
             ]
@@ -220,25 +218,22 @@ class VLANFactory(PrimaryModelFactory):
     has_vlan_group = NautobotBoolIterator()
     vlan_group = factory.Maybe("has_vlan_group", random_instance(VLANGroup, allow_null=False), None)
 
-    has_location = NautobotBoolIterator()
-    location = factory.Maybe(
-        "has_vlan_group",
-        factory.LazyAttribute(lambda vlan: vlan.vlan_group.location),
-        factory.Maybe("has_location", random_instance(Location, allow_null=False), None),
-    )
-
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
+
+    @factory.post_generation
+    def locations(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.locations.set(extracted)
+            else:
+                # TODO (timizuo): Set the current location of content_ty;e 
+                self.locations.set(get_random_instances(lambda: Location.objects.all(), minimum=1))
 
 
 class VLANGetOrCreateFactory(VLANFactory):
     class Meta:
-        django_get_or_create = ("vlan_group", "location", "tenant")
-
-    vlan_group = factory.SubFactory(
-        VLANGroupGetOrCreateFactory,
-        location=factory.SelfAttribute("..location"),
-    )
+        django_get_or_create = ("vlan_group", "tenant")
 
 
 class VRFGetOrCreateFactory(VRFFactory):
@@ -313,7 +308,6 @@ class PrefixFactory(PrimaryModelFactory):
         "has_vlan",
         factory.SubFactory(
             VLANGetOrCreateFactory,
-            location=factory.SelfAttribute("..location"),
             tenant=factory.SelfAttribute("..tenant"),
         ),
         None,

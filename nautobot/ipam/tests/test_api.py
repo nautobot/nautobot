@@ -703,7 +703,6 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "name": "VLAN 4 with a name much longer than 64 characters to verify that we increased the limit",
                 "vlan_group": vlan_groups[0].pk,
                 "status": statuses[0].pk,
-                "location": vlan_groups[0].location.pk,
                 "locations": [locations[0].pk, locations[1].pk],
             },
             {
@@ -711,7 +710,6 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "name": "VLAN 5",
                 "vlan_group": vlan_groups[0].pk,
                 "status": statuses[0].pk,
-                "location": vlan_groups[0].location.pk,
                 "locations": [locations[2].pk, locations[3].pk],
             },
             {
@@ -719,7 +717,6 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "name": "VLAN 6",
                 "vlan_group": vlan_groups[0].pk,
                 "status": statuses[0].pk,
-                "location": vlan_groups[0].location.pk,
                 "locations": [locations[0].pk, locations[3].pk],
             },
         ]

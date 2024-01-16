@@ -5,7 +5,7 @@ import netaddr
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError, MultipleObjectsReturned
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q
 from django.utils.functional import cached_property
 
@@ -1341,7 +1341,7 @@ class VLAN(PrimaryModel):
     description = models.CharField(max_length=200, blank=True)
 
     clone_fields = [
-        "location",
+        "locations",
         "vlan_group",
         "tenant",
         "status",
@@ -1368,6 +1368,19 @@ class VLAN(PrimaryModel):
     def __str__(self):
         return self.display or super().__str__()
 
+    def __init__(self, *args, **kwargs):
+        # TODO: Remove self._location, location @property once legacy `location` field is no longer supported
+        self._location = kwargs.pop("location", None)
+        super().__init__(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        # Using atomic here cause legacy `location` is inserted into `locations`() which might result in an error.
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            if self._location:
+                self.location = self._location
+
+
     @property
     def location(self):
         if self.locations.count() > 1:
@@ -1392,31 +1405,6 @@ class VLAN(PrimaryModel):
             for location in location_with_ancestors.ancestors(include_self=include_self)
         ]
 
-    def clean(self):
-        super().clean()
-
-        # Validate location
-        # TODO: Should we still keep this check:
-        #   refer to Johns comment `https://github.com/nautobot/nautobot/issues/4412#issuecomment-1769311166`
-        #   >> "John will ask around to see if the group location constraint can just be ripped out."
-        # if self.location is not None:
-        #     if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
-        #         raise ValidationError(
-        #             {"location": f'VLANs may not associate to locations of type "{self.location.location_type}".'}
-        #         )
-
-        # Validate VLAN group
-        if (
-            self.vlan_group is not None
-            and self.locations.exists()
-            and self.vlan_group.location is not None
-            and self.vlan_group.location not in self.location_ancestors(include_self=True)
-        ):
-            raise ValidationError(
-                {
-                    "vlan_group": f'The assigned group belongs to a location that does not include location "{self.location}".'
-                }
-            )
 
     @property
     def display(self):

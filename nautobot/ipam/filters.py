@@ -481,7 +481,7 @@ class VLANFilterSet(
         if not devices.exists():
             return queryset.none()
         location_ids = list(devices.values_list("location__id", flat=True))
-        return queryset.filter(Q(location__isnull=True) | Q(location__in=location_ids))
+        return queryset.filter(Q(locations__isnull=True) | Q(locations__in=location_ids))
 
 
 class ServiceFilterSet(NautobotFilterSet):

@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ValidationError
 
 from nautobot.core.forms import (
     add_blank_choice,
@@ -687,6 +688,9 @@ class VLANForm(NautobotModelForm, TenancyForm):
         required=False,
         label="Locations",
         null_option="None",
+        query_params={
+            "content_type": VLAN._meta.label_lower
+        }
     )
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
@@ -716,15 +720,32 @@ class VLANForm(NautobotModelForm, TenancyForm):
             "role": "The primary function of this VLAN",
         }
 
+    def clean(self):
+        try:
+            return super().clean()
+        except ValidationError as e:
+            print("\n\n=====> VALIDATION ERROR")
+            raise forms.ValidationError(e.message_dict)
+            
+
 
 class VLANBulkEditForm(
     TagsBulkEditFormMixin,
-    LocatableModelBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
     RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=VLAN.objects.all(), widget=forms.MultipleHiddenInput())
+    # TODO (timizuo): Should we have locations in VLAN bulk create
+    # locations = DynamicModelMultipleChoiceField(
+    #     queryset=Location.objects.all(),
+    #     required=False,
+    #     label="Locations",
+    #     null_option="None",
+    #     query_params={
+    #         "content_type": VLAN._meta.label_lower
+    #     }
+    # )
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
@@ -736,7 +757,6 @@ class VLANBulkEditForm(
     class Meta:
         model = VLAN
         nullable_fields = [
-            "location",
             "vlan_group",
             "tenant",
             "description",
