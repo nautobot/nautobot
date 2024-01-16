@@ -237,8 +237,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
             context["created_by"] = created_by
             context["last_updated_by"] = last_updated_by
-            # TODO: provide some consistent ordering of ContactAssociations?
-            associated_contacts = instance.associated_contacts.all()
+            associated_contacts = instance.associated_contacts.restrict(request.user, "view").order_by("role__name")
             if is_contact_associatable_model:
                 context["associated_contacts_table"] = AssociatedContactsTable(data=associated_contacts)
             else:

@@ -137,10 +137,14 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             }
             if self.is_contact_associatable_model:
                 paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-                associations = ContactAssociation.objects.filter(
-                    associated_object_id=instance.id,
-                    associated_object_type=content_type,
-                ).order_by("role__name")
+                associations = (
+                    ContactAssociation.objects.filter(
+                        associated_object_id=instance.id,
+                        associated_object_type=content_type,
+                    )
+                    .restrict(request.user, "view")
+                    .order_by("role__name")
+                )
                 associations_table = AssociatedContactsTable(associations, orderable=False)
                 RequestConfig(request, paginate).configure(associations_table)
                 associations_table.columns.show("pk")
