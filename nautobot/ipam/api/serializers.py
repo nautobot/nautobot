@@ -105,8 +105,6 @@ class VLANGroupSerializer(NautobotModelSerializer):
 class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     prefix_count = serializers.IntegerField(read_only=True)
 
-    # TODO (timizuo): Make sure `location` is not part of the fields as we use `__all__`
-
     class Meta:
         model = VLAN
         # TODO(jathan): These were taken from VLANDetailTable and not VLANTable. Let's make sure
@@ -141,17 +139,26 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 class VLANLegacySerializer(VLANSerializer):
     class Meta:
         model = VLAN
-        fields = "__all__"
-        list_display_fields = [
+        fields = [
+            "id",
+            "object_type",
+            "display",
+            "url",
+            "natural_slug",
+            "prefix_count",
             "vid",
-            "location",
-            "vlan_group",
             "name",
-            "prefixes",
-            "tenant",
+            "description",
+            "vlan_group",
             "status",
             "role",
-            "description",
+            "tenant",
+            "location",
+            "created",
+            "last_updated",
+            "tags",
+            "notes_url",
+            "custom_fields",
         ]
         validators = []
 

@@ -688,7 +688,6 @@ class VLANGroupTable(BaseTable):
 class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     vid = tables.TemplateColumn(template_code=VLAN_LINK, verbose_name="ID")
-    location = tables.Column(linkify=True)
     vlan_group = tables.Column(linkify=True)
     tenant = TenantColumn()
 
@@ -697,7 +696,6 @@ class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
         fields = (
             "pk",
             "vid",
-            "location",
             "vlan_group",
             "name",
             "tenant",
@@ -719,7 +717,6 @@ class VLANDetailTable(VLANTable):
         fields = (
             "pk",
             "vid",
-            "location",
             "vlan_group",
             "name",
             "prefixes",
@@ -732,7 +729,6 @@ class VLANDetailTable(VLANTable):
         default_columns = (
             "pk",
             "vid",
-            "location",
             "vlan_group",
             "name",
             "prefixes",

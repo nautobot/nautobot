@@ -234,7 +234,7 @@ class LocationView(generic.ObjectView):
             "prefix_count": Prefix.objects.restrict(request.user, "view")
             .filter(location__in=related_locations)
             .count(),
-            "vlan_count": VLAN.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
+            "vlan_count": VLAN.objects.restrict(request.user, "view").filter(locations__in=related_locations).distinct().count(),
             "circuit_count": Circuit.objects.restrict(request.user, "view")
             .filter(circuit_terminations__location__in=related_locations)
             .count(),

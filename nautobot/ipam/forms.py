@@ -691,8 +691,6 @@ class VLANForm(NautobotModelForm, TenancyForm):
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
-        # TODO (timizuo): Check back, this is most likely not valid
-        query_params={"location": "$location"},
     )
 
     class Meta:
@@ -747,7 +745,6 @@ class VLANBulkEditForm(
 
 class VLANFilterForm(
     NautobotFilterForm,
-    LocatableModelFilterFormMixin,
     TenancyFilterForm,
     StatusModelFilterFormMixin,
     RoleModelFilterFormMixin,
@@ -755,7 +752,7 @@ class VLANFilterForm(
     model = VLAN
     field_order = [
         "q",
-        "location",
+        "locations",
         "group_id",
         "status",
         "role",
@@ -768,7 +765,6 @@ class VLANFilterForm(
         required=False,
         label="VLAN group",
         null_option="None",
-        query_params={"location": "$location"},
     )
     tags = TagFilterField(model)
 

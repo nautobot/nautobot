@@ -325,7 +325,6 @@ class VLANViewSet(NautobotModelViewSet):
     queryset = (
         VLAN.objects.select_related(
             "vlan_group",
-            "locations",
             "status",
             "role",
             "tenant",
