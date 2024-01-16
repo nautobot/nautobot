@@ -1050,6 +1050,9 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         if not table.rows:
             messages.warning(request, f"No {model._meta.verbose_name_plural} were selected.")
             return redirect(self.get_return_url(request))
+        # Hide actions column if present
+        if "actions" in table.columns:
+            table.columns.hide("actions")
 
         context = {
             "form": form,
@@ -1243,6 +1246,9 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 f"No {model._meta.verbose_name_plural} were selected for deletion.",
             )
             return redirect(self.get_return_url(request))
+        # Hide actions column if present
+        if "actions" in table.columns:
+            table.columns.hide("actions")
 
         context = {
             "form": form,
