@@ -35,6 +35,7 @@ from nautobot.dcim.models import (
     DeviceType,
     FrontPort,
     FrontPortTemplate,
+    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
@@ -268,6 +269,19 @@ class ManufacturerViewSet(NautobotModelViewSet):
     )
     serializer_class = serializers.ManufacturerSerializer
     filterset_class = filters.ManufacturerFilterSet
+
+
+#
+# Hardware Family
+#
+
+
+class HardwareFamilyViewSet(NautobotModelViewSet):
+    queryset = HardwareFamily.objects.annotate(
+        device_type_count=count_related(DeviceType, "hardware_family"),
+    )
+    serializer_class = serializers.HardwareFamilySerializer
+    filterset_class = filters.HardwareFamilyFilterSet
 
 
 #

@@ -50,6 +50,7 @@ from nautobot.dcim.models import (
     DeviceType,
     FrontPort,
     FrontPortTemplate,
+    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
@@ -566,6 +567,30 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertContains(response, total_utilization_html, html=True)
 
 
+class HardwareFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = HardwareFamily
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.form_data = {
+            "name": "New Hardware Family",
+            "description": "A new hardware family",
+        }
+        cls.bulk_edit_data = {
+            "description": "A new hardware family",
+        }
+        cls.csv_data = (
+            "name,description",
+            "Hardware Family 4,Fourth hardware family",
+            "Hardware Family 5,Fifth hardware family",
+            "Hardware Family 6,Sixth hardware family",
+            "Hardware Family 7,Seventh hardware family",
+        )
+        HardwareFamily.objects.create(name="Deletable Hardware Family 1")
+        HardwareFamily.objects.create(name="Deletable Hardware Family 2", description="Delete this one")
+        HardwareFamily.objects.create(name="Deletable Hardware Family 3")
+
+
 class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = Manufacturer
 
@@ -617,6 +642,7 @@ class DeviceTypeTestCase(
 
         cls.form_data = {
             "manufacturer": manufacturers[1].pk,
+            "hardware_family": None,
             "model": "Device Type X",
             "part_number": "123ABC",
             "u_height": 2,
@@ -751,7 +777,6 @@ device-bays:
         form_data = {"data": IMPORT_DATA, "format": "yaml"}
         response = self.client.post(reverse("dcim:devicetype_import"), data=form_data, follow=True)
         self.assertHttpStatus(response, 200)
-
         dt = DeviceType.objects.get(model="TEST-1000")
         self.assertEqual(dt.comments, "test comment")
 

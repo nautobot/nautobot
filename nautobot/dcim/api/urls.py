@@ -15,6 +15,7 @@ router.register("racks", views.RackViewSet)
 router.register("rack-reservations", views.RackReservationViewSet)
 
 # Device types
+router.register("hardware-families", views.HardwareFamilyViewSet)
 router.register("manufacturers", views.ManufacturerViewSet)
 router.register("device-types", views.DeviceTypeViewSet)
 
