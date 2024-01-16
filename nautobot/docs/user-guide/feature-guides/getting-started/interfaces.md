@@ -32,12 +32,12 @@ Creating a Device Type is very similar to [creating a Device](creating-devices.m
 
 To create a Device Type:
 
-1. Click on **Devices** in the top navigation menu
-2. Click on the **Device Types** option in the drop-down menu
-3. On the Device Types page `Add +` a new Device Type
+1. Click on **Devices** on the left sidebar.
+2. Locate **Device Types** option in the drop-down menu
+3. Click on the `+` button to add a new Device Type
     * A Device Type requires a **Manufacturer** object to be created prior to creating the Device Type
     * Device Type requires **Manufacturer**, **Model**, and **Height** values at creation
-    * In this example, name the Device Type `MX240-edge`
+    * In this example, name the Device Type `APDU9941`
 4. On the home page for the specific Device Type, click on `+Add Components` and select `Interfaces`
 
 ![Create a device type](../images/getting-started-nautobot-ui/15-create-device-type.png)
@@ -71,10 +71,10 @@ see that the **Interfaces** tab now has the expected 21 Interfaces listed.
 
 Create a new Device with these attributes:
 
-* **Name** = `edge2.van1`
-* **Device role** select `Customer Edge`
-* **Device type** select `Juniper MX240-edge` (this will show up as a fusion of the **Manufacturer** (`Juniper`) for the Device Type and the Device Type (`MX240-edge`) Names)
-* **Location** select `Vancouver 1`
+* **Name** = `ang01-edge-01`
+* **Role** select `edge`
+* **Device type** select `APC APDU9941` (this will show up as a fusion of the **Manufacturer** (`APC`) for the Device Type and the Device Type (`APDU9941`) Names)
+* **Location** select `ANGO1`
 
 On the main screen for the new *Device*, you will see an **Interfaces** tab with the expected Interfaces from the *Device Type* template:
 
@@ -90,7 +90,7 @@ As of this writing (Nautobot 1.0.3), LAG component Interfaces cannot be assigned
 edit this new Device, specifying the component `ae0` Interfaces.
 
 1. On the new Device's main page, select the appropriate Interfaces (`xe-0/0/9` and `xe-1/0/9`) to be added to `ae0` and click on the `Edit` button
-2. On the `Editing Interfaces` form, select `ae0` in the `Parent LAG` drop-down selector
+2. On the `Editing Interfaces` form, select `ae0` in the `Lag` drop-down selector
 3. Click on `Apply`; you will be taken back to the main page for the Device
 
 ![Edit LAG interface](../images/getting-started-nautobot-ui/19-edit-ints-for-lag.png)

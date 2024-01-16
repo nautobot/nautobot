@@ -6,13 +6,13 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ColorField
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.extras.models.change_logging import ChangeLoggedModel
 
 # Importing CustomFieldModel, ChangeLoggedModel, RelationshipModel from  nautobot.extras.models
 # caused circular import error
 from nautobot.extras.models.customfields import CustomFieldModel
-from nautobot.extras.models.change_logging import ChangeLoggedModel
-from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.models.mixins import DynamicGroupMixin, NotesMixin
+from nautobot.extras.models.relationships import RelationshipModel
 
 
 class ContentTypeRelatedQuerySet(RestrictedQuerySet):

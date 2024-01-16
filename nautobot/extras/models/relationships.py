@@ -1,8 +1,9 @@
+from functools import lru_cache
 import logging
 
 from django import forms
-from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
@@ -21,11 +22,10 @@ from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_undersc
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
-from nautobot.extras.choices import RelationshipTypeChoices, RelationshipRequiredSideChoices, RelationshipSideChoices
-from nautobot.extras.utils import FeatureQuery, check_if_key_is_graphql_safe, extras_features
+from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
-
+from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
 
 logger = logging.getLogger(__name__)
 
@@ -329,15 +329,55 @@ class RelationshipModel(models.Model):
 class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model):
+    @lru_cache(maxsize=128)
+    def get_for_model(self, model, hidden=None):
         """
         Return all Relationships assigned to the given model.
+
+        Args:
+            model (Model): The django model to which relationships are registered
+            hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
+
+        Returns a tuple of source and destination scoped relationship querysets.
+        """
+        return (
+            self.get_for_model_source(model, hidden=hidden),
+            self.get_for_model_destination(model, hidden=hidden),
+        )
+
+    @lru_cache(maxsize=128)
+    def get_for_model_source(self, model, hidden=None):
+        """
+        Return all Relationships assigned to the given model for the source side only.
+
+        Args:
+            model (Model): The django model to which relationships are registered
+            hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
         """
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        return (
-            self.get_queryset().filter(source_type=content_type),
-            self.get_queryset().filter(destination_type=content_type),
-        )
+        result = (
+            self.get_queryset().filter(source_type=content_type).select_related("source_type", "destination_type")
+        )  # You almost always will want access to the source_type/destination_type
+        if hidden is not None:
+            result = result.filter(source_hidden=hidden)
+        return result
+
+    @lru_cache(maxsize=128)
+    def get_for_model_destination(self, model, hidden=None):
+        """
+        Return all Relationships assigned to the given model for the destination side only.
+
+        Args:
+            model (Model): The django model to which relationships are registered
+            hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
+        """
+        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
+        result = (
+            self.get_queryset().filter(destination_type=content_type).select_related("source_type", "destination_type")
+        )  # You almost always will want access to the source_type/destination_type
+        if hidden is not None:
+            result = result.filter(destination_hidden=hidden)
+        return result
 
     def get_required_for_model(self, model):
         """

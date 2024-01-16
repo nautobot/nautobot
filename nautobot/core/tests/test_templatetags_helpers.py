@@ -3,12 +3,13 @@ from unittest import skipIf
 from constance.test import override_config
 from django.conf import settings
 from django.templatetags.static import static
-from django.test import TestCase, override_settings
-from example_plugin.models import AnotherExampleModel, ExampleModel
+from django.test import override_settings, TestCase
 
 from nautobot.core.templatetags import helpers
 from nautobot.dcim import models
 from nautobot.ipam.models import VLAN
+
+from example_plugin.models import AnotherExampleModel, ExampleModel
 
 
 @skipIf(
@@ -117,6 +118,20 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
         self.assertEqual(helpers.validated_viewname(ExampleModel, "list"), "plugins:example_plugin:examplemodel_list")
         self.assertIsNone(helpers.validated_viewname(ExampleModel, "notvalid"))
+
+    def test_validated_api_viewname(self):
+        location = models.Location.objects.first()
+
+        self.assertEqual(helpers.validated_api_viewname(location, "list"), "dcim-api:location-list")
+        self.assertIsNone(helpers.validated_api_viewname(models.Location, "notvalid"))
+
+        self.assertEqual(
+            helpers.validated_api_viewname(ExampleModel, "list"), "plugins-api:example_plugin-api:examplemodel-list"
+        )
+        self.assertIsNone(helpers.validated_api_viewname(ExampleModel, "notvalid"))
+
+        # Assert detail views get validated as well
+        self.assertEqual(helpers.validated_api_viewname(location, "detail"), "dcim-api:location-detail")
 
     def test_bettertitle(self):
         self.assertEqual(helpers.bettertitle("myTITle"), "MyTITle")

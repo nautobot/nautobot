@@ -1,19 +1,18 @@
 from decimal import Decimal
 import unittest
 
-import pytz
-import yaml
-
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.test import override_settings
 from django.urls import reverse
 from netaddr import EUI
+import pytz
+import yaml
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
-from nautobot.core.testing import ViewTestCases, extract_page_body, ModelViewTestCase, post_data
+from nautobot.core.testing import extract_page_body, ModelViewTestCase, post_data, ViewTestCases
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
@@ -52,20 +51,20 @@ from nautobot.dcim.models import (
     FrontPort,
     FrontPortTemplate,
     Interface,
-    InterfaceTemplate,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
-    Manufacturer,
+    InterfaceTemplate,
     InventoryItem,
     Location,
     LocationType,
+    Manufacturer,
     Platform,
     PowerFeed,
-    PowerPort,
-    PowerPortTemplate,
     PowerOutlet,
     PowerOutletTemplate,
     PowerPanel,
+    PowerPort,
+    PowerPortTemplate,
     Rack,
     RackGroup,
     RackReservation,
@@ -86,7 +85,7 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.ipam.choices import IPAddressTypeChoices
-from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
@@ -153,6 +152,8 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             # ... or as a PK value
             f'Intermediate 4,{lt1.pk},Another intermediate type,"ipam.prefix,dcim.device",false',
             "Root 3,,Another root type,,true",
+            # We also support later rows having back-references to previous rows now
+            "Leaf 3,Intermediate 3,Another leaf type,,FALSE",
         )
 
     def _get_queryset(self):
@@ -202,11 +203,13 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,location_type,parent,status,tenant,description",
+            "name,location_type,parent__name,status,tenant,description",
             # Mix and match composite keys and PKs to confirm that the serializer handles both correctly
-            f'Root 3,"{lt1.name}",,{status.name},,',
-            f'Intermediate 2,"{lt2.pk}",{loc2.composite_key},{status.pk},"{tenant.name}",Hello world!',
-            f'Leaf 2,"{lt3.name}",{loc3.pk},{status.name},"{tenant.name}",',
+            f'Root 3,"{lt1.name}",NoObject,{status.name},,',
+            f'Intermediate 2,"{lt2.pk}",{loc2.name},{status.pk},"{tenant.name}",Hello world!',
+            f'Leaf 2,"{lt3.name}",{loc3.name},{status.name},"{tenant.name}",',
+            # Back-reference to an instance that didn't exist until processing previous lines of this data
+            f'Leaf 3,"{lt3.pk}",Intermediate 2,{status.name},"{tenant.name}",',
         )
 
         cls.bulk_edit_data = {
@@ -571,6 +574,7 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
+        Device.objects.all().delete()
         DeviceType.objects.all().delete()
         Platform.objects.all().delete()
 
@@ -603,6 +607,7 @@ class DeviceTypeTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        Device.objects.all().delete()
         manufacturers = Manufacturer.objects.all()[:2]
 
         DeviceType.objects.create(model="Test Device Type 1", manufacturer=manufacturers[0])
@@ -1181,6 +1186,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        Device.objects.all().delete()
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
         rack_group = RackGroup.objects.create(location=locations[0], name="Rack Group 1")
@@ -1388,7 +1394,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_interfaces(self):
-        device = Device.objects.first()
+        device = Device.objects.filter(interfaces__isnull=False).first()
         self.add_permissions("ipam.add_ipaddress", "dcim.change_interface")
 
         url = reverse("dcim:device_interfaces", kwargs={"pk": device.pk})
@@ -1540,8 +1546,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.add_permissions("dcim.change_device")
 
         # Create an interface and assign an IP to it.
-        device = Device.objects.first()
-        interface = Interface.objects.first()
+        device = Device.objects.filter(interfaces__isnull=False).first()
+        interface = device.interfaces.first()
         namespace = Namespace.objects.first()
         Prefix.objects.create(prefix="1.2.3.0/24", namespace=namespace, status=self.prefix_status)
         ip_address = IPAddress.objects.create(address="1.2.3.4/32", namespace=namespace, status=self.ipaddr_status)
@@ -1822,6 +1828,9 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     @classmethod
     def setUpTestData(cls):
         device = create_test_device("Device 1")
+        vrfs = list(VRF.objects.all()[:3])
+        for vrf in vrfs:
+            vrf.add_device(device)
 
         statuses = Status.objects.get_for_model(Interface)
         status_active = statuses[0]
@@ -1893,6 +1902,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "tags": [t.pk for t in Tag.objects.get_for_model(Interface)],
             "status": status_active.pk,
+            "vrf": vrfs[0].pk,
         }
 
         cls.bulk_add_data = {
@@ -1907,6 +1917,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "An Interface",
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "tags": [],
+            "vrf": vrfs[1].pk,
         }
 
         cls.bulk_edit_data = {
@@ -1921,6 +1932,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "status": status_active.pk,
+            "vrf": vrfs[2].pk,
         }
 
         cls.csv_data = (

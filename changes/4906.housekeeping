@@ -1,0 +1,2 @@
+Added automatic superuser creation environment variables to docker development environment.
+Updated VS Code Dev Containers configuration and documentation.

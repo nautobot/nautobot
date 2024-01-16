@@ -2,9 +2,9 @@ from django.urls import path
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.dcim.views import CableCreateView, PathTraceView
+
 from . import views
 from .models import CircuitTermination
-
 
 app_name = "circuits"
 router = NautobotUIViewSetRouter()

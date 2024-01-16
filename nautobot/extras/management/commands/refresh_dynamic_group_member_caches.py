@@ -2,10 +2,10 @@ from django.apps import apps
 from django.core.cache import cache
 from django.core.management.base import BaseCommand
 
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.models import DynamicGroup
 from nautobot.extras.querysets import DynamicGroupQuerySet
 from nautobot.extras.registry import registry
-from nautobot.core.utils.config import get_settings_or_config
 
 
 class Command(BaseCommand):

@@ -1,2 +1,0 @@
-Fixed incorrect link in TenantGroup template.
-Fixed ConfigContext not applied to nested TenantGroup objects.

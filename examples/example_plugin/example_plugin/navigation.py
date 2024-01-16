@@ -2,10 +2,8 @@ from nautobot.apps.ui import (
     NavMenuAddButton,
     NavMenuGroup,
     NavMenuItem,
-    NavMenuImportButton,
     NavMenuTab,
 )
-
 
 menu_items = (
     NavMenuTab(
@@ -25,10 +23,6 @@ menu_items = (
                                 permissions=[
                                     "example_plugin.add_examplemodel",
                                 ],
-                            ),
-                            NavMenuImportButton(
-                                link="plugins:example_plugin:examplemodel_import",
-                                permissions=["example_plugin.add_examplemodel"],
                             ),
                         ),
                     ),
@@ -67,10 +61,6 @@ menu_items = (
                                     "example_plugin.add_examplemodel",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="plugins:example_plugin:examplemodel_import",
-                                permissions=["example_plugin.add_examplemodel"],
-                            ),
                         ),
                     ),
                 ),
@@ -94,10 +84,6 @@ menu_items = (
                                 permissions=[
                                     "example_plugin.add_examplemodel",
                                 ],
-                            ),
-                            NavMenuImportButton(
-                                link="plugins:example_plugin:examplemodel_import",
-                                permissions=["example_plugin.add_examplemodel"],
                             ),
                         ),
                     ),

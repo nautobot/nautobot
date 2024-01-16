@@ -11,7 +11,6 @@ from nautobot.dcim import choices as dcim_choices
 from nautobot.ipam import choices as ipam_choices
 from nautobot.virtualization import choices as vm_choices
 
-
 # List of 2-tuples of (model_path, choiceset)
 # Add new mappings here as other models are supported.
 CHOICESET_MAP = {

@@ -1,6 +1,5 @@
 from collections import OrderedDict
 
-import yaml
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -11,15 +10,18 @@ from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
 from django.utils.functional import cached_property, classproperty
 from django.utils.html import format_html
+import yaml
 
 from nautobot.core.models import BaseManager
 from nautobot.core.models.fields import NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
+from nautobot.dcim.utils import get_all_network_driver_mappings
 from nautobot.extras.models import ConfigContextModel, RoleField, StatusField
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
+
 from .device_components import (
     ConsolePort,
     ConsoleServerPort,
@@ -30,8 +32,6 @@ from .device_components import (
     PowerPort,
     RearPort,
 )
-from nautobot.dcim.utils import get_all_network_driver_mappings
-
 
 __all__ = (
     "Device",
@@ -408,7 +408,12 @@ class Device(PrimaryModel, ConfigContextModel):
         blank=True,
         null=True,
     )
-    name = models.CharField(max_length=64, blank=True, null=True, db_index=True)
+    name = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- intentional, see below
+        max_length=64,
+        blank=True,
+        null=True,  # because name is part of uniqueness constraint but is optional
+        db_index=True,
+    )
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, null=True, db_index=True)
     serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number", db_index=True)
     asset_tag = models.CharField(

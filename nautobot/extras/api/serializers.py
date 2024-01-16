@@ -30,15 +30,15 @@ from nautobot.dcim.api.serializers import (
     RackSerializer,
 )
 from nautobot.extras import choices, models
+from nautobot.extras.api.mixins import (
+    TaggedModelSerializerMixin,
+)
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
     JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
-)
-from nautobot.extras.api.mixins import (
-    TaggedModelSerializerMixin,
 )
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
@@ -51,6 +51,8 @@ from nautobot.extras.models import (
     DynamicGroup,
     DynamicGroupMembership,
     ExportTemplate,
+    ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -294,6 +296,28 @@ class ExportTemplateSerializer(RelationshipModelSerializerMixin, ValidatedModelS
 
 
 #
+# External integrations
+#
+
+
+class ExternalIntegrationSerializer(NautobotModelSerializer):
+    class Meta:
+        model = ExternalIntegration
+        fields = "__all__"
+
+
+#
+# File proxies
+#
+
+
+class FileProxySerializer(BaseModelSerializer):
+    class Meta:
+        model = FileProxy
+        exclude = ["file"]
+
+
+#
 # Git repositories
 #
 
@@ -318,7 +342,7 @@ class GitRepositorySerializer(NautobotModelSerializer):
 
 
 class GraphQLQuerySerializer(ValidatedModelSerializer, NotesSerializerMixin):
-    variables = serializers.DictField(required=False, allow_null=True, default={})
+    variables = serializers.DictField(read_only=True)
 
     class Meta:
         model = GraphQLQuery
@@ -444,6 +468,15 @@ class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
     class Meta:
         model = JobResult
         fields = "__all__"
+        extra_kwargs = {
+            "files": {"read_only": True},
+        }
+
+    def get_field_names(self, declared_fields, info):
+        """Add reverse relation to related FileProxy objects."""
+        fields = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(fields, "files")
+        return fields
 
 
 class JobRunResponseSerializer(serializers.Serializer):

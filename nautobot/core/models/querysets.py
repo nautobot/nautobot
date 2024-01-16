@@ -6,17 +6,23 @@ from nautobot.core.utils import permissions
 from nautobot.core.utils.data import merge_dicts_without_collision
 
 
-def count_related(model, field):
+def count_related(model, field, *, filter_dict=None):
     """
     Return a Subquery suitable for annotating a child object count.
+
+    Args:
+        model (Model): The related model to aggregate
+        field (str): The field on the related model which points back to the OuterRef model
+        filter_dict (dict): Optional dict of filter key/value pairs to limit the Subquery
     """
+    filters = {field: OuterRef("pk")}
+    if filter_dict:
+        filters.update(filter_dict)
 
     manager = model.objects
     if hasattr(model.objects, "without_tree_fields"):
         manager = manager.without_tree_fields()
-    subquery = Subquery(
-        manager.filter(**{field: OuterRef("pk")}).order_by().values(field).annotate(c=Count("*")).values("c")
-    )
+    subquery = Subquery(manager.filter(**filters).order_by().values(field).annotate(c=Count("*")).values("c"))
 
     return Coalesce(subquery, 0)
 

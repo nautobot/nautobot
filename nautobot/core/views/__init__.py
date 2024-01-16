@@ -3,21 +3,24 @@ import platform
 import sys
 import time
 
+from db_file_storage.views import get_file
 from django.apps import apps
-import prometheus_client
 from django.conf import settings
-from django.contrib.auth.mixins import AccessMixin
-from django.http import HttpResponseServerError, JsonResponse, HttpResponseForbidden, HttpResponse
-from django.shortcuts import redirect, render
+from django.contrib.auth.decorators import permission_required
+from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin
+from django.contrib.contenttypes.models import ContentType
+from django.http import HttpResponse, HttpResponseForbidden, HttpResponseServerError, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import resolve, reverse
+from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
-from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.generic import TemplateView, View
-from packaging import version
 from graphene_django.views import GraphQLView
+from packaging import version
+import prometheus_client
 from prometheus_client import multiprocess
 from prometheus_client.metrics_core import GaugeMetricFamily
 from prometheus_client.registry import Collector
@@ -25,11 +28,11 @@ from prometheus_client.registry import Collector
 from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_route_for_model
-from nautobot.extras.models import GraphQLQuery
-from nautobot.extras.registry import registry
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.extras.forms import GraphQLQueryForm
+from nautobot.extras.models import FileProxy, GraphQLQuery, Status
+from nautobot.extras.registry import registry
 
 
 class HomeView(AccessMixin, TemplateView):
@@ -58,8 +61,8 @@ class HomeView(AccessMixin, TemplateView):
         return template.render(additional_context)
 
     def get(self, request, *args, **kwargs):
-        # Redirect user to login page if not authenticated and HIDE_RESTRICTED_UI is set to True
-        if not request.user.is_authenticated and get_settings_or_config("HIDE_RESTRICTED_UI"):
+        # Redirect user to login page if not authenticated
+        if not request.user.is_authenticated:
             return self.handle_no_permission()
         # Check whether a new release is available. (Only for staff/superusers.)
         new_release = None
@@ -108,6 +111,16 @@ class HomeView(AccessMixin, TemplateView):
                                 )
 
         return self.render_to_response(context)
+
+
+class ThemePreviewView(LoginRequiredMixin, TemplateView):
+    template_name = "utilities/theme_preview.html"
+
+    def get_context_data(self, **kwargs):
+        return {
+            "content_type": ContentType.objects.get_for_model(Status),
+            "object": Status.objects.first(),
+        }
 
 
 class SearchView(AccessMixin, View):
@@ -242,7 +255,7 @@ def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
 
 class CustomGraphQLView(GraphQLView):
     def render_graphiql(self, request, **data):
-        if not request.user.is_authenticated and get_settings_or_config("HIDE_RESTRICTED_UI"):
+        if not request.user.is_authenticated:
             graphql_url = reverse("graphql")
             login_url = reverse(settings.LOGIN_URL)
             return redirect(f"{login_url}?next={graphql_url}")
@@ -294,3 +307,13 @@ def nautobot_metrics_view(request):
         pass
     metrics_page = prometheus_client.generate_latest(prometheus_registry)
     return HttpResponse(metrics_page, content_type=prometheus_client.CONTENT_TYPE_LATEST)
+
+
+@permission_required(get_permission_for_model(FileProxy, "view"), raise_exception=True)
+def get_file_with_authorization(request, *args, **kwargs):
+    """Patch db_file_storage view with authentication."""
+    # Make sure user has permissions
+    queryset = FileProxy.objects.restrict(request.user, "view")
+    get_object_or_404(queryset, file=request.GET.get("name"))
+
+    return get_file(request, *args, **kwargs)

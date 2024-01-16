@@ -1,7 +1,7 @@
-import django_filters
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+import django_filters
 
 from nautobot.core.filters import (
     BaseFilterSet,
@@ -9,6 +9,7 @@ from nautobot.core.filters import (
     ContentTypeMultipleChoiceFilter,
     MultiValueUUIDFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
+    RelatedMembershipBooleanFilter,
     SearchFilter,
 )
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
@@ -33,8 +34,8 @@ from nautobot.extras.filters.customfields import (
 )
 from nautobot.extras.filters.mixins import (
     ConfigContextRoleFilter,
-    CustomFieldModelFilterSetMixin,
     CreatedUpdatedModelFilterSetMixin,
+    CustomFieldModelFilterSetMixin,
     LocalContextModelFilterSetMixin,
     RelationshipFilter,
     RelationshipModelFilterSetMixin,
@@ -52,6 +53,8 @@ from nautobot.extras.models import (
     DynamicGroup,
     DynamicGroupMembership,
     ExportTemplate,
+    ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -77,7 +80,6 @@ from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleMod
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup
 
-
 __all__ = (
     "ComputedFieldFilterSet",
     "ConfigContextFilterSet",
@@ -101,6 +103,7 @@ __all__ = (
     "DynamicGroupFilterSet",
     "DynamicGroupMembershipFilterSet",
     "ExportTemplateFilterSet",
+    "FileProxyFilterSet",
     "GitRepositoryFilterSet",
     "GraphQLQueryFilterSet",
     "ImageAttachmentFilterSet",
@@ -482,6 +485,54 @@ class ExportTemplateFilterSet(BaseFilterSet):
     class Meta:
         model = ExportTemplate
         fields = ["id", "content_type", "owner_content_type", "owner_object_id", "name"]
+
+
+#
+# External integrations
+#
+
+
+class ExternalIntegrationFilterSet(NautobotFilterSet):
+    has_secrets_group = RelatedMembershipBooleanFilter(
+        field_name="secrets_group",
+        label="Has secrets group",
+    )
+    secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SecretsGroup.objects.all(),
+        label="Secrets group (ID or name)",
+    )
+
+    class Meta:
+        model = ExternalIntegration
+        fields = "__all__"
+
+
+#
+# File proxies
+#
+
+
+class FileProxyFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "job_result__job_model__name": "icontains",
+        },
+    )
+    job = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="job_result__job_model",
+        to_field_name="name",
+        queryset=Job.objects.all(),
+        label="Job (name or ID)",
+    )
+    job_result_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=JobResult.objects.all(),
+        label="Job Result (ID)",
+    )
+
+    class Meta:
+        model = FileProxy
+        fields = ["id", "name", "uploaded_at", "job", "job_result_id"]
 
 
 #

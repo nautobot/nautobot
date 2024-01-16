@@ -1,5 +1,4 @@
 from nautobot.core.celery import register_jobs
-from nautobot.extras.models import Role
 from nautobot.extras.jobs import (
     BooleanVar,
     ChoiceVar,
@@ -9,13 +8,14 @@ from nautobot.extras.jobs import (
     IPAddressWithMaskVar,
     IPNetworkVar,
     Job,
+    JSONVar,
     MultiChoiceVar,
     MultiObjectVar,
     ObjectVar,
     StringVar,
     TextVar,
 )
-
+from nautobot.extras.models import Role
 
 CHOICES = (("ff0000", "Red"), ("00ff00", "Green"), ("0000ff", "Blue"))
 
@@ -68,6 +68,10 @@ class TextVarJob(Job):
     var1 = TextVar()
 
 
+class JSONVarJob(Job):
+    var1 = JSONVar()
+
+
 job_list = [
     BooleanVarJob,
     ChoiceVarJob,
@@ -76,6 +80,7 @@ job_list = [
     IPAddressVarJob,
     IPAddressWithMaskVarJob,
     IPNetworkVarJob,
+    JSONVarJob,
     MultiChoiceVarJob,
     MultiObjectVarJob,
     ObjectVarJob,

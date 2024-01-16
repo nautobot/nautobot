@@ -1,11 +1,12 @@
 from collections import OrderedDict
+
 from django.db import migrations
 
 from nautobot.extras.choices import LogLevelChoices
 from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
-    JOB_LOG_MAX_LOG_OBJECT_LENGTH,
     JOB_LOG_MAX_GROUPING_LENGTH,
+    JOB_LOG_MAX_LOG_OBJECT_LENGTH,
 )
 
 """

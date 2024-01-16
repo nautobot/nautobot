@@ -7,7 +7,7 @@ import graphene_django_optimizer as gql_optimizer
 from graphql import GraphQLError
 
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
-from nautobot.core.graphql.utils import str_to_var_name, get_filtering_args_from_filterset
+from nautobot.core.graphql.utils import get_filtering_args_from_filterset, str_to_var_name
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import RelationshipAssociation
@@ -116,7 +116,7 @@ def generate_computed_field_resolver(name, resolver_name):
     """
 
     def resolve_computed_field(self, info, **kwargs):
-        return self.get_computed_field(slug=name)
+        return self.get_computed_field(key=name)
 
     resolve_computed_field.__name__ = resolver_name
     return resolve_computed_field
