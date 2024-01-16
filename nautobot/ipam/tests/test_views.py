@@ -1,16 +1,16 @@
 import datetime
 import random
 
-from netaddr import IPNetwork
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
+from django.urls import reverse
 from django.utils.html import strip_tags
 from django.utils.timezone import make_aware
-from django.urls import reverse
+from netaddr import IPNetwork
 
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.core.templatetags.helpers import queryset_to_pks
-from nautobot.core.testing import post_data, ModelViewTestCase, ViewTestCases
+from nautobot.core.testing import ModelViewTestCase, post_data, ViewTestCases
 from nautobot.core.testing.utils import extract_page_body
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices

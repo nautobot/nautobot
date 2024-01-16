@@ -1,12 +1,12 @@
-from django.core.cache import cache
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Model, OuterRef, Subquery, Q, F
+from django.core.cache import cache
+from django.db.models import F, Model, OuterRef, Q, Subquery
 from django.db.models.functions import JSONObject
 from django_celery_beat.managers import ExtendedQuerySet
 
-from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.query_functions import EmptyGroupByJSONBAgg
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.models.tags import TaggedItem
 

@@ -10,7 +10,6 @@ from nautobot.extras.context_managers import (
     WebChangeContext,
 )
 
-
 __all__ = (
     "change_logging",
     "ChangeContext",

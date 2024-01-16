@@ -1,5 +1,4 @@
 import logging
-import netaddr
 
 from django.conf import settings
 from django.contrib import messages
@@ -7,27 +6,29 @@ from django.core.cache import cache
 from django.db import models, transaction
 from django.db.models import Count, Prefetch, ProtectedError, Q
 from django.forms.models import model_to_dict
-from django.templatetags.static import static
 from django.shortcuts import get_object_or_404, redirect, render
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.http import urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
+import netaddr
 
-from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import handle_protectederror
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import Role, Status, Tag
+from nautobot.ipam import choices, constants
+from nautobot.ipam.api import serializers
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
+
 from . import filters, forms, tables
-from nautobot.ipam.api import serializers
-from nautobot.ipam import choices, constants
 from .models import (
     IPAddress,
     IPAddressToInterface,
@@ -47,7 +48,6 @@ from .utils import (
     handle_relationship_changes_when_merging_ips,
     retrieve_interface_or_vminterface_from_request,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -787,7 +787,7 @@ class IPAddressEditView(generic.ObjectEditView):
             _, error_msg = retrieve_interface_or_vminterface_from_request(request)
             if error_msg:
                 messages.warning(request, error_msg)
-                return redirect(request.GET.get("return_url", "ipam:ipaddress_add"))
+                return redirect(self.get_return_url(request), default_return_url="ipam:ipaddress_add")
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -864,22 +864,23 @@ class IPAddressEditView(generic.ObjectEditView):
 
 
 # 2.0 TODO: Standardize or remove this view in exchange for a `NautobotViewSet` method
-class IPAddressAssignView(generic.ObjectView):
+class IPAddressAssignView(view_mixins.GetReturnURLMixin, generic.ObjectView):
     """
     Search for IPAddresses to be assigned to an Interface.
     """
 
     queryset = IPAddress.objects.all()
+    default_return_url = "ipam:ipaddress_add"
 
     def dispatch(self, request, *args, **kwargs):
         # Redirect user if an interface has not been provided
         if "interface" not in request.GET and "vminterface" not in request.GET:
-            return redirect("ipam:ipaddress_add")
+            return redirect(self.get_return_url(request))
 
         _, error_msg = retrieve_interface_or_vminterface_from_request(request)
         if error_msg:
             messages.warning(request, error_msg)
-            return redirect(request.GET.get("return_url", "ipam:ipaddress_add"))
+            return redirect(self.get_return_url(request))
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -889,7 +890,11 @@ class IPAddressAssignView(generic.ObjectView):
 
         table = None
         if request.GET.get("q"):
-            addresses = self.queryset.select_related("tenant").exclude(pk__in=interface.ip_addresses.values_list("pk"))
+            addresses = (
+                self.queryset.select_related("parent__namespace", "role", "status", "tenant")
+                .exclude(pk__in=interface.ip_addresses.values_list("pk"))
+                .string_search(request.GET.get("q"))
+            )
             table = tables.IPAddressAssignTable(addresses)
             paginate = {
                 "paginator_class": EnhancedPaginator,
@@ -908,7 +913,7 @@ class IPAddressAssignView(generic.ObjectView):
             "ipam/ipaddress_assign.html",
             {
                 "form": form,
-                "return_url": request.GET.get("return_url", ""),
+                "return_url": self.get_return_url(request),
                 "table": table,
             },
         )
@@ -919,13 +924,13 @@ class IPAddressAssignView(generic.ObjectView):
         if pks := request.POST.getlist("pk"):
             ip_addresses = IPAddress.objects.restrict(request.user, "view").filter(pk__in=pks)
             interface.ip_addresses.add(*ip_addresses)
-            return redirect(request.GET.get("return_url"))
+            return redirect(self.get_return_url(request))
 
         return render(
             request,
             "ipam/ipaddress_assign.html",
             {
-                "return_url": request.GET.get("return_url"),
+                "return_url": self.get_return_url(request),
             },
         )
 

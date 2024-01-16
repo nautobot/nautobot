@@ -75,7 +75,7 @@ class JobResultTest(SeleniumTestCase):
         # Sanity check
         self.assertEqual(len(LogLevelChoices.values()), len(visible_rows()))
 
-        # Trial 1: Give selenium some time to attach event listeners
+        # Give selenium some time to attach event listeners
         time.sleep(10)
 
         # Test for message (one row should be visible)

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
-import uuid
 import tempfile
 from unittest import mock, skip
+import uuid
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -13,16 +13,16 @@ from django.utils.timezone import make_aware, now
 from rest_framework import status
 
 from nautobot.core.choices import ColorChoices
+from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.core.testing.utils import disable_warnings
 from nautobot.core.utils.lookup import get_route_for_model
-from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.dcim.models import (
     Device,
     DeviceType,
-    Manufacturer,
     Location,
     LocationType,
+    Manufacturer,
     Rack,
     RackGroup,
 )
@@ -70,14 +70,12 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.models.jobs import JobHook, JobButton
+from nautobot.extras.models.jobs import JobButton, JobHook
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
-
-from nautobot.ipam.models import IPAddress, Prefix, VLANGroup, VLAN
+from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
-
 
 User = get_user_model()
 

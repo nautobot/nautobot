@@ -1,5 +1,4 @@
 from nautobot.core.celery import register_jobs
-from nautobot.extras.models import Role
 from nautobot.extras.jobs import (
     BooleanVar,
     ChoiceVar,
@@ -16,7 +15,7 @@ from nautobot.extras.jobs import (
     StringVar,
     TextVar,
 )
-
+from nautobot.extras.models import Role
 
 CHOICES = (("ff0000", "Red"), ("00ff00", "Green"), ("0000ff", "Blue"))
 

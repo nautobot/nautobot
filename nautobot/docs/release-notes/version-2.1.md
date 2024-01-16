@@ -72,6 +72,51 @@ Support for versions of PostgreSQL prior to 12.0 has been removed as these versi
 Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specific permissions will now always be hidden from users lacking those permissions. Additionally, users not logged in will now be automatically redirected to the login page.
 
 <!-- towncrier release notes start -->
+## v2.1.1 (2024-01-08)
+
+### Added
+
+- [#5046](https://github.com/nautobot/nautobot/issues/5046) - Updated the LocationType clone process to pre-populate the original object's parent, nestable and content type fields.
+
+### Changed
+
+- [#4992](https://github.com/nautobot/nautobot/issues/4992) - Added change-logging (ObjectChange support) for the ObjectPermission model.
+
+### Removed
+
+- [#5033](https://github.com/nautobot/nautobot/issues/5033) - Removed alpha UI from the main code base for now (it still exists in a prototype branch) to reduce the burden of maintaining its dependencies in the meantime.
+- [#5035](https://github.com/nautobot/nautobot/issues/5035) - Removed nodesource apt repository from Dockerfile.
+
+### Fixed
+
+- [#4606](https://github.com/nautobot/nautobot/issues/4606) - Fixed an error when attempting to "Save Changes" to an existing GraphQL saved query via the GraphiQL UI.
+- [#4606](https://github.com/nautobot/nautobot/issues/4606) - Fixed incorrect positioning of the "Save Changes" button in the "Queries" menu in the GraphiQL UI.
+- [#4606](https://github.com/nautobot/nautobot/issues/4606) - Fixed incorrect specification of the "variables" field in the GraphQL saved query REST API.
+- [#4606](https://github.com/nautobot/nautobot/issues/4606) - Fixed a display glitch in the detail view for GraphQL saved queries.
+- [#5005](https://github.com/nautobot/nautobot/issues/5005) - Fixed missing schema field in config context create/edit forms.
+- [#5020](https://github.com/nautobot/nautobot/issues/5020) - Fixed display of secrets when editing a SecretsGroup.
+
+### Documentation
+
+- [#5019](https://github.com/nautobot/nautobot/issues/5019) - Updated the documentation on the usage of the `nautobot-server runjob` management command.
+- [#5023](https://github.com/nautobot/nautobot/issues/5023) - Fixed some typos in the 2.1.0 release notes.
+- [#5027](https://github.com/nautobot/nautobot/issues/5027) - Fixed typo in Device Redundancy Group docs.
+- [#5044](https://github.com/nautobot/nautobot/issues/5044) - Updated the documentation on `nautobot_database_ready` signal handlers with a warning.
+
+### Housekeeping
+
+- [#5039](https://github.com/nautobot/nautobot/issues/5039) - Updated `ruff` development dependency to `~0.1.10`.
+- [#5039](https://github.com/nautobot/nautobot/issues/5039) - Removed `black` and `flake8` as development dependencies as they're fully replaced by `ruff` now.
+- [#5039](https://github.com/nautobot/nautobot/issues/5039) - Removed `black` and `flake8` steps from CI.
+- [#5039](https://github.com/nautobot/nautobot/issues/5039) - Enabled `DJ` Ruff rules (`flake8-django`) and addressed all warnings raised.
+- [#5039](https://github.com/nautobot/nautobot/issues/5039) - Enabled `PIE` Ruff rules except for `PIE808` (`flake8-pie`) and addressed all warnings raised.
+- [#5039](https://github.com/nautobot/nautobot/issues/5039) - Enabled `RUF` Ruff rules except for `RUF012` and addressed all warnings raised.
+- [#5039](https://github.com/nautobot/nautobot/issues/5039) - Enabled remaining `S` Ruff rules (`flake8-bandit`) and addressed all warnings raised.
+- [#5049](https://github.com/nautobot/nautobot/issues/5049) - Fixed an intermittent timing-related failure in `DynamicGroupModelTest.test_member_caching_enabled` test case.
+- [#5053](https://github.com/nautobot/nautobot/issues/5053) - Removed reference to develop-1.6 branch in CI workflow.
+- [#5055](https://github.com/nautobot/nautobot/issues/5055) - Enabled `I` Ruff rules (`isort`) and addressed all warnings raised.
+- [#5055](https://github.com/nautobot/nautobot/issues/5055) - Removed `isort` as a development dependency as it's fully replaced by `ruff` now.
+
 ## v2.1.0 (2023-12-22)
 
 ### Security

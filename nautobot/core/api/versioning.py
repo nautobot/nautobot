@@ -2,8 +2,8 @@ from django.utils.functional import classproperty
 from django.utils.translation import gettext_lazy as _
 from rest_framework import exceptions
 from rest_framework.compat import unicode_http_header
-from rest_framework.utils.mediatypes import _MediaType
 from rest_framework.settings import api_settings
+from rest_framework.utils.mediatypes import _MediaType
 from rest_framework.versioning import AcceptHeaderVersioning
 
 

@@ -16,3 +16,33 @@ python = ">=3.8,<3.12"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 120
+target-version = "py38"
+
+[tool.ruff.lint]
+select = [
+    "DJ",  # flake8-django
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    "I",  # isort
+    "PIE",  # flake8-pie
+    "RUF",  # ruff itself
+    "S",  # flake8-bandit
+    "W",  # pycodestyle
+]
+ignore = [
+    "E501",  # pycodestyle: line-too-long
+    "PIE808",  # unnecessary-range-start
+    "RUF012",  # mutable-class-default - see https://github.com/astral-sh/ruff/issues/5243
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-sort-within-sections = true
+order-by-type = false
+section-order = ["future", "standard-library", "third-party", "nautobot", "first-party", "local-folder"]
+
+[tool.ruff.lint.isort.sections]
+"nautobot" = ["nautobot"]

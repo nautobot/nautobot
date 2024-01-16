@@ -1,5 +1,5 @@
-import logging
 from collections import defaultdict
+import logging
 
 from django.conf import settings
 from django.contrib.auth.backends import (

@@ -7,8 +7,7 @@ from django.db import migrations
 
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import serialize_object
-from nautobot.extras import choices as extras_choices
-from nautobot.extras import models as extras_models
+from nautobot.extras import choices as extras_choices, models as extras_models
 from nautobot.extras.utils import FeatureQuery
 
 logger = logging.getLogger(__name__)

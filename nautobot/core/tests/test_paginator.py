@@ -3,13 +3,13 @@
 from constance.test import override_config
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.test import RequestFactory, override_settings
+from django.test import override_settings, RequestFactory
 from django.urls import reverse
 
 from nautobot.circuits import models as circuits_models
-from nautobot.dcim import models as dcim_models
 from nautobot.core import testing
 from nautobot.core.views import paginator
+from nautobot.dcim import models as dcim_models
 from nautobot.extras import models as extras_models
 
 

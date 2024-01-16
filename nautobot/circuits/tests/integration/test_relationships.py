@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.core.testing.integration import SeleniumTestCase
-from nautobot.dcim.models import PowerPanel, Location, LocationType
+from nautobot.dcim.models import Location, LocationType, PowerPanel
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
 

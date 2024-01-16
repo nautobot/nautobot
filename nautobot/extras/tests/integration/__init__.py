@@ -2,8 +2,8 @@ import uuid
 
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.extras.models import Role, Status
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
+from nautobot.extras.models import Role, Status
 
 
 def create_test_device():

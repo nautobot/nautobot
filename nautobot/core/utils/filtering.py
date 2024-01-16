@@ -13,7 +13,6 @@ from django_filters.utils import verbose_lookup_expr
 from nautobot.core import exceptions
 from nautobot.core.utils.lookup import get_filterset_for_model
 
-
 # Check if field name contains a lookup expr
 # e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr
 CONTAINS_LOOKUP_EXPR_RE = re.compile(r"(?<=__)\w+")
@@ -88,10 +87,6 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     Return the relevant form field instance for a filterset parameter e.g DynamicModelMultipleChoiceField, forms.IntegerField e.t.c
     """
     # Avoid circular import
-    from nautobot.dcim.models import Device
-    from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, CustomFieldFilterMixin, StatusFilter
-    from nautobot.extras.models import ConfigContext, Role, Status, Tag
-    from nautobot.extras.utils import ChangeLoggedModelsQuery, RoleModelsQuery, TaggableClassesQuery
     from nautobot.core.filters import MultiValueDecimalFilter, MultiValueFloatFilter
     from nautobot.core.forms import (
         BOOLEAN_CHOICES,
@@ -100,6 +95,10 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
         StaticSelect2,
         StaticSelect2Multiple,
     )
+    from nautobot.dcim.models import Device
+    from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, CustomFieldFilterMixin, StatusFilter
+    from nautobot.extras.models import ConfigContext, Role, Status, Tag
+    from nautobot.extras.utils import ChangeLoggedModelsQuery, RoleModelsQuery, TaggableClassesQuery
     from nautobot.virtualization.models import VirtualMachine
 
     if filterset is None or filterset.Meta.model != model:
