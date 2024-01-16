@@ -1041,21 +1041,14 @@ class IPAddress(PrimaryModel):
         verbose_name_plural = "IP addresses"
         unique_together = ["parent", "host"]
 
-    def __init__(self, *args, **kwargs):
-        address = kwargs.pop("address", None)
-        namespace = kwargs.pop("namespace", None)
+    def __init__(self, *args, address=None, namespace=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # If namespace wasn't provided, but parent was, we'll use the parent's namespace.
-        if namespace is None and self.parent is not None:
-            namespace = self.parent.namespace
+        if namespace is not None and not self.present_in_database:
+            self._provided_namespace = namespace
 
-        if namespace is None:
-            namespace = get_default_namespace()
-
-        self._namespace = namespace
-
-        self._deconstruct_address(address)
+        if address is not None and not self.present_in_database:
+            self._deconstruct_address(address)
 
     def __str__(self):
         return str(self.address)
@@ -1103,10 +1096,6 @@ class IPAddress(PrimaryModel):
         if self.type == choices.IPAddressTypeChoices.TYPE_SLAAC and self.ip_version != 6:
             raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
 
-        # If neither `parent` or `namespace` was provided; raise this exception
-        if self._namespace is None:
-            raise ValidationError({"parent": "Either a parent or a namespace must be provided."})
-
         closest_parent = self._get_closest_parent()
         # Validate `parent` can be used as the parent for this ipaddress
         if self.parent and closest_parent:
@@ -1120,6 +1109,7 @@ class IPAddress(PrimaryModel):
                     }
                 )
             self.parent = closest_parent
+            self._namespace = None
 
     def save(self, *args, **kwargs):
         # 3.0 TODO: uncomment the below to enforce this constraint
@@ -1135,6 +1125,7 @@ class IPAddress(PrimaryModel):
         closest_parent = self._get_closest_parent()
         if closest_parent is not None:
             self.parent = closest_parent
+            self._namespace = None
         super().save(*args, **kwargs)
 
     @property
@@ -1180,6 +1171,22 @@ class IPAddress(PrimaryModel):
             query = query.exclude(id=self.id)
 
         return query
+
+    @property
+    def _namespace(self):
+        # if a namespace was explicitly set, use it
+        if getattr(self, "_provided_namespace", None):
+            return self._provided_namespace
+        if self.parent is not None:
+            return self.parent.namespace
+        return get_default_namespace()
+
+    @_namespace.setter
+    def _namespace(self, namespace):
+        # unset parent when namespace is changed
+        if namespace:
+            self.parent = None
+        self._provided_namespace = namespace
 
     # 2.0 TODO: Remove exception, getter, setter below when we can safely deprecate previous properties
     class NATOutsideMultipleObjectsReturned(MultipleObjectsReturned):

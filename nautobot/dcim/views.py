@@ -1104,6 +1104,7 @@ class DeviceListView(generic.ObjectListView):
     queryset = Device.objects.select_related(
         "status",
         "device_type",
+        "device_type__manufacturer",  # Needed for __str__() on device_type
         "role",
         "tenant",
         "location",
