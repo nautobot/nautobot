@@ -104,7 +104,7 @@ class ObjectNewTeamForm(NautobotModelForm):
     contacts = DynamicModelMultipleChoiceField(
         queryset=Team.objects.all(),
         required=False,
-        label="Team(s)",
+        label="Contact(s)",
     )
     associated_object_type = DynamicModelChoiceField(queryset=ContentType.objects.all(), required=True)
     associated_object_id = forms.CharField(required=True)
