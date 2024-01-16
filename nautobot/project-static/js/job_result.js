@@ -23,20 +23,22 @@ function updatePendingStatusLabel(status) {
     elem.text(status.label);
 }
 
-function updateLogTable(result_id) {
+function updateLogTable(result_id, qs) {
     // Calls `update_log_table` to refresh the jobs table from the `/log-table/` endpoint
     // Grab the query string from session storage and pass it through to the log table.
-    let qs = window.sessionStorage.getItem(session_key) || "";
+    if (!qs){
+        qs = window.sessionStorage.getItem(session_key) || "";
+    }
     update_log_table(qs, '/extras/job-results/' + result_id + '/log-table/');
 }
 
 $(document).ready(function(){
-    if (pending_result_id !== null) {
+    if (job_is_pending) {
         (function checkPendingResult() {
             // Keep checking results, update the table, and refresh the logs. When done, refresh the
             // page to finalize the job results output.
             $.ajax({
-                url: url + pending_result_id + '/',
+                url: url + job_result_id + '/',
                 method: 'GET',
                 dataType: 'json',
                 context: this,
@@ -45,7 +47,7 @@ $(document).ready(function(){
                     updatePendingStatusLabel(data.status);
 
                     // Update the job logs table
-                    updateLogTable(pending_result_id);
+                    updateLogTable(job_result_id);
 
                     /// Should reload the page yet?
                     let reload_page = window.sessionStorage.getItem(session_key) == null;

@@ -1583,7 +1583,14 @@ class JobLogEntryTableView(View):
 
     def get(self, request, pk=None):
         instance = self.queryset.get(pk=pk)
-        log_table = tables.JobLogEntryTable(data=instance.job_log_entries.all(), user=request.user)
+        filter_q = request.GET.get("q")
+        if filter_q:
+            queryset = instance.job_log_entries.filter(
+                Q(message__icontains=filter_q) | Q(log_level__icontains=filter_q)
+            )
+        else:
+            queryset = instance.job_log_entries.all()
+        log_table = tables.JobLogEntryTable(data=queryset, user=request.user)
         RequestConfig(request).configure(log_table)
         return HttpResponse(log_table.as_html(request))
 
