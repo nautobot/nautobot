@@ -144,18 +144,13 @@ class BaseJob(Task):
                     try:
                         output = self.run(*args, **deserialized_kwargs)
                     except Exception as err:
-                        self.logger.error("%s", err)
                         pr.dump_stats(profiling_path)
                         raise err
                     else:
                         pr.dump_stats(profiling_path)
                         return output
             else:
-                try:
-                    return self.run(*args, **deserialized_kwargs)
-                except Exception as err:
-                    self.logger.error("%s", err)
-                    raise
+                return self.run(*args, **deserialized_kwargs)
 
     def __str__(self):
         return str(self.name)
