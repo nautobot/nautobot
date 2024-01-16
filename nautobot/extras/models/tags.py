@@ -8,6 +8,7 @@ from nautobot.core.models.fields import ColorField
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.utils import extras_features, TaggableClassesQuery
 
+# These imports are in this particular order because of circular import problems
 from .change_logging import ChangeLoggedModel
 from .customfields import CustomFieldModel
 from .mixins import NotesMixin

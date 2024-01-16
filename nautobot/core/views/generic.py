@@ -124,10 +124,11 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             resp = {"tabs": plugin_tabs}
             return JsonResponse(resp)
         else:
+            content_type = ContentType.objects.get_for_model(self.queryset.model)
             context = {
                 "object": instance,
                 "is_contact_associatable_model": self.is_contact_associatable_model,
-                "content_type": ContentType.objects.get_for_model(self.queryset.model),
+                "content_type": content_type,
                 "verbose_name": self.queryset.model._meta.verbose_name,
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
                 "created_by": created_by,
@@ -138,7 +139,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                 paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
                 associations = ContactAssociation.objects.filter(
                     associated_object_id=instance.id,
-                    associated_object_type=ContentType.objects.get_for_model(type(instance)),
+                    associated_object_type=content_type,
                 ).order_by("role__name")
                 associations_table = AssociatedContactsTable(associations, orderable=False)
                 RequestConfig(request, paginate).configure(associations_table)

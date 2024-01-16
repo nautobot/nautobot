@@ -36,12 +36,13 @@ class ContactForm(NautobotModelForm):
         teams = self.cleaned_data.get("teams", [])
         obj = super().save(*args, **kwargs)
         obj.teams.set(teams)
-        obj.validated_save()
         return obj
 
 
 class ContactBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Contact.objects.all(), widget=forms.MultipleHiddenInput())
+    phone = forms.CharField(required=False)
+    email = forms.CharField(required=False)
     address = forms.CharField(required=False, widget=forms.Textarea())
 
     class Meta:
@@ -96,7 +97,6 @@ class ObjectNewContactForm(NautobotModelForm):
         teams = self.cleaned_data.get("teams", [])
         obj = super().save(*args, **kwargs)
         obj.teams.set(teams)
-        obj.validated_save()
         return obj
 
 
@@ -137,6 +137,9 @@ class ObjectNewTeamForm(NautobotModelForm):
 
 
 class ContactAssociationForm(NautobotModelForm):
+    contact = DynamicModelChoiceField(queryset=Contact.objects.all(), required=False)
+    team = DynamicModelChoiceField(queryset=Team.objects.all(), required=False)
+
     class Meta:
         model = ContactAssociation
         fields = [
@@ -171,6 +174,8 @@ class TeamForm(NautobotModelForm):
 
 class TeamBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Team.objects.all(), widget=forms.MultipleHiddenInput())
+    phone = forms.CharField(required=False)
+    email = forms.CharField(required=False)
     address = forms.CharField(required=False, widget=forms.Textarea())
 
     class Meta:
