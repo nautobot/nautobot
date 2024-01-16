@@ -669,9 +669,15 @@ class JobResult(BaseModel, CustomFieldModel):
 
             # copy fields from eager result to job result
             job_result.refresh_from_db()
-            job_result.result = eager_result.result
+            # Emulate prepare_exception() behavior
+            if isinstance(eager_result.result, Exception):
+                job_result.result = {
+                    "exc_type": type(eager_result.result).__name__, "exc_message": sanitize(str(eager_result.result))
+                }
+            else:
+                job_result.result = sanitize(eager_result.result)
             job_result.status = eager_result.status
-            job_result.traceback = eager_result.traceback
+            job_result.traceback = sanitize(eager_result.traceback)
             job_result.date_done = timezone.now()
             job_result.save()
         else:
