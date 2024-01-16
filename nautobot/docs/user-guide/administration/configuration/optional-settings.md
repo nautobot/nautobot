@@ -892,6 +892,26 @@ Default:
 
 List of (regular expression, replacement pattern) tuples used by the `nautobot.core.utils.logging.sanitize()` function. As of Nautobot 1.3.4 this function is used primarily for sanitization of Job log entries, but it may be used in other scopes in the future.
 
+This pattern catches patterns such as:
+
+| Pattern Match Examples |
+| --- |
+| Password is1234 |
+| Password: is1234 |
+| Password is: is1234 |
+| Password is is1234 |
+| secret is: is1234 |
+| secret is is1234 |
+| secrets is: is1234 |
+| secrets is is1234 |
+| {"username": "is1234"} |
+| {"password": "is1234"} |
+| {"secret": "is1234"} |
+| {"secrets": "is1234"} |
+
+!!! info
+    is1234 would be replaced in the Job logs with `(redacted)`.
+
 ---
 
 ## STORAGE_BACKEND
