@@ -5,6 +5,8 @@ import factory
 import faker
 import math
 
+from django.contrib.contenttypes.models import ContentType
+
 from nautobot.core.factory import (
     NautobotBoolIterator,
     OrganizationalModelFactory,
@@ -227,8 +229,8 @@ class VLANFactory(PrimaryModelFactory):
             if extracted:
                 self.locations.set(extracted)
             else:
-                # TODO (timizuo): Set the current location of content_ty;e 
-                self.locations.set(get_random_instances(lambda: Location.objects.all(), minimum=1))
+                vlan_ct = ContentType.objects.get_for_model(VLAN)
+                self.locations.set(get_random_instances(lambda: Location.objects.filter(location_type__content_types__in=[vlan_ct]), minimum=1))
 
 
 class VLANGetOrCreateFactory(VLANFactory):

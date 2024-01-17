@@ -13,6 +13,7 @@ from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
 from nautobot.extras.models import Role, Status
 from nautobot.ipam import choices
+from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
@@ -685,6 +686,10 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
+
+    def get_deletable_object_pks(self):
+        vlangroups = VLANGroupFactory.create_batch(size=3)
+        return [vg.pk for vg in vlangroups]
 
 
 class VLANTest(APIViewTestCases.APIViewTestCase):

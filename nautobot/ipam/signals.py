@@ -99,9 +99,9 @@ def assert_vlan_locations_content_types(sender, instance, action, reverse, model
         if invalid_locations.exists():
             invalid_location_types = []
             for location in invalid_locations:
-                if location.location_type in invalid_location_types:
+                if location.location_type.name in invalid_location_types:
                     continue
-                invalid_location_types.append(location.location_type)
+                invalid_location_types.append(location.location_type.name)
             raise ValidationError(
                 {"locations": f'VLANs may not associate to locations of types {invalid_location_types}.'}
             )
