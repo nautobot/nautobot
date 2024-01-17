@@ -266,6 +266,9 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT", str(5 * 60)))
 # CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", str(10 * 60)))
 
+# Use threads Celery pool - required for git repository job support
+# CELERY_WORKER_POOL = "threads"
+
 # Ports for prometheus metric HTTP server running on the celery worker.
 # Normally this should be set to a single port, unless you have multiple workers running on a single machine, i.e.
 # sharing the same available ports. In that case you need to specify a range of ports greater than or equal to the
