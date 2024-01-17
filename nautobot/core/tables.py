@@ -121,6 +121,11 @@ class BaseTable(django_tables2.Table):
                             # Can't prefetch beyond a GenericForeignKey
                             prefetch_path.append(field_name)
                             break
+                        else:
+                            # Need to stop processing once field is not a RelatedField or GFK
+                            # Ex: ["_custom_field_data", "tenant_id"] needs to exit
+                            # the loop as "tenant_id" would be misidentified as a RelatedField.
+                            break
                     if prefetch_path:
                         prefetch_fields.append("__".join(prefetch_path))
             self.data.data = self.data.data.prefetch_related(None).prefetch_related(*prefetch_fields)
