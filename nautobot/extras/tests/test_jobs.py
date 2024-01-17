@@ -16,7 +16,9 @@ from django.core.management.base import CommandError
 from django.test import override_settings
 from django.test.client import RequestFactory
 from django.utils import timezone
+import pytz
 
+from nautobot.core.celery import app
 from nautobot.core.testing import (
     create_job_result_and_run_job,
     get_job_class_and_model,
@@ -1033,3 +1035,29 @@ class ScheduledJobIntervalTestCase(TestCase):
         schedule_day_of_week = next(iter(scheduled_job.schedule.day_of_week))
         scheduled_job_weekday = self.cron_days[schedule_day_of_week]
         self.assertEqual(scheduled_job_weekday, requested_weekday)
+
+
+@override_settings(USE_TZ=True, TIME_ZONE="America/New_York")
+class ScheduledJobCronTestCase(TestCase):
+    @timezone.override("America/New_York")
+    def test_cron_time_zone(self):
+        self.assertEqual(app.timezone.key, "America/New_York")
+        tz_new_york = pytz.timezone("America/New_York")
+        scheduled_job = models.ScheduledJob.objects.create(
+            name="test_cron_time_zone",
+            task="pass.TestPass",
+            interval=JobExecutionType.TYPE_CUSTOM,
+            user=self.user,
+            start_time=datetime.datetime(2024, 1, 1, 0, 0, 0, tzinfo=tz_new_york),
+            crontab="0 9 * * *",
+        )
+        with mock.patch("django.utils.timezone.now") as mock_now:
+            last_run_at = datetime.datetime(2024, 1, 1, 9, 0, 0, tzinfo=tz_new_york)
+
+            mock_now.return_value = datetime.datetime(2024, 1, 2, 8, 0, 0, tzinfo=tz_new_york)
+            is_due, _ = scheduled_job.schedule.is_due(last_run_at)
+            self.assertFalse(is_due)
+
+            mock_now.return_value = datetime.datetime(2024, 1, 2, 10, 0, 0, tzinfo=tz_new_york)
+            is_due, _ = scheduled_job.schedule.is_due(last_run_at)
+            self.assertTrue(is_due)

@@ -1018,16 +1018,17 @@ class ScheduledJob(BaseModel):
             day_of_month=day_of_month,
             month_of_year=month_of_year,
             day_of_week=day_of_week,
+            nowfun=timezone.now,
         )
 
     def to_cron(self):
         t = self.start_time
         if self.interval == JobExecutionType.TYPE_HOURLY:
-            return schedules.crontab(minute=t.minute)
+            return schedules.crontab(minute=t.minute, nowfun=timezone.now)
         elif self.interval == JobExecutionType.TYPE_DAILY:
-            return schedules.crontab(minute=t.minute, hour=t.hour)
+            return schedules.crontab(minute=t.minute, hour=t.hour, nowfun=timezone.now)
         elif self.interval == JobExecutionType.TYPE_WEEKLY:
-            return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.strftime("%w"))
+            return schedules.crontab(minute=t.minute, hour=t.hour, day_of_week=t.strftime("%w"), nowfun=timezone.now)
         elif self.interval == JobExecutionType.TYPE_CUSTOM:
             return self.get_crontab(self.crontab)
         raise ValueError(f"I do not know to convert {self.interval} to a Cronjob!")
