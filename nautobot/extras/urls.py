@@ -26,9 +26,12 @@ from nautobot.extras.models import (
 app_name = "extras"
 
 router = NautobotUIViewSetRouter()
+router.register("contacts", views.ContactUIViewSet)
+router.register("contact-associations", views.ContactAssociationUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("roles", views.RoleUIViewSet)
+router.register("teams", views.TeamUIViewSet)
 
 urlpatterns = [
     # Change logging
@@ -165,6 +168,14 @@ urlpatterns = [
         views.ObjectNotesView.as_view(),
         name="configcontextschema_notes",
         kwargs={"model": ConfigContextSchema},
+    ),
+    # contacts
+    path("contact-associations/add-new-contact/", views.ObjectNewContactView.as_view(), name="object_contact_add"),
+    path("contact-associations/add-new-team/", views.ObjectNewTeamView.as_view(), name="object_team_add"),
+    path(
+        "contact-associations/assign-contact-team/",
+        views.ObjectAssignContactOrTeamView.as_view(),
+        name="object_contact_team_assign",
     ),
     # Custom fields
     path("custom-fields/", views.CustomFieldListView.as_view(), name="customfield_list"),

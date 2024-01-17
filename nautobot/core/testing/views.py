@@ -339,8 +339,8 @@ class ViewTestCases:
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_CREATE)
                 # Validate if detail view exists
                 validate = URLValidator()
-                detail_url = instance.get_absolute_url()
                 try:
+                    detail_url = instance.get_absolute_url()
                     validate(detail_url)
                     response = self.client.get(detail_url)
                     response_body = testing.extract_page_body(response.content.decode(response.charset))
@@ -348,7 +348,7 @@ class ViewTestCases:
                     self.assertIn(advanced_tab_href, response_body)
                     self.assertIn("<td>Created By</td>", response_body)
                     self.assertIn("<td>nautobotuser</td>", response_body)
-                except ValidationError:
+                except (AttributeError, ValidationError):
                     # Instance does not have a valid detail view, do nothing here.
                     pass
 
@@ -478,8 +478,8 @@ class ViewTestCases:
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
                 # Validate if detail view exists
                 validate = URLValidator()
-                detail_url = instance.get_absolute_url()
                 try:
+                    detail_url = instance.get_absolute_url()
                     validate(detail_url)
                     response = self.client.get(detail_url)
                     response_body = testing.extract_page_body(response.content.decode(response.charset))
@@ -487,7 +487,7 @@ class ViewTestCases:
                     self.assertIn(advanced_tab_href, response_body)
                     self.assertIn("<td>Last Updated By</td>", response_body)
                     self.assertIn("<td>nautobotuser</td>", response_body)
-                except ValidationError:
+                except (AttributeError, ValidationError):
                     # Instance does not have a valid detail view, do nothing here.
                     pass
 

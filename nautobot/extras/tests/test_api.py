@@ -44,6 +44,8 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
+    ContactAssociation,
     CustomField,
     CustomLink,
     DynamicGroup,
@@ -68,6 +70,7 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
 from nautobot.extras.models.jobs import JobButton, JobHook
@@ -374,6 +377,122 @@ class ContentTypeTest(APITestCase):
 
         url = reverse("extras-api:contenttype-detail", kwargs={"pk": contenttype.pk})
         self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_200_OK)
+
+
+#
+#  Contacts
+#
+
+
+class ContactTest(APIViewTestCases.APIViewTestCase):
+    model = Contact
+    bulk_update_data = {
+        "address": "Carnegie Hall, New York, NY",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_data = [
+            {
+                "name": "Contact 1",
+                "phone": "555-0121",
+                "email": "contact1@example.com",
+                "teams": [Team.objects.first().pk, Team.objects.last().pk],
+            },
+            {
+                "name": "Contact 2",
+                "phone": "555-0122",
+                "email": "contact2@example.com",
+                "address": "Bowser's Castle, Staten Island, NY",
+            },
+            {
+                "name": "Contact 3",
+                "phone": "555-0123",
+                "email": "",
+            },
+            {
+                "name": "Contact 4",
+                "phone": "",
+                "email": "contact4@example.com",
+            },
+        ]
+
+
+class ContactAssociationTestCase(APIViewTestCases.APIViewTestCase):
+    model = ContactAssociation
+    create_data = []
+    choices_fields = ["associated_object_type"]
+
+    @classmethod
+    def setUpTestData(cls):
+        roles = Role.objects.get_for_model(ContactAssociation)
+        statuses = Status.objects.get_for_model(ContactAssociation)
+        ContactAssociation.objects.create(
+            contact=Contact.objects.first(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=IPAddress.objects.first().pk,
+            role=None,
+            status=statuses[0],
+        )
+        ContactAssociation.objects.create(
+            contact=Contact.objects.last(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=IPAddress.objects.first().pk,
+            role=None,
+            status=statuses[1],
+        )
+        ContactAssociation.objects.create(
+            team=Team.objects.first(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=IPAddress.objects.first().pk,
+            role=roles[0],
+            status=statuses[0],
+        )
+        ContactAssociation.objects.create(
+            team=Team.objects.last(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=IPAddress.objects.first().pk,
+            role=roles[2],
+            status=statuses[1],
+        )
+        cls.create_data = [
+            {
+                "contact": Contact.objects.first().pk,
+                "team": None,
+                "associated_object_type": "ipam.ipaddress",
+                "associated_object_id": IPAddress.objects.first().pk,
+                "role": None,
+                "status": statuses[0].pk,
+            },
+            {
+                "contact": Contact.objects.last().pk,
+                "team": None,
+                "associated_object_type": "dcim.device",
+                "associated_object_id": Device.objects.first().pk,
+                "role": roles[1].pk,
+                "status": statuses[0].pk,
+            },
+            {
+                "contact": None,
+                "team": Team.objects.first().pk,
+                "associated_object_type": "ipam.ipaddress",
+                "associated_object_id": IPAddress.objects.first().pk,
+                "role": roles[2].pk,
+                "status": statuses[2].pk,
+            },
+            {
+                "contact": None,
+                "team": Team.objects.last().pk,
+                "associated_object_type": "dcim.device",
+                "associated_object_id": Device.objects.first().pk,
+                "role": roles[1].pk,
+                "status": statuses[0].pk,
+            },
+        ]
+        cls.bulk_update_data = {
+            "role": roles[2].pk,
+            "status": statuses[1].pk,
+        }
 
 
 class CreatedUpdatedFilterTest(APITestCase):
@@ -3462,6 +3581,46 @@ class TagTest(APIViewTestCases.APIViewTestCase):
         tag.refresh_from_db()
         self.assertEqual(tag.color, ColorChoices.COLOR_LIME)
         self.assertEqual(list(tag.content_types.all()), tag_content_types)
+
+
+#
+# Team
+#
+
+
+class TeamTest(APIViewTestCases.APIViewTestCase):
+    model = Team
+    bulk_update_data = {
+        "address": "Carnegie Hall, New York, NY",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_data = [
+            {
+                "name": "Team 1",
+                "phone": "555-0121",
+                "email": "team1@example.com",
+                "contacts": [Contact.objects.first().pk, Contact.objects.last().pk],
+            },
+            {
+                "name": "Team 2",
+                "phone": "555-0122",
+                "email": "team2@example.com",
+                "address": "Bowser's Castle, Staten Island, NY",
+            },
+            {
+                "name": "Team 3",
+                "phone": "555-0123",
+                "email": "",
+            },
+            {
+                "name": "Team 4",
+                "phone": "",
+                "email": "team4@example.com",
+                "address": "Rainbow Bridge, Central NJ",
+            },
+        ]
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):

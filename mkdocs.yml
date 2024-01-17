@@ -216,6 +216,7 @@ plugins:
         'models/dcim/rearporttemplate.md': 'user-guide/core-data-model/dcim/rearporttemplate.md'
         'models/dcim/virtualchassis.md': 'user-guide/core-data-model/dcim/virtualchassis.md'
         'models/extras/computedfield.md': 'user-guide/platform-functionality/computedfield.md'
+        'models/extras/contact.md': 'user-guide/core-data-model/extras/contact.md'
         'models/extras/configcontext.md': 'user-guide/core-data-model/extras/configcontext.md'
         'models/extras/configcontextschema.md': 'user-guide/core-data-model/extras/configcontextschema.md'
         'models/extras/customfield.md': 'user-guide/platform-functionality/customfield.md'
@@ -228,6 +229,7 @@ plugins:
         'models/extras/jobresult.md': 'user-guide/platform-functionality/jobs/models.md'
         'models/extras/secret.md': 'user-guide/platform-functionality/secret.md'
         'models/extras/secretsgroup.md': 'user-guide/platform-functionality/secret.md'
+        'models/extras/team.md': 'user-guide/core-data-model/extras/team.md'
         'models/ipam/ipaddress.md': 'user-guide/core-data-model/ipam/ipaddress.md'
         'models/ipam/prefix.md': 'user-guide/core-data-model/ipam/prefix.md'
         'models/ipam/rir.md': 'user-guide/core-data-model/ipam/rir.md'
@@ -324,6 +326,7 @@ nav:
         - VLANS and VLAN Groups: "user-guide/feature-guides/getting-started/vlans-and-vlan-groups.md"
         - IP Address Management: "user-guide/feature-guides/getting-started/ipam.md"
         - The Search Bar: "user-guide/feature-guides/getting-started/search-bar.md"
+      - Contacts and Teams: "user-guide/feature-guides/contact-and-team.md"
       - Custom Fields: "user-guide/feature-guides/custom-fields.md"
       - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"
       - GraphQL: "user-guide/feature-guides/graphql.md"
@@ -375,6 +378,8 @@ nav:
       - Extras:
         - Config Context: "user-guide/core-data-model/extras/configcontext.md"
         - Config Context Schema: "user-guide/core-data-model/extras/configcontextschema.md"
+        - Contact: "user-guide/core-data-model/extras/contact.md"
+        - Team: "user-guide/core-data-model/extras/team.md"
       - IPAM:
         - IP Address: "user-guide/core-data-model/ipam/ipaddress.md"
         - Namespace: "user-guide/core-data-model/ipam/namespace.md"
@@ -533,6 +538,7 @@ nav:
       - Release Checklist: "development/core/release-checklist.md"
   - Release Notes:
     - "release-notes/index.md"
+    - Version 2.2: "release-notes/version-2.2.md"
     - Version 2.1: "release-notes/version-2.1.md"
     - Version 2.0: "release-notes/version-2.0.md"
     - Version 1.6: "release-notes/version-1.6.md"

@@ -23,6 +23,7 @@ from nautobot.core.utils.requests import (
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import check_filter_for_display, get_csv_form_fields_from_serializer_class
 from nautobot.extras.models.change_logging import ObjectChange
+from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import get_base_template
 
 
@@ -137,6 +138,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         view = renderer_context["view"]
         request = renderer_context["request"]
         # Check if queryset attribute is set before doing anything
+        is_contact_associatable_model = view.is_contact_associatable_model
         queryset = view.alter_queryset(request)
         model = queryset.model
         form_class = view.get_form_class()
@@ -213,6 +215,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
         context = {
             "content_type": content_type,
+            "is_contact_associatable_model": is_contact_associatable_model,
             "form": form,
             "filter_form": filter_form,
             "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset_class=view.filterset_class),
@@ -234,6 +237,11 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
             context["created_by"] = created_by
             context["last_updated_by"] = last_updated_by
+            associated_contacts = instance.associated_contacts.restrict(request.user, "view").order_by("role__name")
+            if is_contact_associatable_model:
+                context["associated_contacts_table"] = AssociatedContactsTable(data=associated_contacts)
+            else:
+                context["associated_contacts_table"] = None
             context.update(view.get_extra_context(request, instance))
         else:
             if view.action == "list":

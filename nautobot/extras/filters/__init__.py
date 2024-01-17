@@ -8,6 +8,7 @@ from nautobot.core.filters import (
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
     MultiValueUUIDFilter,
+    NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
@@ -47,6 +48,8 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
+    ContactAssociation,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -74,6 +77,7 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
@@ -83,6 +87,7 @@ from nautobot.virtualization.models import Cluster, ClusterGroup
 __all__ = (
     "ComputedFieldFilterSet",
     "ConfigContextFilterSet",
+    "ContactFilterSet",
     "ContentTypeFilterSet",
     "ContentTypeMultipleChoiceFilter",
     "CreatedUpdatedFilterSet",
@@ -128,6 +133,7 @@ __all__ = (
     "StatusFilterSet",
     "StatusModelFilterSetMixin",
     "TagFilterSet",
+    "TeamFilterSet",
     "WebhookFilterSet",
 )
 
@@ -386,6 +392,30 @@ class NautobotFilterSet(
     BaseFilterSet, CreatedUpdatedModelFilterSetMixin, RelationshipModelFilterSetMixin and CustomFieldModelFilterSetMixin
     are needed.
     """
+
+
+#
+# Contacts
+#
+
+
+class ContactFilterSet(NameSearchFilterSet, NautobotFilterSet):
+    class Meta:
+        model = Contact
+        fields = "__all__"
+
+
+class ContactAssociationFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "contact__name": "icontains",
+            "team__name": "icontains",
+        },
+    )
+
+    class Meta:
+        model = ContactAssociation
+        fields = "__all__"
 
 
 #
@@ -1004,6 +1034,17 @@ class TagFilterSet(NautobotFilterSet):
     class Meta:
         model = Tag
         fields = ["id", "name", "color", "content_types"]
+
+
+#
+# Teams
+#
+
+
+class TeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
+    class Meta:
+        model = Team
+        fields = "__all__"
 
 
 #

@@ -340,7 +340,7 @@ order-by-type = false
 [tool.towncrier]
 package = "nautobot"
 directory = "changes"
-filename = "nautobot/docs/release-notes/version-2.1.md"
+filename = "nautobot/docs/release-notes/version-2.2.md"
 template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"

@@ -22,6 +22,8 @@ from .models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
+    ContactAssociation,
     CustomField,
     CustomLink,
     DynamicGroup,
@@ -46,9 +48,32 @@ from .models import (
     Status,
     Tag,
     TaggedItem,
+    Team,
     Webhook,
 )
 from .registry import registry
+
+CONTACT_OR_TEAM = """
+{% load helpers %}
+<i class="mdi {% if record.contact %}mdi-account{% else %}mdi-account-group{% endif %}"></i>
+{{ record.contact_or_team|hyperlinked_object:"name"}}
+"""
+
+PHONE = """
+{% if value %}
+    <a href="tel:{{ value }}">{{ value }}</a>
+{% else %}
+    <span class="text-muted">&mdash;</span>
+{% endif %}
+"""
+
+EMAIL = """
+{% if value %}
+    <a href="mailto:{{ value }}">{{ value }}</a>
+{% else %}
+    <span class="text-muted">&mdash;</span>
+{% endif %}
+"""
 
 TAGGED_ITEM = """
 {% if value.get_absolute_url %}
@@ -203,6 +228,35 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
 
         # Return a green check (like a boolean column)
         return render_boolean(True)
+
+
+class ContactTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    phone = tables.TemplateColumn(PHONE)
+    tags = TagColumn(url_name="extras:contact_list")
+    actions = ButtonsColumn(Contact)
+
+    class Meta(BaseTable.Meta):
+        model = Contact
+        fields = (
+            "pk",
+            "name",
+            "phone",
+            "email",
+            "address",
+            "comments",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "phone",
+            "email",
+            "tags",
+            "actions",
+        )
 
 
 class CustomFieldTable(BaseTable):
@@ -1021,6 +1075,35 @@ class TaggedItemTable(BaseTable):
         fields = ("content_object", "content_type")
 
 
+class TeamTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    phone = tables.TemplateColumn(PHONE)
+    tags = TagColumn(url_name="extras:team_list")
+    actions = ButtonsColumn(Team)
+
+    class Meta(BaseTable.Meta):
+        model = Team
+        fields = (
+            "pk",
+            "name",
+            "phone",
+            "email",
+            "address",
+            "comments",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "phone",
+            "email",
+            "tags",
+            "actions",
+        )
+
+
 class WebhookTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
@@ -1055,3 +1138,42 @@ class WebhookTable(BaseTable):
             "http_content_type",
             "enabled",
         )
+
+
+class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
+    pk = ToggleColumn()
+    contact_or_team = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Contact/Team")
+    contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team.phone", verbose_name="Phone")
+    contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team.email", verbose_name="E-Mail")
+    actions = actions = ButtonsColumn(model=ContactAssociation, buttons=("edit", "delete"))
+
+    class Meta(BaseTable.Meta):
+        model = ContactAssociation
+        fields = (
+            "pk",
+            "contact_or_team",
+            "status",
+            "role",
+            "contact_or_team_phone",
+            "contact_or_team_email",
+            "actions",
+        )
+        default_columns = [
+            "pk",
+            "contact_or_team",
+            "status",
+            "role",
+            "contact_or_team_phone",
+            "contact_or_team_email",
+            "actions",
+        ]
+        orderable = False
+
+
+class ContactAssociationTable(StatusTableMixin, RoleTableMixin, BaseTable):
+    associated_object_type = tables.Column(verbose_name="Object Type")
+    associated_object = tables.Column(linkify=True, verbose_name="Object")
+
+    class Meta(BaseTable.Meta):
+        model = ContactAssociation
+        fields = ("role", "status", "associated_object_type", "associated_object")
