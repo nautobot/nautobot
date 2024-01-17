@@ -59,12 +59,6 @@ urlpatterns = [
         {"add_attachment_headers": True},
         name="db_file_storage.download_file",
     ),
-    url(
-        "files/get/",
-        get_file_with_authorization,
-        {"add_attachment_headers": False},
-        name="db_file_storage.get_file",
-    ),
 ]
 
 
