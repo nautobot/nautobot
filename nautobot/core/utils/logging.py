@@ -8,38 +8,42 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-def sanitize(string, replacement="(redacted)"):
+def sanitize(dirty, replacement="(redacted)"):
     """
-    Make an attempt at stripping potentially-sensitive information from the given string or iterable of strings.
+    Make an attempt at stripping potentially-sensitive information from the given string, bytes or iterable thereof.
 
     Obviously this will never be 100% foolproof but we can at least try.
 
     Uses settings.SANITIZER_PATTERNS as the list of (regexp, repl) tuples to apply.
     """
-    if isinstance(string, (list, tuple)):
-        new_string = []
-        for item in string:
+    # Don't allow regex match groups to be referenced in the replacement string!
+    if re.search(r"\\\d|\\g<\d+>", replacement):
+        raise RuntimeError("Invalid replacement string! Must not contain regex match group references.")
+
+    if isinstance(dirty, (list, tuple)):
+        clean = []
+        for item in dirty:
             if isinstance(item, (list, tuple, bytes, str)):
-                new_string.append(sanitize(item))
+                clean.append(sanitize(item))
             else:
                 # Pass through anything that isn't a string or iterable of strings
-                new_string.append(item)
-        if isinstance(string, tuple):
-            new_string = tuple(string)
-        return new_string
+                clean.append(item)
+        if isinstance(dirty, tuple):
+            clean = tuple(clean)
+        return clean
 
-    if isinstance(string, bytes):
-        return sanitize(string.decode("utf-8")).encode("utf-8")
+    if isinstance(dirty, bytes):
+        return sanitize(dirty.decode("utf-8")).encode("utf-8")
 
-    if isinstance(string, str):
-        # Don't allow regex match groups to be referenced in the replacement string!
-        if re.search(r"\\\d|\\g<\d+>", replacement):
-            raise RuntimeError("Invalid replacement string! Must not contain regex match group references.")
-
+    if isinstance(dirty, str):
+        clean = dirty
         for sanitizer, repl in settings.SANITIZER_PATTERNS:
             try:
-                string = sanitizer.sub(repl.format(replacement=replacement), string)
+                clean = sanitizer.sub(repl.format(replacement=replacement), clean)
             except re.error:
                 logger.error('Error in string sanitization using "%s"', sanitizer)
 
-    return string
+        return clean
+
+    logger.warning("No sanitizer support for %s data", type(dirty))
+    return dirty
