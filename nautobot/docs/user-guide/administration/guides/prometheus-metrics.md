@@ -42,6 +42,18 @@ Nautobot makes use of the [django-prometheus](https://github.com/korfuri/django-
 - Django middleware latency histograms
 - Other Django related metadata metrics
 
+Additionally, there are a number of metrics custom to Nautobot specifically:
+
+| Name                                                 | Description                                                                        |
+|------------------------------------------------------|------------------------------------------------------------------------------------|
+| `health_check_database_info`                         | Result of the last database health check                                           |
+| `health_check_redis_backend_info`                    | Result of the last redis health check                                              |
+| `nautobot_app_metrics_processing_ms`                 | The time it took to collect custom app metrics from all installed apps             |
+| `nautobot_workers_tasks_per_status_and_worker_total` | The number of celery tasks with labels for the status and which worker they are on |
+| `nautobot_workers_per_queue_total`                   | The number of celery workers per queue                                             |
+
+Finally, Nautobot App's can provide their own custom metrics.
+
 For the exhaustive list of exposed metrics, visit the `/metrics` endpoint on your Nautobot instance.
 
 ## Multi Processing Notes
