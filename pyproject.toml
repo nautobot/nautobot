@@ -37,7 +37,7 @@ python = ">=3.8,<3.12"
 # Background task processing
 celery = "~5.3.1"
 # Fundamental web framework for Nautobot
-Django = "~3.2.23"
+Django = "~4.2"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -51,7 +51,7 @@ django-constance = {version = "~2.9.1", extras = ["database"]}
 # Permit cross-domain API requests
 django-cors-headers = "~4.2.0"
 # Store files in the database for background tasks
-django-db-file-storage = "~0.5.5"
+django-db-file-storage = {git = "https://github.com/Aagam41/db_file_storage.git", rev = "e005505f1a8878b3920400f3df2fc93b8d9f526b"}
 # AutoSlugField and shell_plus
 django-extensions = "~3.2.3"
 # Advanced query filters

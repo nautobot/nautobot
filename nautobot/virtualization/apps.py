@@ -2,6 +2,7 @@ from nautobot.core.apps import NautobotConfig
 
 
 class VirtualizationConfig(NautobotConfig):
+    default = True
     name = "nautobot.virtualization"
     searchable_models = [
         "cluster",

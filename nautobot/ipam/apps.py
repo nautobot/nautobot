@@ -2,6 +2,7 @@ from nautobot.core.apps import NautobotConfig
 
 
 class IPAMConfig(NautobotConfig):
+    default = True
     name = "nautobot.ipam"
     verbose_name = "IPAM"
     searchable_models = [

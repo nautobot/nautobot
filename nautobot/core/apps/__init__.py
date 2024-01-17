@@ -36,6 +36,7 @@ class NautobotConfig(AppConfig):
     and `homepage.py` files from installed Nautobot applications and plugins.
     """
 
+    default = False  # abstract base class, all subclasses must set this to True
     homepage_layout = "homepage.layout"
     menu_tabs = "navigation.menu_items"
     # New UI Navigation
@@ -800,6 +801,7 @@ class CoreConfig(NautobotConfig):
     AppConfig for the core of Nautobot.
     """
 
+    default = True
     name = "nautobot.core"
     verbose_name = "Nautobot Core"
 
