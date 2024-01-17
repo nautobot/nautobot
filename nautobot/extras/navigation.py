@@ -14,7 +14,7 @@ menu_items = (
         weight=100,
         groups=(
             NavMenuGroup(
-                name="Tags",
+                name="Metadata",  # TODO: is there a better name for this grouping?
                 weight=400,
                 items=(
                     NavMenuItem(
@@ -33,16 +33,10 @@ menu_items = (
                             ),
                         ),
                     ),
-                ),
-            ),
-            NavMenuGroup(
-                name="Statuses",
-                weight=500,
-                items=(
                     NavMenuItem(
                         link="extras:status_list",
                         name="Statuses",
-                        weight=100,
+                        weight=200,
                         permissions=[
                             "extras.view_status",
                         ],
@@ -55,16 +49,10 @@ menu_items = (
                             ),
                         ),
                     ),
-                ),
-            ),
-            NavMenuGroup(
-                name="Roles",
-                weight=500,
-                items=(
                     NavMenuItem(
                         link="extras:role_list",
                         name="Roles",
-                        weight=100,
+                        weight=300,
                         permissions=[
                             "extras.view_status",
                         ],
@@ -76,6 +64,20 @@ menu_items = (
                                 ],
                             ),
                         ),
+                    ),
+                    NavMenuItem(
+                        link="extras:contact_list",
+                        name="Contacts",
+                        weight=400,
+                        permissions=["extras.view_contact"],
+                        buttons=[NavMenuAddButton(link="extras:contact_add", permissions=["extras.add_contact"])],
+                    ),
+                    NavMenuItem(
+                        link="extras:team_list",
+                        name="Teams",
+                        weight=500,
+                        permissions=["extras.view_team"],
+                        buttons=[NavMenuAddButton(link="extras:team_add", permissions=["extras.add_team"])],
                     ),
                 ),
             ),

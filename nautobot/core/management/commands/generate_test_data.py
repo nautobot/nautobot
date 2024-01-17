@@ -67,7 +67,14 @@ class Command(BaseCommand):
                 ManufacturerFactory,
                 PlatformFactory,
             )
-            from nautobot.extras.factory import ExternalIntegrationFactory, RoleFactory, StatusFactory, TagFactory
+            from nautobot.extras.factory import (
+                ContactFactory,
+                ExternalIntegrationFactory,
+                RoleFactory,
+                StatusFactory,
+                TagFactory,
+                TeamFactory,
+            )
             from nautobot.extras.management import populate_status_choices
             from nautobot.extras.utils import TaggableClassesQuery
             from nautobot.ipam.choices import PrefixTypeChoices
@@ -100,6 +107,10 @@ class Command(BaseCommand):
         TagFactory.create_batch(5, content_types=TaggableClassesQuery().as_queryset(), using=db_name)
         # ...and some tags that apply to a random subset of content-types
         TagFactory.create_batch(15, using=db_name)
+        self.stdout.write("Creating Contacts...")
+        ContactFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating Teams...")
+        TeamFactory.create_batch(5, using=db_name)
         self.stdout.write("Creating TenantGroups...")
         TenantGroupFactory.create_batch(10, has_parent=False, using=db_name)
         TenantGroupFactory.create_batch(10, has_parent=True, using=db_name)

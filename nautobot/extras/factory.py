@@ -11,8 +11,25 @@ from nautobot.core.factory import (
     UniqueFaker,
 )
 from nautobot.extras.choices import WebhookHttpMethodChoices
-from nautobot.extras.models import ExternalIntegration, Role, Status, Tag
+from nautobot.extras.models import Contact, ExternalIntegration, Role, Status, Tag, Team
 from nautobot.extras.utils import FeatureQuery, RoleModelsQuery, TaggableClassesQuery
+
+
+class ContactFactory(PrimaryModelFactory):
+    class Meta:
+        model = Contact
+
+    class Params:
+        has_phone = NautobotBoolIterator()
+        has_email = NautobotBoolIterator()
+        has_address = NautobotBoolIterator()
+        has_comments = NautobotBoolIterator()
+
+    name = factory.Faker("name")
+    phone = factory.Maybe("has_phone", factory.Faker("phone_number"), "")
+    email = factory.Maybe("has_email", factory.Faker("email"), "")
+    address = factory.Maybe("has_address", factory.Faker("address"), "")
+    comments = factory.Maybe("has_comments", factory.Faker("text", max_nb_chars=200), "")
 
 
 class ExternalIntegrationFactory(PrimaryModelFactory):
@@ -109,6 +126,28 @@ class StatusFactory(OrganizationalModelFactory):
                         lambda: ContentType.objects.filter(FeatureQuery("statuses").get_query()), minimum=1
                     )
                 )
+
+
+class TeamFactory(PrimaryModelFactory):
+    class Meta:
+        model = Team
+
+    class Params:
+        has_phone = NautobotBoolIterator()
+        has_email = NautobotBoolIterator()
+        has_address = NautobotBoolIterator()
+        has_comments = NautobotBoolIterator()
+
+    name = factory.Faker("job")
+    phone = factory.Maybe("has_phone", factory.Faker("phone_number"), "")
+    email = factory.Maybe("has_email", factory.Faker("email"), "")
+    address = factory.Maybe("has_address", factory.Faker("address"), "")
+    comments = factory.Maybe("has_comments", factory.Faker("text", max_nb_chars=200), "")
+
+    @factory.post_generation
+    def contacts(self, create, extract, **kwargs):
+        """Assign some contacts to a team after generation"""
+        self.contacts.set(get_random_instances(Contact))
 
 
 class TagFactory(OrganizationalModelFactory):

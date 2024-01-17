@@ -345,5 +345,40 @@
         </div>
     </div>
   </div>
+{% if is_contact_associatable_model %}
+    <div id="contacts" role="tabpanel" class="tab-pane {% if request.GET.tab == 'contacts' %}active{% else %}fade{% endif %}">
+        <div class="row">
+            <div class="col-md-12">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <strong>Contact Associations</strong>
+                        </div>
+                        <div class="pull-right noprint">
+                            <!-- Insert table config button here -->
+                        </div>
+                        {% render_table associated_contacts_table 'inc/table.html' %}
+                        <div class="panel-footer noprint">
+                            {% if perms.extras.delete_contactassociation %}
+                                <button type="submit" formaction="{% url 'extras:contactassociation_bulk_delete' %}?return_url={{request.path}}" class="btn btn-danger btn-xs">
+                                    <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
+                                </button>
+                            {% endif %}
+                            {% if perms.extras.add_contactassociation %}
+                                <div class="pull-right">
+                                    <a href="{% url 'extras:object_contact_add' %}?return_url={{request.path}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" class="btn btn-primary btn-xs">
+                                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contact
+                                    </a>
+                                </div>
+                            {% endif %}
+                            <div class="clearfix"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
+{% endif %}
 {% endblock content %}

@@ -11,6 +11,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
 
+from nautobot.circuits.models import Circuit
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.testing import extract_form_failures, extract_page_body, TestCase, ViewTestCases
@@ -30,6 +31,8 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
+    ContactAssociation,
     CustomField,
     CustomLink,
     DynamicGroup,
@@ -51,6 +54,7 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
@@ -351,6 +355,171 @@ class ConfigContextSchemaTestCase(
         cls.bulk_edit_data = {
             "description": "New description",
         }
+
+
+class ContactTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = Contact
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.form_data = {
+            "name": "new contact",
+            "phone": "555-0121",
+            "email": "new-contact@example.com",
+            "address": "Rainbow Road, Ramus NJ",
+        }
+        cls.csv_data = (
+            "name,phone,email,address",
+            'new contact 2,555-0122,,"Rainbow Road, NJ, USA"',
+            "new contact 3,555-0123,newcontact2@example.com,",
+            "new contact 4,555-0124,,",
+        )
+        cls.bulk_edit_data = {"address": "Carnegie Hall, New York, NY"}
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_new_contact_and_assign_contact_to_object(self):
+        initial_contact_count = Contact.objects.count()
+        initial_contact_association_count = ContactAssociation.objects.count()
+        self.add_permissions("extras.add_contact")
+        self.add_permissions("extras.add_contactassociation")
+
+        # Try GET with model-level permission
+        url = reverse("extras:object_contact_add")
+        self.assertHttpStatus(self.client.get(url), 200)
+        contact_associated_circuit = Circuit.objects.first()
+        self.form_data["associated_object_type"] = ContentType.objects.get_for_model(Circuit).pk
+        self.form_data["associated_object_id"] = contact_associated_circuit.pk
+        self.form_data["role"] = Role.objects.get_for_model(ContactAssociation).first().pk
+        self.form_data["status"] = Status.objects.get_for_model(ContactAssociation).first().pk
+
+        # Try POST with model-level permission
+        request = {
+            "path": url,
+            "data": post_data(self.form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_contact_count + 1, Contact.objects.count())
+        self.assertEqual(initial_contact_association_count + 1, ContactAssociation.objects.count())
+        contact = Contact.objects.get(name="new contact", phone="555-0121")
+        self.assertEqual(contact.name, "new contact")
+        self.assertEqual(contact.phone, "555-0121")
+        self.assertEqual(contact.email, "new-contact@example.com")
+        self.assertEqual(contact.address, "Rainbow Road, Ramus NJ")
+        contact_association = ContactAssociation.objects.get(contact=contact)
+        self.assertEqual(contact_association.associated_object_type.pk, self.form_data["associated_object_type"])
+        self.assertEqual(contact_association.associated_object_id, self.form_data["associated_object_id"])
+        self.assertEqual(contact_association.role.pk, self.form_data["role"])
+        self.assertEqual(contact_association.status.pk, self.form_data["status"])
+
+
+class ContactAssociationTestCase(
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+):
+    model = ContactAssociation
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.form_data = {
+            "contact": Contact.objects.first().pk,
+            "team": None,
+            "associated_object_type": ContentType.objects.get_for_model(Circuit).pk,
+            "associated_object_id": Circuit.objects.first().pk,
+            "role": Role.objects.get_for_model(ContactAssociation).first().pk,
+            "status": Status.objects.get_for_model(ContactAssociation).first().pk,
+        }
+        ContactAssociation.objects.create(
+            contact=Contact.objects.first(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=IPAddress.objects.first().pk,
+            status=Status.objects.get_for_model(ContactAssociation).first(),
+        )
+        ContactAssociation.objects.create(
+            contact=Contact.objects.last(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=IPAddress.objects.first().pk,
+            status=Status.objects.get_for_model(ContactAssociation).first(),
+        )
+        ContactAssociation.objects.create(
+            team=Team.objects.first(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=IPAddress.objects.first().pk,
+            status=Status.objects.get_for_model(ContactAssociation).first(),
+        )
+        ContactAssociation.objects.create(
+            team=Team.objects.last(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=IPAddress.objects.first().pk,
+            status=Status.objects.get_for_model(ContactAssociation).first(),
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_assign_existing_contact_to_object(self):
+        contact = Contact.objects.first()
+        initial_contact_association_count = ContactAssociation.objects.count()
+        self.add_permissions("extras.add_contact")
+        self.add_permissions("extras.add_contactassociation")
+
+        # Try GET with model-level permission
+        url = reverse("extras:object_contact_team_assign")
+        self.assertHttpStatus(self.client.get(url), 200)
+        contact_associated_circuit = Circuit.objects.first()
+        self.form_data["associated_object_type"] = ContentType.objects.get_for_model(Circuit).pk
+        self.form_data["associated_object_id"] = contact_associated_circuit.pk
+        self.form_data["role"] = Role.objects.get_for_model(ContactAssociation).first().pk
+        self.form_data["status"] = Status.objects.get_for_model(ContactAssociation).first().pk
+
+        # Try POST with model-level permission
+        request = {
+            "path": url,
+            "data": post_data(self.form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_contact_association_count + 1, ContactAssociation.objects.count())
+        self.assertEqual(contact.pk, self.form_data["contact"])
+        contact_association = ContactAssociation.objects.get(
+            contact=contact, associated_object_id=contact_associated_circuit.pk
+        )
+        self.assertEqual(contact_association.associated_object_type.pk, self.form_data["associated_object_type"])
+        self.assertEqual(contact_association.associated_object_id, self.form_data["associated_object_id"])
+        self.assertEqual(contact_association.role.pk, self.form_data["role"])
+        self.assertEqual(contact_association.status.pk, self.form_data["status"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_assign_existing_team_to_object(self):
+        team = Team.objects.first()
+        initial_contact_association_count = ContactAssociation.objects.count()
+        self.add_permissions("extras.add_team")
+        self.add_permissions("extras.add_contactassociation")
+
+        # Try GET with model-level permission
+        url = reverse("extras:object_contact_team_assign")
+        self.assertHttpStatus(self.client.get(url), 200)
+        contact_associated_circuit = Circuit.objects.first()
+        self.form_data["team"] = team.pk
+        self.form_data["contact"] = None
+        self.form_data["associated_object_type"] = ContentType.objects.get_for_model(Circuit).pk
+        self.form_data["associated_object_id"] = contact_associated_circuit.pk
+        self.form_data["role"] = Role.objects.get_for_model(ContactAssociation).first().pk
+        self.form_data["status"] = Status.objects.get_for_model(ContactAssociation).first().pk
+
+        # Try POST with model-level permission
+        request = {
+            "path": url,
+            "data": post_data(self.form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_contact_association_count + 1, ContactAssociation.objects.count())
+        self.assertEqual(team.pk, self.form_data["team"])
+        contact_association = ContactAssociation.objects.get(
+            team=team, associated_object_id=contact_associated_circuit.pk
+        )
+        self.assertEqual(contact_association.associated_object_type.pk, self.form_data["associated_object_type"])
+        self.assertEqual(contact_association.associated_object_id, self.form_data["associated_object_id"])
+        self.assertEqual(contact_association.role.pk, self.form_data["role"])
+        self.assertEqual(contact_association.status.pk, self.form_data["status"])
 
 
 class CustomLinkTestCase(
@@ -2468,6 +2637,61 @@ class StatusTestCase(
         }
 
 
+class TeamTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = Team
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.form_data = {
+            "name": "new team",
+            "phone": "555-0122",
+            "email": "new-team@example.com",
+            "address": "Rainbow Road, Ramus NJ",
+        }
+        cls.csv_data = (
+            "name,phone,email,address",
+            'new team 2,555-0122,,"rainbow road, NJ, USA"',
+            "new team 3,555-0123,newteam2@example.com,",
+            "new team 4,555-0124,,",
+        )
+        cls.bulk_edit_data = {"address": "Carnegie Hall, New York, NY"}
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_new_team_and_assign_team_to_object(self):
+        initial_team_count = Team.objects.count()
+        initial_team_association_count = ContactAssociation.objects.count()
+        self.add_permissions("extras.add_team")
+        self.add_permissions("extras.add_contactassociation")
+
+        # Try GET with model-level permission
+        url = reverse("extras:object_team_add")
+        self.assertHttpStatus(self.client.get(url), 200)
+        team_associated_circuit = Circuit.objects.first()
+        self.form_data["associated_object_type"] = ContentType.objects.get_for_model(Circuit).pk
+        self.form_data["associated_object_id"] = team_associated_circuit.pk
+        self.form_data["role"] = Role.objects.get_for_model(ContactAssociation).first().pk
+        self.form_data["status"] = Status.objects.get_for_model(ContactAssociation).first().pk
+
+        # Try POST with model-level permission
+        request = {
+            "path": url,
+            "data": post_data(self.form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_team_count + 1, Team.objects.count())
+        self.assertEqual(initial_team_association_count + 1, ContactAssociation.objects.count())
+        team = Team.objects.get(name="new team", phone="555-0122")
+        self.assertEqual(team.name, "new team")
+        self.assertEqual(team.phone, "555-0122")
+        self.assertEqual(team.email, "new-team@example.com")
+        self.assertEqual(team.address, "Rainbow Road, Ramus NJ")
+        contact_association = ContactAssociation.objects.get(team=team)
+        self.assertEqual(contact_association.associated_object_type.pk, self.form_data["associated_object_type"])
+        self.assertEqual(contact_association.associated_object_id, self.form_data["associated_object_id"])
+        self.assertEqual(contact_association.role.pk, self.form_data["role"])
+        self.assertEqual(contact_association.status.pk, self.form_data["status"])
+
+
 class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = Tag
 
@@ -2655,6 +2879,18 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
                     result = "VLANs"
                 # Assert tables are correctly rendered
                 if content_type not in role_content_types:
-                    self.assertNotIn(f"<strong>{result}</strong>", response_body)
+                    if result == "Contact Associations":
+                        # AssociationContact Table in the contact tab should be there.
+                        self.assertIn(
+                            f'<strong>{result}</strong>\n                                    <div class="pull-right noprint">\n',
+                            response_body,
+                        )
+                        # ContactAssociationTable related to this role instances should not be there.
+                        self.assertNotIn(
+                            f'<strong>{result}</strong>\n            </div>\n            \n\n<table class="table table-hover table-headings">\n',
+                            response_body,
+                        )
+                    else:
+                        self.assertNotIn(f"<strong>{result}</strong>", response_body)
                 else:
                     self.assertIn(f"<strong>{result}</strong>", response_body)

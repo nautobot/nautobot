@@ -53,7 +53,8 @@ from nautobot.core.views.utils import (
     import_csv_helper,
     prepare_cloned_fields,
 )
-from nautobot.extras.models import ExportTemplate
+from nautobot.extras.models import ContactAssociation, ExportTemplate
+from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import remove_prefix_from_cf_key
 
 
@@ -67,6 +68,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
 
     queryset = None
     template_name = None
+    is_contact_associatable_model = True
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -122,18 +124,32 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             resp = {"tabs": plugin_tabs}
             return JsonResponse(resp)
         else:
-            return render(
-                request,
-                self.get_template_name(),
-                {
-                    "object": instance,
-                    "verbose_name": self.queryset.model._meta.verbose_name,
-                    "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                    "created_by": created_by,
-                    "last_updated_by": last_updated_by,
-                    **self.get_extra_context(request, instance),
-                },
-            )
+            content_type = ContentType.objects.get_for_model(self.queryset.model)
+            context = {
+                "object": instance,
+                "is_contact_associatable_model": self.is_contact_associatable_model,
+                "content_type": content_type,
+                "verbose_name": self.queryset.model._meta.verbose_name,
+                "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+                "created_by": created_by,
+                "last_updated_by": last_updated_by,
+                **self.get_extra_context(request, instance),
+            }
+            if self.is_contact_associatable_model:
+                paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+                associations = (
+                    ContactAssociation.objects.filter(
+                        associated_object_id=instance.id,
+                        associated_object_type=content_type,
+                    )
+                    .restrict(request.user, "view")
+                    .order_by("role__name")
+                )
+                associations_table = AssociatedContactsTable(associations, orderable=False)
+                RequestConfig(request, paginate).configure(associations_table)
+                associations_table.columns.show("pk")
+                context["associated_contacts_table"] = associations_table
+            return render(request, self.get_template_name(), context)
 
 
 class ObjectListView(ObjectPermissionRequiredMixin, View):
