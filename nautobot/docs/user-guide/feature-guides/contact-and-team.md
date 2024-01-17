@@ -2,7 +2,7 @@
 
 ## How to Assign Contacts and Teams to Nautobot Objects
 
-In order to assign contacts/teams to a particular object, we first need to navigate to the detail view of the object. We will use a circuit in this example.
+In order to assign contacts/teams to a particular object, we first need to define `Status` and `Role` objects for contenttype `extras:contactassociation`. Once that is done, we can navigate to the detail view of the object. We will use a circuit in this example.
 
 ![Circuit](./images/contact-and-team/circuit.png)
 

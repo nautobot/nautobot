@@ -250,7 +250,6 @@ plugins:
         'plugins/porting-from-netbox.md': 'development/apps/porting-from-netbox.md'
         'rest-api/overview.md': 'user-guide/platform-functionality/rest-api/overview.md'
         'user-guide/administration/configuration/node-configuration.md': 'user-guide/administration/configuration/index.md'
-        'user-guides/contact-and-team.md': 'user-guide/feature-guides/contact-and-team.md'
         'user-guides/custom-fields.md': 'user-guide/feature-guides/custom-fields.md'
         'user-guides/getting-started/creating-devices.md': 'user-guide/feature-guides/getting-started/creating-devices.md'
         'user-guides/getting-started/index.md': 'user-guide/feature-guides/getting-started/index.md'
@@ -378,8 +377,8 @@ nav:
         - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
       - Extras:
         - Config Context: "user-guide/core-data-model/extras/configcontext.md"
-        - Contact: "user-guide/core-data-model/extras/contact.md"
         - Config Context Schema: "user-guide/core-data-model/extras/configcontextschema.md"
+        - Contact: "user-guide/core-data-model/extras/contact.md"
         - Team: "user-guide/core-data-model/extras/team.md"
       - IPAM:
         - IP Address: "user-guide/core-data-model/ipam/ipaddress.md"
