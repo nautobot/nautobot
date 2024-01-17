@@ -3,7 +3,6 @@
 import logging
 import pickle
 
-import django_filters
 from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -11,6 +10,7 @@ from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.utils.functional import cached_property
+import django_filters
 
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import DynamicModelChoiceField
@@ -20,9 +20,8 @@ from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices
-from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
+from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGroupQuerySet
 from nautobot.extras.utils import extras_features
-
 
 logger = logging.getLogger(__name__)
 

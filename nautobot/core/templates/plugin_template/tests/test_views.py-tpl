@@ -1,3 +1,0 @@
-from nautobot.core.testing import TestCase
-
-from {{ app_name }} import views

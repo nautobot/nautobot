@@ -1,14 +1,15 @@
 import datetime
+from io import BytesIO
 
 from django.contrib import messages
-from django.core.exceptions import FieldError
+from django.core.exceptions import FieldError, ValidationError
 from django.db.models import ForeignKey
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
-
-from rest_framework import serializers
+from rest_framework import exceptions, serializers
 
 from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField
+from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.models.utils import is_taggable
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_filter_field_label
@@ -167,6 +168,34 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
     # TODO this ordering should be defined by the serializer instead...
     fields = sorted(fields, key=lambda info: 1 if info["required"] else 2)
     return fields
+
+
+def import_csv_helper(*, request, form, serializer_class):
+    field_name = "csv_file" if request.FILES else "csv_data"
+    csvtext = form.cleaned_data[field_name]
+    try:
+        data = NautobotCSVParser().parse(
+            stream=BytesIO(csvtext.encode("utf-8")),
+            parser_context={"request": request, "serializer_class": serializer_class},
+        )
+        new_objs = []
+        validation_failed = False
+        for row, entry in enumerate(data, start=1):
+            serializer = serializer_class(data=entry, context={"request": request})
+            if serializer.is_valid():
+                new_objs.append(serializer.save())
+            else:
+                validation_failed = True
+                for field, err in serializer.errors.items():
+                    form.add_error(field_name, f"Row {row}: {field}: {err[0]}")
+    except exceptions.ParseError as exc:
+        validation_failed = True
+        form.add_error(None, str(exc))
+
+    if validation_failed:
+        raise ValidationError("")
+
+    return new_objs
 
 
 def handle_protectederror(obj_list, request, e):

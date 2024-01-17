@@ -6,8 +6,8 @@ from .git import (
     git_repository_dry_run,
 )
 from .registry import (
-    get_datasource_contents,
     get_datasource_content_choices,
+    get_datasource_contents,
     refresh_datasource_content,
 )
 

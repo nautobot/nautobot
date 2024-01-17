@@ -353,7 +353,7 @@ jobs:
       - "ruff"
       - "yamllint"
   changelog:
-    if: contains(fromJson('["develop","next","develop-1.6"]'), github.base_ref)
+    if: ${{ (contains(fromJson('["develop","next"]'), github.base_ref)) || (startsWith(github.base_ref, 'ltm')) }}
     runs-on: "ubuntu-20.04"
     steps:
       - name: "Check out repository code"

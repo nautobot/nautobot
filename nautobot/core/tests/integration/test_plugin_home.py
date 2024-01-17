@@ -1,5 +1,6 @@
-from django.conf import settings
 from unittest import skipIf
+
+from django.conf import settings
 
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.core.testing.integration import SeleniumTestCase

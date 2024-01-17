@@ -1,8 +1,7 @@
-import yaml
-
-from django.core.management import call_command
 from django.conf import settings
+from django.core.management import call_command
 from django.test.runner import DiscoverRunner
+import yaml
 
 from nautobot.core.celery import app, setup_nautobot_job_logging
 

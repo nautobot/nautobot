@@ -1,0 +1,2 @@
+Increased overly-brief `start_period` for development `nautobot` container to allow sufficient time for initial migrations to run.
+Fixed bug with invoke cli and invoke nbshell.

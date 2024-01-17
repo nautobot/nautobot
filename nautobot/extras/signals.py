@@ -1,9 +1,9 @@
 import contextvars
+from datetime import timedelta
+import logging
 import os
 import secrets
 import shutil
-import logging
-from datetime import timedelta
 
 from db_file_storage.model_utils import delete_file
 from db_file_storage.storage import DatabaseFileStorage
@@ -13,27 +13,28 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.storage import get_storage_class
 from django.db import transaction
-from django.db.models.signals import m2m_changed, pre_delete, post_save, pre_save, post_delete
+from django.db.models.signals import m2m_changed, post_delete, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
 
 from nautobot.core.celery import app, import_jobs_as_celery_tasks
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices
+from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import (
+    ComputedField,
     CustomField,
     DynamicGroup,
     DynamicGroupMembership,
     GitRepository,
     JobResult,
     ObjectChange,
+    Relationship,
 )
 from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.extras.utils import refresh_job_model_from_job_class
-
 
 # thread safe change context state variable
 change_context_state = contextvars.ContextVar("change_context_state", default=None)
@@ -57,6 +58,29 @@ def _get_user_if_authenticated(user, instance):
     else:
         logger.warning(f"Unable to retrieve the user while creating the changelog for {instance}")
         return None
+
+
+@receiver(post_save)
+@receiver(m2m_changed)
+@receiver(post_delete)
+def invalidate_lru_cache(sender, **kwargs):
+    """Invalidate the LRU cache for ComputedFields, CustomFields and Relationships."""
+    if sender is CustomField.content_types.through:
+        manager = CustomField.objects
+    elif sender in (ComputedField, CustomField, Relationship):
+        manager = sender.objects
+    else:
+        return
+
+    cached_methods = (
+        "get_for_model",
+        "get_for_model_source",
+        "get_for_model_destination",
+    )
+
+    for method in cached_methods:
+        if hasattr(manager, method):
+            getattr(manager, method).cache_clear()
 
 
 @receiver(post_save)

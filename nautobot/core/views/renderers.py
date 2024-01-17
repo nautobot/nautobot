@@ -7,9 +7,9 @@ from django_tables2 import RequestConfig
 from rest_framework import renderers
 
 from nautobot.core.forms import (
+    restrict_form_fields,
     SearchForm,
     TableConfigForm,
-    restrict_form_fields,
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
@@ -101,6 +101,10 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         else:
             pk_list = kwargs.get("pk_list", [])
             table = table_class(queryset.filter(pk__in=pk_list), orderable=False)
+            if view.action in ["bulk_destroy", "bulk_update"]:
+                # Hide actions column if present
+                if "actions" in table.columns:
+                    table.columns.hide("actions")
             return table
 
     def validate_action_buttons(self, view, request):

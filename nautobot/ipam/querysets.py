@@ -1,8 +1,8 @@
 import re
 
-import netaddr
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError, Q
+import netaddr
 
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import merge_dicts_without_collision

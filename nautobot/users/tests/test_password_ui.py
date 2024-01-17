@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import override_settings, RequestFactory
 from django.urls import reverse
-from social_django.utils import load_strategy, load_backend
+from social_django.utils import load_backend, load_strategy
 
 from nautobot.core.testing import TestCase
 

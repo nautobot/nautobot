@@ -8,7 +8,7 @@ import django.forms
 from django.utils.safestring import mark_safe
 
 from nautobot import __version__
-from nautobot.core.settings_funcs import is_truthy, parse_redis_connection, ConstanceConfigItem
+from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
 
 #
 # Environment setup

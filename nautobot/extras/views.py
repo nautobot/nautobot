@@ -10,7 +10,7 @@ from django.db.models import Count, ProtectedError, Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import TemplateDoesNotExist, get_template
+from django.template.loader import get_template, TemplateDoesNotExist
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import iri_to_uri
@@ -27,10 +27,10 @@ from nautobot.core.tables import ButtonsColumn
 from nautobot.core.utils.lookup import get_table_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic, viewsets
-from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.core.views.mixins import ObjectPermissionRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
+from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device, Rack
 from nautobot.dcim.tables import DeviceTable, RackTable
 from nautobot.extras.tasks import delete_custom_field_data
@@ -42,7 +42,7 @@ from nautobot.virtualization.tables import VirtualMachineTable
 
 from . import filters, forms, tables
 from .api import serializers
-from .choices import JobExecutionType, JobResultStatusChoices
+from .choices import JobExecutionType, JobResultStatusChoices, LogLevelChoices
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
     enqueue_pull_git_repository_and_refresh_data,
@@ -63,8 +63,10 @@ from .models import (
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    Job as JobModel,
     JobButton,
     JobHook,
+    JobLogEntry,
     JobResult,
     Note,
     ObjectChange,
@@ -80,7 +82,6 @@ from .models import (
     TaggedItem,
     Webhook,
 )
-from .models import Job as JobModel
 from .registry import registry
 from .tables import RoleTable
 
@@ -1507,12 +1508,35 @@ class JobHookBulkDeleteView(generic.BulkDeleteView):
 #
 
 
+def get_annotated_jobresult_queryset():
+    return (
+        JobResult.objects.defer("result")
+        .select_related("job_model", "user")
+        .annotate(
+            debug_log_count=count_related(
+                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_DEBUG}
+            ),
+            info_log_count=count_related(
+                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_INFO}
+            ),
+            warning_log_count=count_related(
+                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_WARNING}
+            ),
+            error_log_count=count_related(
+                JobLogEntry,
+                "job_result",
+                filter_dict={"log_level__in": [LogLevelChoices.LOG_ERROR, LogLevelChoices.LOG_CRITICAL]},
+            ),
+        )
+    )
+
+
 class JobResultListView(generic.ObjectListView):
     """
     List JobResults
     """
 
-    queryset = JobResult.objects.defer("result").select_related("job_model", "user").prefetch_related("logs")
+    queryset = get_annotated_jobresult_queryset()
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -1524,7 +1548,7 @@ class JobResultDeleteView(generic.ObjectDeleteView):
 
 
 class JobResultBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobResult.objects.defer("result").all()
+    queryset = get_annotated_jobresult_queryset()
     table = tables.JobResultTable
     filterset = filters.JobResultFilterSet
 
@@ -1559,7 +1583,14 @@ class JobLogEntryTableView(View):
 
     def get(self, request, pk=None):
         instance = self.queryset.get(pk=pk)
-        log_table = tables.JobLogEntryTable(data=instance.job_log_entries.all(), user=request.user)
+        filter_q = request.GET.get("q")
+        if filter_q:
+            queryset = instance.job_log_entries.filter(
+                Q(message__icontains=filter_q) | Q(log_level__icontains=filter_q)
+            )
+        else:
+            queryset = instance.job_log_entries.all()
+        log_table = tables.JobLogEntryTable(data=queryset, user=request.user)
         RequestConfig(request).configure(log_table)
         return HttpResponse(log_table.as_html(request))
 

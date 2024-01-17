@@ -7,13 +7,13 @@ from nautobot.core.forms import (
     TagFilterField,
 )
 from nautobot.extras.forms import (
-    NautobotFilterForm,
     NautobotBulkEditForm,
+    NautobotFilterForm,
     NautobotModelForm,
     TagsBulkEditFormMixin,
 )
-from .models import Tenant, TenantGroup
 
+from .models import Tenant, TenantGroup
 
 #
 # Tenant groups

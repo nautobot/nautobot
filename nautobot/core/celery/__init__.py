@@ -21,7 +21,6 @@ from nautobot.core.celery.control import discard_git_repository, refresh_git_rep
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.celery.log import NautobotDatabaseHandler
 
-
 logger = logging.getLogger(__name__)
 # The Celery documentation tells us to call setup on the app to initialize
 # settings, but we will NOT be doing that because of a chicken-and-egg problem
