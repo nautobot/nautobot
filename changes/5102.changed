@@ -1,0 +1,3 @@
+Changed the `nautobot-server runjob` management command to check whether the requested user has permission to run the requested job.
+Changed the `nautobot-server runjob` management command to check whether the requested job is installed and enabled.
+Changed the `nautobot-server runjob` management command to check whether a Celery worker is running when invoked without the `--local` flag.

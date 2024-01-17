@@ -8,6 +8,7 @@ from django.utils import timezone
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import Job, JobLogEntry, JobResult
+from nautobot.extras.utils import get_worker_count
 
 
 class Command(BaseCommand):
@@ -52,9 +53,24 @@ class Command(BaseCommand):
             if options.get("data"):
                 data = json.loads(options["data"])
         except json.decoder.JSONDecodeError as error:
-            raise CommandError(f"Invalid JSON data:\n{error!s}")
+            raise CommandError(f"Invalid JSON data:\n{error!s}") from error
 
-        job_model = Job.objects.get_for_class_path(options["job"])
+        try:
+            job_model = Job.objects.get_for_class_path(options["job"])
+        except Job.DoesNotExist as error:
+            raise CommandError(f"Job {options['job']} does not exist.") from error
+
+        try:
+            job_model = Job.objects.restrict(user, "run").get_for_class_path(options["job"])
+        except Job.DoesNotExist:
+            raise CommandError(f"User {options['username']} does not have permission to run this Job") from None
+
+        if not job_model.installed or job_model.job_class is None:
+            raise CommandError("Job is not presently installed")
+        if not job_model.enabled:
+            raise CommandError("Job is not presently enabled to be run")
+        if not options["local"] and not get_worker_count():
+            raise CommandError("No Celery worker detected. Perhaps you meant to specify --local?")
 
         # Run the job and create a new JobResult
         self.stdout.write(f"[{timezone.now():%H:%M:%S}] Running {options['job']}...")
@@ -100,12 +116,14 @@ class Command(BaseCommand):
                     self.stdout.write(f"\t\t{status}: {log_entry.message}")
 
         if job_result.result:
-            self.stdout.write(job_result.result)
+            self.stdout.write(str(job_result.result))
 
         if job_result.status == JobResultStatusChoices.STATUS_FAILURE:
             status = self.style.ERROR("FAILURE")
-        else:
+        elif job_result.status == JobResultStatusChoices.STATUS_SUCCESS:
             status = self.style.SUCCESS("SUCCESS")
+        else:
+            status = self.style.WARNING(job_result.status)
         self.stdout.write(f"[{timezone.now():%H:%M:%S}] {options['job']}: {status}")
 
         # Wrap things up

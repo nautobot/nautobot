@@ -42,7 +42,7 @@ from nautobot.core.forms import (
 )
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_model_from_name
-from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.forms import JobForm
 from nautobot.extras.models import (
@@ -122,6 +122,7 @@ class BaseJob(Task):
         try:
             deserialized_kwargs = self.deserialize_data(kwargs)
         except Exception as err:
+            self.logger.error("%s", err)
             raise RunJobTaskFailed("Error initializing job") from err
         if isinstance(self, JobHookReceiver):
             change_context = ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK
@@ -309,7 +310,8 @@ class BaseJob(Task):
         if file_ids:
             self._delete_file_proxies(*file_ids)
 
-        self.logger.info("Job completed", extra={"grouping": "post_run"})
+        if status == JobResultStatusChoices.STATUS_SUCCESS:
+            self.logger.info("Job completed", extra={"grouping": "post_run"})
 
         # TODO(gary): document this in job author docs
         # Super.after_return must be called for chords to function properly
