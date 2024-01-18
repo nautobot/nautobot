@@ -14,7 +14,7 @@ from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
 from rest_framework.parsers import JSONParser, MultiPartParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 
@@ -375,7 +375,7 @@ class GitRepositoryViewSet(NautobotModelViewSet):
     filterset_class = filters.GitRepositoryFilterSet
 
     @extend_schema(methods=["post"], request=serializers.GitRepositorySerializer)
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], permission_classes=[AllowAny])
     def sync(self, request, pk):
         """
         Enqueue pull git repository and refresh data.
