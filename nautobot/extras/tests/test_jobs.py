@@ -1036,10 +1036,7 @@ class ScheduledJobIntervalTestCase(TestCase):
         scheduled_job_weekday = self.cron_days[schedule_day_of_week]
         self.assertEqual(scheduled_job_weekday, requested_weekday)
 
-
-@override_settings(USE_TZ=True, TIME_ZONE="America/New_York")
-class ScheduledJobCronTestCase(TestCase):
-    @timezone.override("America/New_York")
+    @override_settings(USE_TZ=True, TIME_ZONE="America/New_York")
     def test_cron_time_zone(self):
         self.assertEqual(app.timezone.key, "America/New_York")
         tz_new_york = pytz.timezone("America/New_York")
