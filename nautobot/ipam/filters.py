@@ -14,6 +14,7 @@ from nautobot.core.filters import (
     NumericArrayFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
+    TreeNodeMultipleChoiceFilter,
 )
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Interface, Location
@@ -464,7 +465,13 @@ class VLANFilterSet(
         queryset=VLANGroup.objects.all(),
         label="VLAN Group (name or ID)",
     )
-    locations = NaturalKeyOrPKMultipleChoiceFilter(
+    location = TreeNodeMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        field_name="locations",
+        label="Location (name or ID)",
+    )
+    locations = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Locations (ID or name)",

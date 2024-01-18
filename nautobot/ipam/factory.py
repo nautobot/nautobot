@@ -2,10 +2,9 @@ import datetime
 import logging
 import math
 
+from django.contrib.contenttypes.models import ContentType
 import factory
 import faker
-
-from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.factory import (
     get_random_instances,
@@ -230,7 +229,7 @@ class VLANFactory(PrimaryModelFactory):
                 vlan_ct = ContentType.objects.get_for_model(VLAN)
                 self.locations.set(
                     get_random_instances(
-                        lambda: Location.objects.filter(location_type__content_types__in=[vlan_ct]), minimum=1
+                        lambda: Location.objects.filter(location_type__content_types__in=[vlan_ct]), minimum=0
                     )
                 )
 

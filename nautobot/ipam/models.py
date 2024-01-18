@@ -1390,6 +1390,7 @@ class VLAN(PrimaryModel):
 
     @location.setter
     def location(self, value):
+        print("SET ===> ", value)
         if self.locations.count() > 1:
             raise self.locations.model.MultipleObjectsReturned(
                 "Multiple Location objects returned. Please refer to locations."

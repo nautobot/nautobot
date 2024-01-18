@@ -25,8 +25,8 @@ from nautobot.ipam.models import (
     VRF,
 )
 
-from . import serializers
 from ...dcim.models import Location
+from . import serializers
 
 
 class IPAMRootView(APIRootView):
@@ -340,15 +340,15 @@ class VLANViewSet(NautobotModelViewSet):
     # Because serializer has nat_outside as read_only, update and create methods do not need to be overloaded
     class LocationIncompatibleLegacyBehavior(APIException):
         status_code = 412
-        default_detail = "This object does not conform to pre-2.1 behavior. Please correct data or use API version 2.1"
+        default_detail = "This object does not conform to pre-2.2 behavior. Please correct data or use API version 2.2"
         default_code = "precondition_failed"
 
     def get_serializer_class(self):
         if not getattr(self, "swagger_fake_view", False) and (
             not hasattr(self.request, "major_version")
-            or (self.request.major_version == 2 and self.request.minor_version < 1)
+            or (self.request.major_version == 2 and self.request.minor_version < 2)
         ):
-            # API version 2.0 or earlier - use the legacy serializer
+            # API version 2.1 or earlier - use the legacy serializer
             # Note: Generating API docs at this point request doesn't define major_version or minor_version for some reason
             return serializers.VLANLegacySerializer
         return super().get_serializer_class()
@@ -356,16 +356,21 @@ class VLANViewSet(NautobotModelViewSet):
     def retrieve(self, request, pk=None):
         try:
             return super().retrieve(request, pk)
-        except Location.DoesNotExist as e:
+        except Location.MultipleObjectsReturned as e:
             raise self.LocationIncompatibleLegacyBehavior from e
 
     def list(self, request):
         try:
             return super().list(request)
-        except Location.DoesNotExist as e:
-            raise self.LocationIncompatibleLegacyBehavior(
-                f"At least one object in the resulting list does not conform to pre-2.1 behavior. Please use API version 2.1. Item: {e.obj}, PK: {e.obj.pk}"
-            )
+        except Location.MultipleObjectsReturned as e:
+            raise self.LocationIncompatibleLegacyBehavior from e
+
+    def update(self, request, *args, **kwargs):
+        try:
+            print("=====> UPDATE ", request.data)
+            return super().update(request, *args, **kwargs)
+        except Location.MultipleObjectsReturned as e:
+            raise self.LocationIncompatibleLegacyBehavior from e
 
 
 #

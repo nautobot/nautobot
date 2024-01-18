@@ -161,6 +161,10 @@ class VLANLegacySerializer(VLANSerializer):
         ]
         validators = []
 
+    def update(self, instance, validated_data):
+        print("VALIDATED DATA ====> ", validated_data)
+        return super().update(instance, validated_data)
+
 
 #
 # Prefixes

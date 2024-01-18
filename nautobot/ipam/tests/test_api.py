@@ -4,6 +4,7 @@ from random import shuffle
 from unittest import skip
 
 from django.db import connection
+from django.db.models import Count
 from django.urls import reverse
 from rest_framework import status
 
@@ -746,6 +747,62 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
         content = json.loads(response.content.decode("utf-8"))
         self.assertIn("detail", content)
         self.assertTrue(content["detail"].startswith("Unable to delete object."))
+
+    def test_vlan_2_1_api_version_response(self):
+        """Assert location can be used in VLAN API create/retrieve."""
+
+        self.add_permissions("ipam.view_vlan")
+        self.add_permissions("ipam.add_vlan")
+        self.add_permissions("ipam.change_vlan")
+        with self.subTest("Assert GET"):
+            vlan = VLAN.objects.annotate(locations_count=Count("locations")).filter(locations_count=1).first()
+            url = reverse("ipam-api:vlan-detail", kwargs={"pk": vlan.pk})
+            response = self.client.get(f"{url}?api_version=2.1", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(response.data["location"], vlan.location)
+
+        with self.subTest("Assert GET with multiple location"):
+            vlan = VLAN.objects.annotate(locations_count=Count("locations")).filter(locations_count__gt=1).first()
+            url = reverse("ipam-api:vlan-detail", kwargs={"pk": vlan.pk})
+            response = self.client.get(f"{url}?api_version=2.1", **self.header)
+            self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
+            self.assertEqual(
+                str(response.data["detail"]),
+                "This object does not conform to pre-2.2 behavior. Please correct data or use API version 2.2",
+            )
+
+        with self.subTest("Assert CREATE"):
+            url = reverse("ipam-api:vlan-list")
+            data = {**self.create_data[0]}
+            data["location"] = data.pop("locations")[0]
+            response = self.client.post(f"{url}?api_version=2.1", data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_201_CREATED)
+            self.assertTrue(VLAN.objects.filter(pk=response.data["id"]).exists())
+
+        with self.subTest("Assert UPDATE on multiple locations ERROR"):
+            vlan = VLAN.objects.annotate(locations_count=Count("locations")).filter(locations_count__gt=1).first()
+            url = reverse("ipam-api:vlan-detail", kwargs={"pk": vlan.pk})
+            data = {**self.create_data[0]}
+            data["vid"] = 19
+            data["location"] = data.pop("locations")[0]
+            data.pop("vlan_group")
+            response = self.client.patch(f"{url}?api_version=2.1", data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
+            self.assertEqual(
+                str(response.data["detail"]),
+                "This object does not conform to pre-2.2 behavior. Please correct data or use API version 2.2",
+            )
+
+        # TODO (timizuo): Fix Update is not currently updating location
+        # with self.subTest("Assert UPDATE on single location"):
+        #     vlan = VLAN.objects.annotate(locations_count=Count('locations')).filter(locations_count=1).first()
+        #     url = reverse("ipam-api:vlan-detail", kwargs={"pk": vlan.pk})
+        #     data = {"location": self.create_data[0]["locations"][0]}
+        #     response = self.client.patch(
+        #         f"{url}?api_version=2.1", data, format="json", **self.header
+        #     )
+        #     self.assertHttpStatus(response, status.HTTP_200_OK)
+        #     self.assertEqual(response.data["location"].pk, data["location"])
 
 
 class ServiceTest(APIViewTestCases.APIViewTestCase):

@@ -1079,6 +1079,17 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         params = {"vid": vids}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(vid__in=vids))
 
+    def test_location(self):
+        params = {"location": [self.locations[0].pk, self.locations[1].pk]}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(locations__in=params["location"]).distinct()
+        )
+        params = {"location": [self.locations[0].name, self.locations[1].name]}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(locations__name__in=params["location"]).distinct(),
+        )
+
     def test_locations(self):
         params = {"locations": [self.locations[0].pk, self.locations[1].pk]}
         self.assertQuerysetEqual(

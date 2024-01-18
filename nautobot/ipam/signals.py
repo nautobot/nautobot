@@ -4,7 +4,7 @@ from django.db.models import Q
 from django.db.models.signals import m2m_changed, pre_delete, pre_save
 from django.dispatch import receiver
 
-from nautobot.ipam.models import VLAN, IPAddressToInterface, VRF, VRFDeviceAssignment, VRFPrefixAssignment
+from nautobot.ipam.models import IPAddressToInterface, VLAN, VRF, VRFDeviceAssignment, VRFPrefixAssignment
 
 
 @receiver(pre_save, sender=VRFDeviceAssignment)
