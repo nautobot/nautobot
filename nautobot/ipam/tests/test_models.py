@@ -1074,7 +1074,7 @@ class TestVLAN(ModelTestCases.BaseModelTestCase):
         vlan.status = Status.objects.get_for_model(VLAN).first()
         with self.assertRaises(ValidationError) as cm:
             vlan.validated_save()
-        self.assertIn(f'VLANs may not associate to locations of types {[location_type.name]}', str(cm.exception))
+        self.assertIn(f"VLANs may not associate to locations of types {[location_type.name]}", str(cm.exception))
 
 
 class TestVRF(ModelTestCases.BaseModelTestCase):

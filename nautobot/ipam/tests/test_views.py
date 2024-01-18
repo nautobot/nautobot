@@ -1186,7 +1186,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 role=roles[0],
                 status=status_1,
                 _custom_field_data={"custom_field": "Value"},
-            )
+            ),
         )
         vlans[0].locations.add(location_1)
         vlans[1].locations.add(location_1)

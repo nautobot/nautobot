@@ -1380,7 +1380,6 @@ class VLAN(PrimaryModel):
             if self._location:
                 self.location = self._location
 
-
     @property
     def location(self):
         if self.locations.count() > 1:
@@ -1404,7 +1403,6 @@ class VLAN(PrimaryModel):
             for location_with_ancestors in self.locations.all()
             for location in location_with_ancestors.ancestors(include_self=include_self)
         ]
-
 
     @property
     def display(self):

@@ -688,9 +688,7 @@ class VLANForm(NautobotModelForm, TenancyForm):
         required=False,
         label="Locations",
         null_option="None",
-        query_params={
-            "content_type": VLAN._meta.label_lower
-        }
+        query_params={"content_type": VLAN._meta.label_lower},
     )
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
@@ -726,7 +724,6 @@ class VLANForm(NautobotModelForm, TenancyForm):
         except ValidationError as e:
             print("\n\n=====> VALIDATION ERROR")
             raise forms.ValidationError(e.message_dict)
-            
 
 
 class VLANBulkEditForm(

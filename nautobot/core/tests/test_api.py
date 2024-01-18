@@ -690,11 +690,13 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "vid": 100,
             "name": "Test VLAN 100",
             "status": self.statuses.first().pk,
-            "locations": [{
-                "parent": {
-                    "name": self.location1.name,
-                },
-            }],
+            "locations": [
+                {
+                    "parent": {
+                        "name": self.location1.name,
+                    },
+                }
+            ],
             "vlan_group": self.vlan_group1.pk,
         }
         url = reverse("ipam-api:vlan-list")

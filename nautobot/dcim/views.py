@@ -234,7 +234,10 @@ class LocationView(generic.ObjectView):
             "prefix_count": Prefix.objects.restrict(request.user, "view")
             .filter(location__in=related_locations)
             .count(),
-            "vlan_count": VLAN.objects.restrict(request.user, "view").filter(locations__in=related_locations).distinct().count(),
+            "vlan_count": VLAN.objects.restrict(request.user, "view")
+            .filter(locations__in=related_locations)
+            .distinct()
+            .count(),
             "circuit_count": Circuit.objects.restrict(request.user, "view")
             .filter(circuit_terminations__location__in=related_locations)
             .count(),
@@ -1722,9 +1725,7 @@ class InterfaceView(generic.ObjectView):
             vlans.append(instance.untagged_vlan)
             vlans[0].tagged = False
 
-        for vlan in instance.tagged_vlans.restrict(request.user).select_related(
-            "vlan_group", "tenant", "role"
-        ):
+        for vlan in instance.tagged_vlans.restrict(request.user).select_related("vlan_group", "tenant", "role"):
             vlan.tagged = True
             vlans.append(vlan)
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)

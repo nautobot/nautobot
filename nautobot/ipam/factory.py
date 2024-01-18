@@ -230,7 +230,11 @@ class VLANFactory(PrimaryModelFactory):
                 self.locations.set(extracted)
             else:
                 vlan_ct = ContentType.objects.get_for_model(VLAN)
-                self.locations.set(get_random_instances(lambda: Location.objects.filter(location_type__content_types__in=[vlan_ct]), minimum=1))
+                self.locations.set(
+                    get_random_instances(
+                        lambda: Location.objects.filter(location_type__content_types__in=[vlan_ct]), minimum=1
+                    )
+                )
 
 
 class VLANGetOrCreateFactory(VLANFactory):
