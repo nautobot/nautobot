@@ -984,7 +984,6 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     def test_run_git_sync_no_celery_worker(self, mock_get_worker_count):
         """Git sync cannot be triggered if Celery is not running."""
         mock_get_worker_count.return_value = 0
-        self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
@@ -998,7 +997,6 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     def test_run_git_sync_nonexistent_repo(self, mock_get_worker_count):
         """Git sync request handles case of a nonexistent repository."""
         mock_get_worker_count.return_value = 1
-        self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": "11111111-1111-1111-1111-111111111111"})
         response = self.client.post(url, format="json", **self.header)
@@ -1017,7 +1015,6 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
     def test_run_git_sync_with_permissions(self, _):
         """Git sync request can be submitted successfully."""
-        self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
