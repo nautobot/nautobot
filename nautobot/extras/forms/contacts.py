@@ -152,6 +152,23 @@ class ContactAssociationForm(NautobotModelForm):
         ]
 
 
+class ContactAssociationBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=ContactAssociation.objects.all(), widget=forms.MultipleHiddenInput())
+    role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        required=False,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        required=False,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+
+    class Meta:
+        model = ContactAssociation
+
+
 class TeamForm(NautobotModelForm):
     contacts = DynamicModelMultipleChoiceField(
         queryset=Contact.objects.all(),
