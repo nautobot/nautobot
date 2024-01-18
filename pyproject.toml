@@ -112,6 +112,8 @@ netaddr = "~0.8.0"
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
 netutils = "^1.6.0"
+# HTML sanitization
+nh3 = "~0.2.15"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
