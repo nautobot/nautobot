@@ -33,6 +33,7 @@ from nautobot.extras.forms import (
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
+from nautobot.extras.forms.mixins import LocationsBulkEditFormMixin
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
@@ -711,7 +712,7 @@ class VLANForm(NautobotModelForm, TenancyForm):
             "tags",
         ]
         help_texts = {
-            "locations": "Leave blank if this VLAN spans multiple locations",
+            "locations": "Leave blank if this VLAN spans all locations",
             "vlan_group": "VLAN group (optional)",
             "vid": "Configured VLAN ID",
             "name": "Configured VLAN name",
@@ -723,27 +724,17 @@ class VLANForm(NautobotModelForm, TenancyForm):
         try:
             return super().clean()
         except ValidationError as e:
-            print("\n\n=====> VALIDATION ERROR")
-            raise forms.ValidationError(e.message_dict)
+            raise forms.ValidationError(e.message_dict) from e
 
 
 class VLANBulkEditForm(
     TagsBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
     RoleModelBulkEditFormMixin,
+    LocationsBulkEditFormMixin,
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=VLAN.objects.all(), widget=forms.MultipleHiddenInput())
-    # TODO (timizuo): Should we have locations in VLAN bulk create
-    # locations = DynamicModelMultipleChoiceField(
-    #     queryset=Location.objects.all(),
-    #     required=False,
-    #     label="Locations",
-    #     null_option="None",
-    #     query_params={
-    #         "content_type": VLAN._meta.label_lower
-    #     }
-    # )
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,

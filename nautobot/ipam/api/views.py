@@ -10,6 +10,7 @@ from rest_framework.routers import APIRootView
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.dcim.models import Location
 from nautobot.extras.api.views import NautobotModelViewSet
 from nautobot.ipam import filters
 from nautobot.ipam.models import (
@@ -25,7 +26,6 @@ from nautobot.ipam.models import (
     VRF,
 )
 
-from ...dcim.models import Location
 from . import serializers
 
 
@@ -336,20 +336,14 @@ class VLANViewSet(NautobotModelViewSet):
     serializer_class = serializers.VLANSerializer
     filterset_class = filters.VLANFilterSet
 
-    # 2.0 TODO: Remove exception class and overloaded methods below
-    # Because serializer has nat_outside as read_only, update and create methods do not need to be overloaded
     class LocationIncompatibleLegacyBehavior(APIException):
         status_code = 412
         default_detail = "This object does not conform to pre-2.2 behavior. Please correct data or use API version 2.2"
         default_code = "precondition_failed"
 
     def get_serializer_class(self):
-        if not getattr(self, "swagger_fake_view", False) and (
-            not hasattr(self.request, "major_version")
-            or (self.request.major_version == 2 and self.request.minor_version < 2)
-        ):
+        if self.request.major_version == 2 and self.request.minor_version < 2:
             # API version 2.1 or earlier - use the legacy serializer
-            # Note: Generating API docs at this point request doesn't define major_version or minor_version for some reason
             return serializers.VLANLegacySerializer
         return super().get_serializer_class()
 
@@ -367,7 +361,6 @@ class VLANViewSet(NautobotModelViewSet):
 
     def update(self, request, *args, **kwargs):
         try:
-            print("=====> UPDATE ", request.data)
             return super().update(request, *args, **kwargs)
         except Location.MultipleObjectsReturned as e:
             raise self.LocationIncompatibleLegacyBehavior from e

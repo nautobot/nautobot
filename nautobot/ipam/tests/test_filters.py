@@ -1014,6 +1014,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
                 vid=101,
                 name="VLAN 101",
                 vlan_group=groups[0],
+                location=cls.locations[0],
                 role=roles[0],
                 tenant=tenants[0],
                 status=statuses[0],
@@ -1059,7 +1060,6 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
                 status=statuses[2],
             ),
         )
-        vlans[0].locations.add(cls.locations[0])
         vlans[1].locations.add(cls.locations[0])
         vlans[2].locations.add(cls.locations[1])
         vlans[3].locations.add(cls.locations[1])

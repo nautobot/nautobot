@@ -1390,20 +1390,11 @@ class VLAN(PrimaryModel):
 
     @location.setter
     def location(self, value):
-        print("SET ===> ", value)
         if self.locations.count() > 1:
             raise self.locations.model.MultipleObjectsReturned(
                 "Multiple Location objects returned. Please refer to locations."
             )
         self.locations.set([value])
-
-    def location_ancestors(self, include_self=False):
-        return [
-            # TODO(timizuo): This is most-likely not the best/optimal way to archive this
-            location
-            for location_with_ancestors in self.locations.all()
-            for location in location_with_ancestors.ancestors(include_self=include_self)
-        ]
 
     @property
     def display(self):
