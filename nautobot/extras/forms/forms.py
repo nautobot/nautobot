@@ -370,8 +370,8 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     description = forms.CharField(
         required=False,
         help_text="Also used as the help text when editing models using this custom field.<br>"
-        '<a href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet" target="_blank">'
-        "Markdown</a> syntax is supported.",
+        '<a href="https://www.markdownguide.org/cheat-sheet/#basic-syntax" rel="noopener noreferrer">Markdown</a> '
+        "syntax is supported, as are a limited subset of HTML tags.",
     )
     content_types = MultipleContentTypeField(
         feature="custom_fields", help_text="The object(s) to which this field applies."
@@ -1083,7 +1083,7 @@ class JobButtonFilterForm(BootstrapMixin, forms.Form):
 
 
 class NoteForm(BootstrapMixin, forms.ModelForm):
-    note = CommentField
+    note = CommentField()
 
     class Meta:
         model = Note

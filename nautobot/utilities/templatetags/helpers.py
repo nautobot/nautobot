@@ -8,13 +8,14 @@ from django.conf import settings
 from django.contrib.staticfiles.finders import find
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
-from django.utils.html import format_html, strip_tags
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from markdown import markdown
 from django_jinja import library
 
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.forms import TableConfigForm
+from nautobot.utilities.logging import clean_html
 from nautobot.utilities.utils import foreground_color, get_route_for_model, UtilizationData
 
 HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
@@ -162,18 +163,13 @@ def render_markdown(value):
     Example:
         {{ text | render_markdown }}
     """
-    # Strip HTML tags
-    value = strip_tags(value)
-
-    # Sanitize Markdown links
-    schemes = "|".join(settings.ALLOWED_URL_SCHEMES)
-    pattern = rf"\[(.+)\]\((?!({schemes})).*:(.+)\)"
-    value = re.sub(pattern, "[\\1](\\3)", value, flags=re.IGNORECASE)
-
     # Render Markdown
     html = markdown(value, extensions=["fenced_code", "tables"])
 
-    return mark_safe(html)  # noqa: S308
+    # Sanitize rendered HTML
+    html = clean_html(html)
+
+    return mark_safe(html)  # noqa: S308  # suspicious-mark-safe-usage, OK here since we sanitized the string earlier
 
 
 @library.filter()

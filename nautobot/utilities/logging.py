@@ -4,6 +4,9 @@ import logging
 import re
 
 from django.conf import settings
+import nh3
+
+from nautobot.utilities import constants
 
 
 logger = logging.getLogger(__name__)
@@ -27,3 +30,13 @@ def sanitize(string, replacement="(redacted)"):
             logger.error('Error in string sanitization using "%s"', sanitizer)
 
     return string
+
+
+def clean_html(html):
+    """Use nh3/ammonia to strip out all HTML tags and attributes except those explicitly permitted."""
+    return nh3.clean(
+        html,
+        tags=constants.HTML_ALLOWED_TAGS,
+        attributes=constants.HTML_ALLOWED_ATTRIBUTES,
+        url_schemes=set(settings.ALLOWED_URL_SCHEMES),
+    )
