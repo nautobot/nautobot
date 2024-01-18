@@ -24,6 +24,7 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
+
 from . import serializers
 from ...dcim.models import Location
 

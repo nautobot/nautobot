@@ -1,5 +1,5 @@
-import uuid
 from collections import OrderedDict
+import uuid
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -7,9 +7,9 @@ from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import transaction
 from django.db.models import F, Prefetch
 from django.forms import (
+    modelformset_factory,
     ModelMultipleChoiceField,
     MultipleHiddenInput,
-    modelformset_factory,
 )
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.functional import cached_property
@@ -30,11 +30,12 @@ from nautobot.core.views.mixins import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.utils import get_network_driver_mapping_tool_names, get_all_network_driver_mappings
+from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
 from nautobot.virtualization.models import VirtualMachine
+
 from . import filters, forms, tables
 from .api import serializers
 from .choices import DeviceFaceChoices
@@ -53,6 +54,7 @@ from .models import (
     DeviceType,
     FrontPort,
     FrontPortTemplate,
+    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
@@ -603,7 +605,7 @@ class ManufacturerBulkDeleteView(generic.BulkDeleteView):
 
 
 class DeviceTypeListView(generic.ObjectListView):
-    queryset = DeviceType.objects.select_related("manufacturer").annotate(
+    queryset = DeviceType.objects.select_related("manufacturer", "hardware_family").annotate(
         device_count=count_related(Device, "device_type")
     )
     filterset = filters.DeviceTypeFilterSet
@@ -1106,6 +1108,7 @@ class DeviceListView(generic.ObjectListView):
     queryset = Device.objects.select_related(
         "status",
         "device_type",
+        "device_type__hardware_family",
         "role",
         "tenant",
         "location",
@@ -2909,4 +2912,14 @@ class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDe
     queryset = InterfaceRedundancyGroupAssociation.objects.all()
     form_class = forms.InterfaceRedundancyGroupAssociationForm
     template_name = "dcim/interfaceredundancygroupassociation_create.html"
+    lookup_field = "pk"
+
+
+class HardwareFamilyUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.HardwareFamilyFilterSet
+    form_class = forms.HardwareFamilyForm
+    bulk_update_form_class = forms.HardwareFamilyBulkEditForm
+    queryset = HardwareFamily.objects.annotate(device_type_count=count_related(DeviceType, "hardware_family"))
+    serializer_class = serializers.HardwareFamilySerializer
+    table_class = tables.HardwareFamilyTable
     lookup_field = "pk"

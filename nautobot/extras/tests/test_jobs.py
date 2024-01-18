@@ -3,9 +3,9 @@ from io import StringIO
 import json
 from pathlib import Path
 import re
+import tempfile
 from unittest import mock
 import uuid
-import tempfile
 
 from constance.test import override_config
 from django.conf import settings
@@ -18,10 +18,10 @@ from django.test.client import RequestFactory
 from django.utils import timezone
 
 from nautobot.core.testing import (
-    TestCase,
-    TransactionTestCase,
     create_job_result_and_run_job,
     get_job_class_and_model,
+    TestCase,
+    TransactionTestCase,
 )
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.models import Device, Location, LocationType
@@ -32,7 +32,7 @@ from nautobot.extras.choices import (
     LogLevelChoices,
     ObjectChangeEventContextChoices,
 )
-from nautobot.extras.context_managers import JobHookChangeContext, change_logging, web_request_context
+from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
 from nautobot.extras.jobs import get_job
 
 
@@ -1027,6 +1027,6 @@ class ScheduledJobIntervalTestCase(TestCase):
         )
 
         requested_weekday = self.datetime_days[start_time.weekday()]
-        schedule_day_of_week = list(scheduled_job.schedule.day_of_week)[0]
+        schedule_day_of_week = next(iter(scheduled_job.schedule.day_of_week))
         scheduled_job_weekday = self.cron_days[schedule_day_of_week]
         self.assertEqual(scheduled_job_weekday, requested_weekday)

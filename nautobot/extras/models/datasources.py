@@ -10,7 +10,7 @@ from django.db import models
 
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.generics import PrimaryModel
-from nautobot.extras.utils import extras_features, check_if_key_is_graphql_safe
+from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features
 
 
 @extras_features(
@@ -152,8 +152,8 @@ class GitRepository(PrimaryModel):
             JobResult
         """
         from nautobot.extras.datasources import (
-            enqueue_pull_git_repository_and_refresh_data,
             enqueue_git_repository_diff_origin_and_local,
+            enqueue_pull_git_repository_and_refresh_data,
         )
 
         if dry_run:

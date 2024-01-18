@@ -1,8 +1,7 @@
 import collections
 
 from django.contrib.auth import get_user_model
-from django.test import TransactionTestCase as _TransactionTestCase
-from django.test import tag
+from django.test import tag, TransactionTestCase as _TransactionTestCase
 
 from nautobot.core.testing.api import APITestCase, APIViewTestCases
 from nautobot.core.testing.filters import FilterTestCases

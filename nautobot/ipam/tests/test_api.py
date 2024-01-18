@@ -1,7 +1,7 @@
 from concurrent.futures.thread import ThreadPoolExecutor
 import json
-from unittest import skip
 from random import shuffle
+from unittest import skip
 
 from django.db import connection
 from django.urls import reverse
@@ -17,6 +17,7 @@ from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
+    Namespace,
     Prefix,
     RIR,
     RouteTarget,
@@ -24,7 +25,6 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
-    Namespace,
 )
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 

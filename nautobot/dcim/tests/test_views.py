@@ -1,19 +1,18 @@
 from decimal import Decimal
 import unittest
 
-import pytz
-import yaml
-
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.test import override_settings
 from django.urls import reverse
 from netaddr import EUI
+import pytz
+import yaml
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
-from nautobot.core.testing import ViewTestCases, extract_page_body, ModelViewTestCase, post_data
+from nautobot.core.testing import extract_page_body, ModelViewTestCase, post_data, ViewTestCases
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
@@ -51,21 +50,22 @@ from nautobot.dcim.models import (
     DeviceType,
     FrontPort,
     FrontPortTemplate,
+    HardwareFamily,
     Interface,
-    InterfaceTemplate,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
-    Manufacturer,
+    InterfaceTemplate,
     InventoryItem,
     Location,
     LocationType,
+    Manufacturer,
     Platform,
     PowerFeed,
-    PowerPort,
-    PowerPortTemplate,
     PowerOutlet,
     PowerOutletTemplate,
     PowerPanel,
+    PowerPort,
+    PowerPortTemplate,
     Rack,
     RackGroup,
     RackReservation,
@@ -153,6 +153,8 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             # ... or as a PK value
             f'Intermediate 4,{lt1.pk},Another intermediate type,"ipam.prefix,dcim.device",false',
             "Root 3,,Another root type,,true",
+            # We also support later rows having back-references to previous rows now
+            "Leaf 3,Intermediate 3,Another leaf type,,FALSE",
         )
 
     def _get_queryset(self):
@@ -202,11 +204,13 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
         cls.csv_data = (
-            "name,location_type,parent,status,tenant,description",
+            "name,location_type,parent__name,status,tenant,description",
             # Mix and match composite keys and PKs to confirm that the serializer handles both correctly
-            f'Root 3,"{lt1.name}",,{status.name},,',
-            f'Intermediate 2,"{lt2.pk}",{loc2.composite_key},{status.pk},"{tenant.name}",Hello world!',
-            f'Leaf 2,"{lt3.name}",{loc3.pk},{status.name},"{tenant.name}",',
+            f'Root 3,"{lt1.name}",NoObject,{status.name},,',
+            f'Intermediate 2,"{lt2.pk}",{loc2.name},{status.pk},"{tenant.name}",Hello world!',
+            f'Leaf 2,"{lt3.name}",{loc3.name},{status.name},"{tenant.name}",',
+            # Back-reference to an instance that didn't exist until processing previous lines of this data
+            f'Leaf 3,"{lt3.pk}",Intermediate 2,{status.name},"{tenant.name}",',
         )
 
         cls.bulk_edit_data = {
@@ -563,6 +567,30 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertContains(response, total_utilization_html, html=True)
 
 
+class HardwareFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = HardwareFamily
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.form_data = {
+            "name": "New Hardware Family",
+            "description": "A new hardware family",
+        }
+        cls.bulk_edit_data = {
+            "description": "A new hardware family",
+        }
+        cls.csv_data = (
+            "name,description",
+            "Hardware Family 4,Fourth hardware family",
+            "Hardware Family 5,Fifth hardware family",
+            "Hardware Family 6,Sixth hardware family",
+            "Hardware Family 7,Seventh hardware family",
+        )
+        HardwareFamily.objects.create(name="Deletable Hardware Family 1")
+        HardwareFamily.objects.create(name="Deletable Hardware Family 2", description="Delete this one")
+        HardwareFamily.objects.create(name="Deletable Hardware Family 3")
+
+
 class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = Manufacturer
 
@@ -614,6 +642,7 @@ class DeviceTypeTestCase(
 
         cls.form_data = {
             "manufacturer": manufacturers[1].pk,
+            "hardware_family": None,
             "model": "Device Type X",
             "part_number": "123ABC",
             "u_height": 2,
@@ -748,7 +777,6 @@ device-bays:
         form_data = {"data": IMPORT_DATA, "format": "yaml"}
         response = self.client.post(reverse("dcim:devicetype_import"), data=form_data, follow=True)
         self.assertHttpStatus(response, 200)
-
         dt = DeviceType.objects.get(model="TEST-1000")
         self.assertEqual(dt.comments, "test comment")
 

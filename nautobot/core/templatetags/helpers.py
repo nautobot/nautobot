@@ -6,11 +6,11 @@ import re
 from django import template
 from django.conf import settings
 from django.contrib.staticfiles.finders import find
-from django.templatetags.static import StaticNode, static
+from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, strip_tags
-from django.utils.text import slugify as django_slugify
 from django.utils.safestring import mark_safe
+from django.utils.text import slugify as django_slugify
 from django_jinja import library
 from markdown import markdown
 import yaml
@@ -18,9 +18,9 @@ import yaml
 from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.utils import color, config, data, lookup
-from nautobot.core.utils.navigation import is_route_new_ui_ready
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
+# S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
 HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
 HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')  # noqa: S308
 HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')  # noqa: S308
@@ -124,7 +124,7 @@ def add_html_id(element_str, id_str):
     match = re.match(r"^(.*?<\w+) ?(.*)$", element_str, flags=re.DOTALL)
     if not match:
         return element_str
-    return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))  # noqa: S308
+    return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))  # noqa: S308  # suspicious-mark-safe-usage
 
 
 @library.filter()
@@ -181,7 +181,7 @@ def render_markdown(value):
     # Render Markdown
     html = markdown(value, extensions=["fenced_code", "tables"])
 
-    return mark_safe(html)  # noqa: S308
+    return mark_safe(html)  # noqa: S308  # suspicious-mark-safe-usage, OK here since we sanitized the string earlier
 
 
 @library.filter()
@@ -779,14 +779,3 @@ def queryset_to_pks(obj):
     result = list(obj.values_list("pk", flat=True)) if obj else []
     result = [str(entry) for entry in result]
     return ",".join(result)
-
-
-#
-# Navigation
-#
-
-
-@register.filter()
-def is_new_ui_ready(url_path):
-    """Return True if url_path is NewUI Ready else False"""
-    return is_route_new_ui_ready(url_path)

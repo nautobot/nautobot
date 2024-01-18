@@ -3,7 +3,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from django.conf import settings
-from django.db import DatabaseError, IntegrityError, connection
+from django.db import connection, DatabaseError, IntegrityError
 from health_check.backends import BaseHealthCheckBackend
 from health_check.exceptions import ServiceReturnedUnexpectedResult, ServiceUnavailable
 from prometheus_client import Gauge

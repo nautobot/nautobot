@@ -5,12 +5,12 @@ from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer, Platform
 from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import ServiceProtocolChoices
-from nautobot.ipam.models import IPAddress, VLAN, Service, Namespace, Prefix
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.filters import (
-    ClusterTypeFilterSet,
-    ClusterGroupFilterSet,
     ClusterFilterSet,
+    ClusterGroupFilterSet,
+    ClusterTypeFilterSet,
     VirtualMachineFilterSet,
     VMInterfaceFilterSet,
 )

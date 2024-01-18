@@ -30,6 +30,7 @@ from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.filters import (
     ComputedFieldFilterSet,
     ConfigContextFilterSet,
+    ContactFilterSet,
     ContentTypeFilterSet,
     CustomFieldChoiceFilterSet,
     CustomLinkFilterSet,
@@ -39,8 +40,8 @@ from nautobot.extras.filters import (
     GitRepositoryFilterSet,
     GraphQLQueryFilterSet,
     ImageAttachmentFilterSet,
-    JobFilterSet,
     JobButtonFilterSet,
+    JobFilterSet,
     JobHookFilterSet,
     JobLogEntryFilterSet,
     JobResultFilterSet,
@@ -53,11 +54,13 @@ from nautobot.extras.filters import (
     SecretsGroupFilterSet,
     StatusFilterSet,
     TagFilterSet,
+    TeamFilterSet,
     WebhookFilterSet,
 )
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
+    Contact,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -81,11 +84,12 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.ipam.filters import VLANFilterSet
-from nautobot.ipam.models import IPAddress, VLAN, VLANGroup, Namespace, Prefix
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
 
@@ -360,6 +364,19 @@ class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(Q(app_label__icontains="circ") | Q(model__icontains="circ")),
         )
+
+
+class ContactFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = Contact.objects.all()
+    filterset = ContactFilterSet
+
+    generic_filter_tests = (
+        ["name"],
+        ["phone"],
+        ["email"],
+        ["address"],
+        ["comments"],
+    )
 
 
 class CustomFieldChoiceFilterSetTestCase(FilterTestCases.FilterTestCase):
@@ -1712,6 +1729,19 @@ class TagTestCase(FilterTestCases.NameOnlyFilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+
+class TeamFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = Team.objects.all()
+    filterset = TeamFilterSet
+
+    generic_filter_tests = (
+        ["name"],
+        ["phone"],
+        ["email"],
+        ["address"],
+        ["comments"],
+    )
 
 
 class WebhookTestCase(FilterTestCases.FilterTestCase):

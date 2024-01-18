@@ -8,7 +8,6 @@ from nautobot.core.apps import (
     NavMenuTab,
 )
 
-
 menu_items = (
     NavMenuTab(
         name="Organization",
@@ -239,6 +238,22 @@ menu_items = (
                                 link="dcim:manufacturer_add",
                                 permissions=[
                                     "dcim.add_manufacturer",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:hardwarefamily_list",
+                        name="Hardware Families",
+                        weight=300,
+                        permissions=[
+                            "dcim.view_hardwarefamily",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:hardwarefamily_add",
+                                permissions=[
+                                    "dcim.add_hardwarefamily",
                                 ],
                             ),
                         ),

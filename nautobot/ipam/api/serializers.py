@@ -11,9 +11,9 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
 )
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
+from nautobot.ipam import constants
 from nautobot.ipam.api.fields import IPFieldSerializer
 from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
-from nautobot.ipam import constants
 from nautobot.ipam.models import (
     get_default_namespace,
     IPAddress,
@@ -27,7 +27,6 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
-
 
 #
 # Namespaces

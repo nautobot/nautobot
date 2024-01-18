@@ -1,13 +1,12 @@
 import json
 from unittest import skip
 
+from constance.test import override_config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
-
-from constance.test import override_config
 
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
@@ -31,20 +30,21 @@ from nautobot.dcim.models import (
     DeviceType,
     FrontPort,
     FrontPortTemplate,
+    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceTemplate,
+    InventoryItem,
     Location,
     LocationType,
     Manufacturer,
-    InventoryItem,
     Platform,
     PowerFeed,
-    PowerPort,
-    PowerPortTemplate,
     PowerOutlet,
     PowerOutletTemplate,
     PowerPanel,
+    PowerPort,
+    PowerPortTemplate,
     Rack,
     RackGroup,
     RackReservation,
@@ -53,10 +53,9 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
-from nautobot.ipam.models import IPAddress, VLAN, VLANGroup, Namespace, Prefix
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType
-
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -695,6 +694,35 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
+class HardwareFamilyTest(APIViewTestCases.APIViewTestCase):
+    model = HardwareFamily
+    create_data = [
+        {
+            "name": "Hardware Family 4",
+            "description": "Fourth Hardware Family",
+        },
+        {
+            "name": "Hardware Family 5",
+        },
+        {
+            "name": "Hardware Family 6",
+            "description": "Sixth Hardware Family",
+        },
+        {
+            "name": "Hardware Family 7",
+        },
+    ]
+    bulk_update_data = {
+        "description": "New description",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        HardwareFamily.objects.create(name="Deletable Hardware Family 1")
+        HardwareFamily.objects.create(name="Deletable Hardware Family 2", description="Delete this one")
+        HardwareFamily.objects.create(name="Deletable Hardware Family 3")
+
+
 class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     model = Manufacturer
     create_data = [
@@ -717,7 +745,7 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
+        # FIXME: This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
         Device.objects.all().delete()
@@ -735,15 +763,18 @@ class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         manufacturer_id = Manufacturer.objects.first().pk
+        hardware_family_id = HardwareFamily.objects.first().pk
 
         cls.create_data = [
             {
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 4",
+                "hardware_family": hardware_family_id,
             },
             {
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 5",
+                "hardware_family": hardware_family_id,
             },
             {
                 "manufacturer": manufacturer_id,

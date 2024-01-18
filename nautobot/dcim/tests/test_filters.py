@@ -33,9 +33,10 @@ from nautobot.dcim.filters import (
     DeviceTypeFilterSet,
     FrontPortFilterSet,
     FrontPortTemplateFilterSet,
+    HardwareFamilyFilterSet,
     InterfaceFilterSet,
-    InterfaceRedundancyGroupFilterSet,
     InterfaceRedundancyGroupAssociationFilterSet,
+    InterfaceRedundancyGroupFilterSet,
     InterfaceTemplateFilterSet,
     InventoryItemFilterSet,
     LocationFilterSet,
@@ -43,11 +44,11 @@ from nautobot.dcim.filters import (
     ManufacturerFilterSet,
     PlatformFilterSet,
     PowerFeedFilterSet,
+    PowerOutletFilterSet,
+    PowerOutletTemplateFilterSet,
     PowerPanelFilterSet,
     PowerPortFilterSet,
     PowerPortTemplateFilterSet,
-    PowerOutletFilterSet,
-    PowerOutletTemplateFilterSet,
     RackFilterSet,
     RackGroupFilterSet,
     RackReservationFilterSet,
@@ -55,7 +56,6 @@ from nautobot.dcim.filters import (
     RearPortTemplateFilterSet,
     VirtualChassisFilterSet,
 )
-
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,
@@ -69,6 +69,7 @@ from nautobot.dcim.models import (
     DeviceType,
     FrontPort,
     FrontPortTemplate,
+    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
@@ -79,11 +80,11 @@ from nautobot.dcim.models import (
     Manufacturer,
     Platform,
     PowerFeed,
+    PowerOutlet,
+    PowerOutletTemplate,
     PowerPanel,
     PowerPort,
     PowerPortTemplate,
-    PowerOutlet,
-    PowerOutletTemplate,
     Rack,
     RackGroup,
     RackReservation,
@@ -92,10 +93,9 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.models import Role, SecretsGroup, Status, Tag
-from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN, VLANGroup, Namespace
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
-
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -142,6 +142,7 @@ def common_test_data(cls):
         Manufacturer.objects.filter(device_types__isnull=False, platforms__isnull=False).distinct()[:3]
     )
     cls.manufacturers = manufacturers
+    hardware_families = list(HardwareFamily.objects.all())
 
     platforms = Platform.objects.filter(manufacturer__in=manufacturers)[:3]
     for num, platform in enumerate(platforms):
@@ -154,6 +155,7 @@ def common_test_data(cls):
     device_types = (
         DeviceType.objects.create(
             manufacturer=manufacturers[0],
+            hardware_family=hardware_families[0],
             comments="Device type 1",
             model="Model 1",
             part_number="Part Number 1",
@@ -162,6 +164,7 @@ def common_test_data(cls):
         ),
         DeviceType.objects.create(
             manufacturer=manufacturers[1],
+            hardware_family=hardware_families[1],
             comments="Device type 2",
             model="Model 2",
             part_number="Part Number 2",
@@ -171,6 +174,7 @@ def common_test_data(cls):
         ),
         DeviceType.objects.create(
             manufacturer=manufacturers[2],
+            hardware_family=hardware_families[2],
             comments="Device type 3",
             model="Model 3",
             part_number="Part Number 3",
@@ -880,6 +884,16 @@ class ManufacturerTestCase(FilterTestCases.NameOnlyFilterTestCase):
         InventoryItem.objects.create(device=devices[2], name="Inventory Item 3", manufacturer=cls.manufacturers[2])
 
 
+class HardwareFamilyTestCase(FilterTestCases.NameOnlyFilterTestCase):
+    queryset = HardwareFamily.objects.all()
+    filterset = HardwareFamilyFilterSet
+    generic_filter_tests = [
+        ("description",),
+        ("device_types", "device_types__id"),
+        ("device_types", "device_types__model"),
+    ]
+
+
 class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
     queryset = DeviceType.objects.all()
     filterset = DeviceTypeFilterSet
@@ -894,6 +908,8 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         ("devices", "devices__id"),
         ("front_port_templates", "front_port_templates__id"),
         ("front_port_templates", "front_port_templates__name"),
+        ("hardware_family", "hardware_family__id"),
+        ("hardware_family", "hardware_family__name"),
         ("interface_templates", "interface_templates__id"),
         ("interface_templates", "interface_templates__name"),
         ("manufacturer", "manufacturer__id"),
@@ -1095,7 +1111,8 @@ class ConsoleServerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 class PowerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = PowerPortTemplate.objects.all()
     filterset = PowerPortTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("allocated_draw",),
         ("maximum_draw",),
         ("power_outlet_templates", "power_outlet_templates__id"),
@@ -1120,7 +1137,8 @@ class PowerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 class PowerOutletTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = PowerOutletTemplate.objects.all()
     filterset = PowerOutletTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("power_port_template", "power_port_template__id"),
         ("power_port_template", "power_port_template__name"),
     ]
@@ -1178,7 +1196,8 @@ class InterfaceTemplateTestCase(Mixins.ComponentTemplateMixin):
 class FrontPortTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = FrontPortTemplate.objects.all()
     filterset = FrontPortTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("rear_port_position",),
         ("rear_port_template", "rear_port_template__id"),
     ]
@@ -1195,7 +1214,8 @@ class FrontPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 class RearPortTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = RearPortTemplate.objects.all()
     filterset = RearPortTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("front_port_templates", "front_port_templates__id"),
     ]
 
@@ -1322,6 +1342,8 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ("device_type", "device_type__id"),
         ("device_type", "device_type__model"),
         ("front_ports", "front_ports__id"),
+        ("hardware_family", "device_type__hardware_family__id"),
+        ("hardware_family", "device_type__hardware_family__name"),
         ("interfaces", "interfaces__id"),
         ("mac_address", "interfaces__mac_address"),
         ("manufacturer", "device_type__manufacturer__id"),

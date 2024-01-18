@@ -1,10 +1,10 @@
 from io import StringIO
-import yaml
 
 from django.conf import settings
 from django.core.management import call_command
 from django.test import tag
 from rest_framework.settings import api_settings
+import yaml
 
 from nautobot.core.testing import views
 

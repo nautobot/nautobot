@@ -10,19 +10,6 @@
     {% endfor %}
 {% endblock %}
 
-{% block buttons %}
-        {% plugin_buttons object %}
-        {% if perms.dcim.add_location %}
-            {% clone_button object %}
-        {% endif %}
-        {% if perms.dcim.change_location %}
-            {% edit_button object key="pk" %}
-        {% endif %}
-        {% if perms.dcim.delete_location %}
-            {% delete_button object key="pk" %}
-        {% endif %}
-{% endblock buttons %}
-
 {% block content_left_page %}
     <div class="panel panel-default">
         <div class="panel-heading">

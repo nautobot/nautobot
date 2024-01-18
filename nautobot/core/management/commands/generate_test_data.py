@@ -5,7 +5,7 @@ import os
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import DEFAULT_DB_ALIAS, connections
+from django.db import connections, DEFAULT_DB_ALIAS
 from django.utils.crypto import get_random_string
 
 from nautobot.core.settings_funcs import is_truthy
@@ -61,15 +61,21 @@ class Command(BaseCommand):
                 DeviceFactory,
                 DeviceRedundancyGroupFactory,
                 DeviceTypeFactory,
+                HardwareFamilyFactory,
+                LocationFactory,
+                LocationTypeFactory,
                 ManufacturerFactory,
                 PlatformFactory,
             )
-            from nautobot.extras.factory import ExternalIntegrationFactory, RoleFactory, StatusFactory, TagFactory
-            from nautobot.extras.management import populate_status_choices
-            from nautobot.dcim.factory import (
-                LocationTypeFactory,
-                LocationFactory,
+            from nautobot.extras.factory import (
+                ContactFactory,
+                ExternalIntegrationFactory,
+                RoleFactory,
+                StatusFactory,
+                TagFactory,
+                TeamFactory,
             )
+            from nautobot.extras.management import populate_status_choices
             from nautobot.extras.utils import TaggableClassesQuery
             from nautobot.ipam.choices import PrefixTypeChoices
             from nautobot.ipam.factory import (
@@ -78,8 +84,8 @@ class Command(BaseCommand):
                 PrefixFactory,
                 RIRFactory,
                 RouteTargetFactory,
-                VLANGroupFactory,
                 VLANFactory,
+                VLANGroupFactory,
                 VRFFactory,
             )
             from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
@@ -101,6 +107,10 @@ class Command(BaseCommand):
         TagFactory.create_batch(5, content_types=TaggableClassesQuery().as_queryset(), using=db_name)
         # ...and some tags that apply to a random subset of content-types
         TagFactory.create_batch(15, using=db_name)
+        self.stdout.write("Creating Contacts...")
+        ContactFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating Teams...")
+        TeamFactory.create_batch(5, using=db_name)
         self.stdout.write("Creating TenantGroups...")
         TenantGroupFactory.create_batch(10, has_parent=False, using=db_name)
         TenantGroupFactory.create_batch(10, has_parent=True, using=db_name)
@@ -133,6 +143,8 @@ class Command(BaseCommand):
             PrefixFactory.create(prefix=f"2001:db8:0:{i}::/64", type=PrefixTypeChoices.TYPE_CONTAINER, using=db_name)
         self.stdout.write("Creating Empty Namespaces...")
         NamespaceFactory.create_batch(5, using=db_name)
+        self.stdout.write("Creating Hardware Families...")
+        HardwareFamilyFactory.create_batch(10)
         self.stdout.write("Creating Manufacturers...")
         ManufacturerFactory.create_batch(8, using=db_name)  # First 8 hard-coded Manufacturers
         self.stdout.write("Creating Platforms (with manufacturers)...")

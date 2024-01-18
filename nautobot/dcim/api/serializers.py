@@ -61,6 +61,7 @@ from nautobot.dcim.models import (
     DeviceType,
     FrontPort,
     FrontPortTemplate,
+    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
@@ -377,6 +378,15 @@ class ManufacturerSerializer(NautobotModelSerializer):
         list_display_fields = ["name", "device_type_count", "platform_count", "description"]
 
 
+class HardwareFamilySerializer(NautobotModelSerializer):
+    device_type_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = HardwareFamily
+        fields = "__all__"
+        list_display_fields = ["name", "device_type_count", "description"]
+
+
 class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     subdevice_role = ChoiceField(choices=SubdeviceRoleChoices, allow_blank=True, required=False)
     front_image = serializers.ImageField(allow_null=True, required=False)
@@ -407,6 +417,11 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                 },
             ],
             "include_others": True,
+        }
+        extra_kwargs = {
+            "hardware_family": {
+                "required": False,
+            },
         }
 
 

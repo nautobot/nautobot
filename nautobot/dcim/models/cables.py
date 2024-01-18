@@ -1,5 +1,5 @@
-import logging
 from collections import defaultdict
+import logging
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -25,10 +25,10 @@ from nautobot.extras.utils import extras_features
 # from dcim.models.cables to core.models.generics to extras.models.datasources to core.models.generics.
 # Deferring the update to here works for now; fixing so that core.models.generics doesn't depend on extras.models
 # would be the much more invasive but much more "correct" fix.
-from nautobot.core.models.generics import BaseModel, PrimaryModel
+from nautobot.core.models.generics import BaseModel, PrimaryModel  # isort: skip
 
-from .devices import Device
 from .device_components import FrontPort, RearPort
+from .devices import Device
 
 __all__ = (
     "Cable",

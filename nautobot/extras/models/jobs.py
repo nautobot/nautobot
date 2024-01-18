@@ -41,9 +41,9 @@ from nautobot.extras.constants import (
     JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
+from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.models import ChangeLoggedModel, GitRepository
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.querysets import JobQuerySet, ScheduledJobExtendedQuerySet
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -51,7 +51,6 @@ from nautobot.extras.utils import (
 )
 
 from .customfields import CustomFieldModel
-
 
 logger = logging.getLogger(__name__)
 
@@ -453,9 +452,9 @@ class JobResult(BaseModel, CustomFieldModel):
         to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="job_results"
     )
     name = models.CharField(max_length=255, db_index=True)
-    task_name = models.CharField(
+    task_name = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field
         max_length=255,
-        null=True,
+        null=True,  # TODO: should this be blank=True instead?
         db_index=True,
         help_text="Registered name of the Celery task for this job. Internal use only.",
     )
@@ -479,11 +478,15 @@ class JobResult(BaseModel, CustomFieldModel):
         verbose_name="Result Data",
         help_text="The data returned by the task",
     )
-    worker = models.CharField(max_length=100, default=None, null=True)
+    worker = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field
+        max_length=100,
+        default=None,
+        null=True,  # TODO: should this be default="", blank=True instead?
+    )
     task_args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
     task_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
     celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
-    traceback = models.TextField(blank=True, null=True)
+    traceback = models.TextField(blank=True, null=True)  # noqa: DJ001  # django-nullable-model-string-field -- TODO: can we remove null=True?
     meta = models.JSONField(null=True, default=None, editable=False)
     scheduled_job = models.ForeignKey(to="extras.ScheduledJob", on_delete=models.SET_NULL, null=True, blank=True)
 
@@ -796,6 +799,9 @@ class ScheduledJobs(models.Model):
     last_update = models.DateTimeField(null=False)
 
     objects = ScheduledJobsManager()
+
+    def __str__(self):
+        return str(self.ident)
 
     @classmethod
     def changed(cls, instance, raw=False, **kwargs):

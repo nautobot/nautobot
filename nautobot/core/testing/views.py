@@ -9,11 +9,10 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.validators import URLValidator
-from django.test import TestCase as _TestCase
-from django.test import override_settings, tag
+from django.test import override_settings, tag, TestCase as _TestCase
 from django.urls import NoReverseMatch, reverse
-from django.utils.http import urlencode
 from django.utils.html import escape
+from django.utils.http import urlencode
 from django.utils.text import slugify
 from tree_queries.models import TreeNode
 
@@ -21,9 +20,7 @@ from nautobot.core import testing
 from nautobot.core.templatetags import helpers
 from nautobot.core.testing import mixins
 from nautobot.core.utils import lookup
-from nautobot.extras import choices as extras_choices
-from nautobot.extras import models as extras_models
-from nautobot.extras import querysets as extras_querysets
+from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
 from nautobot.users import models as users_models
 
 __all__ = (
@@ -342,8 +339,8 @@ class ViewTestCases:
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_CREATE)
                 # Validate if detail view exists
                 validate = URLValidator()
-                detail_url = instance.get_absolute_url()
                 try:
+                    detail_url = instance.get_absolute_url()
                     validate(detail_url)
                     response = self.client.get(detail_url)
                     response_body = testing.extract_page_body(response.content.decode(response.charset))
@@ -351,7 +348,7 @@ class ViewTestCases:
                     self.assertIn(advanced_tab_href, response_body)
                     self.assertIn("<td>Created By</td>", response_body)
                     self.assertIn("<td>nautobotuser</td>", response_body)
-                except ValidationError:
+                except (AttributeError, ValidationError):
                     # Instance does not have a valid detail view, do nothing here.
                     pass
 
@@ -481,8 +478,8 @@ class ViewTestCases:
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
                 # Validate if detail view exists
                 validate = URLValidator()
-                detail_url = instance.get_absolute_url()
                 try:
+                    detail_url = instance.get_absolute_url()
                     validate(detail_url)
                     response = self.client.get(detail_url)
                     response_body = testing.extract_page_body(response.content.decode(response.charset))
@@ -490,7 +487,7 @@ class ViewTestCases:
                     self.assertIn(advanced_tab_href, response_body)
                     self.assertIn("<td>Last Updated By</td>", response_body)
                     self.assertIn("<td>nautobotuser</td>", response_body)
-                except ValidationError:
+                except (AttributeError, ValidationError):
                     # Instance does not have a valid detail view, do nothing here.
                     pass
 
@@ -1155,7 +1152,7 @@ class ViewTestCases:
         def test_bulk_edit_objects_with_constrained_permission(self):
             # Select some objects that are *not* already set to match the first value in self.bulk_edit_data or null.
             # We have to exclude null cases because Django filter()/exclude() doesn't like `__in=[None]` as a case.
-            attr_name = list(self.bulk_edit_data.keys())[0]
+            attr_name = next(iter(self.bulk_edit_data.keys()))
             objects = (
                 self._get_queryset()
                 .exclude(**{attr_name: self.bulk_edit_data[attr_name]})

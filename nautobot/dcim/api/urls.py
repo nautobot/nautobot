@@ -1,6 +1,6 @@
 from nautobot.core.api.routers import OrderedDefaultRouter
-from . import views
 
+from . import views
 
 router = OrderedDefaultRouter()
 router.APIRootView = views.DCIMRootView
@@ -15,6 +15,7 @@ router.register("racks", views.RackViewSet)
 router.register("rack-reservations", views.RackReservationViewSet)
 
 # Device types
+router.register("hardware-families", views.HardwareFamilyViewSet)
 router.register("manufacturers", views.ManufacturerViewSet)
 router.register("device-types", views.DeviceTypeViewSet)
 

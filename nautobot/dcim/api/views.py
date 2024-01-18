@@ -1,10 +1,10 @@
-import socket
 from collections import OrderedDict
+import socket
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F
-from django.http import HttpResponseForbidden, HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from drf_spectacular.types import OpenApiTypes
@@ -35,14 +35,15 @@ from nautobot.dcim.models import (
     DeviceType,
     FrontPort,
     FrontPortTemplate,
+    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
+    InventoryItem,
     Location,
     LocationType,
     Manufacturer,
-    InventoryItem,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -65,6 +66,7 @@ from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupS
 from nautobot.extras.secrets.exceptions import SecretError
 from nautobot.ipam.models import Prefix, VLAN
 from nautobot.virtualization.models import VirtualMachine
+
 from . import serializers
 from .exceptions import MissingFilterException
 
@@ -270,6 +272,19 @@ class ManufacturerViewSet(NautobotModelViewSet):
 
 
 #
+# Hardware Family
+#
+
+
+class HardwareFamilyViewSet(NautobotModelViewSet):
+    queryset = HardwareFamily.objects.annotate(
+        device_type_count=count_related(DeviceType, "hardware_family"),
+    )
+    serializer_class = serializers.HardwareFamilySerializer
+    filterset_class = filters.HardwareFamilyFilterSet
+
+
+#
 # Device types
 #
 
@@ -468,9 +483,9 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         # Get NAPALM enable-secret from the device if present
         if device.secrets_group:
             # Work around inconsistent enable password arg in NAPALM drivers
-            enable_password_arg = "secret"
+            enable_password_arg = "secret"  # noqa: S105  # hardcoded-password-string -- false positive
             if device.platform.napalm_driver.lower() == "eos":
-                enable_password_arg = "enable_password"
+                enable_password_arg = "enable_password"  # noqa: S105  # hardcoded-password-string -- false positive
             try:
                 optional_args[enable_password_arg] = device.secrets_group.get_secret_value(
                     SecretsGroupAccessTypeChoices.TYPE_GENERIC,

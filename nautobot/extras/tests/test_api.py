@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
-import uuid
 import tempfile
 from unittest import mock, skip
+import uuid
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -13,16 +13,16 @@ from django.utils.timezone import make_aware, now
 from rest_framework import status
 
 from nautobot.core.choices import ColorChoices
+from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.core.testing.utils import disable_warnings
 from nautobot.core.utils.lookup import get_route_for_model
-from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.dcim.models import (
     Device,
     DeviceType,
-    Manufacturer,
     Location,
     LocationType,
+    Manufacturer,
     Rack,
     RackGroup,
 )
@@ -44,6 +44,8 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
+    ContactAssociation,
     CustomField,
     CustomLink,
     DynamicGroup,
@@ -68,16 +70,15 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
-from nautobot.extras.models.jobs import JobHook, JobButton
+from nautobot.extras.models.jobs import JobButton, JobHook
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
-
-from nautobot.ipam.models import IPAddress, Prefix, VLANGroup, VLAN
+from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
-
 
 User = get_user_model()
 
@@ -376,6 +377,116 @@ class ContentTypeTest(APITestCase):
 
         url = reverse("extras-api:contenttype-detail", kwargs={"pk": contenttype.pk})
         self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_200_OK)
+
+
+#
+#  Contacts
+#
+
+
+class ContactTest(APIViewTestCases.APIViewTestCase):
+    model = Contact
+    bulk_update_data = {
+        "address": "Carnegie Hall, New York, NY",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_data = [
+            {
+                "name": "Contact 1",
+                "phone": "555-0121",
+                "email": "contact1@example.com",
+                "teams": [Team.objects.first().pk, Team.objects.last().pk],
+            },
+            {
+                "name": "Contact 2",
+                "phone": "555-0122",
+                "email": "contact2@example.com",
+                "address": "Bowser's Castle, Staten Island, NY",
+            },
+            {
+                "name": "Contact 3",
+                "phone": "555-0123",
+                "email": "",
+            },
+            {
+                "name": "Contact 4",
+                "phone": "",
+                "email": "contact4@example.com",
+            },
+        ]
+
+
+class ContactAssociationTestCase(APIViewTestCases.APIViewTestCase):
+    model = ContactAssociation
+    create_data = []
+    choices_fields = ["associated_object_type"]
+
+    @classmethod
+    def setUpTestData(cls):
+        ContactAssociation.objects.create(
+            contact=Contact.objects.first(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=IPAddress.objects.first().pk,
+            role=None,
+            status=Status.objects.get_for_model(ContactAssociation).first(),
+        )
+        ContactAssociation.objects.create(
+            contact=Contact.objects.last(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=IPAddress.objects.first().pk,
+            role=None,
+            status=Status.objects.get_for_model(ContactAssociation).first(),
+        )
+        ContactAssociation.objects.create(
+            team=Team.objects.first(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=IPAddress.objects.first().pk,
+            role=Role.objects.get_for_model(ContactAssociation).last(),
+            status=Status.objects.get_for_model(ContactAssociation).first(),
+        )
+        ContactAssociation.objects.create(
+            team=Team.objects.last(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=IPAddress.objects.first().pk,
+            role=Role.objects.get_for_model(ContactAssociation).last(),
+            status=Status.objects.get_for_model(ContactAssociation).first(),
+        )
+        cls.create_data = [
+            {
+                "contact": Contact.objects.first().pk,
+                "team": None,
+                "associated_object_type": "ipam.ipaddress",
+                "associated_object_id": IPAddress.objects.first().pk,
+                "role": None,
+                "status": Status.objects.get_for_model(ContactAssociation).first().pk,
+            },
+            {
+                "contact": Contact.objects.last().pk,
+                "team": None,
+                "associated_object_type": "dcim.device",
+                "associated_object_id": Device.objects.first().pk,
+                "role": Role.objects.get_for_model(ContactAssociation).first().pk,
+                "status": Status.objects.get_for_model(ContactAssociation).first().pk,
+            },
+            {
+                "contact": None,
+                "team": Team.objects.first().pk,
+                "associated_object_type": "ipam.ipaddress",
+                "associated_object_id": IPAddress.objects.first().pk,
+                "role": Role.objects.get_for_model(ContactAssociation).first().pk,
+                "status": Status.objects.get_for_model(ContactAssociation).first().pk,
+            },
+            {
+                "contact": None,
+                "team": Team.objects.last().pk,
+                "associated_object_type": "dcim.device",
+                "associated_object_id": Device.objects.first().pk,
+                "role": Role.objects.get_for_model(ContactAssociation).first().pk,
+                "status": Status.objects.get_for_model(ContactAssociation).first().pk,
+            },
+        ]
 
 
 class CreatedUpdatedFilterTest(APITestCase):
@@ -3206,7 +3317,7 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
             test_secret = Secret.objects.create(
                 name="secret-check-test-not-accessible",
                 provider="text-file",
-                parameters={"path": "/tmp/does-not-matter"},
+                parameters={"path": "/tmp/does-not-matter"},  # noqa: S108  # hardcoded-temp-file -- false positive
             )
             response = self.client.get(reverse("extras-api:secret-check", kwargs={"pk": test_secret.pk}), **self.header)
             self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
@@ -3231,7 +3342,7 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
             test_secret = Secret.objects.create(
                 name="secret-check-test-failed",
                 provider="text-file",
-                parameters={"path": "/tmp/does-not-exist"},
+                parameters={"path": "/tmp/does-not-exist"},  # noqa: S108  # hardcoded-temp-file -- false positive
             )
             response = self.client.get(reverse("extras-api:secret-check", kwargs={"pk": test_secret.pk}), **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -3464,6 +3575,46 @@ class TagTest(APIViewTestCases.APIViewTestCase):
         tag.refresh_from_db()
         self.assertEqual(tag.color, ColorChoices.COLOR_LIME)
         self.assertEqual(list(tag.content_types.all()), tag_content_types)
+
+
+#
+# Team
+#
+
+
+class TeamTest(APIViewTestCases.APIViewTestCase):
+    model = Team
+    bulk_update_data = {
+        "address": "Carnegie Hall, New York, NY",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_data = [
+            {
+                "name": "Team 1",
+                "phone": "555-0121",
+                "email": "team1@example.com",
+                "contacts": [Contact.objects.first().pk, Contact.objects.last().pk],
+            },
+            {
+                "name": "Team 2",
+                "phone": "555-0122",
+                "email": "team2@example.com",
+                "address": "Bowser's Castle, Staten Island, NY",
+            },
+            {
+                "name": "Team 3",
+                "phone": "555-0123",
+                "email": "",
+            },
+            {
+                "name": "Team 4",
+                "phone": "",
+                "email": "team4@example.com",
+                "address": "Rainbow Bridge, Central NJ",
+            },
+        ]
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):

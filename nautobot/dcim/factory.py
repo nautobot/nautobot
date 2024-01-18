@@ -1,22 +1,20 @@
-import factory
 import logging
-import pytz
-import random
-
-from faker import Faker
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+import factory
+from faker import Faker
+import pytz
 
+from nautobot.circuits.models import CircuitTermination
 from nautobot.core.factory import (
     NautobotBoolIterator,
     OrganizationalModelFactory,
     PrimaryModelFactory,
-    UniqueFaker,
     random_instance,
+    UniqueFaker,
 )
-from nautobot.circuits.models import CircuitTermination
 from nautobot.dcim.choices import (
     DeviceRedundancyGroupFailoverStrategyChoices,
     RackDimensionUnitChoices,
@@ -28,21 +26,21 @@ from nautobot.dcim.models import (
     Device,
     DeviceRedundancyGroup,
     DeviceType,
-    Manufacturer,
-    Platform,
+    HardwareFamily,
     Location,
     LocationType,
+    Manufacturer,
+    Platform,
+    PowerPanel,
     Rack,
     RackGroup,
     RackReservation,
-    PowerPanel,
 )
 from nautobot.extras.models import Role, Status
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster
-
 
 logger = logging.getLogger(__name__)
 
@@ -218,10 +216,14 @@ class DeviceTypeFactory(PrimaryModelFactory):
     class Meta:
         model = DeviceType
         exclude = (
+            "has_hardware_family",
             "has_part_number",
             "is_subdevice_child",
             "has_comments",
         )
+
+    has_hardware_family = NautobotBoolIterator()
+    hardware_family = factory.Maybe("has_hardware_family", random_instance(HardwareFamily), None)
 
     manufacturer = random_instance(Manufacturer)
 
@@ -268,6 +270,17 @@ class DeviceRedundancyGroupFactory(PrimaryModelFactory):
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
 
+class HardwareFamilyFactory(PrimaryModelFactory):
+    class Meta:
+        model = HardwareFamily
+        exclude = ("has_description",)
+
+    name = UniqueFaker("word")
+
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+
+
 class ManufacturerFactory(OrganizationalModelFactory):
     class Meta:
         model = Manufacturer
@@ -298,7 +311,7 @@ class PlatformFactory(OrganizationalModelFactory):
     # If it has a manufacturer, it *might* have a napalm_driver.
     napalm_driver = factory.Maybe(
         "has_manufacturer",
-        factory.LazyAttribute(lambda o: random.choice(NAPALM_DRIVERS.get(o.manufacturer.name, [""]))),
+        factory.LazyAttribute(lambda o: factory.random.randgen.choice(NAPALM_DRIVERS.get(o.manufacturer.name, [""]))),
         "",
     )
 
@@ -310,7 +323,7 @@ class PlatformFactory(OrganizationalModelFactory):
     has_description = NautobotBoolIterator()
     network_driver = factory.Maybe(
         "has_manufacturer",
-        factory.LazyAttribute(lambda o: random.choice(NETWORK_DRIVERS.get(o.manufacturer.name, [""]))),
+        factory.LazyAttribute(lambda o: factory.random.randgen.choice(NETWORK_DRIVERS.get(o.manufacturer.name, [""]))),
         "",
     )
 

@@ -1,6 +1,5 @@
-import uuid
-
 from unittest import skip, skipIf
+import uuid
 
 from django.db import connection
 

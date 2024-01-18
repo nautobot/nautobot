@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
-from nautobot.core.testing import TestCase, FilterTestCases
+from nautobot.core.testing import FilterTestCases, TestCase
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import (
     Device,
@@ -27,6 +27,7 @@ from nautobot.ipam.filters import (
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
+    Namespace,
     Prefix,
     RIR,
     RouteTarget,
@@ -34,7 +35,6 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
-    Namespace,
 )
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import (
@@ -426,15 +426,15 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
     def setUpTestData(cls):
         # Create some VRFs that belong to the same Namespace and have an rd
         cls.namespace = Namespace.objects.create(name="IP Address Test Case Namespace")
-        VRF.objects.create(name="VRF 1", rd="65000:100", namespace=cls.namespace)
-        VRF.objects.create(name="VRF 2", rd="65000:200", namespace=cls.namespace)
-        VRF.objects.create(name="VRF 3", rd="65000:300", namespace=cls.namespace)
+        vrfs = (
+            VRF.objects.create(name="VRF 1", rd="65000:100", namespace=cls.namespace),
+            VRF.objects.create(name="VRF 2", rd="65000:200", namespace=cls.namespace),
+            VRF.objects.create(name="VRF 3", rd="65000:300", namespace=cls.namespace),
+        )
         # Create some VRFs without an rd
         VRF.objects.create(name="VRF 4", namespace=cls.namespace)
         VRF.objects.create(name="VRF 5", namespace=cls.namespace)
         VRF.objects.create(name="VRF 6", namespace=cls.namespace)
-        vrfs = VRF.objects.filter(namespace=cls.namespace, rd__isnull=False)
-        assert len(vrfs) == 3, f"This Namespace {cls.namespace} does not contain enough VRFs."
 
         cls.interface_ct = ContentType.objects.get_for_model(Interface)
         cls.vm_interface_ct = ContentType.objects.get_for_model(VMInterface)

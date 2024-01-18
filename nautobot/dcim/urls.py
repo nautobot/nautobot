@@ -1,8 +1,9 @@
 from django.urls import path
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
-from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView, ImageAttachmentEditView
+from nautobot.extras.views import ImageAttachmentEditView, ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
 from nautobot.ipam.views import ServiceEditView
+
 from . import views
 from .models import (
     Cable,
@@ -19,9 +20,9 @@ from .models import (
     Manufacturer,
     Platform,
     PowerFeed,
+    PowerOutlet,
     PowerPanel,
     PowerPort,
-    PowerOutlet,
     Rack,
     RackGroup,
     RackReservation,
@@ -33,6 +34,7 @@ app_name = "dcim"
 
 router = NautobotUIViewSetRouter()
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
+router.register("hardware-families", views.HardwareFamilyUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
 

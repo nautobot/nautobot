@@ -5,7 +5,6 @@ from django.core.exceptions import ValidationError
 from django.db import models
 import netaddr
 
-
 BASE_NAME = "Cleanup Namespace"
 DESCRIPTION = "Created by Nautobot 2.0 IPAM data migrations."
 GLOBAL_NS = "Global"

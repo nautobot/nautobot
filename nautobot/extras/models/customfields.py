@@ -1,14 +1,14 @@
+from collections import OrderedDict
+from datetime import date, datetime
 import logging
 import re
-from collections import OrderedDict
-from datetime import datetime, date
 
 from django import forms
-from django.db import models, transaction
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
+from django.db import models, transaction
 from django.forms.widgets import TextInput
 from django.utils.html import format_html
 
@@ -37,7 +37,7 @@ from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTy
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
-from nautobot.extras.utils import check_if_key_is_graphql_safe, FeatureQuery, extras_features
+from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
 
 logger = logging.getLogger(__name__)
 
