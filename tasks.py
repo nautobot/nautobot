@@ -699,6 +699,7 @@ def check_schema(context, api_version=None):
         "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
+        "parallel": "Run tests in parallel.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "performance_report": "Generate Performance Testing report in the terminal. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
         "performance_snapshot": "Generate a new performance testing report to report.yml. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
@@ -716,6 +717,7 @@ def unittest(
     tag=None,
     verbose=False,
     append=False,
+    parallel=False,
     skip_docs_build=False,
     performance_report=False,
     performance_snapshot=False,
@@ -739,6 +741,8 @@ def unittest(
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
+    if parallel:
+        command += " --parallel"
     if performance_report or (tag and "performance" in tag):
         command += " --slowreport"
     if performance_snapshot:
