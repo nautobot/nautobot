@@ -1055,8 +1055,11 @@ class ScheduledJobIntervalTestCase(TestCase):
         with mock.patch("django.utils.timezone.now") as mock_now:
             mock_now.return_value = self._strptime("2 Jan 2024 8:00AM")
             is_due, _ = scheduled_job.schedule.is_due(scheduled_job.last_run_at)
+            mock_now.assert_called()
             self.assertFalse(is_due)
 
+            mock_now.reset_mock()
             mock_now.return_value = self._strptime("2 Jan 2024 10:00AM")
             is_due, _ = scheduled_job.schedule.is_due(scheduled_job.last_run_at)
+            mock_now.assert_called()
             self.assertTrue(is_due)
