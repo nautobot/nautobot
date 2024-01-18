@@ -764,19 +764,6 @@ class TagsBulkEditFormMixin(forms.Form):
         self.fields["remove_tags"] = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)
 
 
-class LocationsBulkEditFormMixin(forms.Form):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Add add/remove locations fields
-        self.fields["add_locations"] = DynamicModelMultipleChoiceField(
-            queryset=Location.objects.all(), required=False, query_params={"content_type": VLAN._meta.label_lower}
-        )
-        self.fields["remove_locations"] = DynamicModelMultipleChoiceField(
-            queryset=Location.objects.all(), required=False, query_params={"content_type": VLAN._meta.label_lower}
-        )
-
-
 # 2.2 TODO: Names below are only for backward compatibility with Nautobot 1.3 and earlier. Remove in 2.2
 
 

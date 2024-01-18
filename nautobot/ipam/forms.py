@@ -33,7 +33,6 @@ from nautobot.extras.forms import (
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
-from nautobot.extras.forms.mixins import LocationsBulkEditFormMixin
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
@@ -731,7 +730,6 @@ class VLANBulkEditForm(
     TagsBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
     RoleModelBulkEditFormMixin,
-    LocationsBulkEditFormMixin,
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=VLAN.objects.all(), widget=forms.MultipleHiddenInput())
@@ -739,6 +737,12 @@ class VLANBulkEditForm(
         queryset=VLANGroup.objects.all(),
         required=False,
         query_params={"location_id": "$location"},
+    )
+    add_locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(), required=False, query_params={"content_type": VLAN._meta.label_lower}
+    )
+    remove_locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(), required=False, query_params={"content_type": VLAN._meta.label_lower}
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     description = forms.CharField(max_length=100, required=False)

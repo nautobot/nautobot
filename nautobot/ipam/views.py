@@ -1381,6 +1381,12 @@ class VLANBulkEditView(generic.BulkEditView):
     table = tables.VLANTable
     form = forms.VLANBulkEditForm
 
+    def _extra_post_save_action(self, obj, form):
+        if form.cleaned_data.get("add_locations", None):
+            obj.locations.add(*form.cleaned_data["add_locations"])
+        if form.cleaned_data.get("remove_locations", None):
+            obj.locations.remove(*form.cleaned_data["remove_locations"])
+
 
 class VLANBulkDeleteView(generic.BulkDeleteView):
     queryset = VLAN.objects.select_related(
