@@ -74,7 +74,7 @@ class NautobotTestRunner(DiscoverRunner):
                 # Actually create the database for the first connection
                 if first_alias is None:
                     first_alias = alias
-                    with time_keeper.timed("  Creating '%s'" % alias):
+                    with time_keeper.timed(f"  Creating '{alias}'"):
                         connection.creation.create_test_db(
                             verbosity=self.verbosity,
                             autoclobber=not self.interactive,
@@ -94,7 +94,7 @@ class NautobotTestRunner(DiscoverRunner):
 
                     if self.parallel > 1:
                         for index in range(self.parallel):
-                            with time_keeper.timed("  Cloning '%s'" % alias):
+                            with time_keeper.timed(f"  Cloning '{alias}'"):
                                 connection.creation.clone_test_db(
                                     suffix=str(index + 1),
                                     verbosity=self.verbosity,
