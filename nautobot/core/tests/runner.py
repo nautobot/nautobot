@@ -2,7 +2,7 @@ from django.conf import settings
 from django.core.management import call_command
 from django.db import connections
 from django.test.runner import DiscoverRunner
-from django.test.utils import NullTimeKeeper, get_unique_databases_and_mirrors
+from django.test.utils import get_unique_databases_and_mirrors, NullTimeKeeper
 import yaml
 
 from nautobot.core.celery import app, setup_nautobot_job_logging
