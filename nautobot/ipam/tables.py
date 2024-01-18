@@ -690,6 +690,11 @@ class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     vid = tables.TemplateColumn(template_code=VLAN_LINK, verbose_name="ID")
     vlan_group = tables.Column(linkify=True)
+    location_count = LinkedCountColumn(
+        viewname="dcim:location_list",
+        url_params={"vlans": "pk"},
+        verbose_name="Locations",
+    )
     tenant = TenantColumn()
 
     class Meta(BaseTable.Meta):
@@ -699,7 +704,7 @@ class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "vid",
             "vlan_group",
             "name",
-            "tenant",
+            "location_count" "tenant",
             "status",
             "role",
             "description",
@@ -780,6 +785,11 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
     vlan_group = tables.Column(accessor=Accessor("vlan_group__name"), verbose_name="Group")
     tenant = TenantColumn()
     role = tables.TemplateColumn(template_code=VLAN_ROLE_LINK)
+    location_count = LinkedCountColumn(
+        viewname="dcim:location",
+        url_params={"vlans": "pk"},
+        verbose_name="Locations",
+    )
 
     class Meta(BaseTable.Meta):
         model = VLAN
@@ -787,6 +797,7 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
             "vid",
             "tagged",
             "vlan_group",
+            "location_count",
             "name",
             "tenant",
             "status",
