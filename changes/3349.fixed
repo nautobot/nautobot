@@ -1,0 +1,1 @@
+Fixed some recurring scheduled jobs not using configured time zone.
