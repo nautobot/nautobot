@@ -16,7 +16,6 @@ from django.core.management.base import CommandError
 from django.test import override_settings
 from django.test.client import RequestFactory
 from django.utils import timezone
-import pytz
 
 from nautobot.core.celery import app
 from nautobot.core.testing import (
@@ -1021,6 +1020,11 @@ class ScheduledJobIntervalTestCase(TestCase):
     # datetime weekday starts on Monday (Sunday = 6)
     datetime_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
+    def _strptime(self, time_string):
+        """Return a utc datetime object from a string with the format: 01 Jan 2024 09:00AM"""
+        time_format = r"%d %b %Y %I:%M%p"
+        return datetime.datetime.strptime(time_string, time_format).replace(tzinfo=timezone.utc)
+
     def test_weekly_interval(self):
         start_time = timezone.now() + datetime.timedelta(days=6)
         scheduled_job = models.ScheduledJob.objects.create(
@@ -1039,22 +1043,20 @@ class ScheduledJobIntervalTestCase(TestCase):
     @override_settings(USE_TZ=True, TIME_ZONE="America/New_York")
     def test_cron_time_zone(self):
         self.assertEqual(app.timezone.key, "America/New_York")
-        tz_new_york = pytz.timezone("America/New_York")
         scheduled_job = models.ScheduledJob.objects.create(
             name="test_cron_time_zone",
             task="pass.TestPass",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=self.user,
-            start_time=datetime.datetime(2024, 1, 1, 0, 0, 0, tzinfo=tz_new_york),
+            start_time=self._strptime("1 Jan 2024 12:00AM"),
+            last_run_at=self._strptime("1 Jan 2024 9:00AM"),
             crontab="0 9 * * *",
         )
         with mock.patch("django.utils.timezone.now") as mock_now:
-            last_run_at = datetime.datetime(2024, 1, 1, 9, 0, 0, tzinfo=tz_new_york)
-
-            mock_now.return_value = datetime.datetime(2024, 1, 2, 8, 0, 0, tzinfo=tz_new_york)
-            is_due, _ = scheduled_job.schedule.is_due(last_run_at)
+            mock_now.return_value = self._strptime("2 Jan 2024 8:00AM")
+            is_due, _ = scheduled_job.schedule.is_due(scheduled_job.last_run_at)
             self.assertFalse(is_due)
 
-            mock_now.return_value = datetime.datetime(2024, 1, 2, 10, 0, 0, tzinfo=tz_new_york)
-            is_due, _ = scheduled_job.schedule.is_due(last_run_at)
+            mock_now.return_value = self._strptime("2 Jan 2024 10:00AM")
+            is_due, _ = scheduled_job.schedule.is_due(scheduled_job.last_run_at)
             self.assertTrue(is_due)
