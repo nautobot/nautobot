@@ -366,9 +366,9 @@ class ErrorPagesTestCase(TestCase):
         self.assertContains(response, "Network to Code", status_code=404)
         response_content = response.content.decode(response.charset)
         self.assertInHTML(
-            "If further assistance is required, please join the <code>#nautobot</code> channel "
-            'on <a href="https://slack.networktocode.com/">Network to Code\'s Slack community</a> '
-            "and post your question.",
+            "If further assistance is required, please join the <code>#nautobot</code> channel on "
+            '<a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
+            "Slack community</a> and post your question.",
             response_content,
         )
 
@@ -392,16 +392,16 @@ class ErrorPagesTestCase(TestCase):
         self.assertContains(response, "Network to Code", status_code=500)
         response_content = response.content.decode(response.charset)
         self.assertInHTML(
-            "If further assistance is required, please join the <code>#nautobot</code> channel "
-            'on <a href="https://slack.networktocode.com/">Network to Code\'s Slack community</a> '
-            "and post your question.",
+            "If further assistance is required, please join the <code>#nautobot</code> channel on "
+            '<a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
+            "Slack community</a> and post your question.",
             response_content,
         )
 
     @override_settings(DEBUG=False, SUPPORT_MESSAGE="Hello world!")
     @mock.patch("nautobot.core.views.HomeView.get", side_effect=Exception)
     def test_500_custom_support_message(self, mock_get):
-        """Nautobot's custom 500 page should be used and should include a default support message."""
+        """Nautobot's custom 500 page should be used and should include a custom support message if defined."""
         url = reverse("home")
         with self.assertTemplateUsed("500.html"):
             self.client.raise_request_exception = False
