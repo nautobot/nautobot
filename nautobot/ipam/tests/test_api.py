@@ -759,7 +759,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
             url = reverse("ipam-api:vlan-detail", kwargs={"pk": vlan.pk})
             response = self.client.get(f"{url}?api_version=2.1", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
-            self.assertEqual(response.data["location"], vlan.location)
+            self.assertEqual(response.data["location"]["id"], vlan.location.pk)
 
         with self.subTest("Assert GET with multiple location"):
             vlan = VLAN.objects.annotate(locations_count=Count("locations")).filter(locations_count__gt=1).first()
