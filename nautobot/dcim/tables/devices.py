@@ -37,15 +37,12 @@ from .template_code import (
     CONSOLESERVERPORT_BUTTONS,
     DEVICE_LINK,
     DEVICEBAY_BUTTONS,
-    DEVICEBAY_STATUS,
     FRONTPORT_BUTTONS,
     INTERFACE_BUTTONS,
     INTERFACE_IPADDRESSES,
     INTERFACE_REDUNDANCY_GROUP_INTERFACES,
     INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES,
-    INTERFACE_REDUNDANCY_GROUP_STATUS,
     INTERFACE_REDUNDANCY_INTERFACE_PRIORITY,
-    INTERFACE_REDUNDANCY_INTERFACE_STATUS,
     INTERFACE_TAGGED_VLANS,
     LINKED_RECORD_COUNT,
     PATHENDPOINT,
@@ -772,7 +769,7 @@ class DeviceRearPortTable(RearPortTable):
 
 
 class DeviceBayTable(DeviceComponentTable):
-    status = tables.TemplateColumn(template_code=DEVICEBAY_STATUS)
+    installed_device__status = ColoredLabelColumn()
     installed_device = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:devicebay_list")
 
@@ -783,7 +780,7 @@ class DeviceBayTable(DeviceComponentTable):
             "device",
             "name",
             "label",
-            "status",
+            "installed_device__status",
             "installed_device",
             "description",
             "tags",
@@ -793,7 +790,7 @@ class DeviceBayTable(DeviceComponentTable):
             "device",
             "name",
             "label",
-            "status",
+            "installed_device__status",
             "installed_device",
             "description",
         )
@@ -813,7 +810,7 @@ class DeviceDeviceBayTable(DeviceBayTable):
             "pk",
             "name",
             "label",
-            "status",
+            "installed_device__status",
             "installed_device",
             "description",
             "tags",
@@ -823,7 +820,7 @@ class DeviceDeviceBayTable(DeviceBayTable):
             "pk",
             "name",
             "label",
-            "status",
+            "installed_device__status",
             "installed_device",
             "description",
             "actions",
@@ -984,11 +981,8 @@ class InterfaceRedundancyGroupAssociationTable(BaseTable):
     priority = tables.TemplateColumn(template_code=INTERFACE_REDUNDANCY_INTERFACE_PRIORITY)
     interface__device = tables.Column(linkify=True)
     interface = tables.Column(linkify=True)
-    interface__status = tables.TemplateColumn(template_code=INTERFACE_REDUNDANCY_INTERFACE_STATUS)
-    interface_redundancy_group__status = tables.TemplateColumn(
-        template_code=INTERFACE_REDUNDANCY_GROUP_STATUS,
-        verbose_name="Group Status",
-    )
+    interface__status = ColoredLabelColumn()
+    interface_redundancy_group__status = ColoredLabelColumn(verbose_name="Group Status")
     interface__ip_addresses = tables.TemplateColumn(
         template_code=INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES,
         orderable=False,
