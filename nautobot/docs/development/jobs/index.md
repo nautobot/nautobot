@@ -113,7 +113,7 @@ This is the human-friendly name of your job, as will be displayed in the Nautobo
 #### `description`
 
 An optional human-friendly description of what this job does.
-This can accept either plain text or Markdown-formatted text. It can also be multiple lines:
+This can accept either plain text, Markdown-formatted text, or [a limited subset of HTML](../../user-guide/platform-functionality/template-filters.md#render_markdown). It can also be multiple lines:
 
 ```python
 class ExampleJob(Job):
@@ -512,7 +512,7 @@ To skip writing a log entry to the database, set the `skip_db_logging` key in th
             logger.info("This job is running!", extra={"skip_db_logging": True})
     ```
 
-Markdown rendering is supported for log messages.
+Markdown rendering is supported for log messages, as well as [a limited subset of HTML](../../user-guide/platform-functionality/template-filters.md#render_markdown).
 
 +/- 1.3.4
     As a security measure, the `message` passed to any of these methods will be passed through the `nautobot.core.utils.logging.sanitize()` function in an attempt to strip out information such as usernames/passwords that should not be saved to the logs. This is of course best-effort only, and Job authors should take pains to ensure that such information is not passed to the logging APIs in the first place. The set of redaction rules used by the `sanitize()` function can be configured as [settings.SANITIZER_PATTERNS](../../user-guide/administration/configuration/optional-settings.md#sanitizer_patterns).

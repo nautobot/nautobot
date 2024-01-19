@@ -964,7 +964,7 @@ If set to `False`, unknown/unrecognized filter parameters will be discarded and 
 
 Default: `""`
 
-A message to include on error pages (status code 403, 404, 500, etc.) when an error occurs. You can configure this to direct users to the appropriate contact(s) within your organization that provide support for Nautobot. Markdown formatting is supported within this message (raw HTML is not).
+A message to include on error pages (status code 403, 404, 500, etc.) when an error occurs. You can configure this to direct users to the appropriate contact(s) within your organization that provide support for Nautobot. Markdown formatting is supported within this message, as well as [a limited subset of HTML](../../platform-functionality/template-filters.md#render_markdown).
 
 If unset, the default message that will appear is `If further assistance is required, please join the #nautobot channel on [Network to Code's Slack community](https://slack.networktocode.com) and post your question.`
 
