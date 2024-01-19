@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.staticfiles.finders import find
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
-from django.utils.html import format_html, strip_tags
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify as django_slugify
 from django_jinja import library
@@ -17,7 +17,7 @@ import yaml
 
 from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
-from nautobot.core.utils import color, config, data, lookup
+from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
 # S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
@@ -170,16 +170,11 @@ def render_markdown(value):
     Example:
         {{ text | render_markdown }}
     """
-    # Strip HTML tags
-    value = strip_tags(value)
-
-    # Sanitize Markdown links
-    schemes = "|".join(settings.ALLOWED_URL_SCHEMES)
-    pattern = rf"\[(.+)\]\((?!({schemes})).*:(.+)\)"
-    value = re.sub(pattern, "[\\1](\\3)", value, flags=re.IGNORECASE)
-
     # Render Markdown
     html = markdown(value, extensions=["fenced_code", "tables"])
+
+    # Sanitize rendered HTML
+    html = nautobot_logging.clean_html(html)
 
     return mark_safe(html)  # noqa: S308  # suspicious-mark-safe-usage, OK here since we sanitized the string earlier
 

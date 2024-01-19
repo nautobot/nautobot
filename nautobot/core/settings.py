@@ -682,7 +682,8 @@ CONSTANCE_CONFIG = {
     ),
     "SUPPORT_MESSAGE": ConstanceConfigItem(
         default="",
-        help_text="Help message to include on 4xx and 5xx error pages. Markdown is supported.\n"
+        help_text="Help message to include on 4xx and 5xx error pages. "
+        "Markdown is supported, as are some HTML tags and attributes.\n"
         "If unspecified, instructions to join Network to Code's Slack community will be provided.",
     ),
 }
