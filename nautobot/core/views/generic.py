@@ -1024,7 +1024,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                             if hasattr(form, "save_note") and callable(form.save_note):
                                 form.save_note(instance=obj, user=request.user)
-                            
+
                             self._extra_post_save_action(obj, form)
 
                         # Enforce object-level permissions

@@ -720,6 +720,8 @@ class VLANForm(NautobotModelForm, TenancyForm):
         }
 
     def clean(self):
+        # Validation error raised in signal is not properly handled in form clean
+        # Hence handling any validationError that might occur.
         try:
             return super().clean()
         except ValidationError as e:

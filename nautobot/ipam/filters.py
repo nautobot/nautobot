@@ -469,12 +469,12 @@ class VLANFilterSet(
         queryset=Location.objects.all(),
         to_field_name="name",
         field_name="locations",
-        label="Location (name or ID)",
+        label='Location (name or ID) (deprecated, use "locations" filter instead)',
     )
     locations = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
         to_field_name="name",
-        label="Locations (ID or name)",
+        label="Locations (name or ID)",
     )
 
     class Meta:

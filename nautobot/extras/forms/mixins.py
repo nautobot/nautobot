@@ -12,7 +12,6 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
 )
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
-from nautobot.dcim.models import Location
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     RelationshipSideChoices,
@@ -28,7 +27,6 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.extras.utils import remove_prefix_from_cf_key
-from nautobot.ipam.models import VLAN
 
 logger = logging.getLogger(__name__)
 

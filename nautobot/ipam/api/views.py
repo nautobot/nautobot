@@ -314,13 +314,15 @@ class VLANGroupViewSet(NautobotModelViewSet):
 
 
 @extend_schema_view(
-    bulk_update=extend_schema(responses={"200": serializers.VLANLegacySerializer(many=True)}, versions=["2.0"]),
-    bulk_partial_update=extend_schema(responses={"200": serializers.VLANLegacySerializer(many=True)}, versions=["2.0"]),
-    create=extend_schema(responses={"201": serializers.VLANLegacySerializer}, versions=["2.0"]),
-    list=extend_schema(responses={"200": serializers.VLANLegacySerializer(many=True)}, versions=["2.0"]),
-    partial_update=extend_schema(responses={"200": serializers.VLANLegacySerializer}, versions=["2.0"]),
-    retrieve=extend_schema(responses={"200": serializers.VLANLegacySerializer}, versions=["2.0"]),
-    update=extend_schema(responses={"200": serializers.VLANLegacySerializer}, versions=["2.0"]),
+    bulk_update=extend_schema(responses={"200": serializers.VLANLegacySerializer(many=True)}, versions=["2.0", "2.1"]),
+    bulk_partial_update=extend_schema(
+        responses={"200": serializers.VLANLegacySerializer(many=True)}, versions=["2.0", "2.1"]
+    ),
+    create=extend_schema(responses={"201": serializers.VLANLegacySerializer}, versions=["2.0", "2.1"]),
+    list=extend_schema(responses={"200": serializers.VLANLegacySerializer(many=True)}, versions=["2.0", "2.1"]),
+    partial_update=extend_schema(responses={"200": serializers.VLANLegacySerializer}, versions=["2.0", "2.1"]),
+    retrieve=extend_schema(responses={"200": serializers.VLANLegacySerializer}, versions=["2.0", "2.1"]),
+    update=extend_schema(responses={"200": serializers.VLANLegacySerializer}, versions=["2.0", "2.1"]),
 )
 class VLANViewSet(NautobotModelViewSet):
     queryset = (
@@ -342,7 +344,11 @@ class VLANViewSet(NautobotModelViewSet):
         default_code = "precondition_failed"
 
     def get_serializer_class(self):
-        if self.request.major_version == 2 and self.request.minor_version < 2:
+        if (
+            not getattr(self, "swagger_fake_view", False)
+            and self.request.major_version == 2
+            and self.request.minor_version < 2
+        ):
             # API version 2.1 or earlier - use the legacy serializer
             return serializers.VLANLegacySerializer
         return super().get_serializer_class()

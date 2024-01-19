@@ -1316,7 +1316,6 @@ class VLAN(PrimaryModel):
         to="dcim.Location",
         related_name="vlans",
         blank=True,
-        null=True,
     )
     vlan_group = models.ForeignKey(
         to="ipam.VLANGroup",

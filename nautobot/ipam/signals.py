@@ -94,16 +94,12 @@ def ip_address_to_interface_assignment_created(sender, instance, raw=False, **kw
 @receiver(m2m_changed, sender=VLAN.locations.through)
 def assert_vlan_locations_content_types(sender, instance, action, reverse, model, pk_set, **kwargs):
     if action == "pre_add":
-        instnace_ct = ContentType.objects.get_for_model(instance)
+        instance_ct = ContentType.objects.get_for_model(instance)
         invalid_locations = model.objects.select_related("location_type").filter(
-            Q(pk__in=pk_set), ~Q(location_type__content_types__in=[instnace_ct])
+            Q(pk__in=pk_set), ~Q(location_type__content_types__in=[instance_ct])
         )
         if invalid_locations.exists():
-            invalid_location_types = []
-            for location in invalid_locations:
-                if location.location_type.name in invalid_location_types:
-                    continue
-                invalid_location_types.append(location.location_type.name)
+            invalid_location_types = {location.location_type.name for location in invalid_locations}
             raise ValidationError(
-                {"locations": f"VLANs may not associate to locations of types {invalid_location_types}."}
+                {"locations": f"VLANs may not associate to locations of types {list(invalid_location_types)}."}
             )

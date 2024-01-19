@@ -10,6 +10,7 @@ from nautobot.core.api import (
     NautobotModelSerializer,
     ValidatedModelSerializer,
 )
+from nautobot.dcim.models.locations import Location
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.ipam import constants
 from nautobot.ipam.api.fields import IPFieldSerializer
@@ -136,6 +137,10 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 
 class VLANLegacySerializer(VLANSerializer):
+    location = NautobotHyperlinkedRelatedField(
+        allow_null=True, queryset=Location.objects.all(), required=False, view_name="dcim-api:location-detail"
+    )
+
     class Meta:
         model = VLAN
         fields = [
@@ -160,10 +165,6 @@ class VLANLegacySerializer(VLANSerializer):
             "custom_fields",
         ]
         validators = []
-
-    def update(self, instance, validated_data):
-        print("VALIDATED DATA ====> ", validated_data)
-        return super().update(instance, validated_data)
 
 
 #

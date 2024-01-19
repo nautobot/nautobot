@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="vlan",
             name="locations",
-            field=models.ManyToManyField(blank=True, null=True, related_name="vlans", to="dcim.Location"),
+            field=models.ManyToManyField(blank=True, related_name="vlans", to="dcim.Location"),
         ),
     ]
