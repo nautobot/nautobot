@@ -140,7 +140,10 @@ class Job(PrimaryModel):
         help_text="Human-readable name of this job",
         db_index=True,
     )
-    description = models.TextField(blank=True, help_text="Markdown formatting is supported")
+    description = models.TextField(
+        blank=True,
+        help_text="Markdown formatting and a limited subset of HTML are supported",
+    )
 
     # Control flags
     installed = models.BooleanField(
