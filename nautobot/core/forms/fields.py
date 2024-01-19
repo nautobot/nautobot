@@ -381,7 +381,7 @@ class CommentField(django_forms.CharField):
         return format_html(
             '<i class="mdi mdi-information-outline"></i> '
             '<a href="https://www.markdownguide.org/cheat-sheet/#basic-syntax" rel="noopener noreferrer">Markdown</a> '
-            'syntax is supported, well as <a href="{}#render_markdown">a limited subset of HTML</a>.',
+            'syntax is supported, as well as <a href="{}#render_markdown">a limited subset of HTML</a>.',
             static("docs/user-guide/platform-functionality/template-filters.html"),
         )
 
