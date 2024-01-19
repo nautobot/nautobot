@@ -401,7 +401,7 @@ class CommentField(forms.CharField):
             '<i class="mdi mdi-information-outline"></i> '
             '<a href="https://www.markdownguide.org/cheat-sheet/#basic-syntax" rel="noopener noreferrer">Markdown</a> '
             'syntax is supported, as well as <a href="{}#render_markdown">a limited subset of HTML</a>.',
-            static("docs/user-guide/platform-functionality/template-filters.html"),
+            static("docs/additional-features/template-filters.html"),
         )
 
     def __init__(self, *args, **kwargs):
