@@ -1291,7 +1291,7 @@ class VLANListView(generic.ObjectListView):
 
 
 class VLANView(generic.ObjectView):
-    queryset = VLAN.objects.select_related(
+    queryset = VLAN.objects.annotate(location_count=Count("locations")).select_related(
         "role",
         "status",
         "tenant__tenant_group",
