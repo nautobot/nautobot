@@ -29,6 +29,7 @@ from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.mixins import (
     ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
     ObjectDestroyViewMixin,
     ObjectEditViewMixin,
     ObjectPermissionRequiredMixin,
@@ -396,7 +397,13 @@ class ContactUIViewSet(NautobotUIViewSet):
         return context
 
 
-class ContactAssociationUIViewSet(ObjectBulkDestroyViewMixin, ObjectDestroyViewMixin, ObjectEditViewMixin):
+class ContactAssociationUIViewSet(
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectEditViewMixin,
+):
+    bulk_update_form_class = forms.ContactAssociationBulkEditForm
     form_class = forms.ContactAssociationForm
     filterset_class = filters.ContactAssociationFilterSet
     queryset = ContactAssociation.objects.all()

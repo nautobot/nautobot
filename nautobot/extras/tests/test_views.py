@@ -374,7 +374,7 @@ class ContactTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "new contact 3,555-0123,newcontact2@example.com,",
             "new contact 4,555-0124,,",
         )
-        cls.bulk_edit_data = {"address": "Carnegie Hall, New York, NY"}
+        cls.bulk_edit_data = {"address": "Carnegie Hall, New York, NY", "phone": "555-0125"}
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_new_contact_and_assign_contact_to_object(self):
@@ -414,6 +414,7 @@ class ContactTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class ContactAssociationTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
@@ -422,37 +423,47 @@ class ContactAssociationTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        roles = Role.objects.get_for_model(ContactAssociation)
+        statuses = Status.objects.get_for_model(ContactAssociation)
         cls.form_data = {
             "contact": Contact.objects.first().pk,
             "team": None,
             "associated_object_type": ContentType.objects.get_for_model(Circuit).pk,
             "associated_object_id": Circuit.objects.first().pk,
-            "role": Role.objects.get_for_model(ContactAssociation).first().pk,
-            "status": Status.objects.get_for_model(ContactAssociation).first().pk,
+            "role": roles[0].pk,
+            "status": statuses[0].pk,
+        }
+        cls.bulk_edit_data = {
+            "role": roles[1].pk,
+            "status": statuses[1].pk,
         }
         ContactAssociation.objects.create(
             contact=Contact.objects.first(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
             associated_object_id=IPAddress.objects.first().pk,
-            status=Status.objects.get_for_model(ContactAssociation).first(),
+            role=roles[2],
+            status=statuses[1],
         )
         ContactAssociation.objects.create(
             contact=Contact.objects.last(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
             associated_object_id=IPAddress.objects.first().pk,
-            status=Status.objects.get_for_model(ContactAssociation).first(),
+            role=roles[1],
+            status=statuses[2],
         )
         ContactAssociation.objects.create(
             team=Team.objects.first(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
             associated_object_id=IPAddress.objects.first().pk,
-            status=Status.objects.get_for_model(ContactAssociation).first(),
+            role=roles[0],
+            status=statuses[0],
         )
         ContactAssociation.objects.create(
             team=Team.objects.last(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
             associated_object_id=IPAddress.objects.first().pk,
-            status=Status.objects.get_for_model(ContactAssociation).first(),
+            role=roles[0],
+            status=statuses[1],
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
