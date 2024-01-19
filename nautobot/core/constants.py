@@ -1,3 +1,7 @@
+from copy import deepcopy
+
+import nh3
+
 SEARCH_MAX_RESULTS = 15
 
 #
@@ -38,65 +42,29 @@ FILTER_NEGATION_LOOKUP_MAP = {"n": "exact"}
 
 # Subset of the HTML tags allowed by default by ammonia:
 # https://github.com/rust-ammonia/ammonia/blob/master/src/lib.rs
-HTML_ALLOWED_TAGS = {
-    "a",
-    "abbr",
-    "acronym",
-    "b",
-    "blockquote",
-    "br",
-    "code",
-    "dd",
-    "del",
-    "div",
-    "dl",
-    "dt",
-    "em",
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-    "hr",
-    "i",
-    "img",
-    "ins",
-    "kbd",
-    "li",
-    "ol",
-    "p",
-    "pre",
-    "span",
-    "strike",
-    "strong",
-    "sub",
-    "sup",
-    "table",
-    "tbody",
-    "td",
-    "th",
-    "thead",
-    "tr",
-    "tt",
-    "u",
-    "ul",
-    "var",
+HTML_ALLOWED_TAGS = nh3.ALLOWED_TAGS - {
+    # no image maps at present
+    "area",
+    "map",
+
+    # no document-level markup at present
+    "article",
+    "aside",
+    "footer",
+    "header",
+    "nav",
+
+    # miscellaneous out-of-scope for now
+    "data",
+    "dfn",
+    "figcaption",
+    "figure",
 }
 
-# Subset of the HTML attributes allowed by default by ammonia:
+# Variant of the HTML attributes allowed by default by ammonia:
 # https://github.com/rust-ammonia/ammonia/blob/master/src/lib.rs
-HTML_ALLOWED_ATTRIBUTES = {
-    "a": {"href", "title"},
-    "hr": {"align", "size", "width"},
-    "img": {"align", "alt", "height", "src", "title", "width"},
-    "ol": {"start"},
-    "tbody": {"align"},
-    "td": {"align", "colspan", "rowspan"},
-    "th": {"align", "colspan", "rowspan"},
-    "thead": {"align"},
-    "tr": {"align"},
-}
+# at present we just copy nh3.ALLOWED_ATTRIBUTES but we can modify this later as desired and appropriate
+HTML_ALLOWED_ATTRIBUTES = deepcopy(nh3.ALLOWED_ATTRIBUTES)
 
 
 #
