@@ -72,6 +72,74 @@ Support for versions of PostgreSQL prior to 12.0 has been removed as these versi
 Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specific permissions will now always be hidden from users lacking those permissions. Additionally, users not logged in will now be automatically redirected to the login page.
 
 <!-- towncrier release notes start -->
+## v2.1.2 (2024-01-19)
+
+### Security
+
+- [#5054](https://github.com/nautobot/nautobot/issues/5054) - Added validation of redirect URLs to the "Add a new IP Address" and "Assign an IP Address" views.
+- [#5109](https://github.com/nautobot/nautobot/issues/5109) - Removed `/files/get/` URL endpoint (for viewing FileAttachment files in the browser), as it was unused and could potentially pose security issues.
+- [#5133](https://github.com/nautobot/nautobot/issues/5133) - Fixed an XSS vulnerability ([GHSA-v4xv-795h-rv4h](https://github.com/nautobot/nautobot/security/advisories/GHSA-v4xv-795h-rv4h)) in the `render_markdown()` utility function used to render comments, notes, job log entries, etc.
+
+### Added
+
+- [#3877](https://github.com/nautobot/nautobot/issues/3877) - Added global filtering to Job Result log table, enabling search across all pages.
+- [#5102](https://github.com/nautobot/nautobot/issues/5102) - Enhanced the `sanitize` function to also handle sanitization of lists and tuples of strings.
+- [#5133](https://github.com/nautobot/nautobot/issues/5133) - Enhanced Markdown-supporting fields (`comments`, `description`, Notes, Job log entries, etc.) to also permit the use of a limited subset of "safe" HTML tags and attributes.
+
+### Changed
+
+- [#5102](https://github.com/nautobot/nautobot/issues/5102) - Changed the `nautobot-server runjob` management command to check whether the requested user has permission to run the requested job.
+- [#5102](https://github.com/nautobot/nautobot/issues/5102) - Changed the `nautobot-server runjob` management command to check whether the requested job is installed and enabled.
+- [#5102](https://github.com/nautobot/nautobot/issues/5102) - Changed the `nautobot-server runjob` management command to check whether a Celery worker is running when invoked without the `--local` flag.
+
+### Removed
+
+- [#5078](https://github.com/nautobot/nautobot/issues/5078) - Removed `nautobot-server startplugin` management command.
+
+### Fixed
+
+- [#4075](https://github.com/nautobot/nautobot/issues/4075) - Fixed sorting of Device Bays list view by installed device status.
+- [#4444](https://github.com/nautobot/nautobot/issues/4444) - Fixed Sync Git Repository requires non-matching permissions for UI vs API.
+- [#4998](https://github.com/nautobot/nautobot/issues/4998) - Fixed inability to import CSVs where later rows include references to records defined by earlier rows.
+- [#5024](https://github.com/nautobot/nautobot/issues/5024) - Improved performance of the Job Result list view by optimizing the way JobLogEntry records are queried.
+- [#5024](https://github.com/nautobot/nautobot/issues/5024) - Improved performance of the Device list view by including the manufacturer name in the table queryset.
+- [#5024](https://github.com/nautobot/nautobot/issues/5024) - Improved performance of most ObjectListViews by optimizing how Custom fields, Computed fields, and Relationships are queried.
+- [#5024](https://github.com/nautobot/nautobot/issues/5024) - Fixed a bug that caused IPAddress objects to query their parent Prefix and Namespace every time they were instantiated.
+- [#5024](https://github.com/nautobot/nautobot/issues/5024) - Improved performance of the IPAddress list view by including the namespace in the table queryset.
+- [#5024](https://github.com/nautobot/nautobot/issues/5024) - Updated bulk-edit and bulk-delete views to auto-hide any "actions" column in the table of objects being edited or deleted.
+- [#5031](https://github.com/nautobot/nautobot/issues/5031) - Updated the default sanitizer pattern to include secret(s) and to be flexible with python dictionaries.
+- [#5043](https://github.com/nautobot/nautobot/issues/5043) - Fixed early return conditional in `ensure_git_repository`.
+- [#5045](https://github.com/nautobot/nautobot/issues/5045) - Adjusted Bootstrap grid breakpoints to account for the space occupied by the sidebar, fixing various page rendering.
+- [#5054](https://github.com/nautobot/nautobot/issues/5054) - Fixed missing search logic on the "Assign an IP Address" view.
+- [#5081](https://github.com/nautobot/nautobot/issues/5081) - Fixed core.tables.BaseTable to terminate dynamic queryset's building of pre-fetched fields upon first non-RelatedField of a column.
+- [#5095](https://github.com/nautobot/nautobot/issues/5095) - Fixed a couple of potential `KeyError` when refreshing Git repository Jobs.
+- [#5095](https://github.com/nautobot/nautobot/issues/5095) - Fixed color highlighting of `error` and `critical` log entries when viewing a Job Result.
+- [#5102](https://github.com/nautobot/nautobot/issues/5102) - Fixed missing log messages when errors occur during `Job.__call__()` initial setup.
+- [#5102](https://github.com/nautobot/nautobot/issues/5102) - Fixed misleading "Job completed" message from being logged when a Job aborted.
+- [#5102](https://github.com/nautobot/nautobot/issues/5102) - Fixed an error in `nautobot-server runjob` if a job returned data other than a dict.
+- [#5102](https://github.com/nautobot/nautobot/issues/5102) - Fixed misleading "SUCCESS" message when `nautobot-server runjob` resulted in any JobResult status other than "FAILED".
+- [#5102](https://github.com/nautobot/nautobot/issues/5102) - Fixed incorrect JobResult data when using `nautobot-server runjob --local` or `JobResult.execute_job()`.
+- [#5111](https://github.com/nautobot/nautobot/issues/5111) - Fixed rack group and rack filtering by the location selected in the device bulk edit form.
+
+### Dependencies
+
+- [#5083](https://github.com/nautobot/nautobot/issues/5083) - Updated GitPython to version 3.1.41 to address Windows security vulnerability [GHSA-2mqj-m65w-jghx](https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-2mqj-m65w-jghx).
+- [#5086](https://github.com/nautobot/nautobot/issues/5086) - Updated Jinja2 to version 3.1.3 to address to address XSS security vulnerability [GHSA-h5c8-rqwp-cp95](https://github.com/pallets/jinja/security/advisories/GHSA-h5c8-rqwp-cp95).
+- [#5133](https://github.com/nautobot/nautobot/issues/5133) - Added `nh3` HTML sanitization library as a dependency.
+
+### Documentation
+
+- [#5078](https://github.com/nautobot/nautobot/issues/5078) - Added a link to the `cookiecutter-nautobot-app` project in the App developer documentation.
+
+### Housekeeping
+
+- [#4906](https://github.com/nautobot/nautobot/issues/4906) - Added automatic superuser creation environment variables to docker development environment.
+- [#4906](https://github.com/nautobot/nautobot/issues/4906) - Updated VS Code Dev Containers configuration and documentation.
+- [#5076](https://github.com/nautobot/nautobot/issues/5076) - Updated `packaging` dependency to permit newer versions since it follows CalVer rather than SemVer.
+- [#5079](https://github.com/nautobot/nautobot/issues/5079) - Increased overly-brief `start_period` for development `nautobot` container to allow sufficient time for initial migrations to run.
+- [#5079](https://github.com/nautobot/nautobot/issues/5079) - Fixed bug with invoke cli and invoke nbshell.
+- [#5118](https://github.com/nautobot/nautobot/issues/5118) - Updated PR template to encourage inclusion of screenshots.
+
 ## v2.1.1 (2024-01-08)
 
 ### Added
