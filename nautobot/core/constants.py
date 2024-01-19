@@ -46,14 +46,12 @@ HTML_ALLOWED_TAGS = nh3.ALLOWED_TAGS - {
     # no image maps at present
     "area",
     "map",
-
     # no document-level markup at present
     "article",
     "aside",
     "footer",
     "header",
     "nav",
-
     # miscellaneous out-of-scope for now
     "data",
     "dfn",
