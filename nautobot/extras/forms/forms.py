@@ -361,7 +361,6 @@ CustomFieldChoiceFormSet = inlineformset_factory(
 
 
 class CustomFieldDescriptionField(CommentField):
-
     @property
     def default_helptext(self):
         return "Also used as the help text when editing models using this custom field.<br>" + super().default_helptext
