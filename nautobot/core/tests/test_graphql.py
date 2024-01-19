@@ -70,13 +70,13 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.registry import registry
-from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
     Namespace,
     Prefix,
     VLAN,
+    VLANGroup,
     VRF,
     VRFDeviceAssignment,
     VRFPrefixAssignment,
@@ -88,6 +88,11 @@ from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 
 # Use the proper swappable User model
 User = get_user_model()
+
+
+# TODO: the below *shouldn't* be needed, but without it,
+# these tests consistently fail with schema construction errors when run with --parallel flag
+SCHEMA = graphene_settings.SCHEMA  # not a no-op; this causes the schema to be built
 
 
 class GraphQLTestCase(TestCase):
@@ -726,8 +731,8 @@ class GraphQLQueryTest(TestCase):
 
         vlan_statuses = Status.objects.get_for_model(VLAN)
         vlan_groups = (
-            VLANGroupFactory.create(location=cls.location1),
-            VLANGroupFactory.create(location=cls.location2),
+            VLANGroup.objects.create(name="VLANGroup 1", location=cls.location1),
+            VLANGroup.objects.create(name="VLANGroup 2", location=cls.location2),
         )
         cls.vlan1 = VLAN.objects.create(
             name="VLAN 1", vid=100, location=cls.location1, status=vlan_statuses[0], vlan_group=vlan_groups[0]
