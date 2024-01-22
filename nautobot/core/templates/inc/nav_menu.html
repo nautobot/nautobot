@@ -2,6 +2,59 @@
 {% load registry %}
 {% load helpers %}
 {% registry %}
+
+<style>
+    .nav-dropdown-menu {
+        color: #999999 !important;
+        background-color: #151e2a;
+        position: relative;
+        padding: 5px 0;
+        padding-left: 0;
+        margin: 2px 0 0;
+        margin-top: 0;
+        width: 100%;
+        font-size: 14px;
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+        border-radius: 6px;
+    }
+    .nav-dropdown-menu > li > a {
+        color: #ffffff !important;
+        display: block !important;
+        clear: left !important;
+        line-height: 1.285714286 !important;
+        padding: 8px 20px !important;
+    }
+    .nav-dropdown-menu > li > .buttons.pull-right {
+        padding-right: 10px;
+    }
+    .dropdown-header {
+        line-height: 2;
+        padding: 3px 20px;
+        text-transform: uppercase;
+    } 
+    /* When the dropdown is expanded, change color of the anchor text */
+    .navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="true"] #dropdown_title {
+        color: #ff8000; /* Color when expanded */
+    }
+    .nav-dropdown-menu .divider {
+        height: 1px;
+        margin: 11px 0;
+        overflow: hidden;
+        background-color: #646464;
+    }
+
+    html[data-theme="dark"] .nav-dropdown-menu, html[data-theme="dark"] .swagger-ui .servers>label select html[data-theme="dark"] .select2-dropdown {
+        background-color: rgb(222, 222, 222) !important;
+    }
+    html[data-theme="dark"] .nav-dropdown-menu>li>a {
+        color: rgb(51, 51, 51) !important;
+    }
+    .nav-dropdown-menu .mdi {
+        margin-left: 2px;
+    }
+</style>
+
 <nav class="navbar navbar-default navbar-fixed-left navbar-inverse">
     <div class="container-fluid">
         <div class="navbar-header">
@@ -29,12 +82,12 @@
                     {% for tab_name, tab_details in registry.nav_menu.tabs.items %}
                         {% if request.user|has_one_or_more_perms:tab_details.permissions  %}
                             <li class="dropdown">
-                                <a href="#" class="dropdown-toggle" data-tab-weight="{{ tab_details.weight }}" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                <a href="#dropdownMenu{{ forloop.counter }}" class="dropdown-toggle" data-tab-weight="{{ tab_details.weight }}" data-toggle="collapse" role="button" aria-haspopup="true" aria-expanded="false">
                                     <img src="{% custom_branding_or_static 'nav_bullet' 'img/nautobot_chevron.svg' %}" height="20px" />
                                     <span id="dropdown_title" title="{{ tab_name }}">{{ tab_name }}</span>
                                     <span class="caret"></span>
                                 </a>
-                                <ul class="dropdown-menu">
+                                <ul class="collapse nav-dropdown-menu" id="dropdownMenu{{ forloop.counter }}">
                                     {% for group_name, group_details in tab_details.groups.items %}
                                         {% if request.user|has_one_or_more_perms:group_details.permissions  %}
                                             <li class="dropdown-header" data-group-weight="{{ group_details.weight }}">{{ group_name }}</li>
@@ -85,13 +138,13 @@
                     {% endfor %}
                     <li class="nav-divider"></li>
                     <li class="dropdown">
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
+                        <a href="#adminDropdown" class="dropdown-toggle" data-toggle="collapse" role="button"
                            aria-haspopup="true" aria-expanded="false">
                             <i class="mdi mdi-account"></i>
                             <span id="dropdown_title" title="{{ request.user }}">{{ request.user }}</span>
                             <span class="caret"></span>
                         </a>
-                        <ul class="dropdown-menu">
+                        <ul class="collapse nav-dropdown-menu" id="adminDropdown">
                             <li><a href="{% url 'user:profile' %}"><i class="mdi mdi-account-box"></i> Profile</a></li>
                             {% if request.user.is_staff %}
                                 <li><a href="{% url 'admin:index' %}"><i class="mdi mdi-cogs"></i> Admin</a></li>
@@ -111,3 +164,78 @@
         </div>
     </div>
 </nav>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var navbar = document.querySelector('.navbar-fixed-left');
+
+        // Debounce function
+        function debounce(func, wait, immediate) {
+            var timeout;
+            return function() {
+                var context = this, args = arguments;
+                var later = function() {
+                    timeout = null;
+                    if (!immediate) func.apply(context, args);
+                };
+                var callNow = immediate && !timeout;
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+                if (callNow) func.apply(context, args);
+            };
+        }
+
+        // Save scroll position with debounce
+        var saveScrollPosition = debounce(function() {
+            localStorage.setItem('navbarScrollPosition', navbar.scrollTop);
+        }, 250);
+
+        // Function to close all dropdowns except the one that should be expanded
+        function closeAllDropdowns(exceptId) {
+            var dropdowns = document.querySelectorAll('.navbar-fixed-left .navbar-nav .collapse');
+            dropdowns.forEach(function(collapse) {
+                if (collapse.id !== exceptId && collapse.classList.contains('in')) {
+                    $(collapse).collapse('hide');
+                }
+            });
+        }
+
+        // Event listener for dropdown toggles
+        var dropdownToggles = document.querySelectorAll('.navbar-fixed-left .navbar-nav > .dropdown > a[data-toggle="collapse"]');
+
+        dropdownToggles.forEach(function(toggle) {
+            toggle.addEventListener('click', function(event) {
+                event.preventDefault();
+                var collapseElement = document.getElementById(this.getAttribute('href').substring(1));
+
+                // Toggle the current collapse and close others
+                if (!collapseElement.classList.contains('in')) {
+                    closeAllDropdowns(collapseElement.id);
+                    $(collapseElement).collapse('show');
+                    localStorage.setItem('lastOpenedDropdown', collapseElement.id);
+                } else {
+                    $(collapseElement).collapse('hide');
+                    localStorage.removeItem('lastOpenedDropdown');
+                }
+            });
+        });
+
+        // Attempt to open the last opened dropdown if it exists in local storage
+        var lastDropdownId = localStorage.getItem('lastOpenedDropdown');
+        if (lastDropdownId) {
+            var lastDropdownMenu = document.getElementById(lastDropdownId);
+            if (lastDropdownMenu && !lastDropdownMenu.classList.contains('in')) {
+                $(lastDropdownMenu).collapse('show');
+            }
+        }
+
+        // Load and apply the saved scroll position of the navbar
+        var savedScrollPosition = localStorage.getItem('navbarScrollPosition');
+        if (savedScrollPosition) {
+            navbar.scrollTop = savedScrollPosition;
+        }
+
+        // Add event listener to save scroll position on scroll
+        navbar.addEventListener('scroll', saveScrollPosition);
+    });
+</script>
