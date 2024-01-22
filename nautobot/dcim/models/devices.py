@@ -1023,12 +1023,12 @@ class SoftwareImage(PrimaryModel):
     software_version = models.ForeignKey(
         to="SoftwareVersion", on_delete=models.CASCADE, related_name="software_images", verbose_name="Software Version"
     )
-    image_file_name = models.CharField(blank=False, max_length=100, verbose_name="Image File Name")
+    image_file_name = models.CharField(blank=False, max_length=255, verbose_name="Image File Name")
     image_file_checksum = models.CharField(blank=True, max_length=256, verbose_name="Image File Checksum")
     hashing_algorithm = models.CharField(
         choices=SoftwareImageHashingAlgorithmChoices,
         blank=True,
-        max_length=50,
+        max_length=255,
         verbose_name="Hashing Algorithm",
         help_text="Hashing algorithm for image file checksum",
     )
@@ -1074,8 +1074,8 @@ class SoftwareVersion(PrimaryModel):
     """A software version for a Device, Virtual Machine or Inventory Item."""
 
     platform = models.ForeignKey(to="dcim.Platform", on_delete=models.CASCADE)
-    version = models.CharField(max_length=50)
-    alias = models.CharField(max_length=50, blank=True, help_text="Optional alternative label for this version")
+    version = models.CharField(max_length=255)
+    alias = models.CharField(max_length=255, blank=True, help_text="Optional alternative label for this version")
     release_date = models.DateField(null=True, blank=True, verbose_name="Release Date")
     end_of_support_date = models.DateField(null=True, blank=True, verbose_name="End of Support Date")
     documentation_url = models.URLField(blank=True, verbose_name="Documentation URL")

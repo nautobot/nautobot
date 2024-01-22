@@ -6,52 +6,54 @@
                 <div class="panel-heading">
                     <strong>Software Version</strong>
                 </div>
-                <table class="table table-hover panel-body attr-table">
-                    <tr>
-                        <td>Status</td>
-                        <td>
-                            {{ object.status|hyperlinked_object_with_color }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Version</td>
-                        <td>{{ object.version }}</td>
-                    </tr>
-                    <tr>
-                        <td>Alias</td>
-                        <td>{{ object.alias|placeholder }}</td>
-                    </tr>
-                    <tr>
-                        <td>Platform</td>
-                        <td>{{ object.platform|hyperlinked_object }}</td>
-                    </tr>
-                    <tr>
-                        <td>Release Date</td>
-                        <td>{{ object.release_date|placeholder }}</td>
-                    </tr>
-                    <tr>
-                        <td>End of Support Date</td>
-                        <td>{{ object.end_of_support_date|placeholder }}</td>
-                    </tr>
-                    <tr>
-                        <td>Long Term Support</td>
-                        <td>{{ object.long_term_support|render_boolean }}</td>
-                    </tr>
-                    <tr>
-                        <td>Pre-Release</td>
-                        <td>{{ object.pre_release|render_boolean }}</td>
-                    </tr>
-                    <tr>
-                        <td>Documentation URL</td>
-                        <td>
-                            {% if object.documentation_url %}
-                            <a href="{{ object.documentation_url }}" target="_blank">{{ object.documentation_url }}</a>
-                            {% else %}
-                            <span class="text-muted">&mdash;</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                </table>
+                <div class="table-responsive">
+                    <table class="table table-hover panel-body attr-table">
+                        <tr>
+                            <td>Status</td>
+                            <td>
+                                {{ object.status|hyperlinked_object_with_color }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Version</td>
+                            <td>{{ object.version }}</td>
+                        </tr>
+                        <tr>
+                            <td>Alias</td>
+                            <td>{{ object.alias|placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <td>Platform</td>
+                            <td>{{ object.platform|hyperlinked_object }}</td>
+                        </tr>
+                        <tr>
+                            <td>Release Date</td>
+                            <td>{{ object.release_date|placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <td>End of Support Date</td>
+                            <td>{{ object.end_of_support_date|placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <td>Long Term Support</td>
+                            <td>{{ object.long_term_support|render_boolean }}</td>
+                        </tr>
+                        <tr>
+                            <td>Pre-Release</td>
+                            <td>{{ object.pre_release|render_boolean }}</td>
+                        </tr>
+                        <tr>
+                            <td>Documentation URL</td>
+                            <td>
+                                {% if object.documentation_url %}
+                                <a href="{{ object.documentation_url }}" target="_blank">{{ object.documentation_url }}</a>
+                                {% else %}
+                                <span class="text-muted">&mdash;</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
             </div>
 {% endblock content_left_page %}
 

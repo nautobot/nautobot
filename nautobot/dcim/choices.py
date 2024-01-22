@@ -1414,23 +1414,23 @@ class SoftwareImageHashingAlgorithmChoices(ChoiceSet):
 
 class SoftwareImageStatusChoices(ChoiceSet):
     STATUS_ACTIVE = "active"
-    STATUS_PRE_RELEASE = "pre-release"
+    STATUS_EXTENDED_SUPPORT = "extended-support"
     STATUS_END_OF_LIFE = "end-of-life"
 
     CHOICES = (
         (STATUS_ACTIVE, "Active"),
-        (STATUS_PRE_RELEASE, "Pre-release"),
+        (STATUS_EXTENDED_SUPPORT, "Extended Support"),
         (STATUS_END_OF_LIFE, "End-of-life"),
     )
 
 
 class SoftwareVersionStatusChoices(ChoiceSet):
     STATUS_ACTIVE = "active"
-    STATUS_PRE_RELEASE = "pre-release"
+    STATUS_EXTENDED_SUPPORT = "extended-support"
     STATUS_END_OF_LIFE = "end-of-life"
 
     CHOICES = (
         (STATUS_ACTIVE, "Active"),
-        (STATUS_PRE_RELEASE, "Pre-release"),
+        (STATUS_EXTENDED_SUPPORT, "Extended Support"),
         (STATUS_END_OF_LIFE, "End-of-life"),
     )
