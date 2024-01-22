@@ -57,6 +57,7 @@ class NautobotTestRunner(DiscoverRunner):
             setup_nautobot_job_logging(None, None, app.conf)
 
     def setup_databases(self, **kwargs):
+        # Adapted from Django 3.2 django.test.utils.setup_databases
         time_keeper = self.time_keeper
         if time_keeper is None:
             time_keeper = NullTimeKeeper()
@@ -82,6 +83,7 @@ class NautobotTestRunner(DiscoverRunner):
                             serialize=connection.settings_dict["TEST"].get("SERIALIZE", True),
                         )
 
+                    # Extra block added for Nautobot
                     if settings.TEST_USE_FACTORIES:
                         command = ["generate_test_data", "--flush", "--no-input"]
                         if settings.TEST_FACTORY_SEED is not None:
@@ -98,8 +100,11 @@ class NautobotTestRunner(DiscoverRunner):
                                 connection.creation.clone_test_db(
                                     suffix=str(index + 1),
                                     verbosity=self.verbosity,
-                                    keepdb=self.keepdb and not settings.TEST_USE_FACTORIES,
+                                    keepdb=self.keepdb
+                                    # Extra check added for Nautobot:
+                                    and not settings.TEST_USE_FACTORIES,
                                 )
+
                 # Configure all other connections as mirrors of the first one
                 else:
                     connection.creation.set_as_test_mirror(connections[first_alias].settings_dict)
@@ -115,6 +120,7 @@ class NautobotTestRunner(DiscoverRunner):
         return old_names
 
     def teardown_databases(self, old_config, **kwargs):
+        # Adapted from Django 3.2 django.test.utils.teardown_databases
         for connection, old_name, destroy in old_config:
             if destroy:
                 if self.parallel > 1:
@@ -122,13 +128,18 @@ class NautobotTestRunner(DiscoverRunner):
                         connection.creation.destroy_test_db(
                             suffix=str(index + 1),
                             verbosity=self.verbosity,
-                            keepdb=self.keepdb and not settings.TEST_USE_FACTORIES,
+                            keepdb=self.keepdb
+                            # Extra check added for Nautobot
+                            and not settings.TEST_USE_FACTORIES,
                         )
+
+                # Extra block added for Nautobot
                 if settings.TEST_USE_FACTORIES:
                     db_name = connection.alias
                     print(f'Emptying test database "{db_name}"...')
                     call_command("flush", "--no-input", "--database", db_name)
                     print(f"Database {db_name} emptied!")
+
                 connection.creation.destroy_test_db(old_name, self.verbosity, self.keepdb)
 
 
