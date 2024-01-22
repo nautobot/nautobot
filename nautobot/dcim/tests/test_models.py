@@ -1075,6 +1075,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         device2.save()
 
     def test_device_location_content_type_not_allowed(self):
+        self.location_type_2.content_types.clear()
         device = Device(
             name="Device 3",
             device_type=self.device_type,
