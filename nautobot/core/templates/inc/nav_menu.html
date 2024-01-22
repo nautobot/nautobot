@@ -43,7 +43,21 @@
         overflow: hidden;
         background-color: #646464;
     }
-
+    .navbar-fixed-left {
+        overflow-y: auto;
+    }
+    
+    /* Hide scrollbar for Chrome, Safari, and Opera */
+    .navbar-fixed-left::-webkit-scrollbar {
+        display: none;
+    }
+    
+    /* Hide scrollbar for IE, Edge, and Firefox */
+    .navbar-fixed-left {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+    
     html[data-theme="dark"] .nav-dropdown-menu, html[data-theme="dark"] .swagger-ui .servers>label select html[data-theme="dark"] .select2-dropdown {
         background-color: rgb(222, 222, 222) !important;
     }
@@ -168,6 +182,10 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         var navbar = document.querySelector('.navbar-fixed-left');
+        var dropdownToggles = document.querySelectorAll('.navbar-fixed-left .navbar-nav > .dropdown > a[data-toggle="collapse"]');
+        var dropdowns = document.querySelectorAll('.navbar-fixed-left .navbar-nav .collapse');
+        var lastDropdownId = localStorage.getItem('lastOpenedDropdown');
+        var savedScrollPosition = localStorage.getItem('navbarScrollPosition');
 
         // Debounce function
         function debounce(func, wait, immediate) {
@@ -185,14 +203,8 @@
             };
         }
 
-        // Save scroll position with debounce
-        var saveScrollPosition = debounce(function() {
-            localStorage.setItem('navbarScrollPosition', navbar.scrollTop);
-        }, 250);
-
-        // Function to close all dropdowns except the one that should be expanded
-        function closeAllDropdowns(exceptId) {
-            var dropdowns = document.querySelectorAll('.navbar-fixed-left .navbar-nav .collapse');
+        // Close all dropdowns except the one specified
+        function closeAllDropdownsExcept(exceptId) {
             dropdowns.forEach(function(collapse) {
                 if (collapse.id !== exceptId && collapse.classList.contains('in')) {
                     $(collapse).collapse('hide');
@@ -200,17 +212,14 @@
             });
         }
 
-        // Event listener for dropdown toggles
-        var dropdownToggles = document.querySelectorAll('.navbar-fixed-left .navbar-nav > .dropdown > a[data-toggle="collapse"]');
-
+        // Close all dropdowns except the last opened one
         dropdownToggles.forEach(function(toggle) {
             toggle.addEventListener('click', function(event) {
                 event.preventDefault();
                 var collapseElement = document.getElementById(this.getAttribute('href').substring(1));
 
-                // Toggle the current collapse and close others
                 if (!collapseElement.classList.contains('in')) {
-                    closeAllDropdowns(collapseElement.id);
+                    closeAllDropdownsExcept(collapseElement.id);
                     $(collapseElement).collapse('show');
                     localStorage.setItem('lastOpenedDropdown', collapseElement.id);
                 } else {
@@ -220,8 +229,7 @@
             });
         });
 
-        // Attempt to open the last opened dropdown if it exists in local storage
-        var lastDropdownId = localStorage.getItem('lastOpenedDropdown');
+        // Open the last opened dropdown
         if (lastDropdownId) {
             var lastDropdownMenu = document.getElementById(lastDropdownId);
             if (lastDropdownMenu && !lastDropdownMenu.classList.contains('in')) {
@@ -229,13 +237,14 @@
             }
         }
 
-        // Load and apply the saved scroll position of the navbar
-        var savedScrollPosition = localStorage.getItem('navbarScrollPosition');
+        // Restore the last saved scroll position
         if (savedScrollPosition) {
             navbar.scrollTop = savedScrollPosition;
         }
 
-        // Add event listener to save scroll position on scroll
-        navbar.addEventListener('scroll', saveScrollPosition);
+        // Save the scroll position when the navbar is scrolled
+        navbar.addEventListener('scroll', debounce(function() {
+            localStorage.setItem('navbarScrollPosition', navbar.scrollTop);
+        }, 250));
     });
 </script>
