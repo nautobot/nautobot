@@ -682,10 +682,8 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
             "parent__parent__parent__parent__parent__name",
             "parent__parent__parent__parent__parent__parent__name",
             "parent__parent__parent__parent__parent__parent__parent__name",
-        ][: Location.objects.max_tree_depth() + 1]
-        self.assertEqual(
-            len(expected), Location.objects.max_tree_depth() + 1, "Not enough expected entries, fix the test!"
-        )
+        ][: Location.objects.max_depth + 1]
+        self.assertEqual(len(expected), Location.objects.max_depth + 1, "Not enough expected entries, fix the test!")
         self.assertEqual(expected, Location.natural_key_field_lookups)
         # Grab an arbitrary leaf node
         location = Location.objects.filter(parent__isnull=False, children__isnull=True).first()

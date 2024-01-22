@@ -236,7 +236,7 @@ class Location(TreeModel, PrimaryModel):
 
         lookups = []
         name = "name"
-        for _ in range(cls.objects.max_tree_depth() + 1):
+        for _ in range(cls.objects.max_depth + 1):
             lookups.append(name)
             name = f"parent__{name}"
         return lookups
