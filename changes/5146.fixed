@@ -1,8 +1,4 @@
-# What's Changed
-This PR includes updates to improve the side navbar behavior that was introduced in Nautobot 2.1. There are numerous small improvements that make the user experience better than it was with the previous iteration. Below is an enumeration of the changes introduced in this PR:
-1. **Menu Animation:** Menu items now collapse in a smooth animated way rather than jumping 100% open immediately and covering menu items below.
-2. **Menu Behavior:** As a menu is opened, previously opened menu items collapse in a visually pleasing and responsive way.  Menu expansion now pushes other menus below it downward rather than covering them (z axis). Lastly, previously the expanded menus would close automatically when a sub-item was clicked, effectively causing the user to lose place in their navigation.
-3. **Menu Header Improvements:** Menu headers are now represented with a color indication based on menu expanded rather than menu focus. Previously the menu header would lose color after a link is clicked.
-4. **Expanded Menus State Persistence:** Behavior (expanded or closed) is kept in local storage which allows it to be maintained on page refresh, link clicked, or page reload. Previously the expanded menus would close automatically when a subitem was clicked, effectively causing the user to lose place in their navigation.
-5. **Navbar Sroll Position State Persistence:** Navbar scroll up/down position is stored in local storage and restored to previous position upon page refresh, link clicked, or page reload. Previously the scrollbar position would completely reset after a link was clicked or the page refreshed, effectively causing the user to lose place in their navigation.
-6. **Debounce Optimization on Scrollbar State Storage:** Scrollbar events can happen many times per second. Performance is managed by leveraging a debounce function to ensure the storage happens at a reasonable clip. 
+Changed nav menu items to collapse in a smooth animated way, rather than jumping 100% open immediately and covering menu items below. Previously opened menu items now collapse smoothly as well.
+Changed nav menu so that menu expansion now pushes other menus below it downward rather than covering them (z axis).
+Changed nav menu headers to not lose their color after a link was clicked.
+Added nav menu state (expanded or closed) and scroll position to local storage, allowing it to be maintained on page refresh, link clicked, or page reload.
