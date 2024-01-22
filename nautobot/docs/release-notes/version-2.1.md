@@ -91,6 +91,7 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#5102](https://github.com/nautobot/nautobot/issues/5102) - Changed the `nautobot-server runjob` management command to check whether the requested user has permission to run the requested job.
 - [#5102](https://github.com/nautobot/nautobot/issues/5102) - Changed the `nautobot-server runjob` management command to check whether the requested job is installed and enabled.
 - [#5102](https://github.com/nautobot/nautobot/issues/5102) - Changed the `nautobot-server runjob` management command to check whether a Celery worker is running when invoked without the `--local` flag.
+- [#5131](https://github.com/nautobot/nautobot/issues/5131) - Improved the performance of the `/api/dcim/locations/` REST API.
 
 ### Removed
 
