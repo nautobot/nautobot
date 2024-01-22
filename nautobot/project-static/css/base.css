@@ -589,10 +589,13 @@ td span.hover_copy:hover .hover_copy_button {
     margin-bottom: 0;
     margin-right: 20px;
     overflow: auto;
+    overflow-y: auto;
     position: fixed;
     top: 0;
     width: 240px;  /* same as body padding-left */
     z-index: 1030; /* `1030` is taken from Bootstrap's `navbar-fixed-top` */
+    -ms-overflow-style: none;  /* Hide scrollbar IE and Edge */
+    scrollbar-width: none;  /* Hide scrollbar Firefox */
 }
 
 .navbar-fixed-left > .container-fluid {
@@ -711,6 +714,55 @@ td span.hover_copy:hover .hover_copy_button {
 .navbar-inverse .navbar-nav > .dropdown > .dropdown-menu > li > a {
     color: #ffffff;
 }
+
+/* Navbar Dropdown Behavior */
+.nav-dropdown-menu {
+    color: #999999 !important;
+    background-color: #151e2a;
+    position: relative;
+    padding: 5px 0;
+    padding-left: 0;
+    margin: 2px 0 0;
+    margin-top: 0;
+    width: 100%;
+    font-size: 14px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-radius: 6px;
+}
+.nav-dropdown-menu > li > a {
+    color: #ffffff !important;
+    display: block !important;
+    clear: left !important;
+    line-height: 1.285714286 !important;
+    padding: 8px 20px !important;
+}
+.nav-dropdown-menu > li > .buttons.pull-right {
+    padding-right: 10px;
+}
+.dropdown-header {
+    line-height: 2;
+    padding: 3px 20px;
+    text-transform: uppercase;
+} 
+/* When the dropdown is expanded, change color of the anchor text */
+.navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="true"] #dropdown_title {
+    color: #ff8000; /* Color when expanded */
+}
+.nav-dropdown-menu .divider {
+    height: 1px;
+    margin: 11px 0;
+    overflow: hidden;
+    background-color: #646464;
+}
+/* Hide scrollbar for Chrome, Safari, and Opera */
+.navbar-fixed-left::-webkit-scrollbar {
+    display: none;
+}
+.nav-dropdown-menu .mdi {
+    margin-left: 2px;
+}
+
 
 /* Collapse icon on homepage panels */
 .collapse-icon {

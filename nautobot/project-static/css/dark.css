@@ -232,3 +232,11 @@ html[data-theme="dark"] .table-headings>tbody>tr {
 html[data-theme="dark"] .dragging {
   opacity: 0.5;
 }
+
+/* Make Navbar dropdown menu items respond to dark mode correctly */
+html[data-theme="dark"] .nav-dropdown-menu, html[data-theme="dark"] .swagger-ui .servers>label select html[data-theme="dark"] .select2-dropdown {
+  background-color: rgb(222, 222, 222) !important;
+}
+html[data-theme="dark"] .nav-dropdown-menu>li>a {
+  color: rgb(51, 51, 51) !important;
+}
