@@ -1080,12 +1080,12 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             device_type=self.device_type,
             role=self.device_role,
             status=self.device_status,
-            location=self.location_1,
+            location=self.location_2,
         )
         with self.assertRaises(ValidationError) as cm:
             device.validated_save()
         self.assertIn(
-            f'Devices may not associate to locations of type "{self.location_type_1.name}"', str(cm.exception)
+            f'Devices may not associate to locations of type "{self.location_type_2.name}"', str(cm.exception)
         )
 
     def test_device_redundancy_group_validation(self):
