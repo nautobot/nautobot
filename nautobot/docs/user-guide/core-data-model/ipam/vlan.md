@@ -17,4 +17,4 @@ As with prefixes, each VLAN may also be assigned a functional role. Prefixes and
     - Renamed `group` field to `vlan_group`.
 
 +/- 2.2.0
-    - Replace `location` ForeginKey field with `locations` ManyToManyField
+    - Replaced `location` ForeignKey field with `locations` ManyToManyField, allowing a VLAN to be assigned to multiple Locations.

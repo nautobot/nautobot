@@ -988,7 +988,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
     @classmethod
     def setUpTestData(cls):
         cls.location_type_1 = LocationType.objects.get(name="Campus")
-        cls.location_type_2 = LocationType.objects.get(name="Building")
+        cls.location_type_2 = LocationType.objects.get(name="Aisle")
         loc_status = Status.objects.get_for_model(Location).first()
         cls.locations = (
             Location.objects.create(name="Location 1", location_type=cls.location_type_1, status=loc_status),

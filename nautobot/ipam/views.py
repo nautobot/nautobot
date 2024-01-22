@@ -1382,7 +1382,7 @@ class VLANBulkEditView(generic.BulkEditView):
     table = tables.VLANTable
     form = forms.VLANBulkEditForm
 
-    def _extra_post_save_action(self, obj, form):
+    def extra_post_save_action(self, obj, form):
         if form.cleaned_data.get("add_locations", None):
             obj.locations.add(*form.cleaned_data["add_locations"])
         if form.cleaned_data.get("remove_locations", None):

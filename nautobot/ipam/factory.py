@@ -178,6 +178,7 @@ class VLANFactory(PrimaryModelFactory):
             "has_vlan_group",
             "has_role",
             "has_tenant",
+            "has_location",
         )
 
     # TODO: VID and name do not need to be globally unique, but must be unique within a group (if any)
@@ -202,6 +203,7 @@ class VLANFactory(PrimaryModelFactory):
             ]
         )[:255]  # truncate to max VLAN.name length just to be safe
     )
+    has_location = NautobotBoolIterator()
 
     status = random_instance(lambda: Status.objects.get_for_model(VLAN), allow_null=False)
     has_role = NautobotBoolIterator()

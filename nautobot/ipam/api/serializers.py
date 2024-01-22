@@ -137,6 +137,11 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 
 class VLANLegacySerializer(VLANSerializer):
+    """
+    This legacy serializer is used for API versions 2.0 and 2.1.
+    And it is not longer valid for API version 2.2 and so on.
+    """
+
     location = NautobotHyperlinkedRelatedField(
         allow_null=True, queryset=Location.objects.all(), required=False, view_name="dcim-api:location-detail"
     )

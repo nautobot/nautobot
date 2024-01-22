@@ -670,11 +670,6 @@ class LocationFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTe
     def setUpTestData(cls):
         common_test_data(cls)
 
-        # Since VLANFactory is not smart enough to create some VLANs without locations we have to manually remove locations form some vlans
-        # for `test_boolean_filters_generic` testcase
-        locations = Location.objects.last()
-        locations.vlans.clear()
-
     def test_subtree(self):
         params = {"subtree": [self.loc1.name, self.nested_loc.pk]}
         expected = Location.objects.get(name=self.loc1.name).descendants(include_self=True)

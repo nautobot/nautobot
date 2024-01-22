@@ -404,7 +404,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         required=False,
         label="Untagged VLAN",
         query_params={
-            "location_id": "null",
+            "locations": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
@@ -502,7 +502,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location_id": "null",
+            "locations": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
@@ -570,7 +570,7 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location_id": "null",
+            "locations": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(

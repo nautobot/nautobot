@@ -3,6 +3,7 @@ import json
 from random import shuffle
 from unittest import skip
 
+from django.contrib.contenttypes.models import ContentType
 from django.db import connection
 from django.db.models import Count
 from django.urls import reverse
@@ -701,7 +702,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         statuses = Status.objects.get_for_model(VLAN)
         vlan_groups = VLANGroup.objects.filter(location__isnull=False)[:2]
-        locations = Location.objects.all()
+        locations = Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(VLAN))
 
         cls.create_data = [
             {
@@ -793,16 +794,13 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "This object does not conform to pre-2.2 behavior. Please correct data or use API version 2.2",
             )
 
-        # TODO (timizuo): Fix Update is not currently updating location
-        # with self.subTest("Assert UPDATE on single location"):
-        #     vlan = VLAN.objects.annotate(locations_count=Count('locations')).filter(locations_count=1).first()
-        #     url = reverse("ipam-api:vlan-detail", kwargs={"pk": vlan.pk})
-        #     data = {"location": self.create_data[0]["locations"][0]}
-        #     response = self.client.patch(
-        #         f"{url}?api_version=2.1", data, format="json", **self.header
-        #     )
-        #     self.assertHttpStatus(response, status.HTTP_200_OK)
-        #     self.assertEqual(response.data["location"].pk, data["location"])
+        with self.subTest("Assert UPDATE on single location"):
+            vlan = VLAN.objects.annotate(locations_count=Count("locations")).filter(locations_count=1).first()
+            url = reverse("ipam-api:vlan-detail", kwargs={"pk": vlan.pk})
+            data = {"location": self.create_data[0]["locations"][0]}
+            response = self.client.patch(f"{url}?api_version=2.1", data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(response.data["location"]["id"], data["location"])
 
 
 class ServiceTest(APIViewTestCases.APIViewTestCase):
