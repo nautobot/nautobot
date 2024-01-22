@@ -1076,10 +1076,9 @@ class GraphQLQueryTest(TestCase):
         cls.rm2ms_assoc_3.validated_save()
 
         cls.backend = get_default_backend()
-        cls.schema = graphene_settings.SCHEMA
 
     def execute_query(self, query, variables=None):
-        document = self.backend.document_from_string(self.schema, query)
+        document = self.backend.document_from_string(graphene_settings.SCHEMA, query)
         if variables:
             return document.execute(context_value=self.request, variable_values=variables)
         else:
