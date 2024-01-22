@@ -42,7 +42,7 @@ from nautobot.virtualization.tables import VirtualMachineTable
 
 from . import filters, forms, tables
 from .api import serializers
-from .choices import JobExecutionType, JobResultStatusChoices
+from .choices import JobExecutionType, JobResultStatusChoices, LogLevelChoices
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
     enqueue_pull_git_repository_and_refresh_data,
@@ -66,6 +66,7 @@ from .models import (
     Job as JobModel,
     JobButton,
     JobHook,
+    JobLogEntry,
     JobResult,
     Note,
     ObjectChange,
@@ -1507,12 +1508,35 @@ class JobHookBulkDeleteView(generic.BulkDeleteView):
 #
 
 
+def get_annotated_jobresult_queryset():
+    return (
+        JobResult.objects.defer("result")
+        .select_related("job_model", "user")
+        .annotate(
+            debug_log_count=count_related(
+                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_DEBUG}
+            ),
+            info_log_count=count_related(
+                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_INFO}
+            ),
+            warning_log_count=count_related(
+                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_WARNING}
+            ),
+            error_log_count=count_related(
+                JobLogEntry,
+                "job_result",
+                filter_dict={"log_level__in": [LogLevelChoices.LOG_ERROR, LogLevelChoices.LOG_CRITICAL]},
+            ),
+        )
+    )
+
+
 class JobResultListView(generic.ObjectListView):
     """
     List JobResults
     """
 
-    queryset = JobResult.objects.defer("result").select_related("job_model", "user").prefetch_related("logs")
+    queryset = get_annotated_jobresult_queryset()
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -1524,7 +1548,7 @@ class JobResultDeleteView(generic.ObjectDeleteView):
 
 
 class JobResultBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobResult.objects.defer("result").all()
+    queryset = get_annotated_jobresult_queryset()
     table = tables.JobResultTable
     filterset = filters.JobResultFilterSet
 
@@ -1559,7 +1583,14 @@ class JobLogEntryTableView(View):
 
     def get(self, request, pk=None):
         instance = self.queryset.get(pk=pk)
-        log_table = tables.JobLogEntryTable(data=instance.job_log_entries.all(), user=request.user)
+        filter_q = request.GET.get("q")
+        if filter_q:
+            queryset = instance.job_log_entries.filter(
+                Q(message__icontains=filter_q) | Q(log_level__icontains=filter_q)
+            )
+        else:
+            queryset = instance.job_log_entries.all()
+        log_table = tables.JobLogEntryTable(data=queryset, user=request.user)
         RequestConfig(request).configure(log_table)
         return HttpResponse(log_table.as_html(request))
 

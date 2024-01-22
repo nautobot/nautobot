@@ -23,12 +23,14 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import (
+    ComputedField,
     CustomField,
     DynamicGroup,
     DynamicGroupMembership,
     GitRepository,
     JobResult,
     ObjectChange,
+    Relationship,
 )
 from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
@@ -56,6 +58,29 @@ def _get_user_if_authenticated(user, instance):
     else:
         logger.warning(f"Unable to retrieve the user while creating the changelog for {instance}")
         return None
+
+
+@receiver(post_save)
+@receiver(m2m_changed)
+@receiver(post_delete)
+def invalidate_lru_cache(sender, **kwargs):
+    """Invalidate the LRU cache for ComputedFields, CustomFields and Relationships."""
+    if sender is CustomField.content_types.through:
+        manager = CustomField.objects
+    elif sender in (ComputedField, CustomField, Relationship):
+        manager = sender.objects
+    else:
+        return
+
+    cached_methods = (
+        "get_for_model",
+        "get_for_model_source",
+        "get_for_model_destination",
+    )
+
+    for method in cached_methods:
+        if hasattr(manager, method):
+            getattr(manager, method).cache_clear()
 
 
 @receiver(post_save)

@@ -1,6 +1,5 @@
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.fields.related import RelatedField
 from django.urls import reverse
@@ -31,16 +30,16 @@ class BaseTable(django_tables2.Table):
 
     def __init__(self, *args, user=None, **kwargs):
         # Add custom field columns
-        obj_type = ContentType.objects.get_for_model(self._meta.model)
+        model = self._meta.model
 
-        for cf in models.CustomField.objects.filter(content_types=obj_type):
+        for cf in models.CustomField.objects.get_for_model(model):
             name = cf.add_prefix_to_cf_key()
             self.base_columns[name] = CustomFieldColumn(cf)
 
-        for cpf in models.ComputedField.objects.filter(content_type=obj_type):
+        for cpf in models.ComputedField.objects.get_for_model(model):
             self.base_columns[f"cpf_{cpf.key}"] = ComputedFieldColumn(cpf)
 
-        for relationship in models.Relationship.objects.filter(source_type=obj_type):
+        for relationship in models.Relationship.objects.get_for_model_source(model):
             if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.key}_src"] = RelationshipColumn(
                     relationship, side=choices.RelationshipSideChoices.SIDE_SOURCE
@@ -50,7 +49,7 @@ class BaseTable(django_tables2.Table):
                     relationship, side=choices.RelationshipSideChoices.SIDE_PEER
                 )
 
-        for relationship in models.Relationship.objects.filter(destination_type=obj_type):
+        for relationship in models.Relationship.objects.get_for_model_destination(model):
             if not relationship.symmetric:
                 self.base_columns[f"cr_{relationship.key}_dst"] = RelationshipColumn(
                     relationship, side=choices.RelationshipSideChoices.SIDE_DESTINATION
@@ -121,6 +120,11 @@ class BaseTable(django_tables2.Table):
                         elif isinstance(field, GenericForeignKey):
                             # Can't prefetch beyond a GenericForeignKey
                             prefetch_path.append(field_name)
+                            break
+                        else:
+                            # Need to stop processing once field is not a RelatedField or GFK
+                            # Ex: ["_custom_field_data", "tenant_id"] needs to exit
+                            # the loop as "tenant_id" would be misidentified as a RelatedField.
                             break
                     if prefetch_path:
                         prefetch_fields.append("__".join(prefetch_path))

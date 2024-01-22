@@ -1,5 +1,4 @@
 from copy import deepcopy
-from io import BytesIO
 import logging
 import re
 
@@ -21,9 +20,7 @@ from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_tables2 import RequestConfig
-from rest_framework.exceptions import ParseError
 
-from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import (
@@ -53,6 +50,7 @@ from nautobot.core.views.utils import (
     check_filter_for_display,
     get_csv_form_fields_from_serializer_class,
     handle_protectederror,
+    import_csv_helper,
     prepare_cloned_fields,
 )
 from nautobot.extras.models import ExportTemplate
@@ -851,28 +849,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             try:
                 # Iterate through CSV data and bind each row to a new model form instance.
                 with transaction.atomic():
-                    if request.FILES:
-                        field_name = "csv_file"
-                    else:
-                        field_name = "csv_data"
-                    csvtext = form.cleaned_data[field_name]
-
-                    try:
-                        data = NautobotCSVParser().parse(
-                            stream=BytesIO(csvtext.encode("utf-8")),
-                            parser_context={"request": request, "serializer_class": self.serializer_class},
-                        )
-                        serializer = self.serializer_class(data=data, context={"request": request}, many=True)
-                        if serializer.is_valid():
-                            new_objs = serializer.save()
-                        else:
-                            for row, errors in enumerate(serializer.errors, start=1):
-                                for field, err in errors.items():
-                                    form.add_error(field_name, f"Row {row}: {field}: {err[0]}")
-                            raise ValidationError("")
-                    except ParseError as exc:
-                        form.add_error(None, str(exc))
-                        raise ValidationError("")
+                    new_objs = import_csv_helper(request=request, form=form, serializer_class=self.serializer_class)
 
                     # Enforce object-level permissions
                     if self.queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
@@ -1073,6 +1050,9 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         if not table.rows:
             messages.warning(request, f"No {model._meta.verbose_name_plural} were selected.")
             return redirect(self.get_return_url(request))
+        # Hide actions column if present
+        if "actions" in table.columns:
+            table.columns.hide("actions")
 
         context = {
             "form": form,
@@ -1266,6 +1246,9 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 f"No {model._meta.verbose_name_plural} were selected for deletion.",
             )
             return redirect(self.get_return_url(request))
+        # Hide actions column if present
+        if "actions" in table.columns:
+            table.columns.hide("actions")
 
         context = {
             "form": form,

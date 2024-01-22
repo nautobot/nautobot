@@ -368,6 +368,12 @@ CustomFieldChoiceFormSet = inlineformset_factory(
 )
 
 
+class CustomFieldDescriptionField(CommentField):
+    @property
+    def default_helptext(self):
+        return "Also used as the help text when editing models using this custom field.<br>" + super().default_helptext
+
+
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     label = forms.CharField(required=True, max_length=50, help_text="Name of the field as displayed to users.")
     key = SlugField(
@@ -376,11 +382,9 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         slug_source="label",
         help_text="Internal name of this field. Please use underscores rather than dashes.",
     )
-    description = forms.CharField(
+    description = CustomFieldDescriptionField(
+        label="Description",
         required=False,
-        help_text="Also used as the help text when editing models using this custom field.<br>"
-        '<a href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet" target="_blank">'
-        "Markdown</a> syntax is supported.",
     )
     content_types = MultipleContentTypeField(
         feature="custom_fields", help_text="The object(s) to which this field applies."
@@ -1098,7 +1102,7 @@ class JobButtonFilterForm(BootstrapMixin, forms.Form):
 
 
 class NoteForm(BootstrapMixin, forms.ModelForm):
-    note = CommentField
+    note = CommentField()
 
     class Meta:
         model = Note

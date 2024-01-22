@@ -60,12 +60,6 @@ urlpatterns = [
         {"add_attachment_headers": True},
         name="db_file_storage.download_file",
     ),
-    url(
-        "files/get/",
-        get_file_with_authorization,
-        {"add_attachment_headers": False},
-        name="db_file_storage.get_file",
-    ),
     # Templated css file
     path(
         "template.css", TemplateView.as_view(template_name="template.css", content_type="text/css"), name="template_css"
