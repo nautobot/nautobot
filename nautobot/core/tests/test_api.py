@@ -422,13 +422,13 @@ class NautobotCSVParserTest(TestCase):
     def test_parse_success(self):
         status = extras_models.Status.objects.first()  # pylint: disable=redefined-outer-name
         tags = extras_models.Tag.objects.get_for_model(ipam_models.VLAN)
-        vlan_group = ipam_models.VLANGroup.objects.filter(location__isnull=False).first()
+        location = dcim_models.Location.objects.filter(parent__isnull=False).first()
 
         csv_data = "\n".join(
             [
                 # the "foobar" column is not understood by the serializer; per usual REST API behavior, it'll be skipped
-                "vid,name,foobar,description,status,tags,tenant,vlan_group__name,vlan_group__location__name",
-                f'22,hello,huh?,"It, I say, is a living!",{status.name},"{tags.first().name},{tags.last().name}",,{vlan_group.name},{vlan_group.location.name}',
+                "vid,name,foobar,description,status,tags,tenant,location__name,location__parent__name",
+                f'22,hello,huh?,"It, I say, is a living!",{status.name},"{tags.first().name},{tags.last().name}",,{location.name},{location.parent.name}',
             ]
         )
 
@@ -447,9 +447,9 @@ class NautobotCSVParserTest(TestCase):
                     "status": status.name,  # will be understood as a composite-key by the serializer
                     "tags": [tags.first().name, tags.last().name],  # understood as a list of composite-keys
                     "tenant": None,
-                    "vlan_group": {  # parsed representation of CSV data: `vlan_group__name`, `vlan_group__location__name`
-                        "name": vlan_group.name,
-                        "location": {"name": vlan_group.location.name},
+                    "location": {  # parsed representation of CSV data: `location__name`,`location__parent__name`
+                        "name": location.name,
+                        "parent": {"name": location.parent.name},
                     },
                 },
             ],
@@ -618,9 +618,9 @@ class WritableNestedSerializerTest(testing.APITestCase):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "locations": [self.location1.pk],
             "status": self.statuses.first().pk,
             "vlan_group": self.vlan_group1.pk,
+            "locations": [self.location1.pk, self.location2.pk],
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
@@ -628,15 +628,17 @@ class WritableNestedSerializerTest(testing.APITestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(str(response.data["locations"][0]["url"]), self.absolute_api_url(self.location1))
+        self.assertEqual(str(response.data["locations"][1]["url"]), self.absolute_api_url(self.location2))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.status, self.statuses.first())
-        self.assertEqual(vlan.location, self.location1)
+        self.assertEqual(vlan.locations.first(), self.location1)
+        self.assertEqual(vlan.locations.last(), self.location2)
 
     def test_related_by_pk_no_match(self):
         data = {
             "vid": 160,
             "name": "Test VLAN 160",
-            "locations": ["00000000-0000-0000-0000-0000000009eb"],
+            "locations": ["00000000-0000-0000-0000-0000000009eb", "00000000-0000-0000-0000-0000000009ea"],
             "status": self.statuses.first().pk,
         }
         url = reverse("ipam-api:vlan-list")
@@ -653,7 +655,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "vid": 110,
             "name": "Test VLAN 110",
             "status": self.statuses.first().pk,
-            "locations": [{"name": "Location 1"}],
+            "locations": [{"name": "Location 1"}, {"name": "Location 2"}],
             "vlan_group": self.vlan_group1.pk,
         }
         url = reverse("ipam-api:vlan-list")
@@ -662,15 +664,17 @@ class WritableNestedSerializerTest(testing.APITestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(str(response.data["locations"][0]["url"]), self.absolute_api_url(self.location1))
+        self.assertEqual(str(response.data["locations"][1]["url"]), self.absolute_api_url(self.location2))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.locations.first(), self.location1)
+        self.assertEqual(vlan.locations.last(), self.location2)
 
     def test_related_by_attributes_no_match(self):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
             "status": self.statuses.first().pk,
-            "locations": [{"name": "Location X"}],
+            "locations": [{"name": "Location X"}, {"name": "Location Y"}],
             "vlan_group": self.vlan_group1.pk,
         }
         url = reverse("ipam-api:vlan-list")
@@ -711,7 +715,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "vid": 100,
             "name": "Test VLAN 100",
             "status": self.statuses.first().composite_key,
-            "locations": [self.location1.composite_key],
+            "locations": [self.location1.composite_key, self.location2.composite_key],
             "vlan_group": self.vlan_group1.composite_key,
         }
         url = reverse("ipam-api:vlan-list")
@@ -719,9 +723,9 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(str(response.data["locations"][0]["url"]), self.absolute_api_url(self.location1))
+        self.assertEqual(str(response.data["locations"]["url"]), self.absolute_api_url(self.location1))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
-        self.assertEqual(vlan.locations.first(), self.location1)
+        self.assertEqual(vlan.location, self.location1)
 
     @skip("Composite keys aren't being supported at this time")
     def test_related_by_composite_key_no_match(self):
@@ -747,7 +751,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "locations": ["XXX"],
+            "locations": ["XXX", "YYY"],
             "status": self.statuses.first().pk,
             "vlan_group": self.vlan_group2.pk,
         }

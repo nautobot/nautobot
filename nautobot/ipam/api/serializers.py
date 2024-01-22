@@ -104,6 +104,13 @@ class VLANGroupSerializer(NautobotModelSerializer):
 
 class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     prefix_count = serializers.IntegerField(read_only=True)
+    location = NautobotHyperlinkedRelatedField(
+        allow_null=True,
+        queryset=Location.objects.all(),
+        required=False,
+        view_name="dcim-api:location-detail",
+        write_only=True,
+    )
 
     class Meta:
         model = VLAN

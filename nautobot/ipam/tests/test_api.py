@@ -697,6 +697,7 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
 class VLANTest(APIViewTestCases.APIViewTestCase):
     model = VLAN
     choices_fields = []
+    validation_excluded_fields = ["location"]
 
     @classmethod
     def setUpTestData(cls):
@@ -724,7 +725,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "name": "VLAN 6",
                 "vlan_group": vlan_groups[0].pk,
                 "status": statuses[0].pk,
-                "locations": [locations[0].pk, locations[3].pk],
+                "location": locations[3].pk,
             },
         ]
         cls.bulk_update_data = {
