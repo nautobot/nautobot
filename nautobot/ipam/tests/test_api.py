@@ -689,6 +689,9 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
 
+    def get_deletable_object(self):
+        return VLANGroup.objects.create(name="DELETE ME")
+
     def get_deletable_object_pks(self):
         vlangroups = VLANGroupFactory.create_batch(size=3)
         return [vg.pk for vg in vlangroups]
