@@ -72,11 +72,32 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.10 (2024-01-22)
+
+### Security
+
+- [#5109](https://github.com/nautobot/nautobot/issues/5109) - Removed `/files/get/` URL endpoint (for viewing FileAttachment files in the browser), as it was unused and could potentially pose security issues.
+- [#5134](https://github.com/nautobot/nautobot/issues/5134) - Fixed an XSS vulnerability ([GHSA-v4xv-795h-rv4h](https://github.com/nautobot/nautobot/security/advisories/GHSA-v4xv-795h-rv4h)) in the `render_markdown()` utility function used to render comments, notes, job log entries, etc.
+
+### Added
+
+- [#5134](https://github.com/nautobot/nautobot/issues/5134) - Enhanced Markdown-supporting fields (`comments`, `description`, Notes, Job log entries, etc.) to also permit the use of a limited subset of "safe" HTML tags and attributes.
+
+### Changed
+
+- [#5132](https://github.com/nautobot/nautobot/issues/5132) - Updated poetry version for development Docker image to match 2.0.
+
+### Dependencies
+
+- [#5087](https://github.com/nautobot/nautobot/issues/5087) - Updated GitPython to version 3.1.41 to address Windows security vulnerability [GHSA-2mqj-m65w-jghx](https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-2mqj-m65w-jghx).
+- [#5087](https://github.com/nautobot/nautobot/issues/5087) - Updated Jinja2 to version 3.1.3 to address to address XSS security vulnerability [GHSA-h5c8-rqwp-cp95](https://github.com/pallets/jinja/security/advisories/GHSA-h5c8-rqwp-cp95).
+- [#5134](https://github.com/nautobot/nautobot/issues/5134) - Added `nh3` HTML sanitization library as a dependency.
+
 ## v1.6.9 (2024-01-08)
 
 ### Fixed
 
-- [#5042](https://github.com/nautobot/nautobot/issues/5042) - Fixed early return conditional in ensure_git_repository.
+- [#5042](https://github.com/nautobot/nautobot/issues/5042) - Fixed early return conditional in `ensure_git_repository`.
 
 ## v1.6.8 (2023-12-21)
 
