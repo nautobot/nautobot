@@ -72,7 +72,7 @@ Support for versions of PostgreSQL prior to 12.0 has been removed as these versi
 Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specific permissions will now always be hidden from users lacking those permissions. Additionally, users not logged in will now be automatically redirected to the login page.
 
 <!-- towncrier release notes start -->
-## v2.1.2 (2024-01-19)
+## v2.1.2 (2024-01-22)
 
 ### Security
 
@@ -111,6 +111,7 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#5043](https://github.com/nautobot/nautobot/issues/5043) - Fixed early return conditional in `ensure_git_repository`.
 - [#5045](https://github.com/nautobot/nautobot/issues/5045) - Adjusted Bootstrap grid breakpoints to account for the space occupied by the sidebar, fixing various page rendering.
 - [#5054](https://github.com/nautobot/nautobot/issues/5054) - Fixed missing search logic on the "Assign an IP Address" view.
+- [#5058](https://github.com/nautobot/nautobot/issues/5058) - Changed filter query parameters from `location_id` to `location` in `virtualization/forms.py`.
 - [#5081](https://github.com/nautobot/nautobot/issues/5081) - Fixed core.tables.BaseTable to terminate dynamic queryset's building of pre-fetched fields upon first non-RelatedField of a column.
 - [#5095](https://github.com/nautobot/nautobot/issues/5095) - Fixed a couple of potential `KeyError` when refreshing Git repository Jobs.
 - [#5095](https://github.com/nautobot/nautobot/issues/5095) - Fixed color highlighting of `error` and `critical` log entries when viewing a Job Result.
