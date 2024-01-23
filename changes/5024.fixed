@@ -1,6 +1,0 @@
-Improved performance of the Job Result list view by optimizing the way JobLogEntry records are queried.
-Improved performance of the Device list view by including the manufacturer name in the table queryset.
-Improved performance of most ObjectListViews by optimizing how Custom fields, Computed fields, and Relationships are queried.
-Fixed a bug that caused IPAddress objects to query their parent Prefix and Namespace every time they were instantiated.
-Improved performance of the IPAddress list view by including the namespace in the table queryset.
-Updated bulk-edit and bulk-delete views to auto-hide any "actions" column in the table of objects being edited or deleted.
