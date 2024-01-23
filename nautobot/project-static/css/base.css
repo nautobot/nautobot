@@ -666,27 +666,24 @@ td span.hover_copy:hover .hover_copy_button {
     white-space: nowrap;
 }
 
-.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-menu {
-    border: none;
-    min-width: auto;
-    width: 100%;
-}
-
-.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-menu > .dropdown-header {
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > .dropdown-header {
     line-height: 2;
     padding: 3px 20px;
     text-transform: uppercase;
 }
 
-.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-menu > li > .buttons.pull-right {
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > .buttons.pull-right {
     padding-right: 10px;
 }
 
-.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-menu > li > .buttons.pull-right + a {
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > .buttons.pull-right + a {
     margin-right: 43px;
 }
 
-.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-menu > li > a {
+/* Default style for the dropdown links */
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a {
+    color: #ffffff;
+    display: block;
     clear: left;
     line-height: 1.285714286;
     margin-right: 0;
@@ -699,24 +696,12 @@ td span.hover_copy:hover .hover_copy_button {
     transition: background-color 200ms ease, color 200ms ease;
 }
 
-.navbar-inverse .navbar-nav > .dropdown > .dropdown-menu {
+.navbar-inverse .navbar-nav > .dropdown > .nav-dropdown-menu {
     background-color: #151e2a;
 }
 
-.navbar-inverse .navbar-nav > .dropdown > .dropdown-menu .divider {
-    background-color: #646464;
-}
-
-.navbar-inverse .navbar-nav > .dropdown > .dropdown-menu > li > a {
-    transition: background-color 200ms ease;
-}
-
-.navbar-inverse .navbar-nav > .dropdown > .dropdown-menu > li > a {
-    color: #ffffff;
-}
-
 /* Navbar Dropdown Behavior */
-.nav-dropdown-menu {
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu {
     color: #999999 !important;
     background-color: #151e2a;
     position: relative;
@@ -725,31 +710,20 @@ td span.hover_copy:hover .hover_copy_button {
     margin: 2px 0 0;
     margin-top: 0;
     width: 100%;
+    min-width: auto;
     font-size: 14px;
+    border: none;
     border-top-left-radius: 0;
     border-top-right-radius: 0;
     border-radius: 6px;
+    
 }
-.nav-dropdown-menu > li > a {
-    color: #ffffff !important;
-    display: block !important;
-    clear: left !important;
-    line-height: 1.285714286 !important;
-    padding: 8px 20px !important;
-}
-.nav-dropdown-menu > li > .buttons.pull-right {
-    padding-right: 10px;
-}
-.dropdown-header {
-    line-height: 2;
-    padding: 3px 20px;
-    text-transform: uppercase;
-} 
+
 /* When the dropdown is expanded, change color of the anchor text */
 .navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="true"] #dropdown_title {
     color: #ff8000; /* Color when expanded */
 }
-.nav-dropdown-menu .divider {
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu .divider {
     height: 1px;
     margin: 11px 0;
     overflow: hidden;
