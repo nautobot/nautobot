@@ -1,1 +1,0 @@
-Updated `packaging` dependency to permit newer versions since it follows CalVer rather than SemVer.
