@@ -1054,7 +1054,7 @@ class JobListView(generic.ObjectListView):
 
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
-        # Default to hiding "hidden", non-installed jobs
+        # Default to hiding "hidden" and non-installed jobs
         if "hidden" not in request.GET:
             queryset = queryset.filter(hidden=False)
         if "installed" not in request.GET:
