@@ -1,5 +1,0 @@
-Fixed missing log messages when errors occur during `Job.__call__()` initial setup.
-Fixed misleading "Job completed" message from being logged when a Job aborted.
-Fixed an error in `nautobot-server runjob` if a job returned data other than a dict.
-Fixed misleading "SUCCESS" message when `nautobot-server runjob` resulted in any JobResult status other than "FAILED".
-Fixed incorrect JobResult data when using `nautobot-server runjob --local` or `JobResult.execute_job()`.
