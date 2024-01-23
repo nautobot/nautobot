@@ -54,6 +54,8 @@ from nautobot.dcim.filters import (
     RackReservationFilterSet,
     RearPortFilterSet,
     RearPortTemplateFilterSet,
+    SoftwareImageFilterSet,
+    SoftwareVersionFilterSet,
     VirtualChassisFilterSet,
 )
 from nautobot.dcim.models import (
@@ -90,6 +92,8 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
+    SoftwareImage,
+    SoftwareVersion,
     VirtualChassis,
 )
 from nautobot.extras.models import Role, SecretsGroup, Status, Tag
@@ -534,7 +538,7 @@ def common_test_data(cls):
 
     device_statuses = Status.objects.get_for_model(Device)
 
-    devices = (
+    cls.devices = (
         Device.objects.create(
             name="Device 1",
             device_type=device_types[0],
@@ -585,8 +589,8 @@ def common_test_data(cls):
             secrets_group=secrets_groups[2],
         ),
     )
-    devices[0].tags.set(Tag.objects.get_for_model(Device))
-    devices[1].tags.set(Tag.objects.get_for_model(Device)[:3])
+    cls.devices[0].tags.set(Tag.objects.get_for_model(Device))
+    cls.devices[1].tags.set(Tag.objects.get_for_model(Device)[:3])
 
 
 class LocationTypeFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
@@ -3185,3 +3189,93 @@ class InterfaceRedundancyGroupAssociationTestCase(FilterTestCases.FilterTestCase
 
         for i, interface in enumerate(cls.interfaces):
             interface_redundancy_groups[i].add_interface(interface, 100 * i)
+
+
+class SoftwareImageFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = SoftwareImage.objects.all()
+    filterset = SoftwareImageFilterSet
+    generic_filter_tests = (
+        ["software_version", "software_version__id"],
+        ["software_version", "software_version__version"],
+        ["image_file_name"],
+        ["image_file_checksum"],
+        ["image_file_size"],
+        ["hashing_algorithm"],
+        ["status", "status__id"],
+        ["status", "status__name"],
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        common_test_data(cls)
+        cls.device_types[0].software_images.set(SoftwareImage.objects.all()[:2])
+        cls.device_types[1].software_images.set(SoftwareImage.objects.all()[2:4])
+
+        inventory_items = (
+            InventoryItem.objects.create(
+                device=cls.devices[0],
+                name="Inventory Item 1",
+                manufacturer=cls.manufacturers[0],
+            ),
+            InventoryItem.objects.create(
+                device=cls.devices[1],
+                name="Inventory Item 2",
+                manufacturer=cls.manufacturers[1],
+            ),
+        )
+        inventory_items[0].software_images.set(SoftwareImage.objects.all()[:2])
+        inventory_items[1].software_images.set(SoftwareImage.objects.all()[2:4])
+
+        device0, device1 = cls.devices[:2]
+        device0.software_image = SoftwareImage.objects.first()
+        device0.save()
+        device1.software_image = SoftwareImage.objects.last()
+        device1.save()
+
+        virtual_machine0, virtual_machine1 = VirtualMachine.objects.all()[:2]
+        virtual_machine0.software_image = SoftwareImage.objects.first()
+        virtual_machine0.save()
+        virtual_machine1.software_image = SoftwareImage.objects.last()
+        virtual_machine1.save()
+
+
+class SoftwareVersionFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = SoftwareVersion.objects.all()
+    filterset = SoftwareVersionFilterSet
+    generic_filter_tests = (
+        ["version"],
+        ["alias"],
+        ["documentation_url"],
+        ["end_of_support_date"],
+        ["release_date"],
+        ["platform", "platform__id"],
+        ["platform", "platform__name"],
+        ["software_images", "software_images__id"],
+        ["software_images", "software_images__image_file_name"],
+        ["status", "status__id"],
+        ["status", "status__name"],
+    )
+
+    def test_long_term_support(self):
+        params = {"long_term_support": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            SoftwareVersion.objects.filter(long_term_support=True),
+        )
+        params = {"long_term_support": False}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            SoftwareVersion.objects.filter(long_term_support=False),
+        )
+
+    def test_pre_release(self):
+        params = {"pre_release": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            SoftwareVersion.objects.filter(pre_release=True),
+        )
+        params = {"pre_release": False}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            SoftwareVersion.objects.filter(pre_release=False),
+        )

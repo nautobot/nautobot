@@ -46,6 +46,8 @@ from nautobot.dcim.models import (
     RackGroup,
     RearPort,
     RearPortTemplate,
+    SoftwareImage,
+    SoftwareVersion,
 )
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -1658,3 +1660,11 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
         interface.remove_ip_addresses(self.device.primary_ip6)
         self.device.refresh_from_db()
         self.assertEqual(self.device.primary_ip6, None)
+
+
+class SoftwareImageTestCase(ModelTestCases.BaseModelTestCase):
+    model = SoftwareImage
+
+
+class SoftwareVersionTestCase(ModelTestCases.BaseModelTestCase):
+    model = SoftwareVersion

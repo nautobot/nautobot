@@ -20,6 +20,7 @@ from nautobot.dcim.choices import (
     RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
+    SoftwareImageHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.models import (
@@ -35,6 +36,8 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
+    SoftwareImage,
+    SoftwareVersion,
 )
 from nautobot.extras.models import Role, Status
 from nautobot.extras.utils import FeatureQuery
@@ -233,7 +236,7 @@ class DeviceTypeFactory(PrimaryModelFactory):
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
 
     # If randomly a subdevice, set u_height to 0.
-    is_subdevice_child = factory.Faker("boolean", chance_of_getting_true=33)
+    is_subdevice_child = NautobotBoolIterator(chance_of_getting_true=33)
     u_height = factory.Maybe("is_subdevice_child", 0, factory.Faker("pyint", min_value=1, max_value=2))
 
     is_full_depth = NautobotBoolIterator()
@@ -529,7 +532,7 @@ class RackFactory(PrimaryModelFactory):
     has_rack_group = NautobotBoolIterator()  # TODO there's no RackGroupFactory yet...
     rack_group = factory.Maybe("has_rack_group", random_instance(RackGroup), None)
 
-    has_tenant = factory.Faker("boolean")
+    has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
     has_serial = NautobotBoolIterator()
@@ -571,10 +574,60 @@ class RackReservationFactory(PrimaryModelFactory):
     rack = random_instance(Rack, allow_null=False)
     units = factory.LazyAttribute(get_rack_reservation_units)
 
-    has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
+    has_tenant = NautobotBoolIterator(chance_of_getting_true=75)
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
     user = random_instance(User, allow_null=False)
 
     # Note no "has_description" here, RackReservation.description is mandatory.
     description = factory.Faker("sentence")
+
+
+class SoftwareImageFactory(PrimaryModelFactory):
+    class Meta:
+        model = SoftwareImage
+
+    class Params:
+        has_image_file_checksum = NautobotBoolIterator()
+        has_hashing_algorithm = NautobotBoolIterator()
+        has_image_file_size = NautobotBoolIterator()
+        has_download_url = NautobotBoolIterator()
+
+    status = random_instance(
+        lambda: Status.objects.get_for_model(SoftwareImage),
+        allow_null=False,
+    )
+    software_version = random_instance(lambda: SoftwareVersion.objects.all(), allow_null=False)
+    image_file_name = factory.Faker("file_name", extension="bin")
+    image_file_checksum = factory.Maybe("has_image_file_checksum", factory.Faker("md5"), "")
+    hashing_algorithm = factory.Maybe(
+        "has_hashing_algorithm",
+        factory.Faker("random_element", elements=SoftwareImageHashingAlgorithmChoices.values()),
+        "",
+    )
+    image_file_size = factory.Maybe("has_image_file_size", factory.Faker("pyint"), None)
+    download_url = factory.Maybe("has_download_url", factory.Faker("uri"), "")
+
+
+class SoftwareVersionFactory(PrimaryModelFactory):
+    class Meta:
+        model = SoftwareVersion
+
+    class Params:
+        has_alias = NautobotBoolIterator()
+        has_release_date = NautobotBoolIterator()
+        has_end_of_support_date = NautobotBoolIterator()
+        has_documentation_url = NautobotBoolIterator()
+
+    status = random_instance(
+        lambda: Status.objects.get_for_model(SoftwareVersion),
+        allow_null=False,
+    )
+    platform = random_instance(lambda: Platform.objects.all(), allow_null=False)
+    version = factory.Faker("numerify", text="%!.%!.%!")
+    alias = factory.Maybe("has_alias", factory.Faker("word"), "")
+    release_date = factory.Maybe("has_release_date", factory.Faker("date_object"), None)
+    end_of_support_date = factory.Maybe("has_end_of_support_date", factory.Faker("date_object"), None)
+    documentation_url = factory.Maybe("has_documentation_url", factory.Faker("uri"), "")
+    long_term_support = NautobotBoolIterator()
+    pre_release = NautobotBoolIterator()

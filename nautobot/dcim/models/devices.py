@@ -1027,10 +1027,10 @@ class DeviceRedundancyGroup(PrimaryModel):
 
 
 class SoftwareImageQuerySet(RestrictedQuerySet):
-    """Queryset for `SoftwareImage` objects."""
+    """Queryset for SoftwareImage objects."""
 
     def get_for_object(self, obj):
-        """Return all `SoftwareImage` assigned to the given object."""
+        """Return all SoftwareImage assigned to the given object."""
         if not isinstance(obj, models.Model):
             raise TypeError(f"{obj} is not an instance of Django Model class")
         if isinstance(obj, Device):
@@ -1075,6 +1075,8 @@ class SoftwareImage(PrimaryModel):
     download_url = models.URLField(blank=True, verbose_name="Download URL")
     status = StatusField(blank=False, null=False)
 
+    objects = BaseManager.from_queryset(SoftwareImageQuerySet)()
+
     class Meta:
         ordering = ("software_version", "image_file_name")
         unique_together = ("image_file_name", "software_version")
@@ -1082,14 +1084,12 @@ class SoftwareImage(PrimaryModel):
     def __str__(self):
         return self.image_file_name
 
-    objects = SoftwareImageQuerySet.as_manager()
-
 
 class SoftwareVersionQuerySet(RestrictedQuerySet):
-    """Queryset for `SoftwareVersion` objects."""
+    """Queryset for SoftwareVersion objects."""
 
     def get_for_object(self, obj):
-        """Return all `SoftwareLCM` assigned to the given object."""
+        """Return all SoftwareVersion assigned to the given object."""
         if not isinstance(obj, models.Model):
             raise TypeError(f"{obj} is not an instance of Django Model class")
         if isinstance(obj, Device):
@@ -1125,6 +1125,8 @@ class SoftwareVersion(PrimaryModel):
     pre_release = models.BooleanField(verbose_name="Pre-Release", default=False, help_text="Is a Pre-Release version")
     status = StatusField(blank=False, null=False)
 
+    objects = BaseManager.from_queryset(SoftwareVersionQuerySet)()
+
     class Meta:
         ordering = ("platform", "version", "end_of_support_date", "release_date")
         unique_together = (
@@ -1136,5 +1138,3 @@ class SoftwareVersion(PrimaryModel):
         if self.alias:
             return self.alias
         return f"{self.platform} - {self.version}"
-
-    objects = SoftwareVersionQuerySet.as_manager()

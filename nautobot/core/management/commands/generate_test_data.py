@@ -66,6 +66,8 @@ class Command(BaseCommand):
                 LocationTypeFactory,
                 ManufacturerFactory,
                 PlatformFactory,
+                SoftwareImageFactory,
+                SoftwareVersionFactory,
             )
             from nautobot.extras.factory import (
                 ContactFactory,
@@ -144,13 +146,17 @@ class Command(BaseCommand):
         self.stdout.write("Creating Empty Namespaces...")
         NamespaceFactory.create_batch(5, using=db_name)
         self.stdout.write("Creating Hardware Families...")
-        HardwareFamilyFactory.create_batch(10)
+        HardwareFamilyFactory.create_batch(20)
         self.stdout.write("Creating Manufacturers...")
         ManufacturerFactory.create_batch(8, using=db_name)  # First 8 hard-coded Manufacturers
         self.stdout.write("Creating Platforms (with manufacturers)...")
         PlatformFactory.create_batch(20, has_manufacturer=True, using=db_name)
         self.stdout.write("Creating Platforms (without manufacturers)...")
         PlatformFactory.create_batch(5, has_manufacturer=False, using=db_name)
+        self.stdout.write("Creating Software Versions...")
+        SoftwareVersionFactory.create_batch(20)
+        self.stdout.write("Creating Software Images...")
+        SoftwareImageFactory.create_batch(25)
         self.stdout.write("Creating Manufacturers without Platforms...")
         ManufacturerFactory.create_batch(4, using=db_name)  # 4 more hard-coded Manufacturers
         self.stdout.write("Creating DeviceTypes...")
@@ -204,30 +210,36 @@ class Command(BaseCommand):
 
         self._output_hash_for_factory_models(
             factories=[
-                RoleFactory,
-                StatusFactory,
-                TagFactory,
-                TenantGroupFactory,
-                TenantFactory,
-                LocationTypeFactory,
-                LocationFactory,
-                RIRFactory,
-                RouteTargetFactory,
-                VRFFactory,
-                VLANGroupFactory,
-                VLANFactory,
-                PrefixFactory,
+                CircuitFactory,
+                CircuitTerminationFactory,
+                CircuitTypeFactory,
+                ContactFactory,
+                DeviceRedundancyGroupFactory,
+                DeviceTypeFactory,
+                ExternalIntegrationFactory,
+                HardwareFamilyFactory,
                 IPAddressFactory,
+                LocationFactory,
+                LocationTypeFactory,
+                ManufacturerFactory,
                 NamespaceFactory,
                 PlatformFactory,
-                DeviceTypeFactory,
-                ManufacturerFactory,
-                DeviceRedundancyGroupFactory,
-                CircuitTypeFactory,
-                ProviderNetworkFactory,
-                CircuitFactory,
+                PrefixFactory,
                 ProviderFactory,
-                CircuitTerminationFactory,
+                ProviderNetworkFactory,
+                RIRFactory,
+                RoleFactory,
+                RouteTargetFactory,
+                SoftwareImageFactory,
+                SoftwareVersionFactory,
+                StatusFactory,
+                TagFactory,
+                TeamFactory,
+                TenantFactory,
+                TenantGroupFactory,
+                VLANFactory,
+                VLANGroupFactory,
+                VRFFactory,
             ]
         )
 

@@ -54,6 +54,7 @@ from .template_code import (
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
     REARPORT_BUTTONS,
+    SOFTWARE_VERSION_SOFTWARE_IMAGES,
 )
 
 __all__ = (
@@ -1060,6 +1061,10 @@ class SoftwareImageTable(StatusTableMixin, BaseTable):
 class SoftwareVersionTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     version = tables.Column(linkify=True)
+    software_images = tables.TemplateColumn(
+        template_code=SOFTWARE_VERSION_SOFTWARE_IMAGES,
+        verbose_name="Software Images",
+    )
     tags = TagColumn(url_name="dcim:softwareversion_list")
     actions = ButtonsColumn(SoftwareVersion)
 
@@ -1072,10 +1077,21 @@ class SoftwareVersionTable(StatusTableMixin, BaseTable):
             "status",
             "release_date",
             "end_of_support_date",
+            "software_images",
             "long_term_support",
             "pre_release",
             "documentation_url",
             "tags",
             "actions",
         )
-        default_columns = ("pk", "version", "alias", "status", "release_date", "end_of_support_date", "tags", "actions")
+        default_columns = (
+            "pk",
+            "version",
+            "alias",
+            "status",
+            "release_date",
+            "end_of_support_date",
+            "software_images",
+            "tags",
+            "actions",
+        )

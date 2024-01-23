@@ -1,3 +1,4 @@
+import datetime
 from decimal import Decimal
 import unittest
 
@@ -33,9 +34,16 @@ from nautobot.dcim.choices import (
     RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
+    SoftwareImageHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
-from nautobot.dcim.filters import ConsoleConnectionFilterSet, InterfaceConnectionFilterSet, PowerConnectionFilterSet
+from nautobot.dcim.filters import (
+    ConsoleConnectionFilterSet,
+    InterfaceConnectionFilterSet,
+    PowerConnectionFilterSet,
+    SoftwareImageFilterSet,
+    SoftwareVersionFilterSet,
+)
 from nautobot.dcim.models import (
     Cable,
     CablePath,
@@ -71,6 +79,8 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
+    SoftwareImage,
+    SoftwareVersion,
     VirtualChassis,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
@@ -3053,3 +3063,81 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
         self.assertHttpStatus(self.client.post(**request), 302)
         self.assertEqual(initial_count + 2, InterfaceRedundancyGroupAssociation.objects.all().count())
+
+
+class SoftwareImageTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = SoftwareImage
+    filterset = SoftwareImageFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        statuses = Status.objects.get_for_model(SoftwareImage)
+        software_versions = SoftwareVersion.objects.all()
+
+        cls.form_data = {
+            "software_version": software_versions[0].pk,
+            "image_file_name": "software_image_test_case.bin",
+            "status": statuses[0].pk,
+            "image_file_checksum": "abcdef1234567890",
+            "image_file_size": 1234567890,
+            "hashing_algorithm": SoftwareImageHashingAlgorithmChoices.SHA512,
+            "download_url": "https://example.com/software_image_test_case.bin",
+        }
+
+        cls.csv_data = (
+            "software_version__platform__name,software_version__version,status__name,image_file_name",
+            f"{software_versions[0].platform.name},{software_versions[0].version},{statuses[0].name},sofware_image_test_case_1.bin",
+            f"{software_versions[1].platform.name},{software_versions[1].version},{statuses[1].name},sofware_image_test_case_2.bin",
+            f"{software_versions[2].platform.name},{software_versions[2].version},{statuses[0].name},sofware_image_test_case_3.bin",
+            f"{software_versions[3].platform.name},{software_versions[3].version},{statuses[2].name},sofware_image_test_case_4.bin",
+        )
+
+        cls.bulk_edit_data = {
+            "software_version": software_versions[0].pk,
+            "status": statuses[0].pk,
+            "image_file_checksum": "abcdef1234567890",
+            "hashing_algorithm": SoftwareImageHashingAlgorithmChoices.SHA512,
+            "image_file_size": 1234567890,
+            "download_url": "https://example.com/software_image_test_case.bin",
+        }
+
+
+class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = SoftwareVersion
+    filterset = SoftwareVersionFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        statuses = Status.objects.get_for_model(SoftwareVersion)
+        platforms = Platform.objects.all()
+
+        cls.form_data = {
+            "platform": platforms[0].pk,
+            "version": "1.0.0",
+            "status": statuses[0].pk,
+            "alias": "Version 1.0.0",
+            "release_date": datetime.date(2001, 1, 1),
+            "end_of_support_date": datetime.date(2005, 1, 1),
+            "documentation_url": "https://example.com/software_version_test_case",
+            "long_term_support": True,
+            "pre_release": False,
+        }
+
+        cls.csv_data = (
+            "platform__name,version,status__name",
+            f"{platforms[0].name},version 1.1.0,{statuses[0].name}",
+            f"{platforms[1].name},version 1.2.0,{statuses[1].name}",
+            f"{platforms[2].name},version 1.3.0,{statuses[2].name}",
+            f"{platforms[3].name},version 1.4.0,{statuses[0].name}",
+        )
+
+        cls.bulk_edit_data = {
+            "platform": platforms[0].pk,
+            "status": statuses[0].pk,
+            "alias": "Version x.y.z",
+            "release_date": datetime.date(2001, 12, 31),
+            "end_of_support_date": datetime.date(2005, 12, 31),
+            "documentation_url": "https://example.com/software_version_test_case/docs2",
+            "long_term_support": False,
+            "pre_release": True,
+        }

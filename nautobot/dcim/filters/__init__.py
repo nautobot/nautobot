@@ -1638,6 +1638,11 @@ class SoftwareImageFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
             "software_version__platform__name": "icontains",
         }
     )
+    software_version = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareVersion.objects.all(),
+        to_field_name="version",
+        label="Software version (version or ID)",
+    )
     has_device_types = RelatedMembershipBooleanFilter(
         field_name="device_types",
         label="Has device types",
@@ -1669,6 +1674,16 @@ class SoftwareVersionFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
             "alias": "icontains",
             "platform__name": "icontains",
         }
+    )
+    platform = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Platform.objects.all(),
+        to_field_name="name",
+        label="Platform (name or ID)",
+    )
+    software_images = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareImage.objects.all(),
+        to_field_name="image_file_name",
+        label="Software images (image file name or ID)",
     )
     has_software_images = RelatedMembershipBooleanFilter(
         field_name="software_images",
