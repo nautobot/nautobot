@@ -1,2 +1,0 @@
-Fixed a couple of potential `KeyError` when refreshing Git repository Jobs.
-Fixed color highlighting of `error` and `critical` log entries when viewing a Job Result.
