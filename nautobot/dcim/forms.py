@@ -3782,6 +3782,8 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
 
 
 class SoftwareImageBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
+    """SoftwareImage bulk edit form."""
+
     pk = forms.ModelMultipleChoiceField(queryset=SoftwareImage.objects.all(), widget=forms.MultipleHiddenInput)
     software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
     image_file_name = forms.CharField(required=False)
@@ -3804,6 +3806,66 @@ class SoftwareImageBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMi
         ]
 
 
+class SoftwareImageFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
+    """SoftwareImage basic filter form."""
+
+    model = SoftwareImage
+
+    q = forms.CharField(required=False, label="Search")
+    software_version = DynamicModelMultipleChoiceField(
+        queryset=SoftwareVersion.objects.all(),
+        required=False,
+        label="Software version",
+    )
+    image_file_name = forms.CharField(required=False, label="Image file name")
+    image_file_checksum = forms.CharField(required=False, label="Image file checksum")
+    hashing_algorithm = forms.ChoiceField(
+        choices=add_blank_choice(SoftwareImageHashingAlgorithmChoices),
+        required=False,
+        widget=StaticSelect2(),
+        label="Hashing algorithm",
+    )
+    image_file_size = forms.IntegerField(required=False, label="Image file size")
+    download_url = forms.URLField(required=False, label="Download URL")
+    has_device_types = forms.NullBooleanField(
+        required=False,
+        label="Has device types",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_devices = forms.NullBooleanField(
+        required=False,
+        label="Has devices",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_inventory_items = forms.NullBooleanField(
+        required=False,
+        label="Has inventory items",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_virtual_machines = forms.NullBooleanField(
+        required=False,
+        label="Has virtual machines",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    tags = TagFilterField(model)
+
+    field_order = [
+        "q",
+        "software_version",
+        "image_file_name",
+        "image_file_checksum",
+        "hashing_algorithm",
+        "image_file_size",
+        "download_url",
+        "has_device_types",
+        "has_devices",
+        "has_inventory_items",
+        "has_virtual_machines",
+        "status",
+        "tags",
+    ]
+
+
 class SoftwareImageForm(NautobotModelForm):
     """SoftwareImage credit/edit form."""
 
@@ -3819,6 +3881,8 @@ class SoftwareImageForm(NautobotModelForm):
 
 
 class SoftwareVersionBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
+    """SoftwareVersion bulk edit form."""
+
     pk = forms.ModelMultipleChoiceField(queryset=SoftwareVersion.objects.all(), widget=forms.MultipleHiddenInput)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
     alias = forms.CharField(required=False)
@@ -3838,6 +3902,51 @@ class SoftwareVersionBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditForm
             "end_of_support_date",
             "documentation_url",
         ]
+
+
+class SoftwareVersionFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
+    """SoftwareVersion basic filter form."""
+
+    model = SoftwareVersion
+
+    q = forms.CharField(required=False, label="Search")
+    platform = DynamicModelMultipleChoiceField(
+        queryset=Platform.objects.all(),
+        required=False,
+        label="Platform",
+    )
+    version = forms.CharField(required=False, label="Version")
+    alias = forms.CharField(required=False, label="Alias")
+    release_date = NullableDateField(required=False, widget=DatePicker(), label="Release date")
+    end_of_support_date = NullableDateField(required=False, widget=DatePicker(), label="End of support date")
+    documentation_url = forms.URLField(required=False, label="Documentation URL")
+    long_term_support = forms.NullBooleanField(
+        required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES), label="Long Term Support"
+    )
+    pre_release = forms.NullBooleanField(
+        required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES), label="Pre-Release"
+    )
+    has_software_images = forms.NullBooleanField(
+        required=False,
+        label="Has software images",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    tags = TagFilterField(model)
+
+    field_order = [
+        "q",
+        "platform",
+        "version",
+        "alias",
+        "release_date",
+        "end_of_support_date",
+        "documentation_url",
+        "long_term_support",
+        "pre_release",
+        "has_software_images",
+        "status",
+        "tags",
+    ]
 
 
 class SoftwareVersionForm(NautobotModelForm):

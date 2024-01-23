@@ -1638,6 +1638,22 @@ class SoftwareImageFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
             "software_version__platform__name": "icontains",
         }
     )
+    has_device_types = RelatedMembershipBooleanFilter(
+        field_name="device_types",
+        label="Has device types",
+    )
+    has_devices = RelatedMembershipBooleanFilter(
+        field_name="devices",
+        label="Has devices",
+    )
+    has_inventory_items = RelatedMembershipBooleanFilter(
+        field_name="inventory_items",
+        label="Has inventory items",
+    )
+    has_virtual_machines = RelatedMembershipBooleanFilter(
+        field_name="virtual_machines",
+        label="Has virtual machines",
+    )
 
     class Meta:
         model = SoftwareImage
@@ -1653,6 +1669,10 @@ class SoftwareVersionFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
             "alias": "icontains",
             "platform__name": "icontains",
         }
+    )
+    has_software_images = RelatedMembershipBooleanFilter(
+        field_name="software_images",
+        label="Has software images",
     )
 
     class Meta:

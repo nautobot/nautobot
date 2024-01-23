@@ -2949,6 +2949,7 @@ class HardwareFamilyUIViewSet(NautobotUIViewSet):
 
 class SoftwareImageUIViewSet(NautobotUIViewSet):
     filterset_class = filters.SoftwareImageFilterSet
+    filterset_form_class = forms.SoftwareImageFilterForm
     form_class = forms.SoftwareImageForm
     bulk_update_form_class = forms.SoftwareImageBulkEditForm
     queryset = SoftwareImage.objects.select_related("software_version")
@@ -2958,6 +2959,7 @@ class SoftwareImageUIViewSet(NautobotUIViewSet):
 
 class SoftwareVersionUIViewSet(NautobotUIViewSet):
     filterset_class = filters.SoftwareVersionFilterSet
+    filterset_form_class = forms.SoftwareVersionFilterForm
     form_class = forms.SoftwareVersionForm
     bulk_update_form_class = forms.SoftwareVersionBulkEditForm
     queryset = SoftwareVersion.objects.select_related("platform")
