@@ -13,7 +13,6 @@ from nautobot.core.forms import (
 )
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.choices import (
-    CustomFieldFilterLogicChoices,
     RelationshipSideChoices,
     RelationshipTypeChoices,
 )
@@ -63,13 +62,9 @@ __all__ = (
 
 class CustomFieldModelFilterFormMixin(forms.Form):
     def __init__(self, *args, **kwargs):
-        self.obj_type = ContentType.objects.get_for_model(self.model)
-
         super().__init__(*args, **kwargs)
 
-        custom_fields = CustomField.objects.filter(content_types=self.obj_type).exclude(
-            filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED
-        )
+        custom_fields = CustomField.objects.get_for_model(self.model, exclude_filter_disabled=True)
         self.custom_fields = []
         for cf in custom_fields:
             field_name = cf.add_prefix_to_cf_key()
@@ -653,16 +648,13 @@ class RelationshipModelFilterFormMixin(forms.Form):
         """
         Append form fields for all Relationships assigned to this model.
         """
-        query = Q(source_type=self.obj_type, source_hidden=False) | Q(
-            destination_type=self.obj_type, destination_hidden=False
-        )
-        relationships = Relationship.objects.select_related("source_type", "destination_type").filter(query)
+        src_relationships, dst_relationships = Relationship.objects.get_for_model(model=self.model, hidden=False)
 
-        for rel in relationships.iterator():
-            if rel.source_type == self.obj_type and not rel.source_hidden:
-                self._append_relationships_side([rel], RelationshipSideChoices.SIDE_SOURCE)
-            if rel.destination_type == self.obj_type and not rel.destination_hidden:
-                self._append_relationships_side([rel], RelationshipSideChoices.SIDE_DESTINATION)
+        for rel in src_relationships:
+            self._append_relationships_side([rel], RelationshipSideChoices.SIDE_SOURCE)
+
+        for rel in dst_relationships:
+            self._append_relationships_side([rel], RelationshipSideChoices.SIDE_DESTINATION)
 
     def _append_relationships_side(self, relationships, initial_side):
         """

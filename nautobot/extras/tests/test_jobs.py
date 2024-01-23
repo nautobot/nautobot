@@ -299,10 +299,9 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 3)
+        self.assertEqual(len(job_logs), 2)
         self.assertIn("Running job", job_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
-        self.assertIn("Job completed", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
 
     def test_atomic_transaction_context_manager_job_fail(self):
@@ -317,10 +316,9 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 3)
+        self.assertEqual(len(job_logs), 2)
         self.assertIn("Running job", job_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
-        self.assertIn("Job completed", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
 
     def test_ip_address_vars(self):
@@ -652,6 +650,11 @@ class JobFileOutputTest(TransactionTestCase):
 
 class RunJobManagementCommandTest(TransactionTestCase):
     """Test cases for the `nautobot-server runjob` management command."""
+
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
 
     def run_command(self, *args):
         out = StringIO()

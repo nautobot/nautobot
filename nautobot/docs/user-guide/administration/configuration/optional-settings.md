@@ -883,11 +883,34 @@ Default:
 ```python
 [
     (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
-    (re.compile(r"(username|password|passwd|pwd)((?:\s+is.?|:)?\s+)\S+", re.IGNORECASE), r"\1\2{replacement}"),
+    (
+        re.compile(r"(username|password|passwd|pwd|secret|secrets)([\"']?(?:\s+is.?|:)?\s+)\S+[\"']?", re.IGNORECASE),
+        r"\1\2{replacement}",
+    ),
 ]
 ```
 
 List of (regular expression, replacement pattern) tuples used by the `nautobot.core.utils.logging.sanitize()` function. As of Nautobot 1.3.4 this function is used primarily for sanitization of Job log entries, but it may be used in other scopes in the future.
+
+This pattern catches patterns such as:
+
+| Pattern Match Examples |
+| --- |
+| Password is1234 |
+| Password: is1234 |
+| Password is: is1234 |
+| Password is is1234 |
+| secret is: is1234 |
+| secret is is1234 |
+| secrets is: is1234 |
+| secrets is is1234 |
+| {"username": "is1234"} |
+| {"password": "is1234"} |
+| {"secret": "is1234"} |
+| {"secrets": "is1234"} |
+
+!!! info
+    is1234 would be replaced in the Job logs with `(redacted)`.
 
 ---
 
@@ -941,7 +964,7 @@ If set to `False`, unknown/unrecognized filter parameters will be discarded and 
 
 Default: `""`
 
-A message to include on error pages (status code 403, 404, 500, etc.) when an error occurs. You can configure this to direct users to the appropriate contact(s) within your organization that provide support for Nautobot. Markdown formatting is supported within this message (raw HTML is not).
+A message to include on error pages (status code 403, 404, 500, etc.) when an error occurs. You can configure this to direct users to the appropriate contact(s) within your organization that provide support for Nautobot. Markdown formatting is supported within this message, as well as [a limited subset of HTML](../../platform-functionality/template-filters.md#render_markdown).
 
 If unset, the default message that will appear is `If further assistance is required, please join the #nautobot channel on [Network to Code's Slack community](https://slack.networktocode.com) and post your question.`
 

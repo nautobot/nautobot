@@ -366,9 +366,9 @@ class ErrorPagesTestCase(TestCase):
         self.assertContains(response, "Network to Code", status_code=404)
         response_content = response.content.decode(response.charset)
         self.assertInHTML(
-            "If further assistance is required, please join the <code>#nautobot</code> channel "
-            'on <a href="https://slack.networktocode.com/">Network to Code\'s Slack community</a> '
-            "and post your question.",
+            "If further assistance is required, please join the <code>#nautobot</code> channel on "
+            '<a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
+            "Slack community</a> and post your question.",
             response_content,
         )
 
@@ -392,16 +392,16 @@ class ErrorPagesTestCase(TestCase):
         self.assertContains(response, "Network to Code", status_code=500)
         response_content = response.content.decode(response.charset)
         self.assertInHTML(
-            "If further assistance is required, please join the <code>#nautobot</code> channel "
-            'on <a href="https://slack.networktocode.com/">Network to Code\'s Slack community</a> '
-            "and post your question.",
+            "If further assistance is required, please join the <code>#nautobot</code> channel on "
+            '<a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
+            "Slack community</a> and post your question.",
             response_content,
         )
 
     @override_settings(DEBUG=False, SUPPORT_MESSAGE="Hello world!")
     @mock.patch("nautobot.core.views.HomeView.get", side_effect=Exception)
     def test_500_custom_support_message(self, mock_get):
-        """Nautobot's custom 500 page should be used and should include a default support message."""
+        """Nautobot's custom 500 page should be used and should include a custom support message if defined."""
         url = reverse("home")
         with self.assertTemplateUsed("500.html"):
             self.client.raise_request_exception = False
@@ -420,30 +420,21 @@ class DBFileStorageViewTestCase(TestCase):
         self.file_proxy_1 = FileProxy.objects.create(name=self.test_file_1.name, file=self.test_file_1)
         self.test_file_2 = SimpleUploadedFile(name="test_file_2.txt", content=b"I am content.\n")
         self.file_proxy_2 = FileProxy.objects.create(name=self.test_file_2.name, file=self.test_file_2)
-        self.urls = [
-            f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_1.file.name}",
-            f"{reverse('db_file_storage.get_file')}?name={self.file_proxy_1.file.name}",
-        ]
+        self.url = f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_1.file.name}"
 
     def test_get_file_anonymous(self):
         self.client.logout()
-        for url in self.urls:
-            with self.subTest(url):
-                response = self.client.get(url)
-                self.assertHttpStatus(response, 403)
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 403)
 
     def test_get_file_without_permission(self):
-        for url in self.urls:
-            with self.subTest(url):
-                response = self.client.get(url)
-                self.assertHttpStatus(response, 403)
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 403)
 
     def test_get_object_with_permission(self):
         self.add_permissions(get_permission_for_model(FileProxy, "view"))
-        for url in self.urls:
-            with self.subTest(url):
-                response = self.client.get(url)
-                self.assertHttpStatus(response, 200)
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
 
     def test_get_object_with_constrained_permission(self):
         obj_perm = ObjectPermission(
@@ -454,14 +445,8 @@ class DBFileStorageViewTestCase(TestCase):
         obj_perm.save()
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(FileProxy))
-        for url in self.urls:
-            with self.subTest(url):
-                response = self.client.get(url)
-                self.assertHttpStatus(response, 200)
-        for url in [
-            f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_2.file.name}",
-            f"{reverse('db_file_storage.get_file')}?name={self.file_proxy_2.file.name}",
-        ]:
-            with self.subTest(url):
-                response = self.client.get(url)
-                self.assertHttpStatus(response, 404)
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
+        url = f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_2.file.name}"
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 404)

@@ -102,6 +102,10 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         else:
             pk_list = kwargs.get("pk_list", [])
             table = table_class(queryset.filter(pk__in=pk_list), orderable=False)
+            if view.action in ["bulk_destroy", "bulk_update"]:
+                # Hide actions column if present
+                if "actions" in table.columns:
+                    table.columns.hide("actions")
             return table
 
     def validate_action_buttons(self, view, request):
