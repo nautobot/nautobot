@@ -174,7 +174,7 @@
                 <p>Prefixes</p>
             </div>
             <div class="col-md-4 text-center">
-                <h2><a href="{% url 'ipam:vlan_list' %}?location={{ object.pk }}" class="btn {% if stats.vlan_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.vlan_count }}</a></h2>
+                <h2><a href="{% url 'ipam:vlan_list' %}?locations={{ object.pk }}" class="btn {% if stats.vlan_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.vlan_count }}</a></h2>
                 <p>VLANs</p>
             </div>
             <div class="col-md-4 text-center">

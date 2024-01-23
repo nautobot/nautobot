@@ -144,7 +144,7 @@ class Command(BaseCommand):
         self.stdout.write("Creating Empty Namespaces...")
         NamespaceFactory.create_batch(5, using=db_name)
         self.stdout.write("Creating Hardware Families...")
-        HardwareFamilyFactory.create_batch(10)
+        HardwareFamilyFactory.create_batch(15)
         self.stdout.write("Creating Manufacturers...")
         ManufacturerFactory.create_batch(8, using=db_name)  # First 8 hard-coded Manufacturers
         self.stdout.write("Creating Platforms (with manufacturers)...")

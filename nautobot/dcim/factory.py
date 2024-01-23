@@ -357,16 +357,15 @@ class LocationTypeFactory(OrganizationalModelFactory):
     @factory.post_generation
     def content_types(self, create, extract, **kwargs):
         """Assign some contenttypes to a location after generation"""
-        if self.name in ["Root", "Campus"]:
+        if self.name in ["Root", "Campus", "Building"]:
             self.content_types.set(ContentType.objects.filter(FeatureQuery("locations").get_query()))
-        elif self.name in ["Building", "Floor"]:
+        elif self.name in ["Floor"]:
             self.content_types.set(
                 [
                     ContentType.objects.get_for_model(Prefix),
                     ContentType.objects.get_for_model(Rack),
                     ContentType.objects.get_for_model(RackGroup),
                     ContentType.objects.get_for_model(VLANGroup),
-                    ContentType.objects.get_for_model(VLAN),
                 ]
             )
         elif self.name in ["Room"]:

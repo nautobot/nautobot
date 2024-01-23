@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ValidationError
 
 from nautobot.core.forms import (
     add_blank_choice,
@@ -682,17 +683,23 @@ class VLANGroupFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
 #
 
 
-class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
+class VLANForm(NautobotModelForm, TenancyForm):
+    locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        label="Locations",
+        null_option="None",
+        query_params={"content_type": VLAN._meta.label_lower},
+    )
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
-        query_params={"location": "$location"},
     )
 
     class Meta:
         model = VLAN
         fields = [
-            "location",
+            "locations",
             "vlan_group",
             "vid",
             "name",
@@ -704,7 +711,7 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "tags",
         ]
         help_texts = {
-            "location": "Leave blank if this VLAN spans multiple locations",
+            "locations": "Leave blank if this VLAN spans all locations",
             "vlan_group": "VLAN group (optional)",
             "vid": "Configured VLAN ID",
             "name": "Configured VLAN name",
@@ -712,10 +719,17 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "role": "The primary function of this VLAN",
         }
 
+    def clean(self):
+        # Validation error raised in signal is not properly handled in form clean
+        # Hence handling any validationError that might occur.
+        try:
+            return super().clean()
+        except ValidationError as e:
+            raise forms.ValidationError(e.message_dict) from e
+
 
 class VLANBulkEditForm(
     TagsBulkEditFormMixin,
-    LocatableModelBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
     RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
@@ -726,13 +740,18 @@ class VLANBulkEditForm(
         required=False,
         query_params={"location_id": "$location"},
     )
+    add_locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(), required=False, query_params={"content_type": VLAN._meta.label_lower}
+    )
+    remove_locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(), required=False, query_params={"content_type": VLAN._meta.label_lower}
+    )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     description = forms.CharField(max_length=100, required=False)
 
     class Meta:
         model = VLAN
         nullable_fields = [
-            "location",
             "vlan_group",
             "tenant",
             "description",
@@ -741,7 +760,6 @@ class VLANBulkEditForm(
 
 class VLANFilterForm(
     NautobotFilterForm,
-    LocatableModelFilterFormMixin,
     TenancyFilterForm,
     StatusModelFilterFormMixin,
     RoleModelFilterFormMixin,
@@ -749,7 +767,7 @@ class VLANFilterForm(
     model = VLAN
     field_order = [
         "q",
-        "location",
+        "locations",
         "group_id",
         "status",
         "role",
@@ -762,7 +780,6 @@ class VLANFilterForm(
         required=False,
         label="VLAN group",
         null_option="None",
-        query_params={"location": "$location"},
     )
     tags = TagFilterField(model)
 

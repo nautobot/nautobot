@@ -1222,6 +1222,7 @@ class VLANGroupView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         vlans = (
             VLAN.objects.restrict(request.user, "view")
+            .annotate(location_count=Count("locations"))
             .filter(vlan_group=instance)
             .prefetch_related(Prefetch("prefixes", queryset=Prefix.objects.restrict(request.user)))
         )
@@ -1231,7 +1232,6 @@ class VLANGroupView(generic.ObjectView):
         vlan_table = tables.VLANDetailTable(vlans)
         if request.user.has_perm("ipam.change_vlan") or request.user.has_perm("ipam.delete_vlan"):
             vlan_table.columns.show("pk")
-        vlan_table.columns.hide("location")
         vlan_table.columns.hide("vlan_group")
 
         paginate = {
@@ -1282,16 +1282,17 @@ class VLANGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class VLANListView(generic.ObjectListView):
-    queryset = VLAN.objects.select_related("location", "vlan_group", "tenant", "role", "status")
+    queryset = VLAN.objects.annotate(location_count=Count("locations")).select_related(
+        "vlan_group", "tenant", "role", "status"
+    )
     filterset = filters.VLANFilterSet
     filterset_form = forms.VLANFilterForm
     table = tables.VLANDetailTable
 
 
 class VLANView(generic.ObjectView):
-    queryset = VLAN.objects.select_related(
+    queryset = VLAN.objects.annotate(location_count=Count("locations")).select_related(
         "role",
-        "location",
         "status",
         "tenant__tenant_group",
     )
@@ -1301,7 +1302,6 @@ class VLANView(generic.ObjectView):
             Prefix.objects.restrict(request.user, "view")
             .filter(vlan=instance)
             .select_related(
-                "location",
                 "status",
                 "role",
                 # "vrf",
@@ -1374,7 +1374,6 @@ class VLANBulkImportView(generic.BulkImportView):
 class VLANBulkEditView(generic.BulkEditView):
     queryset = VLAN.objects.select_related(
         "vlan_group",
-        "location",
         "status",
         "tenant",
         "role",
@@ -1383,11 +1382,16 @@ class VLANBulkEditView(generic.BulkEditView):
     table = tables.VLANTable
     form = forms.VLANBulkEditForm
 
+    def extra_post_save_action(self, obj, form):
+        if form.cleaned_data.get("add_locations", None):
+            obj.locations.add(*form.cleaned_data["add_locations"])
+        if form.cleaned_data.get("remove_locations", None):
+            obj.locations.remove(*form.cleaned_data["remove_locations"])
+
 
 class VLANBulkDeleteView(generic.BulkDeleteView):
     queryset = VLAN.objects.select_related(
         "vlan_group",
-        "location",
         "status",
         "tenant",
         "role",

@@ -689,8 +689,12 @@ class VLANGroupTable(BaseTable):
 class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     vid = tables.TemplateColumn(template_code=VLAN_LINK, verbose_name="ID")
-    location = tables.Column(linkify=True)
     vlan_group = tables.Column(linkify=True)
+    location_count = LinkedCountColumn(
+        viewname="dcim:location_list",
+        url_params={"vlans": "pk"},
+        verbose_name="Locations",
+    )
     tenant = TenantColumn()
 
     class Meta(BaseTable.Meta):
@@ -698,9 +702,9 @@ class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
         fields = (
             "pk",
             "vid",
-            "location",
             "vlan_group",
             "name",
+            "location_count",
             "tenant",
             "status",
             "role",
@@ -720,10 +724,10 @@ class VLANDetailTable(VLANTable):
         fields = (
             "pk",
             "vid",
-            "location",
             "vlan_group",
             "name",
             "prefixes",
+            "location_count",
             "tenant",
             "status",
             "role",
@@ -733,10 +737,10 @@ class VLANDetailTable(VLANTable):
         default_columns = (
             "pk",
             "vid",
-            "location",
             "vlan_group",
             "name",
             "prefixes",
+            "location_count",
             "tenant",
             "status",
             "role",
@@ -781,18 +785,22 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
 
     vid = tables.LinkColumn(viewname="ipam:vlan", args=[Accessor("pk")], verbose_name="ID")
     tagged = BooleanColumn()
-    location = tables.Column(linkify=True)
     vlan_group = tables.Column(accessor=Accessor("vlan_group__name"), verbose_name="Group")
     tenant = TenantColumn()
     role = tables.TemplateColumn(template_code=VLAN_ROLE_LINK)
+    location_count = LinkedCountColumn(
+        viewname="dcim:location",
+        url_params={"vlans": "pk"},
+        verbose_name="Locations",
+    )
 
     class Meta(BaseTable.Meta):
         model = VLAN
         fields = (
             "vid",
             "tagged",
-            "location",
             "vlan_group",
+            "location_count",
             "name",
             "tenant",
             "status",

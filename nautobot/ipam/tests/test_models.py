@@ -1074,21 +1074,7 @@ class TestVLAN(ModelTestCases.BaseModelTestCase):
         vlan.status = Status.objects.get_for_model(VLAN).first()
         with self.assertRaises(ValidationError) as cm:
             vlan.validated_save()
-        self.assertIn(f'VLANs may not associate to locations of type "{location_type.name}"', str(cm.exception))
-
-        location_type.content_types.add(ContentType.objects.get_for_model(VLAN))
-        group = VLANGroup.objects.create(name="Group 1")
-        vlan.vlan_group = group
-        location_status = Status.objects.get_for_model(Location).first()
-        location_2 = Location.objects.create(name="Location 2", location_type=location_type, status=location_status)
-        group.location = location_2
-        group.save()
-        with self.assertRaises(ValidationError) as cm:
-            vlan.validated_save()
-        self.assertIn(
-            f'The assigned group belongs to a location that does not include location "{location.name}"',
-            str(cm.exception),
-        )
+        self.assertIn(f"VLANs may not associate to locations of types {[location_type.name]}", str(cm.exception))
 
 
 class TestVRF(ModelTestCases.BaseModelTestCase):

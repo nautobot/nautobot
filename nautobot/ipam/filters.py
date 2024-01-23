@@ -14,9 +14,10 @@ from nautobot.core.filters import (
     NumericArrayFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
+    TreeNodeMultipleChoiceFilter,
 )
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
-from nautobot.dcim.models import Device, Interface
+from nautobot.dcim.models import Device, Interface, Location
 from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
 from nautobot.ipam import choices
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
@@ -441,7 +442,6 @@ class VLANGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSe
 
 class VLANFilterSet(
     NautobotFilterSet,
-    LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
@@ -465,6 +465,17 @@ class VLANFilterSet(
         queryset=VLANGroup.objects.all(),
         label="VLAN Group (name or ID)",
     )
+    location = TreeNodeMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        field_name="locations",
+        label='Location (name or ID) (deprecated, use "locations" filter instead)',
+    )
+    locations = TreeNodeMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        label="Locations (name or ID)",
+    )
 
     class Meta:
         model = VLAN
@@ -478,7 +489,7 @@ class VLANFilterSet(
         if not devices.exists():
             return queryset.none()
         location_ids = list(devices.values_list("location__id", flat=True))
-        return queryset.filter(Q(location__isnull=True) | Q(location__in=location_ids))
+        return queryset.filter(Q(locations__isnull=True) | Q(locations__in=location_ids))
 
 
 class ServiceFilterSet(NautobotFilterSet):

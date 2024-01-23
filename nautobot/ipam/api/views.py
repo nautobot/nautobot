@@ -1,14 +1,16 @@
 from django.conf import settings
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.dcim.models import Location
 from nautobot.extras.api.views import NautobotModelViewSet
 from nautobot.ipam import filters
 from nautobot.ipam.models import (
@@ -311,11 +313,21 @@ class VLANGroupViewSet(NautobotModelViewSet):
 #
 
 
+@extend_schema_view(
+    bulk_update=extend_schema(responses={"200": serializers.VLANLegacySerializer(many=True)}, versions=["2.0", "2.1"]),
+    bulk_partial_update=extend_schema(
+        responses={"200": serializers.VLANLegacySerializer(many=True)}, versions=["2.0", "2.1"]
+    ),
+    create=extend_schema(responses={"201": serializers.VLANLegacySerializer}, versions=["2.0", "2.1"]),
+    list=extend_schema(responses={"200": serializers.VLANLegacySerializer(many=True)}, versions=["2.0", "2.1"]),
+    partial_update=extend_schema(responses={"200": serializers.VLANLegacySerializer}, versions=["2.0", "2.1"]),
+    retrieve=extend_schema(responses={"200": serializers.VLANLegacySerializer}, versions=["2.0", "2.1"]),
+    update=extend_schema(responses={"200": serializers.VLANLegacySerializer}, versions=["2.0", "2.1"]),
+)
 class VLANViewSet(NautobotModelViewSet):
     queryset = (
         VLAN.objects.select_related(
             "vlan_group",
-            "location",
             "status",
             "role",
             "tenant",
@@ -325,6 +337,39 @@ class VLANViewSet(NautobotModelViewSet):
     )
     serializer_class = serializers.VLANSerializer
     filterset_class = filters.VLANFilterSet
+
+    class LocationIncompatibleLegacyBehavior(APIException):
+        status_code = 412
+        default_detail = "This object does not conform to pre-2.2 behavior. Please correct data or use API version 2.2"
+        default_code = "precondition_failed"
+
+    def get_serializer_class(self):
+        if (
+            not getattr(self, "swagger_fake_view", False)
+            and self.request.major_version == 2
+            and self.request.minor_version < 2
+        ):
+            # API version 2.1 or earlier - use the legacy serializer
+            return serializers.VLANLegacySerializer
+        return super().get_serializer_class()
+
+    def retrieve(self, request, pk=None):
+        try:
+            return super().retrieve(request, pk)
+        except Location.MultipleObjectsReturned as e:
+            raise self.LocationIncompatibleLegacyBehavior from e
+
+    def list(self, request):
+        try:
+            return super().list(request)
+        except Location.MultipleObjectsReturned as e:
+            raise self.LocationIncompatibleLegacyBehavior from e
+
+    def update(self, request, *args, **kwargs):
+        try:
+            return super().update(request, *args, **kwargs)
+        except Location.MultipleObjectsReturned as e:
+            raise self.LocationIncompatibleLegacyBehavior from e
 
 
 #

@@ -246,6 +246,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         field_name="vlans",
         label="Has VLANs",
     )
+    # FIXME (timizuo): LocationFilterSet vlans field currently only filters with vid and not pk(throws an error when pk is provided)
     vlans = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="vid",
         queryset=VLAN.objects.all(),

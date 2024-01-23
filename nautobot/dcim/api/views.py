@@ -156,7 +156,7 @@ class LocationViewSet(NautobotModelViewSet):
             device_count=count_related(Device, "location"),
             rack_count=count_related(Rack, "location"),
             prefix_count=count_related(Prefix, "location"),
-            vlan_count=count_related(VLAN, "location"),
+            vlan_count=count_related(VLAN, "locations"),
             circuit_count=count_related(Circuit, "circuit_terminations__location"),
             virtual_machine_count=count_related(VirtualMachine, "cluster__location"),
         )

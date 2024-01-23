@@ -940,6 +940,9 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         # For example, a parent object can be defined given some parameter from the request URL.
         return obj
 
+    def extra_post_save_action(self, obj, form):
+        """Extra actions after a form is saved"""
+
     def post(self, request, **kwargs):
         logger = logging.getLogger(__name__ + ".BulkEditView")
         model = self.queryset.model
@@ -1021,6 +1024,8 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                             if hasattr(form, "save_note") and callable(form.save_note):
                                 form.save_note(instance=obj, user=request.user)
+
+                            self.extra_post_save_action(obj, form)
 
                         # Enforce object-level permissions
                         if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(

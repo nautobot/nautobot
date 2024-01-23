@@ -1908,8 +1908,8 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
                 status=interface_statuses[0],
             ),
         )
-        interface_taggable_vlan_1 = VLAN.objects.filter(location=devices[2].location).first()
-        interface_taggable_vlan_2 = VLAN.objects.filter(location=devices[2].location).last()
+        interface_taggable_vlan_1 = VLAN.objects.filter(locations__in=[devices[2].location]).first()
+        interface_taggable_vlan_2 = VLAN.objects.filter(locations__in=[devices[2].location]).last()
 
         cabled_interfaces[0].tags.set(Tag.objects.get_for_model(Interface))
         cabled_interfaces[1].tags.set(Tag.objects.get_for_model(Interface)[:3])

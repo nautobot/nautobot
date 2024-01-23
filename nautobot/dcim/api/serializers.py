@@ -742,10 +742,10 @@ class InterfaceSerializer(
         # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to assign a VLAN belongs to
         # the parent Location or the child location of `device.location`?
         for vlan in data.get("tagged_vlans", []):
-            if vlan.location not in [device.location, None]:
+            if vlan.locations.exists() and not vlan.locations.filter(pk=device.location.pk).exists():
                 raise serializers.ValidationError(
                     {
-                        "tagged_vlans": f"VLAN {vlan} must belong to the same location as the interface's parent device, or "
+                        "tagged_vlans": f"VLAN {vlan} must have a common location as the interface's parent device, or "
                         f"it must be global."
                     }
                 )

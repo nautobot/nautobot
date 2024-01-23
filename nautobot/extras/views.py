@@ -2107,12 +2107,15 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 context["virtual_machine_table"] = virtual_machine_table
 
             if ContentType.objects.get_for_model(VLAN) in context["content_types"]:
-                vlans = instance.vlans.select_related(
-                    "vlan_group",
-                    "location",
-                    "status",
-                    "tenant",
-                ).restrict(request.user, "view")
+                vlans = (
+                    instance.vlans.annotate(location_count=Count("locations"))
+                    .select_related(
+                        "vlan_group",
+                        "status",
+                        "tenant",
+                    )
+                    .restrict(request.user, "view")
+                )
                 vlan_table = VLANTable(vlans)
                 vlan_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(vlan_table)
