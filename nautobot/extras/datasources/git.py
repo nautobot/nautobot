@@ -1,21 +1,21 @@
 """Git data source functionality."""
 
 from collections import defaultdict, namedtuple
+from contextlib import suppress
 import logging
 import mimetypes
 import os
+from pathlib import Path
 import re
 import sys
-from contextlib import suppress
-from pathlib import Path
 from urllib.parse import quote
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
+from git import InvalidGitRepositoryError, Repo
 import yaml
-from git import Repo, InvalidGitRepositoryError
 
 from nautobot.core.celery import app as celery_app
 from nautobot.core.utils.git import GitRepo
@@ -38,10 +38,10 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
 from nautobot.extras.utils import refresh_job_model_from_job_class
-from nautobot.tenancy.models import TenantGroup, Tenant
-from nautobot.virtualization.models import ClusterGroup, Cluster, VirtualMachine
-from .utils import files_from_contenttype_directories
+from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 
+from .utils import files_from_contenttype_directories
 
 logger = logging.getLogger(__name__)
 
@@ -77,16 +77,11 @@ def enqueue_pull_git_repository_and_refresh_data(repository, user):
     return enqueue_git_repository_helper(repository, user, GitRepositorySync)
 
 
-def get_repo_from_url_to_path_and_from_branch(repository_record):
-    """Returns the from_url, to_path and from_branch of a Git Repo
+def get_repo_access_url(repository_record):
+    """Returns the repo url with and without token when present
     Returns:
-        namedtuple (GitRepoInfo): (
-        from_url (str): git repo url with token or user if available,
-        to_path (Path): path to location of git repo on local machine
-        from_branch (str): current git repo branch
-    )
+        (str): The url used to connect to the git repo, with credentials as applicable.
     """
-
     # Inject username and/or token into source URL if necessary
     from_url = repository_record.remote_url
 
@@ -120,6 +115,19 @@ def get_repo_from_url_to_path_and_from_branch(repository_record):
             from_url = re.sub("//", f"//{quote(user, safe='')}:{quote(token, safe='')}@", from_url)
         else:
             from_url = re.sub("//", f"//{quote(token, safe='')}@", from_url)
+    return from_url
+
+
+def get_repo_from_url_to_path_and_from_branch(repository_record):
+    """Returns the from_url, to_path and from_branch of a Git Repo
+    Returns:
+        namedtuple (GitRepoInfo): (
+        from_url (str): git repo url with token or user if available,
+        to_path (Path): path to location of git repo on local machine
+        from_branch (str): current git repo branch
+    )
+    """
+    from_url = get_repo_access_url(repository_record)
 
     to_path = repository_record.filesystem_path
     from_branch = repository_record.branch
@@ -145,10 +153,9 @@ def ensure_git_repository(repository_record, logger=None, head=None):  # pylint:
     if head is not None:
         # If the repo exists and has HEAD already checked out, the repo is present and has the correct branch selected.
         with suppress(InvalidGitRepositoryError):
-            if (
-                Path(repository_record.filesystem_path).exists()
-                and Repo(repository_record.filesystem_path).head == head
-            ):
+            if Path(repository_record.filesystem_path).exists() and str(
+                Repo(repository_record.filesystem_path).rev_parse("HEAD")
+            ) == str(head):
                 return False
 
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
@@ -735,14 +742,15 @@ def refresh_code_from_repository(repository_slug, consumer=None, skip_reimport=F
             logger.debug("Unloading module %s", module_name)
             if module_name in app.loader.task_modules:
                 app.loader.task_modules.remove(module_name)
-            del sys.modules[module_name]
+            if module_name in sys.modules:
+                del sys.modules[module_name]
 
     # Unregister any previous Celery tasks from this module
     for task_name in list(app.tasks):
         if task_name.startswith(f"{repository_slug}."):
             logger.debug("Unregistering Celery task %s", task_name)
             app.tasks.unregister(task_name)
-            if consumer is not None:
+            if consumer is not None and task_name in consumer.strategies:
                 del consumer.strategies[task_name]
 
     if not skip_reimport:

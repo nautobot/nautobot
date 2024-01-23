@@ -5,7 +5,7 @@ def hex_to_rgb(hex_str):
     """
     Map a hex string like "00ff00" to individual r, g, b integer values.
     """
-    return [int(hex_str[c : c + 2], 16) for c in (0, 2, 4)]  # noqa: E203
+    return [int(hex_str[c : c + 2], 16) for c in (0, 2, 4)]
 
 
 def rgb_to_hex(r, g, b):

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
-import uuid
 import tempfile
 from unittest import mock, skip
+import uuid
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -13,16 +13,16 @@ from django.utils.timezone import make_aware, now
 from rest_framework import status
 
 from nautobot.core.choices import ColorChoices
+from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.core.testing.utils import disable_warnings
 from nautobot.core.utils.lookup import get_route_for_model
-from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.dcim.models import (
     Device,
     DeviceType,
-    Manufacturer,
     Location,
     LocationType,
+    Manufacturer,
     Rack,
     RackGroup,
 )
@@ -37,6 +37,7 @@ from nautobot.extras.choices import (
     RelationshipTypeChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
+    WebhookHttpMethodChoices,
 )
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
@@ -48,6 +49,8 @@ from nautobot.extras.models import (
     DynamicGroup,
     DynamicGroupMembership,
     ExportTemplate,
+    ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -67,14 +70,12 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.models.jobs import JobHook, JobButton
+from nautobot.extras.models.jobs import JobButton, JobHook
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
-
-from nautobot.ipam.models import IPAddress, Prefix, VLANGroup, VLAN
+from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
-
 
 User = get_user_model()
 
@@ -813,6 +814,103 @@ class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
         )
 
 
+class ExternalIntegrationTest(APIViewTestCases.APIViewTestCase):
+    model = ExternalIntegration
+    create_data = [
+        {
+            "name": "Test External Integration 1",
+            "remote_url": "ssh://example.com/test1/",
+            "verify_ssl": False,
+            "timeout": 5,
+            "extra_config": "{'foo': 'bar'}",
+            "http_method": WebhookHttpMethodChoices.METHOD_DELETE,
+            "headers": "{'header': 'fake header'}",
+            "ca_file_path": "/this/is/a/file/path",
+        },
+        {
+            "name": "Test External Integration 2",
+            "remote_url": "http://example.com/test2/",
+            "http_method": WebhookHttpMethodChoices.METHOD_POST,
+        },
+        {
+            "name": "Test External Integration 3",
+            "remote_url": "https://example.com/test3/",
+            "verify_ssl": True,
+            "timeout": 30,
+            "extra_config": "{'foo': ['bat', 'baz']}",
+            "headers": "{'new_header': 'fake header'}",
+            "ca_file_path": "/this/is/a/new/file/path",
+        },
+    ]
+    bulk_update_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}"}
+    choices_fields = ["http_method"]
+
+
+class FileProxyTest(
+    APIViewTestCases.GetObjectViewTestCase,
+    APIViewTestCases.ListObjectsViewTestCase,
+):
+    model = FileProxy
+
+    @classmethod
+    def setUpTestData(cls):
+        job = Job.objects.first()
+        job_results = (
+            JobResult.objects.create(
+                job_model=job,
+                name=job.class_path,
+                date_done=now(),
+                status=JobResultStatusChoices.STATUS_SUCCESS,
+            ),
+            JobResult.objects.create(
+                job_model=job,
+                name=job.class_path,
+                date_done=now(),
+                status=JobResultStatusChoices.STATUS_SUCCESS,
+            ),
+            JobResult.objects.create(
+                job_model=job,
+                name=job.class_path,
+                date_done=now(),
+                status=JobResultStatusChoices.STATUS_SUCCESS,
+            ),
+        )
+        cls.file_proxies = []
+        for i, job_result in enumerate(job_results):
+            file = SimpleUploadedFile(name=f"Output {i}.txt", content=f"Content {i}\n".encode("utf-8"))
+            file_proxy = FileProxy.objects.create(name=file.name, file=file, job_result=job_result)
+            cls.file_proxies.append(file_proxy)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_download_file_without_permission(self):
+        """Test `download` action without permission."""
+        url = reverse("extras-api:fileproxy-download", kwargs={"pk": self.file_proxies[0].pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_download_file_with_permission(self):
+        """Test `download` action with permission."""
+        obj_perm = ObjectPermission(
+            name="Test permission", constraints={"pk": self.file_proxies[0].pk}, actions=["view"]
+        )
+        obj_perm.validated_save()
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+        obj_perm.users.add(self.user)
+
+        # FileProxy permitted by permission
+        url = reverse("extras-api:fileproxy-download", kwargs={"pk": self.file_proxies[0].pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = b"".join(data for data in response)
+        self.assertEqual(content.decode("utf-8"), "Content 0\n")
+
+        # FileProxy not permitted by permission
+        url = reverse("extras-api:fileproxy-download", kwargs={"pk": self.file_proxies[1].pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+
+
 class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     model = GitRepository
     bulk_update_data = {
@@ -886,7 +984,6 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     def test_run_git_sync_no_celery_worker(self, mock_get_worker_count):
         """Git sync cannot be triggered if Celery is not running."""
         mock_get_worker_count.return_value = 0
-        self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
@@ -900,7 +997,6 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     def test_run_git_sync_nonexistent_repo(self, mock_get_worker_count):
         """Git sync request handles case of a nonexistent repository."""
         mock_get_worker_count.return_value = 1
-        self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": "11111111-1111-1111-1111-111111111111"})
         response = self.client.post(url, format="json", **self.header)
@@ -919,7 +1015,6 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
     def test_run_git_sync_with_permissions(self, _):
         """Git sync request can be submitted successfully."""
-        self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
@@ -3106,7 +3201,7 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
             test_secret = Secret.objects.create(
                 name="secret-check-test-not-accessible",
                 provider="text-file",
-                parameters={"path": "/tmp/does-not-matter"},
+                parameters={"path": "/tmp/does-not-matter"},  # noqa: S108  # hardcoded-temp-file -- false positive
             )
             response = self.client.get(reverse("extras-api:secret-check", kwargs={"pk": test_secret.pk}), **self.header)
             self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
@@ -3131,7 +3226,7 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
             test_secret = Secret.objects.create(
                 name="secret-check-test-failed",
                 provider="text-file",
-                parameters={"path": "/tmp/does-not-exist"},
+                parameters={"path": "/tmp/does-not-exist"},  # noqa: S108  # hardcoded-temp-file -- false positive
             )
             response = self.client.get(reverse("extras-api:secret-check", kwargs={"pk": test_secret.pk}), **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)

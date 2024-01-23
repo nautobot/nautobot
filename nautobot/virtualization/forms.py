@@ -19,21 +19,21 @@ from nautobot.core.forms import (
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.constants import INTERFACE_MTU_MAX, INTERFACE_MTU_MIN
-from nautobot.dcim.forms import InterfaceCommonForm, INTERFACE_MODE_HELP_TEXT
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
+from nautobot.dcim.forms import INTERFACE_MODE_HELP_TEXT, InterfaceCommonForm
 from nautobot.dcim.models import Device, Location, Platform, Rack
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
-    NautobotBulkEditForm,
-    NautobotModelForm,
-    NautobotFilterForm,
     LocalContextFilterForm,
-    LocalContextModelForm,
     LocalContextModelBulkEditForm,
+    LocalContextModelForm,
+    NautobotBulkEditForm,
+    NautobotFilterForm,
+    NautobotModelForm,
     RoleModelBulkEditFormMixin,
     RoleModelFilterFormMixin,
     StatusModelBulkEditFormMixin,
@@ -44,8 +44,8 @@ from nautobot.extras.models import Status
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
-from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
+from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 #
 # Cluster types
@@ -404,7 +404,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         required=False,
         label="Untagged VLAN",
         query_params={
-            "location_id": "null",
+            "location": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
@@ -412,7 +412,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         required=False,
         label="Tagged VLANs",
         query_params={
-            "location_id": "null",
+            "location": "null",
         },
     )
     ip_addresses = DynamicModelMultipleChoiceField(
@@ -502,14 +502,14 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location_id": "null",
+            "location": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location_id": "null",
+            "location": "null",
         },
     )
     status = DynamicModelChoiceField(
@@ -570,14 +570,14 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location_id": "null",
+            "location": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location_id": "null",
+            "location": "null",
         },
     )
 

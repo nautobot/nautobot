@@ -1,11 +1,11 @@
 from unittest import skipIf
 
-import netaddr
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import connection, IntegrityError
 from django.db.models import ProtectedError
 from django.test import TestCase
+import netaddr
 
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim import choices as dcim_choices
@@ -13,6 +13,7 @@ from nautobot.dcim.models import Device, DeviceType, Interface, Location, Locati
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
+    get_default_namespace,
     IPAddress,
     IPAddressToInterface,
     Namespace,
@@ -23,7 +24,6 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
-    get_default_namespace,
 )
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
@@ -867,7 +867,7 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
 
     def test_multiple_nat_outside_list(self):
         """
-        Test suite to test supporing nat_outside_list.
+        Test suite to test supporting nat_outside_list.
         """
         Prefix.objects.create(prefix="192.168.0.0/24", status=self.status, namespace=self.namespace)
         nat_inside = IPAddress.objects.create(address="192.168.0.1/24", status=self.status, namespace=self.namespace)
@@ -997,6 +997,34 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
             type=PrefixTypeChoices.TYPE_NETWORK,
         )
         ip.validated_save()
+
+    def test_change_parent_and_namespace(self):
+        namespaces = (
+            Namespace.objects.create(name="test_change_parent 1"),
+            Namespace.objects.create(name="test_change_parent 2"),
+        )
+        prefixes = (
+            Prefix.objects.create(
+                prefix="10.0.0.0/8", status=self.status, namespace=namespaces[0], type=PrefixTypeChoices.TYPE_NETWORK
+            ),
+            Prefix.objects.create(
+                prefix="10.0.0.0/16", status=self.status, namespace=namespaces[1], type=PrefixTypeChoices.TYPE_NETWORK
+            ),
+        )
+
+        ip = IPAddress(address="10.0.0.1", status=self.status, namespace=namespaces[0])
+        ip.validated_save()
+        ip.refresh_from_db()
+        self.assertEqual(ip.parent, prefixes[0])
+
+        ip.parent = prefixes[1]
+        ip.validated_save()
+        ip.refresh_from_db()
+        self.assertEqual(ip.parent, prefixes[1])
+
+        ip._namespace = namespaces[0]
+        ip.validated_save()
+        self.assertEqual(ip.parent, prefixes[0])
 
     def test_varbinary_ip_fields_with_empty_values_do_not_violate_not_null_constrains(self):
         # Assert that an error is triggered when the host is not provided.

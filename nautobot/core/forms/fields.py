@@ -8,15 +8,15 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
 from django.db.models import Q
-from django.forms.fields import BoundField, InvalidJSONInput
-from django.forms.fields import JSONField as _JSONField
+from django.forms.fields import BoundField, InvalidJSONInput, JSONField as _JSONField
+from django.templatetags.static import static
 from django.urls import reverse
+from django.utils.html import format_html
 import django_filters
 from netaddr import EUI
 from netaddr.core import AddrFormatError
 
-from nautobot.core import choices as core_choices
-from nautobot.core import forms
+from nautobot.core import choices as core_choices, forms
 from nautobot.core.forms import widgets
 from nautobot.core.models import validators
 from nautobot.core.utils import data as data_utils, lookup
@@ -374,12 +374,16 @@ class CommentField(django_forms.CharField):
 
     widget = django_forms.Textarea
     default_label = ""
-    # TODO: Port Markdown cheat sheet to internal documentation
-    default_helptext = (
-        '<i class="mdi mdi-information-outline"></i> '
-        '<a href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet" target="_blank">'
-        "Markdown</a> syntax is supported"
-    )
+
+    @property
+    def default_helptext(self):
+        # TODO: Port Markdown cheat sheet to internal documentation
+        return format_html(
+            '<i class="mdi mdi-information-outline"></i> '
+            '<a href="https://www.markdownguide.org/cheat-sheet/#basic-syntax" rel="noopener noreferrer">Markdown</a> '
+            'syntax is supported, as well as <a href="{}#render_markdown">a limited subset of HTML</a>.',
+            static("docs/user-guide/platform-functionality/template-filters.html"),
+        )
 
     def __init__(self, *args, **kwargs):
         required = kwargs.pop("required", False)

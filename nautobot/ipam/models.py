@@ -1,13 +1,13 @@
 import logging
 import operator
 
-import netaddr
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError, MultipleObjectsReturned
+from django.core.exceptions import MultipleObjectsReturned, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 from django.utils.functional import cached_property
+import netaddr
 
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField
@@ -19,10 +19,10 @@ from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices, constants
 from nautobot.virtualization.models import VMInterface
+
 from .fields import VarbinaryIPField
 from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet
 from .validators import DNSValidator
-
 
 __all__ = (
     "IPAddress",
@@ -101,10 +101,10 @@ class VRF(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, db_index=True)
-    rd = models.CharField(
+    rd = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- see below
         max_length=constants.VRF_RD_MAX_LENGTH,
         blank=True,
-        null=True,
+        null=True,  # because rd is optional but part of a uniqueness constraint
         verbose_name="Route distinguisher",
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
@@ -257,6 +257,7 @@ class VRF(PrimaryModel):
         return instance.delete()
 
 
+@extras_features("graphql")
 class VRFDeviceAssignment(BaseModel):
     vrf = models.ForeignKey("ipam.VRF", on_delete=models.CASCADE, related_name="device_assignments")
     device = models.ForeignKey(
@@ -265,10 +266,10 @@ class VRFDeviceAssignment(BaseModel):
     virtual_machine = models.ForeignKey(
         "virtualization.VirtualMachine", null=True, blank=True, on_delete=models.CASCADE, related_name="vrf_assignments"
     )
-    rd = models.CharField(
+    rd = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- see below
         max_length=constants.VRF_RD_MAX_LENGTH,
         blank=True,
-        null=True,
+        null=True,  # because rd is optional but (will be) part of a uniqueness constraint
         verbose_name="Route distinguisher",
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
@@ -306,6 +307,7 @@ class VRFDeviceAssignment(BaseModel):
             raise ValidationError("A VRF must be associated with either a device or a virtual machine.")
 
 
+@extras_features("graphql")
 class VRFPrefixAssignment(BaseModel):
     vrf = models.ForeignKey("ipam.VRF", on_delete=models.CASCADE, related_name="+")
     prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="vrf_assignments")
@@ -1039,21 +1041,14 @@ class IPAddress(PrimaryModel):
         verbose_name_plural = "IP addresses"
         unique_together = ["parent", "host"]
 
-    def __init__(self, *args, **kwargs):
-        address = kwargs.pop("address", None)
-        namespace = kwargs.pop("namespace", None)
+    def __init__(self, *args, address=None, namespace=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # If namespace wasn't provided, but parent was, we'll use the parent's namespace.
-        if namespace is None and self.parent is not None:
-            namespace = self.parent.namespace
+        if namespace is not None and not self.present_in_database:
+            self._provided_namespace = namespace
 
-        if namespace is None:
-            namespace = get_default_namespace()
-
-        self._namespace = namespace
-
-        self._deconstruct_address(address)
+        if address is not None and not self.present_in_database:
+            self._deconstruct_address(address)
 
     def __str__(self):
         return str(self.address)
@@ -1101,10 +1096,6 @@ class IPAddress(PrimaryModel):
         if self.type == choices.IPAddressTypeChoices.TYPE_SLAAC and self.ip_version != 6:
             raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
 
-        # If neither `parent` or `namespace` was provided; raise this exception
-        if self._namespace is None:
-            raise ValidationError({"parent": "Either a parent or a namespace must be provided."})
-
         closest_parent = self._get_closest_parent()
         # Validate `parent` can be used as the parent for this ipaddress
         if self.parent and closest_parent:
@@ -1118,6 +1109,7 @@ class IPAddress(PrimaryModel):
                     }
                 )
             self.parent = closest_parent
+            self._namespace = None
 
     def save(self, *args, **kwargs):
         # 3.0 TODO: uncomment the below to enforce this constraint
@@ -1133,6 +1125,7 @@ class IPAddress(PrimaryModel):
         closest_parent = self._get_closest_parent()
         if closest_parent is not None:
             self.parent = closest_parent
+            self._namespace = None
         super().save(*args, **kwargs)
 
     @property
@@ -1179,6 +1172,22 @@ class IPAddress(PrimaryModel):
 
         return query
 
+    @property
+    def _namespace(self):
+        # if a namespace was explicitly set, use it
+        if getattr(self, "_provided_namespace", None):
+            return self._provided_namespace
+        if self.parent is not None:
+            return self.parent.namespace
+        return get_default_namespace()
+
+    @_namespace.setter
+    def _namespace(self, namespace):
+        # unset parent when namespace is changed
+        if namespace:
+            self.parent = None
+        self._provided_namespace = namespace
+
     # 2.0 TODO: Remove exception, getter, setter below when we can safely deprecate previous properties
     class NATOutsideMultipleObjectsReturned(MultipleObjectsReturned):
         """
@@ -1192,8 +1201,9 @@ class IPAddress(PrimaryModel):
             return f"Multiple IPAddress objects specify this object (pk: {self.obj.pk}) as nat_inside. Please refer to nat_outside_list."
 
 
+@extras_features("graphql")
 class IPAddressToInterface(BaseModel):
-    ip_address = models.ForeignKey("ipam.IPAddress", on_delete=models.CASCADE, related_name="+")
+    ip_address = models.ForeignKey("ipam.IPAddress", on_delete=models.CASCADE, related_name="interface_assignments")
     interface = models.ForeignKey(
         "dcim.Interface", blank=True, null=True, on_delete=models.CASCADE, related_name="ip_address_assignments"
     )

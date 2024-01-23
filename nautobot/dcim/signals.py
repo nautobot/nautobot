@@ -2,22 +2,23 @@ import logging
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db.models.signals import m2m_changed, post_save, pre_delete
 from django.db import transaction
+from django.db.models.signals import m2m_changed, post_save, pre_delete
 from django.dispatch import receiver
 
 from nautobot.core.signals import disable_for_loaddata
+
 from .models import (
     Cable,
     CablePath,
     Device,
     DeviceRedundancyGroup,
+    Interface,
     PathEndpoint,
     PowerPanel,
     Rack,
     RackGroup,
     VirtualChassis,
-    Interface,
 )
 from .utils import validate_interface_tagged_vlans
 

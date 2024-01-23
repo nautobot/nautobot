@@ -1,13 +1,11 @@
 import logging
 
 from django.db.utils import ProgrammingError
-
 import graphene
 from health_check.plugins import plugin_dir
 
 from nautobot.core.apps import NautobotConfig
 from nautobot.core.signals import nautobot_database_ready
-
 
 logger = logging.getLogger(__name__)
 
@@ -17,12 +15,13 @@ class ExtrasConfig(NautobotConfig):
 
     def ready(self):
         super().ready()
-        import nautobot.extras.signals  # noqa
+        import nautobot.extras.signals  # noqa: F401  # unused-import -- but this import installs the signals
         from nautobot.extras.signals import refresh_job_models
 
         nautobot_database_ready.connect(refresh_job_models, sender=self)
 
         from graphene_django.converter import convert_django_field
+
         from nautobot.core.models.fields import TagsField
         from nautobot.extras.graphql.types import TagType
 
@@ -51,8 +50,8 @@ class ExtrasConfig(NautobotConfig):
         plugin_dir.register(RedisBackend)
 
         # Register built-in SecretsProvider classes
-        from nautobot.extras.secrets.providers import EnvironmentVariableSecretsProvider, TextFileSecretsProvider
         from nautobot.extras.secrets import register_secrets_provider
+        from nautobot.extras.secrets.providers import EnvironmentVariableSecretsProvider, TextFileSecretsProvider
 
         register_secrets_provider(EnvironmentVariableSecretsProvider)
         register_secrets_provider(TextFileSecretsProvider)

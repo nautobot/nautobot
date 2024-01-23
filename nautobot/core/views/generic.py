@@ -1,5 +1,4 @@
 from copy import deepcopy
-from io import BytesIO
 import logging
 import re
 
@@ -11,7 +10,7 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError,
 )
-from django.db import transaction, IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import ManyToManyField, ProtectedError
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse, JsonResponse
@@ -21,11 +20,8 @@ from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_tables2 import RequestConfig
-from rest_framework.exceptions import ParseError
 
-from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.utils import get_serializer_for_model
-from nautobot.core.forms import SearchForm
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -34,24 +30,27 @@ from nautobot.core.forms import (
     CSVDataField,
     CSVFileField,
     ImportForm,
-    TableConfigForm,
     restrict_form_fields,
+    SearchForm,
+    TableConfigForm,
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     get_filterable_params_from_filter_params,
     normalize_querydict,
 )
-from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
     check_filter_for_display,
     get_csv_form_fields_from_serializer_class,
     handle_protectederror,
+    import_csv_helper,
     prepare_cloned_fields,
 )
 from nautobot.extras.models import ExportTemplate
@@ -101,6 +100,8 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         Generic GET handler for accessing an object.
         """
         instance = get_object_or_404(self.queryset, **kwargs)
+        # Get the ObjectChange records to populate the advanced tab information
+        created_by, last_updated_by = get_created_and_last_updated_usernames_for_model(instance)
 
         # TODO: this feels inelegant - should the tabs lookup be a dedicated endpoint rather than piggybacking
         # on the object-retrieve endpoint?
@@ -128,6 +129,8 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                     "object": instance,
                     "verbose_name": self.queryset.model._meta.verbose_name,
                     "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+                    "created_by": created_by,
+                    "last_updated_by": last_updated_by,
                     **self.get_extra_context(request, instance),
                 },
             )
@@ -153,7 +156,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     template_name = "generic/object_list.html"
     action_buttons = ("add", "import", "export")
     non_filter_params = (
-        "export",  # trigger for CSV/export-template/YAML export
+        "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
@@ -167,7 +170,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
 
-    # TODO: remove this as well?
+    # 3.0 TODO: remove, irrelevant after #4746
     def queryset_to_yaml(self):
         """
         Export the queryset of objects as concatenated YAML documents.
@@ -230,7 +233,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 filter_form = self.filterset_form(filter_params, label_suffix="")
 
         # Check for export template rendering
-        if request.GET.get("export"):
+        if request.GET.get("export"):  # 3.0 TODO: remove, irrelevant after #4746
             et = get_object_or_404(
                 ExportTemplate,
                 content_type=content_type,
@@ -245,7 +248,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 )
 
         # Check for YAML export support
-        elif "export" in request.GET and hasattr(model, "to_yaml"):
+        elif "export" in request.GET and hasattr(model, "to_yaml"):  # 3.0 TODO: remove, irrelevant after #4746
             response = HttpResponse(self.queryset_to_yaml(), content_type="text/yaml")
             filename = f"{settings.BRANDING_PREPENDED_FILENAME}{self.queryset.model._meta.verbose_name_plural}.yaml"
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
@@ -846,28 +849,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             try:
                 # Iterate through CSV data and bind each row to a new model form instance.
                 with transaction.atomic():
-                    if request.FILES:
-                        field_name = "csv_file"
-                    else:
-                        field_name = "csv_data"
-                    csvtext = form.cleaned_data[field_name]
-
-                    try:
-                        data = NautobotCSVParser().parse(
-                            stream=BytesIO(csvtext.encode("utf-8")),
-                            parser_context={"request": request, "serializer_class": self.serializer_class},
-                        )
-                        serializer = self.serializer_class(data=data, context={"request": request}, many=True)
-                        if serializer.is_valid():
-                            new_objs = serializer.save()
-                        else:
-                            for row, errors in enumerate(serializer.errors, start=1):
-                                for field, err in errors.items():
-                                    form.add_error(field_name, f"Row {row}: {field}: {err[0]}")
-                            raise ValidationError("")
-                    except ParseError as exc:
-                        form.add_error(None, str(exc))
-                        raise ValidationError("")
+                    new_objs = import_csv_helper(request=request, form=form, serializer_class=self.serializer_class)
 
                     # Enforce object-level permissions
                     if self.queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
@@ -1068,6 +1050,9 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         if not table.rows:
             messages.warning(request, f"No {model._meta.verbose_name_plural} were selected.")
             return redirect(self.get_return_url(request))
+        # Hide actions column if present
+        if "actions" in table.columns:
+            table.columns.hide("actions")
 
         context = {
             "form": form,
@@ -1261,6 +1246,9 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 f"No {model._meta.verbose_name_plural} were selected for deletion.",
             )
             return redirect(self.get_return_url(request))
+        # Hide actions column if present
+        if "actions" in table.columns:
+            table.columns.hide("actions")
 
         context = {
             "form": form,

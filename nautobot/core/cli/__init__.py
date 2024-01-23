@@ -11,7 +11,6 @@ from jinja2 import BaseLoader, Environment
 from nautobot.core.runner import run_app
 from nautobot.extras.plugins.utils import load_plugins
 
-
 # Default file location for the generated config emitted by `init`
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 DEFAULT_CONFIG_PATH = os.path.join(NAUTOBOT_ROOT, "nautobot_config.py")
@@ -73,7 +72,8 @@ def generate_settings(config_template=CONFIG_TEMPLATE, **kwargs):
     }
 
     with open(config_template) as fh:
-        environment = Environment(loader=BaseLoader, keep_trailing_newline=True)
+        # We don't need autoescape=True since we control the template file
+        environment = Environment(loader=BaseLoader, keep_trailing_newline=True)  # noqa: S701  # jinja2-autoescape-false
         config = environment.from_string(fh.read())
 
     return config.render(**template_vars)

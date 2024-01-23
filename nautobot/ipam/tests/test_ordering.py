@@ -1,5 +1,5 @@
-from unittest import skip
 from operator import attrgetter
+from unittest import skip
 
 from nautobot.core.testing import TestCase
 from nautobot.ipam.models import IPAddress, Prefix

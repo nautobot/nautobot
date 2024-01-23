@@ -1,10 +1,10 @@
+from functools import cached_property
+
 from django.core.cache import cache
-
 from tree_queries.models import TreeNode
-from tree_queries.query import TreeManager as TreeManager_
-from tree_queries.query import TreeQuerySet as TreeQuerySet_
+from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as TreeQuerySet_
 
-from nautobot.core.models import querysets, BaseManager
+from nautobot.core.models import BaseManager, querysets
 
 
 class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
@@ -29,6 +29,10 @@ class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):
 
     _with_tree_fields = True
     use_in_migrations = True
+
+    @cached_property
+    def max_depth(self):
+        return self.max_tree_depth()
 
 
 class TreeModel(TreeNode):

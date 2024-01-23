@@ -8,7 +8,7 @@ More information on Tenants can be found in the [Tenants](../../core-data-model/
 
 To create a Tenant:
 
-1. Click on **Organization** on the top navigation menu
+1. Click on **Organization** on the left sidebar menu
 2. Find **Tenants** and click on the `+`
 3. Populate the `Name` field
 4. Click the `Create` button
@@ -19,7 +19,7 @@ To create a Tenant:
 
 It is simple to assign a Tenant to an existing object. This next example will add a Tenant to an existing Device.
 
-1. Click on **Devices** in the top navigation menu
+1. Click on **Devices** in the left sidebar menu
 2. Look for the **Devices** option and click on it
     * This will take you to the **Devices** page
 3. Click on the specific Device you want to add the Tenant to
