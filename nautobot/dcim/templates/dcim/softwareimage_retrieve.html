@@ -30,7 +30,7 @@
                                     <td>
                                         {% if object.image_file_name %}
                                         <span class="hover_copy">
-                                            <span id="copy_image_file_name"><code>{{ object.image_file_name }}</code></span>
+                                            <span id="copy_image_file_name">{{ object.image_file_name }}</span>
                                             <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_image_file_name">
                                                 <span class="mdi mdi-content-copy"></span>
                                             </button>
@@ -45,7 +45,7 @@
                                     <td>
                                         {% if object.image_file_checksum %}
                                         <span class="hover_copy">
-                                            <span id="copy_image_file_checksum"><code>{{ object.image_file_checksum }}</code></span>
+                                            <span id="copy_image_file_checksum">{{ object.image_file_checksum }}</span>
                                             <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_image_file_checksum">
                                                 <span class="mdi mdi-content-copy"></span>
                                             </button>
@@ -57,18 +57,28 @@
                                 </tr>
                                 <tr>
                                     <td>Hashing Algorithm</td>
-                                    <td>{{ object.hashing_algorithm|placeholder }}</td>
+                                    <td>{{ object.get_hashing_algorithm_display|placeholder }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Image File Size (bytes)</td>
+                                    <td>
+                                        {% if object.image_file_checksum %}
+                                        <span class="hover_copy">
+                                            <span id="copy_image_file_size">{{ object.image_file_size }}</span>
+                                            <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_image_file_size">
+                                                <span class="mdi mdi-content-copy"></span>
+                                            </button>
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">&mdash;</span>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td>Download URL</td>
                                     <td>
                                         {% if object.download_url %}
-                                        <span class="hover_copy">
-                                            <span id="copy_image_file_checksum"><code>{{ object.download_url }}</code></span>
-                                            <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_image_file_checksum">
-                                                <span class="mdi mdi-content-copy"></span>
-                                            </button>
-                                        </span>
+                                        <a href="{{ object.download_url }}" target="_blank">{{ object.download_url }}</a>
                                         {% else %}
                                         <span class="text-muted">&mdash;</span>
                                         {% endif %}

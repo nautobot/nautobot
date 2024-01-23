@@ -77,6 +77,7 @@ from .choices import (
     RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
+    SoftwareImageHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
 from .constants import (
@@ -703,6 +704,11 @@ class DeviceTypeForm(NautobotModelForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all())
     hardware_family = DynamicModelChoiceField(queryset=HardwareFamily.objects.all(), required=False)
     comments = CommentField()
+    software_images = DynamicModelMultipleChoiceField(
+        queryset=SoftwareImage.objects.all(),
+        required=False,
+        label="Software images",
+    )
 
     class Meta:
         model = DeviceType
@@ -714,6 +720,7 @@ class DeviceTypeForm(NautobotModelForm):
             "u_height",
             "is_full_depth",
             "subdevice_role",
+            "software_images",
             "front_image",
             "rear_image",
             "comments",
@@ -2775,6 +2782,11 @@ class InventoryItemForm(NautobotModelForm):
         query_params={"device": "$device"},
     )
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+    software_images = DynamicModelMultipleChoiceField(
+        queryset=SoftwareImage.objects.all(),
+        required=False,
+        label="Software images",
+    )
 
     class Meta:
         model = InventoryItem
@@ -2784,6 +2796,7 @@ class InventoryItemForm(NautobotModelForm):
             "name",
             "label",
             "manufacturer",
+            "software_images",
             "part_id",
             "serial",
             "asset_tag",
@@ -2808,12 +2821,18 @@ class InventoryItemCreateForm(ComponentCreateForm):
         max_length=50,
         required=False,
     )
+    software_images = DynamicModelMultipleChoiceField(
+        queryset=SoftwareImage.objects.all(),
+        required=False,
+        label="Software images",
+    )
     field_order = (
         "device",
         "parent",
         "name_pattern",
         "label_pattern",
         "manufacturer",
+        "software_images",
         "part_id",
         "serial",
         "asset_tag",
@@ -3762,6 +3781,29 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
 #
 
 
+class SoftwareImageBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=SoftwareImage.objects.all(), widget=forms.MultipleHiddenInput)
+    software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
+    image_file_name = forms.CharField(required=False)
+    image_file_checksum = forms.CharField(required=False)
+    hashing_algorithm = forms.ChoiceField(
+        choices=add_blank_choice(SoftwareImageHashingAlgorithmChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    image_file_size = forms.IntegerField(required=False)
+    download_url = forms.URLField(required=False)
+
+    class Meta:
+        model = SoftwareImage
+        nullable_fields = [
+            "image_file_checksum",
+            "hashing_algorithm",
+            "image_file_size",
+            "download_url",
+        ]
+
+
 class SoftwareImageForm(NautobotModelForm):
     """SoftwareImage credit/edit form."""
 
@@ -3774,6 +3816,28 @@ class SoftwareImageForm(NautobotModelForm):
     class Meta:
         model = SoftwareImage
         fields = "__all__"
+
+
+class SoftwareVersionBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=SoftwareVersion.objects.all(), widget=forms.MultipleHiddenInput)
+    platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
+    alias = forms.CharField(required=False)
+    release_date = NullableDateField(required=False, widget=DatePicker())
+    end_of_support_date = NullableDateField(required=False, widget=DatePicker())
+    documentation_url = forms.URLField(required=False)
+    long_term_support = forms.NullBooleanField(
+        required=False, widget=BulkEditNullBooleanSelect, label="Long Term Support"
+    )
+    pre_release = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Pre-Release")
+
+    class Meta:
+        model = SoftwareVersion
+        nullable_fields = [
+            "alias",
+            "release_date",
+            "end_of_support_date",
+            "documentation_url",
+        ]
 
 
 class SoftwareVersionForm(NautobotModelForm):

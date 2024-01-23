@@ -1017,6 +1017,27 @@ class DeviceBay(ComponentModel):
 #
 
 
+@extras_features("graphql")
+class InventoryItemToSoftwareImage(BaseModel):
+    inventory_item = models.ForeignKey(
+        "dcim.InventoryItem", on_delete=models.CASCADE, related_name="software_image_mappings"
+    )
+    software_image = models.ForeignKey(
+        "dcim.SoftwareImage", on_delete=models.PROTECT, related_name="inventory_item_mappings"
+    )
+    is_default = models.BooleanField(default=False, help_text="Is the default image for this inventory item")
+
+    class Meta:
+        unique_together = [
+            ["inventory_item", "software_image"],
+        ]
+        verbose_name = "Inventory Item to Software Image mapping"
+        verbose_name_plural = "Inventory Item to Software Image mappings"
+
+    def __str__(self):
+        return f"{self.inventory_item!s} - {self.software_image!s}"
+
+
 @extras_features(
     "custom_validators",
     "export_templates",
@@ -1052,6 +1073,13 @@ class InventoryItem(TreeModel, ComponentModel):
         help_text="A unique tag used to identify this item",
     )
     discovered = models.BooleanField(default=False, help_text="This item was automatically discovered")
+    software_images = models.ManyToManyField(
+        to="dcim.SoftwareImage",
+        through=InventoryItemToSoftwareImage,
+        related_name="inventory_items",
+        blank=True,
+        verbose_name="Software Images",
+    )
 
     class Meta:
         ordering = ("_name",)

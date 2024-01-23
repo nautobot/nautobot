@@ -221,6 +221,14 @@ class VirtualMachine(PrimaryModel, ConfigContextModel):
     memory = models.PositiveIntegerField(blank=True, null=True, verbose_name="Memory (MB)")
     disk = models.PositiveIntegerField(blank=True, null=True, verbose_name="Disk (GB)")
     comments = models.TextField(blank=True)
+    software_image = models.ForeignKey(
+        to="dcim.SoftwareImage",
+        on_delete=models.PROTECT,
+        related_name="virtual_machines",
+        blank=True,
+        null=True,
+        help_text="The software image running on this virtual machine",
+    )
 
     objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
 

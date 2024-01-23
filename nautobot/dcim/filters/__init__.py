@@ -1630,6 +1630,15 @@ class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet, NameSearchFilt
 class SoftwareImageFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     """Filters for SoftwareImage model."""
 
+    q = SearchFilter(
+        filter_predicates={
+            "image_file_name": "icontains",
+            "software_version__version": "icontains",
+            "software_version__alias": "icontains",
+            "software_version__platform__name": "icontains",
+        }
+    )
+
     class Meta:
         model = SoftwareImage
         fields = "__all__"
@@ -1637,6 +1646,14 @@ class SoftwareImageFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
 
 class SoftwareVersionFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     """Filters for SoftwareVersion model."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "version": "icontains",
+            "alias": "icontains",
+            "platform__name": "icontains",
+        }
+    )
 
     class Meta:
         model = SoftwareVersion

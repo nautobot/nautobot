@@ -58,5 +58,19 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-{% include 'panel_table.html' with table=software_images_table heading='Software Images' %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>Software Images</strong>
+    </div>
+    <div class="table-responsive">
+        {% include 'inc/table.html' with table=software_images_table %}
+    </div>
+    {% if perms.dcim.add_softwareimage %}
+        <div class="panel-footer text-right noprint">
+            <a href="{% url 'dcim:softwareimage_add' %}?software_version={{ object.pk }}&return_url={% url 'dcim:softwareversion' pk=object.pk %}" class="btn btn-xs btn-primary">
+                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Software Image
+            </a>
+        </div>
+    {% endif %}
+</div>
 {% endblock content_right_page %}

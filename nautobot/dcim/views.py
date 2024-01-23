@@ -663,6 +663,12 @@ class DeviceTypeView(generic.ObjectView):
             rear_port_table.columns.show("pk")
             devicebay_table.columns.show("pk")
 
+        software_images_table = tables.SoftwareImageTable(
+            instance.software_images.restrict(request.user, "view"),
+            orderable=False,
+            exclude=["device_types"],
+        )
+
         return {
             "instance_count": instance_count,
             "consoleport_table": consoleport_table,
@@ -673,6 +679,7 @@ class DeviceTypeView(generic.ObjectView):
             "front_port_table": front_port_table,
             "rear_port_table": rear_port_table,
             "devicebay_table": devicebay_table,
+            "software_images_table": software_images_table,
         }
 
 
@@ -2099,7 +2106,16 @@ class InventoryItemView(generic.ObjectView):
     queryset = InventoryItem.objects.all()
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_inventory"}
+        software_images_table = tables.SoftwareImageTable(
+            instance.software_images.restrict(request.user, "view"),
+            orderable=False,
+            exclude=["inventory_items"],
+        )
+
+        return {
+            "breadcrumb_url": "dcim:device_inventory",
+            "software_images_table": software_images_table,
+        }
 
 
 class InventoryItemEditView(generic.ObjectEditView):
@@ -2934,7 +2950,7 @@ class HardwareFamilyUIViewSet(NautobotUIViewSet):
 class SoftwareImageUIViewSet(NautobotUIViewSet):
     filterset_class = filters.SoftwareImageFilterSet
     form_class = forms.SoftwareImageForm
-    # bulk_update_form_class = forms.SoftwareImageBulkEditForm
+    bulk_update_form_class = forms.SoftwareImageBulkEditForm
     queryset = SoftwareImage.objects.select_related("software_version")
     serializer_class = serializers.SoftwareImageSerializer
     table_class = tables.SoftwareImageTable
@@ -2943,7 +2959,7 @@ class SoftwareImageUIViewSet(NautobotUIViewSet):
 class SoftwareVersionUIViewSet(NautobotUIViewSet):
     filterset_class = filters.SoftwareVersionFilterSet
     form_class = forms.SoftwareVersionForm
-    # bulk_update_form_class = forms.SoftwareVersionBulkEditForm
+    bulk_update_form_class = forms.SoftwareVersionBulkEditForm
     queryset = SoftwareVersion.objects.select_related("platform")
     serializer_class = serializers.SoftwareVersionSerializer
     table_class = tables.SoftwareVersionTable
@@ -2954,7 +2970,7 @@ class SoftwareVersionUIViewSet(NautobotUIViewSet):
 
         software_images = instance.software_images.restrict(request.user, "view")
         software_images_table = tables.SoftwareImageTable(
-            software_images, orderable=False, exclude=["software_version"]
+            software_images, orderable=False, exclude=["software_version", "actions"]
         )
 
         return {

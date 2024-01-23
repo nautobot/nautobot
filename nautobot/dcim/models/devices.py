@@ -14,7 +14,7 @@ import yaml
 
 from nautobot.core.models import BaseManager, RestrictedQuerySet
 from nautobot.core.models.fields import NaturalOrderingField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import (
     DeviceFaceChoices,
@@ -98,6 +98,25 @@ class HardwareFamily(PrimaryModel):
         return self.name
 
 
+@extras_features("graphql")
+class DeviceTypeToSoftwareImage(BaseModel):
+    device_type = models.ForeignKey("dcim.DeviceType", on_delete=models.CASCADE, related_name="software_image_mappings")
+    software_image = models.ForeignKey(
+        "dcim.SoftwareImage", on_delete=models.PROTECT, related_name="device_type_mappings"
+    )
+    is_default = models.BooleanField(default=False, help_text="Is the default image for this device type")
+
+    class Meta:
+        unique_together = [
+            ["device_type", "software_image"],
+        ]
+        verbose_name = "Device Type to Software Image mapping"
+        verbose_name_plural = "Device Type to Software Image mappings"
+
+    def __str__(self):
+        return f"{self.device_type!s} - {self.software_image!s}"
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -150,6 +169,13 @@ class DeviceType(PrimaryModel):
     )
     front_image = models.ImageField(upload_to="devicetype-images", blank=True)
     rear_image = models.ImageField(upload_to="devicetype-images", blank=True)
+    software_images = models.ManyToManyField(
+        to="dcim.SoftwareImage",
+        through=DeviceTypeToSoftwareImage,
+        related_name="device_types",
+        blank=True,
+        verbose_name="Software Images",
+    )
     comments = models.TextField(blank=True)
 
     clone_fields = [
@@ -526,6 +552,14 @@ class Device(PrimaryModel, ConfigContextModel):
         validators=[MinValueValidator(1)],
         verbose_name="Device Redundancy Group Priority",
         help_text="The priority the device has in the device redundancy group.",
+    )
+    software_image = models.ForeignKey(
+        to="dcim.SoftwareImage",
+        on_delete=models.PROTECT,
+        related_name="devices",
+        blank=True,
+        null=True,
+        help_text="The software image running on this device",
     )
     # 2.0 TODO: Profile filtering on this field if it could benefit from an index
     vc_position = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
@@ -1031,6 +1065,12 @@ class SoftwareImage(PrimaryModel):
         max_length=255,
         verbose_name="Hashing Algorithm",
         help_text="Hashing algorithm for image file checksum",
+    )
+    image_file_size = models.PositiveBigIntegerField(
+        blank=True,
+        null=True,
+        verbose_name="Image File Size",
+        help_text="Image file size in bytes",
     )
     download_url = models.URLField(blank=True, verbose_name="Download URL")
     status = StatusField(blank=False, null=False)

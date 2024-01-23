@@ -46,3 +46,9 @@
                 </table>
             </div>
 {% endblock content_left_page %}
+
+{% block content_right_page %}
+    {% if object.software_images.count %}
+        {% include 'panel_table.html' with table=software_images_table heading='Software Images' %}
+    {% endif %}
+{% endblock content_right_page %}

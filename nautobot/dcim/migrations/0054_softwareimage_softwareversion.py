@@ -79,6 +79,7 @@ class Migration(migrations.Migration):
                 ("image_file_name", models.CharField(max_length=255)),
                 ("image_file_checksum", models.CharField(blank=True, max_length=256)),
                 ("hashing_algorithm", models.CharField(blank=True, max_length=255)),
+                ("image_file_size", models.PositiveBigIntegerField(blank=True, null=True)),
                 ("download_url", models.URLField(blank=True)),
                 (
                     "software_version",
