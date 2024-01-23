@@ -72,6 +72,103 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.10 (2024-01-22)
+
+### Security
+
+- [#5109](https://github.com/nautobot/nautobot/issues/5109) - Removed `/files/get/` URL endpoint (for viewing FileAttachment files in the browser), as it was unused and could potentially pose security issues.
+- [#5134](https://github.com/nautobot/nautobot/issues/5134) - Fixed an XSS vulnerability ([GHSA-v4xv-795h-rv4h](https://github.com/nautobot/nautobot/security/advisories/GHSA-v4xv-795h-rv4h)) in the `render_markdown()` utility function used to render comments, notes, job log entries, etc.
+
+### Added
+
+- [#5134](https://github.com/nautobot/nautobot/issues/5134) - Enhanced Markdown-supporting fields (`comments`, `description`, Notes, Job log entries, etc.) to also permit the use of a limited subset of "safe" HTML tags and attributes.
+
+### Changed
+
+- [#5132](https://github.com/nautobot/nautobot/issues/5132) - Updated poetry version for development Docker image to match 2.0.
+
+### Dependencies
+
+- [#5087](https://github.com/nautobot/nautobot/issues/5087) - Updated GitPython to version 3.1.41 to address Windows security vulnerability [GHSA-2mqj-m65w-jghx](https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-2mqj-m65w-jghx).
+- [#5087](https://github.com/nautobot/nautobot/issues/5087) - Updated Jinja2 to version 3.1.3 to address to address XSS security vulnerability [GHSA-h5c8-rqwp-cp95](https://github.com/pallets/jinja/security/advisories/GHSA-h5c8-rqwp-cp95).
+- [#5134](https://github.com/nautobot/nautobot/issues/5134) - Added `nh3` HTML sanitization library as a dependency.
+
+## v1.6.9 (2024-01-08)
+
+### Fixed
+
+- [#5042](https://github.com/nautobot/nautobot/issues/5042) - Fixed early return conditional in `ensure_git_repository`.
+
+## v1.6.8 (2023-12-21)
+
+### Security
+
+- [#4876](https://github.com/nautobot/nautobot/issues/4876) - Updated `cryptography` to `41.0.7` due to CVE-2023-49083. As this is not a direct dependency of Nautobot, it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#4988](https://github.com/nautobot/nautobot/issues/4988) - Fixed missing object-level permissions enforcement when running a JobButton ([GHSA-vf5m-xrhm-v999](https://github.com/nautobot/nautobot/security/advisories/GHSA-vf5m-xrhm-v999)).
+- [#4988](https://github.com/nautobot/nautobot/issues/4988) - Removed the requirement for users to have both `extras.run_job` and `extras.run_jobbutton` permissions to run a Job via a Job Button. Only `extras.run_job` permission is now required.
+- [#5002](https://github.com/nautobot/nautobot/issues/5002) - Updated `paramiko` to `3.4.0` due to CVE-2023-48795. As this is not a direct dependency of Nautobot, it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+### Added
+
+- [#4965](https://github.com/nautobot/nautobot/issues/4965) - Added MMF OM5 cable type to cable type choices.
+
+### Removed
+
+- [#4988](https://github.com/nautobot/nautobot/issues/4988) - Removed redundant `/extras/job-button/<uuid>/run/` URL endpoint; Job Buttons now use `/extras/jobs/<uuid>/run/` endpoint like any other job.
+
+### Fixed
+
+- [#4977](https://github.com/nautobot/nautobot/issues/4977) - Fixed early return conditional in `ensure_git_repository`.
+
+### Housekeeping
+
+- [#4988](https://github.com/nautobot/nautobot/issues/4988) - Fixed some bugs in `example_plugin.jobs.ExampleComplexJobButtonReceiver`.
+
+## v1.6.7 (2023-12-12)
+
+### Security
+
+- [#4959](https://github.com/nautobot/nautobot/issues/4959) - Enforce authentication and object permissions on DB file storage views ([GHSA-75mc-3pjc-727q](https://github.com/nautobot/nautobot/security/advisories/GHSA-75mc-3pjc-727q)).
+
+### Added
+
+- [#4873](https://github.com/nautobot/nautobot/issues/4873) - Added QSFP112 interface type to interface type choices.
+
+### Removed
+
+- [#4797](https://github.com/nautobot/nautobot/issues/4797) - Removed erroneous `custom_fields` decorator from InterfaceRedundancyGroupAssociation as it's not a supported feature for this model.
+- [#4857](https://github.com/nautobot/nautobot/issues/4857) - Removed Jathan McCollum as a point of contact in `SECURITY.md`.
+
+### Fixed
+
+- [#4142](https://github.com/nautobot/nautobot/issues/4142) - Fixed unnecessary git operations when calling `ensure_git_repository` while the desired commit is already checked out.
+- [#4917](https://github.com/nautobot/nautobot/issues/4917) - Fixed slow performance on location hierarchy html template.
+- [#4921](https://github.com/nautobot/nautobot/issues/4921) - Fixed inefficient queries in `Location.base_site`.
+
+## v1.6.6 (2023-11-21)
+
+### Security
+
+- [#4833](https://github.com/nautobot/nautobot/issues/4833) - Fixed cross-site-scripting (XSS) potential with maliciously crafted Custom Links, Computed Fields, and Job Buttons (GHSA-cf9f-wmhp-v4pr).
+
+### Changed
+
+- [#4833](https://github.com/nautobot/nautobot/issues/4833) - Changed the `render_jinja2()` API to no longer automatically call `mark_safe()` on the output.
+
+### Fixed
+
+- [#3179](https://github.com/nautobot/nautobot/issues/3179) - Fixed the error that occurred when fetching the API response for CircuitTermination with a cable connected to CircuitTermination, FrontPort, or RearPort.
+- [#4799](https://github.com/nautobot/nautobot/issues/4799) - Reduced size of Nautobot `sdist` and `wheel` packages from 69 MB to 29 MB.
+
+### Dependencies
+
+- [#4799](https://github.com/nautobot/nautobot/issues/4799) - Updated `mkdocs` development dependency to `1.5.3`.
+
+### Housekeeping
+
+- [#4799](https://github.com/nautobot/nautobot/issues/4799) - Updated docs configuration for `examples/example_plugin`.
+- [#4833](https://github.com/nautobot/nautobot/issues/4833) - Added `ruff` to invoke tasks and CI.
+
 ## v1.6.5 (2023-11-13)
 
 ### Security
