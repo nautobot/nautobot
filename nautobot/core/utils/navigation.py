@@ -15,7 +15,7 @@ def get_only_new_ui_ready_routes(patterns, prefix=""):
         prefix (str): URL pattern prefix to include when constructing route patterns.
 
     Returns:
-        list: A list of route patterns associated with view classes that use the new UI.
+        (list): A list of route patterns associated with view classes that use the new UI.
     """
     new_ui_routes = set()
     for pattern in patterns:
@@ -49,4 +49,6 @@ def get_all_new_ui_ready_routes():
 
 
 def is_route_new_ui_ready(route):
+    if route is None:
+        return False
     return any(re.compile(url).match(route.lstrip("/")) for url in registry["new_ui_ready_routes"])

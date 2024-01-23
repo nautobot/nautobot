@@ -17,7 +17,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        args = ["--verbose"] + options.pop("targets")
+        args = ["--verbose", *options.pop("targets")]
         if options.pop("recursive"):
             args.append("--recursive=y")
         run_pylint(args)

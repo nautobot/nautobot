@@ -7,13 +7,14 @@ from django_tables2 import RequestConfig
 from rest_framework import renderers
 
 from nautobot.core.forms import (
+    restrict_form_fields,
     SearchForm,
     TableConfigForm,
-    restrict_form_fields,
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
@@ -61,9 +62,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         Helper function to construct and paginate the table for rendering used in the ObjectListView, ObjectBulkUpdateView and ObjectBulkDestroyView.
         """
         table_class = view.get_table_class()
-        queryset = view.get_queryset()
+        request = kwargs.get("request", view.request)
+        queryset = view.alter_queryset(request)
         if view.action in ["list", "notes", "changelog"]:
-            request = kwargs.get("request", view.request)
             if view.action == "list":
                 permissions = kwargs.get("permissions", {})
                 table = table_class(queryset, user=request.user)
@@ -100,11 +101,15 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         else:
             pk_list = kwargs.get("pk_list", [])
             table = table_class(queryset.filter(pk__in=pk_list), orderable=False)
+            if view.action in ["bulk_destroy", "bulk_update"]:
+                # Hide actions column if present
+                if "actions" in table.columns:
+                    table.columns.hide("actions")
             return table
 
     def validate_action_buttons(self, view, request):
         """Verify actions in self.action_buttons are valid view actions."""
-        queryset = view.get_queryset()
+        queryset = view.alter_queryset(request)
         always_valid_actions = ("export",)
         valid_actions = []
         invalid_actions = []
@@ -135,8 +140,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             return {}
         view = renderer_context["view"]
         request = renderer_context["request"]
-        # Check if queryset attribute is set before doing anything.
-        queryset = view.get_queryset()
+        # Check if queryset attribute is set before doing anything
+        queryset = view.alter_queryset(request)
         model = queryset.model
         form_class = view.get_form_class()
         content_type = ContentType.objects.get_for_model(model)
@@ -145,7 +150,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         search_form = None
         instance = None
         filter_form = None
-        queryset = view.alter_queryset(request)
         display_filter_params = []
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = self.construct_user_permissions(request, model)
@@ -230,6 +234,10 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "verbose_name_plural": queryset.model._meta.verbose_name_plural,
         }
         if view.action == "retrieve":
+            created_by, last_updated_by = get_created_and_last_updated_usernames_for_model(instance)
+
+            context["created_by"] = created_by
+            context["last_updated_by"] = last_updated_by
             context.update(view.get_extra_context(request, instance))
         else:
             if view.action == "list":

@@ -2,8 +2,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 import netaddr
 
-from .formfields import IPNetworkFormField
 from . import lookups
+from .formfields import IPNetworkFormField
 
 
 class VarbinaryIPField(models.BinaryField):
@@ -87,6 +87,11 @@ class VarbinaryIPField(models.BinaryField):
         defaults = {"form_class": self.form_class()}
         defaults.update(kwargs)
         return super().formfield(*args, **defaults)
+
+    def get_default(self):
+        value = super().get_default()
+        # Prevent None or "" values from being represented as b''
+        return None if value in self.empty_values else value
 
 
 VarbinaryIPField.register_lookup(lookups.IExact)

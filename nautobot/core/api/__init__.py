@@ -17,7 +17,6 @@ from .serializers import (
     WritableNestedSerializer,
 )
 
-
 __all__ = (
     "BaseModelSerializer",
     "BulkOperationSerializer",

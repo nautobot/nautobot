@@ -1,14 +1,15 @@
 import datetime
+from io import BytesIO
 
 from django.contrib import messages
-from django.core.exceptions import FieldError
+from django.core.exceptions import FieldError, ValidationError
 from django.db.models import ForeignKey
-from django.utils.html import escape
+from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
-
-from rest_framework import serializers
+from rest_framework import exceptions, serializers
 
 from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField
+from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.models.utils import is_taggable
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_filter_field_label
@@ -97,6 +98,8 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
     """From the given serializer class, build a list of field dicts suitable for rendering in the CSV import form."""
     serializer = serializer_class(context={"request": None, "depth": 0})
     fields = []
+    # Note lots of "noqa: S308" in this function. That's `suspicious-mark-safe-usage`, but in all of the below cases
+    # we control the input string and it's known to be safe, so mark_safe() is being used correctly here.
     for field_name, field in serializer.fields.items():
         if field.read_only:
             continue
@@ -114,13 +117,13 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
                     "help_text": cf_form_field.help_text,
                 }
                 if cf.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
-                    field_info["format"] = mark_safe("<code>true</code> or <code>false</code>")
+                    field_info["format"] = mark_safe("<code>true</code> or <code>false</code>")  # noqa: S308
                 elif cf.type == CustomFieldTypeChoices.TYPE_DATE:
-                    field_info["format"] = mark_safe("<code>YYYY-MM-DD</code>")
+                    field_info["format"] = mark_safe("<code>YYYY-MM-DD</code>")  # noqa: S308
                 elif cf.type == CustomFieldTypeChoices.TYPE_SELECT:
                     field_info["choices"] = {cfc.value: cfc.value for cfc in cf.custom_field_choices.all()}
                 elif cf.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
-                    field_info["format"] = mark_safe('<code>"value,value"</code>')
+                    field_info["format"] = mark_safe('<code>"value,value"</code>')  # noqa: S308
                     field_info["choices"] = {cfc.value: cfc.value for cfc in cf.custom_field_choices.all()}
                 fields.append(field_info)
             continue
@@ -132,27 +135,27 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
             "help_text": field.help_text,
         }
         if isinstance(field, serializers.BooleanField):
-            field_info["format"] = mark_safe("<code>true</code> or <code>false</code>")
+            field_info["format"] = mark_safe("<code>true</code> or <code>false</code>")  # noqa: S308
         elif isinstance(field, serializers.DateField):
-            field_info["format"] = mark_safe("<code>YYYY-MM-DD</code>")
+            field_info["format"] = mark_safe("<code>YYYY-MM-DD</code>")  # noqa: S308
         elif isinstance(field, TimeZoneSerializerField):
-            field_info["format"] = mark_safe(
+            field_info["format"] = mark_safe(  # noqa: S308
                 '<a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">available options</a>'
             )
         elif isinstance(field, serializers.ManyRelatedField):
-            if isinstance(field.child_relation, ContentTypeField):
-                field_info["format"] = mark_safe('<code>"app_label.model,app_label.model"</code>')
+            if field.field_name == "tags":
+                field_info["format"] = mark_safe('<code>"name,name"</code> or <code>"UUID,UUID"</code>')  # noqa: S308
+            elif isinstance(field.child_relation, ContentTypeField):
+                field_info["format"] = mark_safe('<code>"app_label.model,app_label.model"</code>')  # noqa: S308
             else:
-                field_info["format"] = mark_safe(
-                    '<code>"composite_key,composite_key"</code> or <code>"UUID,UUID"</code>'
-                )
+                field_info["format"] = mark_safe('<code>"UUID,UUID"</code>')  # noqa: S308
         elif isinstance(field, serializers.RelatedField):
             if isinstance(field, ContentTypeField):
-                field_info["format"] = mark_safe("<code>app_label.model</code>")
+                field_info["format"] = mark_safe("<code>app_label.model</code>")  # noqa: S308
             else:
-                field_info["format"] = mark_safe("<code>composite_key</code> or <code>UUID</code>")
+                field_info["format"] = mark_safe("<code>UUID</code>")  # noqa: S308
         elif isinstance(field, (serializers.ListField, serializers.MultipleChoiceField)):
-            field_info["format"] = mark_safe('<code>"value,value"</code>')
+            field_info["format"] = mark_safe('<code>"value,value"</code>')  # noqa: S308
         elif isinstance(field, (serializers.DictField, serializers.JSONField)):
             pass  # Not trivial to specify a format as it could be a JSON dict or a comma-separated string
 
@@ -167,27 +170,54 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
     return fields
 
 
+def import_csv_helper(*, request, form, serializer_class):
+    field_name = "csv_file" if request.FILES else "csv_data"
+    csvtext = form.cleaned_data[field_name]
+    try:
+        data = NautobotCSVParser().parse(
+            stream=BytesIO(csvtext.encode("utf-8")),
+            parser_context={"request": request, "serializer_class": serializer_class},
+        )
+        new_objs = []
+        validation_failed = False
+        for row, entry in enumerate(data, start=1):
+            serializer = serializer_class(data=entry, context={"request": request})
+            if serializer.is_valid():
+                new_objs.append(serializer.save())
+            else:
+                validation_failed = True
+                for field, err in serializer.errors.items():
+                    form.add_error(field_name, f"Row {row}: {field}: {err[0]}")
+    except exceptions.ParseError as exc:
+        validation_failed = True
+        form.add_error(None, str(exc))
+
+    if validation_failed:
+        raise ValidationError("")
+
+    return new_objs
+
+
 def handle_protectederror(obj_list, request, e):
     """
     Generate a user-friendly error message in response to a ProtectedError exception.
     """
     protected_objects = list(e.protected_objects)
     protected_count = len(protected_objects) if len(protected_objects) <= 50 else "More than 50"
-    err_message = (
-        f"Unable to delete <strong>{', '.join(str(obj) for obj in obj_list)}</strong>. "
-        f"{protected_count} dependent objects were found: "
+    err_message = format_html(
+        "Unable to delete <strong>{}</strong>. {} dependent objects were found: ",
+        ", ".join(str(obj) for obj in obj_list),
+        protected_count,
     )
 
     # Append dependent objects to error message
-    dependent_objects = []
-    for dependent in protected_objects[:50]:
-        if hasattr(dependent, "get_absolute_url"):
-            dependent_objects.append(f'<a href="{dependent.get_absolute_url()}">{escape(dependent)}</a>')
-        else:
-            dependent_objects.append(str(dependent))
-    err_message += ", ".join(dependent_objects)
+    err_message += format_html_join(
+        ", ",
+        '<a href="{}">{}</a>',
+        ((dependent.get_absolute_url(), dependent) for dependent in protected_objects[:50]),
+    )
 
-    messages.error(request, mark_safe(err_message))
+    messages.error(request, err_message)
 
 
 def prepare_cloned_fields(instance):

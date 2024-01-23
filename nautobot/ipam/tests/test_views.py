@@ -1,16 +1,16 @@
 import datetime
 import random
 
-from netaddr import IPNetwork
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
+from django.urls import reverse
 from django.utils.html import strip_tags
 from django.utils.timezone import make_aware
-from django.urls import reverse
+from netaddr import IPNetwork
 
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.core.templatetags.helpers import queryset_to_pks
-from nautobot.core.testing import post_data, ModelViewTestCase, ViewTestCases
+from nautobot.core.testing import ModelViewTestCase, post_data, ViewTestCases
 from nautobot.core.testing.utils import extract_page_body
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
@@ -26,6 +26,7 @@ from nautobot.extras.models import (
 from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
     IPAddress,
+    IPAddressToInterface,
     Namespace,
     Prefix,
     RIR,
@@ -37,7 +38,7 @@ from nautobot.ipam.models import (
 )
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 
 class NamespaceTestCase(
@@ -49,12 +50,14 @@ class NamespaceTestCase(
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
     ViewTestCases.BulkImportObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Namespace
 
     @classmethod
     def setUpTestData(cls):
-        locations = Location.objects.all()[:4]
+        locations = Location.objects.get_for_model(Namespace)
 
         cls.form_data = {"name": "Namespace X", "location": locations[0].pk, "description": "A new Namespace"}
 
@@ -64,6 +67,11 @@ class NamespaceTestCase(
             f"Namespace 5,{locations[2].pk}",
             "Namespace 6,",
         )
+
+        cls.bulk_edit_data = {
+            "description": "New description",
+            "location": locations[1].pk,
+        }
 
 
 class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -353,7 +361,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         cls.namespace = Namespace.objects.create(name="ipam_test_views_ip_address_test")
-        statuses = Status.objects.get_for_model(IPAddress)
+        cls.statuses = Status.objects.get_for_model(IPAddress)
         cls.prefix_status = Status.objects.get_for_model(Prefix).first()
         roles = Role.objects.get_for_model(IPAddress)
         parent, _ = Prefix.objects.get_or_create(
@@ -365,7 +373,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "namespace": cls.namespace.pk,
             "address": IPNetwork("192.0.2.99/24"),
             "tenant": None,
-            "status": statuses[1].pk,
+            "status": cls.statuses[1].pk,
             "type": IPAddressTypeChoices.TYPE_DHCP,
             "role": roles[0].pk,
             "nat_inside": None,
@@ -376,14 +384,14 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.csv_data = (
             "address,status,parent",
-            f"192.0.2.4/24,{statuses[0].name},{parent.composite_key}",
-            f"192.0.2.5/24,{statuses[0].name},{parent.composite_key}",
-            f"192.0.2.6/24,{statuses[0].name},{parent.composite_key}",
+            f"192.0.2.4/24,{cls.statuses[0].name},{parent.composite_key}",
+            f"192.0.2.5/24,{cls.statuses[0].name},{parent.composite_key}",
+            f"192.0.2.6/24,{cls.statuses[0].name},{parent.composite_key}",
         )
 
         cls.bulk_edit_data = {
             "tenant": None,
-            "status": statuses[1].pk,
+            "status": cls.statuses[1].pk,
             "role": roles[1].pk,
             "type": IPAddressTypeChoices.TYPE_HOST,
             "dns_name": "example",
@@ -497,6 +505,26 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 strip_tags(content),
             )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_create_ips(self):
+        """"""
+        self.add_permissions("ipam.add_ipaddress")
+        form_data = {
+            "namespace": self.namespace.pk,
+            "pattern": "192.0.2.[4-6]/24",
+            "status": self.statuses[1].pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
+        }
+        request = {
+            "path": reverse("ipam:ipaddress_bulk_add"),
+            "data": post_data(form_data),
+        }
+        response = self.client.post(**request)
+        self.assertEqual(302, response.status_code)
+        self.assertTrue(IPAddress.objects.filter(address="192.0.2.4/24").exists())
+        self.assertTrue(IPAddress.objects.filter(address="192.0.2.5/24").exists())
+        self.assertTrue(IPAddress.objects.filter(address="192.0.2.6/24").exists())
+
 
 class IPAddressMergeTestCase(ModelViewTestCase):
     @classmethod
@@ -599,7 +627,7 @@ class IPAddressMergeTestCase(ModelViewTestCase):
                 ],
             },
         )
-        cls.dup_ip_1.tags.set(random.choices(Tag.objects.get_for_model(IPAddress), k=3))
+        cls.dup_ip_1.tags.set(random.choices(Tag.objects.get_for_model(IPAddress), k=3))  # noqa: S311  # suspicious-non-cryptographic-random-usage -- ok here in test code
         parent_2, _ = Prefix.objects.get_or_create(
             prefix="94.0.0.2/12",
             defaults={"namespace": cls.namespace_2, "status": prefix_status, "type": "network"},
@@ -623,7 +651,7 @@ class IPAddressMergeTestCase(ModelViewTestCase):
                 ],
             },
         )
-        cls.dup_ip_2.tags.set(random.choices(Tag.objects.get_for_model(IPAddress), k=2))
+        cls.dup_ip_2.tags.set(random.choices(Tag.objects.get_for_model(IPAddress), k=2))  # noqa: S311  # suspicious-non-cryptographic-random-usage -- ok here in test code
         parent_3, _ = Prefix.objects.get_or_create(
             prefix="94.0.0.2/15",
             defaults={"namespace": namespace_3, "status": prefix_status, "type": "network"},
@@ -647,7 +675,7 @@ class IPAddressMergeTestCase(ModelViewTestCase):
                 ],
             },
         )
-        cls.dup_ip_3.tags.set(random.choices(Tag.objects.get_for_model(IPAddress), k=3))
+        cls.dup_ip_3.tags.set(random.choices(Tag.objects.get_for_model(IPAddress), k=3))  # noqa: S311  # suspicious-non-cryptographic-random-usage -- ok here in test code
         cls.merge_data = {
             "pk": [cls.dup_ip_1.pk, cls.dup_ip_2.pk, cls.dup_ip_3.pk],
             "host": cls.dup_ip_1.host,
@@ -984,6 +1012,113 @@ class IPAddressMergeTestCase(ModelViewTestCase):
                         relationship=sym_m2m, source_id=merged_ip.pk
                     ) | RelationshipAssociation.objects.filter(relationship=sym_m2m, destination_id=merged_ip.pk)
                     self.assertEqual(set(associations), set(correct_associations))
+
+
+class IPAddressToInterfaceTestCase(ViewTestCases.BulkImportObjectsViewTestCase):
+    model = IPAddressToInterface
+
+    @classmethod
+    def setUpTestData(cls):
+        # Device/Interface
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        location = Location.objects.filter(parent__isnull=False, parent__parent__isnull=False).first()
+        manufacturer = Manufacturer.objects.first()
+        tenant = Tenant.objects.first()
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
+        devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
+        device = Device.objects.create(
+            name="Device 1",
+            location=location,
+            device_type=devicetype,
+            role=devicerole,
+            tenant=tenant,
+            status=devicestatus,
+        )
+        intf_status = Status.objects.get_for_model(Interface).first()
+        interface = Interface.objects.create(device=device, name="Interface 1", status=intf_status)
+
+        # Namespace, Prefix, IPAddress
+        namespace = Namespace.objects.create(name="ip2interface_namespace")
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        Prefix.objects.get_or_create(
+            prefix="192.0.2.0/24",
+            defaults={"namespace": namespace, "status": prefix_status, "type": "network"},
+        )
+        ip_addresses = [
+            IPAddress.objects.create(
+                address="192.0.2.1/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
+            ),
+            IPAddress.objects.create(
+                address="192.0.2.2/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
+            ),
+            IPAddress.objects.create(
+                address="192.0.2.3/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
+            ),
+        ]
+        ip1, ip2, ip3 = ip_addresses
+
+        cls.csv_data = (
+            "ip_address__host,ip_address__parent__namespace__name,interface__name,interface__device__name,interface__device__tenant__name,interface__device__location__name,interface__device__location__parent__name,interface__device__location__parent__parent__name",
+            f'{ip1.host},{ip1.parent.namespace.name},{interface.name},{interface.device.name},"{interface.device.tenant.name}",{interface.device.location.name},{interface.device.location.parent.name},{interface.device.location.parent.parent.name}',
+            f'{ip2.host},{ip2.parent.namespace.name},{interface.name},{interface.device.name},"{interface.device.tenant.name}",{interface.device.location.name},{interface.device.location.parent.name},{interface.device.location.parent.parent.name}',
+            f'{ip3.host},{ip3.parent.namespace.name},{interface.name},{interface.device.name},"{interface.device.tenant.name}",{interface.device.location.name},{interface.device.location.parent.name},{interface.device.location.parent.parent.name}',
+        )
+
+    def test_vminterface_import(self):
+        """Explicitly tests that bulk import of VMInterface assignments also works."""
+        # Initialize any pre-existing assignments. There is no mercy in this dojo!!
+        self._get_queryset().all().delete()
+
+        # Namespace, Prefix, IPAddress
+        namespace = Namespace.objects.create(name="ip2vminterface_namespace")
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        Prefix.objects.get_or_create(
+            prefix="192.0.3.0/24",
+            defaults={"namespace": namespace, "status": prefix_status, "type": "network"},
+        )
+        ip_addresses = [
+            IPAddress.objects.create(
+                address="192.0.3.1/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
+            ),
+            IPAddress.objects.create(
+                address="192.0.3.2/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
+            ),
+            IPAddress.objects.create(
+                address="192.0.3.3/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
+            ),
+        ]
+        ip1, ip2, ip3 = ip_addresses
+
+        # VirtualMachine/VMInterface
+        location = Location.objects.filter(parent__isnull=False, parent__parent__isnull=False).first()
+        cluster_type = ClusterType.objects.create(name="Cluster Type 2")
+        cluster = Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, location=location)
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        tenant = Tenant.objects.first()
+        virtual_machine = VirtualMachine.objects.create(cluster=cluster, name="VM 1", status=vm_status, tenant=tenant)
+        vm_intf_status = Status.objects.get_for_model(VMInterface).first()
+        vm_interface = VMInterface.objects.create(
+            virtual_machine=virtual_machine, name="VMInterface 1", status=vm_intf_status
+        )
+
+        csv_data = (
+            "ip_address__host,ip_address__parent__namespace__name,vm_interface__virtual_machine__cluster__name,vm_interface__virtual_machine__tenant__name,vm_interface__virtual_machine__name,vm_interface__name",
+            f'{ip1.host},{ip1.parent.namespace.name},{vm_interface.virtual_machine.cluster.name},"{vm_interface.virtual_machine.tenant.name}",{vm_interface.virtual_machine.name},{vm_interface.name}',
+            f'{ip2.host},{ip2.parent.namespace.name},{vm_interface.virtual_machine.cluster.name},"{vm_interface.virtual_machine.tenant.name}",{vm_interface.virtual_machine.name},{vm_interface.name}',
+            f'{ip3.host},{ip3.parent.namespace.name},{vm_interface.virtual_machine.cluster.name},"{vm_interface.virtual_machine.tenant.name}",{vm_interface.virtual_machine.name},{vm_interface.name}',
+        )
+
+        initial_count = self._get_queryset().count()
+        data = {
+            "csv_data": "\n".join(csv_data),
+        }
+
+        self.add_permissions("ipam.add_ipaddresstointerface")
+        self.assertHttpStatus(self.client.post(self._get_url("import"), data), 200)
+        self.assertEqual(self._get_queryset().count(), initial_count + len(csv_data) - 1)
 
 
 class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):

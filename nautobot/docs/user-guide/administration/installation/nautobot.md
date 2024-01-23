@@ -196,7 +196,11 @@ However, because we've set the `NAUTOBOT_ROOT`, this command will automatically 
 
 ```no-highlight
 nautobot-server init
+```
 
+Example output:
+
+```no-highlight
 Nautobot would like to send anonymized installation metrics to the project's maintainers.
 These metrics include the installed Nautobot version, the Python version in use, an anonymous "deployment ID", and a list of one-way-hashed names of enabled Nautobot Apps and their versions.
 Allow Nautobot to send these metrics? [y/n]: y
@@ -277,20 +281,6 @@ Nautobot does not come with any predefined user accounts. You'll need to create 
 nautobot-server createsuperuser
 ```
 
-## Build Nautobot 2.0 UI
-
-Nautobot 2.0 introduces a new user interface. This interface is built using [React](https://react.dev/) and requires Node.js version 18 or higher to build the UI.
-
-### Build the UI
-
-Nautobot provides a management command to install the required Node.js packages and build the UI:
-
-```no-highlight
-nautobot-server build_ui --npm-install
-```
-
-This only needs to be performed manually the first time Nautobot v2 is installed. The [`post_upgrade`](../tools/nautobot-server.md#post_upgrade) command that must be ran after any Nautobot upgrade will automatically re-run this command.
-
 ## Create Static Directories
 
 Nautobot relies upon many static files including:
@@ -352,9 +342,9 @@ Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on
 !!! important
     Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background Celery worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server celery worker` separately. For production use, Nautobot and the worker processes should be managed by `systemd` rather than started manually, as described in the next section of this documentation.
 
-Note that the initial user interface will be locked down for non-authenticated users.
+Unauthenticated users will be presented with a login page:
 
-![Nautobot UI as seen by a non-authenticated user](../../../media/installation/nautobot_ui_guest.png)
+![Nautobot UI as seen by a non-authenticated user](../../../media/installation/nautobot_ui_login.png)
 
 Try logging in using the superuser account we just created. Once authenticated, you'll be able to access all areas of the UI:
 

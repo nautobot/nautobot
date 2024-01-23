@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.0.0rc3"
+version = "2.1.3b1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -24,12 +24,12 @@ packages = [
     {include = "nautobot"}
 ]
 include = [
-    "CHANGELOG.md",
-    "CONTRIBUTING.md",
-    "LICENSE.txt",
-    "NOTICE",
-    # Poetry by default will exclude these files as they are in .gitignore
+    # Rendered documentation - Poetry by default would exclude these files as they are in .gitignore
     "nautobot/project-static/docs/**/*",
+]
+exclude = [
+    # Source code of the documentation doesn't need to be included since we package the rendered docs
+    "nautobot/docs/**/*",
 ]
 
 [tool.poetry.dependencies]
@@ -37,7 +37,7 @@ python = ">=3.8,<3.12"
 # Background task processing
 celery = "~5.3.1"
 # Fundamental web framework for Nautobot
-Django = "~3.2.20"
+Django = "~3.2.23"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -74,7 +74,7 @@ django-taggit = "~4.0.0"
 # NOTE: django-timezone-field 4.2.x is available but appears to break our initial migrations?
 django-timezone-field = "~5.1"
 # Tree database structures based on Common Table Expressions
-django-tree-queries = "~0.15.0"
+django-tree-queries = "~0.16.1"
 # Run production webservers such as uWSGI/gunicorn as a Django management command.
 django-webserver = "~1.2.0"
 # REST API framework
@@ -86,7 +86,7 @@ drf-spectacular = {version = "0.26.3", extras = ["sidecar"]}
 # Emoji terminal output for Python.
 emoji = "~2.8.0"
 # Git integrations for Python
-GitPython = "~3.1.36"
+GitPython = "~3.1.41"
 # GraphQL support
 # NOTE: graphene-django 3.x is available but includes breaking changes. Will address in a future release.
 graphene-django = "~2.16.0"
@@ -94,7 +94,7 @@ graphene-django = "~2.16.0"
 # NOTE: graphene-django-optimizer 0.9 and later require Graphene v3
 graphene-django-optimizer = "~0.8.0"
 # Template rendering engine
-Jinja2 = "~3.1.2"
+Jinja2 = "~3.1.3"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
 jsonschema = ">=4.7.0,<4.19.0"
 # Rendering of markdown files to HTML
@@ -112,15 +112,17 @@ netaddr = "~0.8.0"
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
 netutils = "^1.6.0"
+# HTML sanitization
+nh3 = "~0.2.15"
 # Handling of version numbers
-packaging = "~23.1"
+packaging = ">=23.1"
 # Image processing library
 Pillow = "~10.0.0"
 # Custom prometheus metrics
 prometheus-client = "~0.17.1"
 # PostgreSQL database adapter
-# NOTE: psycopg3 is avaiable now and nominally replaces psycopg2
-psycopg2-binary = "~2.9.6"
+# NOTE: psycopg3 is available now and nominally replaces psycopg2
+psycopg2-binary = "~2.9.9"
 # A Python slugify application that handles unicode.
 python-slugify = "~8.0.1"
 # The uWSGI WSGI HTTP server as a Python module
@@ -168,7 +170,7 @@ watchdog = "~3.0.0"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
-mkdocs = "~1.4.3"
+mkdocs = "~1.5.3"
 # Embedding YAML files into Markdown documents as tables
 markdown-data-tables = "~1.0.0"
 # Automatically generate some files as part of mkdocs build
@@ -177,6 +179,8 @@ mkdocs-gen-files = "~0.5.0"
 mkdocs-include-markdown-plugin = "~4.0.4"
 # Material for mkdocs theme
 mkdocs-material = "~9.1.18"
+# Handle docs redirections
+mkdocs-redirects = "~1.2.1"
 # Automatically handle index pages for docs sections
 mkdocs-section-index = "~0.3.5"
 # Render custom markdown for version added/changed/remove notes
@@ -187,16 +191,12 @@ mkdocstrings = "~0.22.0"
 mkdocstrings-python = "~1.3.0"
 
 [tool.poetry.group.linting.dependencies]
-# Code style enforcement
-black = "~23.7.0"
-# Code style checking and limited static analysis
-flake8 = {version = "~6.0.0", python = ">=3.8.1"}
-# Code style checking for python import statements
-isort = "~5.12.0"
 # Code static analysis
-pylint = "~2.17.4"
+pylint = "~2.17.7"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
+# Combination linter and code formatter
+ruff = "~0.1.10"
 # YAML linting
 yamllint = "~1.30.0"
 
@@ -211,6 +211,8 @@ requests = ">=2.28.0,<2.32.0"
 selenium = "~4.9.1"
 # Abstraction layer for working with Selenium
 splinter = "~0.18.1"
+# Serialization of tracebacks - used when running unittest with --parallel flag
+tblib = "~3.0.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -219,39 +221,13 @@ nautobot-server = "nautobot.core.cli:main"
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.black]
-line-length = 120
-target-version = ['py38', 'py39', 'py310', 'py311']
-include = '\.pyi?$'
-exclude = '''
-(
-  /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | _build
-    | buck-out
-    | build
-    | dist
-    | node_modules
-  )/
-)
-'''
-
-[tool.isort]
-profile = "black"
-line_length = 120
-force_sort_within_sections = true
-
 [tool.pylint.master]
 load-plugins = "pylint_django"
 py-version = "3.8"
 ignore-paths = [
     ".*third_party.*"
 ]
+jobs = 0
 
 [tool.pylint.basic]
 # No docstrings required yet for private functions, or for test_* functions, or for inner Meta classes.
@@ -261,7 +237,7 @@ good-names = """_,i,j,k,pk"""
 
 [tool.pylint.message_control]
 # TODO: re-enable and fix these as time permits
-# unused-import is already covered by flake8
+# unused-import is already covered by ruff
 disable=""",
     abstract-method,
     arguments-differ,
@@ -338,19 +314,82 @@ notes = """,
 # @patch changes the signature of a function it's applied to; don't raise "no-value-for-parameter" here
 signature-mutators=["unittest.mock.patch"]
 
+[tool.ruff]
+line-length = 120
+target-version = "py38"
+
+[tool.ruff.lint]
+select = [
+    "DJ",  # flake8-django
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    "I",  # isort
+    "PIE",  # flake8-pie
+    "RUF",  # ruff itself
+    "S",  # flake8-bandit
+    "W",  # pycodestyle
+]
+ignore = [
+    "E501",  # pycodestyle: line-too-long
+    "PIE808",  # unnecessary-range-start
+    "RUF012",  # mutable-class-default - see https://github.com/astral-sh/ruff/issues/5243
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-sort-within-sections = true
+known-local-folder = ["example_plugin"]
+order-by-type = false
+
 [tool.towncrier]
 package = "nautobot"
 directory = "changes"
-filename = "nautobot/docs/release-notes/version-2.0.md"
+filename = "nautobot/docs/release-notes/version-2.1.md"
 template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
 
-[tool.towncrier.fragment.added]
-[tool.towncrier.fragment.changed]
-[tool.towncrier.fragment.dependencies]
-[tool.towncrier.fragment.deprecated]
-[tool.towncrier.fragment.fixed]
-[tool.towncrier.fragment.housekeeping]
-[tool.towncrier.fragment.removed]
-[tool.towncrier.fragment.security]
+[[tool.towncrier.type]]
+directory = "security"
+name = "Security"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "added"
+name = "Added"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "changed"
+name = "Changed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "deprecated"
+name = "Deprecated"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "removed"
+name = "Removed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "fixed"
+name = "Fixed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "dependencies"
+name = "Dependencies"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "documentation"
+name = "Documentation"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "housekeeping"
+name = "Housekeeping"
+showcontent = true

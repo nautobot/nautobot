@@ -1,28 +1,40 @@
 import contextvars
-import os
-import random
-import shutil
-import logging
 from datetime import timedelta
+import logging
+import os
+import secrets
+import shutil
 
+from db_file_storage.model_utils import delete_file
+from db_file_storage.storage import DatabaseFileStorage
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.core.files.storage import get_storage_class
 from django.db import transaction
-from django.db.models.signals import m2m_changed, pre_delete, post_save, pre_save, post_delete
+from django.db.models.signals import m2m_changed, post_delete, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
 
 from nautobot.core.celery import app, import_jobs_as_celery_tasks
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices
+from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+from nautobot.extras.models import (
+    ComputedField,
+    CustomField,
+    DynamicGroup,
+    DynamicGroupMembership,
+    GitRepository,
+    JobResult,
+    ObjectChange,
+    Relationship,
+)
+from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.extras.utils import refresh_job_model_from_job_class
-from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
-from .choices import JobResultStatusChoices, ObjectChangeActionChoices
-from .models import CustomField, DynamicGroup, DynamicGroupMembership, GitRepository, JobResult, ObjectChange
-from .webhooks import enqueue_webhooks
-
 
 # thread safe change context state variable
 change_context_state = contextvars.ContextVar("change_context_state", default=None)
@@ -30,11 +42,11 @@ logger = logging.getLogger(__name__)
 
 
 #
-# Change logging/webhooks
+# Change logging
 #
 
 
-def _get_user_if_authenticated(user, objectchange):
+def _get_user_if_authenticated(user, instance):
     """Return the user object associated with the request if the user is defined.
 
     If the user is not defined, log a warning to indicate that the user couldn't be retrived from the request
@@ -44,8 +56,31 @@ def _get_user_if_authenticated(user, objectchange):
     if user.is_authenticated:
         return user
     else:
-        logger.warning(f"Unable to retrieve the user while creating the changelog for {objectchange.changed_object}")
+        logger.warning(f"Unable to retrieve the user while creating the changelog for {instance}")
         return None
+
+
+@receiver(post_save)
+@receiver(m2m_changed)
+@receiver(post_delete)
+def invalidate_lru_cache(sender, **kwargs):
+    """Invalidate the LRU cache for ComputedFields, CustomFields and Relationships."""
+    if sender is CustomField.content_types.through:
+        manager = CustomField.objects
+    elif sender in (ComputedField, CustomField, Relationship):
+        manager = sender.objects
+    else:
+        return
+
+    cached_methods = (
+        "get_for_model",
+        "get_for_model_source",
+        "get_for_model_destination",
+    )
+
+    for method in cached_methods:
+        if hasattr(manager, method):
+            getattr(manager, method).cache_clear()
 
 
 @receiver(post_save)
@@ -54,15 +89,12 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
     """
     Fires when an object is created or updated.
     """
-    from .jobs import enqueue_job_hooks  # avoid circular import
 
     if raw:
         return
 
     if change_context_state.get() is None:
         return
-
-    object_m2m_changed = False
 
     # Determine the type of change being made
     if kwargs.get("created"):
@@ -71,28 +103,36 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         action = ObjectChangeActionChoices.ACTION_UPDATE
     elif kwargs.get("action") in ["post_add", "post_remove"] and kwargs["pk_set"]:
         # m2m_changed with objects added or removed
-        object_m2m_changed = True
         action = ObjectChangeActionChoices.ACTION_UPDATE
     else:
         return
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
+        user = _get_user_if_authenticated(change_context_state.get().get_user(), instance)
         # save a copy of this instance's field cache so it can be restored after serialization
         # to prevent unexpected behavior when chaining multiple signal handlers
         original_cache = instance._state.fields_cache.copy()
-        if object_m2m_changed:
-            related_changes = ObjectChange.objects.filter(
-                changed_object_type=ContentType.objects.get_for_model(instance),
-                changed_object_id=instance.pk,
-                request_id=change_context_state.get().change_id,
-            )
-            m2m_changes = instance.to_objectchange(action)
-            related_changes.update(object_data=m2m_changes.object_data, object_data_v2=m2m_changes.object_data_v2)
-            objectchange = related_changes.first() if related_changes.exists() else None
+
+        # If a change already exists for this change_id, user, and object, update it instead of creating a new one.
+        # If the object was deleted then recreated with the same pk (don't do this), change the action to update.
+        related_changes = ObjectChange.objects.filter(
+            changed_object_type=ContentType.objects.get_for_model(instance),
+            changed_object_id=instance.pk,
+            user=user,
+            request_id=change_context_state.get().change_id,
+        )
+        objectchange = instance.to_objectchange(action)
+        if related_changes.exists():
+            most_recent_change = related_changes.order_by("-time").first()
+            if most_recent_change.action == ObjectChangeActionChoices.ACTION_DELETE:
+                most_recent_change.action = ObjectChangeActionChoices.ACTION_UPDATE
+            most_recent_change.object_data = objectchange.object_data
+            most_recent_change.object_data_v2 = objectchange.object_data_v2
+            most_recent_change.save()
+            objectchange = most_recent_change
         else:
-            objectchange = instance.to_objectchange(action)
-            objectchange.user = _get_user_if_authenticated(change_context_state.get().get_user(), objectchange)
+            objectchange.user = user
             objectchange.request_id = change_context_state.get().change_id
             objectchange.change_context = change_context_state.get().context
             objectchange.change_context_detail = change_context_state.get().context_detail[
@@ -103,13 +143,6 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         # restore field cache
         instance._state.fields_cache = original_cache
 
-        # Enqueue job hooks
-        if objectchange is not None:
-            enqueue_job_hooks(objectchange)
-
-    # Enqueue webhooks
-    enqueue_webhooks(instance, change_context_state.get().get_user(), change_context_state.get().change_id, action)
-
     # Increment metric counters
     if action == ObjectChangeActionChoices.ACTION_CREATE:
         model_inserts.labels(instance._meta.model_name).inc()
@@ -118,7 +151,7 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
 
     # Housekeeping: 0.1% chance of clearing out expired ObjectChanges
     changelog_retention = get_settings_or_config("CHANGELOG_RETENTION")
-    if changelog_retention and random.randint(1, 1000) == 1:
+    if changelog_retention and secrets.randbelow(1000) == 0:
         cutoff = timezone.now() - timedelta(days=changelog_retention)
         ObjectChange.objects.filter(time__lt=cutoff).delete()
 
@@ -128,38 +161,53 @@ def _handle_deleted_object(sender, instance, **kwargs):
     """
     Fires when an object is deleted.
     """
-    from .jobs import enqueue_job_hooks  # avoid circular import
-
     if change_context_state.get() is None:
         return
 
+    if hasattr(instance, "notes") and isinstance(instance.notes, NotesQuerySet):
+        notes = instance.notes
+        notes.delete()
+
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
+        user = _get_user_if_authenticated(change_context_state.get().get_user(), instance)
+
         # save a copy of this instance's field cache so it can be restored after serialization
         # to prevent unexpected behavior when chaining multiple signal handlers
         original_cache = instance._state.fields_cache.copy()
+
+        # if a change already exists for this change_id, user, and object, update it instead of creating a new one
+        # except in the case that the object was created and deleted in the same change_id
+        # we don't want to create a delete change for an object that never existed
+        related_changes = ObjectChange.objects.filter(
+            changed_object_type=ContentType.objects.get_for_model(instance),
+            changed_object_id=instance.pk,
+            user=user,
+            request_id=change_context_state.get().change_id,
+        )
         objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-        objectchange.user = _get_user_if_authenticated(change_context_state.get().get_user(), objectchange)
-        objectchange.request_id = change_context_state.get().change_id
-        objectchange.change_context = change_context_state.get().context
-        objectchange.change_context_detail = change_context_state.get().context_detail[
-            :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
-        ]
-        objectchange.save()
+        save_new_objectchange = True
+        if related_changes.exists():
+            most_recent_change = related_changes.order_by("-time").first()
+            if most_recent_change.action != ObjectChangeActionChoices.ACTION_CREATE:
+                most_recent_change.action = ObjectChangeActionChoices.ACTION_DELETE
+                most_recent_change.object_data = objectchange.object_data
+                most_recent_change.object_data_v2 = objectchange.object_data_v2
+                most_recent_change.save()
+                objectchange = most_recent_change
+                save_new_objectchange = False
+
+        if save_new_objectchange:
+            objectchange.user = user
+            objectchange.request_id = change_context_state.get().change_id
+            objectchange.change_context = change_context_state.get().context
+            objectchange.change_context_detail = change_context_state.get().context_detail[
+                :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+            ]
+            objectchange.save()
 
         # restore field cache
         instance._state.fields_cache = original_cache
-
-        # Enqueue job hooks
-        enqueue_job_hooks(objectchange)
-
-    # Enqueue webhooks
-    enqueue_webhooks(
-        instance,
-        change_context_state.get().get_user(),
-        change_context_state.get().change_id,
-        ObjectChangeActionChoices.ACTION_DELETE,
-    )
 
     # Increment metric counters
     model_deletes.labels(instance._meta.model_name).inc()
@@ -324,6 +372,17 @@ post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroupMember
 #
 # Jobs
 #
+
+
+@receiver(pre_delete, sender=JobResult)
+def job_result_delete_associated_files(instance, **kwargs):
+    """For each related FileProxy, make sure its file gets deleted correctly from disk or database."""
+    if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+        for file_proxy in instance.files.all():
+            delete_file(file_proxy, "file")
+    else:
+        for file_proxy in instance.files.all():
+            file_proxy.file.delete()
 
 
 def refresh_job_models(sender, *, apps, **kwargs):

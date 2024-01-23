@@ -15,12 +15,12 @@ from nautobot.core.tables import RelationshipColumn
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.utils.lookup import get_route_for_model
-from nautobot.dcim.models import Device, Platform, Rack, Location, LocationType
+from nautobot.dcim.models import Device, Location, LocationType, Platform, Rack
 from nautobot.dcim.tables import LocationTable
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
+from nautobot.ipam.models import VLAN, VLANGroup
 
 
 class RelationshipBaseTest:
@@ -427,6 +427,39 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
             "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
             str(error.exception),
         )
+
+    def test_get_for_model_lru_cache_invalidation(self):
+        """Test that the lru cache is properly invalidated when Relationships are created or deleted."""
+
+        manager = Relationship.objects
+        manager_methods = (manager.get_for_model, manager.get_for_model_source, manager.get_for_model_destination)
+
+        for manager_method in manager_methods:
+            with self.subTest(manager_method=manager_method.__name__):
+                qs1 = manager_method(Location)
+
+                # Assert that the cache is used when calling method a second time
+                qs1_cached = manager_method(Location)
+                self.assertTrue(qs1_cached is qs1)
+
+                # Assert that the cache is invalidated on object save
+                relationship = Relationship(
+                    label="Test Relationship 1",
+                    key="test_relationship_1",
+                    source_type=self.location_ct,
+                    destination_type=self.location_ct,
+                    source_label="Location",
+                    destination_filter={"name": ["location-b"]},
+                    type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+                )
+                relationship.save()
+                qs2 = manager_method(Location)
+                self.assertFalse(qs2 is qs1)
+
+                # Assert that the cache is invalidated on object delete
+                relationship.delete()
+                qs3 = manager_method(Location)
+                self.assertNotIn(qs3, (qs1, qs2))
 
 
 class RelationshipAssociationTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
@@ -1206,13 +1239,13 @@ class RequiredRelationshipTestMixin:
                 ],
                 "expected_errors": {
                     "api": {
-                        "objects_nonexistent": "Circuit types require a platform, but no platforms exist yet. "
+                        "objects_nonexistent": "Circuit Types require a platform, but no platforms exist yet. "
                         "Create a platform by posting to /api/dcim/platforms/",
                         "objects_not_specified": 'You need to specify ["relationships"]["circuittype_platform_o2o"]'
                         '["destination"]["objects"].',
                     },
                     "ui": {
-                        "objects_nonexistent": "Circuit types require a platform, but no platforms exist yet.",
+                        "objects_nonexistent": "Circuit Types require a platform, but no platforms exist yet.",
                         "objects_not_specified": "You need to select a platform.",
                     },
                 },
@@ -1368,7 +1401,7 @@ class RequiredRelationshipTestMixin:
                     # Object is updated with the required relationship data (succeeds)
                     response = self.send_data(
                         from_model,
-                        {**{"name": f'{params["create_data"]["name"]} edited'}, **related_objects_data},
+                        {"name": f'{params["create_data"]["name"]} edited', **related_objects_data},
                         interact_with,
                         action="edit",
                         url_kwargs={"pk": newly_created_object.pk},

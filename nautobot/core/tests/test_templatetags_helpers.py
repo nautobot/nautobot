@@ -3,12 +3,13 @@ from unittest import skipIf
 from constance.test import override_config
 from django.conf import settings
 from django.templatetags.static import static
-from django.test import TestCase, override_settings
-from example_plugin.models import AnotherExampleModel, ExampleModel
+from django.test import override_settings, TestCase
 
 from nautobot.core.templatetags import helpers
 from nautobot.dcim import models
 from nautobot.ipam.models import VLAN
+
+from example_plugin.models import AnotherExampleModel, ExampleModel
 
 
 @skipIf(
@@ -78,9 +79,24 @@ class NautobotTemplatetagsHelperTest(TestCase):
             helpers.render_markdown("**bold and _italics_**"), "<p><strong>bold and <em>italics</em></strong></p>"
         )
         self.assertEqual(helpers.render_markdown("* list"), "<ul>\n<li>list</li>\n</ul>")
-        self.assertEqual(
+        self.assertHTMLEqual(
             helpers.render_markdown("[I am a link](https://www.example.com)"),
-            '<p><a href="https://www.example.com">I am a link</a></p>',
+            '<p><a href="https://www.example.com" rel="noopener noreferrer">I am a link</a></p>',
+        )
+
+    def test_render_markdown_security(self):
+        self.assertEqual(helpers.render_markdown('<script>alert("XSS")</script>'), "")
+        self.assertHTMLEqual(
+            helpers.render_markdown('[link](javascript:alert("XSS"))'),
+            '<p><a title="XSS" rel="noopener noreferrer">link</a>)</p>',  # the trailing ) seems weird to me, but...
+        )
+        self.assertHTMLEqual(
+            helpers.render_markdown(
+                "[link\nJS]"
+                "(&#x6A&#x61&#x76&#x61&#x73&#x63&#x72&#x69&#x70&#x74&#x3A"  # '(javascript:'
+                "&#x61&#x6C&#x65&#x72&#x74&#x28&#x27&#x58&#x53&#x53&#x27&#x29)"  # 'alert("XSS"))'
+            ),
+            '<p><a rel="noopener noreferrer">link JS</a></p>',
         )
 
     def test_render_json(self):
@@ -117,6 +133,20 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
         self.assertEqual(helpers.validated_viewname(ExampleModel, "list"), "plugins:example_plugin:examplemodel_list")
         self.assertIsNone(helpers.validated_viewname(ExampleModel, "notvalid"))
+
+    def test_validated_api_viewname(self):
+        location = models.Location.objects.first()
+
+        self.assertEqual(helpers.validated_api_viewname(location, "list"), "dcim-api:location-list")
+        self.assertIsNone(helpers.validated_api_viewname(models.Location, "notvalid"))
+
+        self.assertEqual(
+            helpers.validated_api_viewname(ExampleModel, "list"), "plugins-api:example_plugin-api:examplemodel-list"
+        )
+        self.assertIsNone(helpers.validated_api_viewname(ExampleModel, "notvalid"))
+
+        # Assert detail views get validated as well
+        self.assertEqual(helpers.validated_api_viewname(location, "detail"), "dcim-api:location-detail")
 
     def test_bettertitle(self):
         self.assertEqual(helpers.bettertitle("myTITle"), "MyTITle")
@@ -216,3 +246,28 @@ class NautobotTemplatetagsHelperTest(TestCase):
     def test_settings_or_config(self):
         self.assertEqual(helpers.settings_or_config("BANNER_TOP"), "¡Hola, mundo!")
         self.assertEqual(helpers.settings_or_config("SAMPLE_VARIABLE", "example_plugin"), "Testing")
+
+    def test_support_message(self):
+        """Test the `support_message` tag with config and settings."""
+        with override_settings():
+            del settings.SUPPORT_MESSAGE
+            with override_config():
+                self.assertHTMLEqual(
+                    helpers.support_message(),
+                    "<p>If further assistance is required, please join the <code>#nautobot</code> channel "
+                    'on <a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
+                    "Slack community</a> and post your question.</p>",
+                )
+
+            with override_config(SUPPORT_MESSAGE="Reach out to your support team for assistance."):
+                self.assertHTMLEqual(
+                    helpers.support_message(),
+                    "<p>Reach out to your support team for assistance.</p>",
+                )
+
+        with override_settings(SUPPORT_MESSAGE="Settings **support** message:\n\n- Item 1\n- Item 2"):
+            with override_config(SUPPORT_MESSAGE="Config support message"):
+                self.assertHTMLEqual(
+                    helpers.support_message(),
+                    "<p>Settings <strong>support</strong> message:</p><ul><li>Item 1</li><li>Item 2</li></ul>",
+                )

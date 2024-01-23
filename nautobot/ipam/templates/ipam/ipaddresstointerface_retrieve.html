@@ -1,0 +1,58 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+{% load render_table from django_tables2 %}
+
+{% block masthead %}
+<h1>
+<span class="hover_copy"><span id="copy_title">{{ object }}</span><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_title">
+    <span class="mdi mdi-content-copy"></span>
+</button>
+</span>
+</h1>
+{% endblock masthead %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>IP Address to Interface</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>IP Address</td>
+                    <td>{{ object.ip_address|hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>Interface</td>
+                    <td>{{ object.interface|hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>VM Interface</td>
+                    <td>{{ object.vm_interface|hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>Is source?</td>
+                    <td>{{ object.is_source }}</td>
+                </tr>
+                <tr>
+                    <td>Is destination?</td>
+                    <td>{{ object.is_destination }}</td>
+                </tr>
+                <tr>
+                    <td>Is default?</td>
+                    <td>{{ object.is_default }}</td>
+                </tr>
+                <tr>
+                    <td>Is primary?</td>
+                    <td>{{ object.is_primary }}</td>
+                </tr>
+                <tr>
+                    <td>Is secondary?</td>
+                    <td>{{ object.is_secondary }}</td>
+                </tr>
+                <tr>
+                    <td>Is standby?</td>
+                    <td>{{ object.is_standby }}</td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_left_page %}

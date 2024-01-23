@@ -1,5 +1,5 @@
-from django.apps import apps
 from django import forms
+from django.apps import apps
 
 from nautobot.core.forms import BootstrapMixin
 

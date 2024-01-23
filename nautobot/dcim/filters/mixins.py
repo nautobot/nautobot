@@ -4,8 +4,8 @@ import django_filters
 from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueUUIDFilter,
-    NaturalKeyOrPKMultipleChoiceFilter,
     NameSearchFilterSet,
+    NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
     TreeNodeMultipleChoiceFilter,

@@ -19,21 +19,21 @@ from nautobot.core.forms import (
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.constants import INTERFACE_MTU_MAX, INTERFACE_MTU_MIN
-from nautobot.dcim.forms import InterfaceCommonForm, INTERFACE_MODE_HELP_TEXT
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
+from nautobot.dcim.forms import INTERFACE_MODE_HELP_TEXT, InterfaceCommonForm
 from nautobot.dcim.models import Device, Location, Platform, Rack
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
-    NautobotBulkEditForm,
-    NautobotModelForm,
-    NautobotFilterForm,
     LocalContextFilterForm,
-    LocalContextModelForm,
     LocalContextModelBulkEditForm,
+    LocalContextModelForm,
+    NautobotBulkEditForm,
+    NautobotFilterForm,
+    NautobotModelForm,
     RoleModelBulkEditFormMixin,
     RoleModelFilterFormMixin,
     StatusModelBulkEditFormMixin,
@@ -44,8 +44,8 @@ from nautobot.extras.models import Status
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
-from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
+from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 #
 # Cluster types
@@ -384,24 +384,27 @@ class VirtualMachineFilterForm(
 
 
 class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
+    virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
     parent_interface = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(),
         required=False,
         label="Parent interface",
         help_text="Assigned parent VMinterface",
+        query_params={"virtual_machine": "$virtual_machine"},
     )
     bridge = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(),
         required=False,
         label="Bridge interface",
         help_text="Assigned bridge VMinterface",
+        query_params={"virtual_machine": "$virtual_machine"},
     )
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         label="Untagged VLAN",
         query_params={
-            "location_id": "null",
+            "location": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
@@ -409,7 +412,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         required=False,
         label="Tagged VLANs",
         query_params={
-            "location_id": "null",
+            "location": "null",
         },
     )
     ip_addresses = DynamicModelMultipleChoiceField(
@@ -436,7 +439,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             "tagged_vlans",
             "status",
         ]
-        widgets = {"virtual_machine": forms.HiddenInput(), "mode": StaticSelect2()}
+        widgets = {"mode": StaticSelect2()}
         labels = {
             "mode": "802.1Q Mode",
         }
@@ -446,11 +449,10 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        vm_id = self.initial.get("virtual_machine") or self.data.get("virtual_machine")
 
-        # Restrict parent interface assignment by VM
-        self.fields["parent_interface"].widget.add_query_param("virtual_machine_id", vm_id)
-        self.fields["bridge"].widget.add_query_param("virtual_machine_id", vm_id)
+        # Disallow changing the virtual_machine of an existing vminterface
+        if self.instance is not None and self.instance.present_in_database:
+            self.fields["virtual_machine"].disabled = True
 
         virtual_machine = VirtualMachine.objects.get(
             pk=self.initial.get("virtual_machine") or self.data.get("virtual_machine")
@@ -500,14 +502,14 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location_id": "null",
+            "location": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location_id": "null",
+            "location": "null",
         },
     )
     status = DynamicModelChoiceField(
@@ -568,14 +570,14 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location_id": "null",
+            "location": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location_id": "null",
+            "location": "null",
         },
     )
 

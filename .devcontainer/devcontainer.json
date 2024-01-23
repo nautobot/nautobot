@@ -1,19 +1,62 @@
 {
-    "dockerComposeFile": ["../development/docker-compose.yml", "../development/docker-compose.debug.yml"],
+    "name": "Nautobot Dev Container",
+    "dockerComposeFile": [
+        "../development/docker-compose.yml",
+        "../development/docker-compose.postgres.yml",
+        "../development/docker-compose.dev.yml"
+    ],
+    "features": {
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": { }
+    },
     "service": "nautobot",
-	"workspaceFolder": "/source/",
-	"extensions": [
-		"ms-python.vscode-pylance",
-		"streetsidesoftware.code-spell-checker",
-		"eamodio.gitlens",
-		"oderwat.indent-rainbow",
-		"ms-python.python",
-		"ms-vsliveshare.vsliveshare"
-	],
-	"settings": {
-		"python.pythonPath": "/usr/local/bin/python",
-		"python.analysis.extraPaths": ["/source"],
-		"python.linting.pylintEnabled": true,
-		"python.linting.enabled": true
-	}
+    "shutdownAction": "stopCompose",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "charliermarsh.ruff",
+                "DavidAnson.vscode-markdownlint",
+                "eamodio.gitlens",
+                "EditorConfig.EditorConfig",
+                "GitHub.vscode-pull-request-github",
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "samuelcolvin.jinjahtml",
+                "tamasfe.even-better-toml"
+            ],
+            "settings": {
+                // Global editor settings
+                "editor.codeActionsOnSave": {
+                    "source.fixAll.markdownlint": "explicit"
+                },
+                "editor.formatOnPaste": true,
+                "editor.formatOnSave": true,
+                // JSON settings
+                "json.format.keepLines": true,
+                "workbench.settings.useSplitJSON": false,
+                // Markdown settings
+                "[markdown]": {
+                    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
+                },
+                // Python settings
+                "[python]": {
+                    "editor.codeActionsOnSave": {
+                        "source.fixAll": "explicit",
+                        "source.organizeImports": "explicit"
+                    },
+                    // When rebuilding the devcontainer, `Developer: Reload Window` must be
+                    // executed for the Ruff formatter to be recognized by the settings.
+                    // See: https://github.com/microsoft/vscode/issues/189839
+                    "editor.defaultFormatter": "charliermarsh.ruff",
+                    "editor.formatOnSave": true
+                },
+                "python.analysis.extraPaths": [
+                    "${workspaceFolder}"
+                ],
+                "python.defaultInterpreterPath": "/usr/local/bin/python",
+                "python.pythonPath": "/usr/local/bin/python"
+            }
+        }
+    },
+    "workspaceFolder": "/source",
+    "postCreateCommand": "bash .devcontainer/postCreateCommand.sh"
 }

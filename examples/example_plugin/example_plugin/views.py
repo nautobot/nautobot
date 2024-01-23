@@ -1,13 +1,14 @@
 from django.shortcuts import HttpResponse, render
 from django.views.generic import View
+from rest_framework.decorators import action
 
 from nautobot.apps import views
 from nautobot.circuits.models import Circuit
 from nautobot.dcim.models import Device
 
-from example_plugin.models import AnotherExampleModel, ExampleModel
 from example_plugin import filters, forms, tables
 from example_plugin.api import serializers
+from example_plugin.models import AnotherExampleModel, ExampleModel
 
 
 class CircuitDetailPluginTabView(views.ObjectView):
@@ -16,7 +17,7 @@ class CircuitDetailPluginTabView(views.ObjectView):
     making it suitable to show as a tab on the circuit detail page.
 
     Views that are intended to be for an object detail tab's content rendering must
-    always inherit from nautobot.core.views.generic.ObjectView.
+    always inherit from nautobot.apps.views.ObjectView.
     """
 
     queryset = Circuit.objects.all()
@@ -29,7 +30,7 @@ class DeviceDetailPluginTabOneView(views.ObjectView):
     making it suitable to show as a tab on the device detail page.
 
     Views that are intended to be for an object detail tab's content rendering must
-    always inherit from nautobot.core.views.generic.ObjectView.
+    always inherit from nautobot.apps.views.ObjectView.
     """
 
     queryset = Device.objects.all()
@@ -76,6 +77,18 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
     queryset = ExampleModel.objects.all()
     serializer_class = serializers.ExampleModelSerializer
     table_class = tables.ExampleModelTable
+
+    @action(detail=False, methods=["get"], url_path="all-names", url_name="all_names")
+    def all_names(self, request):
+        """
+        Returns a list of all the example model names.
+        """
+        all_example_models = self.get_queryset()
+        return render(
+            request,
+            "example_plugin/examplemodel_custom_action_get_all_example_model_names.html",
+            {"data": [model.name for model in all_example_models]},
+        )
 
 
 # Example excluding the BulkUpdateViewSet

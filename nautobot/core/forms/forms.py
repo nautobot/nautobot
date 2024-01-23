@@ -7,7 +7,7 @@ from django.forms import formset_factory
 from django.urls import reverse
 import yaml
 
-from nautobot.core.utils.filtering import build_lookup_label, get_filterset_parameter_form_field, get_filter_field_label
+from nautobot.core.utils.filtering import build_lookup_label, get_filter_field_label, get_filterset_parameter_form_field
 from nautobot.ipam import formfields
 
 __all__ = (

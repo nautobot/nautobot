@@ -5,10 +5,8 @@ from nautobot.core.apps import (
     NavMenuAddButton,
     NavMenuGroup,
     NavMenuItem,
-    NavMenuImportButton,
     NavMenuTab,
 )
-
 
 menu_items = (
     NavMenuTab(
@@ -29,12 +27,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="extras:tag_add",
-                                permissions=[
-                                    "extras.add_tag",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="extras:tag_import",
                                 permissions=[
                                     "extras.add_tag",
                                 ],
@@ -61,12 +53,6 @@ menu_items = (
                                     "extras.add_status",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="extras:status_import",
-                                permissions=[
-                                    "extras.add_status",
-                                ],
-                            ),
                         ),
                     ),
                 ),
@@ -85,12 +71,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="extras:role_add",
-                                permissions=[
-                                    "extras.add_role",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="extras:role_import",
                                 permissions=[
                                     "extras.add_role",
                                 ],
@@ -136,10 +116,7 @@ menu_items = (
                         name="Secrets",
                         weight=100,
                         permissions=["extras.view_secret"],
-                        buttons=(
-                            NavMenuAddButton(link="extras:secret_add", permissions=["extras.add_secret"]),
-                            NavMenuImportButton(link="extras:secret_import", permissions=["extras.add_secret"]),
-                        ),
+                        buttons=(NavMenuAddButton(link="extras:secret_add", permissions=["extras.add_secret"]),),
                     ),
                     NavMenuItem(
                         link="extras:secretsgroup_list",
@@ -272,12 +249,6 @@ menu_items = (
                                     "extras.add_gitrepository",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="extras:gitrepository_import",
-                                permissions=[
-                                    "extras.add_gitrepository",
-                                ],
-                            ),
                         ),
                     ),
                 ),
@@ -317,6 +288,14 @@ menu_items = (
                                 ],
                             ),
                         ),
+                    ),
+                    NavMenuItem(
+                        link="extras:note_list",
+                        name="Notes",
+                        weight=300,
+                        permissions=[
+                            "extras.view_note",
+                        ],
                     ),
                 ),
             ),
@@ -368,6 +347,22 @@ menu_items = (
                                 link="extras:exporttemplate_add",
                                 permissions=[
                                     "extras.add_exporttemplate",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="extras:externalintegration_list",
+                        name="External Integrations",
+                        weight=300,
+                        permissions=[
+                            "extras.view_externalintegration",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="extras:externalintegration_add",
+                                permissions=[
+                                    "extras.add_externalintegration",
                                 ],
                             ),
                         ),

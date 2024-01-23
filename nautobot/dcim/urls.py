@@ -1,8 +1,9 @@
 from django.urls import path
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
-from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView, ImageAttachmentEditView
+from nautobot.extras.views import ImageAttachmentEditView, ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
 from nautobot.ipam.views import ServiceEditView
+
 from . import views
 from .models import (
     Cable,
@@ -19,9 +20,9 @@ from .models import (
     Manufacturer,
     Platform,
     PowerFeed,
+    PowerOutlet,
     PowerPanel,
     PowerPort,
-    PowerOutlet,
     Rack,
     RackGroup,
     RackReservation,
@@ -79,7 +80,7 @@ urlpatterns = [
         kwargs={"model": Location},
     ),
     path(
-        "locations/<uuid:pk>/images/add/",
+        "locations/<uuid:object_id>/images/add/",
         ImageAttachmentEditView.as_view(),
         name="location_add_image",
         kwargs={"model": Location},

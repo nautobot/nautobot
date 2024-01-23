@@ -34,8 +34,8 @@ from nautobot.dcim.filters import (
     FrontPortFilterSet,
     FrontPortTemplateFilterSet,
     InterfaceFilterSet,
-    InterfaceRedundancyGroupFilterSet,
     InterfaceRedundancyGroupAssociationFilterSet,
+    InterfaceRedundancyGroupFilterSet,
     InterfaceTemplateFilterSet,
     InventoryItemFilterSet,
     LocationFilterSet,
@@ -43,11 +43,11 @@ from nautobot.dcim.filters import (
     ManufacturerFilterSet,
     PlatformFilterSet,
     PowerFeedFilterSet,
+    PowerOutletFilterSet,
+    PowerOutletTemplateFilterSet,
     PowerPanelFilterSet,
     PowerPortFilterSet,
     PowerPortTemplateFilterSet,
-    PowerOutletFilterSet,
-    PowerOutletTemplateFilterSet,
     RackFilterSet,
     RackGroupFilterSet,
     RackReservationFilterSet,
@@ -55,7 +55,6 @@ from nautobot.dcim.filters import (
     RearPortTemplateFilterSet,
     VirtualChassisFilterSet,
 )
-
 from nautobot.dcim.models import (
     Cable,
     ConsolePort,
@@ -79,11 +78,11 @@ from nautobot.dcim.models import (
     Manufacturer,
     Platform,
     PowerFeed,
+    PowerOutlet,
+    PowerOutletTemplate,
     PowerPanel,
     PowerPort,
     PowerPortTemplate,
-    PowerOutlet,
-    PowerOutletTemplate,
     Rack,
     RackGroup,
     RackReservation,
@@ -92,16 +91,16 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.models import Role, SecretsGroup, Status, Tag
-from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN, VLANGroup, Namespace
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
-
 
 # Use the proper swappable User model
 User = get_user_model()
 
 
 def common_test_data(cls):
+    Device.objects.all().delete()
     tenants = Tenant.objects.filter(tenant_group__isnull=False)
     cls.tenants = tenants
 
@@ -137,12 +136,13 @@ def common_test_data(cls):
     CircuitTermination.objects.create(circuit=circuit, location=loc0, term_side="A")
     CircuitTermination.objects.create(circuit=circuit, location=loc1, term_side="Z")
 
-    manufacturers = list(Manufacturer.objects.all()[:3])
+    manufacturers = list(
+        Manufacturer.objects.filter(device_types__isnull=False, platforms__isnull=False).distinct()[:3]
+    )
     cls.manufacturers = manufacturers
 
-    platforms = Platform.objects.all()[:3]
+    platforms = Platform.objects.filter(manufacturer__in=manufacturers)[:3]
     for num, platform in enumerate(platforms):
-        platform.manufacturer = manufacturers[num]
         platform.napalm_driver = f"driver-{num}"
         platform.napalm_args = ["--test", f"--arg{num}"]
         platform.network_driver = f"driver_{num}"
@@ -651,6 +651,7 @@ class LocationFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTe
         ("racks", "racks__id"),
         ("racks", "racks__name"),
         ("shipping_address",),
+        ("status", "status__id"),
         ("status", "status__name"),
         ("time_zone",),
         ("vlan_groups", "vlan_groups__id"),
@@ -765,7 +766,9 @@ class RackTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         ("rack_group", "rack_group__name"),
         ("rack_reservations", "rack_reservations__id"),
         ("role", "role__name"),
+        ("role", "role__id"),
         ("serial",),
+        ("status", "status__id"),
         ("status", "status__name"),
         ("type",),
         ("u_height",),
@@ -1085,7 +1088,8 @@ class ConsoleServerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 class PowerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = PowerPortTemplate.objects.all()
     filterset = PowerPortTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("allocated_draw",),
         ("maximum_draw",),
         ("power_outlet_templates", "power_outlet_templates__id"),
@@ -1110,7 +1114,8 @@ class PowerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 class PowerOutletTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = PowerOutletTemplate.objects.all()
     filterset = PowerOutletTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("power_port_template", "power_port_template__id"),
         ("power_port_template", "power_port_template__name"),
     ]
@@ -1168,7 +1173,8 @@ class InterfaceTemplateTestCase(Mixins.ComponentTemplateMixin):
 class FrontPortTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = FrontPortTemplate.objects.all()
     filterset = FrontPortTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("rear_port_position",),
         ("rear_port_template", "rear_port_template__id"),
     ]
@@ -1185,7 +1191,8 @@ class FrontPortTemplateTestCase(Mixins.ComponentTemplateMixin):
 class RearPortTemplateTestCase(Mixins.ComponentTemplateMixin):
     queryset = RearPortTemplate.objects.all()
     filterset = RearPortTemplateFilterSet
-    generic_filter_tests = Mixins.ComponentTemplateMixin.generic_filter_tests + [
+    generic_filter_tests = [
+        *Mixins.ComponentTemplateMixin.generic_filter_tests,
         ("front_port_templates", "front_port_templates__id"),
     ]
 
@@ -1257,7 +1264,7 @@ class PlatformTestCase(FilterTestCases.NameOnlyFilterTestCase):
         )
 
     def test_devices(self):
-        devices = [Device.objects.first(), Device.objects.last()]
+        devices = Device.objects.filter(platform__isnull=False)[:2]
         params = {"devices": [devices[0].pk, devices[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(devices))
 
@@ -1331,6 +1338,7 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ("role", "role__name"),
         ("secrets_group", "secrets_group__id"),
         ("secrets_group", "secrets_group__name"),
+        ("status", "status__id"),
         ("status", "status__name"),
         ("vc_position",),
         ("vc_priority",),
@@ -1364,8 +1372,8 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         )
 
         # Create additional components for filtering
-        InventoryItem.objects.create(device=devices[0], name="Inventory Item 1")
-        InventoryItem.objects.create(device=devices[1], name="Inventory Item 2")
+        InventoryItem.objects.create(device=devices[0], name="Inventory Item 1", serial="abc")
+        InventoryItem.objects.create(device=devices[1], name="Inventory Item 2", serial="xyz")
         Service.objects.create(device=devices[0], name="ssh", protocol="tcp", ports=[22])
         Service.objects.create(device=devices[1], name="dns", protocol="udp", ports=[53])
 
@@ -1511,9 +1519,43 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             )
 
     def test_search(self):
-        value = self.queryset.values_list("pk", flat=True)[0]
-        params = {"q": value}
-        self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+        filter_fields = (
+            "name",
+            "serial",
+            "inventory_items__serial",
+            "asset_tag",
+            "device_type__manufacturer__name",
+            "comments",
+        )
+        for filter_field in filter_fields:
+            with self.subTest(f"test q filter by field {filter_field}"):
+                value = (
+                    self.queryset.values_list(filter_field, flat=True)
+                    .exclude(**{f"{filter_field}__in": ["", None]})
+                    .first()
+                )
+                params = {"q": value}
+                # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+                # pylint: disable=unsupported-binary-operation
+                qs_filter = (
+                    Q(name__icontains=value)
+                    | Q(serial__icontains=value.strip())
+                    | Q(inventory_items__serial__icontains=value.strip())
+                    | Q(asset_tag__icontains=value.strip())
+                    | Q(device_type__manufacturer__name__icontains=value.strip())
+                    | Q(comments__icontains=value)
+                )
+                self.assertQuerysetEqualAndNotEmpty(
+                    self.filterset(params, self.queryset).qs,
+                    self.queryset.filter(qs_filter),
+                )
+
+        with self.subTest("test q filter by field pk"):
+            value = self.queryset.values_list("pk", flat=True).first()
+            params = {"q": value}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(id=value)
+            )
 
 
 class ConsolePortTestCase(FilterTestCases.FilterTestCase):
@@ -1790,6 +1832,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         ("name",),
         ("parent_interface", "parent_interface__id"),
         ("parent_interface", "parent_interface__name"),
+        ("status", "status__id"),
         ("status", "status__name"),
         ("type",),
         ("tagged_vlans", "tagged_vlans__id"),
@@ -2545,6 +2588,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         ("color",),
         ("label",),
         ("length",),
+        ("status", "status__id"),
         ("status", "status__name"),
         ("termination_a_id",),
         ("termination_b_id",),
@@ -2835,6 +2879,7 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
         ("power_panel", "power_panel__name"),
         ("rack", "rack__id"),
         ("rack", "rack__name"),
+        ("status", "status__id"),
         ("status", "status__name"),
         ("voltage",),
     ]

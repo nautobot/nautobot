@@ -5,10 +5,8 @@ from nautobot.core.apps import (
     NavMenuAddButton,
     NavMenuGroup,
     NavMenuItem,
-    NavMenuImportButton,
     NavMenuTab,
 )
-
 
 menu_items = (
     NavMenuTab(
@@ -33,12 +31,6 @@ menu_items = (
                                     "dcim.add_locationtype",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="dcim:locationtype_import",
-                                permissions=[
-                                    "dcim.add_locationtype",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -51,12 +43,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="dcim:location_add",
-                                permissions=[
-                                    "dcim.add_location",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="dcim:location_import",
                                 permissions=[
                                     "dcim.add_location",
                                 ],
@@ -83,12 +69,6 @@ menu_items = (
                                     "dcim.add_rack",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="dcim:rack_import",
-                                permissions=[
-                                    "dcim.add_rack",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -105,12 +85,6 @@ menu_items = (
                                     "dcim.add_rackgroup",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="dcim:rackgroup_import",
-                                permissions=[
-                                    "dcim.add_rackgroup",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -123,12 +97,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="dcim:rackreservation_add",
-                                permissions=[
-                                    "dcim.add_rackreservation",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="dcim:rackreservation_import",
                                 permissions=[
                                     "dcim.add_rackreservation",
                                 ],
@@ -170,12 +138,6 @@ menu_items = (
                                     "dcim.add_device",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="dcim:device_import",
-                                permissions=[
-                                    "dcim.add_device",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -188,12 +150,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="dcim:platform_add",
-                                permissions=[
-                                    "dcim.add_platform",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="dcim:platform_import",
                                 permissions=[
                                     "dcim.add_platform",
                                 ],
@@ -214,12 +170,6 @@ menu_items = (
                                     "dcim.add_virtualchassis",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="dcim:virtualchassis_import",
-                                permissions=[
-                                    "dcim.add_virtualchassis",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -236,12 +186,6 @@ menu_items = (
                                     "dcim.add_deviceredundancygroup",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="dcim:deviceredundancygroup_import",
-                                permissions=[
-                                    "dcim.add_deviceredundancygroup",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -254,12 +198,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="dcim:interfaceredundancygroup_add",
-                                permissions=[
-                                    "dcim.add_interfaceredundancygroup",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="dcim:interfaceredundancygroup_import",
                                 permissions=[
                                     "dcim.add_interfaceredundancygroup",
                                 ],
@@ -286,12 +224,6 @@ menu_items = (
                                     "dcim.add_devicetype",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="dcim:devicetype_import",
-                                permissions=[
-                                    "dcim.add_devicetype",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -304,12 +236,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="dcim:manufacturer_add",
-                                permissions=[
-                                    "dcim.add_manufacturer",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="dcim:manufacturer_import",
                                 permissions=[
                                     "dcim.add_manufacturer",
                                 ],
@@ -329,14 +255,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_cable",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:cable_import",
-                                permissions=[
-                                    "dcim.add_cable",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:console_connections_list",
@@ -380,14 +299,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_interface",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:interface_import",
-                                permissions=[
-                                    "dcim.add_interface",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:frontport_list",
@@ -396,14 +308,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_frontport",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:frontport_import",
-                                permissions=[
-                                    "dcim.add_frontport",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:rearport_list",
@@ -412,14 +317,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_rearport",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:rearport_import",
-                                permissions=[
-                                    "dcim.add_rearport",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:consoleport_list",
@@ -428,14 +326,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_consoleport",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:consoleport_import",
-                                permissions=[
-                                    "dcim.add_consoleport",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:consoleserverport_list",
@@ -444,14 +335,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_consoleserverport",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:consoleserverport_import",
-                                permissions=[
-                                    "dcim.add_consoleserverport",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:powerport_list",
@@ -460,14 +344,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_powerport",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:powerport_import",
-                                permissions=[
-                                    "dcim.add_powerport",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:poweroutlet_list",
@@ -476,14 +353,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_poweroutlet",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:poweroutlet_import",
-                                permissions=[
-                                    "dcim.add_poweroutlet",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:devicebay_list",
@@ -492,14 +362,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_devicebay",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:devicebay_import",
-                                permissions=[
-                                    "dcim.add_devicebay",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:inventoryitem_list",
@@ -508,14 +371,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_inventoryitem",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:inventoryitem_import",
-                                permissions=[
-                                    "dcim.add_inventoryitem",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                 ),
             ),
@@ -542,12 +398,6 @@ menu_items = (
                                     "dcim.add_powerfeed",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="dcim:powerfeed_import",
-                                permissions=[
-                                    "dcim.add_powerfeed",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -559,12 +409,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="dcim:powerpanel_add",
-                                permissions=[
-                                    "dcim.add_powerpanel",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="dcim:powerpanel_import",
                                 permissions=[
                                     "dcim.add_powerpanel",
                                 ],

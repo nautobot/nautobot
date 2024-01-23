@@ -4,28 +4,28 @@ import logging
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.validators import ValidationError
 from django.db.models.fields.reverse_related import ManyToOneRel, OneToOneRel
-
 import graphene
 from graphene.types import generic
 
 from nautobot.circuits.graphql.types import CircuitTerminationType
-from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.graphql.generators import (
     generate_attrs_for_schema_type,
     generate_computed_field_resolver,
     generate_custom_field_resolver,
     generate_filter_resolver,
     generate_list_search_parameters,
+    generate_null_choices_resolver,
     generate_relationship_resolver,
     generate_restricted_queryset,
     generate_schema_type,
-    generate_null_choices_resolver,
 )
-from nautobot.core.graphql.types import ContentTypeType
+from nautobot.core.graphql.types import ContentTypeType, JSON
+from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.dcim.graphql.types import (
-    CableType,
     CablePathType,
+    CableType,
     ConsolePortType,
     ConsoleServerPortType,
     DeviceType,
@@ -39,10 +39,11 @@ from nautobot.dcim.graphql.types import (
     RackType,
     RearPortType,
 )
-from nautobot.extras.registry import registry
-from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
-from nautobot.extras.graphql.types import TagType, DynamicGroupType
+from nautobot.extras.graphql.types import DynamicGroupType, TagType
+from nautobot.extras.models import ComputedField, CustomField, Relationship
+from nautobot.extras.registry import registry
+from nautobot.extras.utils import check_if_key_is_graphql_safe
 from nautobot.ipam.graphql.types import IPAddressType, PrefixType
 from nautobot.virtualization.graphql.types import VirtualMachineType, VMInterfaceType
 
@@ -82,6 +83,7 @@ CUSTOM_FIELD_MAPPING = {
     CustomFieldTypeChoices.TYPE_DATE: graphene.Date(),
     CustomFieldTypeChoices.TYPE_URL: graphene.String(),
     CustomFieldTypeChoices.TYPE_SELECT: graphene.String(),
+    CustomFieldTypeChoices.TYPE_JSON: JSON(),
 }
 
 
@@ -153,7 +155,7 @@ def extend_schema_type_null_field_choice(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
     # This is a workaround implemented for https://github.com/nautobot/nautobot/issues/466#issuecomment-877991184
     # We want to iterate over fields and see if they meet the criteria: null=False, blank=True, and choices defined
@@ -191,7 +193,7 @@ def extend_schema_type_filter(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
     for field in model._meta.get_fields():
         # Check attribute is a ManyToOne field
@@ -220,7 +222,7 @@ def extend_schema_type_custom_field(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
 
     cfs = CustomField.objects.get_for_model(model)
@@ -268,7 +270,7 @@ def extend_schema_type_computed_field(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
 
     cfs = ComputedField.objects.get_for_model(model)
@@ -278,6 +280,17 @@ def extend_schema_type_computed_field(schema_type, model):
 
     for field in cfs:
         field_name = f"{prefix}{field.key}"
+        try:
+            check_if_key_is_graphql_safe("Computed Field", field.key)
+        except ValidationError:
+            logger.warning(
+                'Unable to add the computed field "%s" to %s because computed field key "%s" is not GraphQL safe',
+                field,
+                schema_type._meta.name,
+                field_name,
+            )
+            continue
+
         resolver_name = f"resolve_{field_name}"
 
         if hasattr(schema_type, resolver_name):
@@ -309,7 +322,7 @@ def extend_schema_type_tags(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
 
     fields_name = [field.name for field in model._meta.get_fields()]
@@ -332,7 +345,7 @@ def extend_schema_type_config_context(schema_type, model):
         model (Model): Django model
 
     Returns:
-        schema_type (DjangoObjectType)
+        (DjangoObjectType): The extended schema_type object
     """
 
     fields_name = [field.name for field in model._meta.get_fields()]

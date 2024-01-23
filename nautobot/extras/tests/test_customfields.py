@@ -7,9 +7,9 @@ from django.db.models import ProtectedError
 from django.forms import ChoiceField, IntegerField, NumberInput
 from django.urls import reverse
 from rest_framework import status
-from nautobot.core.forms.widgets import MultiValueCharInput, StaticSelect2
 
 from nautobot.circuits.models import Provider
+from nautobot.core.forms.widgets import MultiValueCharInput, StaticSelect2
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.tables import CustomFieldColumn
 from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
@@ -19,7 +19,7 @@ from nautobot.dcim.filters import LocationFilterSet
 from nautobot.dcim.forms import RackFilterForm
 from nautobot.dcim.models import Device, Location, LocationType, Rack
 from nautobot.dcim.tables import LocationTable
-from nautobot.extras.choices import CustomFieldTypeChoices, CustomFieldFilterLogicChoices
+from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
 from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import VirtualMachine
@@ -385,14 +385,44 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
 
 class CustomFieldManagerTest(TestCase):
     def setUp(self):
-        content_type = ContentType.objects.get_for_model(Location)
+        self.content_type = ContentType.objects.get_for_model(Location)
         custom_field = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Text Field", default="foo")
         custom_field.save()
-        custom_field.content_types.set([content_type])
+        custom_field.content_types.set([self.content_type])
 
     def test_get_for_model(self):
         self.assertEqual(CustomField.objects.get_for_model(Location).count(), 2)
         self.assertEqual(CustomField.objects.get_for_model(VirtualMachine).count(), 0)
+
+    def test_get_for_model_lru_cache_invalidation(self):
+        """Test that the lru cache is properly invalidated when CustomFields are created or deleted."""
+
+        qs1 = CustomField.objects.get_for_model(Location)
+
+        # Assert that the cache is used when calling get_for_model a second time
+        qs1_cached = CustomField.objects.get_for_model(Location)
+        self.assertTrue(qs1_cached is qs1)
+
+        # Assert that the cache is invalidated on object save
+        custom_field = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Test CF1", default="foo")
+        custom_field.save()
+        qs2 = CustomField.objects.get_for_model(Location)
+        self.assertFalse(qs2 is qs1)
+
+        # Assert that the cache is invalidated when adding a CustomField.content_types m2m relationship
+        custom_field.content_types.set([self.content_type])
+        qs3 = CustomField.objects.get_for_model(Location)
+        self.assertNotIn(qs3, (qs1, qs2))
+
+        # Assert that the cache is invalidated when removing a CustomField.content_types m2m relationship
+        custom_field.content_types.set([])
+        qs4 = CustomField.objects.get_for_model(Location)
+        self.assertNotIn(qs4, (qs1, qs2, qs3))
+
+        # Assert that the cache is invalidated on object delete
+        custom_field.delete()
+        qs5 = CustomField.objects.get_for_model(Location)
+        self.assertNotIn(qs5, (qs1, qs2, qs3, qs4))
 
 
 class CustomFieldDataAPITest(APITestCase):
@@ -408,14 +438,14 @@ class CustomFieldDataAPITest(APITestCase):
 
         # Text custom field
         cls.cf_text = CustomField(
-            type=CustomFieldTypeChoices.TYPE_TEXT, label="Text Field", key="text_cf", default="foo"
+            type=CustomFieldTypeChoices.TYPE_TEXT, label="Text Field", key="text_cf", default="FOO"
         )
         cls.cf_text.save()
         cls.cf_text.content_types.set([content_type])
 
         # Integer custom field
         cls.cf_integer = CustomField(
-            type=CustomFieldTypeChoices.TYPE_INTEGER, label="Number Field", key="number_cf", default=123
+            type=CustomFieldTypeChoices.TYPE_INTEGER, label="Number Field", key="number_cf", default=12
         )
         cls.cf_integer.save()
         cls.cf_integer.content_types.set([content_type])
@@ -2119,7 +2149,7 @@ class CustomFieldTableTest(TestCase):
             "url_field": '<a href="http://example.com/2">http://example.com/2</a>',
             "choice_field": '<span class="label label-default">Bar</span>',
             "multi_choice_field": (
-                '<span class="label label-default">Bar</span> <span class="label label-default">Baz</span> '
+                '<span class="label label-default">Bar</span> <span class="label label-default">Baz</span>'
             ),
         }
 

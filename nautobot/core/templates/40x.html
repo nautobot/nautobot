@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load helpers %}
 
 {% block content %}
 <div class="row" style="margin-top: 150px;">
@@ -8,7 +9,10 @@
                 <strong>{% block icon %}{% endblock %} {% block title %}{% endblock %}</strong>
             </div>
             <div class="panel-body">
-                {% block message %}{% endblock %}
+                <p>
+                    {% block message %}{% endblock %}
+                </p>
+                {% support_message %}
             </div>
             <div class="panel-footer text-right">
                 <a href="{% url 'home' %}" class="btn btn-xs btn-primary">Home Page</a>

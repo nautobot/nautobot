@@ -11,7 +11,6 @@ from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.utils import extras_features, TaggableClassesQuery
 
-
 #
 # Tags
 #

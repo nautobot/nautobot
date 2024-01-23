@@ -1,5 +1,5 @@
-import uuid
 from collections import OrderedDict
+import uuid
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -7,14 +7,13 @@ from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import transaction
 from django.db.models import F, Prefetch
 from django.forms import (
+    modelformset_factory,
     ModelMultipleChoiceField,
     MultipleHiddenInput,
-    modelformset_factory,
 )
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.functional import cached_property
-from django.utils.html import escape
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
@@ -31,11 +30,12 @@ from nautobot.core.views.mixins import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.utils import get_network_driver_mapping_tool_names, get_all_network_driver_mappings
+from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
 from nautobot.virtualization.models import VirtualMachine
+
 from . import filters, forms, tables
 from .api import serializers
 from .choices import DeviceFaceChoices
@@ -143,7 +143,7 @@ class BaseDeviceComponentsBulkRenameView(generic.BulkRenameView):
         selected_object = selected_objects.first()
         if selected_object and selected_object.device:
             return selected_object.device.name
-        return None
+        return ""
 
 
 #
@@ -1104,6 +1104,7 @@ class DeviceListView(generic.ObjectListView):
     queryset = Device.objects.select_related(
         "status",
         "device_type",
+        "device_type__manufacturer",  # Needed for __str__() on device_type
         "role",
         "tenant",
         "location",
@@ -2634,8 +2635,8 @@ class VirtualChassisAddMemberView(ObjectPermissionRequiredMixin, GetReturnURLMix
 
             if membership_form.is_valid():
                 membership_form.save()
-                msg = f'Added member <a href="{device.get_absolute_url()}">{escape(device)}</a>'
-                messages.success(request, mark_safe(msg))
+                msg = format_html('Added member <a href="{}">{}</a>', device.get_absolute_url(), device)
+                messages.success(request, msg)
 
                 if "_addanother" in request.POST:
                     return redirect(request.get_full_path())
@@ -2684,8 +2685,8 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
         # Protect master device from being removed
         virtual_chassis = VirtualChassis.objects.filter(master=device).first()
         if virtual_chassis is not None:
-            msg = f"Unable to remove master device {escape(device)} from the virtual chassis."
-            messages.error(request, mark_safe(msg))
+            msg = format_html("Unable to remove master device {} from the virtual chassis.", device)
+            messages.error(request, msg)
             return redirect(device.get_absolute_url())
 
         if form.is_valid():

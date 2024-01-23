@@ -12,9 +12,8 @@ from nautobot.core.settings_funcs import sso_auth_enabled
 from nautobot.core.testing import NautobotTestClient, TestCase
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.models import Status
-from nautobot.ipam.models import Prefix, Namespace
+from nautobot.ipam.models import Namespace, Prefix
 from nautobot.users.models import ObjectPermission, Token
-
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -51,7 +50,7 @@ class ExternalAuthenticationTestCase(TestCase):
         self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_REMOTE_USER")
 
         # Client should not be authenticated
-        self.client.get(reverse("home"), follow=True, **headers)  # noqa
+        self.client.get(reverse("home"), follow=True, **headers)
         self.assertNotIn("_auth_user_id", self.client.session)
 
     @override_settings(AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS)

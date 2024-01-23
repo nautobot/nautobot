@@ -1,8 +1,8 @@
 from django import template
 from django.urls import NoReverseMatch, reverse
 
-from nautobot.core.views import utils as views_utils
 from nautobot.core.utils import lookup
+from nautobot.core.views import utils as views_utils
 from nautobot.extras import models
 
 register = template.Library()
@@ -36,9 +36,9 @@ def edit_button(instance, use_pk=False, key="slug"):
     Render a button to edit a model instance.
 
     Args:
-        instance: Model record.
-        use_pk: Used for backwards compatibility, no-op in this function.
-        key: Used for backwards compatibility, no-op in this function.
+        instance (BaseModel): Model record.
+        use_pk (bool): Used for backwards compatibility, no-op in this function.
+        key (str): Used for backwards compatibility, no-op in this function.
     """
     viewname = lookup.get_route_for_model(instance, "edit")
 
@@ -63,9 +63,9 @@ def delete_button(instance, use_pk=False, key="slug"):
     Render a button to delete a model instance.
 
     Args:
-        instance: Model record.
-        use_pk: Used for backwards compatibility, no-op in this function.
-        key: Used for backwards compatibility, no-op in this function.
+        instance (BaseModel): Model record.
+        use_pk (bool): Used for backwards compatibility, no-op in this function.
+        key (str): Used for backwards compatibility, no-op in this function.
     """
     viewname = lookup.get_route_for_model(instance, "delete")
 
@@ -114,15 +114,21 @@ def export_button(context, content_type=None):
         user = context["request"].user
         export_templates = models.ExportTemplate.objects.restrict(user, "view").filter(content_type=content_type)
         try:
-            export_url = reverse(lookup.get_route_for_model(content_type.model_class(), "list", api=True))
+            export_url = reverse(
+                "extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ExportObjectList"}
+            )
         except NoReverseMatch:
             export_url = None
+        include_yaml_option = hasattr(content_type.model_class(), "to_yaml")
     else:
         export_templates = []
         export_url = None
+        include_yaml_option = False
 
     return {
         "export_url": export_url,
-        "url_params": context["request"].GET,
+        "query_string": context["request"].GET.urlencode(),
+        "content_type": content_type,
         "export_templates": export_templates,
+        "include_yaml_option": include_yaml_option,
     }

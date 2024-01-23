@@ -1,13 +1,12 @@
 import json
 from unittest import skip
 
+from constance.test import override_config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
-
-from constance.test import override_config
 
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
@@ -34,17 +33,17 @@ from nautobot.dcim.models import (
     Interface,
     InterfaceRedundancyGroup,
     InterfaceTemplate,
+    InventoryItem,
     Location,
     LocationType,
     Manufacturer,
-    InventoryItem,
     Platform,
     PowerFeed,
-    PowerPort,
-    PowerPortTemplate,
     PowerOutlet,
     PowerOutletTemplate,
     PowerPanel,
+    PowerPort,
+    PowerPortTemplate,
     Rack,
     RackGroup,
     RackReservation,
@@ -53,10 +52,9 @@ from nautobot.dcim.models import (
     VirtualChassis,
 )
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
-from nautobot.ipam.models import IPAddress, VLAN, VLANGroup, Namespace, Prefix
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType
-
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -506,6 +504,13 @@ class RackTest(APIViewTestCases.APIViewTestCase):
                 "role": rack_roles[1].pk,
                 "status": statuses[1].pk,
             },
+            # Make sure rack_group is not interpreted as a required field
+            {
+                "name": "Test Rack 7",
+                "location": locations[1].pk,
+                "role": rack_roles[1].pk,
+                "status": statuses[1].pk,
+            },
         ]
         cls.bulk_update_data = {
             "status": statuses[1].pk,
@@ -594,31 +599,54 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         response = self.client.options(url, **self.header)
         detail_view_schema = response.data["view_options"]["retrieve"]
 
-        expected_schema = [
-            {
-                "Rack": {"fields": ["name", "location", "rack_group"]},
-                "Other Fields": {
-                    "fields": [
-                        "asset_tag",
-                        "desc_units",
-                        "device_count",
-                        "facility_id",
-                        "outer_depth",
-                        "outer_unit",
-                        "outer_width",
-                        "power_feed_count",
-                        "role",
-                        "serial",
-                        "tenant",
-                        "type",
-                        "u_height",
-                        "width",
-                    ]
-                },
-            },
-            {"Comments": {"fields": ["comments"]}},
-        ]
+        expected_schema = {
+            "tabs": {
+                "Rack": [
+                    {
+                        "Rack": {"fields": ["name", "location", "rack_group"]},
+                        "Other Fields": {
+                            "fields": [
+                                "asset_tag",
+                                "desc_units",
+                                "device_count",
+                                "facility_id",
+                                "outer_depth",
+                                "outer_unit",
+                                "outer_width",
+                                "power_feed_count",
+                                "role",
+                                "serial",
+                                "tenant",
+                                "type",
+                                "u_height",
+                                "width",
+                            ]
+                        },
+                    },
+                    {
+                        "Comments": {"fields": ["comments"]},
+                        "Tags": {"fields": ["tags"]},
+                    },
+                ],
+                "Advanced": [
+                    {
+                        "Object Details": {
+                            "fields": [
+                                "id",
+                                "url",
+                                "object_type",
+                                "created",
+                                "last_updated",
+                                "natural_slug",
+                            ]
+                        }
+                    },
+                ],
+            }
+        }
+
         self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.maxDiff = None
         self.assertEqual(expected_schema, detail_view_schema)
 
 
@@ -690,6 +718,7 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
         # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
+        Device.objects.all().delete()
         DeviceType.objects.all().delete()
         Platform.objects.all().delete()
 
@@ -1074,6 +1103,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        Device.objects.all().delete()
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
         rack_status = Status.objects.get_for_model(Rack).first()
@@ -1516,7 +1546,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
             ),
         )
 
-        vlan_group = VLANGroup.objects.first()
+        vlan_group = VLANGroup.objects.create(name="Test VLANGroup 1")
         vlan_status = Status.objects.get_for_model(VLAN).first()
         cls.vlans = (
             VLAN.objects.create(name="VLAN 1", vid=1, status=vlan_status, vlan_group=vlan_group),

@@ -1,11 +1,9 @@
-import django_tables2 as tables
 from django.conf import settings
 from django.utils.html import format_html
-from django.utils.safestring import mark_safe
+import django_tables2 as tables
 from django_tables2.utils import Accessor
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
-from nautobot.core.templatetags.helpers import render_boolean, render_markdown
 from nautobot.core.tables import (
     BaseTable,
     BooleanColumn,
@@ -17,7 +15,8 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from .choices import LogLevelChoices
+from nautobot.core.templatetags.helpers import render_boolean, render_markdown
+
 from .models import (
     ComputedField,
     ConfigContext,
@@ -27,13 +26,14 @@ from .models import (
     DynamicGroup,
     DynamicGroupMembership,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     Job as JobModel,
     JobButton,
     JobHook,
-    JobResult,
     JobLogEntry,
+    JobResult,
     Note,
     ObjectChange,
     Relationship,
@@ -48,7 +48,6 @@ from .models import (
     Webhook,
 )
 from .registry import registry
-
 
 TAGGED_ITEM = """
 {% if value.get_absolute_url %}
@@ -236,7 +235,7 @@ class CustomFieldTable(BaseTable):
 
     def render_description(self, record):
         if record.description:
-            return mark_safe(render_markdown(record.description))
+            return render_markdown(record.description)
         return self.default
 
 
@@ -408,6 +407,40 @@ class ExportTemplateTable(BaseTable):
         )
 
 
+class ExternalIntegrationTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    remote_url = tables.Column()
+    http_method = tables.Column()
+    secrets_group = tables.Column(linkify=True)
+    ca_file_path = tables.Column()
+    tags = TagColumn(url_name="extras:externalintegration_list")
+
+    class Meta(BaseTable.Meta):
+        model = ExternalIntegration
+        fields = (
+            "pk",
+            "name",
+            "remote_url",
+            "http_method",
+            "secrets_group",
+            "verify_ssl",
+            "timeout",
+            "ca_file_path",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "remote_url",
+            "http_method",
+            "secrets_group",
+            "verify_ssl",
+            "timeout",
+            "tags",
+        )
+
+
 class GitRepositoryTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
@@ -504,7 +537,7 @@ def log_object_link(value, record):
 
 
 def log_entry_color_css(record):
-    if record.log_level.lower() == "failure":
+    if record.log_level.lower() in ("error", "critical"):
         return "danger"
     return record.log_level.lower()
 
@@ -690,20 +723,15 @@ class JobResultTable(BaseTable):
         """
         Define custom rendering for the summary column.
         """
-        log_objects = record.job_log_entries.all()
-        debug = log_objects.filter(log_level=LogLevelChoices.LOG_DEBUG).count()
-        info = log_objects.filter(log_level=LogLevelChoices.LOG_INFO).count()
-        warning = log_objects.filter(log_level=LogLevelChoices.LOG_WARNING).count()
-        error = log_objects.filter(log_level__in=[LogLevelChoices.LOG_ERROR, LogLevelChoices.LOG_CRITICAL]).count()
         return format_html(
             """<label class="label label-default">{}</label>
             <label class="label label-info">{}</label>
             <label class="label label-warning">{}</label>
             <label class="label label-danger">{}</label>""",
-            debug,
-            info,
-            warning,
-            error,
+            record.debug_log_count,
+            record.info_log_count,
+            record.warning_log_count,
+            record.error_log_count,
         )
 
     class Meta(BaseTable.Meta):
@@ -761,6 +789,7 @@ class JobButtonTable(BaseTable):
 
 class NoteTable(BaseTable):
     actions = ButtonsColumn(Note)
+    created = tables.LinkColumn()
 
     class Meta(BaseTable.Meta):
         model = Note

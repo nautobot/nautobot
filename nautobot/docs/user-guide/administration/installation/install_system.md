@@ -20,14 +20,14 @@ This will install:
 
 === "Ubuntu/Debian"
 
-    ```no-highlight
+    ```bash
     sudo apt update -y
     sudo apt install -y git python3 python3-pip python3-venv python3-dev redis-server
     ```
 
 === "RHEL8 + Derivatives"
 
-    ```no-highlight
+    ```bash
     sudo dnf check-update
     sudo dnf install -y git python38 python38-devel python38-pip redis
     ```
@@ -73,6 +73,8 @@ Please follow the steps for your selected database backend below.
     postgres=# CREATE USER nautobot WITH PASSWORD 'insecure_password';
     CREATE ROLE
     postgres=# GRANT ALL PRIVILEGES ON DATABASE nautobot TO nautobot;
+    GRANT
+    postgres=# GRANT CREATE ON SCHEMA public TO nautobot;
     GRANT
     postgres=# \q
     ```

@@ -2,8 +2,7 @@ import pstats
 import tempfile
 
 from nautobot.core.celery import register_jobs
-from nautobot.extras.jobs import Job, get_task_logger
-
+from nautobot.extras.jobs import get_task_logger, Job
 
 logger = get_task_logger(__name__)
 
