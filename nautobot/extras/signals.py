@@ -23,8 +23,8 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import (
-    ContactAssociation,
     ComputedField,
+    ContactAssociation,
     CustomField,
     DynamicGroup,
     DynamicGroupMembership,
