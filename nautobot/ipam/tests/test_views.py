@@ -1142,6 +1142,9 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "VLAN Group 7,Seventh VLAN group",
         )
 
+    def get_deletable_object(self):
+        return VLANGroup.objects.create(name="TEST DELETE ME")
+
 
 class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = VLAN
