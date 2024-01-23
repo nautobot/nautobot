@@ -211,6 +211,8 @@ requests = ">=2.28.0,<2.32.0"
 selenium = "~4.9.1"
 # Abstraction layer for working with Selenium
 splinter = "~0.18.1"
+# Serialization of tracebacks - used when running unittest with --parallel flag
+tblib = "~3.0.0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
