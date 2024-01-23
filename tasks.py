@@ -731,7 +731,7 @@ def unittest(
         run_command(context, "coverage erase")
 
     append_arg = " --append" if append and not parallel else ""
-    parallel_arg = " --parallel-mode --rcfile=.coveragerc.parallel" if parallel else ""
+    parallel_arg = " --parallel-mode" if parallel else ""
     command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
     command += " --config=nautobot/core/tests/nautobot_config.py"
     # booleans
