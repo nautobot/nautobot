@@ -75,26 +75,6 @@ class NautobotDatabaseBackend(DatabaseBackend):
         exc_info = super().prepare_exception(exc, serializer=serializer)
 
         exc_message = exc_info["exc_message"]
-
-        # If the message is iterable, walk through every item and try to sanitize any strings.
-        if isinstance(exc_message, (list, tuple)):
-            new_exc_message = []
-            for item in exc_message:
-                if isinstance(item, list):
-                    new_list = []
-                    for i in item:
-                        if isinstance(i, str):
-                            i = sanitize(i)
-                        new_list.append(i)
-                    new_exc_message.append(new_list)
-                elif isinstance(item, bytes):
-                    new_exc_message.append(sanitize(item.decode("utf-8")))
-                elif isinstance(item, str):
-                    new_exc_message.append(sanitize(item))
-                # Pass through anything that isn't a string/list of strings
-                else:
-                    new_exc_message.append(item)
-
-            exc_info["exc_message"] = tuple(new_exc_message)
+        exc_info["exc_message"] = sanitize(exc_message)
 
         return exc_info

@@ -1109,6 +1109,7 @@ class DeviceListView(generic.ObjectListView):
         "status",
         "device_type",
         "device_type__hardware_family",
+        "device_type__manufacturer",  # Needed for __str__() on device_type
         "role",
         "tenant",
         "location",

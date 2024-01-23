@@ -50,17 +50,6 @@ DEVICE_LINK = """
 </a>
 """
 
-DEVICEBAY_STATUS = """
-{% if record.installed_device_id %}
-    {% load helpers %}
-    <span class="label" style="color: {{ record.installed_device.status.color|fgcolor }}; background-color: #{{ record.installed_device.status.color }}">
-        {{ record.installed_device.get_status_display }}
-    </span>
-{% else %}
-    <span class="label label-default">Vacant</span>
-{% endif %}
-"""
-
 INTERFACE_IPADDRESSES = """
 {% for ip in record.ip_addresses.all %}
     <a href="{{ ip.get_absolute_url }}">{{ ip }}</a> (<a href="{{ ip.parent.namespace.get_absolute_url }}">{{ ip.parent.namespace }}</a>)<br />
@@ -77,26 +66,10 @@ INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES = """
 {% endfor %}
 """
 
-INTERFACE_REDUNDANCY_GROUP_STATUS = """
-{% load helpers %}
-<span class="label"
-    style="color: {{ record.interface_redundancy_group.status.color|fgcolor }};
-    background-color: #{{ record.interface_redundancy_group.status.color }}">
-    {{ record.interface_redundancy_group.get_status_display }}
-</span>
-"""
-
 INTERFACE_REDUNDANCY_INTERFACE_PRIORITY = """
 {% load helpers %}
 <span class="badge badge-default">
     {{ record.priority|placeholder }}
-</span>
-"""
-
-INTERFACE_REDUNDANCY_INTERFACE_STATUS = """
-{% load helpers %}
-<span class="label" style="color: {{ record.interface.status.color|fgcolor }}; background-color: #{{ record.interface.status.color }}">
-    {{ record.interface.get_status_display }}
 </span>
 """
 
