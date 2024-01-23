@@ -727,8 +727,12 @@ def unittest(
         # First build the docs so they are available.
         build_and_check_docs(context)
 
-    append_arg = " --append" if append else ""
-    command = f"coverage run{append_arg} --module nautobot.core.cli test {label}"
+    if parallel and not append:
+        run_command(context, "coverage erase")
+
+    append_arg = " --append" if append and not parallel else ""
+    parallel_arg = " --parallel-mode --rcfile=.coveragerc.parallel" if parallel else ""
+    command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
     command += " --config=nautobot/core/tests/nautobot_config.py"
     # booleans
     if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
@@ -760,11 +764,15 @@ def unittest(
 
     run_command(context, command)
 
+    if parallel:
+        run_command(context, "coverage combine")
+    unittest_coverage(context)
+
 
 @task
 def unittest_coverage(context):
     """Report on code test coverage as measured by 'invoke unittest'."""
-    command = "coverage report --skip-covered --include 'nautobot/*' --omit *migrations*"
+    command = "coverage report --skip-covered --include 'nautobot/*'"
 
     run_command(context, command)
 
