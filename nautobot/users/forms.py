@@ -38,3 +38,12 @@ class TokenForm(BootstrapMixin, forms.ModelForm):
         widgets = {
             "expires": DateTimePicker(),
         }
+
+
+class AdvancedProfileSettingsForm(BootstrapMixin, forms.Form):
+    request_profiling = forms.BooleanField(
+        required=False,
+        help_text="Enable request profiling for the durration of the login session. "
+        "This is for debugging purposes and should only be enabled when "
+        "instructed by an adiministrator.",
+    )

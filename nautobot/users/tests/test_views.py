@@ -91,3 +91,29 @@ class PasswordUITest(TestCase):
                     "Remotely authenticated user credentials cannot be changed within Nautobot.",
                     str(response.content),
                 )
+
+
+class AdancedProfileSettingsViewTest(TestCase):
+    """
+    Tests for the user's advanced settings profile edit view
+    """
+
+    def test_enable_request_profiling(self):
+        """
+        Check that a user can enable request profling on their session
+        """
+        # Simulate form submission with checkbox checked
+        response = self.client.post(reverse("user:advanced_settings_edit"), {"request_profiling": True})
+        self.assertEqual(response.status_code, 200)
+        # Check if the session has the correct value
+        self.assertTrue(self.client.session["silk_record_requests"])
+
+    def test_disable_request_profiling(self):
+        """
+        Check that a user can disable request profling on their session
+        """
+        # Simulate form submission with checkbox unchecked
+        response = self.client.post(reverse("user:advanced_settings_edit"), {"request_profiling": False})
+        self.assertEqual(response.status_code, 200)
+        # Check if the session has the correct value
+        self.assertFalse(self.client.session["silk_record_requests"])
