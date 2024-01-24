@@ -374,6 +374,8 @@ nav:
         - Power Panel : "user-guide/core-data-model/dcim/powerpanel.md"
         - Power Feed: "user-guide/core-data-model/dcim/powerfeed.md"
         - Rack Reservation: "user-guide/core-data-model/dcim/rackreservation.md"
+        - Software Image: "user-guide/core-data-model/dcim/softwareimage.md"
+        - Software Version: "user-guide/core-data-model/dcim/softwareversion.md"
         - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
       - Extras:
         - Config Context: "user-guide/core-data-model/extras/configcontext.md"

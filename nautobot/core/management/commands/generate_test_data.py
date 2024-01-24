@@ -216,6 +216,7 @@ class Command(BaseCommand):
                 CircuitTerminationFactory,
                 CircuitTypeFactory,
                 ContactFactory,
+                DeviceFactory,
                 DeviceRedundancyGroupFactory,
                 DeviceTypeFactory,
                 ExternalIntegrationFactory,
