@@ -727,7 +727,7 @@ def unittest(
         # First build the docs so they are available.
         build_and_check_docs(context)
 
-    if parallel and not append:
+    if not append:
         run_command(context, "coverage erase")
 
     append_arg = " --append" if append and not parallel else ""
@@ -764,14 +764,14 @@ def unittest(
 
     run_command(context, command)
 
-    if parallel:
-        run_command(context, "coverage combine")
     unittest_coverage(context)
 
 
 @task
 def unittest_coverage(context):
     """Report on code test coverage as measured by 'invoke unittest'."""
+    run_command(context, "coverage combine")
+
     command = "coverage report --skip-covered --include 'nautobot/*'"
 
     run_command(context, command)
