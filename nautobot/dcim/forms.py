@@ -15,11 +15,13 @@ from nautobot.core.forms import (
     BulkEditNullBooleanSelect,
     ColorSelect,
     CommentField,
+    DatePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
     form_from_model,
     MultipleContentTypeField,
+    NullableDateField,
     NumericArrayField,
     SelectWithPK,
     SmallTextarea,
@@ -117,6 +119,8 @@ from .models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
+    SoftwareImage,
+    SoftwareVersion,
     VirtualChassis,
 )
 
@@ -3751,3 +3755,38 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
             "secrets_group",
             "protocol",
         ]
+
+
+#
+# Software images
+#
+
+
+class SoftwareImageForm(NautobotModelForm):
+    """SoftwareImage credit/edit form."""
+
+    field_order = [
+        "software_version",
+        "image_file_name",
+        "status",
+    ]
+
+    class Meta:
+        model = SoftwareImage
+        fields = "__all__"
+
+
+class SoftwareVersionForm(NautobotModelForm):
+    """SoftwareVersion credit/edit form."""
+
+    release_date = NullableDateField(required=False, widget=DatePicker())
+    end_of_support_date = NullableDateField(required=False, widget=DatePicker())
+    field_order = [
+        "platform",
+        "version",
+        "status",
+    ]
+
+    class Meta:
+        model = SoftwareVersion
+        fields = "__all__"

@@ -83,6 +83,8 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
+    SoftwareImage,
+    SoftwareVersion,
     VirtualChassis,
 )
 from nautobot.extras.api.mixins import (
@@ -1011,4 +1013,21 @@ class PowerFeedSerializer(
 
     class Meta:
         model = PowerFeed
+        fields = "__all__"
+
+
+#
+# Software images
+#
+
+
+class SoftwareImageSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    class Meta:
+        model = SoftwareImage
+        fields = "__all__"
+
+
+class SoftwareVersionSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    class Meta:
+        model = SoftwareVersion
         fields = "__all__"

@@ -69,6 +69,8 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
+    SoftwareImage,
+    SoftwareVersion,
     VirtualChassis,
 )
 from nautobot.extras.filters import (
@@ -1623,3 +1625,19 @@ class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet, NameSearchFilt
         model = InterfaceRedundancyGroupAssociation
 
         fields = ["id", "interface_redundancy_group", "interface", "priority"]
+
+
+class SoftwareImageFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
+    """Filters for SoftwareImage model."""
+
+    class Meta:
+        model = SoftwareImage
+        fields = "__all__"
+
+
+class SoftwareVersionFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
+    """Filters for SoftwareVersion model."""
+
+    class Meta:
+        model = SoftwareVersion
+        fields = "__all__"

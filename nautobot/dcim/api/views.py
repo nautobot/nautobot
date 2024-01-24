@@ -56,6 +56,8 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
+    SoftwareImage,
+    SoftwareVersion,
     VirtualChassis,
 )
 from nautobot.extras.api.views import (
@@ -786,3 +788,20 @@ class ConnectedDeviceViewSet(ViewSet):
             return Response()
 
         return Response(serializers.DeviceSerializer(local_interface.device, context={"request": request}).data)
+
+
+#
+# Software images
+#
+
+
+class SoftwareImageViewSet(NautobotModelViewSet):
+    queryset = SoftwareImage.objects.select_related("software_version")
+    serializer_class = serializers.SoftwareImageSerializer
+    filterset_class = filters.SoftwareImageFilterSet
+
+
+class SoftwareVersionViewSet(NautobotModelViewSet):
+    queryset = SoftwareVersion.objects.select_related("platform")
+    serializer_class = serializers.SoftwareVersionSerializer
+    filterset_class = filters.SoftwareVersionFilterSet

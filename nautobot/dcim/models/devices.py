@@ -12,11 +12,16 @@ from django.utils.functional import cached_property, classproperty
 from django.utils.html import format_html
 import yaml
 
-from nautobot.core.models import BaseManager
+from nautobot.core.models import BaseManager, RestrictedQuerySet
 from nautobot.core.models.fields import NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
+from nautobot.dcim.choices import (
+    DeviceFaceChoices,
+    DeviceRedundancyGroupFailoverStrategyChoices,
+    SoftwareImageHashingAlgorithmChoices,
+    SubdeviceRoleChoices,
+)
 from nautobot.dcim.utils import get_all_network_driver_mappings
 from nautobot.extras.models import ConfigContextModel, RoleField, StatusField
 from nautobot.extras.querysets import ConfigContextModelQuerySet
@@ -28,6 +33,7 @@ from .device_components import (
     DeviceBay,
     FrontPort,
     Interface,
+    InventoryItem,
     PowerOutlet,
     PowerPort,
     RearPort,
@@ -979,3 +985,116 @@ class DeviceRedundancyGroup(PrimaryModel):
 
     def __str__(self):
         return self.name
+
+
+#
+# Software images
+#
+
+
+class SoftwareImageQuerySet(RestrictedQuerySet):
+    """Queryset for `SoftwareImage` objects."""
+
+    def get_for_object(self, obj):
+        """Return all `SoftwareImage` assigned to the given object."""
+        if not isinstance(obj, models.Model):
+            raise TypeError(f"{obj} is not an instance of Django Model class")
+        if isinstance(obj, Device):
+            qs = self.filter(software_version__platform__devices=obj)
+        elif isinstance(obj, InventoryItem):
+            qs = self.filter(software_version__platform__devices__inventory_items=obj)
+        else:
+            qs = self
+
+        return qs
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "statuses",
+    "webhooks",
+)
+class SoftwareImage(PrimaryModel):
+    """A software image for a Device, Virtual Machine or Inventory Item."""
+
+    software_version = models.ForeignKey(
+        to="SoftwareVersion", on_delete=models.CASCADE, related_name="software_images", verbose_name="Software Version"
+    )
+    image_file_name = models.CharField(blank=False, max_length=100, verbose_name="Image File Name")
+    image_file_checksum = models.CharField(blank=True, max_length=256, verbose_name="Image File Checksum")
+    hashing_algorithm = models.CharField(
+        choices=SoftwareImageHashingAlgorithmChoices,
+        blank=True,
+        max_length=50,
+        verbose_name="Hashing Algorithm",
+        help_text="Hashing algorithm for image file checksum",
+    )
+    download_url = models.URLField(blank=True, verbose_name="Download URL")
+    status = StatusField(blank=False, null=False)
+
+    class Meta:
+        ordering = ("software_version", "image_file_name")
+        unique_together = ("image_file_name", "software_version")
+
+    def __str__(self):
+        return self.image_file_name
+
+    objects = SoftwareImageQuerySet.as_manager()
+
+
+class SoftwareVersionQuerySet(RestrictedQuerySet):
+    """Queryset for `SoftwareVersion` objects."""
+
+    def get_for_object(self, obj):
+        """Return all `SoftwareLCM` assigned to the given object."""
+        if not isinstance(obj, models.Model):
+            raise TypeError(f"{obj} is not an instance of Django Model class")
+        if isinstance(obj, Device):
+            qs = self.filter(platform__devices=obj)
+        elif isinstance(obj, InventoryItem):
+            qs = self.filter(platform__devices__inventory_items=obj)
+        else:
+            qs = self
+
+        return qs
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "statuses",
+    "webhooks",
+)
+class SoftwareVersion(PrimaryModel):
+    """A software version for a Device, Virtual Machine or Inventory Item."""
+
+    platform = models.ForeignKey(to="dcim.Platform", on_delete=models.CASCADE)
+    version = models.CharField(max_length=50)
+    alias = models.CharField(max_length=50, blank=True, help_text="Optional alternative label for this version")
+    release_date = models.DateField(null=True, blank=True, verbose_name="Release Date")
+    end_of_support_date = models.DateField(null=True, blank=True, verbose_name="End of Support Date")
+    documentation_url = models.URLField(blank=True, verbose_name="Documentation URL")
+    long_term_support = models.BooleanField(
+        verbose_name="Long Term Support", default=False, help_text="Is a Long Term Support version"
+    )
+    pre_release = models.BooleanField(verbose_name="Pre-Release", default=False, help_text="Is a Pre-Release version")
+    status = StatusField(blank=False, null=False)
+
+    class Meta:
+        ordering = ("platform", "version", "end_of_support_date", "release_date")
+        unique_together = (
+            "platform",
+            "version",
+        )
+
+    def __str__(self):
+        if self.alias:
+            return self.alias
+        return f"{self.platform} - {self.version}"
+
+    objects = SoftwareVersionQuerySet.as_manager()

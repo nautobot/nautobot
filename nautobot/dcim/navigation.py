@@ -391,6 +391,44 @@ menu_items = (
                     ),
                 ),
             ),
+            NavMenuGroup(
+                name="Software",
+                weight=500,
+                items=(
+                    NavMenuItem(
+                        link="dcim:softwareimage_list",
+                        name="Software Images",
+                        weight=100,
+                        permissions=[
+                            "dcim.view_softwareimage",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:softwareimage_add",
+                                permissions=[
+                                    "dcim.add_softwareimage",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:softwareversion_list",
+                        name="Software Versions",
+                        weight=200,
+                        permissions=[
+                            "dcim.view_softwareversion",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:softwareversion_add",
+                                permissions=[
+                                    "dcim.add_softwareversion",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
         ),
     ),
     NavMenuTab(

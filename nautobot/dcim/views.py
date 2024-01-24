@@ -76,6 +76,8 @@ from .models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
+    SoftwareImage,
+    SoftwareVersion,
     VirtualChassis,
 )
 
@@ -2922,3 +2924,39 @@ class HardwareFamilyUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.HardwareFamilySerializer
     table_class = tables.HardwareFamilyTable
     lookup_field = "pk"
+
+
+#
+# Software images
+#
+
+
+class SoftwareImageUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.SoftwareImageFilterSet
+    form_class = forms.SoftwareImageForm
+    # bulk_update_form_class = forms.SoftwareImageBulkEditForm
+    queryset = SoftwareImage.objects.select_related("software_version")
+    serializer_class = serializers.SoftwareImageSerializer
+    table_class = tables.SoftwareImageTable
+
+
+class SoftwareVersionUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.SoftwareVersionFilterSet
+    form_class = forms.SoftwareVersionForm
+    # bulk_update_form_class = forms.SoftwareVersionBulkEditForm
+    queryset = SoftwareVersion.objects.select_related("platform")
+    serializer_class = serializers.SoftwareVersionSerializer
+    table_class = tables.SoftwareVersionTable
+
+    def get_extra_context(self, request, instance=None):
+        if instance is None:
+            return {}
+
+        software_images = instance.software_images.restrict(request.user, "view")
+        software_images_table = tables.SoftwareImageTable(
+            software_images, orderable=False, exclude=["software_version"]
+        )
+
+        return {
+            "software_images_table": software_images_table,
+        }
