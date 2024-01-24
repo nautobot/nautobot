@@ -51,3 +51,27 @@ Adds part of the request URL path to the profile file name to make it easier to 
 Default: `nautobot.core.settings.silk_request_logging_intercept_logic`
 
 This defines a custom function that filters requests to be profiled. Notably, the default looks for the user session flag described above.
+
+---
+
+### SILKY_AUTHENTICATION
+
+Default: `True`
+
+Users must be authenticated to access the django-silk UI.
+
+---
+
+### SILKY_AUTHORISATION
+
+Default: `True`
+
+Users must have permissions to access the django-silk UI. Used in combination with `SILKY_AUTHENTICATION`.
+
+---
+
+### SILKY_PERMISSIONS
+
+Default: `lambda user: user.is_superuser`
+
+This ensures the users must be a superuser of the system to access the django-silk UI. Used in combination with `SILKY_AUTHENTICATION` and `SILKY_AUTHORISATION`.
