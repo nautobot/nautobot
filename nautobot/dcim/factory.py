@@ -9,6 +9,7 @@ import pytz
 
 from nautobot.circuits.models import CircuitTermination
 from nautobot.core.factory import (
+    get_random_instances,
     NautobotBoolIterator,
     OrganizationalModelFactory,
     PrimaryModelFactory,
@@ -105,16 +106,22 @@ def get_random_platform_for_manufacturer(manufacturer):
     return factory.random.randgen.choice(qs) if qs.exists() else None
 
 
+def get_random_software_image_for_device_type(device_type):
+    qs = SoftwareImage.objects.filter(device_types=device_type)
+    return factory.random.randgen.choice(qs) if qs.exists() else None
+
+
 class DeviceFactory(PrimaryModelFactory):
     class Meta:
         model = Device
         exclude = (
-            "has_tenant",
+            "has_asset_tag",
+            "has_comments",
+            "has_device_redundancy_group",
             "has_platform",
             "has_serial",
-            "has_asset_tag",
-            "has_device_redundancy_group",
-            "has_comments",
+            "has_software_image",
+            "has_tenant",
         )
 
     device_type = random_instance(DeviceType, allow_null=False)
@@ -159,6 +166,13 @@ class DeviceFactory(PrimaryModelFactory):
 
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("bs"))
+
+    has_software_image = NautobotBoolIterator()
+    software_image = factory.Maybe(
+        "has_software_image",
+        factory.LazyAttribute(lambda o: get_random_software_image_for_device_type(o.device_type)),
+        None,
+    )
 
     # TODO to be done after these model factories are done.
     # has_cluster = NautobotBoolIterator()
@@ -219,10 +233,11 @@ class DeviceTypeFactory(PrimaryModelFactory):
     class Meta:
         model = DeviceType
         exclude = (
+            "has_comments",
             "has_hardware_family",
             "has_part_number",
+            "has_software_images",
             "is_subdevice_child",
-            "has_comments",
         )
 
     has_hardware_family = NautobotBoolIterator()
@@ -250,6 +265,17 @@ class DeviceTypeFactory(PrimaryModelFactory):
 
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
+
+    has_software_images = NautobotBoolIterator()
+
+    @factory.post_generation
+    def software_images(self, create, extracted, **kwargs):
+        if not create or not DeviceTypeFactory.has_software_images.evaluate(None, None, None):
+            return
+        if extracted:
+            self.software_images.set(extracted)
+        else:
+            self.software_images.set(get_random_instances(SoftwareImage, minimum=1))
 
 
 class DeviceRedundancyGroupFactory(PrimaryModelFactory):

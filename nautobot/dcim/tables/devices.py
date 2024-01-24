@@ -54,7 +54,6 @@ from .template_code import (
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
     REARPORT_BUTTONS,
-    SOFTWARE_VERSION_SOFTWARE_IMAGES,
 )
 
 __all__ = (
@@ -1039,6 +1038,21 @@ class SoftwareImageTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     image_file_name = tables.Column(linkify=True)
     software_version = tables.Column(linkify=True)
+    device_type_count = LinkedCountColumn(
+        viewname="dcim:devicetype_list",
+        url_params={"software_images": "pk"},
+        verbose_name="Device Types",
+    )
+    device_count = LinkedCountColumn(
+        viewname="dcim:device_list",
+        url_params={"software_image": "pk"},
+        verbose_name="Devices",
+    )
+    inventory_item_count = LinkedCountColumn(
+        viewname="dcim:inventoryitem_list",
+        url_params={"software_images": "pk"},
+        verbose_name="Inventory Items",
+    )
     tags = TagColumn(url_name="dcim:softwareimage_list")
     actions = ButtonsColumn(SoftwareImage)
 
@@ -1047,22 +1061,36 @@ class SoftwareImageTable(StatusTableMixin, BaseTable):
         fields = (
             "pk",
             "image_file_name",
-            "software_version",
             "status",
+            "software_version",
             "image_file_checksum",
             "hashing_algorithm",
             "download_url",
+            "device_type_count",
+            "device_count",
+            "inventory_item_count",
             "tags",
             "actions",
         )
-        default_columns = ("pk", "image_file_name", "software_version", "status", "tags", "actions")
+        default_columns = (
+            "pk",
+            "image_file_name",
+            "status",
+            "software_version",
+            "device_type_count",
+            "device_count",
+            "inventory_item_count",
+            "tags",
+            "actions",
+        )
 
 
 class SoftwareVersionTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     version = tables.Column(linkify=True)
-    software_images = tables.TemplateColumn(
-        template_code=SOFTWARE_VERSION_SOFTWARE_IMAGES,
+    software_image_count = LinkedCountColumn(
+        viewname="dcim:softwareimage_list",
+        url_params={"software_version": "pk"},
         verbose_name="Software Images",
     )
     tags = TagColumn(url_name="dcim:softwareversion_list")
@@ -1077,10 +1105,10 @@ class SoftwareVersionTable(StatusTableMixin, BaseTable):
             "status",
             "release_date",
             "end_of_support_date",
-            "software_images",
             "long_term_support",
             "pre_release",
             "documentation_url",
+            "software_image_count",
             "tags",
             "actions",
         )
@@ -1091,7 +1119,7 @@ class SoftwareVersionTable(StatusTableMixin, BaseTable):
             "status",
             "release_date",
             "end_of_support_date",
-            "software_images",
+            "software_image_count",
             "tags",
             "actions",
         )

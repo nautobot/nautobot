@@ -144,10 +144,6 @@ RACKGROUP_ELEVATIONS = """
 </a>
 """
 
-SOFTWARE_VERSION_SOFTWARE_IMAGES = """
-<a href="{% url 'dcim:softwareimage_list' %}?software_version={{record.pk}}">{{ record.software_images.count }}</a>
-"""
-
 # Value is a namedtuple that takes a numerator and denominator to pass in.
 UTILIZATION_GRAPH = """
 {% load helpers %}

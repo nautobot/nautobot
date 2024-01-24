@@ -1561,6 +1561,11 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         required=False,
         label="VRFs",
     )
+    software_image = DynamicModelChoiceField(
+        queryset=SoftwareImage.objects.all(),
+        required=False,
+        query_params={"device_types": "$device_type"},
+    )
     comments = CommentField()
 
     class Meta:
@@ -1571,6 +1576,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "device_type",
             "serial",
             "asset_tag",
+            "software_image",
             "location",
             "rack",
             "device_redundancy_group",

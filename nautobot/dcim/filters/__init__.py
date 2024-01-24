@@ -638,6 +638,11 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         field_name="device_bay_templates",
         label="Has device bay templates",
     )
+    software_images = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareImage.objects.all(),
+        to_field_name="image_file_name",
+        label="Software images (image file name or ID)",
+    )
 
     class Meta:
         model = DeviceType
@@ -958,6 +963,11 @@ class DeviceFilterSet(
     device_bays = django_filters.ModelMultipleChoiceFilter(
         queryset=DeviceBay.objects.all(),
         label="Device Bays",
+    )
+    software_image = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareImage.objects.all(),
+        to_field_name="image_file_name",
+        label="Software image (image file name or ID)",
     )
 
     class Meta:
@@ -1329,6 +1339,11 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentModelFilterSetMixin):
         label="Has child items",
     )
     serial = MultiValueCharFilter(lookup_expr="iexact")
+    software_images = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareImage.objects.all(),
+        to_field_name="image_file_name",
+        label="Software images (image file name or ID)",
+    )
 
     class Meta:
         model = InventoryItem
@@ -1642,6 +1657,19 @@ class SoftwareImageFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         queryset=SoftwareVersion.objects.all(),
         to_field_name="version",
         label="Software version (version or ID)",
+    )
+    device_types = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DeviceType.objects.all(),
+        to_field_name="model",
+        label="Device types (model or ID)",
+    )
+    devices = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        label="Devices (name or ID)",
+    )
+    inventory_items = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=InventoryItem.objects.all(),
+        label="Inventory items (name or ID)",
     )
     has_device_types = RelatedMembershipBooleanFilter(
         field_name="device_types",
