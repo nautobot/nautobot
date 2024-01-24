@@ -770,11 +770,12 @@ class DeviceTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceType.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     hardware_family = DynamicModelChoiceField(queryset=HardwareFamily.objects.all(), required=False)
+    software_images = DynamicModelMultipleChoiceField(queryset=SoftwareImage.objects.all(), required=False)
     u_height = forms.IntegerField(required=False)
     is_full_depth = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect(), label="Is full depth")
 
     class Meta:
-        nullable_fields = ["hardware_family"]
+        nullable_fields = ["hardware_family", "software_images"]
 
 
 class DeviceTypeFilterForm(NautobotFilterForm):

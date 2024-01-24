@@ -604,8 +604,10 @@ class ManufacturerBulkDeleteView(generic.BulkDeleteView):
 
 
 class DeviceTypeListView(generic.ObjectListView):
-    queryset = DeviceType.objects.select_related("manufacturer", "hardware_family").annotate(
-        device_count=count_related(Device, "device_type")
+    queryset = (
+        DeviceType.objects.select_related("manufacturer", "hardware_family")
+        .prefetch_related("software_images")
+        .annotate(device_count=count_related(Device, "device_type"))
     )
     filterset = filters.DeviceTypeFilterSet
     filterset_form = forms.DeviceTypeFilterForm
@@ -614,7 +616,7 @@ class DeviceTypeListView(generic.ObjectListView):
 
 
 class DeviceTypeView(generic.ObjectView):
-    queryset = DeviceType.objects.select_related("manufacturer")
+    queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_images")
     use_new_ui = True
 
     def get_extra_context(self, request, instance):
@@ -664,9 +666,13 @@ class DeviceTypeView(generic.ObjectView):
             devicebay_table.columns.show("pk")
 
         software_images_table = tables.SoftwareImageTable(
-            instance.software_images.restrict(request.user, "view"),
+            instance.software_images.restrict(request.user, "view").annotate(
+                device_count=count_related(Device, "software_image"),
+                device_type_count=count_related(DeviceType, "software_images"),
+                inventory_item_count=count_related(InventoryItem, "software_images"),
+            ),
             orderable=False,
-            exclude=["device_types"],
+            exclude=["actions", "tags"],
         )
 
         return {
@@ -722,8 +728,10 @@ class DeviceTypeImportView(generic.ObjectImportView):
 
 
 class DeviceTypeBulkEditView(generic.BulkEditView):
-    queryset = DeviceType.objects.select_related("manufacturer").annotate(
-        device_count=count_related(Device, "device_type")
+    queryset = (
+        DeviceType.objects.select_related("manufacturer")
+        .prefetch_related("software_images")
+        .annotate(device_count=count_related(Device, "device_type"))
     )
     filterset = filters.DeviceTypeFilterSet
     table = tables.DeviceTypeTable
@@ -731,8 +739,10 @@ class DeviceTypeBulkEditView(generic.BulkEditView):
 
 
 class DeviceTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = DeviceType.objects.select_related("manufacturer").annotate(
-        device_count=count_related(Device, "device_type")
+    queryset = (
+        DeviceType.objects.select_related("manufacturer")
+        .prefetch_related("software_images")
+        .annotate(device_count=count_related(Device, "device_type"))
     )
     filterset = filters.DeviceTypeFilterSet
     table = tables.DeviceTypeTable
@@ -2107,9 +2117,13 @@ class InventoryItemView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         software_images_table = tables.SoftwareImageTable(
-            instance.software_images.restrict(request.user, "view"),
+            instance.software_images.restrict(request.user, "view").annotate(
+                device_count=count_related(Device, "software_image"),
+                device_type_count=count_related(DeviceType, "software_images"),
+                inventory_item_count=count_related(InventoryItem, "software_images"),
+            ),
             orderable=False,
-            exclude=["inventory_items"],
+            exclude=["actions", "tags"],
         )
 
         return {
@@ -2980,7 +2994,11 @@ class SoftwareVersionUIViewSet(NautobotUIViewSet):
         if instance is None:
             return {}
 
-        software_images = instance.software_images.restrict(request.user, "view")
+        software_images = instance.software_images.restrict(request.user, "view").annotate(
+            device_count=count_related(Device, "software_image"),
+            device_type_count=count_related(DeviceType, "software_images"),
+            inventory_item_count=count_related(InventoryItem, "software_images"),
+        )
         software_images_table = tables.SoftwareImageTable(
             software_images, orderable=False, exclude=["software_version", "actions"]
         )
