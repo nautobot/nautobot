@@ -1,20 +1,24 @@
+import datetime
 import json
 from unittest import skip
 
 from constance.test import override_config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
+from django.db.models import ProtectedError
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
 from nautobot.core.testing import APITestCase, APIViewTestCases
-from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
+from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size, get_deletable_objects
 from nautobot.dcim.choices import (
     InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedTypeChoices,
+    SoftwareImageHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.models import (
@@ -50,6 +54,8 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
+    SoftwareImage,
+    SoftwareVersion,
     VirtualChassis,
 )
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
@@ -2613,3 +2619,116 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
         )
         for i, interface in enumerate(cls.interfaces):
             interface_redundancy_groups[0].add_interface(interface, i * 100)
+
+
+class SoftwareImageTestCase(APIViewTestCases.APIViewTestCase):
+    model = SoftwareImage
+    choices_fields = ["hashing_algorithm"]
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.VERBOTEN_STRINGS = tuple(
+            [o for o in cls.VERBOTEN_STRINGS if o not in SoftwareImageHashingAlgorithmChoices.as_dict().keys()]
+        )
+        statuses = Status.objects.get_for_model(SoftwareImage)
+        software_versions = SoftwareVersion.objects.all()
+
+        cls.create_data = [
+            {
+                "software_version": software_versions[0].pk,
+                "status": statuses[0].pk,
+                "image_file_name": "software_image_test_case_1.bin",
+            },
+            {
+                "software_version": software_versions[1].pk,
+                "status": statuses[1].pk,
+                "image_file_name": "software_image_test_case_2.bin",
+            },
+            {
+                "software_version": software_versions[2].pk,
+                "status": statuses[2].pk,
+                "image_file_name": "software_image_test_case_3.bin",
+            },
+        ]
+        cls.bulk_update_data = {
+            "software_version": software_versions[0].pk,
+            "status": statuses[0].pk,
+            "image_file_checksum": "abcdef1234567890",
+            "hashing_algorithm": SoftwareImageHashingAlgorithmChoices.SHA512,
+            "image_file_size": 1234567890,
+            "download_url": "https://example.com/software_image_test_case.bin",
+        }
+
+
+class SoftwareVersionTestCase(APIViewTestCases.APIViewTestCase):
+    model = SoftwareVersion
+
+    @classmethod
+    def setUpTestData(cls):
+        statuses = Status.objects.get_for_model(SoftwareVersion)
+        platforms = Platform.objects.all()
+
+        cls.create_data = [
+            {
+                "platform": platforms[0].pk,
+                "status": statuses[0].pk,
+                "version": "version 1.1.0",
+            },
+            {
+                "platform": platforms[1].pk,
+                "status": statuses[1].pk,
+                "version": "version 1.2.0",
+            },
+            {
+                "platform": platforms[2].pk,
+                "status": statuses[2].pk,
+                "version": "version 1.3.0",
+            },
+        ]
+        cls.bulk_update_data = {
+            "platform": platforms[0].pk,
+            "status": statuses[0].pk,
+            "alias": "Version x.y.z",
+            "release_date": datetime.date(2001, 12, 31),
+            "end_of_support_date": datetime.date(2005, 12, 31),
+            "documentation_url": "https://example.com/software_version_test_case/docs2",
+            "long_term_support": False,
+            "pre_release": True,
+        }
+
+    def get_deletable_object(self):
+        instances = get_deletable_objects(self.model, self._get_queryset())
+        deletable = None
+        for instance in instances:
+            try:
+                with transaction.atomic():
+                    deletable = instance.pk
+                    instance.delete()
+                    raise StopIteration
+            except ProtectedError:
+                pass
+            except StopIteration:
+                break
+        if deletable is None:
+            self.fail("Couldn't find a single deletable object!")
+        return self._get_queryset().get(pk=deletable)
+
+    def get_deletable_object_pks(self):
+        instances = get_deletable_objects(self.model, self._get_queryset())
+        deletable = []
+        for instance in instances:
+            try:
+                with transaction.atomic():
+                    pk = instance.pk
+                    instance.delete()
+                    deletable.append(pk)
+                    if len(deletable) >= 3:
+                        raise StopIteration
+                    raise ProtectedError("force rollback", [instance])
+            except ProtectedError:
+                pass
+            except StopIteration:
+                break
+        if len(deletable) < 3:
+            self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
+        return deletable
