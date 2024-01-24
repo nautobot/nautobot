@@ -13,7 +13,7 @@ from rest_framework.test import APIClient, APIRequestFactory
 from nautobot.core import testing
 from nautobot.core.models import fields as core_fields
 from nautobot.core.utils import permissions
-from nautobot.extras import management, models as extras_models
+from nautobot.extras import management, models as extras_models, signals as extras_signals
 from nautobot.users import models as users_models
 
 # Use the proper swappable User model
@@ -61,6 +61,13 @@ class NautobotTestCaseMixin:
 
             # Force login explicitly with the first-available backend
             self.client.force_login(self.user)
+
+    def tearDown(self):
+        """Clear lru_cache data to avoid leakage of information between test cases when running in parallel."""
+        extras_signals.invalidate_lru_cache(extras_models.CustomField)
+        extras_signals.invalidate_lru_cache(extras_models.ComputedField)
+        extras_signals.invalidate_lru_cache(extras_models.Relationship)
+        super().tearDown()
 
     def prepare_instance(self, instance):
         """
