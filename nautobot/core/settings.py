@@ -930,6 +930,7 @@ SILKY_AUTHENTICATION = True  # User must login
 SILKY_AUTHORISATION = True  # User must have permissions
 SILKY_PERMISSIONS = lambda user: user.is_superuser  # noqa: E731
 
+
 # This ensures profiling only happens when enabled on the sessions. Users are able
 # to turn this on or off in their user profile. It also ignores health-check requests.
 def silk_request_logging_intercept_logic(request):
