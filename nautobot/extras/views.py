@@ -1054,15 +1054,11 @@ class JobListView(generic.ObjectListView):
 
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
-        # Default to hiding "hidden", non-installed jobs and job hook receivers
+        # Default to hiding "hidden" and non-installed jobs
         if "hidden" not in request.GET:
             queryset = queryset.filter(hidden=False)
         if "installed" not in request.GET:
             queryset = queryset.filter(installed=True)
-        if "is_job_hook_receiver" not in request.GET:
-            queryset = queryset.filter(is_job_hook_receiver=False)
-        if "is_job_button_receiver" not in request.GET:
-            queryset = queryset.filter(is_job_button_receiver=False)
         queryset = queryset.prefetch_related("results")
         return queryset
 
