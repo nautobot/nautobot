@@ -226,6 +226,7 @@ concurrency = ["multiprocessing", "thread"]
 omit = [
     # Don't measure coverage of test code
     "nautobot/**/tests/**/*.py",
+    "nautobot/core/testing/*.py",
     "nautobot/extras/test_jobs/*.py",
 ]
 
