@@ -72,6 +72,6 @@ Users must have permissions to access the django-silk UI. Used in combination wi
 
 ### SILKY_PERMISSIONS
 
-Default: `lambda user: user.is_superuser`
+Default: `nautobot.core.settings.silk_user_permissions`
 
 This ensures the users must be a superuser of the system to access the django-silk UI. Used in combination with `SILKY_AUTHENTICATION` and `SILKY_AUTHORISATION`.

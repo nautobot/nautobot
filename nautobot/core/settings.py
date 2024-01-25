@@ -928,7 +928,14 @@ SILKY_PYTHON_PROFILER_EXTENDED_FILE_NAME = True
 SILKY_ANALYZE_QUERIES = False  # See the docs for the implications of turning this on https://github.com/jazzband/django-silk?tab=readme-ov-file#enable-query-analysis
 SILKY_AUTHENTICATION = True  # User must login
 SILKY_AUTHORISATION = True  # User must have permissions
-SILKY_PERMISSIONS = lambda user: user.is_superuser  # noqa: E731
+
+
+# This makes it so that only superusers can access the silk UI
+def silk_user_permissions(user):
+    return user.is_superuser
+
+
+SILKY_PERMISSIONS = silk_user_permissions
 
 
 # This ensures profiling only happens when enabled on the sessions. Users are able
