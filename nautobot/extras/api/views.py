@@ -395,7 +395,10 @@ class GitRepositoryViewSet(NautobotModelViewSet):
     filterset_class = filters.GitRepositoryFilterSet
 
     @extend_schema(methods=["post"], request=serializers.GitRepositorySerializer)
-    @action(detail=True, methods=["post"])
+    # Since we are explicitly checking for `extras:change_gitrepository` in the API sync() method
+    # We explicitly set the permission_classes to IsAuthenticated in the @action decorator
+    # bypassing the default DRF permission check for `extras:add_gitrepository` and the permission check fall through to the function itself.
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def sync(self, request, pk):
         """
         Enqueue pull git repository and refresh data.

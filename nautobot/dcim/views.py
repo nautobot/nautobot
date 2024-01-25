@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import transaction
-from django.db.models import F, Prefetch
+from django.db.models import Count, F, Prefetch
 from django.forms import (
     modelformset_factory,
     ModelMultipleChoiceField,
@@ -238,7 +238,10 @@ class LocationView(generic.ObjectView):
             "prefix_count": Prefix.objects.restrict(request.user, "view")
             .filter(location__in=related_locations)
             .count(),
-            "vlan_count": VLAN.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
+            "vlan_count": VLAN.objects.restrict(request.user, "view")
+            .filter(locations__in=related_locations)
+            .distinct()
+            .count(),
             "circuit_count": Circuit.objects.restrict(request.user, "view")
             .filter(circuit_terminations__location__in=related_locations)
             .count(),
@@ -1125,6 +1128,7 @@ class DeviceListView(generic.ObjectListView):
         "status",
         "device_type",
         "device_type__hardware_family",
+        "device_type__manufacturer",  # Needed for __str__() on device_type
         "role",
         "tenant",
         "location",
@@ -1744,8 +1748,10 @@ class InterfaceView(generic.ObjectView):
             vlans.append(instance.untagged_vlan)
             vlans[0].tagged = False
 
-        for vlan in instance.tagged_vlans.restrict(request.user).select_related(
-            "location", "vlan_group", "tenant", "role"
+        for vlan in (
+            instance.tagged_vlans.restrict(request.user)
+            .annotate(location_count=Count("locations"))
+            .select_related("vlan_group", "tenant", "role")
         ):
             vlan.tagged = True
             vlans.append(vlan)

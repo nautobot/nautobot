@@ -216,11 +216,85 @@ Render a dictionary as formatted JSON.
 
 ### render_markdown
 
-Render text as Markdown.
+Render and sanitize Markdown text into HTML. A limited subset of HTML tags and attributes are permitted in the text as well; non-permitted HTML will be stripped from the output for security.
 
 ```django
 {{ text | render_markdown }}
 ```
+
+#### Permitted HTML Tags and Attributes
+
++++ 2.1.2
+
+The set of permitted HTML tags is defined in `nautobot.core.constants.HTML_ALLOWED_TAGS`, and their permitted attributes are defined in `nautobot.core.constants.HTML_ALLOWED_ATTRIBUTES`. As of Nautobot 2.1.2 the following are permitted:
+
+??? info "Full list of HTML tags and attributes"
+    | Tag            | Attributes                                                           |
+    | -------------- | -------------------------------------------------------------------- |
+    | `<a>`          | `href`, `hreflang`                                                   |
+    | `<abbr>`       |                                                                      |
+    | `<acronym>`    |                                                                      |
+    | `<b>`          |                                                                      |
+    | `<bdi>`        |                                                                      |
+    | `<bdo>`        | `dir`                                                                |
+    | `<blockquote>` | `cite`                                                               |
+    | `<br>`         |                                                                      |
+    | `<caption>`    |                                                                      |
+    | `<center>`     |                                                                      |
+    | `<cite>`       |                                                                      |
+    | `<code>`       |                                                                      |
+    | `<col>`        | `align`, `char`, `charoff`, `span`                                   |
+    | `<colgroup>`   | `align`, `char`, `charoff`, `span`                                   |
+    | `<dd>`         |                                                                      |
+    | `<del>`        | `cite`, `datetime`                                                   |
+    | `<details>`    |                                                                      |
+    | `<div>`        |                                                                      |
+    | `<dl>`         |                                                                      |
+    | `<dt>`         |                                                                      |
+    | `<em>`         |                                                                      |
+    | `<h1>`         |                                                                      |
+    | `<h2>`         |                                                                      |
+    | `<h3>`         |                                                                      |
+    | `<h4>`         |                                                                      |
+    | `<h5>`         |                                                                      |
+    | `<h6>`         |                                                                      |
+    | `<hgroup>`     |                                                                      |
+    | `<hr>`         | `align`, `size`, `width`                                             |
+    | `<i>`          |                                                                      |
+    | `<img>`        | `align`, `alt`, `height`, `src`, `width`                             |
+    | `<ins>`        | `cite`, `datetime`                                                   |
+    | `<kbd>`        |                                                                      |
+    | `<li>`         |                                                                      |
+    | `<mark>`       |                                                                      |
+    | `<ol>`         | `start`                                                              |
+    | `<p>`          |                                                                      |
+    | `<pre>`        |                                                                      |
+    | `<q>`          | `cite`                                                               |
+    | `<rp>`         |                                                                      |
+    | `<rt>`         |                                                                      |
+    | `<rtc>`        |                                                                      |
+    | `<ruby>`       |                                                                      |
+    | `<s>`          |                                                                      |
+    | `<samp>`       |                                                                      |
+    | `<small>`      |                                                                      |
+    | `<span>`       |                                                                      |
+    | `<strike>`     |                                                                      |
+    | `<strong>`     |                                                                      |
+    | `<sub>`        |                                                                      |
+    | `<summary>`    |                                                                      |
+    | `<sup>`        |                                                                      |
+    | `<table>`      | `align`, `char`, `charoff`, `summary`                                |
+    | `<tbody>`      | `align`, `char`, `charoff`                                           |
+    | `<td>`         | `align`, `char`, `charoff`, `colspan`, `headers`, `rowspan`          |
+    | `<th>`         | `align`, `char`, `charoff`, `colspan`, `headers`, `rowspan`, `scope` |
+    | `<thead>`      | `align`, `char`, `charoff`                                           |
+    | `<time>`       |                                                                      |
+    | `<tr>`         | `align`, `char`, `charoff`                                           |
+    | `<tt>`         |                                                                      |
+    | `<u>`          |                                                                      |
+    | `<ul>`         |                                                                      |
+    | `<var>`        |                                                                      |
+    | `<wbr>`        |                                                                      |
 
 ### render_yaml
 

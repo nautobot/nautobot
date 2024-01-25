@@ -4,7 +4,7 @@ import operator
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q
 from django.utils.functional import cached_property
 import netaddr
@@ -1041,21 +1041,14 @@ class IPAddress(PrimaryModel):
         verbose_name_plural = "IP addresses"
         unique_together = ["parent", "host"]
 
-    def __init__(self, *args, **kwargs):
-        address = kwargs.pop("address", None)
-        namespace = kwargs.pop("namespace", None)
+    def __init__(self, *args, address=None, namespace=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # If namespace wasn't provided, but parent was, we'll use the parent's namespace.
-        if namespace is None and self.parent is not None:
-            namespace = self.parent.namespace
+        if namespace is not None and not self.present_in_database:
+            self._provided_namespace = namespace
 
-        if namespace is None:
-            namespace = get_default_namespace()
-
-        self._namespace = namespace
-
-        self._deconstruct_address(address)
+        if address is not None and not self.present_in_database:
+            self._deconstruct_address(address)
 
     def __str__(self):
         return str(self.address)
@@ -1103,10 +1096,6 @@ class IPAddress(PrimaryModel):
         if self.type == choices.IPAddressTypeChoices.TYPE_SLAAC and self.ip_version != 6:
             raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
 
-        # If neither `parent` or `namespace` was provided; raise this exception
-        if self._namespace is None:
-            raise ValidationError({"parent": "Either a parent or a namespace must be provided."})
-
         closest_parent = self._get_closest_parent()
         # Validate `parent` can be used as the parent for this ipaddress
         if self.parent and closest_parent:
@@ -1120,6 +1109,7 @@ class IPAddress(PrimaryModel):
                     }
                 )
             self.parent = closest_parent
+            self._namespace = None
 
     def save(self, *args, **kwargs):
         # 3.0 TODO: uncomment the below to enforce this constraint
@@ -1135,6 +1125,7 @@ class IPAddress(PrimaryModel):
         closest_parent = self._get_closest_parent()
         if closest_parent is not None:
             self.parent = closest_parent
+            self._namespace = None
         super().save(*args, **kwargs)
 
     @property
@@ -1180,6 +1171,22 @@ class IPAddress(PrimaryModel):
             query = query.exclude(id=self.id)
 
         return query
+
+    @property
+    def _namespace(self):
+        # if a namespace was explicitly set, use it
+        if getattr(self, "_provided_namespace", None):
+            return self._provided_namespace
+        if self.parent is not None:
+            return self.parent.namespace
+        return get_default_namespace()
+
+    @_namespace.setter
+    def _namespace(self, namespace):
+        # unset parent when namespace is changed
+        if namespace:
+            self.parent = None
+        self._provided_namespace = namespace
 
     # 2.0 TODO: Remove exception, getter, setter below when we can safely deprecate previous properties
     class NATOutsideMultipleObjectsReturned(MultipleObjectsReturned):
@@ -1312,12 +1319,10 @@ class VLAN(PrimaryModel):
     or more Prefixes assigned to it.
     """
 
-    location = models.ForeignKey(
+    locations = models.ManyToManyField(
         to="dcim.Location",
-        on_delete=models.PROTECT,
         related_name="vlans",
         blank=True,
-        null=True,
     )
     vlan_group = models.ForeignKey(
         to="ipam.VLANGroup",
@@ -1342,7 +1347,7 @@ class VLAN(PrimaryModel):
     description = models.CharField(max_length=200, blank=True)
 
     clone_fields = [
-        "location",
+        "locations",
         "vlan_group",
         "tenant",
         "status",
@@ -1354,7 +1359,6 @@ class VLAN(PrimaryModel):
 
     class Meta:
         ordering = (
-            "location",
             "vlan_group",
             "vid",
         )  # (location, group, vid) may be non-unique
@@ -1370,28 +1374,33 @@ class VLAN(PrimaryModel):
     def __str__(self):
         return self.display or super().__str__()
 
-    def clean(self):
-        super().clean()
+    def __init__(self, *args, **kwargs):
+        # TODO: Remove self._location, location @property once legacy `location` field is no longer supported
+        self._location = kwargs.pop("location", None)
+        super().__init__(*args, **kwargs)
 
-        # Validate location
-        if self.location is not None:
-            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
-                raise ValidationError(
-                    {"location": f'VLANs may not associate to locations of type "{self.location.location_type}".'}
-                )
+    def save(self, *args, **kwargs):
+        # Using atomic here cause legacy `location` is inserted into `locations`() which might result in an error.
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            if self._location:
+                self.location = self._location
 
-        # Validate VLAN group
-        if (
-            self.vlan_group is not None
-            and self.location is not None
-            and self.vlan_group.location is not None
-            and self.vlan_group.location not in self.location.ancestors(include_self=True)
-        ):
-            raise ValidationError(
-                {
-                    "vlan_group": f'The assigned group belongs to a location that does not include location "{self.location}".'
-                }
+    @property
+    def location(self):
+        if self.locations.count() > 1:
+            raise self.locations.model.MultipleObjectsReturned(
+                "Multiple Location objects returned. Please refer to locations."
             )
+        return self.locations.first()
+
+    @location.setter
+    def location(self, value):
+        if self.locations.count() > 1:
+            raise self.locations.model.MultipleObjectsReturned(
+                "Multiple Location objects returned. Please refer to locations."
+            )
+        self.locations.set([value])
 
     @property
     def display(self):

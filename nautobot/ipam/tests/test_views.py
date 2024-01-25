@@ -1142,6 +1142,9 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "VLAN Group 7,Seventh VLAN group",
         )
 
+    def get_deletable_object(self):
+        return VLANGroup.objects.create(name="TEST DELETE ME")
+
 
 class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = VLAN
@@ -1162,33 +1165,35 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         status_1 = statuses[0]
         status_2 = statuses[1]
 
-        VLAN.objects.create(
-            vlan_group=vlangroups[0],
-            vid=101,
-            name="VLAN101",
-            location=location_1,
-            role=roles[0],
-            status=status_1,
-            _custom_field_data={"custom_field": "Value"},
+        vlans = (
+            VLAN.objects.create(
+                vlan_group=vlangroups[0],
+                vid=101,
+                name="VLAN101",
+                role=roles[0],
+                status=status_1,
+                _custom_field_data={"custom_field": "Value"},
+            ),
+            VLAN.objects.create(
+                vlan_group=vlangroups[0],
+                vid=102,
+                name="VLAN102",
+                role=roles[0],
+                status=status_1,
+                _custom_field_data={"custom_field": "Value"},
+            ),
+            VLAN.objects.create(
+                vlan_group=vlangroups[0],
+                vid=103,
+                name="VLAN103",
+                role=roles[0],
+                status=status_1,
+                _custom_field_data={"custom_field": "Value"},
+            ),
         )
-        VLAN.objects.create(
-            vlan_group=vlangroups[0],
-            vid=102,
-            name="VLAN102",
-            location=location_1,
-            role=roles[0],
-            status=status_1,
-            _custom_field_data={"custom_field": "Value"},
-        )
-        VLAN.objects.create(
-            vlan_group=vlangroups[0],
-            vid=103,
-            name="VLAN103",
-            location=location_1,
-            role=roles[0],
-            status=status_1,
-            _custom_field_data={"custom_field": "Value"},
-        )
+        vlans[0].locations.add(location_1)
+        vlans[1].locations.add(location_1)
+        vlans[2].locations.add(location_1)
 
         custom_field = CustomField.objects.create(
             type=CustomFieldTypeChoices.TYPE_TEXT, label="Custom Field", default=""
@@ -1196,13 +1201,13 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         custom_field.content_types.set([ContentType.objects.get_for_model(VLAN)])
 
         cls.form_data = {
-            "location": cls.locations.last().pk,
             "vlan_group": vlangroups[1].pk,
             "vid": 999,
             "name": "VLAN999 with an unwieldy long name since we increased the limit to more than 64 characters",
             "tenant": None,
             "status": status_2.pk,
             "role": roles[1].pk,
+            "locations": list(cls.locations.values_list("pk", flat=True)[:2]),
             "description": "A new VLAN",
             "tags": [t.pk for t in Tag.objects.get_for_model(VLAN)],
         }
@@ -1215,7 +1220,6 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         cls.bulk_edit_data = {
-            "location": cls.locations.first().pk,
             "vlan_group": vlangroups[0].pk,
             "tenant": Tenant.objects.first().pk,
             "status": status_2.pk,

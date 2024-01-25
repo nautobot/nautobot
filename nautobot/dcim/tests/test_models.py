@@ -684,10 +684,8 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
             "parent__parent__parent__parent__parent__name",
             "parent__parent__parent__parent__parent__parent__name",
             "parent__parent__parent__parent__parent__parent__parent__name",
-        ][: Location.objects.max_tree_depth() + 1]
-        self.assertEqual(
-            len(expected), Location.objects.max_tree_depth() + 1, "Not enough expected entries, fix the test!"
-        )
+        ][: Location.objects.max_depth + 1]
+        self.assertEqual(len(expected), Location.objects.max_depth + 1, "Not enough expected entries, fix the test!")
         self.assertEqual(expected, Location.natural_key_field_lookups)
         # Grab an arbitrary leaf node
         location = Location.objects.filter(parent__isnull=False, children__isnull=True).first()
@@ -1077,17 +1075,18 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         device2.save()
 
     def test_device_location_content_type_not_allowed(self):
+        self.location_type_2.content_types.clear()
         device = Device(
             name="Device 3",
             device_type=self.device_type,
             role=self.device_role,
             status=self.device_status,
-            location=self.location_1,
+            location=self.location_2,
         )
         with self.assertRaises(ValidationError) as cm:
             device.validated_save()
         self.assertIn(
-            f'Devices may not associate to locations of type "{self.location_type_1.name}"', str(cm.exception)
+            f'Devices may not associate to locations of type "{self.location_type_2.name}"', str(cm.exception)
         )
 
     def test_device_redundancy_group_validation(self):

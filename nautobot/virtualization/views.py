@@ -412,9 +412,7 @@ class VMInterfaceView(generic.ObjectView):
             vlans.append(instance.untagged_vlan)
             vlans[0].tagged = False
 
-        for vlan in instance.tagged_vlans.restrict(request.user).select_related(
-            "location", "vlan_group", "tenant", "role"
-        ):
+        for vlan in instance.tagged_vlans.restrict(request.user).select_related("vlan_group", "tenant", "role"):
             vlan.tagged = True
             vlans.append(vlan)
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
