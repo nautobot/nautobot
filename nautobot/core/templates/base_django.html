@@ -11,7 +11,7 @@
 </head>
 <body>
     {% include 'inc/nav_menu.html' %}
-    <div class="container-fluid wrapper">
+    <div class="container-fluid wrapper" id="main-content">
         {% if request.user.is_authenticated %}
             {% if "BANNER_TOP"|settings_or_config %}
                 <div class="alert alert-info text-center" role="alert">
