@@ -1,0 +1,3 @@
+Added Collapse Capable Side Navbar: Side Navbar is now able to be expanded and collapsed
+Added Expandable Main Content: The Main Content part of the UI grows as the Side Navbar collapses and shrinks as the Side Navbar expands.
+Fixed Brand Icon mouseover Background: Fix for mouseover effect on the Brand / Icon (was flashing white background vs being transparent) when in dark mode.
