@@ -221,6 +221,15 @@ nautobot-server = "nautobot.core.cli:main"
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.coverage.run]
+concurrency = ["multiprocessing", "thread"]
+omit = [
+    # Don't measure coverage of test code
+    "nautobot/**/tests/**/*.py",
+    "nautobot/core/testing/*.py",
+    "nautobot/extras/test_jobs/*.py",
+]
+
 [tool.pylint.master]
 load-plugins = "pylint_django"
 py-version = "3.8"
