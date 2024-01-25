@@ -5,14 +5,12 @@ from unittest import skip
 from constance.test import override_config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.db import transaction
-from django.db.models import ProtectedError
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
 from nautobot.core.testing import APITestCase, APIViewTestCases
-from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size, get_deletable_objects
+from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
 from nautobot.dcim.choices import (
     InterfaceModeChoices,
     InterfaceTypeChoices,
@@ -32,6 +30,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImage,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -39,6 +38,7 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroup,
     InterfaceTemplate,
     InventoryItem,
+    InventoryItemToSoftwareImage,
     Location,
     LocationType,
     Manufacturer,
@@ -768,6 +768,9 @@ class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        cls.VERBOTEN_STRINGS = tuple(
+            [o for o in cls.VERBOTEN_STRINGS if o not in SoftwareImageHashingAlgorithmChoices.as_dict().keys()]
+        )
         manufacturer_id = Manufacturer.objects.first().pk
         hardware_family_id = HardwareFamily.objects.first().pk
 
@@ -1108,6 +1111,10 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
         "network_driver": "cisco_xe",
     }
+
+    @classmethod
+    def setUpTestData(cls):
+        DeviceTypeToSoftwareImage.objects.all().delete()  # Protected FK to SoftwareImage prevents deletion
 
     @override_settings(
         NETWORK_DRIVERS={
@@ -1971,6 +1978,9 @@ class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeMode
     def setUpTestData(cls):
         super().setUpTestData()
 
+        cls.VERBOTEN_STRINGS = tuple(
+            [o for o in cls.VERBOTEN_STRINGS if o not in SoftwareImageHashingAlgorithmChoices.as_dict().keys()]
+        )
         InventoryItem.objects.create(device=cls.device, name="Inventory Item 1", manufacturer=cls.manufacturer)
         InventoryItem.objects.create(device=cls.device, name="Inventory Item 2", manufacturer=cls.manufacturer)
         InventoryItem.objects.create(device=cls.device, name="Inventory Item 3", manufacturer=cls.manufacturer)
@@ -2665,6 +2675,11 @@ class SoftwareVersionTestCase(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        DeviceTypeToSoftwareImage.objects.all().delete()  # Protected FK to SoftwareImage prevents deletion
+        InventoryItemToSoftwareImage.objects.all().delete()  # Protected FK to SoftwareImage prevents deletion
+        cls.VERBOTEN_STRINGS = tuple(
+            [o for o in cls.VERBOTEN_STRINGS if o not in SoftwareImageHashingAlgorithmChoices.as_dict().keys()]
+        )
         statuses = Status.objects.get_for_model(SoftwareVersion)
         platforms = Platform.objects.all()
 
@@ -2696,39 +2711,116 @@ class SoftwareVersionTestCase(APIViewTestCases.APIViewTestCase):
             "pre_release": True,
         }
 
-    def get_deletable_object(self):
-        instances = get_deletable_objects(self.model, self._get_queryset())
-        deletable = None
-        for instance in instances:
-            try:
-                with transaction.atomic():
-                    deletable = instance.pk
-                    instance.delete()
-                    raise StopIteration
-            except ProtectedError:
-                pass
-            except StopIteration:
-                break
-        if deletable is None:
-            self.fail("Couldn't find a single deletable object!")
-        return self._get_queryset().get(pk=deletable)
 
-    def get_deletable_object_pks(self):
-        instances = get_deletable_objects(self.model, self._get_queryset())
-        deletable = []
-        for instance in instances:
-            try:
-                with transaction.atomic():
-                    pk = instance.pk
-                    instance.delete()
-                    deletable.append(pk)
-                    if len(deletable) >= 3:
-                        raise StopIteration
-                    raise ProtectedError("force rollback", [instance])
-            except ProtectedError:
-                pass
-            except StopIteration:
-                break
-        if len(deletable) < 3:
-            self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
-        return deletable
+class DeviceTypeToSoftwareImageTestCase(APIViewTestCases.APIViewTestCase):
+    model = DeviceTypeToSoftwareImage
+
+    @classmethod
+    def setUpTestData(cls):
+        DeviceTypeToSoftwareImage.objects.all().delete()
+        device_types = DeviceType.objects.all()[:4]
+        software_images = SoftwareImage.objects.all()[:3]
+
+        # deletable objects
+        DeviceTypeToSoftwareImage.objects.create(
+            device_type=device_types[0],
+            software_image=software_images[0],
+            is_default=True,
+        )
+        DeviceTypeToSoftwareImage.objects.create(
+            device_type=device_types[0],
+            software_image=software_images[1],
+            is_default=False,
+        )
+        DeviceTypeToSoftwareImage.objects.create(
+            device_type=device_types[0],
+            software_image=software_images[2],
+            is_default=True,
+        )
+
+        cls.create_data = [
+            {
+                "software_image": software_images[0].pk,
+                "device_type": device_types[1].pk,
+                "is_default": True,
+            },
+            {
+                "software_image": software_images[1].pk,
+                "device_type": device_types[2].pk,
+                "is_default": True,
+            },
+            {
+                "software_image": software_images[2].pk,
+                "device_type": device_types[3].pk,
+                "is_default": False,
+            },
+        ]
+        cls.bulk_update_data = {
+            "is_default": False,
+        }
+
+
+class InventoryItemToSoftwareImageTestCase(APIViewTestCases.APIViewTestCase):
+    model = InventoryItemToSoftwareImage
+
+    @classmethod
+    def setUpTestData(cls):
+        InventoryItemToSoftwareImage.objects.all().delete()
+        device = Device.objects.first()
+        inventory_items = (
+            InventoryItem.objects.create(
+                name="Inventory Item 1",
+                device=device,
+            ),
+            InventoryItem.objects.create(
+                name="Inventory Item 2",
+                device=device,
+            ),
+            InventoryItem.objects.create(
+                name="Inventory Item 3",
+                device=device,
+            ),
+            InventoryItem.objects.create(
+                name="Inventory Item 4",
+                device=device,
+            ),
+        )
+        software_images = SoftwareImage.objects.all()[:3]
+
+        # deletable objects
+        InventoryItemToSoftwareImage.objects.create(
+            inventory_item=inventory_items[0],
+            software_image=software_images[0],
+            is_default=True,
+        )
+        InventoryItemToSoftwareImage.objects.create(
+            inventory_item=inventory_items[0],
+            software_image=software_images[1],
+            is_default=False,
+        )
+        InventoryItemToSoftwareImage.objects.create(
+            inventory_item=inventory_items[0],
+            software_image=software_images[2],
+            is_default=True,
+        )
+
+        cls.create_data = [
+            {
+                "software_image": software_images[0].pk,
+                "inventory_item": inventory_items[1].pk,
+                "is_default": True,
+            },
+            {
+                "software_image": software_images[1].pk,
+                "inventory_item": inventory_items[2].pk,
+                "is_default": True,
+            },
+            {
+                "software_image": software_images[2].pk,
+                "inventory_item": inventory_items[3].pk,
+                "is_default": False,
+            },
+        ]
+        cls.bulk_update_data = {
+            "is_default": False,
+        }

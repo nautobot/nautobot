@@ -19,6 +19,7 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from nautobot.circuits.models import Circuit
 from nautobot.core.api.exceptions import ServiceUnavailable
 from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.views import ModelViewSet
 from nautobot.core.models.querysets import count_related
 from nautobot.dcim import filters
 from nautobot.dcim.models import (
@@ -33,6 +34,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImage,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -41,6 +43,7 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     InventoryItem,
+    InventoryItemToSoftwareImage,
     Location,
     LocationType,
     Manufacturer,
@@ -805,3 +808,15 @@ class SoftwareVersionViewSet(NautobotModelViewSet):
     queryset = SoftwareVersion.objects.select_related("platform")
     serializer_class = serializers.SoftwareVersionSerializer
     filterset_class = filters.SoftwareVersionFilterSet
+
+
+class DeviceTypeToSoftwareImageViewSet(ModelViewSet):
+    queryset = DeviceTypeToSoftwareImage.objects.select_related("device_type", "software_image")
+    serializer_class = serializers.DeviceTypeToSoftwareImageSerializer
+    filterset_class = filters.DeviceTypeToSoftwareImageFilterSet
+
+
+class InventoryItemToSoftwareImageViewSet(ModelViewSet):
+    queryset = InventoryItemToSoftwareImage.objects.select_related("inventory_item", "software_image")
+    serializer_class = serializers.InventoryItemToSoftwareImageSerializer
+    filterset_class = filters.InventoryItemToSoftwareImageFilterSet

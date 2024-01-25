@@ -7,7 +7,7 @@ from django.db.models import Sum
 from django.utils.functional import classproperty
 
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, MACAddressCharField, NaturalOrderingField
-from nautobot.core.models.generics import BaseModel, ChangeLoggedModel, PrimaryModel
+from nautobot.core.models.generics import BaseModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.core.models.tree_queries import TreeModel
@@ -32,6 +32,7 @@ from nautobot.dcim.constants import (
     WIRELESS_IFACE_TYPES,
 )
 from nautobot.extras.models import (
+    ChangeLoggedModel,
     RelationshipModel,
     Status,
     StatusField,
@@ -1018,7 +1019,7 @@ class DeviceBay(ComponentModel):
 
 
 @extras_features("graphql")
-class InventoryItemToSoftwareImage(BaseModel):
+class InventoryItemToSoftwareImage(BaseModel, ChangeLoggedModel):
     inventory_item = models.ForeignKey(
         "dcim.InventoryItem", on_delete=models.CASCADE, related_name="software_image_mappings"
     )

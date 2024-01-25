@@ -23,7 +23,7 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.utils import get_all_network_driver_mappings
-from nautobot.extras.models import ConfigContextModel, RoleField, StatusField
+from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
 
@@ -99,7 +99,7 @@ class HardwareFamily(PrimaryModel):
 
 
 @extras_features("graphql")
-class DeviceTypeToSoftwareImage(BaseModel):
+class DeviceTypeToSoftwareImage(BaseModel, ChangeLoggedModel):
     device_type = models.ForeignKey("dcim.DeviceType", on_delete=models.CASCADE, related_name="software_image_mappings")
     software_image = models.ForeignKey(
         "dcim.SoftwareImage", on_delete=models.PROTECT, related_name="device_type_mappings"

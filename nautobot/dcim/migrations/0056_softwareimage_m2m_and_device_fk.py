@@ -38,6 +38,14 @@ class Migration(migrations.Migration):
                         to="dcim.softwareimage",
                     ),
                 ),
+                (
+                    "created",
+                    models.DateTimeField(auto_now_add=True, null=True),
+                ),
+                (
+                    "last_updated",
+                    models.DateTimeField(auto_now=True, null=True),
+                ),
             ],
             options={
                 "verbose_name": "Inventory Item to Software Image mapping",
@@ -70,6 +78,14 @@ class Migration(migrations.Migration):
                         related_name="device_type_mappings",
                         to="dcim.softwareimage",
                     ),
+                ),
+                (
+                    "created",
+                    models.DateTimeField(auto_now_add=True, null=True),
+                ),
+                (
+                    "last_updated",
+                    models.DateTimeField(auto_now=True, null=True),
                 ),
             ],
             options={

@@ -46,6 +46,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImage,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -54,6 +55,7 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     InventoryItem,
+    InventoryItemToSoftwareImage,
     Location,
     LocationType,
     Manufacturer,
@@ -100,6 +102,7 @@ __all__ = (
     "DeviceFilterSet",
     "DeviceRedundancyGroupFilterSet",
     "DeviceTypeFilterSet",
+    "DeviceTypeToSoftwareImageFilterSet",
     "FrontPortFilterSet",
     "FrontPortTemplateFilterSet",
     "HardwareFamilyFilterSet",
@@ -127,6 +130,8 @@ __all__ = (
     "RackReservationFilterSet",
     "RearPortFilterSet",
     "RearPortTemplateFilterSet",
+    "SoftwareImageFilterSet",
+    "SoftwareVersionFilterSet",
     "VirtualChassisFilterSet",
 )
 
@@ -1720,4 +1725,42 @@ class SoftwareVersionFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
 
     class Meta:
         model = SoftwareVersion
+        fields = "__all__"
+
+
+class DeviceTypeToSoftwareImageFilterSet(BaseFilterSet):
+    """Filters for DeviceTypeToSoftwareImage model."""
+
+    device_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DeviceType.objects.all(),
+        to_field_name="model",
+        label="Device type (model or ID)",
+    )
+    software_image = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareImage.objects.all(),
+        to_field_name="image_file_name",
+        label="Software image (image file name or ID)",
+    )
+
+    class Meta:
+        model = DeviceTypeToSoftwareImage
+        fields = "__all__"
+
+
+class InventoryItemToSoftwareImageFilterSet(BaseFilterSet):
+    """Filters for InventoryItemToSoftwareImage model."""
+
+    inventory_item = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=InventoryItem.objects.all(),
+        to_field_name="name",
+        label="Inventory item (name or ID)",
+    )
+    software_image = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareImage.objects.all(),
+        to_field_name="image_file_name",
+        label="Software image (image file name or ID)",
+    )
+
+    class Meta:
+        model = InventoryItemToSoftwareImage
         fields = "__all__"

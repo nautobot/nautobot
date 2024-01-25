@@ -31,6 +31,7 @@ from nautobot.dcim.filters import (
     DeviceFilterSet,
     DeviceRedundancyGroupFilterSet,
     DeviceTypeFilterSet,
+    DeviceTypeToSoftwareImageFilterSet,
     FrontPortFilterSet,
     FrontPortTemplateFilterSet,
     HardwareFamilyFilterSet,
@@ -39,6 +40,7 @@ from nautobot.dcim.filters import (
     InterfaceRedundancyGroupFilterSet,
     InterfaceTemplateFilterSet,
     InventoryItemFilterSet,
+    InventoryItemToSoftwareImageFilterSet,
     LocationFilterSet,
     LocationTypeFilterSet,
     ManufacturerFilterSet,
@@ -69,6 +71,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImage,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -77,6 +80,7 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     InventoryItem,
+    InventoryItemToSoftwareImage,
     Location,
     LocationType,
     Manufacturer,
@@ -3302,3 +3306,44 @@ class SoftwareVersionFilterSetTestCase(FilterTestCases.FilterTestCase):
             self.filterset(params, self.queryset).qs,
             SoftwareVersion.objects.filter(pre_release=False),
         )
+
+
+class DeviceTypeToSoftwareImageFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = DeviceTypeToSoftwareImage.objects.all()
+    filterset = DeviceTypeToSoftwareImageFilterSet
+    generic_filter_tests = (
+        ["software_image", "software_image__id"],
+        ["software_image", "software_image__image_file_name"],
+        ["device_type", "device_type__id"],
+        ["device_type", "device_type__model"],
+    )
+
+
+class InventoryItemToSoftwareImageFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = InventoryItemToSoftwareImage.objects.all()
+    filterset = InventoryItemToSoftwareImageFilterSet
+    generic_filter_tests = (
+        ["software_image", "software_image__id"],
+        ["software_image", "software_image__image_file_name"],
+        ["inventory_item", "inventory_item__id"],
+        ["inventory_item", "inventory_item__name"],
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        common_test_data(cls)
+
+        inventory_items = (
+            InventoryItem.objects.create(
+                device=cls.devices[0], name="Inventory Item 1", manufacturer=cls.manufacturers[0]
+            ),
+            InventoryItem.objects.create(
+                device=cls.devices[0], name="Inventory Item 2", manufacturer=cls.manufacturers[0]
+            ),
+            InventoryItem.objects.create(
+                device=cls.devices[0], name="Inventory Item 3", manufacturer=cls.manufacturers[0]
+            ),
+        )
+        inventory_items[0].software_images.set(SoftwareImage.objects.all()[:2])
+        inventory_items[1].software_images.set(SoftwareImage.objects.all()[2:4])
+        inventory_items[2].software_images.set([SoftwareImage.objects.all()[4]])

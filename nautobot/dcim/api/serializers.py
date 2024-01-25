@@ -59,6 +59,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImage,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -67,6 +68,7 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     InventoryItem,
+    InventoryItemToSoftwareImage,
     Location,
     LocationType,
     Manufacturer,
@@ -1030,4 +1032,16 @@ class SoftwareImageSerializer(NautobotModelSerializer, TaggedModelSerializerMixi
 class SoftwareVersionSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = SoftwareVersion
+        fields = "__all__"
+
+
+class DeviceTypeToSoftwareImageSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = DeviceTypeToSoftwareImage
+        fields = "__all__"
+
+
+class InventoryItemToSoftwareImageSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = InventoryItemToSoftwareImage
         fields = "__all__"
