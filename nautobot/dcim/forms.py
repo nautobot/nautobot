@@ -822,6 +822,7 @@ class DeviceTypeFilterForm(NautobotFilterForm):
         label="Has pass-through ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
+    software_images = DynamicModelMultipleChoiceField(queryset=SoftwareImage.objects.all(), required=False)
     tags = TagFilterField(model)
 
 
@@ -2878,9 +2879,10 @@ class InventoryItemBulkEditForm(
 ):
     pk = forms.ModelMultipleChoiceField(queryset=InventoryItem.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+    software_images = DynamicModelMultipleChoiceField(queryset=SoftwareImage.objects.all(), required=False)
 
     class Meta:
-        nullable_fields = ["label", "manufacturer", "part_id", "description"]
+        nullable_fields = ["description", "label", "manufacturer", "part_id", "software_images"]
 
 
 class InventoryItemFilterForm(DeviceComponentFilterForm):
@@ -2891,6 +2893,7 @@ class InventoryItemFilterForm(DeviceComponentFilterForm):
     serial = forms.CharField(required=False)
     asset_tag = forms.CharField(required=False)
     discovered = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    software_images = DynamicModelMultipleChoiceField(queryset=SoftwareImage.objects.all(), required=False)
     tags = TagFilterField(model)
 
 

@@ -8,3 +8,6 @@ Inventory items are hierarchical in nature, such that any individual item may be
 
 +++ 1.4.5
     The fields `created` and `last_updated` were added to all device component models. If you upgraded from Nautobot 1.4.4 or earlier, the values for these fields will default to `None` (null).
+
++++ 2.2.0
+    The [Software Image](softwareimage.md) model has been introduced to represent a software image that can be installed on an inventory item. One or more software images can be optionally assigned to inventory items.

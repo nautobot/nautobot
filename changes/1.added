@@ -1,1 +1,3 @@
 Added new models for software versions and software images.
+Added a many-to-many relationship from `DeviceType` to `SoftwareImage`.
+Added a many-to-many relationship from `InventoryItem` to `SoftwareImage`.
