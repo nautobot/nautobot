@@ -40,15 +40,13 @@
                         <td>{{ object.asset_tag|placeholder }}</td>
                     </tr>
                     <tr>
+                        <td>Software Version</td>
+                        <td>{{ object.software_version|hyperlinked_object }}</td>
+                    </tr>
+                    <tr>
                         <td>Description</td>
                         <td>{{ object.description|placeholder }}</td>
                     </tr>
                 </table>
             </div>
 {% endblock content_left_page %}
-
-{% block content_right_page %}
-    {% if object.software_images.count %}
-        {% include 'panel_table.html' with table=software_images_table heading='Software Images' %}
-    {% endif %}
-{% endblock content_right_page %}

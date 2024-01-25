@@ -56,6 +56,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImage,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -1198,6 +1199,11 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
 
+        # Protected FK to SoftwareImage prevents deletion
+        DeviceTypeToSoftwareImage.objects.all().delete()
+        # Protected FK to SoftwareVersion prevents deletion
+        Device.objects.all().update(software_version=None)
+
         cls.form_data = {
             "name": "Platform X",
             "manufacturer": manufacturer.pk,
@@ -1254,6 +1260,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         statuses = Status.objects.get_for_model(Device)
         status_active = statuses[0]
 
+        software_versions = SoftwareVersion.objects.all()[:2]
+        devicetypes[0].software_images.set(software_versions[0].software_images.all())
+        devicetypes[1].software_images.set(software_versions[1].software_images.all())
+
         cls.custom_fields = (
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_INTEGER, label="Crash Counter", default=0),
         )
@@ -1268,6 +1278,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 role=deviceroles[0],
                 platform=platforms[0],
                 status=status_active,
+                software_version=software_versions[0],
                 _custom_field_data={"crash_counter": 5},
             ),
             Device.objects.create(
@@ -1278,6 +1289,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 role=deviceroles[0],
                 platform=platforms[0],
                 status=status_active,
+                software_version=software_versions[0],
                 _custom_field_data={"crash_counter": 10},
             ),
             Device.objects.create(
@@ -1359,14 +1371,15 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "local_config_context_data": None,
             "cf_crash_counter": -1,
             "cr_router-id": None,
+            "software_version": software_versions[1].pk,
         }
 
         cls.csv_data = (
-            "role,device_type,status,name,location,rack,position,face,secrets_group,parent_bay",
+            "role,device_type,status,name,location,rack,position,face,secrets_group,parent_bay,software_version",
             f"{deviceroles[0].name},{devicetypes[0].composite_key},{statuses[0].name},Device 4,{locations[0].name},{racks[0].composite_key},10,front,",
             f"{deviceroles[0].pk},{devicetypes[0].pk},{statuses[0].pk},Device 5,{locations[0].pk},{racks[0].pk},20,front,",
             f"{deviceroles[0].name},{devicetypes[0].composite_key},{statuses[0].name},Device 6,{locations[0].name},{racks[0].composite_key},30,front,Secrets Group 2",
-            f"{deviceroles[1].name},{devicetypes[1].composite_key},{statuses[0].name},Child Device,{locations[0].name},,,,,{device_bay.composite_key}",
+            f"{deviceroles[1].name},{devicetypes[1].composite_key},{statuses[0].name},Child Device,{locations[0].name},,,,,{device_bay.composite_key},{software_versions[1].pk}",
         )
 
         cls.bulk_edit_data = {
@@ -2172,6 +2185,7 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        software_versions = SoftwareVersion.objects.all()[:3]
         device = create_test_device("Device 1")
         manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1")
 
@@ -2195,6 +2209,7 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "asset_tag": "ABC123",
             "description": "An inventory item",
             "tags": [t.pk for t in Tag.objects.get_for_model(InventoryItem)],
+            "software_version": software_versions[0].pk,
         }
 
         cls.bulk_create_data = {
@@ -2207,18 +2222,20 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX ABC",
             "description": "An inventory item",
             "tags": [t.pk for t in Tag.objects.get_for_model(InventoryItem)],
+            "software_version": software_versions[1].pk,
         }
 
         cls.bulk_edit_data = {
             "part_id": "123456",
             "description": "New description",
+            "software_version": software_versions[2].pk,
         }
 
         cls.csv_data = (
-            "device,name",
-            f"{device.composite_key},Inventory Item 4",
-            f"{device.pk},Inventory Item 5",
-            f"{device.composite_key},Inventory Item 6",
+            "device,name,software_version",
+            f"{device.composite_key},Inventory Item 4,{software_versions[0].composite_key}",
+            f"{device.pk},Inventory Item 5,{software_versions[1].composite_key}",
+            f"{device.composite_key},Inventory Item 6,{software_versions[2].composite_key}",
         )
 
 
@@ -3110,6 +3127,11 @@ class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def setUpTestData(cls):
         statuses = Status.objects.get_for_model(SoftwareVersion)
         platforms = Platform.objects.all()
+
+        # Protected FK to SoftwareImage prevents deletion
+        DeviceTypeToSoftwareImage.objects.all().delete()
+        # Protected FK to SoftwareVersion prevents deletion
+        Device.objects.all().update(software_version=None)
 
         cls.form_data = {
             "platform": platforms[0].pk,

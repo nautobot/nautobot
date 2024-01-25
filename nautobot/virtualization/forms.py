@@ -25,7 +25,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFormMixin,
 )
 from nautobot.dcim.forms import INTERFACE_MODE_HELP_TEXT, InterfaceCommonForm
-from nautobot.dcim.models import Device, Location, Platform, Rack
+from nautobot.dcim.models import Device, Location, Platform, Rack, SoftwareVersion
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     LocalContextFilterForm,
@@ -227,6 +227,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
             "platform",
             "primary_ip4",
             "primary_ip6",
+            "software_version",
             "vcpus",
             "memory",
             "disk",
@@ -242,6 +243,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
         widgets = {
             "primary_ip4": StaticSelect2(),
             "primary_ip6": StaticSelect2(),
+            "software_version": StaticSelect2(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -315,6 +317,7 @@ class VirtualMachineBulkEditForm(
     memory = forms.IntegerField(required=False, label="Memory (MB)")
     disk = forms.IntegerField(required=False, label="Disk (GB)")
     comments = CommentField(widget=SmallTextarea, label="Comments")
+    software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
 
     class Meta:
         nullable_fields = [
@@ -324,6 +327,7 @@ class VirtualMachineBulkEditForm(
             "memory",
             "disk",
             "comments",
+            "software_version",
         ]
 
 
@@ -373,6 +377,16 @@ class VirtualMachineFilterForm(
     has_primary_ip = forms.NullBooleanField(
         required=False,
         label="Has a primary IP",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    software_version = DynamicModelMultipleChoiceField(
+        queryset=SoftwareVersion.objects.all(),
+        required=False,
+        label="Software version",
+    )
+    has_software_version = forms.NullBooleanField(
+        required=False,
+        label="Has software version",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     tags = TagFilterField(model)

@@ -38,7 +38,6 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroup,
     InterfaceTemplate,
     InventoryItem,
-    InventoryItemToSoftwareImage,
     Location,
     LocationType,
     Manufacturer,
@@ -1114,7 +1113,10 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        DeviceTypeToSoftwareImage.objects.all().delete()  # Protected FK to SoftwareImage prevents deletion
+        # Protected FK to SoftwareImage prevents deletion
+        DeviceTypeToSoftwareImage.objects.all().delete()
+        # Protected FK to SoftwareVersion prevents deletion
+        Device.objects.all().update(software_version=None)
 
     @override_settings(
         NETWORK_DRIVERS={
@@ -1172,8 +1174,10 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             SecretsGroup.objects.create(name="Secrets Group 2"),
         )
 
-        device_type = DeviceType.objects.first()
+        device_type = DeviceType.objects.filter(software_images__isnull=False).first()
         device_role = Role.objects.get_for_model(Device).first()
+
+        software_version = SoftwareVersion.objects.filter(software_images__device_types=device_type).first()
 
         Device.objects.create(
             device_type=device_type,
@@ -1185,6 +1189,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
             local_config_context_data={"A": 1},
+            software_version=software_version,
         )
         Device.objects.create(
             device_type=device_type,
@@ -1196,6 +1201,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
             local_config_context_data={"B": 2},
+            software_version=software_version,
         )
         Device.objects.create(
             device_type=device_type,
@@ -1220,6 +1226,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "rack": racks[1].pk,
                 "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
+                "software_version": software_version.pk,
             },
             {
                 "device_type": device_type.pk,
@@ -1231,6 +1238,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "rack": racks[1].pk,
                 "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
+                "software_version": software_version.pk,
             },
             {
                 "device_type": device_type.pk,
@@ -1978,9 +1986,8 @@ class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeMode
     def setUpTestData(cls):
         super().setUpTestData()
 
-        cls.VERBOTEN_STRINGS = tuple(
-            [o for o in cls.VERBOTEN_STRINGS if o not in SoftwareImageHashingAlgorithmChoices.as_dict().keys()]
-        )
+        software_versions = SoftwareVersion.objects.all()[:3]
+
         InventoryItem.objects.create(device=cls.device, name="Inventory Item 1", manufacturer=cls.manufacturer)
         InventoryItem.objects.create(device=cls.device, name="Inventory Item 2", manufacturer=cls.manufacturer)
         InventoryItem.objects.create(device=cls.device, name="Inventory Item 3", manufacturer=cls.manufacturer)
@@ -1990,11 +1997,13 @@ class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeMode
                 "device": cls.device.pk,
                 "name": "Inventory Item 4",
                 "manufacturer": cls.manufacturer.pk,
+                "software_version": software_versions[0].pk,
             },
             {
                 "device": cls.device.pk,
                 "name": "Inventory Item 5",
                 "manufacturer": cls.manufacturer.pk,
+                "software_version": software_versions[1].pk,
             },
             {
                 "device": cls.device.pk,
@@ -2676,7 +2685,6 @@ class SoftwareVersionTestCase(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         DeviceTypeToSoftwareImage.objects.all().delete()  # Protected FK to SoftwareImage prevents deletion
-        InventoryItemToSoftwareImage.objects.all().delete()  # Protected FK to SoftwareImage prevents deletion
         cls.VERBOTEN_STRINGS = tuple(
             [o for o in cls.VERBOTEN_STRINGS if o not in SoftwareImageHashingAlgorithmChoices.as_dict().keys()]
         )
@@ -2718,6 +2726,9 @@ class DeviceTypeToSoftwareImageTestCase(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         DeviceTypeToSoftwareImage.objects.all().delete()
+        cls.VERBOTEN_STRINGS = tuple(
+            [o for o in cls.VERBOTEN_STRINGS if o not in SoftwareImageHashingAlgorithmChoices.as_dict().keys()]
+        )
         device_types = DeviceType.objects.all()[:4]
         software_images = SoftwareImage.objects.all()[:3]
 
@@ -2752,72 +2763,6 @@ class DeviceTypeToSoftwareImageTestCase(APIViewTestCases.APIViewTestCase):
             {
                 "software_image": software_images[2].pk,
                 "device_type": device_types[3].pk,
-                "is_default": False,
-            },
-        ]
-        cls.bulk_update_data = {
-            "is_default": False,
-        }
-
-
-class InventoryItemToSoftwareImageTestCase(APIViewTestCases.APIViewTestCase):
-    model = InventoryItemToSoftwareImage
-
-    @classmethod
-    def setUpTestData(cls):
-        InventoryItemToSoftwareImage.objects.all().delete()
-        device = Device.objects.first()
-        inventory_items = (
-            InventoryItem.objects.create(
-                name="Inventory Item 1",
-                device=device,
-            ),
-            InventoryItem.objects.create(
-                name="Inventory Item 2",
-                device=device,
-            ),
-            InventoryItem.objects.create(
-                name="Inventory Item 3",
-                device=device,
-            ),
-            InventoryItem.objects.create(
-                name="Inventory Item 4",
-                device=device,
-            ),
-        )
-        software_images = SoftwareImage.objects.all()[:3]
-
-        # deletable objects
-        InventoryItemToSoftwareImage.objects.create(
-            inventory_item=inventory_items[0],
-            software_image=software_images[0],
-            is_default=True,
-        )
-        InventoryItemToSoftwareImage.objects.create(
-            inventory_item=inventory_items[0],
-            software_image=software_images[1],
-            is_default=False,
-        )
-        InventoryItemToSoftwareImage.objects.create(
-            inventory_item=inventory_items[0],
-            software_image=software_images[2],
-            is_default=True,
-        )
-
-        cls.create_data = [
-            {
-                "software_image": software_images[0].pk,
-                "inventory_item": inventory_items[1].pk,
-                "is_default": True,
-            },
-            {
-                "software_image": software_images[1].pk,
-                "inventory_item": inventory_items[2].pk,
-                "is_default": True,
-            },
-            {
-                "software_image": software_images[2].pk,
-                "inventory_item": inventory_items[3].pk,
                 "is_default": False,
             },
         ]

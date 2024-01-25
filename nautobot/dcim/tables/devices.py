@@ -1037,16 +1037,6 @@ class SoftwareImageTable(StatusTableMixin, BaseTable):
         url_params={"software_images": "pk"},
         verbose_name="Device Types",
     )
-    device_count = LinkedCountColumn(
-        viewname="dcim:device_list",
-        url_params={"software_image": "pk"},
-        verbose_name="Devices",
-    )
-    inventory_item_count = LinkedCountColumn(
-        viewname="dcim:inventoryitem_list",
-        url_params={"software_images": "pk"},
-        verbose_name="Inventory Items",
-    )
     tags = TagColumn(url_name="dcim:softwareimage_list")
     actions = ButtonsColumn(SoftwareImage)
 
@@ -1061,8 +1051,6 @@ class SoftwareImageTable(StatusTableMixin, BaseTable):
             "hashing_algorithm",
             "download_url",
             "device_type_count",
-            "device_count",
-            "inventory_item_count",
             "tags",
             "actions",
         )
@@ -1072,8 +1060,6 @@ class SoftwareImageTable(StatusTableMixin, BaseTable):
             "status",
             "software_version",
             "device_type_count",
-            "device_count",
-            "inventory_item_count",
             "tags",
             "actions",
         )
@@ -1086,6 +1072,16 @@ class SoftwareVersionTable(StatusTableMixin, BaseTable):
         viewname="dcim:softwareimage_list",
         url_params={"software_version": "pk"},
         verbose_name="Software Images",
+    )
+    device_count = LinkedCountColumn(
+        viewname="dcim:device_list",
+        url_params={"software_version": "pk"},
+        verbose_name="Devices",
+    )
+    inventory_item_count = LinkedCountColumn(
+        viewname="dcim:inventoryitem_list",
+        url_params={"software_version": "pk"},
+        verbose_name="Inventory Items",
     )
     tags = TagColumn(url_name="dcim:softwareversion_list")
     actions = ButtonsColumn(SoftwareVersion)
@@ -1103,6 +1099,8 @@ class SoftwareVersionTable(StatusTableMixin, BaseTable):
             "pre_release",
             "documentation_url",
             "software_image_count",
+            "device_count",
+            "inventory_item_count",
             "tags",
             "actions",
         )
@@ -1114,6 +1112,8 @@ class SoftwareVersionTable(StatusTableMixin, BaseTable):
             "release_date",
             "end_of_support_date",
             "software_image_count",
+            "device_count",
+            "inventory_item_count",
             "tags",
             "actions",
         )

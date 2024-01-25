@@ -13,47 +13,6 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="InventoryItemToSoftwareImage",
-            fields=[
-                (
-                    "id",
-                    models.UUIDField(
-                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
-                    ),
-                ),
-                ("is_default", models.BooleanField(default=False)),
-                (
-                    "inventory_item",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="software_image_mappings",
-                        to="dcim.inventoryitem",
-                    ),
-                ),
-                (
-                    "software_image",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT,
-                        related_name="inventory_item_mappings",
-                        to="dcim.softwareimage",
-                    ),
-                ),
-                (
-                    "created",
-                    models.DateTimeField(auto_now_add=True, null=True),
-                ),
-                (
-                    "last_updated",
-                    models.DateTimeField(auto_now=True, null=True),
-                ),
-            ],
-            options={
-                "verbose_name": "Inventory Item to Software Image mapping",
-                "verbose_name_plural": "Inventory Item to Software Image mappings",
-                "unique_together": {("inventory_item", "software_image")},
-            },
-        ),
-        migrations.CreateModel(
             name="DeviceTypeToSoftwareImage",
             fields=[
                 (
@@ -106,23 +65,24 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="inventoryitem",
-            name="software_images",
-            field=models.ManyToManyField(
+            name="software_version",
+            field=models.ForeignKey(
                 blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
                 related_name="inventory_items",
-                through="dcim.InventoryItemToSoftwareImage",
-                to="dcim.SoftwareImage",
+                to="dcim.softwareversion",
             ),
         ),
         migrations.AddField(
             model_name="device",
-            name="software_image",
+            name="software_version",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="devices",
-                to="dcim.softwareimage",
+                to="dcim.softwareversion",
             ),
         ),
     ]

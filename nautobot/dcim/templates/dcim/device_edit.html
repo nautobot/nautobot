@@ -20,12 +20,6 @@
         </div>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Software</strong></div>
-        <div class="panel-body">
-            {% render_field form.software_image %}
-        </div>
-    </div>
-    <div class="panel panel-default">
         <div class="panel-heading"><strong>Location</strong></div>
         <div class="panel-body">
             {% render_field form.location %}
@@ -77,6 +71,7 @@
             {% render_field form.secrets_group %}
             {% render_field form.device_redundancy_group %}
             {% render_field form.device_redundancy_group_priority %}
+            {% render_field form.software_version %}
         </div>
     </div>
     <div class="panel panel-default">

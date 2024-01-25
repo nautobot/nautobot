@@ -60,17 +60,21 @@
 {% block content_right_page %}
 <div class="panel panel-default">
     <div class="panel-heading">
-        <strong>Software Images</strong>
+        <strong>Stats</strong>
     </div>
-    <div class="table-responsive">
-        {% include 'inc/table.html' with table=software_images_table %}
-    </div>
-    {% if perms.dcim.add_softwareimage %}
-        <div class="panel-footer text-right noprint">
-            <a href="{% url 'dcim:softwareimage_add' %}?software_version={{ object.pk }}&return_url={% url 'dcim:softwareversion' pk=object.pk %}" class="btn btn-xs btn-primary">
-                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Software Image
-            </a>
+    <div class="panel-body">
+        <div class="col-md-4 text-center">
+            <h2><a href="{% url 'dcim:softwareimage_list' %}?software_version={{ object.pk }}" class="btn {% if object.software_images.count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ object.software_images.count }}</a></h2>
+            <p>Software Images</p>
         </div>
-    {% endif %}
+        <div class="col-md-4 text-center">
+            <h2><a href="{% url 'dcim:device_list' %}?software_version={{ object.pk }}" class="btn {% if object.devices.count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ object.devices.count }}</a></h2>
+            <p>Devices</p>
+        </div>
+        <div class="col-md-4 text-center">
+            <h2><a href="{% url 'dcim:inventoryitem_list' %}?software_version={{ object.pk }}" class="btn {% if object.inventory_items.count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ object.inventory_items.count }}</a></h2>
+            <p>Inventory Items</p>
+        </div>
+    </div>
 </div>
 {% endblock content_right_page %}

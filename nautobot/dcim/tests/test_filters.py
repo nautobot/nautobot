@@ -40,7 +40,6 @@ from nautobot.dcim.filters import (
     InterfaceRedundancyGroupFilterSet,
     InterfaceTemplateFilterSet,
     InventoryItemFilterSet,
-    InventoryItemToSoftwareImageFilterSet,
     LocationFilterSet,
     LocationTypeFilterSet,
     ManufacturerFilterSet,
@@ -80,7 +79,6 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     InventoryItem,
-    InventoryItemToSoftwareImage,
     Location,
     LocationType,
     Manufacturer,
@@ -113,6 +111,7 @@ def common_test_data(cls):
     Device.objects.all().delete()
     tenants = Tenant.objects.filter(tenant_group__isnull=False)
     cls.tenants = tenants
+    cls.software_versions = SoftwareVersion.objects.all()
 
     lt1 = LocationType.objects.get(name="Campus")
     lt2 = LocationType.objects.get(name="Building")
@@ -286,13 +285,28 @@ def common_test_data(cls):
 
     vm_status = Status.objects.get_for_model(VirtualMachine).first()
     VirtualMachine.objects.create(
-        cluster=clusters[0], name="VM 1", role=cls.device_roles[0], platform=platforms[0], status=vm_status
+        cluster=clusters[0],
+        name="VM 1",
+        role=cls.device_roles[0],
+        platform=platforms[0],
+        status=vm_status,
+        software_version=cls.software_versions[0],
     )
     VirtualMachine.objects.create(
-        cluster=clusters[0], name="VM 2", role=cls.device_roles[1], platform=platforms[1], status=vm_status
+        cluster=clusters[0],
+        name="VM 2",
+        role=cls.device_roles[1],
+        platform=platforms[1],
+        status=vm_status,
+        software_version=cls.software_versions[1],
     )
     VirtualMachine.objects.create(
-        cluster=clusters[0], name="VM 3", role=cls.device_roles[2], platform=platforms[2], status=vm_status
+        cluster=clusters[0],
+        name="VM 3",
+        role=cls.device_roles[2],
+        platform=platforms[2],
+        status=vm_status,
+        software_version=cls.software_versions[2],
     )
 
     vlan_groups = (
@@ -560,6 +574,7 @@ def common_test_data(cls):
             serial="ABC",
             position=1,
             secrets_group=secrets_groups[0],
+            software_version=cls.software_versions[0],
         ),
         Device.objects.create(
             name="Device 2",
@@ -577,6 +592,7 @@ def common_test_data(cls):
             position=2,
             secrets_group=secrets_groups[1],
             local_config_context_data={"foo": 123},
+            software_version=cls.software_versions[1],
         ),
         Device.objects.create(
             name="Device 3",
@@ -593,6 +609,7 @@ def common_test_data(cls):
             serial="GHI",
             position=3,
             secrets_group=secrets_groups[2],
+            software_version=cls.software_versions[2],
         ),
     )
     cls.devices[0].tags.set(Tag.objects.get_for_model(Device))
@@ -1370,8 +1387,8 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ("role", "role__name"),
         ("secrets_group", "secrets_group__id"),
         ("secrets_group", "secrets_group__name"),
-        ("software_image", "software_image__id"),
-        ("software_image", "software_image__image_file_name"),
+        ("software_version", "software_version__id"),
+        ("software_version", "software_version__version"),
         ("status", "status__id"),
         ("status", "status__name"),
         ("vc_position",),
@@ -2454,8 +2471,8 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
         ("parent", "parent__id"),
         ("parent", "parent__name"),
         ("part_id",),
-        ("software_images", "software_images__id"),
-        ("software_images", "software_images__image_file_name"),
+        ("software_version", "software_version__id"),
+        ("software_version", "software_version__version"),
     ]
 
     @classmethod
@@ -2468,6 +2485,8 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
             Device.objects.get(name="Device 3"),
         )
 
+        software_versions = SoftwareVersion.objects.all()[:3]
+
         inventory_items = (
             InventoryItem.objects.create(
                 device=devices[0],
@@ -2479,6 +2498,7 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
                 discovered=True,
                 description="First",
                 label="inventoryitem1",
+                software_version=software_versions[0],
             ),
             InventoryItem.objects.create(
                 device=devices[1],
@@ -2490,6 +2510,7 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
                 discovered=True,
                 description="Second",
                 label="inventoryitem2",
+                software_version=software_versions[1],
             ),
             InventoryItem.objects.create(
                 device=devices[2],
@@ -2501,13 +2522,11 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
                 discovered=False,
                 description="Third",
                 label="inventoryitem3",
+                software_version=software_versions[2],
             ),
         )
         inventory_items[0].tags.set(Tag.objects.get_for_model(InventoryItem))
         inventory_items[1].tags.set(Tag.objects.get_for_model(InventoryItem)[:3])
-
-        inventory_items[0].software_images.set(SoftwareImage.objects.all()[:2])
-        inventory_items[1].software_images.set(SoftwareImage.objects.all()[2:4])
 
         InventoryItem.objects.create(device=devices[0], name="Inventory Item 1A", parent=inventory_items[0])
         InventoryItem.objects.create(device=devices[1], name="Inventory Item 2A", parent=inventory_items[1])
@@ -3220,14 +3239,10 @@ class SoftwareImageFilterSetTestCase(FilterTestCases.FilterTestCase):
     generic_filter_tests = (
         ["device_types", "device_types__id"],
         ["device_types", "device_types__model"],
-        ["devices", "devices__id"],
-        ["devices", "devices__name"],
         ["hashing_algorithm"],
         ["image_file_checksum"],
         ["image_file_name"],
         ["image_file_size"],
-        ["inventory_items", "inventory_items__id"],
-        ["inventory_items", "inventory_items__name"],
         ["software_version", "software_version__id"],
         ["software_version", "software_version__version"],
         ["status", "status__id"],
@@ -3237,21 +3252,6 @@ class SoftwareImageFilterSetTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
         common_test_data(cls)
-
-        inventory_items = (
-            InventoryItem.objects.create(
-                device=cls.devices[0],
-                name="Inventory Item 1",
-                manufacturer=cls.manufacturers[0],
-            ),
-            InventoryItem.objects.create(
-                device=cls.devices[1],
-                name="Inventory Item 2",
-                manufacturer=cls.manufacturers[1],
-            ),
-        )
-        inventory_items[0].software_images.set(SoftwareImage.objects.all()[:2])
-        inventory_items[1].software_images.set(SoftwareImage.objects.all()[2:4])
 
         device0, device1 = cls.devices[:2]
         device0.software_image = SoftwareImage.objects.first()
@@ -3282,6 +3282,29 @@ class SoftwareVersionFilterSetTestCase(FilterTestCases.FilterTestCase):
         ["status", "status__name"],
         ["version"],
     )
+
+    @classmethod
+    def setUpTestData(cls):
+        common_test_data(cls)
+
+        InventoryItem.objects.create(
+            device=cls.devices[0],
+            name="Inventory Item 1",
+            manufacturer=cls.manufacturers[0],
+            software_version=cls.software_versions[0],
+        )
+        InventoryItem.objects.create(
+            device=cls.devices[1],
+            name="Inventory Item 2",
+            manufacturer=cls.manufacturers[1],
+            software_version=cls.software_versions[1],
+        )
+        InventoryItem.objects.create(
+            device=cls.devices[2],
+            name="Inventory Item 3",
+            manufacturer=cls.manufacturers[2],
+            software_version=cls.software_versions[2],
+        )
 
     def test_long_term_support(self):
         params = {"long_term_support": True}
@@ -3317,33 +3340,3 @@ class DeviceTypeToSoftwareImageFilterSetTestCase(FilterTestCases.FilterTestCase)
         ["device_type", "device_type__id"],
         ["device_type", "device_type__model"],
     )
-
-
-class InventoryItemToSoftwareImageFilterSetTestCase(FilterTestCases.FilterTestCase):
-    queryset = InventoryItemToSoftwareImage.objects.all()
-    filterset = InventoryItemToSoftwareImageFilterSet
-    generic_filter_tests = (
-        ["software_image", "software_image__id"],
-        ["software_image", "software_image__image_file_name"],
-        ["inventory_item", "inventory_item__id"],
-        ["inventory_item", "inventory_item__name"],
-    )
-
-    @classmethod
-    def setUpTestData(cls):
-        common_test_data(cls)
-
-        inventory_items = (
-            InventoryItem.objects.create(
-                device=cls.devices[0], name="Inventory Item 1", manufacturer=cls.manufacturers[0]
-            ),
-            InventoryItem.objects.create(
-                device=cls.devices[0], name="Inventory Item 2", manufacturer=cls.manufacturers[0]
-            ),
-            InventoryItem.objects.create(
-                device=cls.devices[0], name="Inventory Item 3", manufacturer=cls.manufacturers[0]
-            ),
-        )
-        inventory_items[0].software_images.set(SoftwareImage.objects.all()[:2])
-        inventory_items[1].software_images.set(SoftwareImage.objects.all()[2:4])
-        inventory_items[2].software_images.set([SoftwareImage.objects.all()[4]])

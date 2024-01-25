@@ -43,7 +43,6 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     InventoryItem,
-    InventoryItemToSoftwareImage,
     Location,
     LocationType,
     Manufacturer,
@@ -814,9 +813,3 @@ class DeviceTypeToSoftwareImageViewSet(ModelViewSet):
     queryset = DeviceTypeToSoftwareImage.objects.select_related("device_type", "software_image")
     serializer_class = serializers.DeviceTypeToSoftwareImageSerializer
     filterset_class = filters.DeviceTypeToSoftwareImageFilterSet
-
-
-class InventoryItemToSoftwareImageViewSet(ModelViewSet):
-    queryset = InventoryItemToSoftwareImage.objects.select_related("inventory_item", "software_image")
-    serializer_class = serializers.InventoryItemToSoftwareImageSerializer
-    filterset_class = filters.InventoryItemToSoftwareImageFilterSet

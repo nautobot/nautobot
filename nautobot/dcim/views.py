@@ -670,9 +670,7 @@ class DeviceTypeView(generic.ObjectView):
 
         software_images_table = tables.SoftwareImageTable(
             instance.software_images.restrict(request.user, "view").annotate(
-                device_count=count_related(Device, "software_image"),
                 device_type_count=count_related(DeviceType, "software_images"),
-                inventory_item_count=count_related(InventoryItem, "software_images"),
             ),
             orderable=False,
             exclude=["actions", "tags"],
@@ -1152,6 +1150,7 @@ class DeviceView(generic.ObjectView):
         "platform",
         "primary_ip4",
         "primary_ip6",
+        "software_version",
         "status",
     )
     use_new_ui = True
@@ -2119,23 +2118,10 @@ class InventoryItemListView(generic.ObjectListView):
 
 
 class InventoryItemView(generic.ObjectView):
-    queryset = InventoryItem.objects.all()
+    queryset = InventoryItem.objects.all().select_related("device", "manufacturer", "software_version")
 
     def get_extra_context(self, request, instance):
-        software_images_table = tables.SoftwareImageTable(
-            instance.software_images.restrict(request.user, "view").annotate(
-                device_count=count_related(Device, "software_image"),
-                device_type_count=count_related(DeviceType, "software_images"),
-                inventory_item_count=count_related(InventoryItem, "software_images"),
-            ),
-            orderable=False,
-            exclude=["actions", "tags"],
-        )
-
-        return {
-            "breadcrumb_url": "dcim:device_inventory",
-            "software_images_table": software_images_table,
-        }
+        return {"breadcrumb_url": "dcim:device_inventory"}
 
 
 class InventoryItemEditView(generic.ObjectEditView):
@@ -2974,13 +2960,10 @@ class SoftwareImageUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.SoftwareImageBulkEditForm
     queryset = (
         SoftwareImage.objects.select_related("software_version")
-        .prefetch_related("device_types", "devices", "inventory_items")
-        .annotate(
-            device_count=count_related(Device, "software_image"),
-            device_type_count=count_related(DeviceType, "software_images"),
-            inventory_item_count=count_related(InventoryItem, "software_images"),
-        )
+        .prefetch_related("device_types")
+        .annotate(device_type_count=count_related(DeviceType, "software_images"))
     )
+
     serializer_class = serializers.SoftwareImageSerializer
     table_class = tables.SoftwareImageTable
 
@@ -2990,25 +2973,14 @@ class SoftwareVersionUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.SoftwareVersionFilterForm
     form_class = forms.SoftwareVersionForm
     bulk_update_form_class = forms.SoftwareVersionBulkEditForm
-    queryset = SoftwareVersion.objects.select_related("platform").annotate(
-        software_image_count=count_related(SoftwareImage, "software_version")
+    queryset = (
+        SoftwareVersion.objects.select_related("platform")
+        .prefetch_related("devices", "inventory_items", "software_images")
+        .annotate(
+            software_image_count=count_related(SoftwareImage, "software_version"),
+            device_count=count_related(Device, "software_version"),
+            inventory_item_count=count_related(InventoryItem, "software_version"),
+        )
     )
     serializer_class = serializers.SoftwareVersionSerializer
     table_class = tables.SoftwareVersionTable
-
-    def get_extra_context(self, request, instance=None):
-        if instance is None:
-            return {}
-
-        software_images = instance.software_images.restrict(request.user, "view").annotate(
-            device_count=count_related(Device, "software_image"),
-            device_type_count=count_related(DeviceType, "software_images"),
-            inventory_item_count=count_related(InventoryItem, "software_images"),
-        )
-        software_images_table = tables.SoftwareImageTable(
-            software_images, orderable=False, exclude=["software_version", "actions"]
-        )
-
-        return {
-            "software_images_table": software_images_table,
-        }

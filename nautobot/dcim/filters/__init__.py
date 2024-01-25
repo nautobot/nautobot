@@ -55,7 +55,6 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     InventoryItem,
-    InventoryItemToSoftwareImage,
     Location,
     LocationType,
     Manufacturer,
@@ -86,7 +85,7 @@ from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import Cluster
+from nautobot.virtualization.models import Cluster, VirtualMachine
 
 __all__ = (
     "CableFilterSet",
@@ -970,10 +969,14 @@ class DeviceFilterSet(
         queryset=DeviceBay.objects.all(),
         label="Device Bays",
     )
-    software_image = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=SoftwareImage.objects.all(),
-        to_field_name="image_file_name",
-        label="Software image (image file name or ID)",
+    software_version = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareVersion.objects.all(),
+        to_field_name="version",
+        label="Software version (version or ID)",
+    )
+    has_software_version = RelatedMembershipBooleanFilter(
+        field_name="software_version",
+        label="Has software version",
     )
 
     class Meta:
@@ -989,6 +992,8 @@ class DeviceFilterSet(
             "device_redundancy_group_priority",
             "tags",
             "interfaces",
+            "software_version",
+            "has_software_version",
         ]
 
     def generate_query__has_primary_ip(self, value):
@@ -1345,15 +1350,30 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentModelFilterSetMixin):
         label="Has child items",
     )
     serial = MultiValueCharFilter(lookup_expr="iexact")
-    software_images = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=SoftwareImage.objects.all(),
-        to_field_name="image_file_name",
-        label="Software images (image file name or ID)",
+    software_version = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareVersion.objects.all(),
+        to_field_name="version",
+        label="Software version (version or ID)",
+    )
+    has_software_version = RelatedMembershipBooleanFilter(
+        field_name="software_version",
+        label="Has software version",
     )
 
     class Meta:
         model = InventoryItem
-        fields = ["id", "name", "part_id", "asset_tag", "discovered", "description", "label", "tags"]
+        fields = [
+            "id",
+            "name",
+            "part_id",
+            "asset_tag",
+            "discovered",
+            "description",
+            "label",
+            "software_version",
+            "has_software_version",
+            "tags",
+        ]
 
 
 class VirtualChassisFilterSet(NautobotFilterSet):
@@ -1669,29 +1689,9 @@ class SoftwareImageFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         to_field_name="model",
         label="Device types (model or ID)",
     )
-    devices = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Device.objects.all(),
-        label="Devices (name or ID)",
-    )
-    inventory_items = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=InventoryItem.objects.all(),
-        label="Inventory items (name or ID)",
-    )
     has_device_types = RelatedMembershipBooleanFilter(
         field_name="device_types",
         label="Has device types",
-    )
-    has_devices = RelatedMembershipBooleanFilter(
-        field_name="devices",
-        label="Has devices",
-    )
-    has_inventory_items = RelatedMembershipBooleanFilter(
-        field_name="inventory_items",
-        label="Has inventory items",
-    )
-    has_virtual_machines = RelatedMembershipBooleanFilter(
-        field_name="virtual_machines",
-        label="Has virtual machines",
     )
 
     class Meta:
@@ -1709,10 +1709,40 @@ class SoftwareVersionFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
             "platform__name": "icontains",
         }
     )
+    devices = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        label="Devices (name or ID)",
+    )
+    has_devices = RelatedMembershipBooleanFilter(
+        field_name="devices",
+        label="Has devices",
+    )
+    inventory_items = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=InventoryItem.objects.all(),
+        label="Inventory items (name or ID)",
+    )
+    has_inventory_items = RelatedMembershipBooleanFilter(
+        field_name="inventory_items",
+        label="Has inventory items",
+    )
+    virtual_machines = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VirtualMachine.objects.all(),
+        label="Virtual machines (name or ID)",
+    )
+    has_virtual_machines = RelatedMembershipBooleanFilter(
+        field_name="virtual_machines",
+        label="Has virtual machines",
+    )
     platform = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Platform.objects.all(),
         to_field_name="name",
         label="Platform (name or ID)",
+    )
+    device_types = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="software_images__device_types",
+        queryset=DeviceType.objects.all(),
+        to_field_name="model",
+        label="Device types (model or ID)",
     )
     software_images = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SoftwareImage.objects.all(),
@@ -1745,23 +1775,4 @@ class DeviceTypeToSoftwareImageFilterSet(BaseFilterSet):
 
     class Meta:
         model = DeviceTypeToSoftwareImage
-        fields = "__all__"
-
-
-class InventoryItemToSoftwareImageFilterSet(BaseFilterSet):
-    """Filters for InventoryItemToSoftwareImage model."""
-
-    inventory_item = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=InventoryItem.objects.all(),
-        to_field_name="name",
-        label="Inventory item (name or ID)",
-    )
-    software_image = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=SoftwareImage.objects.all(),
-        to_field_name="image_file_name",
-        label="Software image (image file name or ID)",
-    )
-
-    class Meta:
-        model = InventoryItemToSoftwareImage
         fields = "__all__"

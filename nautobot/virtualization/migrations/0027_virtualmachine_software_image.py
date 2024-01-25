@@ -13,13 +13,13 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="virtualmachine",
-            name="software_image",
+            name="software_version",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="virtual_machines",
-                to="dcim.softwareimage",
+                to="dcim.softwareversion",
             ),
         ),
     ]

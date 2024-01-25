@@ -553,13 +553,13 @@ class Device(PrimaryModel, ConfigContextModel):
         verbose_name="Device Redundancy Group Priority",
         help_text="The priority the device has in the device redundancy group.",
     )
-    software_image = models.ForeignKey(
-        to="dcim.SoftwareImage",
+    software_version = models.ForeignKey(
+        to="dcim.SoftwareVersion",
         on_delete=models.PROTECT,
         related_name="devices",
         blank=True,
         null=True,
-        help_text="The software image running on this device",
+        help_text="The software version installed on this device",
     )
     # 2.0 TODO: Profile filtering on this field if it could benefit from an index
     vc_position = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])

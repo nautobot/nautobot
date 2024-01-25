@@ -68,7 +68,6 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
     InventoryItem,
-    InventoryItemToSoftwareImage,
     Location,
     LocationType,
     Manufacturer,
@@ -1038,10 +1037,4 @@ class SoftwareVersionSerializer(NautobotModelSerializer, TaggedModelSerializerMi
 class DeviceTypeToSoftwareImageSerializer(ValidatedModelSerializer):
     class Meta:
         model = DeviceTypeToSoftwareImage
-        fields = "__all__"
-
-
-class InventoryItemToSoftwareImageSerializer(ValidatedModelSerializer):
-    class Meta:
-        model = InventoryItemToSoftwareImage
         fields = "__all__"

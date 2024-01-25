@@ -106,8 +106,8 @@ def get_random_platform_for_manufacturer(manufacturer):
     return factory.random.randgen.choice(qs) if qs.exists() else None
 
 
-def get_random_software_image_for_device_type(device_type):
-    qs = SoftwareImage.objects.filter(device_types=device_type)
+def get_random_software_version_for_device_type(device_type):
+    qs = SoftwareVersion.objects.filter(software_images__device_types=device_type)
     return factory.random.randgen.choice(qs) if qs.exists() else None
 
 
@@ -120,7 +120,7 @@ class DeviceFactory(PrimaryModelFactory):
             "has_device_redundancy_group",
             "has_platform",
             "has_serial",
-            "has_software_image",
+            "has_software_version",
             "has_tenant",
         )
 
@@ -167,10 +167,10 @@ class DeviceFactory(PrimaryModelFactory):
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("bs"))
 
-    has_software_image = NautobotBoolIterator()
-    software_image = factory.Maybe(
-        "has_software_image",
-        factory.LazyAttribute(lambda o: get_random_software_image_for_device_type(o.device_type)),
+    has_software_version = NautobotBoolIterator()
+    software_version = factory.Maybe(
+        "has_software_version",
+        factory.LazyAttribute(lambda o: get_random_software_version_for_device_type(o.device_type)),
         None,
     )
 

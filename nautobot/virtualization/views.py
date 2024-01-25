@@ -304,7 +304,7 @@ class VirtualMachineListView(generic.ObjectListView):
 
 
 class VirtualMachineView(generic.ObjectView):
-    queryset = VirtualMachine.objects.select_related("tenant__tenant_group")
+    queryset = VirtualMachine.objects.select_related("software_version", "tenant__tenant_group")
 
     def get_extra_context(self, request, instance):
         # Interfaces
