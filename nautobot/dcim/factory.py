@@ -622,7 +622,7 @@ class SoftwareImageFactory(PrimaryModelFactory):
         lambda: Status.objects.get_for_model(SoftwareImage),
         allow_null=False,
     )
-    software_version = random_instance(lambda: SoftwareVersion.objects.all(), allow_null=False)
+    software_version = random_instance(SoftwareVersion, allow_null=False)
     image_file_name = factory.Faker("file_name", extension="bin")
     image_file_checksum = factory.Maybe("has_image_file_checksum", factory.Faker("md5"), "")
     hashing_algorithm = factory.Maybe(
@@ -648,7 +648,7 @@ class SoftwareVersionFactory(PrimaryModelFactory):
         lambda: Status.objects.get_for_model(SoftwareVersion),
         allow_null=False,
     )
-    platform = random_instance(lambda: Platform.objects.all(), allow_null=False)
+    platform = random_instance(Platform, allow_null=False)
     version = factory.Faker("numerify", text="%!.%!.%!")
     alias = factory.Maybe("has_alias", factory.Faker("word"), "")
     release_date = factory.Maybe("has_release_date", factory.Faker("date_object"), None)

@@ -93,6 +93,9 @@ class CSVParsingRelatedTestCase(TestCase):
                 "cluster__name",
                 "virtual_chassis__name",
                 "device_redundancy_group__name",
+                "software_image__software_version__version",
+                "software_image__image_file_name",
+                "software_image__software_version__platform__name",
                 "secrets_group__name",
             ]
             self.assertEqual(
@@ -221,6 +224,9 @@ class CSVParsingRelatedTestCase(TestCase):
                 "cluster__name": CSV_NO_OBJECT,
                 "virtual_chassis__name": CSV_NO_OBJECT,
                 "device_redundancy_group__name": CSV_NO_OBJECT,
+                "software_image__software_version__version": CSV_NO_OBJECT,
+                "software_image__image_file_name": CSV_NO_OBJECT,
+                "software_image__software_version__platform__name": CSV_NO_OBJECT,
                 "secrets_group__name": CSV_NO_OBJECT,
                 "parent_bay__name": CSV_NO_OBJECT,
                 "parent_bay__device__name": CSV_NO_OBJECT,
@@ -238,7 +244,6 @@ class CSVParsingRelatedTestCase(TestCase):
             serializer_data.pop("custom_fields")
             serializer_data.pop("created")
             serializer_data.pop("last_updated")
-
             self.assertEqual(expected_data, serializer_data)
 
     @override_settings(ALLOWED_HOSTS=["*"])
