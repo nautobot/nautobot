@@ -3,17 +3,85 @@
 {% load helpers %}
 {% registry %}
 
+<style>
+    .navbar-toggler {
+        color: rgb(100, 100, 100);
+    }
+    .navbar-toggler:hover {
+        cursor: pointer;
+    }
+    .navbar-fixed-left.collapsed:hover {
+        cursor: pointer;
+    }
+    .navbar-fixed-left .navbar-toggler {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+    }
+    .navbar-brand img {
+        transition: opacity 0.5s ease;
+    }
+    /* Hide menu items initially */
+    .navbar-fixed-left .navbar-nav {
+        display: none;
+    }
+    /* When navbar is expanded, show menu items */
+    .navbar-fixed-left:not(.collapsed) .navbar-nav {
+        display: block;
+    }
+    .navbar-fixed-left {
+        transition: width 0.5s;
+    }
+    .navbar-fixed-left.collapsed {
+        width: 60px; 
+    }
+    .container-fluid.wrapper {
+        transition: margin-left 0.5s;
+        margin-left: 0px; 
+    }
+    .navbar-fixed-left.collapsed ~ .container-fluid.wrapper {
+        margin-left: 0px; 
+    }
+    /* When navbar is expanded, show the search form */
+    .navbar-fixed-left:not(.collapsed) .navbar-search-form {
+        display: block;
+    }
+    /* Hide the search form when navbar collapsed */
+    .navbar-fixed-left .navbar-search-form {
+        display: none;
+    }
+    .navbar-fixed-left.collapsed .navbar-brand {
+        display: flex;
+        justify-content: center; /* Centers the brand logo horizontally */
+        padding: 0; 
+    }
+    .navbar-fixed-left.collapsed .navbar-brand img {
+        height: 60px;
+        padding-top: 10px; 
+        padding-left: 10px; 
+        padding-bottom: 10px;
+    }
+    .navbar-inverse .navbar-collapse, .navbar-inverse .navbar-form {
+        border-color: transparent;
+    }
+</style>
+
+
 <nav class="navbar navbar-default navbar-fixed-left navbar-inverse">
+    <!-- Collapsible button -->
+    <i class="mdi mdi-menu navbar-toggler" data-toggle="collapse" data-target="#navbarContent" aria-controls="navbarContent" aria-expanded="true" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></i>
+
     <div class="container-fluid">
         <div class="navbar-header">
             <a class="navbar-brand" href="{% url 'home' %}">
-                <img src="{% custom_branding_or_static 'logo' 'img/nautobot_logo.svg' %}" height="30" />
+                <img src="{% custom_branding_or_static 'logo' 'img/nautobot_logo.svg' %}" alt="Nautobot Logo" id="navbarImage" height="30" />
             </a>
         </div>
 
+        <div class="navbar-collapse" id="navbarContent">
         <div id="navbar">
             {% if request.user.is_authenticated %}
-                <form action="{% url 'search' %}" method="get" class="navbar-form" id="navbar_search" role="search">
+                <form action="{% url 'search' %}" method="get" class="navbar-form navbar-search-form" id="navbar_search" role="search">
                     <div class="input-group">
                         <input type="text" name="q" class="form-control" placeholder="Search {{ settings.BRANDING_TITLE }}">
                         <span class="input-group-btn">
@@ -53,14 +121,14 @@
                                                                         {% url button_details.link as button_url %}
                                                                         {% if button_url %}
                                                                             <a href="{{ button_url }}"
-                                                                               data-button-weight="{{ button_details.weight }}"
-                                                                               class="btn btn-xs btn-{{ button_details.button_class }}"
-                                                                               title="{{ button_title }}">
+                                                                            data-button-weight="{{ button_details.weight }}"
+                                                                            class="btn btn-xs btn-{{ button_details.button_class }}"
+                                                                            title="{{ button_title }}">
                                                                                 <i class="mdi {{ button_details.icon_class }}"></i>
                                                                             </a>
                                                                         {% else %}
                                                                             <a class="btn btn-xs btn-danger"
-                                                                               title="ERROR: Invalid link!">
+                                                                            title="ERROR: Invalid link!">
                                                                                 <i class="mdi mdi-alert"></i>
                                                                             </a>
                                                                         {% endif %}
@@ -87,7 +155,7 @@
                     <li class="nav-divider"></li>
                     <li class="dropdown">
                         <a href="#adminDropdown" class="dropdown-toggle" data-toggle="collapse" role="button"
-                           aria-haspopup="true" aria-expanded="false">
+                        aria-haspopup="true" aria-expanded="false">
                             <i class="mdi mdi-account"></i>
                             <span id="dropdown_title" title="{{ request.user }}">{{ request.user }}</span>
                             <span class="caret"></span>
@@ -110,6 +178,7 @@
                 {% endif %}
             </ul>
         </div>
+        </div>
     </div>
 </nav>
 
@@ -120,6 +189,32 @@
         var dropdowns = document.querySelectorAll('.navbar-fixed-left .navbar-nav .collapse');
         var lastDropdownId = localStorage.getItem('lastOpenedDropdown');
         var savedScrollPosition = localStorage.getItem('navbarScrollPosition');
+        var toggler = navbar.querySelector('.navbar-toggler');
+        var mainContent = document.querySelector('.container-fluid.wrapper');
+        var navbarBrandImage = document.querySelector('.navbar-brand img');
+
+        // Toggle the navbar when the toggle button or any part of the collapsed navbar is clicked
+        function toggleNavbar() {
+            navbar.classList.toggle('collapsed');
+            // Image fade and main content margin adjustment
+            if (navbar.classList.contains('collapsed')) {
+                mainContent.style.marginLeft = '-180px';
+                navbarBrandImage.src = '/static/img/nautobot_icon.svg';
+                // toggler.classList.replace('mdi-menu', 'mdi-arrow-right');
+            } else {
+                mainContent.style.marginLeft = '0px';
+                navbarBrandImage.src = '/static/img/nautobot_logo.svg';
+                // toggler.classList.replace('mdi-arrow-right', 'mdi-menu');
+            }
+        }
+
+        toggler.addEventListener('click', toggleNavbar);
+
+        navbar.addEventListener('click', function(event) {
+            if (navbar.classList.contains('collapsed') && event.target === navbar) {
+                toggleNavbar();
+            }
+        });
 
         // Debounce function
         function debounce(func, wait, immediate) {
