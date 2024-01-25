@@ -1,1 +1,0 @@
-Fixed core.tables.BaseTable to terminate dynamic queryset's building of pre-fetched fields upon first non-RelatedField of a column.

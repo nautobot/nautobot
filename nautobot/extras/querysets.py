@@ -148,7 +148,7 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
             location_query_string = "cluster__location"
 
         location_query = Q(locations=None) | Q(locations=OuterRef(location_query_string))
-        for _ in range(Location.objects.max_tree_depth() + 1):
+        for _ in range(Location.objects.max_depth + 1):
             location_query_string += "__parent"
             location_query |= Q(locations=OuterRef(location_query_string))
 
@@ -156,7 +156,7 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
 
         tenant_group_query_string = "tenant__tenant_group"
         tenant_group_query = Q(tenant_groups=None) | Q(tenant_groups=OuterRef(tenant_group_query_string))
-        for _ in range(TenantGroup.objects.max_tree_depth() + 1):
+        for _ in range(TenantGroup.objects.max_depth + 1):
             tenant_group_query_string += "__parent"
             tenant_group_query |= Q(tenant_groups=OuterRef(tenant_group_query_string))
         base_query.add((tenant_group_query), Q.AND)

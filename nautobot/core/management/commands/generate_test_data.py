@@ -254,7 +254,7 @@ Type 'yes' to continue, or 'no' to cancel: """
 
         if options["cache_test_fixtures"] and os.path.exists(options["fixture_file"]):
             self.stdout.write(self.style.WARNING(f"Loading factory data from file {options['fixture_file']}"))
-            call_command("loaddata", options["fixture_file"])
+            call_command("loaddata", "--database", options["database"], options["fixture_file"])
         else:
             self._generate_factory_data(options["seed"], options["database"])
 
