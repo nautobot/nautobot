@@ -1157,6 +1157,21 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         device.primary_ip6 = interface.ip_addresses.all().filter(ip_version=6).first()
         device.validated_save()
 
+    def test_software_version_device_type_validation(self):
+        """
+        Device's software version must contain a software image that matches the device's device type.
+        """
+
+        software_version = SoftwareVersion.objects.filter(software_images__isnull=False).first()
+
+        self.device_type.software_images.set([])
+        self.device.software_version = software_version
+        with self.assertRaises(ValidationError):
+            self.device.validated_save()
+
+        self.device_type.software_images.add(software_version.software_images.first())
+        self.device.validated_save()
+
 
 class CableTestCase(ModelTestCases.BaseModelTestCase):
     model = Cable

@@ -772,10 +772,25 @@ class Device(PrimaryModel, ConfigContextModel):
                     }
                 )
 
+        # Validate device is a member of a device redundancy group if it has a device redundancy group priority set
         if self.device_redundancy_group_priority is not None and self.device_redundancy_group is None:
             raise ValidationError(
                 {
                     "device_redundancy_group_priority": "Must assign a redundancy group when defining a redundancy group priority."
+                }
+            )
+
+        # Validate device software version has a software image that matches the device's device type
+        if (
+            self.software_version is not None
+            and not self.software_version.software_images.filter(device_types=self.device_type).exists()
+        ):
+            raise ValidationError(
+                {
+                    "software_version": (
+                        f"No software images in version '{self.software_version}' are "
+                        f"associated with device type {self.device_type}."
+                    )
                 }
             )
 
