@@ -124,6 +124,16 @@ html[data-theme="dark"] .nav-tabs>li.active>a:hover {
   background-color: rgb(217, 217, 217) !important;      /* Blends active tab with background */
 }
 
+/* Preserve blue background for navbar buttons */
+html[data-theme="dark"] .navbar ul li.active a.btn {
+  background-color: #0938e1 !important;
+}
+
+/* Preserve matching background for navbar links */
+html[data-theme="dark"] .navbar ul li.active a {
+  background-color: transparent !important;
+}
+
 /* Preserve matching background in iGraphQL text boxes */
 /* Also fixes bug preventing selected text from being distinguised as selected */
 html[data-theme="dark"] .CodeMirror pre {
