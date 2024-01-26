@@ -214,6 +214,13 @@ Render a dictionary as formatted JSON.
 {{ data | render_json }}
 ```
 
+!!! note
+    To highlight language syntax in the browser it has to be wrapped in:
+
+    ```django
+    <pre><code class="language-json">{{ data | render_json }}</code></pre>
+    ```
+
 ### render_markdown
 
 Render and sanitize Markdown text into HTML. A limited subset of HTML tags and attributes are permitted in the text as well; non-permitted HTML will be stripped from the output for security.
@@ -303,6 +310,13 @@ Render a dictionary as formatted YAML.
 ```django
 {{ data | render_yaml }}
 ```
+
+!!! note
+    To highlight language syntax in the browser it has to be wrapped in:
+
+    ```django
+    <pre><code class="language-yaml">{{ data | render_yaml }}</code></pre>
+    ```
 
 ### settings_or_config
 
