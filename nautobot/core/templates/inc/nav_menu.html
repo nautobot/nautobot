@@ -32,7 +32,7 @@
                             <li class="dropdown">
                                 <a href="#dropdownMenu{{ forloop.counter }}" class="dropdown-toggle" data-tab-weight="{{ tab_details.weight }}" data-toggle="collapse" role="button" aria-haspopup="true" aria-expanded="false">
                                     <img src="{% custom_branding_or_static 'nav_bullet' 'img/nautobot_chevron.svg' %}" height="20px" />
-                                    <span id="dropdown_title" title="{{ tab_name }}">{{ tab_name }}</span>
+                                    <span id="dropdown_title">{{ tab_name }}</span>
                                     <span class="caret"></span>
                                 </a>
                                 <ul class="collapse nav-dropdown-menu" id="dropdownMenu{{ forloop.counter }}">
@@ -118,8 +118,24 @@
         var navbar = document.querySelector('.navbar-fixed-left');
         var dropdownToggles = document.querySelectorAll('.navbar-fixed-left .navbar-nav > .dropdown > a[data-toggle="collapse"]');
         var dropdowns = document.querySelectorAll('.navbar-fixed-left .navbar-nav .collapse');
-        var lastDropdownId = localStorage.getItem('lastOpenedDropdown');
-        var savedScrollPosition = localStorage.getItem('navbarScrollPosition');
+        var lastDropdownId = sessionStorage.getItem('lastOpenedDropdown');
+        var savedScrollPosition = sessionStorage.getItem('navbarScrollPosition');
+        var activeLink = sessionStorage.getItem('activeLink');
+
+        // Function to reset stored dropdown information
+        function resetNavbarInformation() {
+            sessionStorage.removeItem('lastOpenedDropdown');
+            sessionStorage.removeItem('savedScrollPosition');
+            sessionStorage.removeItem('activeLink');
+        }
+
+        // Add an event listener for the home link click
+        var homeLink = document.querySelector('.navbar-fixed-left .navbar-brand');
+        if (homeLink) {
+            homeLink.addEventListener('click', function() {
+                resetNavbarInformation();
+            });
+        }
 
         // Debounce function
         function debounce(func, wait, immediate) {
@@ -146,6 +162,17 @@
             });
         }
 
+        // Add click event listener to the dropdown links and save the clicked one
+        function addLinkClickListeners() {
+            var dropdownLinks = document.querySelectorAll('.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a');
+
+            dropdownLinks.forEach(function(link) {
+                link.addEventListener('click', function() {
+                    sessionStorage.setItem('activeLink', link.getAttribute('href'));
+                });
+            });
+        }
+
         // Close all dropdowns except the last opened one
         dropdownToggles.forEach(function(toggle) {
             toggle.addEventListener('click', function(event) {
@@ -155,10 +182,10 @@
                 if (!collapseElement.classList.contains('in')) {
                     closeAllDropdownsExcept(collapseElement.id);
                     $(collapseElement).collapse('show');
-                    localStorage.setItem('lastOpenedDropdown', collapseElement.id);
+                    sessionStorage.setItem('lastOpenedDropdown', collapseElement.id);
                 } else {
                     $(collapseElement).collapse('hide');
-                    localStorage.removeItem('lastOpenedDropdown');
+                    sessionStorage.removeItem('lastOpenedDropdown');
                 }
             });
         });
@@ -178,7 +205,18 @@
 
         // Save the scroll position when the navbar is scrolled
         navbar.addEventListener('scroll', debounce(function() {
-            localStorage.setItem('navbarScrollPosition', navbar.scrollTop);
+            sessionStorage.setItem('navbarScrollPosition', navbar.scrollTop);
         }, 250));
+
+         // Add click event listeners to dropdown links
+        addLinkClickListeners();
+
+        // Apply the 'active' class to the previously clicked link
+        if (activeLink) {
+            var previouslyClickedLink = document.querySelector('.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a[href="' + activeLink + '"]');
+            if (previouslyClickedLink) {
+                previouslyClickedLink.parentElement.classList.add('active');
+            }
+        }
     });
 </script>
