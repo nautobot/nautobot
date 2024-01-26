@@ -75,6 +75,7 @@ class VirtualMachineFactory(PrimaryModelFactory):
             # "has_primary_ip4",
             # "has_primary_ip6",
             "has_role",
+            "has_software_version",
             "has_tenant",
             "has_vcpus",
         )

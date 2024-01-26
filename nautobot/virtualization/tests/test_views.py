@@ -4,7 +4,7 @@ from netaddr import EUI
 
 from nautobot.core.testing import post_data, ViewTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.models import Device, Location, LocationType, Platform
+from nautobot.dcim.models import Device, Location, LocationType, Platform, SoftwareVersion
 from nautobot.extras.models import ConfigContextSchema, CustomField, Role, Status, Tag
 from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import VLAN
@@ -148,6 +148,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Cluster.objects.create(name="Cluster 2", cluster_type=clustertype, location=locations[0]),
         )
 
+        software_versions = SoftwareVersion.objects.filter(software_images__isnull=False)[:3]
         statuses = Status.objects.get_for_model(VirtualMachine)
         status_staged = statuses[0]
 
@@ -157,6 +158,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             role=vmroles[0],
             platform=platforms[0],
             status=statuses[0],
+            software_version=software_versions[0],
         )
         VirtualMachine.objects.create(
             name="Virtual Machine 2",
@@ -164,6 +166,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             role=vmroles[0],
             platform=platforms[0],
             status=statuses[0],
+            software_version=software_versions[1],
         )
         VirtualMachine.objects.create(
             name="Virtual Machine 3",
@@ -171,6 +174,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             role=vmroles[0],
             platform=platforms[0],
             status=statuses[0],
+            software_version=software_versions[2],
         )
 
         cls.form_data = {
@@ -188,11 +192,12 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "comments": "Some comments",
             "tags": [t.pk for t in Tag.objects.get_for_model(VirtualMachine)],
             "local_config_context_data": None,
+            "software_version": software_versions[0].pk,
         }
 
         cls.csv_data = (
-            "name,cluster,status",
-            f"Virtual Machine 4,Cluster 1,{statuses[0].name}",
+            "name,cluster,status,software_version",
+            f"Virtual Machine 4,Cluster 1,{statuses[0].name},{software_versions[0].composite_key}",
             f"Virtual Machine 5,Cluster 1,{statuses[0].name}",
             f"Virtual Machine 6,Cluster 1,{statuses[0].name}",
         )
@@ -207,6 +212,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "memory": 65535,
             "disk": 8000,
             "comments": "New comments",
+            "software_version": software_versions[0].pk,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
