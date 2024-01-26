@@ -113,6 +113,15 @@ class DeviceTypeToSoftwareImage(BaseModel, ChangeLoggedModel):
         verbose_name = "Device Type to Software Image mapping"
         verbose_name_plural = "Device Type to Software Image mappings"
 
+    def clean(self):
+        super().clean()
+
+        # Validate that only one default image is set per device type
+        if self.is_default:
+            current_default = DeviceTypeToSoftwareImage.objects.filter(device_type=self.device_type, is_default=True)
+            if current_default.exists() and current_default.first().pk != self.pk:
+                raise ValidationError({"is_default": "Only one default image can be set per device type."})
+
     def __str__(self):
         return f"{self.device_type!s} - {self.software_image!s}"
 

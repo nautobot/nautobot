@@ -28,6 +28,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImage,
     FrontPort,
     FrontPortTemplate,
     Interface,
@@ -1171,6 +1172,40 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
 
         self.device_type.software_images.add(software_version.software_images.first())
         self.device.validated_save()
+
+
+class DeviceTypeToSoftwareImageTestCase(ModelTestCases.BaseModelTestCase):
+    model = DeviceTypeToSoftwareImage
+
+    def test_is_default_uniqueness(self):
+        """
+        Assert that only one default software image can be set per device type.
+        """
+
+        device_type = DeviceType.objects.first()
+        software_images = SoftwareImage.objects.all()[:3]
+        DeviceTypeToSoftwareImage.objects.filter(device_type=device_type).delete()
+
+        DeviceTypeToSoftwareImage.objects.create(
+            device_type=device_type,
+            software_image=software_images[0],
+            is_default=True,
+        )
+
+        device_type_to_software_image = DeviceTypeToSoftwareImage(
+            device_type=device_type,
+            software_image=software_images[1],
+            is_default=True,
+        )
+
+        with self.assertRaises(ValidationError):
+            device_type_to_software_image.validated_save()
+
+        device_type_to_software_image.is_default = False
+        device_type_to_software_image.validated_save()
+
+    def test_get_docs_url(self):
+        """No docs for this through table model."""
 
 
 class CableTestCase(ModelTestCases.BaseModelTestCase):

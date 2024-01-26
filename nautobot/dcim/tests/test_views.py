@@ -1394,6 +1394,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "position": None,
             "face": DeviceFaceChoices.FACE_FRONT,
             "secrets_group": secrets_groups[1].pk,
+            "software_version": software_versions[1].pk,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

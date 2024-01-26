@@ -761,8 +761,8 @@ class ViewTestCases:
             self.assertNotIn("Unknown filter field", content, msg=content)
             self.assertIn("None", content, msg=content)
             if hasattr(self.model, "name"):
-                self.assertRegex(content, r">\s*" + re.escape(instance1.name) + r"\s*<", msg=content)
-                self.assertRegex(content, r">\s*" + re.escape(instance2.name) + r"\s*<", msg=content)
+                self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
+                self.assertRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
             if instance1.get_absolute_url() in content:
                 self.assertIn(instance2.get_absolute_url(), content, msg=content)
 
@@ -817,8 +817,8 @@ class ViewTestCases:
             content = testing.extract_page_body(response.content.decode(response.charset))
             # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
             if hasattr(self.model, "name"):
-                self.assertRegex(content, r">\s*" + re.escape(instance1.name) + r"\s*<", msg=content)
-                self.assertNotRegex(content, r">\s*" + re.escape(instance2.name) + r"\s*<", msg=content)
+                self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
+                self.assertNotRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
             elif hasattr(self.model, "get_absolute_url"):
                 self.assertIn(instance1.get_absolute_url(), content, msg=content)
                 self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
