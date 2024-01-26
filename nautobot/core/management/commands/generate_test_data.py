@@ -112,7 +112,7 @@ class Command(BaseCommand):
         self.stdout.write("Creating Contacts...")
         ContactFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Teams...")
-        TeamFactory.create_batch(5, using=db_name)
+        TeamFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating TenantGroups...")
         TenantGroupFactory.create_batch(10, has_parent=False, using=db_name)
         TenantGroupFactory.create_batch(10, has_parent=True, using=db_name)
