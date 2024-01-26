@@ -658,7 +658,7 @@ class DynamicFilterFormTest(TestCase):
                     ("created", "Created"),
                     ("description", "Description"),
                     ("devices", "Devices (name or ID)"),
-                    ("cf_example_plugin_auto_custom_field", "Example Plugin Automatically Added Custom Field"),
+                    ("cf_example_app_auto_custom_field", "Example App Automatically Added Custom Field"),
                     ("facility", "Facility"),
                     ("has_vlan_groups", "Has VLAN groups"),
                     ("has_vlans", "Has VLANs"),

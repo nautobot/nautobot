@@ -55,7 +55,7 @@ If you have invalid filters in your `DynamicGroup` instances, the following outp
     DynamicGroup instance with name `Test DP 3` and content type `dcim | device redundancy group` has an invalid filter `site`
     DynamicGroup instance with name `Test DP 3` and content type `dcim | device redundancy group` has an invalid filter `length`
     DynamicGroup instance with name `Test DP 3` and content type `dcim | device redundancy group` has an invalid filter `region`
-    DynamicGroup instance with name `Test DP 4` and content type `example_plugin | another example model` has an invalid filter `site`
+    DynamicGroup instance with name `Test DP 4` and content type `example_app | another example model` has an invalid filter `site`
 
 >>> Please fix the broken filters stated above according to the documentation available at:
 https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1/#ui-graphql-and-rest-api-filter-changes
@@ -449,7 +449,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.sessions.models import Session
 from django_celery_beat.models import ClockedSchedule, CrontabSchedule, IntervalSchedule, PeriodicTask, PeriodicTasks, SolarSchedule
 from django_celery_results.models import ChordCounter, GroupResult, TaskResult
-from example_plugin.models import AnotherExampleModel, ExampleModel
+from example_app.models import AnotherExampleModel, ExampleModel
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.dcim.models.cables import Cable, CablePath
 from nautobot.dcim.models.device_component_templates import ConsolePortTemplate, ConsoleServerPortTemplate, DeviceBayTemplate, FrontPortTemplate, InterfaceTemplate, PowerOutletTemplate, PowerPortTemplate, RearPortTemplate
@@ -681,7 +681,7 @@ Run a job (script, report) to validate or update data in Nautobot. The Job name 
 User account to impersonate as the requester of this job.
 
 ```no-highlight
-nautobot-server runjob --username someuser example_plugin.jobs.MyJobWithNoVars
+nautobot-server runjob --username someuser example_app.jobs.MyJobWithNoVars
 ```
 
 `--local`
@@ -691,7 +691,7 @@ Run the job on the local system and not on a worker.
 JSON string that populates the `data` variable of the job.
 
 ```no-highlight
-nautobot-server runjob --username someuser --local --data '{"my_boolvar": false}' example_plugin.jobs.MyJobWithVars
+nautobot-server runjob --username someuser --local --data '{"my_boolvar": false}' example_app.jobs.MyJobWithVars
 ```
 
 Please see the [guide on Jobs](../../platform-functionality/jobs/index.md) for more information on working with and running jobs.
@@ -704,18 +704,18 @@ Please see the [guide on Jobs](../../platform-functionality/jobs/index.md) for m
 
 Send anonymized installation metrics to the Nautobot maintainers. This management command is called by [`post_upgrade`](#post_upgrade) and is not intended to be run manually.
 
-If the [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled) setting is `True`, this command will send a list of all installed [apps](../../../development/apps/index.md) and their versions, as well as the currently installed Nautobot and Python versions, to the Nautobot maintainers. A randomized UUID will be generated and saved in the [`DEPLOYMENT_ID`](../configuration/optional-settings.md#deployment_id) setting to anonymously but uniquely identify this installation. The plugin names will be one-way hashed with SHA256 to further anonymize the data sent. This enables tracking the installation metrics of publicly released apps without disclosing the names of any private apps.
+If the [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled) setting is `True`, this command will send a list of all installed [Apps](../../../development/apps/index.md) and their versions, as well as the currently installed Nautobot and Python versions, to the Nautobot maintainers. A randomized UUID will be generated and saved in the [`DEPLOYMENT_ID`](../configuration/optional-settings.md#deployment_id) setting to anonymously but uniquely identify this installation. The App names will be one-way hashed with SHA256 to further anonymize the data sent. This enables tracking the installation metrics of publicly released apps without disclosing the names of any private apps.
 
 The following is an example of the data that is sent:
 
 ```py
 {
     "deployment_id": "1de3dacf-f046-4a98-8d4a-17419080db79",
-    "nautobot_version": "1.6.0b1",
+    "nautobot_version": "2.1.2",
     "python_version": "3.10.12",
     "installed_apps": {
-        # "example_plugin" hashed by sha256
-        "3ffee4622af3aad6f78257e3ae12da99ca21d71d099f67f4a2e19e464453bee7": "1.0.0"
+        # "example_app" hashed by sha256
+        "ded1fb19a53a47aa4fe26b72b4ab9297b631e4d4f852b03b3788d5dbc292ae8d": "1.0.0"
     }
 }
 ```
