@@ -93,9 +93,8 @@ class CSVParsingRelatedTestCase(TestCase):
                 "cluster__name",
                 "virtual_chassis__name",
                 "device_redundancy_group__name",
-                "software_image__software_version__version",
-                "software_image__image_file_name",
-                "software_image__software_version__platform__name",
+                "software_version__platform__name",
+                "software_version__version",
                 "secrets_group__name",
             ]
             self.assertEqual(
@@ -224,9 +223,8 @@ class CSVParsingRelatedTestCase(TestCase):
                 "cluster__name": CSV_NO_OBJECT,
                 "virtual_chassis__name": CSV_NO_OBJECT,
                 "device_redundancy_group__name": CSV_NO_OBJECT,
-                "software_image__software_version__version": CSV_NO_OBJECT,
-                "software_image__image_file_name": CSV_NO_OBJECT,
-                "software_image__software_version__platform__name": CSV_NO_OBJECT,
+                "software_version__platform__name": CSV_NO_OBJECT,
+                "software_version__version": CSV_NO_OBJECT,
                 "secrets_group__name": CSV_NO_OBJECT,
                 "parent_bay__name": CSV_NO_OBJECT,
                 "parent_bay__device__name": CSV_NO_OBJECT,
