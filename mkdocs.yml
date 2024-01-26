@@ -214,6 +214,8 @@ plugins:
         'models/dcim/rackreservation.md': 'user-guide/core-data-model/dcim/rackreservation.md'
         'models/dcim/rearport.md': 'user-guide/core-data-model/dcim/rearport.md'
         'models/dcim/rearporttemplate.md': 'user-guide/core-data-model/dcim/rearporttemplate.md'
+        'models/dcim/softwareimage.md': 'user-guide/core-data-model/dcim/softwareimage.md'
+        'models/dcim/softwareversion.md': 'user-guide/core-data-model/dcim/softwareversion.md'
         'models/dcim/virtualchassis.md': 'user-guide/core-data-model/dcim/virtualchassis.md'
         'models/extras/computedfield.md': 'user-guide/platform-functionality/computedfield.md'
         'models/extras/contact.md': 'user-guide/core-data-model/extras/contact.md'

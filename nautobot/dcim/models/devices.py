@@ -1054,15 +1054,20 @@ class SoftwareImageQuerySet(RestrictedQuerySet):
     """Queryset for SoftwareImage objects."""
 
     def get_for_object(self, obj):
-        """Return all SoftwareImage assigned to the given object."""
-        if not isinstance(obj, models.Model):
-            raise TypeError(f"{obj} is not an instance of Django Model class")
+        """Return all SoftwareImages assigned to the given object."""
+        from nautobot.virtualization.models import VirtualMachine
+
         if isinstance(obj, Device):
-            qs = self.filter(software_version__platform__devices=obj)
+            qs = self.filter(software_version__devices=obj)
         elif isinstance(obj, InventoryItem):
-            qs = self.filter(software_version__platform__devices__inventory_items=obj)
+            qs = self.filter(software_version__inventory_items=obj)
+        elif isinstance(obj, DeviceType):
+            qs = self.filter(device_types=obj)
+        elif isinstance(obj, VirtualMachine):
+            qs = self.filter(software_version__virtual_machines=obj)
         else:
-            qs = self
+            valid_types = "Device, DeviceType, InventoryItem and VirtualMachine"
+            raise TypeError(f"{obj} is not a valid object type. Valid types are {valid_types}.")
 
         return qs
 
@@ -1113,15 +1118,20 @@ class SoftwareVersionQuerySet(RestrictedQuerySet):
     """Queryset for SoftwareVersion objects."""
 
     def get_for_object(self, obj):
-        """Return all SoftwareVersion assigned to the given object."""
-        if not isinstance(obj, models.Model):
-            raise TypeError(f"{obj} is not an instance of Django Model class")
+        """Return all SoftwareVersions assigned to the given object."""
+        from nautobot.virtualization.models import VirtualMachine
+
         if isinstance(obj, Device):
-            qs = self.filter(platform__devices=obj)
+            qs = self.filter(devices=obj)
         elif isinstance(obj, InventoryItem):
-            qs = self.filter(platform__devices__inventory_items=obj)
+            qs = self.filter(inventory_items=obj)
+        elif isinstance(obj, DeviceType):
+            qs = self.filter(software_images__device_types=obj)
+        elif isinstance(obj, VirtualMachine):
+            qs = self.filter(virtual_machines=obj)
         else:
-            qs = self
+            valid_types = "Device, DeviceType, InventoryItem and VirtualMachine"
+            raise TypeError(f"{obj} is not a valid object type. Valid types are {valid_types}.")
 
         return qs
 

@@ -207,6 +207,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
         queryset=Cluster.objects.all(), query_params={"cluster_group_id": "$cluster_group"}
     )
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
+    software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
     vrfs = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -243,7 +244,6 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
         widgets = {
             "primary_ip4": StaticSelect2(),
             "primary_ip6": StaticSelect2(),
-            "software_version": StaticSelect2(),
         }
 
     def __init__(self, *args, **kwargs):

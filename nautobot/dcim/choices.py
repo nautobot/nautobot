@@ -1420,7 +1420,7 @@ class SoftwareImageStatusChoices(ChoiceSet):
     CHOICES = (
         (STATUS_ACTIVE, "Active"),
         (STATUS_EXTENDED_SUPPORT, "Extended Support"),
-        (STATUS_END_OF_LIFE, "End-of-life"),
+        (STATUS_END_OF_LIFE, "End-of-Life"),
     )
 
 
@@ -1432,5 +1432,5 @@ class SoftwareVersionStatusChoices(ChoiceSet):
     CHOICES = (
         (STATUS_ACTIVE, "Active"),
         (STATUS_EXTENDED_SUPPORT, "Extended Support"),
-        (STATUS_END_OF_LIFE, "End-of-life"),
+        (STATUS_END_OF_LIFE, "End-of-Life"),
     )

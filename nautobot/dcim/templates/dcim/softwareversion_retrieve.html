@@ -64,16 +64,22 @@
     </div>
     <div class="panel-body">
         <div class="col-md-4 text-center">
-            <h2><a href="{% url 'dcim:softwareimage_list' %}?software_version={{ object.pk }}" class="btn {% if object.software_images.count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ object.software_images.count }}</a></h2>
-            <p>Software Images</p>
+            {% with software_image_count=object.software_images.count %}
+                <h2><a href="{% url 'dcim:softwareimage_list' %}?software_version={{ object.pk }}" class="btn {% if software_image_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ software_image_count }}</a></h2>
+                <p>Software Images</p>
+            {% endwith %}
         </div>
         <div class="col-md-4 text-center">
-            <h2><a href="{% url 'dcim:device_list' %}?software_version={{ object.pk }}" class="btn {% if object.devices.count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ object.devices.count }}</a></h2>
-            <p>Devices</p>
+            {% with device_count=object.devices.count %}
+                <h2><a href="{% url 'dcim:device_list' %}?software_version={{ object.pk }}" class="btn {% if device_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ device_count }}</a></h2>
+                <p>Devices</p>
+            {% endwith %}
         </div>
         <div class="col-md-4 text-center">
-            <h2><a href="{% url 'dcim:inventoryitem_list' %}?software_version={{ object.pk }}" class="btn {% if object.inventory_items.count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ object.inventory_items.count }}</a></h2>
-            <p>Inventory Items</p>
+            {% with inventory_item_count=object.inventory_items.count %}
+                <h2><a href="{% url 'dcim:inventoryitem_list' %}?software_version={{ object.pk }}" class="btn {% if inventory_item_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ inventory_item_count }}</a></h2>
+                <p>Inventory Items</p>
+            {% endwith %}
         </div>
     </div>
 </div>

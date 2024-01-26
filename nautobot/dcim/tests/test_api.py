@@ -149,6 +149,18 @@ class Mixins:
     class BasePortTemplateTestMixin(BaseComponentTestMixin):
         """Mixin class for all `FooPortTemplate` tests."""
 
+    class SoftwareImageRelatedModelMixin:
+        """
+        The SoftwareImage hashing_algorithm field includes some values (md5, sha1, etc.) that are
+        considered indicators of sensitive data which cause APITestCase.assert_no_verboten_content() to fail.
+        We remove those values from the VERBOTEN_STRINGS property to allow the test to pass for any models
+        that could return a SoftwareImage representation in a depth > 0 API call.
+        """
+
+        VERBOTEN_STRINGS = tuple(
+            [o for o in APITestCase.VERBOTEN_STRINGS if o not in SoftwareImageHashingAlgorithmChoices.as_dict().keys()]
+        )
+
 
 class LocationTypeTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
     model = LocationType
@@ -758,7 +770,7 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
         Platform.objects.all().delete()
 
 
-class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
+class DeviceTypeTest(Mixins.SoftwareImageRelatedModelMixin, APIViewTestCases.APIViewTestCase):
     model = DeviceType
     bulk_update_data = {
         "part_number": "ABC123",
@@ -767,9 +779,6 @@ class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.VERBOTEN_STRINGS = tuple(
-            [o for o in cls.VERBOTEN_STRINGS if o not in SoftwareImageHashingAlgorithmChoices.as_dict().keys()]
-        )
         manufacturer_id = Manufacturer.objects.first().pk
         hardware_family_id = HardwareFamily.objects.first().pk
 
@@ -2640,15 +2649,12 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
             interface_redundancy_groups[0].add_interface(interface, i * 100)
 
 
-class SoftwareImageTestCase(APIViewTestCases.APIViewTestCase):
+class SoftwareImageTestCase(Mixins.SoftwareImageRelatedModelMixin, APIViewTestCases.APIViewTestCase):
     model = SoftwareImage
     choices_fields = ["hashing_algorithm"]
 
     @classmethod
     def setUpTestData(cls):
-        cls.VERBOTEN_STRINGS = tuple(
-            [o for o in cls.VERBOTEN_STRINGS if o not in SoftwareImageHashingAlgorithmChoices.as_dict().keys()]
-        )
         statuses = Status.objects.get_for_model(SoftwareImage)
         software_versions = SoftwareVersion.objects.all()
 
@@ -2679,15 +2685,12 @@ class SoftwareImageTestCase(APIViewTestCases.APIViewTestCase):
         }
 
 
-class SoftwareVersionTestCase(APIViewTestCases.APIViewTestCase):
+class SoftwareVersionTestCase(Mixins.SoftwareImageRelatedModelMixin, APIViewTestCases.APIViewTestCase):
     model = SoftwareVersion
 
     @classmethod
     def setUpTestData(cls):
         DeviceTypeToSoftwareImage.objects.all().delete()  # Protected FK to SoftwareImage prevents deletion
-        cls.VERBOTEN_STRINGS = tuple(
-            [o for o in cls.VERBOTEN_STRINGS if o not in SoftwareImageHashingAlgorithmChoices.as_dict().keys()]
-        )
         statuses = Status.objects.get_for_model(SoftwareVersion)
         platforms = Platform.objects.all()
 
@@ -2720,15 +2723,12 @@ class SoftwareVersionTestCase(APIViewTestCases.APIViewTestCase):
         }
 
 
-class DeviceTypeToSoftwareImageTestCase(APIViewTestCases.APIViewTestCase):
+class DeviceTypeToSoftwareImageTestCase(Mixins.SoftwareImageRelatedModelMixin, APIViewTestCases.APIViewTestCase):
     model = DeviceTypeToSoftwareImage
 
     @classmethod
     def setUpTestData(cls):
         DeviceTypeToSoftwareImage.objects.all().delete()
-        cls.VERBOTEN_STRINGS = tuple(
-            [o for o in cls.VERBOTEN_STRINGS if o not in SoftwareImageHashingAlgorithmChoices.as_dict().keys()]
-        )
         device_types = DeviceType.objects.all()[:4]
         software_images = SoftwareImage.objects.all()[:3]
 
@@ -2746,7 +2746,7 @@ class DeviceTypeToSoftwareImageTestCase(APIViewTestCases.APIViewTestCase):
         DeviceTypeToSoftwareImage.objects.create(
             device_type=device_types[0],
             software_image=software_images[2],
-            is_default=True,
+            is_default=False,
         )
 
         cls.create_data = [
