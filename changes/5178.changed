@@ -1,0 +1,2 @@
+Navbar dropdown links turn orange on hover and when active/clicked; state is saved.
+Changed navbar state save to use session storage.
