@@ -114,11 +114,7 @@
                 <tr>
                     <td>Software Version</td>
                     <td>
-                        {% if object.software_version %}
-                            {{ object.software_version|hyperlinked_object }}
-                        {% else %}
-                            <span class="text-muted">&mdash;</span>
-                        {% endif %}
+                        {{ object.software_version|hyperlinked_object }}
                     </td>
                 </tr>
             </table>

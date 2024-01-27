@@ -110,8 +110,8 @@ class DeviceTypeToSoftwareImage(BaseModel, ChangeLoggedModel):
         unique_together = [
             ["device_type", "software_image"],
         ]
-        verbose_name = "Device Type to Software Image mapping"
-        verbose_name_plural = "Device Type to Software Image mappings"
+        verbose_name = "device type to software image mapping"
+        verbose_name_plural = "device type to software image mappings"
 
     def clean(self):
         super().clean()
@@ -1111,7 +1111,7 @@ class SoftwareImage(PrimaryModel):
         unique_together = ("image_file_name", "software_version")
 
     def __str__(self):
-        return self.image_file_name
+        return f"{self.software_version} - {self.image_file_name}"
 
 
 class SoftwareVersionQuerySet(RestrictedQuerySet):

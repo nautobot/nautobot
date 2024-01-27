@@ -48,8 +48,8 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={
-                "verbose_name": "Device Type to Software Image mapping",
-                "verbose_name_plural": "Device Type to Software Image mappings",
+                "verbose_name": "device type to software image mapping",
+                "verbose_name_plural": "device type to software image mappings",
                 "unique_together": {("device_type", "software_image")},
             },
         ),
