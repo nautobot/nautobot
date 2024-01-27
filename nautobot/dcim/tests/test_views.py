@@ -1260,7 +1260,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         statuses = Status.objects.get_for_model(Device)
         status_active = statuses[0]
 
-        software_versions = SoftwareVersion.objects.all()[:2]
+        software_versions = SoftwareVersion.objects.filter(software_images__isnull=False)[:2]
         devicetypes[0].software_images.set(software_versions[0].software_images.all())
         devicetypes[1].software_images.set(software_versions[1].software_images.all())
 
