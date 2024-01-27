@@ -172,7 +172,7 @@ class Command(BaseCommand):
         self.stdout.write("Creating SoftwareImages without DeviceTypes...")
         SoftwareImageFactory.create_batch(5)
         self.stdout.write("Creating CircuitTypes...")
-        CircuitTypeFactory.create_batch(20, using=db_name)
+        CircuitTypeFactory.create_batch(40, using=db_name)
         self.stdout.write("Creating Providers...")
         ProviderFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating ProviderNetworks...")
