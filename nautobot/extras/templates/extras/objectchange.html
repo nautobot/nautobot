@@ -119,8 +119,8 @@
                             {% endif %}
                         </span>
                     {% else %}
-                    <pre class="diff-removed"><code class="language-json">{{ diff_removed|render_json }}</code></pre>
-                    <pre class="diff-added"><code class="language-json">{{ diff_added|render_json }}</code></pre>
+                    <pre class="diff-removed">{{ diff_removed|render_json }}</pre>
+                    <pre class="diff-added">{{ diff_added|render_json }}</pre>
                     {% endif %}
                 </div>
             </div>
@@ -131,7 +131,7 @@
                     <strong>Object Data</strong>
                 </div>
                 <div class="panel-body">
-                    <pre><code class="language-json">{{ object.object_data|render_json }}</code></pre>
+                    <pre>{{ object.object_data|render_json }}</pre>
                 </div>
             </div>
         </div>

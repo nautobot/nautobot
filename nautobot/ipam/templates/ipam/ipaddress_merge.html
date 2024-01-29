@@ -156,7 +156,7 @@
                                             {% elif field.type == 'multi-select' and value %}
                                                 {{ value|join:", " }}
                                             {% elif field.type == 'json' and value is not None %}
-                                                <pre><code class="language-json">{{ value|render_json }}</code></pre>
+                                                <pre>{{ value|render_json }}</pre>
                                             {% elif value or value == 0 %}
                                                 {{ value }}
                                             {% else %}

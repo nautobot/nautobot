@@ -210,16 +210,11 @@ If value is None this renders `<span class="text-muted">&mdash;</span>`
 
 Render a dictionary as formatted JSON.
 
+Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a `<code class="language-json>` HTML tag to flag it for syntax highlighting by highlight.js.
+
 ```django
 {{ data | render_json }}
 ```
-
-!!! note
-    To highlight language syntax in the browser it has to be wrapped in:
-
-    ```django
-    <pre><code class="language-json">{{ data | render_json }}</code></pre>
-    ```
 
 ### render_markdown
 
@@ -307,16 +302,11 @@ The set of permitted HTML tags is defined in `nautobot.core.constants.HTML_ALLOW
 
 Render a dictionary as formatted YAML.
 
+Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a `<code class="language-yaml>` HTML tag to flag it for syntax highlighting by highlight.js.
+
 ```django
 {{ data | render_yaml }}
 ```
-
-!!! note
-    To highlight language syntax in the browser it has to be wrapped in:
-
-    ```django
-    <pre><code class="language-yaml">{{ data | render_yaml }}</code></pre>
-    ```
 
 ### settings_or_config
 
