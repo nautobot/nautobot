@@ -19,6 +19,7 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 from nautobot.circuits.models import Circuit
 from nautobot.core.api.exceptions import ServiceUnavailable
 from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.views import ModelViewSet
 from nautobot.core.models.querysets import count_related
 from nautobot.dcim import filters
 from nautobot.dcim.models import (
@@ -33,6 +34,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImage,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -56,6 +58,8 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
+    SoftwareImage,
+    SoftwareVersion,
     VirtualChassis,
 )
 from nautobot.extras.api.views import (
@@ -292,7 +296,7 @@ class HardwareFamilyViewSet(NautobotModelViewSet):
 class DeviceTypeViewSet(NautobotModelViewSet):
     queryset = (
         DeviceType.objects.select_related("manufacturer")
-        .prefetch_related("tags")
+        .prefetch_related("software_images", "tags")
         .annotate(device_count=count_related(Device, "device_type"))
     )
     serializer_class = serializers.DeviceTypeSerializer
@@ -382,6 +386,7 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         "parent_bay",
         "primary_ip4",
         "primary_ip6",
+        "software_version",
         "virtual_chassis__master",
         "device_redundancy_group",
         "secrets_group",
@@ -615,7 +620,9 @@ class DeviceBayViewSet(NautobotModelViewSet):
 
 
 class InventoryItemViewSet(NautobotModelViewSet):
-    queryset = InventoryItem.objects.select_related("device", "manufacturer").prefetch_related("tags")
+    queryset = InventoryItem.objects.select_related("device", "manufacturer", "software_version").prefetch_related(
+        "tags"
+    )
     serializer_class = serializers.InventoryItemSerializer
     filterset_class = filters.InventoryItemFilterSet
 
@@ -786,3 +793,28 @@ class ConnectedDeviceViewSet(ViewSet):
             return Response()
 
         return Response(serializers.DeviceSerializer(local_interface.device, context={"request": request}).data)
+
+
+#
+# Software images
+#
+
+
+class SoftwareImageViewSet(NautobotModelViewSet):
+    queryset = SoftwareImage.objects.select_related("software_version").prefetch_related("device_types")
+    serializer_class = serializers.SoftwareImageSerializer
+    filterset_class = filters.SoftwareImageFilterSet
+
+
+class SoftwareVersionViewSet(NautobotModelViewSet):
+    queryset = SoftwareVersion.objects.select_related("platform").prefetch_related(
+        "devices", "software_images", "inventory_items", "virtual_machines"
+    )
+    serializer_class = serializers.SoftwareVersionSerializer
+    filterset_class = filters.SoftwareVersionFilterSet
+
+
+class DeviceTypeToSoftwareImageViewSet(ModelViewSet):
+    queryset = DeviceTypeToSoftwareImage.objects.select_related("device_type", "software_image")
+    serializer_class = serializers.DeviceTypeToSoftwareImageSerializer
+    filterset_class = filters.DeviceTypeToSoftwareImageFilterSet

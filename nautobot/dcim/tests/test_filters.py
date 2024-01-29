@@ -31,6 +31,7 @@ from nautobot.dcim.filters import (
     DeviceFilterSet,
     DeviceRedundancyGroupFilterSet,
     DeviceTypeFilterSet,
+    DeviceTypeToSoftwareImageFilterSet,
     FrontPortFilterSet,
     FrontPortTemplateFilterSet,
     HardwareFamilyFilterSet,
@@ -54,6 +55,8 @@ from nautobot.dcim.filters import (
     RackReservationFilterSet,
     RearPortFilterSet,
     RearPortTemplateFilterSet,
+    SoftwareImageFilterSet,
+    SoftwareVersionFilterSet,
     VirtualChassisFilterSet,
 )
 from nautobot.dcim.models import (
@@ -67,6 +70,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImage,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -90,6 +94,8 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
+    SoftwareImage,
+    SoftwareVersion,
     VirtualChassis,
 )
 from nautobot.extras.models import Role, SecretsGroup, Status, Tag
@@ -105,6 +111,7 @@ def common_test_data(cls):
     Device.objects.all().delete()
     tenants = Tenant.objects.filter(tenant_group__isnull=False)
     cls.tenants = tenants
+    cls.software_versions = SoftwareVersion.objects.all()
 
     lt1 = LocationType.objects.get(name="Campus")
     lt2 = LocationType.objects.get(name="Building")
@@ -183,6 +190,8 @@ def common_test_data(cls):
             subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
         ),
     )
+    device_types[0].software_images.set(SoftwareImage.objects.all()[:2])
+    device_types[1].software_images.set(SoftwareImage.objects.all()[2:4])
     cls.device_types = device_types
 
     rack_groups = (
@@ -276,13 +285,28 @@ def common_test_data(cls):
 
     vm_status = Status.objects.get_for_model(VirtualMachine).first()
     VirtualMachine.objects.create(
-        cluster=clusters[0], name="VM 1", role=cls.device_roles[0], platform=platforms[0], status=vm_status
+        cluster=clusters[0],
+        name="VM 1",
+        role=cls.device_roles[0],
+        platform=platforms[0],
+        status=vm_status,
+        software_version=cls.software_versions[0],
     )
     VirtualMachine.objects.create(
-        cluster=clusters[0], name="VM 2", role=cls.device_roles[1], platform=platforms[1], status=vm_status
+        cluster=clusters[0],
+        name="VM 2",
+        role=cls.device_roles[1],
+        platform=platforms[1],
+        status=vm_status,
+        software_version=cls.software_versions[1],
     )
     VirtualMachine.objects.create(
-        cluster=clusters[0], name="VM 3", role=cls.device_roles[2], platform=platforms[2], status=vm_status
+        cluster=clusters[0],
+        name="VM 3",
+        role=cls.device_roles[2],
+        platform=platforms[2],
+        status=vm_status,
+        software_version=cls.software_versions[2],
     )
 
     vlan_groups = (
@@ -534,7 +558,7 @@ def common_test_data(cls):
 
     device_statuses = Status.objects.get_for_model(Device)
 
-    devices = (
+    cls.devices = (
         Device.objects.create(
             name="Device 1",
             device_type=device_types[0],
@@ -550,6 +574,7 @@ def common_test_data(cls):
             serial="ABC",
             position=1,
             secrets_group=secrets_groups[0],
+            software_version=cls.software_versions[0],
         ),
         Device.objects.create(
             name="Device 2",
@@ -567,6 +592,7 @@ def common_test_data(cls):
             position=2,
             secrets_group=secrets_groups[1],
             local_config_context_data={"foo": 123},
+            software_version=cls.software_versions[1],
         ),
         Device.objects.create(
             name="Device 3",
@@ -583,10 +609,11 @@ def common_test_data(cls):
             serial="GHI",
             position=3,
             secrets_group=secrets_groups[2],
+            software_version=cls.software_versions[2],
         ),
     )
-    devices[0].tags.set(Tag.objects.get_for_model(Device))
-    devices[1].tags.set(Tag.objects.get_for_model(Device)[:3])
+    cls.devices[0].tags.set(Tag.objects.get_for_model(Device))
+    cls.devices[1].tags.set(Tag.objects.get_for_model(Device)[:3])
 
 
 class LocationTypeFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
@@ -917,6 +944,8 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         ("power_port_templates", "power_port_templates__name"),
         ("rear_port_templates", "rear_port_templates__id"),
         ("rear_port_templates", "rear_port_templates__name"),
+        ("software_images", "software_images__id"),
+        ("software_images", "software_images__image_file_name"),
         ("u_height",),
     ]
 
@@ -1358,6 +1387,8 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ("role", "role__name"),
         ("secrets_group", "secrets_group__id"),
         ("secrets_group", "secrets_group__name"),
+        ("software_version", "software_version__id"),
+        ("software_version", "software_version__version"),
         ("status", "status__id"),
         ("status", "status__name"),
         ("vc_position",),
@@ -1371,6 +1402,14 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         common_test_data(cls)
 
         devices = Device.objects.all()
+
+        device_types_with_software_images = DeviceType.objects.filter(
+            software_images__isnull=False, devices__isnull=False
+        ).distinct()[:2]
+        for device_type in device_types_with_software_images:
+            device = device_type.devices.first()
+            device.software_image = device_type.software_images.first()
+            device.save()
 
         # Create a device with no components for testing the "has_*" filters
         device_type = DeviceType.objects.create(
@@ -2432,6 +2471,8 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
         ("parent", "parent__id"),
         ("parent", "parent__name"),
         ("part_id",),
+        ("software_version", "software_version__id"),
+        ("software_version", "software_version__version"),
     ]
 
     @classmethod
@@ -2444,6 +2485,8 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
             Device.objects.get(name="Device 3"),
         )
 
+        software_versions = SoftwareVersion.objects.all()[:3]
+
         inventory_items = (
             InventoryItem.objects.create(
                 device=devices[0],
@@ -2455,6 +2498,7 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
                 discovered=True,
                 description="First",
                 label="inventoryitem1",
+                software_version=software_versions[0],
             ),
             InventoryItem.objects.create(
                 device=devices[1],
@@ -2466,6 +2510,7 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
                 discovered=True,
                 description="Second",
                 label="inventoryitem2",
+                software_version=software_versions[1],
             ),
             InventoryItem.objects.create(
                 device=devices[2],
@@ -2477,6 +2522,7 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
                 discovered=False,
                 description="Third",
                 label="inventoryitem3",
+                software_version=software_versions[2],
             ),
         )
         inventory_items[0].tags.set(Tag.objects.get_for_model(InventoryItem))
@@ -3185,3 +3231,112 @@ class InterfaceRedundancyGroupAssociationTestCase(FilterTestCases.FilterTestCase
 
         for i, interface in enumerate(cls.interfaces):
             interface_redundancy_groups[i].add_interface(interface, 100 * i)
+
+
+class SoftwareImageFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = SoftwareImage.objects.all()
+    filterset = SoftwareImageFilterSet
+    generic_filter_tests = (
+        ["device_types", "device_types__id"],
+        ["device_types", "device_types__model"],
+        ["hashing_algorithm"],
+        ["image_file_checksum"],
+        ["image_file_name"],
+        ["image_file_size"],
+        ["software_version", "software_version__id"],
+        ["software_version", "software_version__version"],
+        ["status", "status__id"],
+        ["status", "status__name"],
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        common_test_data(cls)
+
+        device0, device1 = cls.devices[:2]
+        device0.software_image = SoftwareImage.objects.first()
+        device0.save()
+        device1.software_image = SoftwareImage.objects.last()
+        device1.save()
+
+        virtual_machine0, virtual_machine1 = VirtualMachine.objects.all()[:2]
+        virtual_machine0.software_image = SoftwareImage.objects.first()
+        virtual_machine0.save()
+        virtual_machine1.software_image = SoftwareImage.objects.last()
+        virtual_machine1.save()
+
+
+class SoftwareVersionFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = SoftwareVersion.objects.all()
+    filterset = SoftwareVersionFilterSet
+    generic_filter_tests = (
+        ["alias"],
+        ["documentation_url"],
+        ["end_of_support_date"],
+        ["platform", "platform__id"],
+        ["platform", "platform__name"],
+        ["release_date"],
+        ["software_images", "software_images__id"],
+        ["software_images", "software_images__image_file_name"],
+        ["status", "status__id"],
+        ["status", "status__name"],
+        ["version"],
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        common_test_data(cls)
+
+        InventoryItem.objects.create(
+            device=cls.devices[0],
+            name="Inventory Item 1",
+            manufacturer=cls.manufacturers[0],
+            software_version=cls.software_versions[0],
+        )
+        InventoryItem.objects.create(
+            device=cls.devices[1],
+            name="Inventory Item 2",
+            manufacturer=cls.manufacturers[1],
+            software_version=cls.software_versions[1],
+        )
+        InventoryItem.objects.create(
+            device=cls.devices[2],
+            name="Inventory Item 3",
+            manufacturer=cls.manufacturers[2],
+            software_version=cls.software_versions[2],
+        )
+
+    def test_long_term_support(self):
+        params = {"long_term_support": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            SoftwareVersion.objects.filter(long_term_support=True),
+        )
+        params = {"long_term_support": False}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            SoftwareVersion.objects.filter(long_term_support=False),
+        )
+
+    def test_pre_release(self):
+        params = {"pre_release": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            SoftwareVersion.objects.filter(pre_release=True),
+        )
+        params = {"pre_release": False}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            SoftwareVersion.objects.filter(pre_release=False),
+        )
+
+
+class DeviceTypeToSoftwareImageFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = DeviceTypeToSoftwareImage.objects.all()
+    filterset = DeviceTypeToSoftwareImageFilterSet
+    generic_filter_tests = (
+        ["software_image", "software_image__id"],
+        ["software_image", "software_image__image_file_name"],
+        ["device_type", "device_type__id"],
+        ["device_type", "device_type__model"],
+    )

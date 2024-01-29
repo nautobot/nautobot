@@ -7,7 +7,7 @@ from django.db.models import Sum
 from django.utils.functional import classproperty
 
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, MACAddressCharField, NaturalOrderingField
-from nautobot.core.models.generics import BaseModel, ChangeLoggedModel, PrimaryModel
+from nautobot.core.models.generics import BaseModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.core.models.tree_queries import TreeModel
@@ -32,6 +32,7 @@ from nautobot.dcim.constants import (
     WIRELESS_IFACE_TYPES,
 )
 from nautobot.extras.models import (
+    ChangeLoggedModel,
     RelationshipModel,
     Status,
     StatusField,
@@ -1056,6 +1057,14 @@ class InventoryItem(TreeModel, ComponentModel):
         help_text="A unique tag used to identify this item",
     )
     discovered = models.BooleanField(default=False, help_text="This item was automatically discovered")
+    software_version = models.ForeignKey(
+        to="dcim.SoftwareVersion",
+        on_delete=models.PROTECT,
+        related_name="inventory_items",
+        blank=True,
+        null=True,
+        verbose_name="The software version installed on this item",
+    )
 
     class Meta:
         ordering = ("_name",)
