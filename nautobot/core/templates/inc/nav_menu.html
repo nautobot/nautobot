@@ -122,8 +122,8 @@
         var savedScrollPosition = sessionStorage.getItem('navbarScrollPosition');
         var activeLink = sessionStorage.getItem('activeLink');
 
-        // Function to reset stored dropdown information
-        function resetNavbarInformation() {
+        // Function to reset stored dropdown state information
+        function resetNavbarState() {
             sessionStorage.removeItem('lastOpenedDropdown');
             sessionStorage.removeItem('savedScrollPosition');
             sessionStorage.removeItem('activeLink');
@@ -133,7 +133,7 @@
         var homeLink = document.querySelector('.navbar-fixed-left .navbar-brand');
         if (homeLink) {
             homeLink.addEventListener('click', function() {
-                resetNavbarInformation();
+                resetNavbarState();
             });
         }
 
