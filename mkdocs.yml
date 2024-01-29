@@ -334,6 +334,7 @@ nav:
       - GraphQL: "user-guide/feature-guides/graphql.md"
       - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
       - Relationships: "user-guide/feature-guides/relationships.md"
+      - Software Images and Versions: "user-guide/feature-guides/software-images-and-versions.md"
     - Core Data Model:
       - Circuits:
         - Circuit: "user-guide/core-data-model/circuits/circuit.md"

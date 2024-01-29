@@ -3903,7 +3903,7 @@ class SoftwareImageForm(NautobotModelForm):
     device_types = DynamicModelMultipleChoiceField(
         queryset=DeviceType.objects.all(),
         required=False,
-        label="Device types",
+        label="Device Types",
     )
 
     field_order = [
