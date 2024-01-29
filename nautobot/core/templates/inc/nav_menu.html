@@ -129,6 +129,21 @@
             sessionStorage.removeItem('activeLink');
         }
 
+        // Select the navbar dropdown elements
+        var navbarItems = document.querySelectorAll('.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-toggle > #dropdown_title');
+
+        // Add a title attribute and tooltip, only if necessary
+        navbarItems.forEach(function(item) {
+            // Check if the text overflows
+            if (item.scrollWidth > item.clientWidth) {
+                // Set the title attribute
+                item.setAttribute('title', item.innerText);
+
+                // Reinitialize Bootstrap tooltip
+                $(item).tooltip();
+            }
+        });
+
         // Add an event listener for the home link click
         var homeLink = document.querySelector('.navbar-fixed-left .navbar-brand');
         if (homeLink) {
