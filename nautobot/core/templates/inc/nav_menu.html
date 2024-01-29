@@ -214,7 +214,10 @@
         // Apply the 'active' class to the previously clicked link
         if (activeLink) {
             var previouslyClickedLink = document.querySelector('.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a[href="' + activeLink + '"]');
-            if (previouslyClickedLink) {
+            var currentLocation = window.location.pathname + window.location.search;
+            console.log(previouslyClickedLink.getAttribute('href'));
+            console.log(currentLocation);
+            if (previouslyClickedLink && currentLocation.includes(previouslyClickedLink.getAttribute('href'))) {
                 previouslyClickedLink.parentElement.classList.add('active');
             }
         }
