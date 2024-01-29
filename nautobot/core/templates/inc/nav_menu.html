@@ -215,8 +215,7 @@
         if (activeLink) {
             var previouslyClickedLink = document.querySelector('.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a[href="' + activeLink + '"]');
             var currentLocation = window.location.pathname + window.location.search;
-            console.log(previouslyClickedLink.getAttribute('href'));
-            console.log(currentLocation);
+            
             if (previouslyClickedLink && currentLocation.includes(previouslyClickedLink.getAttribute('href'))) {
                 previouslyClickedLink.parentElement.classList.add('active');
             }
