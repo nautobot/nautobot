@@ -3900,6 +3900,12 @@ class SoftwareImageFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
 class SoftwareImageForm(NautobotModelForm):
     """SoftwareImage credit/edit form."""
 
+    device_types = DynamicModelMultipleChoiceField(
+        queryset=DeviceType.objects.all(),
+        required=False,
+        label="Device types",
+    )
+
     field_order = [
         "software_version",
         "image_file_name",
@@ -3909,6 +3915,16 @@ class SoftwareImageForm(NautobotModelForm):
     class Meta:
         model = SoftwareImage
         fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["device_types"].initial = self.instance.device_types.all()
+
+    def _save_m2m(self):
+        """Save many-to-many fields."""
+        super()._save_m2m()
+        self.instance.device_types.set(self.cleaned_data["device_types"])
 
 
 class SoftwareVersionBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):

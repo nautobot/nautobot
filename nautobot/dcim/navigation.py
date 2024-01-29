@@ -265,25 +265,9 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
-                        link="dcim:softwareimage_list",
-                        name="Software Images",
-                        weight=200,
-                        permissions=[
-                            "dcim.view_softwareimage",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="dcim:softwareimage_add",
-                                permissions=[
-                                    "dcim.add_softwareimage",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
                         link="dcim:softwareversion_list",
                         name="Software Versions",
-                        weight=300,
+                        weight=200,
                         permissions=[
                             "dcim.view_softwareversion",
                         ],
@@ -292,6 +276,22 @@ menu_items = (
                                 link="dcim:softwareversion_add",
                                 permissions=[
                                     "dcim.add_softwareversion",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:softwareimage_list",
+                        name="Software Images",
+                        weight=300,
+                        permissions=[
+                            "dcim.view_softwareimage",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:softwareimage_add",
+                                permissions=[
+                                    "dcim.add_softwareimage",
                                 ],
                             ),
                         ),

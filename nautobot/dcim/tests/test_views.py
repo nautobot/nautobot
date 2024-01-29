@@ -3089,6 +3089,7 @@ class SoftwareImageTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        device_types = DeviceType.objects.all()[:2]
         statuses = Status.objects.get_for_model(SoftwareImage)
         software_versions = SoftwareVersion.objects.all()
 
@@ -3100,6 +3101,7 @@ class SoftwareImageTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "image_file_size": 1234567890,
             "hashing_algorithm": SoftwareImageHashingAlgorithmChoices.SHA512,
             "download_url": "https://example.com/software_image_test_case.bin",
+            "device_types": [device_types[0].pk, device_types[1].pk],
         }
 
         cls.csv_data = (

@@ -81,6 +81,12 @@
                 <p>Inventory Items</p>
             {% endwith %}
         </div>
+        <div class="col-md-4 text-center">
+            {% with virtual_machine_count=object.virtual_machines.count %}
+                <h2><a href="{% url 'virtualization:virtualmachine_list' %}?software_version={{ object.pk }}" class="btn {% if virtual_machine_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ virtual_machine_count }}</a></h2>
+                <p>Virtual Machines</p>
+            {% endwith %}
+        </div>
     </div>
 </div>
 {% endblock content_right_page %}
