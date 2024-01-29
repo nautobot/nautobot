@@ -440,6 +440,9 @@ Similar to `ObjectVar`, but allows for the selection of multiple objects.
 
 An uploaded file. Note that uploaded files are present in memory only for the duration of the job's execution: They will not be automatically saved for future use. The job is responsible for writing file contents to disk where necessary.
 
+!!! note
+    Keep in mind that the maximum size is defined by the FILE_UPLOAD_MAX_MEMORY_SIZE from Django settings. By default, it uses 2621440 (i.e. 2.5 MB).
+
 #### `IPAddressVar`
 
 An IPv4 or IPv6 address, without a mask. Returns a `netaddr.IPAddress` object.

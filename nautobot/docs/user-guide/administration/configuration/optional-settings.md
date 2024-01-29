@@ -487,6 +487,14 @@ Please see [the object permissions page](../guides/permissions.md) for more info
 
 ---
 
+## FILE_UPLOAD_MAX_MEMORY_SIZE
+
+Default:  2621440 (i.e. 2.5 MB).
+
+The maximum size (in bytes) that an upload will be before it gets streamed to the file system.
+
+---
+
 ## GIT_ROOT
 
 Default: `os.path.join(NAUTOBOT_ROOT, "git")`
