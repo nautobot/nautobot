@@ -1116,9 +1116,9 @@ files = [
 dev = ["coverage", "coveralls", "pytest"]
 
 [[package]]
-name = "example-plugin"
+name = "example-app"
 version = "1.0.0"
-description = "Nautobot example plugin that does a whole lot of nothing."
+description = "Nautobot example app that does a whole lot of nothing."
 optional = false
 python-versions = ">=3.8,<3.12"
 files = []
@@ -1126,12 +1126,12 @@ develop = true
 
 [package.source]
 type = "directory"
-url = "examples/example_plugin"
+url = "examples/example_app"
 
 [[package]]
-name = "example-plugin-with-view-override"
+name = "example-app-with-view-override"
 version = "1.0.0"
-description = "Nautobot plugin for testing override_views."
+description = "Nautobot App for testing override_views feature."
 optional = false
 python-versions = "*"
 files = []
@@ -1139,7 +1139,7 @@ develop = true
 
 [package.source]
 type = "directory"
-url = "examples/example_plugin_with_view_override"
+url = "examples/example_app_with_view_override"
 
 [[package]]
 name = "exceptiongroup"
@@ -3983,4 +3983,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "136fa4c518d4206074a6f43319274580a9fd1c9ccc7e32b8045e767a0f8bcd12"
+content-hash = "e2c64bfbe32985bac4369dbde6c630e1391f490d576b6d429aa9bcd3e2ced4e0"

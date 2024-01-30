@@ -135,7 +135,7 @@ COPY --from=poetry ${POETRY_HOME} ${POETRY_HOME}
 COPY --from=poetry /root/.config/pypoetry /root/.config/pypoetry
 ENV PATH="${POETRY_HOME}/bin:${PATH}"
 
-# The example_plugin is only a dev dependency, but Poetry fails to install non-dev dependencies if its source is missing
+# The example_app is only a dev dependency, but Poetry fails to install non-dev dependencies if its source is missing
 COPY --chown=nautobot:nautobot pyproject.toml poetry.lock README.md /source/
 COPY --chown=nautobot:nautobot examples /source/examples
 
@@ -200,7 +200,7 @@ COPY --from=build-nautobot --chown=nautobot:nautobot /source/dist /source/dist
 # hadolint ignore=DL3042
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     pip install --no-deps /source/dist/*.whl && \
-    pip uninstall -y example-plugin example-plugin-with-view-override && \
+    pip uninstall -y example-app example-app-with-view-override && \
     rm -rf /source/*
 
 USER nautobot
