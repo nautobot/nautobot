@@ -738,14 +738,18 @@ td span.hover_copy:hover .hover_copy_button {
     color: #ff8000; /* Color when expanded */
 }
 
-/* Default arrow direction */
 .navbar-fixed-left .navbar-nav > .dropdown > a > .caret {
-    transition: transform 0.4s ease;
+    transition: transform 300ms ease;
+}
+
+/* Default arrow direction when the dropdown is closed */
+.navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="false"] > .caret {
+    transform: rotate(270deg);  /* Rotate 270 degrees to point right */
 }
 
 /* Change arrow direction when the dropdown is open */
 .navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="true"] > .caret {
-    transform: rotate(180deg);
+    transform: rotate(360deg);
     color: #ff8000; /* Color when expanded */
 }
 
@@ -785,3 +789,4 @@ td span.hover_copy:hover .hover_copy_button {
 .dragging {
     opacity: 0.5;
 }
+
