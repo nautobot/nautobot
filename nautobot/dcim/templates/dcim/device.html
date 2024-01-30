@@ -216,6 +216,12 @@
                                             </td>
                                         </tr>
                                     {% endif %}
+                                    <tr>
+                                        <td>Software Version</td>
+                                        <td>
+                                            {{ object.software_version|hyperlinked_object }}
+                                        </td>
+                                    </tr>
                                 </table>
                             </div>
                             {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields_advanced_ui=False %}

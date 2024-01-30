@@ -214,6 +214,8 @@ plugins:
         'models/dcim/rackreservation.md': 'user-guide/core-data-model/dcim/rackreservation.md'
         'models/dcim/rearport.md': 'user-guide/core-data-model/dcim/rearport.md'
         'models/dcim/rearporttemplate.md': 'user-guide/core-data-model/dcim/rearporttemplate.md'
+        'models/dcim/softwareimage.md': 'user-guide/core-data-model/dcim/softwareimage.md'
+        'models/dcim/softwareversion.md': 'user-guide/core-data-model/dcim/softwareversion.md'
         'models/dcim/virtualchassis.md': 'user-guide/core-data-model/dcim/virtualchassis.md'
         'models/extras/computedfield.md': 'user-guide/platform-functionality/computedfield.md'
         'models/extras/contact.md': 'user-guide/core-data-model/extras/contact.md'
@@ -332,6 +334,7 @@ nav:
       - GraphQL: "user-guide/feature-guides/graphql.md"
       - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
       - Relationships: "user-guide/feature-guides/relationships.md"
+      - Software Images and Versions: "user-guide/feature-guides/software-images-and-versions.md"
     - Core Data Model:
       - Circuits:
         - Circuit: "user-guide/core-data-model/circuits/circuit.md"
@@ -374,6 +377,8 @@ nav:
         - Power Panel : "user-guide/core-data-model/dcim/powerpanel.md"
         - Power Feed: "user-guide/core-data-model/dcim/powerfeed.md"
         - Rack Reservation: "user-guide/core-data-model/dcim/rackreservation.md"
+        - Software Image: "user-guide/core-data-model/dcim/softwareimage.md"
+        - Software Version: "user-guide/core-data-model/dcim/softwareversion.md"
         - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
       - Extras:
         - Config Context: "user-guide/core-data-model/extras/configcontext.md"

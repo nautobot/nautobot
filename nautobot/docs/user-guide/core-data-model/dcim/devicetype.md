@@ -2,7 +2,7 @@
 
 A device type represents a particular make and model of hardware that exists in the real world. Device types define the physical attributes of a device (rack height and depth) and its individual components (console, power, network interfaces, and so on).
 
-Device types are instantiated as devices installed within locations and/or equipment racks. For example, you might define a device type to represent a Juniper EX4300-48T network switch with 48 Ethernet interfaces. You can then create multiple _instances_ of this type named "switch1," "switch2," and so on. Each device will automatically inherit the components (such as interfaces) of its device type at the time of creation. However, changes made to a device type will **not** apply to instances of that device type retroactively.
+Device types are instantiated as devices installed within locations and/or equipment racks. For example, you might define a device type to represent a Juniper EX4300-48T network switch with 48 Ethernet interfaces. You can then create multiple _instances_ of this type named "switch1", "switch2", and so on. Each device will automatically inherit the components (such as interfaces) of its device type at the time of creation. However, changes made to a device type will **not** apply to instances of that device type retroactively.
 
 Some devices house child devices which share physical resources, like space and power, but which functional independently from one another. A common example of this is blade server chassis. Each device type is designated as one of the following:
 
@@ -45,3 +45,6 @@ Once component templates have been created, every new device that you create as 
 
 +++ 2.2.0
     The [Hardware Family](hardwarefamily.md) model has been introduced to represent a group of related device types. A device type can be optionally assigned to a hardware family. Each hardware family must have a unique name and may have a description assigned to it.
+
++++ 2.2.0
+    The [Software Image](softwareimage.md) model has been introduced to represent a software image that can be installed on a device. One or more software images can be optionally assigned to a device type. The device type must be associated to a software image before devices of that type can associate to that image.

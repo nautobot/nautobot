@@ -141,22 +141,6 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
-                        link="dcim:platform_list",
-                        name="Platforms",
-                        weight=300,
-                        permissions=[
-                            "dcim.view_platform",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="dcim:platform_add",
-                                permissions=[
-                                    "dcim.add_platform",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
                         link="dcim:virtualchassis_list",
                         name="Virtual Chassis",
                         weight=400,
@@ -254,6 +238,60 @@ menu_items = (
                                 link="dcim:hardwarefamily_add",
                                 permissions=[
                                     "dcim.add_hardwarefamily",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            NavMenuGroup(
+                name="Software",
+                weight=250,
+                items=(
+                    NavMenuItem(
+                        link="dcim:platform_list",
+                        name="Platforms",
+                        weight=100,
+                        permissions=[
+                            "dcim.view_platform",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:platform_add",
+                                permissions=[
+                                    "dcim.add_platform",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:softwareversion_list",
+                        name="Software Versions",
+                        weight=200,
+                        permissions=[
+                            "dcim.view_softwareversion",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:softwareversion_add",
+                                permissions=[
+                                    "dcim.add_softwareversion",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:softwareimage_list",
+                        name="Software Images",
+                        weight=300,
+                        permissions=[
+                            "dcim.view_softwareimage",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:softwareimage_add",
+                                permissions=[
+                                    "dcim.add_softwareimage",
                                 ],
                             ),
                         ),
