@@ -56,7 +56,7 @@ The code below shows how to add a new tab to the navbar. A tab is defined by a `
 
 The position in the navigation menu is defined by the weight. The lower the weight the closer to the start of the menus the object will be. All core objects have weights in multiples of 100, meaning there is plenty of space around the objects for Apps to customize.
 
-Below you can see `Example Menu` has a weight value of `150`. This means the tab (menu) will appear between `Organization` and `Devices`.
+Below you can see `Example Menu` has a weight value of `150`. This means the tab (menu) will appear between `Organization` (100) and `Devices` (200).
 
 ``` python
 from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
