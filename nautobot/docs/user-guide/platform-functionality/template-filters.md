@@ -303,7 +303,8 @@ The set of permitted HTML tags is defined in `nautobot.core.constants.HTML_ALLOW
 
 Render a dictionary as formatted YAML.
 
-Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a `<code class="language-yaml>` HTML tag to flag it for syntax highlighting by highlight.js.
++/- 2.2.0
+    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a `<code class="language-yaml>` HTML tag to flag it for syntax highlighting by highlight.js.
 
 ```django
 {{ data | render_yaml }}
