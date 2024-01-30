@@ -26,7 +26,7 @@ class ContentTypeType(OptimizedNautobotObjectType):
         model = ContentType
 
 
-class NautobotDate(graphene.Date):
+class DateType(graphene.Date):
     """
     Overriding the default serialize method from https://github.com/graphql-python/graphene/blob/master/graphene/types/datetime.py
     to handle the case where the date object is passed as a str object.
