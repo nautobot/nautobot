@@ -22,7 +22,7 @@ To create a new Software Image, navigate to **Devices > Software Images** and cl
 
 ## Assigning Software Images to Device Types
 
-[Device Types](../core-data-model/dcim/devicetype.md) must be associated to Software Images before Devices of that type can be associated to any Software Versions. In the UI, the Device Type / Software Image association can be made either on the Device Type form or the Software Image form. Through the REST API, you must make these associations using the through model `dcim.DeviceTypeToSoftwareImage` at `/api/dcim/device-type-to-software-image/`.
+[Device Types](../core-data-model/dcim/devicetype.md) must be associated to Software Images before Devices of that type can be associated to any Software Versions. In the UI, the Device Type / Software Image association can be made either on the Device Type form or the Software Image form. Through the REST API, you must make these associations using the through model `dcim.DeviceTypeToSoftwareImage` at `/api/dcim/device-types-to-software-images/`.
 
 ## Assigning Software Versions to Devices, Inventory Items and Virtual Machines
 
