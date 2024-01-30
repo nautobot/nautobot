@@ -1,0 +1,1 @@
+Corrected `prefetch_related`/`select_related` calls to improve performance of `/api/ipam/prefixes/` and `/api/ipam/vrfs/` REST API endpoints.
