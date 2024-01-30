@@ -1,3 +1,4 @@
+import datetime
 import json
 from unittest import skip
 
@@ -15,6 +16,7 @@ from nautobot.dcim.choices import (
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedTypeChoices,
+    SoftwareImageHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.models import (
@@ -28,6 +30,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImage,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -50,6 +53,8 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
+    SoftwareImage,
+    SoftwareVersion,
     VirtualChassis,
 )
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
@@ -143,6 +148,18 @@ class Mixins:
 
     class BasePortTemplateTestMixin(BaseComponentTestMixin):
         """Mixin class for all `FooPortTemplate` tests."""
+
+    class SoftwareImageRelatedModelMixin:
+        """
+        The SoftwareImage hashing_algorithm field includes some values (md5, sha1, etc.) that are
+        considered indicators of sensitive data which cause APITestCase.assert_no_verboten_content() to fail.
+        We remove those values from the VERBOTEN_STRINGS property to allow the test to pass for any models
+        that could return a SoftwareImage representation in a depth > 0 API call.
+        """
+
+        VERBOTEN_STRINGS = tuple(
+            [o for o in APITestCase.VERBOTEN_STRINGS if o not in SoftwareImageHashingAlgorithmChoices.as_dict().keys()]
+        )
 
 
 class LocationTypeTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
@@ -753,7 +770,7 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
         Platform.objects.all().delete()
 
 
-class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
+class DeviceTypeTest(Mixins.SoftwareImageRelatedModelMixin, APIViewTestCases.APIViewTestCase):
     model = DeviceType
     bulk_update_data = {
         "part_number": "ABC123",
@@ -1103,6 +1120,13 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
         "network_driver": "cisco_xe",
     }
 
+    @classmethod
+    def setUpTestData(cls):
+        # Protected FK to SoftwareImage prevents deletion
+        DeviceTypeToSoftwareImage.objects.all().delete()
+        # Protected FK to SoftwareVersion prevents deletion
+        Device.objects.all().update(software_version=None)
+
     @override_settings(
         NETWORK_DRIVERS={
             "netmiko": {"cisco_ios": "custom_cisco_netmiko"},
@@ -1159,8 +1183,10 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             SecretsGroup.objects.create(name="Secrets Group 2"),
         )
 
-        device_type = DeviceType.objects.first()
+        device_type = DeviceType.objects.filter(software_images__isnull=False).first()
         device_role = Role.objects.get_for_model(Device).first()
+
+        software_version = SoftwareVersion.objects.filter(software_images__device_types=device_type).first()
 
         Device.objects.create(
             device_type=device_type,
@@ -1172,6 +1198,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
             local_config_context_data={"A": 1},
+            software_version=software_version,
         )
         Device.objects.create(
             device_type=device_type,
@@ -1183,6 +1210,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
             local_config_context_data={"B": 2},
+            software_version=software_version,
         )
         Device.objects.create(
             device_type=device_type,
@@ -1207,6 +1235,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "rack": racks[1].pk,
                 "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
+                "software_version": software_version.pk,
             },
             {
                 "device_type": device_type.pk,
@@ -1218,6 +1247,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "rack": racks[1].pk,
                 "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
+                "software_version": software_version.pk,
             },
             {
                 "device_type": device_type.pk,
@@ -1965,6 +1995,8 @@ class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeMode
     def setUpTestData(cls):
         super().setUpTestData()
 
+        software_versions = SoftwareVersion.objects.all()[:3]
+
         InventoryItem.objects.create(device=cls.device, name="Inventory Item 1", manufacturer=cls.manufacturer)
         InventoryItem.objects.create(device=cls.device, name="Inventory Item 2", manufacturer=cls.manufacturer)
         InventoryItem.objects.create(device=cls.device, name="Inventory Item 3", manufacturer=cls.manufacturer)
@@ -1974,11 +2006,13 @@ class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeMode
                 "device": cls.device.pk,
                 "name": "Inventory Item 4",
                 "manufacturer": cls.manufacturer.pk,
+                "software_version": software_versions[0].pk,
             },
             {
                 "device": cls.device.pk,
                 "name": "Inventory Item 5",
                 "manufacturer": cls.manufacturer.pk,
+                "software_version": software_versions[1].pk,
             },
             {
                 "device": cls.device.pk,
@@ -2613,3 +2647,125 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
         )
         for i, interface in enumerate(cls.interfaces):
             interface_redundancy_groups[0].add_interface(interface, i * 100)
+
+
+class SoftwareImageTestCase(Mixins.SoftwareImageRelatedModelMixin, APIViewTestCases.APIViewTestCase):
+    model = SoftwareImage
+    choices_fields = ["hashing_algorithm"]
+
+    @classmethod
+    def setUpTestData(cls):
+        statuses = Status.objects.get_for_model(SoftwareImage)
+        software_versions = SoftwareVersion.objects.all()
+
+        cls.create_data = [
+            {
+                "software_version": software_versions[0].pk,
+                "status": statuses[0].pk,
+                "image_file_name": "software_image_test_case_1.bin",
+            },
+            {
+                "software_version": software_versions[1].pk,
+                "status": statuses[1].pk,
+                "image_file_name": "software_image_test_case_2.bin",
+            },
+            {
+                "software_version": software_versions[2].pk,
+                "status": statuses[2].pk,
+                "image_file_name": "software_image_test_case_3.bin",
+            },
+        ]
+        cls.bulk_update_data = {
+            "software_version": software_versions[0].pk,
+            "status": statuses[0].pk,
+            "image_file_checksum": "abcdef1234567890",
+            "hashing_algorithm": SoftwareImageHashingAlgorithmChoices.SHA512,
+            "image_file_size": 1234567890,
+            "download_url": "https://example.com/software_image_test_case.bin",
+        }
+
+
+class SoftwareVersionTestCase(Mixins.SoftwareImageRelatedModelMixin, APIViewTestCases.APIViewTestCase):
+    model = SoftwareVersion
+
+    @classmethod
+    def setUpTestData(cls):
+        DeviceTypeToSoftwareImage.objects.all().delete()  # Protected FK to SoftwareImage prevents deletion
+        statuses = Status.objects.get_for_model(SoftwareVersion)
+        platforms = Platform.objects.all()
+
+        cls.create_data = [
+            {
+                "platform": platforms[0].pk,
+                "status": statuses[0].pk,
+                "version": "version 1.1.0",
+            },
+            {
+                "platform": platforms[1].pk,
+                "status": statuses[1].pk,
+                "version": "version 1.2.0",
+            },
+            {
+                "platform": platforms[2].pk,
+                "status": statuses[2].pk,
+                "version": "version 1.3.0",
+            },
+        ]
+        cls.bulk_update_data = {
+            "platform": platforms[0].pk,
+            "status": statuses[0].pk,
+            "alias": "Version x.y.z",
+            "release_date": datetime.date(2001, 12, 31),
+            "end_of_support_date": datetime.date(2005, 12, 31),
+            "documentation_url": "https://example.com/software_version_test_case/docs2",
+            "long_term_support": False,
+            "pre_release": True,
+        }
+
+
+class DeviceTypeToSoftwareImageTestCase(Mixins.SoftwareImageRelatedModelMixin, APIViewTestCases.APIViewTestCase):
+    model = DeviceTypeToSoftwareImage
+
+    @classmethod
+    def setUpTestData(cls):
+        DeviceTypeToSoftwareImage.objects.all().delete()
+        device_types = DeviceType.objects.all()[:4]
+        software_images = SoftwareImage.objects.all()[:3]
+
+        # deletable objects
+        DeviceTypeToSoftwareImage.objects.create(
+            device_type=device_types[0],
+            software_image=software_images[0],
+            is_default=True,
+        )
+        DeviceTypeToSoftwareImage.objects.create(
+            device_type=device_types[0],
+            software_image=software_images[1],
+            is_default=False,
+        )
+        DeviceTypeToSoftwareImage.objects.create(
+            device_type=device_types[0],
+            software_image=software_images[2],
+            is_default=False,
+        )
+
+        cls.create_data = [
+            {
+                "software_image": software_images[0].pk,
+                "device_type": device_types[1].pk,
+                "is_default": True,
+            },
+            {
+                "software_image": software_images[1].pk,
+                "device_type": device_types[2].pk,
+                "is_default": True,
+            },
+            {
+                "software_image": software_images[2].pk,
+                "device_type": device_types[3].pk,
+                "is_default": False,
+            },
+        ]
+        cls.bulk_update_data = {
+            "is_default": False,
+        }

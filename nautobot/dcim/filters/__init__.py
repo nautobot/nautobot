@@ -46,6 +46,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImage,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -69,6 +70,8 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
+    SoftwareImage,
+    SoftwareVersion,
     VirtualChassis,
 )
 from nautobot.extras.filters import (
@@ -82,7 +85,7 @@ from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import Cluster
+from nautobot.virtualization.models import Cluster, VirtualMachine
 
 __all__ = (
     "CableFilterSet",
@@ -98,6 +101,7 @@ __all__ = (
     "DeviceFilterSet",
     "DeviceRedundancyGroupFilterSet",
     "DeviceTypeFilterSet",
+    "DeviceTypeToSoftwareImageFilterSet",
     "FrontPortFilterSet",
     "FrontPortTemplateFilterSet",
     "HardwareFamilyFilterSet",
@@ -125,6 +129,8 @@ __all__ = (
     "RackReservationFilterSet",
     "RearPortFilterSet",
     "RearPortTemplateFilterSet",
+    "SoftwareImageFilterSet",
+    "SoftwareVersionFilterSet",
     "VirtualChassisFilterSet",
 )
 
@@ -637,6 +643,11 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         field_name="device_bay_templates",
         label="Has device bay templates",
     )
+    software_images = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareImage.objects.all(),
+        to_field_name="image_file_name",
+        label="Software images (image file name or ID)",
+    )
 
     class Meta:
         model = DeviceType
@@ -958,6 +969,15 @@ class DeviceFilterSet(
         queryset=DeviceBay.objects.all(),
         label="Device Bays",
     )
+    software_version = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareVersion.objects.all(),
+        to_field_name="version",
+        label="Software version (version or ID)",
+    )
+    has_software_version = RelatedMembershipBooleanFilter(
+        field_name="software_version",
+        label="Has software version",
+    )
 
     class Meta:
         model = Device
@@ -972,6 +992,8 @@ class DeviceFilterSet(
             "device_redundancy_group_priority",
             "tags",
             "interfaces",
+            "software_version",
+            "has_software_version",
         ]
 
     def generate_query__has_primary_ip(self, value):
@@ -1328,10 +1350,30 @@ class InventoryItemFilterSet(BaseFilterSet, DeviceComponentModelFilterSetMixin):
         label="Has child items",
     )
     serial = MultiValueCharFilter(lookup_expr="iexact")
+    software_version = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareVersion.objects.all(),
+        to_field_name="version",
+        label="Software version (version or ID)",
+    )
+    has_software_version = RelatedMembershipBooleanFilter(
+        field_name="software_version",
+        label="Has software version",
+    )
 
     class Meta:
         model = InventoryItem
-        fields = ["id", "name", "part_id", "asset_tag", "discovered", "description", "label", "tags"]
+        fields = [
+            "id",
+            "name",
+            "part_id",
+            "asset_tag",
+            "discovered",
+            "description",
+            "label",
+            "software_version",
+            "has_software_version",
+            "tags",
+        ]
 
 
 class VirtualChassisFilterSet(NautobotFilterSet):
@@ -1624,3 +1666,113 @@ class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet, NameSearchFilt
         model = InterfaceRedundancyGroupAssociation
 
         fields = ["id", "interface_redundancy_group", "interface", "priority"]
+
+
+class SoftwareImageFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
+    """Filters for SoftwareImage model."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "image_file_name": "icontains",
+            "software_version__version": "icontains",
+            "software_version__alias": "icontains",
+            "software_version__platform__name": "icontains",
+        }
+    )
+    software_version = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareVersion.objects.all(),
+        to_field_name="version",
+        label="Software version (version or ID)",
+    )
+    device_types = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DeviceType.objects.all(),
+        to_field_name="model",
+        label="Device types (model or ID)",
+    )
+    has_device_types = RelatedMembershipBooleanFilter(
+        field_name="device_types",
+        label="Has device types",
+    )
+
+    class Meta:
+        model = SoftwareImage
+        fields = "__all__"
+
+
+class SoftwareVersionFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
+    """Filters for SoftwareVersion model."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "version": "icontains",
+            "alias": "icontains",
+            "platform__name": "icontains",
+        }
+    )
+    devices = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        label="Devices (name or ID)",
+    )
+    has_devices = RelatedMembershipBooleanFilter(
+        field_name="devices",
+        label="Has devices",
+    )
+    inventory_items = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=InventoryItem.objects.all(),
+        label="Inventory items (name or ID)",
+    )
+    has_inventory_items = RelatedMembershipBooleanFilter(
+        field_name="inventory_items",
+        label="Has inventory items",
+    )
+    virtual_machines = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VirtualMachine.objects.all(),
+        label="Virtual machines (name or ID)",
+    )
+    has_virtual_machines = RelatedMembershipBooleanFilter(
+        field_name="virtual_machines",
+        label="Has virtual machines",
+    )
+    platform = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Platform.objects.all(),
+        to_field_name="name",
+        label="Platform (name or ID)",
+    )
+    device_types = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="software_images__device_types",
+        queryset=DeviceType.objects.all(),
+        to_field_name="model",
+        label="Device types (model or ID)",
+    )
+    software_images = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareImage.objects.all(),
+        to_field_name="image_file_name",
+        label="Software images (image file name or ID)",
+    )
+    has_software_images = RelatedMembershipBooleanFilter(
+        field_name="software_images",
+        label="Has software images",
+    )
+
+    class Meta:
+        model = SoftwareVersion
+        fields = "__all__"
+
+
+class DeviceTypeToSoftwareImageFilterSet(BaseFilterSet):
+    """Filters for DeviceTypeToSoftwareImage model."""
+
+    device_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DeviceType.objects.all(),
+        to_field_name="model",
+        label="Device type (model or ID)",
+    )
+    software_image = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareImage.objects.all(),
+        to_field_name="image_file_name",
+        label="Software image (image file name or ID)",
+    )
+
+    class Meta:
+        model = DeviceTypeToSoftwareImage
+        fields = "__all__"

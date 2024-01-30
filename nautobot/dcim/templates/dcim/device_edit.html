@@ -20,6 +20,13 @@
         </div>
     </div>
     <div class="panel panel-default">
+        <div class="panel-heading"><strong>Software</strong></div>
+        <div class="panel-body">
+            {% render_field form.platform %}
+            {% render_field form.software_version %}
+        </div>
+    </div>
+    <div class="panel panel-default">
         <div class="panel-heading"><strong>Location</strong></div>
         <div class="panel-body">
             {% render_field form.location %}
@@ -63,7 +70,6 @@
         <div class="panel-heading"><strong>Management</strong></div>
         <div class="panel-body">
             {% render_field form.status %}
-            {% render_field form.platform %}
             {% if editing %}
                 {% render_field form.primary_ip4 %}
                 {% render_field form.primary_ip6 %}
