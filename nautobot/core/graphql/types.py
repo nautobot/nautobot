@@ -26,7 +26,7 @@ class ContentTypeType(OptimizedNautobotObjectType):
         model = ContentType
 
 
-class Date(graphene.Date):
+class NautobotDate(graphene.Date):
     """
     Overriding the default serialize method from https://github.com/graphql-python/graphene/blob/master/graphene/types/datetime.py
     to handle the case where the date object is passed as a str object.
@@ -36,11 +36,11 @@ class Date(graphene.Date):
     def serialize(date):
         if isinstance(date, datetime.datetime):
             date = date.date()
-        if not isinstance(date, datetime.date) and isinstance(date, str):
-            date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
-        if not isinstance(date, datetime.date):
-            raise AssertionError('Received not compatible date "{}"'.format(repr(date)))
-        return date.isoformat()
+            return date.isoformat()
+        elif isinstance(date, str):
+            return date
+        else:
+            raise AssertionError(f'Received not compatible date "{date!r}"')
 
 
 class JSON(graphene.Scalar):
