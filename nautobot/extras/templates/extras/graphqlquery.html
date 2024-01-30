@@ -48,9 +48,23 @@
 {% block javascript %}
 {{ block.super }}
 <script>
+    function fillQueryOutput(data) {
+        const queryOutput = document.querySelector('#query_output');
+
+        [...queryOutput.childNodes].forEach(childNode => childNode.remove());
+
+        const code = document.createElement('code');
+        code.classList.add('language-json');
+        code.textContent = JSON.stringify(data, undefined, 2);
+
+        queryOutput.appendChild(code);
+
+        hljs.highlightElement(code);
+    }
+
     function test_query() {
-        var output = $("#query_output");
-        var variables = $("#query_variables").val();
+        const variables = document.querySelector('#query_variables').value;
+
         $.ajax({
             url: "{% url 'graphql' %}",
             method: "POST",
@@ -61,11 +75,11 @@
                 "variables": variables,
             },
             success: function(data) {
-                output.text(JSON.stringify(data, undefined, 2));
+                fillQueryOutput(data);
             },
             error: function(error) {
                 console.log(error);
-                output.text(JSON.stringify(error.responseJSON, undefined, 2));
+                fillQueryOutput(error.responseJSON);
             }
         });
     };
