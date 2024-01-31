@@ -97,7 +97,7 @@ GITREPOSITORY_BUTTONS = """
 """
 
 JOB_BUTTONS = """
-<a href="{% url 'extras:job_run' pk=record.pk %}" class="btn btn-primary btn-xs" title="Run/Schedule" {% if not perms.extras.run_job or not record.runnable %}disabled="disabled"{% endif %}><i class="mdi mdi-play" aria-hidden="true"></i></a>
+<a href="{% url 'extras:job' pk=record.pk %}" class="btn btn-primary btn-xs" title="Details"><i class="mdi mdi-information" aria-hidden="true"></i></a>
 """
 
 OBJECTCHANGE_OBJECT = """
@@ -600,7 +600,10 @@ class JobTable(BaseTable):
     # TODO(Glenn): pk = ToggleColumn()
     source = tables.Column()
     # grouping is used to, well, group the Jobs, so it isn't a column of its own.
-    name = tables.Column(linkify=True)
+    name = tables.Column(
+        attrs={"a": {"class": "job_run", "title": "Run/Schedule"}},
+        linkify=("extras:job_run", {"pk": tables.A("pk")}),
+    )
     installed = BooleanColumn()
     enabled = BooleanColumn()
     has_sensitive_variables = BooleanColumn()
@@ -633,6 +636,9 @@ class JobTable(BaseTable):
 
     def render_description(self, value):
         return render_markdown(value)
+
+    def render_name(self, value):
+        return format_html('<span class="btn btn-primary btn-xs"><i class="mdi mdi-play"></i></span>{}', value)
 
     class Meta(BaseTable.Meta):
         model = JobModel
