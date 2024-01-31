@@ -63,7 +63,7 @@
     }
 
     function test_query() {
-        const variables = document.querySelector('#query_variables').value;
+        const variables = document.querySelector('#query_variables')?.value;
 
         $.ajax({
             url: "{% url 'graphql' %}",
