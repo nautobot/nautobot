@@ -52,9 +52,12 @@ from .models import (
 )
 from .registry import registry
 
+CONTACT_OR_TEAM_ICON = """
+<i class="mdi {% if record.contact %}mdi-account{% else %}mdi-account-group{% endif %}"></i>
+"""
+
 CONTACT_OR_TEAM = """
 {% load helpers %}
-<i class="mdi {% if record.contact %}mdi-account{% else %}mdi-account-group{% endif %}"></i>
 {{ record.contact_or_team|hyperlinked_object:"name"}}
 """
 
@@ -1136,7 +1139,8 @@ class WebhookTable(BaseTable):
 
 class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
-    contact_or_team = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Contact/Team")
+    type = tables.TemplateColumn(CONTACT_OR_TEAM_ICON, verbose_name="Type")
+    contact = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Contact")
     contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team.phone", verbose_name="Phone")
     contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team.email", verbose_name="E-Mail")
     actions = actions = ButtonsColumn(model=ContactAssociation, buttons=("edit", "delete"))
@@ -1145,7 +1149,8 @@ class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
         model = ContactAssociation
         fields = (
             "pk",
-            "contact_or_team",
+            "type",
+            "contact",
             "status",
             "role",
             "contact_or_team_phone",
@@ -1154,7 +1159,8 @@ class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
         )
         default_columns = [
             "pk",
-            "contact_or_team",
+            "type",
+            "contact",
             "status",
             "role",
             "contact_or_team_phone",
