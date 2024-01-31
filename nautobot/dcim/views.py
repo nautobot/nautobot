@@ -2952,16 +2952,16 @@ class HardwareFamilyUIViewSet(NautobotUIViewSet):
         device_types = instance.device_types.select_related("manufacturer").annotate(
             device_count=count_related(Device, "device_type")
         )
-        device_table_table = tables.DeviceTypeTable(device_types, orderable=False)
+        device_type_table = tables.DeviceTypeTable(device_types, orderable=False)
 
         paginate = {
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
         }
-        RequestConfig(request, paginate).configure(device_table_table)
+        RequestConfig(request, paginate).configure(device_type_table)
 
         return {
-            "device_type_table": device_table_table,
+            "device_type_table": device_type_table,
         }
 
 
