@@ -5,6 +5,7 @@ from django.contrib.auth.forms import (
 )
 
 from nautobot.core.forms import BootstrapMixin, DateTimePicker
+from nautobot.core.utils.config import get_settings_or_config
 
 from .models import Token
 
@@ -47,3 +48,11 @@ class AdvancedProfileSettingsForm(BootstrapMixin, forms.Form):
         "This is for debugging purposes and should only be enabled when "
         "instructed by an adiministrator.",
     )
+
+    def clean(self):
+        # ALLOW_REQUEST_PROFILING is a constance config option that controls whether users can enable request profiling
+        ALLOW_REQUEST_PROFILING = get_settings_or_config("ALLOW_REQUEST_PROFILING")
+        if not ALLOW_REQUEST_PROFILING and self.cleaned_data["request_profiling"]:
+            raise forms.ValidationError(
+                {"request_profiling": "Request profiling has been globally disabled by an administrator."}
+            )

@@ -571,6 +571,11 @@ CONSTANCE_ADDITIONAL_FIELDS = {
 }
 
 CONSTANCE_CONFIG = {
+    "ALLOW_REQUEST_PROFILING": ConstanceConfigItem(
+        default=True,
+        help_text="Allow users to enable request profiling on their login session.",
+        field_type=bool,
+    ),
     "BANNER_BOTTOM": ConstanceConfigItem(
         default="",
         help_text="Custom HTML to display in a banner at the bottom of all pages.",
@@ -701,6 +706,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
     "User Interface": ["SUPPORT_MESSAGE"],
+    "Debugging": ["ALLOW_REQUEST_PROFILING"],
 }
 
 #

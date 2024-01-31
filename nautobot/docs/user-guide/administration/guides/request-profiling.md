@@ -22,6 +22,14 @@ From there, administrators can view details of individual requests, including ti
 
 The Nautobot configuration comes out of the box with django-silk set up to support the above functionality. Those settings are described below, but it is not the intention of the Nautobot docs to describe all django-silk settings. Django-silk provides several other parameters that knowledgeable users may also be able to use, depending on the use case.
 
+### ALLOW_REQUEST_PROFILING
+
+Default: `True`
+
+Global setting to allow or deny users from enabling request profiling on their login session.
+
+---
+
 ### SILKY_PYTHON_PROFILER
 
 Default: `True`

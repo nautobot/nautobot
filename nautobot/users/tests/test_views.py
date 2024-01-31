@@ -117,3 +117,23 @@ class AdancedProfileSettingsViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         # Check if the session has the correct value
         self.assertFalse(self.client.session["silk_record_requests"])
+
+    @override_settings(ALLOW_REQUEST_PROFILING=False)
+    def test_disable_allow_request_profiling_rejects_user_enable(self):
+        """
+        Check that a user cannot enable request profiling if ALLOW_REQUEST_PROFILING=False
+        """
+        # Simulate form submission with checkbox unchecked
+        response = self.client.post(reverse("user:advanced_settings_edit"), {"request_profiling": True})
+
+        # Check if the form is in the response context and has errors
+        self.assertTrue("form" in response.context)
+        form = response.context["form"]
+        self.assertFalse(form.is_valid())
+
+        # Check for your specific error message
+        expected_error_message = "Request profiling has been globally disabled by an administrator."
+        self.assertEqual(form.errors["request_profiling"][0], expected_error_message)
+
+        # Check if the session has the correct value
+        self.assertFalse(self.client.session.get("silk_record_requests"))
