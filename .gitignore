@@ -15,6 +15,7 @@ nautobot.sql
 .DS_Store
 .idea
 .coverage
+.coverage.*
 .vscode
 docker-compose.override.yml
 *.env

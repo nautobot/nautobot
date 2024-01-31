@@ -364,7 +364,7 @@ class AdvancedProfileSettingsEditView(LoginRequiredMixin, View):
             request.session["silk_record_requests"] = silk_record_requests
 
             if silk_record_requests:
-                msg = "Enabled request profiling for the durration of the login session."
+                msg = "Enabled request profiling for the duration of the login session."
             else:
                 msg = "Disabled request profiling."
             messages.success(request, msg)
