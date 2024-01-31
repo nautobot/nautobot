@@ -1,3 +1,3 @@
-Navbar dropdown links turn orange on hover and when active/clicked; state is saved.
+Changed navbar dropdown link behavior to turn orange on hover and when active/clicked; state is saved.
 Changed navbar state save to use session storage.
-Navbar dropdown carets point right when closed.
+Changed navbar dropdown carets to point right when closed.
