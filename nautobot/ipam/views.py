@@ -80,7 +80,7 @@ class NamespaceUIViewSet(
     form_class = forms.NamespaceForm
     bulk_update_form_class = forms.NamespaceBulkEditForm
     filterset_class = filters.NamespaceFilterSet
-    queryset = Namespace.objects.all()
+    queryset = Namespace.objects.select_related("location")
     serializer_class = serializers.NamespaceSerializer
     table_class = tables.NamespaceTable
 
@@ -234,7 +234,7 @@ class NamespaceVRFsView(generic.ObjectView):
 
 
 class VRFListView(generic.ObjectListView):
-    queryset = VRF.objects.all()
+    queryset = VRF.objects.select_related("namespace", "tenant")
     filterset = filters.VRFFilterSet
     filterset_form = forms.VRFFilterForm
     table = tables.VRFTable
@@ -316,7 +316,7 @@ class VRFBulkDeleteView(generic.BulkDeleteView):
 
 
 class RouteTargetListView(generic.ObjectListView):
-    queryset = RouteTarget.objects.all()
+    queryset = RouteTarget.objects.select_related("tenant")
     filterset = filters.RouteTargetFilterSet
     filterset_form = forms.RouteTargetFilterForm
     table = tables.RouteTargetTable
