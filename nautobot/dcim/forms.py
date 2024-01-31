@@ -3606,20 +3606,19 @@ class InterfaceRedundancyGroupAssociationForm(BootstrapMixin, NoteModelFormMixin
     location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         required=False,
-        query_params={"region_id": "$region"},
     )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         null_option="None",
-        query_params={"location_id": "$location"},
+        query_params={"location": "$location"},
     )
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
         query_params={
-            "location_id": "$location",
-            "rack_id": "$rack",
+            "location": "$location",
+            "rack": "$rack",
         },
     )
     interface = DynamicModelChoiceField(
