@@ -126,8 +126,8 @@ class RelationshipBaseTest:
         cls.m2ms_1.validated_save()
 
         # Relationships involving a content type that doesn't actually have a backing model.
-        # This can occur in practice if, for example, a relationship is defined for a plugin-defined model,
-        # then the plugin is subsequently uninstalled or deactivated.
+        # This can occur in practice if, for example, a relationship is defined for an App-defined model,
+        # then the App is subsequently uninstalled or deactivated.
         cls.invalid_ct = ContentType.objects.create(app_label="nonexistent", model="nosuchmodel")
 
         # Don't use validated_save() on these as it will fail due to the invalid content-type

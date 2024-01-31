@@ -76,6 +76,8 @@ from nautobot.virtualization.models import (
     VirtualMachine,
 )
 
+from example_app.jobs import ExampleJob
+
 
 class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
     """
@@ -1056,25 +1058,23 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         # JobModel instances are automatically instantiated at startup, so we just need to look them up.
         cls.local_job = JobModel.objects.get(job_class_name="TestPass")
         cls.job_containing_sensitive_variables = JobModel.objects.get(job_class_name="ExampleLoggingJob")
-        cls.plugin_job = JobModel.objects.get(job_class_name="ExampleJob")
+        cls.app_job = JobModel.objects.get(job_class_name="ExampleJob")
 
     def test_job_class(self):
         self.assertEqual(self.local_job.job_class.description, "Validate job import")
 
-        from example_plugin.jobs import ExampleJob
-
-        self.assertEqual(self.plugin_job.job_class, ExampleJob)
+        self.assertEqual(self.app_job.job_class, ExampleJob)
 
     def test_class_path(self):
         self.assertEqual(self.local_job.class_path, "pass.TestPass")
         self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
 
-        self.assertEqual(self.plugin_job.class_path, "example_plugin.jobs.ExampleJob")
-        self.assertEqual(self.plugin_job.class_path, self.plugin_job.job_class.class_path)
+        self.assertEqual(self.app_job.class_path, "example_app.jobs.ExampleJob")
+        self.assertEqual(self.app_job.class_path, self.app_job.job_class.class_path)
 
     def test_latest_result(self):
         self.assertEqual(self.local_job.latest_result, None)
-        self.assertEqual(self.plugin_job.latest_result, None)
+        self.assertEqual(self.app_job.latest_result, None)
         # TODO(Glenn): create some JobResults and test that this works correctly for them as well.
 
     def test_defaults(self):

@@ -339,20 +339,20 @@ class MetricsViewTestCase(TestCase):
         return text_string_to_metric_families(page_content)
 
     def test_metrics_extensibility(self):
-        """Assert that the example metric from the example plugin shows up _exactly_ when the plugin is enabled."""
+        """Assert that the example metric from the Example App shows up _exactly_ when the app is enabled."""
         test_metric_name = "nautobot_example_metric_count"
-        metrics_with_plugin = self.query_and_parse_metrics()
-        metric_names_with_plugin = {metric.name for metric in metrics_with_plugin}
-        self.assertIn(test_metric_name, metric_names_with_plugin)
+        metrics_with_app = self.query_and_parse_metrics()
+        metric_names_with_app = {metric.name for metric in metrics_with_app}
+        self.assertIn(test_metric_name, metric_names_with_app)
         with override_settings(PLUGINS=[]):
             # Clear out the app metric registry because it is not updated when settings are changed but Nautobot is not
             # restarted.
             registry["app_metrics"].clear()
-            metrics_without_plugin = self.query_and_parse_metrics()
-            metric_names_without_plugin = {metric.name for metric in metrics_without_plugin}
-            self.assertNotIn(test_metric_name, metric_names_without_plugin)
-        metric_names_with_plugin.remove(test_metric_name)
-        self.assertSetEqual(metric_names_with_plugin, metric_names_without_plugin)
+            metrics_without_app = self.query_and_parse_metrics()
+            metric_names_without_app = {metric.name for metric in metrics_without_app}
+            self.assertNotIn(test_metric_name, metric_names_without_app)
+        metric_names_with_app.remove(test_metric_name)
+        self.assertSetEqual(metric_names_with_app, metric_names_without_app)
 
 
 class ErrorPagesTestCase(TestCase):
