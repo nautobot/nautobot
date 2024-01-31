@@ -118,6 +118,22 @@ class GraphQLTestCase(TestCase):
         resp = execute_saved_query("gql-2", user=self.user, variables={"name": "site-1"}).to_dict()
         self.assertFalse(resp["data"].get("error"))
 
+    @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_execute_query_with_custom_field_type_date(self):
+        """Test Custom Field with Date type returns valid Date object and not string. Fix for bug #3664"""
+        custom_field = CustomField(
+            type=CustomFieldTypeChoices.TYPE_DATE, label="custom_date_field", key="custom_date_field"
+        )
+        custom_field.validated_save()
+        custom_field.content_types.set([ContentType.objects.get_for_model(Site)])
+        custom_field_data = {"custom_date_field": "2023-01-23"}
+        self.sites[0]._custom_field_data = custom_field_data
+        self.sites[0].save()
+        query = "query ($name: [String!]) { sites(name:$name) {name, _custom_field_data, cf_custom_date_field} }"
+        resp = execute_query(query, user=self.user, variables={"name": "Site-1"}).to_dict()
+        self.assertEqual(resp["data"]["sites"]["cf_custom_date_field"], custom_field_data)
+
     def test_graphql_types_registry(self):
         """Ensure models with graphql feature are registered in the graphene_django registry."""
         graphene_django_registry = get_global_registry()
