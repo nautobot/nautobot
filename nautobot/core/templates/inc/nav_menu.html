@@ -234,6 +234,9 @@
             if (previouslyClickedLink && currentLocation.includes(previouslyClickedLink.getAttribute('href'))) {
                 previouslyClickedLink.parentElement.classList.add('active');
             }
+            else {
+                sessionStorage.removeItem('activeLink');
+            }
         }
     });
 </script>
