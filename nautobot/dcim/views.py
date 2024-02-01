@@ -2947,6 +2947,27 @@ class HardwareFamilyUIViewSet(NautobotUIViewSet):
     table_class = tables.HardwareFamilyTable
     lookup_field = "pk"
 
+    def get_extra_context(self, request, instance):
+        # Related device types table
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            device_types = (
+                DeviceType.objects.restrict(request.user, "view")
+                .filter(hardware_family=instance)
+                .select_related("manufacturer")
+                .annotate(device_count=count_related(Device, "device_type"))
+            )
+            device_type_table = tables.DeviceTypeTable(device_types, orderable=False)
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(device_type_table)
+
+            context["device_type_table"] = device_type_table
+        return context
+
 
 #
 # Software images

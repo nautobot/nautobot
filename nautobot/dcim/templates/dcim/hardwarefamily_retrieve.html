@@ -21,3 +21,20 @@
             </table>
         </div>
 {% endblock %}
+
+{% block content_full_width_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Device Types</strong>
+        </div>
+        {% include 'panel_table.html' with table=device_type_table %}
+        {% if perms.dcim.add_devicetype %}
+            <div class="panel-footer text-right noprint">
+                <a href="{% url 'dcim:devicetype_add' %}?hardware_family={{ object.pk }}" class="btn btn-xs btn-primary">
+                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Device Type
+                </a>
+            </div>
+        {% endif %}
+    </div>
+    {% include 'inc/paginator.html' with paginator=device_type_table.paginator page=device_type_table.page %}
+{% endblock content_full_width_page %}
