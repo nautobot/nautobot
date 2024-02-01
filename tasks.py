@@ -535,7 +535,7 @@ def loaddata(context, filepath="db_output.json"):
 def build_and_check_docs(context):
     """Build docs for use within Nautobot."""
     build_nautobot_docs(context)
-    build_example_plugin_docs(context)
+    build_example_app_docs(context)
 
 
 def build_nautobot_docs(context):
@@ -544,15 +544,15 @@ def build_nautobot_docs(context):
     run_command(context, command)
 
 
-def build_example_plugin_docs(context):
-    """Build Example Plugin docs."""
+def build_example_app_docs(context):
+    """Build Example App docs."""
     command = "mkdocs build --no-directory-urls --strict"
     if is_truthy(context.nautobot.local):
-        local_command = f"cd examples/example_plugin && {command}"
+        local_command = f"cd examples/example_app && {command}"
         print_command(local_command)
         context.run(local_command, pty=True)
     else:
-        docker_command = f"run --workdir='/source/examples/example_plugin' --entrypoint '{command}' nautobot"
+        docker_command = f"run --workdir='/source/examples/example_app' --entrypoint '{command}' nautobot"
         docker_compose(context, docker_command, pty=True)
 
 

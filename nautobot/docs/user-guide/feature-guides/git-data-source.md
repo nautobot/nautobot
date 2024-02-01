@@ -17,15 +17,15 @@ The feature uses the concept of a `provides` field to map a repository to a use 
 |[Config Contexts](../core-data-model/extras/configcontext.md)|Config contexts can be used to provide additional data that you can't natively store in Nautobot.|
 |[Config Context Schemas](../core-data-model/extras/configcontextschema.md)|Schemas enforce data validation on config contexts.|
 
-### Examples of Plugins Defining Additional Providers
+### Examples of Apps Defining Additional Providers
 
-Additional Git providers can be added by using Nautobot's flexible plugin system.
+Additional Git providers can be added by using Nautobot's flexible App system.
 
-|Name|Summary|Related Plugin|
+|Name|Summary|Related App|
 |:--|:--|:--|
-|Backup Configs|Backup configuration data.|[Golden Config](https://github.com/nautobot/nautobot-plugin-golden-config)|
-|Intended Configs|Stores the intended configurations, this grabs Nautobot data and runs through Jinja Templates.|[Golden Config](https://github.com/nautobot/nautobot-plugin-golden-config)|
-|Jinja Templates|Repository that holds Jinja templates to be used to generate intended configs.|[Golden Config](https://github.com/nautobot/nautobot-plugin-golden-config)|
+|Backup Configs|Backup configuration data.|[Golden Config](https://github.com/nautobot/nautobot-app-golden-config)|
+|Intended Configs|Stores the intended configurations, this grabs Nautobot data and runs through Jinja Templates.|[Golden Config](https://github.com/nautobot/nautobot-app-golden-config)|
+|Jinja Templates|Repository that holds Jinja templates to be used to generate intended configs.|[Golden Config](https://github.com/nautobot/nautobot-app-golden-config)|
 
 ## Repository Details
 
@@ -70,7 +70,7 @@ That loads a default page to add a repository.
 ![Add a New Git Repository](./images/git-as-data-source/02-git-data-source.png)
 
 !!! note
-    By default only config contexts, export templates, and jobs are available resource types.  Others may be added when specific plugins are used.
+    By default only config contexts, config context schemas, export templates, and jobs are available resource types.  Others may be added when specific Nautobot Apps are installed.
 
 #### Fill out Repository Details
 
@@ -208,7 +208,7 @@ Detailed information on [config contexts](../platform-functionality/gitrepositor
 
 Config contexts may be provided as JSON or YAML files located in the `/config_contexts/` folder, which must be in the root of the Git repository.
 
-Config contexts can be used to provide additional details to different automation tooling.  For example Ansible variables, or any other data that you can't natively store in Nautobot.  It can also be used in the Golden Configuration Nautobot plugin to provide extra details to generate configuration templates.
+Config contexts can be used to provide additional details to different automation tooling.  For example Ansible variables, or any other data that you can't natively store in Nautobot.  It can also be used in the Nautobot Golden Configuration App to provide extra details to generate configuration templates.
 
 A few simple examples of Configuration Context data might be:
 
@@ -277,14 +277,14 @@ config_context_schemas
 
 ## Additional Git Data Sources
 
-As seen in [Fill out Repository Details](#fill-out-repository-details), the standard installation of Nautobot will come natively with export templates, jobs, and config contexts.  Additional data sources can be incorporated using the Nautobot plugin system.  For example, the [nautobot-plugin-golden-config](https://github.com/nautobot/nautobot-plugin-golden-config) plugin implements four additional data sources.
+As seen in [Fill out Repository Details](#fill-out-repository-details), the standard installation of Nautobot will come natively with export templates, jobs, and config contexts.  Additional data sources can be incorporated using the Nautobot App system.  For example, the [nautobot-golden-config](https://github.com/nautobot/nautobot-app-golden-config) App implements four additional data sources.
 
 - Config Contexts
 - Backup Configs
 - Intended Configs
 - Jinja Templates
 
-For more information for the Golden Configuration specific data sources, navigate to [Nautobot Golden Config Repo](https://github.com/nautobot/nautobot-plugin-golden-config/blob/develop/docs/navigating-golden.md#git-settings).
+For more information for the Golden Configuration specific data sources, navigate to [Nautobot Golden Config Repo](https://github.com/nautobot/nautobot-app-golden-config/blob/develop/docs/navigating-golden.md#git-settings).
 
 ## Common Issues and Troubleshooting
 
