@@ -49,6 +49,14 @@ class AdvancedProfileSettingsForm(BootstrapMixin, forms.Form):
         "instructed by an administrator.",
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # ALLOW_REQUEST_PROFILING is a constance config option that controls whether users can enable request profiling
+        ALLOW_REQUEST_PROFILING = get_settings_or_config("ALLOW_REQUEST_PROFILING")
+        if not ALLOW_REQUEST_PROFILING:
+            self.fields["request_profiling"].disabled = True
+
     def clean(self):
         # ALLOW_REQUEST_PROFILING is a constance config option that controls whether users can enable request profiling
         ALLOW_REQUEST_PROFILING = get_settings_or_config("ALLOW_REQUEST_PROFILING")

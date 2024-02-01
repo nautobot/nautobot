@@ -46,7 +46,7 @@ can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can b
 
 ### ALLOW_REQUEST_PROFILING
 
-Default: `True`
+Default: `False`
 
 Global setting to allow or deny users from enabling request profiling on their login session.
 

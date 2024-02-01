@@ -24,7 +24,7 @@ The Nautobot configuration comes out of the box with django-silk set up to suppo
 
 ### ALLOW_REQUEST_PROFILING
 
-Default: `True`
+Default: `False`
 
 Global setting to allow or deny users from enabling request profiling on their login session.
 
