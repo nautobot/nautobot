@@ -2948,9 +2948,12 @@ class HardwareFamilyUIViewSet(NautobotUIViewSet):
     lookup_field = "pk"
 
     def get_extra_context(self, request, instance):
-        # Parent prefixes table
-        device_types = instance.device_types.select_related("manufacturer").annotate(
-            device_count=count_related(Device, "device_type")
+        # Related device types table
+        device_types = (
+            DeviceType.objects.restrict(request.user, "view")
+            .filter(hardware_family=instance)
+            .select_related("manufacturer")
+            .annotate(device_count=count_related(Device, "device_type"))
         )
         device_type_table = tables.DeviceTypeTable(device_types, orderable=False)
 
