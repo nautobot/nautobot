@@ -47,7 +47,7 @@ class DateType(graphene.Date):
 
     @staticmethod
     def serialize(date):
-        if isinstance(date, datetime.datetime) or isinstance(date, datetime.date):
+        if isinstance(date, (datetime.date, datetime.datetime)):
             date = date.date()
             return date.isoformat()
         elif isinstance(date, str):
