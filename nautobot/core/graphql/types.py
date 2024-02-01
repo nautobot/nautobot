@@ -1,6 +1,7 @@
 import datetime
 
 from django.contrib.contenttypes.models import ContentType
+from graphql import GraphQLError
 from rest_framework.reverse import NoReverseMatch, reverse
 import graphene
 import graphene_django_optimizer as gql_optimizer
@@ -51,5 +52,5 @@ class DateType(graphene.Date):
             return date.isoformat()
         elif isinstance(date, str):
             return date
-        else:
-            raise AssertionError(f'Received not compatible date "{date!r}"')
+        elif not isinstance(date, datetime.date):
+            raise GraphQLError(f'Received not compatible date "{date!r}"')
