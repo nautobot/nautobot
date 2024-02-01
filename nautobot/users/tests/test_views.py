@@ -93,7 +93,7 @@ class PasswordUITest(TestCase):
                 )
 
 
-class AdancedProfileSettingsViewTest(TestCase):
+class AdvancedProfileSettingsViewTest(TestCase):
     """
     Tests for the user's advanced settings profile edit view
     """
