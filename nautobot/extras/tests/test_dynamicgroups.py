@@ -968,7 +968,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         )
         this_dg.validated_save()
 
-        this_dg.set_filter({"example_plugin_prefix_tenant_name": [a_tenant]})
+        this_dg.set_filter({"example_app_prefix_tenant_name": [a_tenant]})
         this_dg.validated_save()
 
     def test_unapplied_tags_can_be_added_to_dynamic_group_filters(self):

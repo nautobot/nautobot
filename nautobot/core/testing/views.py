@@ -83,7 +83,7 @@ class ModelViewTestCase(ModelTestCase):
         """
         Return the base format string for a view URL for the test.
 
-        Examples: "dcim:device_{}", "plugins:example_plugin:example_model_{}"
+        Examples: "dcim:device_{}", "plugins:example_app:example_model_{}"
 
         Override this if needed for testing of views that don't correspond directly to self.model,
         for example the DCIM "interface-connections" and "console-connections" view tests.
@@ -824,13 +824,13 @@ class ViewTestCases:
                 self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
 
         @skipIf(
-            "example_plugin" not in settings.PLUGINS,
-            "example_plugin not in settings.PLUGINS",
+            "example_app" not in settings.PLUGINS,
+            "example_app not in settings.PLUGINS",
         )
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        def test_list_view_plugin_banner(self):
+        def test_list_view_app_banner(self):
             """
-            If example plugin is installed, check if the plugin banner is rendered correctly in ObjectListView.
+            If example app is installed, check if the app banner is rendered correctly in ObjectListView.
             """
             # Add model-level permission
             obj_perm = users_models.ObjectPermission(name="Test permission", actions=["view"])
@@ -843,7 +843,7 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             response_body = response.content.decode(response.charset)
 
-            # Check plugin banner is rendered correctly
+            # Check app banner is rendered correctly
             self.assertIn(
                 f"<div>You are viewing a table of {self.model._meta.verbose_name_plural}</div>", response_body
             )
