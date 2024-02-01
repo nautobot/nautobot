@@ -47,10 +47,10 @@ class DateType(graphene.Date):
 
     @staticmethod
     def serialize(date):
-        if isinstance(date, datetime.datetime):
+        if isinstance(date, datetime.datetime) or isinstance(date, datetime.date):
             date = date.date()
             return date.isoformat()
         elif isinstance(date, str):
             return date
-        elif not isinstance(date, datetime.date):
+        else:
             raise GraphQLError(f'Received not compatible date "{date!r}"')
