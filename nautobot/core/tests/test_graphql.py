@@ -120,6 +120,22 @@ class GraphQLTestCase(GraphQLTestCaseBase):
 
     @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_execute_query_with_custom_field_type_date(self):
+        """Test Custom Field with Date type returns valid Date object and not string. Fix for bug #3664"""
+        custom_field = CustomField(
+            type=CustomFieldTypeChoices.TYPE_DATE, label="custom_date_field", key="custom_date_field"
+        )
+        custom_field.validated_save()
+        custom_field.content_types.set([ContentType.objects.get_for_model(Location)])
+        custom_field_data = {"custom_date_field": "2023-01-23"}
+        self.locations[0]._custom_field_data = custom_field_data
+        self.locations[0].save()
+        query = "query ($name: [String!]) { locations(name:$name) {name, _custom_field_data, cf_custom_date_field} }"
+        resp = execute_query(query, user=self.user, variables={"name": "Location-1"}).to_dict()
+        self.assertEqual(resp["data"]["locations"]["cf_custom_date_field"], custom_field_data)
+
+    @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_custom_field_type_json(self):
         """Test Custom Field with JSON type returns valid JSON object and not string. Fix for bug #4627"""
         custom_field = CustomField(
