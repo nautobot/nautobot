@@ -820,17 +820,17 @@ class InterfaceTypeChoices(ChoiceSet):
     TYPE_E1 = "e1"
     TYPE_T3 = "t3"
     TYPE_E3 = "e3"
-    TYPE_EIA232= "eia232"
+    TYPE_EIA232 = "eia232"
     TYPE_EIA422 = "eia422"
     TYPE_EIA423 = "eia423"
     TYPE_EIA485 = "eia485"
-    TYPE_EIA485_modbus = "modbus"
-    TYPE_EIA485_profibus = "profibus"
-    TYPE_fiber_profibus = "profibus-fiber"
+    TYPE_EIA485_MODBUS = "modbus"
+    TYPE_EIA485_PROFIBUS = "profibus"
+    TYPE_FIBER_PROFIBUS = "profibus-fiber"
     TYPE_HART_RS232 = "hart-rs232"
     TYPE_HART_RS422 = "hart-rs422"
     TYPE_HART_RS485 = "hart-rs485"
-    TYPE_HART_bell202 = "hart-bell202"
+    TYPE_HART_BELL202 = "hart-bell202"
 
     # ATM/DSL
     TYPE_XDSL = "xdsl"
@@ -1001,15 +1001,13 @@ class InterfaceTypeChoices(ChoiceSet):
                 (TYPE_EIA422, "EIA/RS422"),
                 (TYPE_EIA423, "EIA/RS423"),
                 (TYPE_EIA485, "EIA/RS485"),
-                (TYPE_EIA485_modbus, "MODbus EIA/RS485"),
-                (TYPE_EIA485_profibus, "Profibus over EIA/RS485 (IEC 61158)"),
-                (TYPE_fiber_profibus, "Profibus over fiber"),
+                (TYPE_EIA485_MODBUS, "MODbus EIA/RS485"),
+                (TYPE_EIA485_PROFIBUS, "Profibus over EIA/RS485 (IEC 61158)"),
+                (TYPE_FIBER_PROFIBUS, "Profibus over fiber"),
                 (TYPE_HART_RS232, "HART over RS232"),
                 (TYPE_HART_RS422, "HART over RS422"),
                 (TYPE_HART_RS485, "HART over RS485"),
-                (TYPE_HART_bell202, "HART over bell202"),
-
-
+                (TYPE_HART_BELL202, "HART over bell202"),
             ),
         ),
         ("ATM", ((TYPE_XDSL, "xDSL"),)),
