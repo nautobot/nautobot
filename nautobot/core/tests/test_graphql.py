@@ -1,6 +1,7 @@
+import datetime
 import random
 import types
-from unittest import skip
+from unittest import skip, TestCase as UnitTestTestCase
 import uuid
 
 from django.apps import apps
@@ -32,7 +33,7 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_relationships,
     extend_schema_type_tags,
 )
-from nautobot.core.graphql.types import OptimizedNautobotObjectType
+from nautobot.core.graphql.types import DateType, OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.testing import create_test_user, NautobotTestClient
 from nautobot.dcim.choices import ConsolePortTypeChoices, InterfaceModeChoices, InterfaceTypeChoices, PortTypeChoices
@@ -2384,3 +2385,17 @@ query {
         self.assertNotIn("error", str(result))
         expected_interfaces_first = {"ip_addresses": [{"primary_ip4_for": [{"id": str(self.device1.id)}]}]}
         self.assertEqual(result.data["device"]["interfaces"][0], expected_interfaces_first)
+
+
+class GraphQLTypeTestCase(UnitTestTestCase):
+    def test_date_type(self):
+        date_obj = datetime.date.today()
+        date_time_obj = datetime.datetime.today()
+        str_obj = date_obj.isoformat()
+        obj_not_accepted = False
+        self.assertEqual(DateType.serialize(date_obj), str_obj)
+        self.assertEqual(DateType.serialize(date_time_obj), str_obj)
+        self.assertEqual(DateType.serialize(str_obj), str_obj)
+        with self.assertRaises(GraphQLError) as cm:
+            DateType.serialize(obj_not_accepted)
+        self.assertIn("Received not compatible date", str(cm.exception))
