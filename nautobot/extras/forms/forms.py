@@ -590,20 +590,20 @@ class ExternalIntegrationForm(NautobotModelForm):
 
         HEADERS_HELP_TEXT = """
             Optional user-defined <a href="https://json.org/">JSON</a> data for this integration. Example:
-            <pre>{
+            <pre><code class="language-json">{
                 "Accept": "application/json",
                 "Content-Type": "application/json"
-            }</pre>
+            }</code></pre>
         """
         EXTRA_CONFIG_HELP_TEXT = """
             Optional user-defined <a href="https://json.org/">JSON</a> data for this integration. Example:
-            <pre>{
+            <pre><code class="language-json">{
                 "key": "value",
                 "key2": [
                     "value1",
                     "value2"
                 ]
-            }</pre>
+            }</code></pre>
         """
         help_texts = {
             "headers": inspect.cleandoc(HEADERS_HELP_TEXT),

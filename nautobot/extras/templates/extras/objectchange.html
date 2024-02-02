@@ -119,8 +119,8 @@
                             {% endif %}
                         </span>
                     {% else %}
-                        <pre style="background-color: #ffdce0;">{{ diff_removed|render_json }}</pre>
-                        <pre style="background-color: #cdffd8;">{{ diff_added|render_json }}</pre>
+                        <pre class="diff-removed">{{ diff_removed|render_json }}</pre>
+                        <pre class="diff-added">{{ diff_added|render_json }}</pre>
                     {% endif %}
                 </div>
             </div>
