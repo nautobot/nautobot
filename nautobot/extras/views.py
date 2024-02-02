@@ -1059,7 +1059,6 @@ class JobListView(generic.ObjectListView):
             queryset = queryset.filter(hidden=False)
         if "installed" not in request.GET:
             queryset = queryset.filter(installed=True)
-        queryset = queryset.prefetch_related("results")
         return queryset
 
     def extra_context(self):
