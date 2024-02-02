@@ -1,2 +1,2 @@
-Corrected `prefetch_related`/`select_related` calls to improve performance of `/api/ipam/prefixes/` and `/api/ipam/vrfs/` REST API endpoints.
-Corrected `select_related` calls to improve performance of `/ipam/namespaces/`, `/ipam/route-targets/`, and `/ipam/vrfs/` UI list views.
+Improved automatic query optimization when rendering object list views.
+Optimized database queries to improve performance of `/api/ipam/prefixes/` and `/api/ipam/vrfs/` REST API endpoints.

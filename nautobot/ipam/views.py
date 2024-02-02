@@ -80,7 +80,7 @@ class NamespaceUIViewSet(
     form_class = forms.NamespaceForm
     bulk_update_form_class = forms.NamespaceBulkEditForm
     filterset_class = filters.NamespaceFilterSet
-    queryset = Namespace.objects.select_related("location")
+    queryset = Namespace.objects.all()
     serializer_class = serializers.NamespaceSerializer
     table_class = tables.NamespaceTable
 
@@ -234,7 +234,7 @@ class NamespaceVRFsView(generic.ObjectView):
 
 
 class VRFListView(generic.ObjectListView):
-    queryset = VRF.objects.select_related("namespace", "tenant")
+    queryset = VRF.objects.all()
     filterset = filters.VRFFilterSet
     filterset_form = forms.VRFFilterForm
     table = tables.VRFTable
@@ -316,7 +316,7 @@ class VRFBulkDeleteView(generic.BulkDeleteView):
 
 
 class RouteTargetListView(generic.ObjectListView):
-    queryset = RouteTarget.objects.select_related("tenant")
+    queryset = RouteTarget.objects.all()
     filterset = filters.RouteTargetFilterSet
     filterset_form = forms.RouteTargetFilterForm
     table = tables.RouteTargetTable
@@ -424,19 +424,7 @@ class PrefixListView(generic.ObjectListView):
     filterset_form = forms.PrefixFilterForm
     table = tables.PrefixDetailTable
     template_name = "ipam/prefix_list.html"
-    queryset = Prefix.objects.select_related(
-        "parent",
-        "location",
-        "namespace",
-        "tenant",
-        "vlan",
-        "rir",
-        "role",
-        "status",
-    ).prefetch_related(
-        "ip_addresses",
-        "children",
-    )
+    queryset = Prefix.objects.select_related("parent").prefetch_related("children")
     use_new_ui = True
 
 
@@ -726,7 +714,7 @@ class PrefixBulkDeleteView(generic.BulkDeleteView):
 
 
 class IPAddressListView(generic.ObjectListView):
-    queryset = IPAddress.objects.select_related("tenant", "status", "role", "parent__namespace").annotate(
+    queryset = IPAddress.objects.annotate(
         interface_count=Count("interfaces"),
         interface_parent_count=(Count("interfaces__device", distinct=True)),
         vm_interface_count=Count("vm_interfaces"),
@@ -1210,7 +1198,7 @@ class IPAddressToInterfaceUIViewSet(view_mixins.ObjectBulkCreateViewMixin):
 
 
 class VLANGroupListView(generic.ObjectListView):
-    queryset = VLANGroup.objects.select_related("location").annotate(vlan_count=count_related(VLAN, "vlan_group"))
+    queryset = VLANGroup.objects.annotate(vlan_count=count_related(VLAN, "vlan_group"))
     filterset = filters.VLANGroupFilterSet
     filterset_form = forms.VLANGroupFilterForm
     table = tables.VLANGroupTable
@@ -1282,7 +1270,7 @@ class VLANGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class VLANListView(generic.ObjectListView):
-    queryset = VLAN.objects.select_related("location", "vlan_group", "tenant", "role", "status")
+    queryset = VLAN.objects.prefetch_related("prefixes")
     filterset = filters.VLANFilterSet
     filterset_form = forms.VLANFilterForm
     table = tables.VLANDetailTable
