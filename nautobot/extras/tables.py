@@ -1143,7 +1143,9 @@ class WebhookTable(BaseTable):
 
 class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
-    contact_type = tables.TemplateColumn(CONTACT_OR_TEAM_ICON, verbose_name="Contact Type")
+    contact_type = tables.TemplateColumn(
+        CONTACT_OR_TEAM_ICON, verbose_name="Type", attrs={"td": {"style": "width:20px;"}}
+    )
     name = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Name")
     contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team.phone", verbose_name="Phone")
     contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team.email", verbose_name="E-Mail")
