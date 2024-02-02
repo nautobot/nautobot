@@ -2081,9 +2081,9 @@ class GraphQLTypeTestCase(UnitTestTestCase):
         date_time_obj = datetime.datetime.today()
         str_obj = date_obj.isoformat()
         obj_not_accepted = False
-        self.assertEqual(DateType.serialize(None, date_obj), str_obj)
-        self.assertEqual(DateType.serialize(None, date_time_obj), str_obj)
-        self.assertEqual(DateType.serialize(None, str_obj), str_obj)
+        self.assertEqual(DateType.serialize(date_obj), str_obj)
+        self.assertEqual(DateType.serialize(date_time_obj), str_obj)
+        self.assertEqual(DateType.serialize(str_obj), str_obj)
         with self.assertRaises(GraphQLError) as cm:
-            DateType.serialize(None, obj_not_accepted)
+            DateType.serialize(obj_not_accepted)
         self.assertIn("Received not compatible date", str(cm.exception))
