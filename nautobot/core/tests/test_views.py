@@ -338,6 +338,11 @@ class MetricsViewTestCase(TestCase):
         page_content = response.content.decode(response.charset)
         return text_string_to_metric_families(page_content)
 
+    @override_settings(METRICS_AUTHENTICATED=True)
+    def query_and_parse_metrics_authenticated(self):
+        response = self.client.get(reverse("metrics"))
+        self.assertHttpStatus(response, 403, msg="/metrics should return a 403 HTTP status code.")
+
     def test_metrics_extensibility(self):
         """Assert that the example metric from the example plugin shows up _exactly_ when the plugin is enabled."""
         test_metric_name = "nautobot_example_metric_count"
