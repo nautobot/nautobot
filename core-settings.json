@@ -1,84 +1,99 @@
 {
     "type": "object",
     "properties": {
-        "version": {
+        "VERSION": {
             "type": "string",
             "default": "v2.2"
         },
-        "enable_installation_metrics": {
+        "CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED": {
+            "type": "boolean",
+            "default": false
+        },
+        "EXEMPT_VIEW_PERMISSIONS": {
+            "type": "array",
+            "default": []
+        },
+        "INSTALLATION_METRICS_ENABLED": {
             "type": "boolean",
             "default": true
         },
-        "enable_maintainenace_mode": {
+        "MAINTENANCE_MODE": {
             "type": "boolean",
             "default": false
         },
-        "enable_metrics": {
+        "METRICS_ENABLED": {
             "type": "boolean",
             "default": false
         },
-        "napalm_env": {
-            "type": "object",
-            "properties": {
-                "napalm_args": {
-                    "type": "object",
-                    "default": {}
-                },
-                "napalm_password": {
-                    "type": "string",
-                    "default": ""
-                },
-                "napalm_timeout": {
-                    "type": "integer",
-                    "default": ""
-                },
-                "napalm_username": {
-                    "type": "string",
-                    "default": ""
-                }
-            }
-        },
-        "plugins": {
-            "type": "array",
-            "default": []
-        },
-        "plugins_config": {
+        "NAPALM_ARGS": {
             "type": "object",
             "default": {}
         },
-        "external_auth_default_groups": {
+        "NAPALM_PASSWORD": {
+            "type": "string",
+            "default": ""
+        },
+        "NAPALM_TIMEOUT": {
+            "type": "integer",
+            "default": ""
+        },
+        "NAPALM_USERNAME": {
+            "type": "string",
+            "default": ""
+        },
+        "PLUGINS": {
             "type": "array",
             "default": []
         },
-        "external_auth_default_permissions": {
+        "PLUGINS_CONFIG": {
             "type": "object",
             "default": {}
         },
-        "remote_auth_auto_create_user": {
+        "EXTERNAL_AUTH_DEFAULT_GROUPS": {
+            "type": "array",
+            "default": []
+        },
+        "EXTERNAL_AUTH_DEFAULT_PERMISSIONS": {
+            "type": "object",
+            "default": {}
+        },
+        "REMOTE_AUTH_AUTO_CREATE_USER": {
             "type": "boolean",
             "default": false
         },
-        "remote_auth_header": {
+        "REMOTE_AUTH_HEADER": {
             "type": "string",
             "default": "HTTP_REMOTE_USER"
         },
-        "social_auth_postgres_jsonfield": {
+        "SOCIAL_AUTH_POSTGRES_JSONFIELD": {
             "type": "boolean",
             "default": false
         },
-        "social_auth_backend_prefix": {
+        "SOCIAL_AUTH_BACKEND_PREFIX": {
             "type": "string",
             "default": "social_core.backends"
         },
-        "storage_backend": {
+        "STORAGE_BACKEND": {
             "type": "string",
             "default": "null"
         },
-        "storage_config": {
+        "STORAGE_CONFIG": {
             "type": "object",
             "default": {}
         },
-        "test_use_factories": {
+        "TEST_RUNNER": {
+            "type": "string",
+            "default": "nautobot.core.tests.runner.NautobotTestRunner"
+        },
+        "TEST_FACTORY_SEED": {
+            "type": "string",
+            "default": "null"
+        },
+        "TEST_PERFORMANCE_BASELINE_FILE": {
+            "type": "string",
+            "default": "nautobot/core/tests/performance_baselines.yml"
+        },
+        "PROMETHEUS_EXPORT_MIGRATIONS": {
             "type": "boolean",
             "default": false
         }
