@@ -44,6 +44,9 @@ Default: `True`
 
 Generates a binary `.prof` file for each profiled request, which can be downloaded.
 
+!!! note
+    Django Silk has garbage collection mechanisms for the data it stores in the database; however, it does not automatically clean up the generated files. Although these files are usually very small, their management should be a consideration for administrators.
+
 ---
 
 ### SILKY_PYTHON_PROFILER_EXTENDED_FILE_NAME
