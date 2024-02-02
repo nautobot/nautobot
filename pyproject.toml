@@ -73,6 +73,8 @@ django-redis = "~5.3.0"
 # RQ (Redis Queueing) for background handling of webhooks, jobs, etc.
 # NOTE: django-rq 2.8 is available but since we don't use this any more ourselves we don't care about updating it.
 django-rq = "~2.8.1"
+# Django silk for request profiling
+django-silk = "~5.1.0"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.13.2", optional = true}
 # Advanced HTML tables

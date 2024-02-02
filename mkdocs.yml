@@ -141,6 +141,7 @@ nav:
           - Nautobot Server: "administration/nautobot-server.md"
           - Nautobot Shell: "administration/nautobot-shell.md"
           - Permissions: "administration/permissions.md"
+          - Request Profiling: "administration/request-profiling.md"
           - Replicating Nautobot: "administration/replicating-nautobot.md"
           - Task Queues: "administration/celery-queues.md"
       - User Guides:
