@@ -277,13 +277,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Device table
         device_table = DeviceTable(
-            data=instance.devices.select_related(
-                "tenant",
-                "location",
-                "rack",
-                "device_type",
-                "role",
-            ).prefetch_related("primary_ip"),
+            data=instance.devices.all(),
             orderable=False,
             extra_columns=[
                 (
@@ -303,11 +297,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Virtual machine table
         virtual_machine_table = VirtualMachineTable(
-            data=instance.virtual_machines.select_related(
-                "cluster",
-                "role",
-                "tenant",
-            ).prefetch_related("primary_ip"),
+            data=instance.virtual_machines.all(),
             orderable=False,
             extra_columns=[
                 (
