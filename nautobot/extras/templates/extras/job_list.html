@@ -1,6 +1,32 @@
 {% extends 'generic/object_list.html' %}
 {% load helpers %}
 
+{% block extra_styles %}
+<style>
+    .accordion-toggle {
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    tr a.job_run .btn {
+        margin: -4px 10px 0 0;
+    }
+
+    tr.disabled {
+        color: #7d7f7c;
+    }
+
+    tr.disabled a.job_run {
+        cursor: not-allowed;
+        opacity: 0.65;
+    }
+
+    tr.disabled a.job_run .btn {
+        cursor: not-allowed;
+    }
+</style>
+{% endblock %}
+
 {% block buttons %}
 <button type="button" class="btn btn-default" id="accordion-toggle-all">Collapse All</button>
 {% endblock %}
