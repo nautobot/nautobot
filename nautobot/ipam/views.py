@@ -424,7 +424,7 @@ class PrefixListView(generic.ObjectListView):
     filterset_form = forms.PrefixFilterForm
     table = tables.PrefixDetailTable
     template_name = "ipam/prefix_list.html"
-    queryset = Prefix.objects.select_related("parent").prefetch_related("children")
+    queryset = Prefix.objects.all()
     use_new_ui = True
 
 
@@ -1270,7 +1270,7 @@ class VLANGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class VLANListView(generic.ObjectListView):
-    queryset = VLAN.objects.prefetch_related("prefixes")
+    queryset = VLAN.objects.all()
     filterset = filters.VLANFilterSet
     filterset_form = forms.VLANFilterForm
     table = tables.VLANDetailTable

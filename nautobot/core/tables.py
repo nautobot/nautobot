@@ -4,6 +4,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.fields.related import ForeignKey, RelatedField
+from django.db.models.fields.reverse_related import ManyToOneRel
 from django.urls import reverse
 from django.utils.html import escape, format_html, format_html_join
 from django.utils.safestring import mark_safe
@@ -122,8 +123,8 @@ class BaseTable(django_tables2.Table):
                             # Follow ForeignKeys to the related model via select_related
                             select_path.append(field_name)
                             model = field.remote_field.model
-                        elif isinstance(field, RelatedField) and not select_path:
-                            # Follow M2M relations to the related model via prefetch_related
+                        elif isinstance(field, (RelatedField, ManyToOneRel)) and not select_path:
+                            # Follow O2M and M2M relations to the related model via prefetch_related
                             prefetch_path.append(field_name)
                             model = field.remote_field.model
                         elif isinstance(field, GenericForeignKey) and not select_path:

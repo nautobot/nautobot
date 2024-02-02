@@ -360,9 +360,7 @@ class RackGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class RackListView(generic.ObjectListView):
-    queryset = Rack.objects.prefetch_related("devices__device_type").annotate(
-        device_count=count_related(Device, "rack")
-    )
+    queryset = Rack.objects.annotate(device_count=count_related(Device, "rack"))
     filterset = filters.RackFilterSet
     filterset_form = forms.RackFilterForm
     table = tables.RackDetailTable
