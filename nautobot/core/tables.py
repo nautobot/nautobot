@@ -8,7 +8,8 @@ from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
 import django_tables2
 from django_tables2.data import TableQuerysetData
-from django_tables2.utils import Accessor
+from django_tables2.utils import Accessor, OrderBy, OrderByTuple
+from tree_queries.models import TreeNode
 
 from nautobot.core.templatetags import helpers
 from nautobot.core.utils import lookup
@@ -141,6 +142,38 @@ class BaseTable(django_tables2.Table):
     @property
     def visible_columns(self):
         return [name for name in self.sequence if self.columns[name].visible]
+
+    @property
+    def order_by(self):
+        return self._order_by
+
+    @order_by.setter
+    def order_by(self, value):
+        """
+        Order the rows of the table based on columns.
+
+        Arguments:
+            value: iterable or comma separated string of order by aliases.
+        """
+        # NOTE: Copy paste code from parent order_by; since calling `super().order_by` raises an Exception
+        # collapse empty values to ()
+        order_by = () if not value else value
+        # accept string
+        order_by = order_by.split(",") if isinstance(order_by, str) else order_by
+        valid = []
+
+        # everything's been converted to a iterable, accept iterable!
+        for alias in order_by:
+            name = OrderBy(alias).bare
+            if name in self.columns and self.columns[name].orderable:
+                valid.append(alias)
+        self._order_by = OrderByTuple(valid)
+
+        model = getattr(self.Meta, "model", None)
+        if model and issubclass(model, TreeNode):
+            self.data.data = self.data.data.extra(order_by=self.order_by)
+        else:
+            self.data.order_by(self._order_by)
 
 
 #

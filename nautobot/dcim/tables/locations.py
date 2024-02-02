@@ -50,7 +50,7 @@ class LocationTypeTable(BaseTable):
 
 class LocationTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
     location_type = tables.Column(linkify=True)
     parent = tables.Column(linkify=True)
     tenant = TenantColumn()
