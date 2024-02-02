@@ -64,6 +64,8 @@ django-jinja = "~2.10.2"
 django-prometheus = "~2.3.1"
 # Redis cache for Django used for distributed locking
 django-redis = "~5.3.0"
+# Django silk for request profiling
+django-silk = "~5.1.0"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.13.2", optional = true}
 # Advanced HTML tables
