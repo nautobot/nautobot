@@ -12,9 +12,7 @@ from .models import Tenant, TenantGroup
 
 TREE_LINK = """
 {% load helpers %}
-{% for i in record.tree_depth|as_range %}
-    <i class="mdi mdi-circle-small"></i>
-{% endfor %}
+{% tree_hierarchy_ui_representation record.tree_depth table.order_by %}
 <a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
 """
 
