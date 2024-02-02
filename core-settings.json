@@ -1,0 +1,86 @@
+{
+    "type": "object",
+    "properties": {
+        "version": {
+            "type": "string",
+            "default": "v2.2"
+        },
+        "enable_installation_metrics": {
+            "type": "boolean",
+            "default": true
+        },
+        "enable_maintainenace_mode": {
+            "type": "boolean",
+            "default": false
+        },
+        "enable_metrics": {
+            "type": "boolean",
+            "default": false
+        },
+        "napalm_env": {
+            "type": "object",
+            "properties": {
+                "napalm_args": {
+                    "type": "object",
+                    "default": {}
+                },
+                "napalm_password": {
+                    "type": "string",
+                    "default": ""
+                },
+                "napalm_timeout": {
+                    "type": "integer",
+                    "default": ""
+                },
+                "napalm_username": {
+                    "type": "string",
+                    "default": ""
+                }
+            }
+        },
+        "plugins": {
+            "type": "array",
+            "default": []
+        },
+        "plugins_config": {
+            "type": "object",
+            "default": {}
+        },
+        "external_auth_default_groups": {
+            "type": "array",
+            "default": []
+        },
+        "external_auth_default_permissions": {
+            "type": "object",
+            "default": {}
+        },
+        "remote_auth_auto_create_user": {
+            "type": "boolean",
+            "default": false
+        },
+        "remote_auth_header": {
+            "type": "string",
+            "default": "HTTP_REMOTE_USER"
+        },
+        "social_auth_postgres_jsonfield": {
+            "type": "boolean",
+            "default": false
+        },
+        "social_auth_backend_prefix": {
+            "type": "string",
+            "default": "social_core.backends"
+        },
+        "storage_backend": {
+            "type": "string",
+            "default": "null"
+        },
+        "storage_config": {
+            "type": "object",
+            "default": {}
+        },
+        "test_use_factories": {
+            "type": "boolean",
+            "default": false
+        }
+    }
+}
