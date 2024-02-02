@@ -91,3 +91,47 @@ class PasswordUITest(TestCase):
                     "Remotely authenticated user credentials cannot be changed within Nautobot.",
                     str(response.content),
                 )
+
+
+class AdvancedProfileSettingsViewTest(TestCase):
+    """
+    Tests for the user's advanced settings profile edit view
+    """
+
+    @override_settings(ALLOW_REQUEST_PROFILING=True)
+    def test_enable_request_profiling(self):
+        """
+        Check that a user can enable request profling on their session
+        """
+        # Simulate form submission with checkbox checked
+        response = self.client.post(reverse("user:advanced_settings_edit"), {"request_profiling": True})
+        self.assertEqual(response.status_code, 200)
+        # Check if the session has the correct value
+        self.assertTrue(self.client.session["silk_record_requests"])
+
+    @override_settings(ALLOW_REQUEST_PROFILING=True)
+    def test_disable_request_profiling(self):
+        """
+        Check that a user can disable request profling on their session
+        """
+        # Simulate form submission with checkbox unchecked
+        response = self.client.post(reverse("user:advanced_settings_edit"), {"request_profiling": False})
+        self.assertEqual(response.status_code, 200)
+        # Check if the session has the correct value
+        self.assertFalse(self.client.session["silk_record_requests"])
+
+    @override_settings(ALLOW_REQUEST_PROFILING=False)
+    def test_disable_allow_request_profiling_rejects_user_enable(self):
+        """
+        Check that a user cannot enable request profiling if ALLOW_REQUEST_PROFILING=False
+        """
+        # Simulate form submission with checkbox unchecked
+        response = self.client.post(reverse("user:advanced_settings_edit"), {"request_profiling": True})
+
+        # Check if the form is in the response context and has errors
+        self.assertTrue("form" in response.context)
+        form = response.context["form"]
+        self.assertFalse(form.cleaned_data["request_profiling"])
+
+        # Check if the session has the correct value
+        self.assertFalse(self.client.session.get("silk_record_requests"))
