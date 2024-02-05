@@ -113,6 +113,7 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
                 field_info = {
                     "name": cf.add_prefix_to_cf_key(),
                     "required": cf_form_field.required,
+                    "foreign_key": False,
                     "label": cf_form_field.label,
                     "help_text": cf_form_field.help_text,
                 }
@@ -131,6 +132,7 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
         field_info = {
             "name": field_name,
             "required": field.required,
+            "foreign_key": False,
             "label": field.label,
             "help_text": field.help_text,
         }
@@ -148,12 +150,14 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
             elif isinstance(field.child_relation, ContentTypeField):
                 field_info["format"] = mark_safe('<code>"app_label.model,app_label.model"</code>')  # noqa: S308
             else:
-                field_info["format"] = mark_safe('<code>"UUID,UUID"</code>')  # noqa: S308
+                field_info["foreign_key"] = field.child_relation.queryset.model._meta.label_lower
+                field_info["format"] = mark_safe('<code>"UUID,UUID"</code> or combination of fields')  # noqa: S308
         elif isinstance(field, serializers.RelatedField):
             if isinstance(field, ContentTypeField):
                 field_info["format"] = mark_safe("<code>app_label.model</code>")  # noqa: S308
             else:
-                field_info["format"] = mark_safe("<code>UUID</code>")  # noqa: S308
+                field_info["foreign_key"] = field.queryset.model._meta.label_lower
+                field_info["format"] = mark_safe("<code>UUID</code> or combination of fields")  # noqa: S308
         elif isinstance(field, (serializers.ListField, serializers.MultipleChoiceField)):
             field_info["format"] = mark_safe('<code>"value,value"</code>')  # noqa: S308
         elif isinstance(field, (serializers.DictField, serializers.JSONField)):

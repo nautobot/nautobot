@@ -101,14 +101,16 @@ def add_button(url):
     }
 
 
+# 3.0 TODO: remove as unused.
 @register.inclusion_tag("buttons/import.html")
 def import_button(url):
+    """Deprecated - use csv_import_button instead."""
     return {
         "import_url": url,
     }
 
 
-@register.inclusion_tag("buttons/import.html")
+@register.inclusion_tag("buttons/csv_import.html")
 def csv_import_button(content_type):
     try:
         import_url = reverse(

@@ -867,8 +867,8 @@ class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
         return Response(object_counts)
 
 
-class CSVFieldsForContentTypeAPIView(NautobotAPIVersionMixin, APIView):
-    """Get information about CSV fields for a given ContentType."""
+class CSVImportFieldsForContentTypeAPIView(NautobotAPIVersionMixin, APIView):
+    """Get information about CSV import fields for a given ContentType."""
 
     permission_classes = [IsAuthenticated]
 
