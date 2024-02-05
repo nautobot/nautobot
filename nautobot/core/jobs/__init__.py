@@ -225,27 +225,29 @@ class ImportObjectsFromCSV(Job):
                 stream=csv_bytes,
                 parser_context={"request": None, "serializer_class": serializer_class},
             )
+            self.logger.info("Processing %d rows of data", len(data))
             validation_failed = False
-            update_interval = len(data) // 10 if len(data) >= 10 else 1
             for row, entry in enumerate(data, start=1):
                 serializer = serializer_class(data=entry, context={"request": None})
                 if serializer.is_valid():
-                    new_objs.append(serializer.save())
+                    new_obj = serializer.save()
+                    self.logger.info('Row %d: created record "%s"', row, new_obj, extra={"object": new_obj})
+                    new_objs.append(new_obj)
                 else:
                     validation_failed = True
                     for field, err in serializer.errors.items():
                         self.logger.error("Row %d: `%s`: `%s`", row, field, err[0])
-                if row % update_interval == 0:
-                    self.logger.info("Processed %d row(s) of %d total", row, len(data))
         except drf_exceptions.ParseError as exc:
             validation_failed = True
             self.logger.error("`%s`", exc)
 
         if new_objs:
-            self.logger.info("Created %d %s objects", len(new_objs), content_type)
+            self.logger.info("Created %d %s object(s) from %d row(s) of data", len(new_objs), content_type, len(data))
+        else:
+            self.logger.warning("No %s objects were created", content_type)
 
         if validation_failed:
-            raise RunJobTaskFailed("Import not fully successful, see logs")
+            raise RunJobTaskFailed("CSV import not fully successful, see logs")
 
 
 jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun, ImportObjectsFromCSV]
