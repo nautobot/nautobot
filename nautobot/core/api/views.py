@@ -880,6 +880,7 @@ class CSVImportFieldsForContentTypeAPIView(NautobotAPIVersionMixin, APIView):
         fields = get_csv_form_fields_from_serializer_class(serializer_class)
         return Response({"fields": fields})
 
+
 #
 # Lookup Expr
 #

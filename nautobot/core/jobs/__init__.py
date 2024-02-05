@@ -204,7 +204,7 @@ class ImportObjectsFromCSV(Job):
         soft_time_limit = 1800
         time_limit = 2000
 
-    def run(self,  *, content_type, csv_data=None, csv_file=None):
+    def run(self, *, content_type, csv_data=None, csv_file=None):
         if not self.user.has_perm(f"{content_type.app_label}.add_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to create %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have create permissions on the requested content-type")
