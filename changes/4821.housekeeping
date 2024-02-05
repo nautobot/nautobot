@@ -1,2 +1,2 @@
-Updated `MarkupSafe` dependency to 2.1.4.
-Updated `ruff` dependency to 0.1.14.
+Updated `MarkupSafe` dependency to 2.1.5.
+Updated `ruff` development dependency to 0.1.15.
