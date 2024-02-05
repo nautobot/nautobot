@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import itertools
+import json
 import logging
 import platform
 
@@ -940,3 +941,16 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
         else:
             data = bound_field.as_widget()
         return Response(data)
+
+
+class SettingsJSONFileView(NautobotAPIVersionMixin, APIView):
+    """View that exposes the JSON Schema of the settings.json file in the REST API"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        file_path = "settings.json"
+        with open(file_path, "r") as jsonfile:
+            json_data = json.load(jsonfile)
+        return Response(json_data)
