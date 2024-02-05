@@ -1,0 +1,2 @@
+Improved automatic query optimization when rendering object list views.
+Optimized database queries to improve performance of `/api/ipam/prefixes/` and `/api/ipam/vrfs/` REST API endpoints.
