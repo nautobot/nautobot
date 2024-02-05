@@ -1,0 +1,4 @@
+Updated `MarkupSafe` dependency to 2.1.5.
+Updated `mysqlclient` dependency to 2.2.3.
+Updated `python-slugify` dependency to 8.0.3.
+Updated `pyuwsgi` dependency to 2.0.23.
