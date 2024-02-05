@@ -1,0 +1,33 @@
+{% extends 'users/base.html' %}
+{% load form_helpers %}
+
+{% block title %}Advanced Settings{% endblock %}
+
+{% block usercontent %}
+    <form action="." method="post" class="form form-horizontal col-md-10 col-md-offset-1">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="panel panel-danger">
+                <div class="panel-heading"><strong>Errors</strong></div>
+                <div class="panel-body">
+                    {{ form.non_field_errors }}
+                </div>
+            </div>
+        {% endif %}
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>Advanced Settings</strong></div>
+            <div class="panel-body">
+                {% render_field form.request_profiling %}
+                {% if request.user.is_superuser %}
+                    <div class="col-md-9 col-md-offset-3">
+                        <a href="{% url 'silk:summary' %}">Silk Request Profiling Dashboard</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="text-right">
+            <button type="submit" name="_update" class="btn btn-primary">Update</button>
+            <a href="{% url 'user:profile' %}" class="btn btn-default">Cancel</a>
+        </div>
+    </form>
+{% endblock %}
