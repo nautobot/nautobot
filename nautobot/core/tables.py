@@ -155,24 +155,27 @@ class BaseTable(django_tables2.Table):
         Arguments:
             value: iterable or comma separated string of order by aliases.
         """
-        # NOTE: Copy paste code from parent order_by; since calling `super().order_by` raises an Exception
         # collapse empty values to ()
         order_by = () if not value else value
         # accept string
         order_by = order_by.split(",") if isinstance(order_by, str) else order_by
         valid = []
 
-        # everything's been converted to a iterable, accept iterable!
         for alias in order_by:
             name = OrderBy(alias).bare
             if name in self.columns and self.columns[name].orderable:
                 valid.append(alias)
         self._order_by = OrderByTuple(valid)
 
+        # The above block of code is copied from super().order_by
+        # due to limitations in directly calling parent class methods within a property setter.
+        # See Python bug report: https://bugs.python.org/issue14965
         model = getattr(self.Meta, "model", None)
         if model and issubclass(model, TreeNode):
+            # Use the TreeNode model's approach to sorting
             self.data.data = self.data.data.extra(order_by=self.order_by)
         else:
+            # Otherwise, use the default sorting method
             self.data.order_by(self._order_by)
 
 
