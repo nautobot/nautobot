@@ -95,12 +95,20 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
     def test_render_json(self):
         self.assertEqual(
-            helpers.render_json({"first": [1, 2, 3]}), '{\n    "first": [\n        1,\n        2,\n        3\n    ]\n}'
+            helpers.render_json({"syntax": "highlight"}),
+            '<code class="language-json">{\n    &quot;syntax&quot;: &quot;highlight&quot;\n}</code>',
         )
-        self.assertEqual('"I am UTF-8! 😀"', helpers.render_json("I am UTF-8! 😀"))
+        self.assertEqual(
+            helpers.render_json({"first": [1, 2, 3]}, False),
+            '{\n    "first": [\n        1,\n        2,\n        3\n    ]\n}',
+        )
+        self.assertEqual('"I am UTF-8! 😀"', helpers.render_json("I am UTF-8! 😀", False))
 
     def test_render_yaml(self):
-        self.assertEqual("utf8:\n- 😀😀\n- 😀\n", helpers.render_yaml({"utf8": ["😀😀", "😀"]}))
+        self.assertEqual(
+            helpers.render_yaml({"syntax": "highlight"}), '<code class="language-yaml">syntax: highlight\n</code>'
+        )
+        self.assertEqual("utf8:\n- 😀😀\n- 😀\n", helpers.render_yaml({"utf8": ["😀😀", "😀"]}, False))
 
     def test_meta(self):
         location = models.Location.objects.first()

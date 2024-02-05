@@ -646,10 +646,10 @@ CONSTANCE_CONFIG = {
             "Extend or override default Platform.network_driver translations provided by "
             '<a href="https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/">netutils</a>. '
             "Enter a dictionary in JSON format, for example:\n"
-            "<pre>{\n"
+            '<pre><code class="language-json">{\n'
             '    "netmiko": {"my_network_driver": "cisco_ios"},\n'
             '    "pyats": {"my_network_driver": "iosxe"} \n'
-            "}</pre>",
+            "}</code></pre>",
         ),
         # Use custom field type defined above
         field_type="optional_json_field",

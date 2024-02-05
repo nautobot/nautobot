@@ -210,6 +210,9 @@ If value is None this renders `<span class="text-muted">&mdash;</span>`
 
 Render a dictionary as formatted JSON.
 
++/- 2.2.0
+    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a `<code class="language-json>` HTML tag to flag it for syntax highlighting by highlight.js.
+
 ```django
 {{ data | render_json }}
 ```
@@ -299,6 +302,9 @@ The set of permitted HTML tags is defined in `nautobot.core.constants.HTML_ALLOW
 ### render_yaml
 
 Render a dictionary as formatted YAML.
+
++/- 2.2.0
+    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a `<code class="language-yaml>` HTML tag to flag it for syntax highlighting by highlight.js.
 
 ```django
 {{ data | render_yaml }}
