@@ -181,20 +181,32 @@ def render_markdown(value):
 
 @library.filter()
 @register.filter()
-def render_json(value):
+def render_json(value, syntax_highlight=True):
     """
     Render a dictionary as formatted JSON.
+
+    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a
+    `<code class="language-json>` HTML tag to flag it for syntax highlighting by highlight.js.
     """
-    return json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
+    rendered_json = json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
+    if syntax_highlight:
+        return format_html('<code class="language-json">{}</code>', rendered_json)
+    return rendered_json
 
 
 @library.filter()
 @register.filter()
-def render_yaml(value):
+def render_yaml(value, syntax_highlight=True):
     """
     Render a dictionary as formatted YAML.
+
+    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a
+    `<code class="language-yaml>` HTML tag to flag it for syntax highlighting by highlight.js.
     """
-    return yaml.dump(json.loads(json.dumps(value, ensure_ascii=False)), allow_unicode=True)
+    rendered_yaml = yaml.dump(json.loads(json.dumps(value, ensure_ascii=False)), allow_unicode=True)
+    if syntax_highlight:
+        return format_html('<code class="language-yaml">{}</code>', rendered_yaml)
+    return rendered_yaml
 
 
 @library.filter()
