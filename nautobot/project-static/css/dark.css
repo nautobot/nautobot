@@ -124,6 +124,21 @@ html[data-theme="dark"] .nav-tabs>li.active>a:hover {
   background-color: rgb(217, 217, 217) !important;      /* Blends active tab with background */
 }
 
+/* Preserve matching background for active navbar links */
+html[data-theme="dark"] .navbar ul li.active a {
+  background-color: transparent !important;
+}
+
+/* Preserve blue background for active navbar buttons */
+html[data-theme="dark"] .navbar ul li.active a.btn {
+  background-color: #0938e1 !important;
+}
+
+/* Change navbar link background color when hover */
+html[data-theme="dark"] .nav-dropdown-menu>li>a:hover {
+  background-color: rgb(196, 204, 210) !important;
+}
+
 /* Preserve matching background in iGraphQL text boxes */
 /* Also fixes bug preventing selected text from being distinguised as selected */
 html[data-theme="dark"] .CodeMirror pre {
@@ -231,4 +246,12 @@ html[data-theme="dark"] .table-headings>tbody>tr {
 /* Make panel being dragged opaque */
 html[data-theme="dark"] .dragging {
   opacity: 0.5;
+}
+
+/* Make Navbar dropdown menu items respond to dark mode correctly */
+html[data-theme="dark"] .nav-dropdown-menu, html[data-theme="dark"] .swagger-ui .servers>label select html[data-theme="dark"] .select2-dropdown {
+  background-color: rgb(222, 222, 222) !important;
+}
+html[data-theme="dark"] .nav-dropdown-menu>li>a {
+  color: rgb(51, 51, 51) !important;
 }

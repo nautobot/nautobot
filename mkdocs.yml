@@ -310,6 +310,7 @@ nav:
         - Permissions: "user-guide/administration/guides/permissions.md"
         - Prometheus Metrics: "user-guide/administration/guides/prometheus-metrics.md"
         - Replicating Nautobot: "user-guide/administration/guides/replicating-nautobot.md"
+        - Request Profiling: "user-guide/administration/guides/request-profiling.md"
         - Django Storages with S3: "user-guide/administration/guides/s3-django-storage.md"
         - Task Queues: "user-guide/administration/guides/celery-queues.md"
     - Feature Guides:
