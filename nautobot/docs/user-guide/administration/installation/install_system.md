@@ -76,9 +76,9 @@ Please follow the steps for your selected database backend below.
     GRANT
     postgres=# \connect nautobot
     You are now connected to database "nautobot" as user "postgres".
-    postgres=# GRANT CREATE ON SCHEMA public TO nautobot;
+    nautobot=# GRANT CREATE ON SCHEMA public TO nautobot;
     GRANT
-    postgres=# \q
+    nautobot=# \q
     ```
 
     #### Verify PostgreSQL Service Status
@@ -294,7 +294,11 @@ Please follow the steps for your selected database backend below.
     CREATE ROLE
     postgres=# GRANT ALL PRIVILEGES ON DATABASE nautobot TO nautobot;
     GRANT
-    postgres=# \q
+    postgres=# \connect nautobot
+    You are now connected to database "nautobot" as user "postgres".
+    nautobot=# GRANT CREATE ON SCHEMA public TO nautobot;
+    GRANT
+    nautobot=# \q
     ```
 
     ### Verify PostgreSQL Service Status
