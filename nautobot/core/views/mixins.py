@@ -541,6 +541,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
             else:
                 form_class = getattr(self, "form_class", None)
         elif self.action == "bulk_create":
+            # 3.0 TODO: remove this, it's handled now by the ImportObjectsFromCSV system Job.
             required_field_names = [
                 field["name"]
                 for field in get_csv_form_fields_from_serializer_class(self.serializer_class)
@@ -897,9 +898,12 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         return Response(data)
 
 
+# 3.0 TODO: remove, replaced by ImportObjectsFromCSV system Job
 class ObjectBulkCreateViewMixin(NautobotViewSetMixin):
     """
     UI mixin to bulk create model instances.
+
+    Deprecated - use ImportObjectsFromCSV system Job instead.
     """
 
     bulk_create_active_tab = "csv-data"

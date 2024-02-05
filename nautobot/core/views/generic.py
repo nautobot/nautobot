@@ -808,9 +808,12 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
 
+# 3.0 TODO: remove this class
 class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
     Import objects in bulk (CSV format).
+
+    Deprecated - replaced by ImportObjectsFromCSV system Job.
 
     queryset: Base queryset for the model
     table: The django-tables2 Table used to render the list of imported objects
