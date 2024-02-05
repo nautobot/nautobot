@@ -195,6 +195,9 @@ WantedBy=multi-user.target
 The Celery Beat scheduler enables the periodic execution of and scheduling of background tasks. It is required to take
 advantage of the [job scheduling and approval](../../platform-functionality/jobs/job-scheduling-and-approvals.md) features.
 
+!!! warning
+    It's important that the [`TIME_ZONE`](../configuration/optional-settings.md#time_zone) setting on your Nautobot servers and Celery Beat server match to prevent scheduled jobs from running in the wrong time zone.
+
 To establish the `systemd` unit file for the Celery Beat scheduler, copy and paste the following into `/etc/systemd/system/nautobot-scheduler.service`:
 
 ```ini
