@@ -46,13 +46,6 @@
     {% block buttons %}
         {% plugin_buttons object %}
         {% block extra_buttons %}{% endblock extra_buttons %}
-        {% if perms.extras.add_contactassociation and is_contact_associatable_model %}
-            <div class="btn-group">
-                <a href="{% url 'extras:object_contact_add' %}?return_url={{request.path}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" type="button" class="btn btn-info">
-                    <span class="mdi mdi-account" aria-hidden="true"></span> Add Contact </span>
-                </a>
-            </div>
-        {% endif %}
         {% if object.clone_fields and user|can_add:object %}
             {% clone_button object %}
         {% endif %}
@@ -179,7 +172,9 @@
                                         <!-- Insert table config button here -->
                                     </div>
                                 </div>
-                                {% render_table associated_contacts_table 'inc/table.html' %}
+                                <div class="table-responsive">
+                                    {% render_table associated_contacts_table 'inc/table.html' %}
+                                </div>
                                 <div class="panel-footer noprint">
                                     {% if perms.extras.change_contactassociation %}
                                         <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{request.path}}" class="btn btn-warning btn-xs">
