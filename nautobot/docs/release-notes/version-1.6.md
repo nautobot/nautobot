@@ -72,6 +72,21 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.11 (2024-02-05)
+
+### Security
+
+- [#5151](https://github.com/nautobot/nautobot/issues/5151) - Updated `pillow` dependency to 10.2.0 due to CVE-2023-50447.
+
+### Added
+
+- [#5169](https://github.com/nautobot/nautobot/issues/5169) - Added support for user session profiling via django-silk.
+
+### Fixed
+
+- [#3664](https://github.com/nautobot/nautobot/issues/3664) - Fixed AssertionError when querying Date type custom fields in GraphQL.
+- [#5162](https://github.com/nautobot/nautobot/issues/5162) - Fixed incorrect rack group variable in device template.
+
 ## v1.6.10 (2024-01-22)
 
 ### Security
