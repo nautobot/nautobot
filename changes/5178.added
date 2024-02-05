@@ -1,0 +1,2 @@
+Added Navbar dropdown arrow rotation on open/close.
+Added behavior of resetting navbar state when the "home" link is clicked.

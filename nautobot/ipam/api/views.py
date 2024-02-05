@@ -53,13 +53,8 @@ class NamespaceViewSet(NautobotModelViewSet):
 
 
 class VRFViewSet(NautobotModelViewSet):
-    queryset = (
-        VRF.objects.select_related("tenant").prefetch_related("import_targets", "export_targets", "tags")
-        # FIXME(jathan): See if we need to revise the counts for prefixes/ips, here?
-        # .annotate(
-        #     ipaddress_count=count_related(IPAddress, "vrf"),
-        #     prefix_count=count_related(Prefix, "vrf"),
-        # )
+    queryset = VRF.objects.select_related("namespace", "tenant").prefetch_related(
+        "devices", "virtual_machines", "prefixes", "import_targets", "export_targets", "tags"
     )
     serializer_class = serializers.VRFSerializer
     filterset_class = filters.VRFFilterSet
@@ -94,12 +89,14 @@ class RIRViewSet(NautobotModelViewSet):
 
 class PrefixViewSet(NautobotModelViewSet):
     queryset = Prefix.objects.select_related(
+        "location",
+        "namespace",
+        "parent",
+        "rir",
         "role",
         "status",
-        "location",
         "tenant",
         "vlan",
-        "namespace",
     ).prefetch_related("tags")
     serializer_class = serializers.PrefixSerializer
     filterset_class = filters.PrefixFilterSet
@@ -274,10 +271,10 @@ class PrefixViewSet(NautobotModelViewSet):
 
 class IPAddressViewSet(NautobotModelViewSet):
     queryset = IPAddress.objects.select_related(
-        "parent",
         "nat_inside",
-        "status",
+        "parent",
         "role",
+        "status",
         "tenant",
     ).prefetch_related("tags", "nat_outside_list")
     serializer_class = serializers.IPAddressSerializer
