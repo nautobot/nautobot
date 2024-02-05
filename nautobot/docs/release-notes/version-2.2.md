@@ -21,3 +21,13 @@ Software versions must be associated to a platform. Software images must be asso
 #### VLAN Location field enhancement ([#4412](https://github.com/nautobot/nautobot/issues/4412))
 
 VLAN model has undergone modifications related to the `location` field. The primary change involves replacing the `location` field(ForeignKey), with a new `locations` field(ManyToManyField). To ensure backwards compatibility with pre-2.2 versions, the original location field has been retained as a `@property` field. Users can continue to interact with the location field in a manner consistent with previous versions.
+
+#### Syntax highlighting ([#5098](https://github.com/nautobot/nautobot/issues/5098))
+
+Language syntax highlighting for GraphQL, JSON, XML and YAML is now supported in the UI via JavaScript. To enable the feature, a code snippet has to be wrapped in the following HTML structure:
+
+```html
+<pre><code class="language-{graphql,json,xml,yaml}">...</code></pre>
+```
+
+[`render_json`](../user-guide/platform-functionality/template-filters.md#render_json) and [`render_yaml`](../user-guide/platform-functionality/template-filters.md#render_yaml) template filters default to this new behavior with an optional opt-out `syntax_highlight=False` arg.

@@ -364,7 +364,9 @@
                         <div class="pull-right noprint">
                             <!-- Insert table config button here -->
                         </div>
-                        {% render_table associated_contacts_table 'inc/table.html' %}
+                        <div class="table-responsive">
+                            {% render_table associated_contacts_table 'inc/table.html' %}
+                        </div>
                         <div class="panel-footer noprint">
                             {% if perms.extras.change_contactassociation %}
                                 <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{request.path}}" class="btn btn-warning btn-xs">

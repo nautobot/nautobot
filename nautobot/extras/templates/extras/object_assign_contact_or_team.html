@@ -22,6 +22,12 @@
     </div>
 {% endblock %}
 
+{% block buttons %}
+    <button type="submit" name="_create" class="btn btn-primary">Assign</button>
+    <button type="submit" name="_addanother" class="btn btn-primary">Assign and Add Another</button>
+    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+{% endblock %}
+
 {% block javascript %}
 <script>
     var contact = document.getElementById("id_contact");

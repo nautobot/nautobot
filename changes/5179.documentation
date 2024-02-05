@@ -1,0 +1,2 @@
+Updated all documentation referencing the `example_plugin` to refer to the (renamed) `example_app`.
+Replaced some "plugin" references in the documentation with "App" or "Nautobot App" as appropriate.
