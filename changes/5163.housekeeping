@@ -1,4 +1,0 @@
-Added `--parallel` flag to `invoke unittest` in CI.
-Fixed code coverage calculation when running `invoke unittest --parallel`.
-Changed `invoke unittest` and `invoke integration-test` to automatically report code coverage on successful completion.
-Changed test code coverage analysis to exclude the test code itself from the analysis.

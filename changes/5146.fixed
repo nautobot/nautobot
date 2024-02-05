@@ -1,4 +1,0 @@
-Changed nav menu items to collapse in a smooth animated way, rather than jumping 100% open immediately and covering menu items below. Previously opened menu items now collapse smoothly as well.
-Changed nav menu so that menu expansion now pushes other menus below it downward rather than covering them (z axis).
-Changed nav menu headers to not lose their color after a link was clicked.
-Added nav menu state (expanded or closed) and scroll position to local storage, allowing it to be maintained on page refresh, link clicked, or page reload.

@@ -1,1 +1,0 @@
-Fixed AssertionError when querying Date type custom fields in GraphQL.
