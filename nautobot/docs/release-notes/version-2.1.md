@@ -98,8 +98,17 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#5146](https://github.com/nautobot/nautobot/issues/5146) - Added nav menu state (expanded or closed) and scroll position to local storage, allowing it to be maintained on page refresh, link clicked, or page reload.
 - [#5198](https://github.com/nautobot/nautobot/issues/5198) - Fixed error in device and rack dropdowns when attempting to add an Interface to an InterfaceRedundancyGroup.
 
+### Dependencies
+
+- [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `MarkupSafe` dependency to 2.1.5.
+- [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `mysqlclient` dependency to 2.2.3.
+- [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `python-slugify` dependency to 8.0.3.
+- [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `pyuwsgi` dependency to 2.0.23.
+
 ### Housekeeping
 
+- [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `mkdocs-section-index` documentation dependency to 0.3.8.
+- [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `ruff` development dependency to 0.1.15.
 - [#5130](https://github.com/nautobot/nautobot/issues/5130) - Added experimental `--parallel` option to `invoke unittest`.
 - [#5163](https://github.com/nautobot/nautobot/issues/5163) - Added `--parallel` flag to `invoke unittest` in CI.
 - [#5163](https://github.com/nautobot/nautobot/issues/5163) - Fixed code coverage calculation when running `invoke unittest --parallel`.
