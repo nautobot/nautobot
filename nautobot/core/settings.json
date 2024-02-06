@@ -1,0 +1,544 @@
+{
+    "type": "object",
+    "properties": {
+        "ADMINS": {
+            "type": "array",
+            "default": []
+        },
+        "ALLOWED_HOSTS": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "default": []
+        },
+        "BANNER_BOTTOM": {
+            "type": "string",
+            "default": ""
+        },
+        "BANNER_LOGIN": {
+            "type": "string",
+            "default": ""
+        },
+        "BANNER_TOP": {
+            "type": "string",
+            "default": ""
+        },
+        "BRANDING_FILEPATHS": {
+            "type": "object",
+            "properties": {
+                "logo": {
+                    "type": "string",
+                    "default": ""
+                },
+                "favicon": {
+                    "type": "string",
+                    "default": ""
+                },
+                "icon_16": {
+                    "type": "string",
+                    "default": ""
+                },
+                "icon_32": {
+                    "type": "string",
+                    "default": ""
+                },
+                "icon_180": {
+                    "type": "string",
+                    "default": ""
+                },
+                "icon_192": {
+                    "type": "string",
+                    "default": ""
+                },
+                "icon_mask": {
+                    "type": "string",
+                    "default": ""
+                },
+                "header_bullet": {
+                    "type": "string",
+                    "default": ""
+                },
+                "nav_bullet": {
+                    "type": "string",
+                    "default": ""
+                }
+            }
+        },
+        "BRANDING_PREPENDED_FILENAME": {
+            "type": "string",
+            "default": "nautobot_"
+        },
+        "BRANDING_TITLE": {
+            "type": "string",
+            "default": "Nautobot"
+        },
+        "BRANDING_URLS": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "default": "https://github.com/nautobot/nautobot"
+                },
+                "docs": {
+                    "type": "string",
+                    "default": "static/docs/index.html"
+                },
+                "help": {
+                    "type": "string",
+                    "default": "https://github.com/nautobot/nautobot/wiki"
+                }
+            }
+        },
+        "CACHES": {
+            "type": "object",
+            "properties": {
+                "default": {
+                    "type": "object",
+                    "properties": {
+                        "BACKEND": {
+                            "type": "string",
+                            "default": "[django_redis.cache|django_prometheus.cache.backends.redis].RedisCache"
+                        },
+                        "LOCATION": {
+                            "type": "string",
+                            "default": "redis://localhost:6379/1"
+                        },
+                        "TIMEOUT": {
+                            "type": "integer",
+                            "default": 300
+                        },
+                        "OPTIONS": {
+                            "type": "object",
+                            "properties": {
+                                "CLIENT_CLASS": {
+                                    "type": "string",
+                                    "default": "django_redis.client.DefaultClient"
+                                },
+                                "PASSWORD": {
+                                    "type": "string",
+                                    "default": ""
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "CELERY_BROKER_TRANSPORT_OPTIONS": {
+            "type": "object",
+            "default": {}
+        },
+        "CELERY_BROKER_URL": {
+            "type": "string",
+            "default": "redis://localhost:6379/0"
+        },
+        "CELERY_TASK_DEFAULT_QUEUE": {
+            "type": "string",
+            "default": "default"
+        },
+        "CELERY_TASK_SOFT_TIME_LIMIT": {
+            "type": "integer",
+            "default": 300
+        },
+        "CELERY_TASK_TIME_LIMIT": {
+            "type": "integer",
+            "default": 600
+        },
+        "CELERY_WORKER_PROMETHEUS_PORTS": {
+            "type": "array",
+            "items": {
+                "type": "integer"
+            },
+            "default": []
+        },
+        "CELERY_WORKER_REDIRECT_STDOUTS": {
+            "type": "boolean",
+            "default": true
+        },
+        "CELERY_WORKER_REDIRECT_STDOUTS_LEVEL": {
+            "type": "string",
+            "default": "WARNING"
+        },
+        "CHANGELOG_RETENTION": {
+            "type": "integer",
+            "default": 90
+        },
+        "CONFIG_CONTEXT_DYNAMIC_GROUPS_ENALBED": {
+            "type": "boolean",
+            "default": false
+        },
+        "CONTENT_TYPE_CACHE_TIMEOUT": {
+            "type": "integer",
+            "default": 0
+        },
+        "CORS_ALLOW_ALL_ORIGINS": {
+            "type": "boolean",
+            "default": false
+        },
+        "CORS_ALLOWED_ORIGINS": {
+            "type": "array",
+            "default": []
+        },
+        "CORS_ALLOWED_ORIGIN_REGEXES": {
+            "type": "array",
+            "default": []
+        },
+        "CSRF_TRUSTED_ORIGINS": {
+            "type": "array",
+            "default": []
+        },
+        "DATABASES": {
+            "type": "object",
+            "properties": {
+                "default": {
+                    "type": "object",
+                    "properties": {
+                        "NAME": {
+                            "type": "string",
+                            "default": "nautobot"
+                        },
+                        "USER": {
+                            "type": "string",
+                            "default": ""
+                        },
+                        "PASSWORD": {
+                            "type": "string",
+                            "default": ""
+                        },
+                        "HOST": {
+                            "type": "string",
+                            "default": "localhost"
+                        },
+                        "PORT": {
+                            "type": "string",
+                            "default": ""
+                        },
+                        "CONN_MAX_AGE": {
+                            "type": "integer",
+                            "default": 300
+                        },
+                        "ENGINE": {
+                            "type": "string",
+                            "default": "[django|django_prometheus].db.backends.[postgresql|mysql]"
+                        }
+                    }
+                }
+            }
+        },
+        "DATE_FORMAT": {
+            "type": "string",
+            "default": "N j, Y"
+        },
+        "DATETIME_FORMAT": {
+            "type": "string",
+            "default": "N j, Y g:i a"
+        },
+        "DEBUG": {
+            "type": "boolean",
+            "default": false
+        },
+        "DEPLOYMENT_ID": {
+            "type": "string"
+        },
+        "DISABLE_PREFIX_LIST_HIERARCHY": {
+            "type": "boolean",
+            "default": false
+        },
+        "DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT": {
+            "type": "integer",
+            "default": 0
+        },
+        "ENFORCE_GLOBAL_UNIQUE": {
+            "type": "boolean",
+            "default": false
+        },
+        "EXEMPT_VIEW_PERMISSIONS": {
+            "type": "array",
+            "default": []
+        },
+        "EXTERNAL_AUTH_DEFAULT_GROUPS": {
+            "type": "array",
+            "default": []
+        },
+        "EXTERNAL_AUTH_DEFAULT_PERMISSIONS": {
+            "type": "object",
+            "default": {}
+        },
+        "FORCE_SCRIPT_NAME": {
+            "type": "string",
+            "default": ""
+        },
+        "GIT_ROOT": {
+            "type": "string",
+            "default": "~/.nautobot/git"
+        },
+        "GRAPHQL_COMPUTED_FIELD_PREFIX": {
+            "type": "string",
+            "default": "cpf"
+        },
+        "GRAPHQL_CUSTOM_FIELD_PREFIX": {
+            "type": "string",
+            "default": "cf"
+        },
+        "GRAPHQL_RELATIONSHIP_PREFIX": {
+            "type": "string",
+            "default": "rel"
+        },
+        "HTTP_PROXIES": {
+            "type": "object",
+            "default": null
+        },
+        "INSTALLATION_METRICS_ENABLED": {
+            "type": "boolean",
+            "default": true
+        },
+        "INTERNAL_IPS": {
+            "type": "array",
+            "default": [
+                "127.0.0.1",
+                "::1"
+            ]
+        },
+        "JOB_CREATE_FILE_MAX_SIZE": {
+            "type": "integer",
+            "default": 10485760
+        },
+        "JOB_FILE_IO_STORAGE": {
+            "type": "string",
+            "default": "db_file_storage.storage.DatabaseFileStorage"
+        },
+        "JOBS_ROOT": {
+            "type": "string",
+            "default": "~/.nautobot/jobs"
+        },
+        "LOCATION_NAME_AS_NATURAL_KEY": {
+            "type": "boolean",
+            "default": false
+        },
+        "LOGGING": {
+            "type": "object",
+            "properties": {
+                "version": {
+                    "type": "integer",
+                    "default": 1
+                },
+                "disable_existing_loggers": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "formatters": {
+                    "type": "object",
+                    "default": {
+                        "normal": {
+                            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
+                            "datefmt": "%H:%M:%S"
+                        },
+                        "verbose": {
+                            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s",
+                            "datefmt": "%H:%M:%S"
+                        }
+                    },
+                    "additioinalProperties": true
+                },
+                "handlers": {
+                    "type": "object",
+                    "default": {
+                        "normal_console": {
+                            "level": "INFO",
+                            "class": "logging.StreamHandler",
+                            "formatter": "normal"
+                        },
+                        "verbose_console": {
+                            "level": "DEBUG",
+                            "class": "logging.StreamHandler",
+                            "formatter": "verbose"
+                        }
+                    },
+                    "additioinalProperties": true
+                },
+                "loggers": {
+                    "type": "object",
+                    "default": {
+                        "django": {
+                            "handlers": [
+                                "normal_console"
+                            ],
+                            "level": "INFO"
+                        },
+                        "nautobot": {
+                            "handlers": [
+                                "normal_console"
+                            ],
+                            "level": "INFO"
+                        }
+                    },
+                    "additioinalProperties": true
+                },
+                "additioinalProperties": true
+            },
+            "additioinalProperties": true
+        },
+        "MAINTENANCE_MODE": {
+            "type": "boolean",
+            "default": false
+        },
+        "MAX_PAGE_SIZE": {
+            "type": "integer",
+            "default": 1000
+        },
+        "MEDIA_ROOT": {
+            "type": "string",
+            "default": "~/.nautobot/media"
+        },
+        "METRICS_ENABLED": {
+            "type": "boolean",
+            "default": false
+        },
+        "NAPALM_ARGS": {
+            "type": "object",
+            "default": {}
+        },
+        "NAPALM_PASSWORD": {
+            "type": "string",
+            "default": ""
+        },
+        "NAPALM_TIMEOUT": {
+            "type": "integer",
+            "default": 30
+        },
+        "NAPALM_USERNAME": {
+            "type": "string",
+            "default": ""
+        },
+        "NAUTOBOT_LOG_DEPRECATION_WARNINGS": {
+            "type": "boolean",
+            "default": false
+        },
+        "NAUTOBOT_ROOT": {
+            "type": "string",
+            "default": "~/.nautobot/"
+        },
+        "NETWORK_DRIVERS": {
+            "type": "object",
+            "default": {}
+        },
+        "PAGINATE_COUNT": {
+            "type": "integer",
+            "default": 50
+        },
+        "PER_PAGE_DEFAULTS": {
+            "type": "array",
+            "default": [
+                25,
+                50,
+                100,
+                250,
+                500,
+                1000
+            ]
+        },
+        "PLUGINS": {
+            "type": "array",
+            "default": []
+        },
+        "PLUGINS_CONFIG": {
+            "type": "object",
+            "default": {}
+        },
+        "PREFER_IPV4": {
+            "type": "boolean",
+            "default": false
+        },
+        "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT": {
+            "type": "integer",
+            "default": 22
+        },
+        "RACK_ELEVATION_DEFAULT_UNIT_WIDTH": {
+            "type": "integer",
+            "default": 220
+        },
+        "REDIS_LOCK_TIMEOUT": {
+            "type": "integer",
+            "default": 600
+        },
+        "RELEASE_CHECK_TIMEOUT": {
+            "type": "integer",
+            "default": 86400
+        },
+        "RELEASE_CHECK_URL": {
+            "type": "string",
+            "default": ""
+        },
+        "SANITIZER_PATTERNS": {},
+        "SECRET_KEY": {
+            "type": "string",
+            "default": ""
+        },
+        "SESSION_COOKIE_AGE": {
+            "type": "integer",
+            "default": 1209600
+        },
+        "SESSION_ENGINE": {
+            "type": "string",
+            "default": "django.contrib.sessions.backends.db"
+        },
+        "SESSION_EXPIRE_AT_BROWSER_CLOSE": {
+            "type": "boolean",
+            "default": false
+        },
+        "SESSION_FILE_PATH": {
+            "type": "string",
+            "default": ""
+        },
+        "SHORT_DATE_FORMAT": {
+            "type": "string",
+            "default": "Y-m-d"
+        },
+        "SHORT_DATETIME_FORMAT": {
+            "type": "string",
+            "default": "Y-m-d H:i"
+        },
+        "STATIC_ROOT": {
+            "type": "string",
+            "default": "~/.nautobot/static"
+        },
+        "STORAGE_BACKEND": {
+            "type": "string",
+            "default": ""
+        },
+        "STORAGE_CONFIG": {
+            "type": "object",
+            "default": {}
+        },
+        "STRICT_FILTERING": {
+            "type": "boolean",
+            "default": true
+        },
+        "SUPPORT_MESSAGE": {
+            "type": "string",
+            "default": ""
+        },
+        "TEST_FACTORY_SEED": {
+            "type": "string",
+            "default": ""
+        },
+        "TEST_PERFORMANCE_BASELINE_FILE": {
+            "type": "string",
+            "default": "nautobot/core/tests/performance_baselines.yml"
+        },
+        "TEST_USE_FACTORIES": {
+            "type": "boolean",
+            "default": false
+        },
+        "TIME_FORMAT": {
+            "type": "string",
+            "default": "g:i a"
+        },
+        "TIME_ZONE": {
+            "type": "string",
+            "default": "UTC"
+        },
+        "UI_RACK_VIEW_TRUNCATE_FUNCTION": {}
+    }
+}
