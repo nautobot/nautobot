@@ -47,9 +47,6 @@ class NamespaceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 
 class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    ipaddress_count = serializers.IntegerField(read_only=True)
-    prefix_count = serializers.IntegerField(read_only=True)
-
     class Meta:
         model = VRF
         fields = "__all__"

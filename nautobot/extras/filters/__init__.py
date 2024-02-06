@@ -523,6 +523,12 @@ class ExportTemplateFilterSet(BaseFilterSet):
 
 
 class ExternalIntegrationFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "remote_url": "icontains",
+        },
+    )
     has_secrets_group = RelatedMembershipBooleanFilter(
         field_name="secrets_group",
         label="Has secrets group",
