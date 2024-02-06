@@ -179,7 +179,7 @@ class BaseTable(django_tables2.Table):
             # This ensures consistent behavior regardless of the input type.
             if isinstance(self.data.data, list):
                 queryset = model.objects.filter(pk__in=[instance.pk for instance in self.data.data])
-            self.data.data = queryset.extra(order_by=self.order_by)
+            self.data.data = queryset.extra(order_by=self._order_by)
         else:
             # Otherwise, use the default sorting method
             self.data.order_by(self._order_by)
