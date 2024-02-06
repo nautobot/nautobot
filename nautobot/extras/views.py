@@ -1253,6 +1253,7 @@ class JobListView(generic.ObjectListView):
     filterset = filters.JobFilterSet
     filterset_form = forms.JobFilterForm
     action_buttons = ()
+    non_filter_params = "view"
     template_name = "extras/job_list.html"
 
     def alter_queryset(self, request):
@@ -1270,8 +1271,19 @@ class JobListView(generic.ObjectListView):
         return queryset
 
     def extra_context(self):
+        # Determine user's preferred view
+        if self.request.GET.get("view") in ["list", "tiles"]:
+            view = self.request.GET.get("view")
+            if self.request.user.is_authenticated:
+                self.request.user.set_config("extras.joblistview.view", view, commit=True)
+        elif self.request.user.is_authenticated:
+            view = self.request.user.get_config("extras.joblistview.view", "list")
+        else:
+            view = "list"
+
         return {
-            "table_inc_template": "extras/inc/job_table.html",
+            "table_inc_template": "extras/inc/job_tiles.html" if view == "tiles" else "extras/inc/job_table.html",
+            "view": view,
         }
 
 
