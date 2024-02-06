@@ -1,5 +1,0 @@
-Changed navbar dropdown link behavior to turn orange when active/clicked; state is saved.
-Changed navbar dropdown link hover style.
-Changed navbar state save to use session storage.
-Changed navbar dropdown to use chevron icon instead of carets.
-Aligned navbar dropdown icons to the right.

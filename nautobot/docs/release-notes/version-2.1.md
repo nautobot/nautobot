@@ -72,6 +72,66 @@ Support for versions of PostgreSQL prior to 12.0 has been removed as these versi
 Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specific permissions will now always be hidden from users lacking those permissions. Additionally, users not logged in will now be automatically redirected to the login page.
 
 <!-- towncrier release notes start -->
+## v2.1.3 (2024-02-05)
+
+### Security
+
+- [#5151](https://github.com/nautobot/nautobot/issues/5151) - Updated `pillow` dependency to 10.2.0 due to CVE-2023-50447.
+
+### Added
+
+- [#4981](https://github.com/nautobot/nautobot/issues/4981) - Add serial types to InterfaceTypeChoices.
+- [#5012](https://github.com/nautobot/nautobot/issues/5012) - Added database indexes to the ObjectChange model to improve performance when filtering by `user_name`, `changed_object`, or `related_object`, and also by `changed_object` in combination with `user` or `user_name`.
+- [#5169](https://github.com/nautobot/nautobot/issues/5169) - Added support for user session profiling via django-silk.
+- [#5178](https://github.com/nautobot/nautobot/issues/5178) - Added Navbar dropdown arrow rotation on open/close.
+- [#5178](https://github.com/nautobot/nautobot/issues/5178) - Added behavior of resetting navbar state when the "home" link is clicked.
+
+### Changed
+
+- [#5149](https://github.com/nautobot/nautobot/issues/5149) - Updated the Job List to show Job Hook Receiver and Job Button Receiver Jobs, which were previously being hidden from view.
+- [#5178](https://github.com/nautobot/nautobot/issues/5178) - Changed navbar dropdown link behavior to turn orange when active/clicked; state is saved.
+- [#5178](https://github.com/nautobot/nautobot/issues/5178) - Changed navbar dropdown link hover style.
+- [#5178](https://github.com/nautobot/nautobot/issues/5178) - Changed navbar state save to use session storage.
+- [#5178](https://github.com/nautobot/nautobot/issues/5178) - Changed navbar dropdown to use chevron icon instead of carets.
+- [#5178](https://github.com/nautobot/nautobot/issues/5178) - Aligned navbar dropdown icons to the right.
+
+### Removed
+
+- [#5178](https://github.com/nautobot/nautobot/issues/5178) - Removed unneeded tooltip of dropdown title.
+- [#5178](https://github.com/nautobot/nautobot/issues/5178) - Removed navbar dropdown links underlining.
+
+### Fixed
+
+- [#3664](https://github.com/nautobot/nautobot/issues/3664) - Fixed AssertionError when querying Date type custom fields in GraphQL.
+- [#4898](https://github.com/nautobot/nautobot/issues/4898) - Improved automatic query optimization when rendering object list views.
+- [#4898](https://github.com/nautobot/nautobot/issues/4898) - Optimized database queries to improve performance of `/api/ipam/prefixes/` and `/api/ipam/vrfs/` REST API endpoints.
+- [#5067](https://github.com/nautobot/nautobot/issues/5067) - Fixed missing search filter on ExternalIntegration.
+- [#5146](https://github.com/nautobot/nautobot/issues/5146) - Changed nav menu items to collapse in a smooth animated way, rather than jumping 100% open immediately and covering menu items below. Previously opened menu items now collapse smoothly as well.
+- [#5146](https://github.com/nautobot/nautobot/issues/5146) - Changed nav menu so that menu expansion now pushes other menus below it downward rather than covering them (z axis).
+- [#5146](https://github.com/nautobot/nautobot/issues/5146) - Changed nav menu headers to not lose their color after a link was clicked.
+- [#5146](https://github.com/nautobot/nautobot/issues/5146) - Added nav menu state (expanded or closed) and scroll position to local storage, allowing it to be maintained on page refresh, link clicked, or page reload.
+- [#5174](https://github.com/nautobot/nautobot/issues/5174) - Added missing postgresql public schema permission grant command.
+- [#5178](https://github.com/nautobot/nautobot/issues/5178) - Fixed navbar dropdown links alignment and spacing.
+- [#5198](https://github.com/nautobot/nautobot/issues/5198) - Fixed error in device and rack dropdowns when attempting to add an Interface to an InterfaceRedundancyGroup.
+
+### Dependencies
+
+- [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `MarkupSafe` dependency to 2.1.5.
+- [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `mysqlclient` dependency to 2.2.3.
+- [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `python-slugify` dependency to 8.0.3.
+- [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `pyuwsgi` dependency to 2.0.23.
+
+### Housekeeping
+
+- [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `mkdocs-section-index` documentation dependency to 0.3.8.
+- [#4821](https://github.com/nautobot/nautobot/issues/4821) - Updated `ruff` development dependency to 0.1.15.
+- [#5130](https://github.com/nautobot/nautobot/issues/5130) - Added experimental `--parallel` option to `invoke unittest`.
+- [#5163](https://github.com/nautobot/nautobot/issues/5163) - Added `--parallel` flag to `invoke unittest` in CI.
+- [#5163](https://github.com/nautobot/nautobot/issues/5163) - Fixed code coverage calculation when running `invoke unittest --parallel`.
+- [#5163](https://github.com/nautobot/nautobot/issues/5163) - Changed `invoke unittest` and `invoke integration-test` to automatically report code coverage on successful completion.
+- [#5163](https://github.com/nautobot/nautobot/issues/5163) - Changed test code coverage analysis to exclude the test code itself from the analysis.
+- [#5206](https://github.com/nautobot/nautobot/issues/5206) - Added q filter test for ExternalIntegration.
+
 ## v2.1.2 (2024-01-22)
 
 ### Security
