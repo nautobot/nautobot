@@ -210,6 +210,9 @@ If value is None this renders `<span class="text-muted">&mdash;</span>`
 
 Render a dictionary as formatted JSON.
 
++/- 2.2.0
+    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a `<code class="language-json>` HTML tag to flag it for syntax highlighting by highlight.js.
+
 ```django
 {{ data | render_json }}
 ```
@@ -300,6 +303,9 @@ The set of permitted HTML tags is defined in `nautobot.core.constants.HTML_ALLOW
 
 Render a dictionary as formatted YAML.
 
++/- 2.2.0
+    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a `<code class="language-yaml>` HTML tag to flag it for syntax highlighting by highlight.js.
+
 ```django
 {{ data | render_yaml }}
 ```
@@ -317,8 +323,8 @@ Get a value from Django settings (if specified) or Constance configuration (othe
 
     ```django
     # Django Template
-    {{ "SAMPLE_VARIABLE" | settings_or_config:"example_plugin" }}
-    {{ "lowercase_example" | settings_or_config:"example_plugin" }}
+    {{ "SAMPLE_VARIABLE" | settings_or_config:"example_app" }}
+    {{ "lowercase_example" | settings_or_config:"example_app" }}
     ```
 
 ### slugify

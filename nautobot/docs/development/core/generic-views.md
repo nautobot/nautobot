@@ -19,9 +19,9 @@ Once you define a view by subclassing any of the above generic classes, you must
 
 If you do not need `ObjectEditView` and/or `BulkImportView` for your particular model, as an alternative you can simply update your `ObjectListView` subclass to overload the action buttons.  For example, `action_buttons = ("add",)` or if none are required `action_buttons = ()`.
 
-To demonstrate these concepts we can look at the `example_plugin` included in the Nautobot repository.
+To demonstrate these concepts we can look at the `example_app` included in the Nautobot repository.
 
-The example plugin has a simple model called `ExampleModel`:
+The Example App has a simple model called `ExampleModel`:
 
 ```python
 class ExampleModel(OrganizationalModel):

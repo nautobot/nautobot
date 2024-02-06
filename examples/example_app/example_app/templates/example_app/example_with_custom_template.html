@@ -1,0 +1,15 @@
+{% extends 'extras/job.html' %}
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+        This is custom content injected by this specific App-provided Job
+        </div>
+    </div>
+    {{ block.super }}
+{% endblock content %}
+{% block javascript %}
+    {{ block.super }}
+    <script>
+        console.log("This job from the example_app is injecting custom JavaScript");
+    </script>
+{% endblock javascript %}
