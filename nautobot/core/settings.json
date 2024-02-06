@@ -470,7 +470,10 @@
             "type": "string",
             "default": ""
         },
-        "SANITIZER_PATTERNS": {},
+        "SANITIZER_PATTERNS": {
+            "type": "array",
+            "default": []
+        },
         "SECRET_KEY": {
             "type": "string",
             "default": ""
@@ -539,6 +542,9 @@
             "type": "string",
             "default": "UTC"
         },
-        "UI_RACK_VIEW_TRUNCATE_FUNCTION": {}
+        "UI_RACK_VIEW_TRUNCATE_FUNCTION": {
+            "type": "callable",
+            "default": "UI_RACK_VIEW_TRUNCATE_FUNCTION"
+        }
     }
 }

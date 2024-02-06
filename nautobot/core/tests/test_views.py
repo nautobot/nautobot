@@ -1,4 +1,7 @@
+import json
+import os
 import re
+import types
 from unittest import mock
 import urllib.parse
 
@@ -9,6 +12,7 @@ from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
 
+from nautobot.core import settings
 from nautobot.core.testing import TestCase
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.mixins import GetReturnURLMixin
@@ -450,3 +454,21 @@ class DBFileStorageViewTestCase(TestCase):
         url = f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_2.file.name}"
         response = self.client.get(url)
         self.assertHttpStatus(response, 404)
+
+class SettingsJSONSchemaViewTestCase(TestCase):
+    def test_json_schema_contains_valid_setting_variables(self):
+        TYPE_MAPPING = {
+            "string": [str],
+            "object": [dict, None],
+            "integer": [int],
+            "boolean": [bool],
+            "array": [list, tuple],
+            "callable": [types.FunctionType],
+        }
+        file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/settings.json"
+        with open(file_path, "r") as jsonfile:
+            json_data = json.load(jsonfile)
+        for key, value in json_data["properties"].items():
+            settings_value = getattr(settings, f"{key}", None)
+            if settings_value:
+                self.assertIn(type(settings_value), TYPE_MAPPING[value["type"]])

@@ -952,7 +952,6 @@ class SettingsJSONSchemaView(NautobotAPIVersionMixin, APIView):
     @extend_schema(exclude=True)
     def get(self, request):
         file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/settings.json"
-        print(file_path)
         with open(file_path, "r") as jsonfile:
             json_data = json.load(jsonfile)
         return Response(json_data)
