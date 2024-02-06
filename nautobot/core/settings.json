@@ -1,8 +1,19 @@
 {
     "type": "object",
+    "definitions": {
+        "callable": {
+            "type": "string"
+        },
+        "regex": {
+            "type": "string"
+        }
+    },
     "properties": {
         "ADMINS": {
             "type": "array",
+            "items": {
+                "type": "string"
+            },
             "default": []
         },
         "ALLOWED_HOSTS": {
@@ -98,7 +109,11 @@
                     "properties": {
                         "BACKEND": {
                             "type": "string",
-                            "default": "[django_redis.cache|django_prometheus.cache.backends.redis].RedisCache"
+                            "default": "django_redis.cache.RedisCache",
+                            "enum": [
+                                "django_redis.cache.RedisCache",
+                                "django_prometheus.cache.backends.redis.RedisCache"
+                            ]
                         },
                         "LOCATION": {
                             "type": "string",
@@ -178,14 +193,23 @@
         },
         "CORS_ALLOWED_ORIGINS": {
             "type": "array",
+            "items": {
+                "type": "string"
+            },
             "default": []
         },
         "CORS_ALLOWED_ORIGIN_REGEXES": {
             "type": "array",
+            "items": {
+                "$ref": "#/definitions/regex"
+            },
             "default": []
         },
         "CSRF_TRUSTED_ORIGINS": {
             "type": "array",
+            "items": {
+                "type": "string"
+            },
             "default": []
         },
         "DATABASES": {
@@ -220,7 +244,13 @@
                         },
                         "ENGINE": {
                             "type": "string",
-                            "default": "[django|django_prometheus].db.backends.[postgresql|mysql]"
+                            "default": "django.db.backends.postgresql",
+                            "enum": [
+                                "django.db.backends.postgresql",
+                                "django.db.backends.mysql",
+                                "django_prometheus.db.backends.postgresql",
+                                "django_prometheus.db.backends.mysql"
+                            ]
                         }
                     }
                 }
@@ -255,10 +285,16 @@
         },
         "EXEMPT_VIEW_PERMISSIONS": {
             "type": "array",
+            "items": {
+                "type": "string"
+            },
             "default": []
         },
         "EXTERNAL_AUTH_DEFAULT_GROUPS": {
             "type": "array",
+            "items": {
+                "type": "string"
+            },
             "default": []
         },
         "EXTERNAL_AUTH_DEFAULT_PERMISSIONS": {
@@ -287,7 +323,7 @@
         },
         "HTTP_PROXIES": {
             "type": "object",
-            "default": null
+            "default": {}
         },
         "INSTALLATION_METRICS_ENABLED": {
             "type": "boolean",
@@ -295,6 +331,9 @@
         },
         "INTERNAL_IPS": {
             "type": "array",
+            "items": {
+                "type": "string"
+            },
             "default": [
                 "127.0.0.1",
                 "::1"
@@ -339,7 +378,7 @@
                             "datefmt": "%H:%M:%S"
                         }
                     },
-                    "additioinalProperties": true
+                    "additionalProperties": true
                 },
                 "handlers": {
                     "type": "object",
@@ -355,7 +394,7 @@
                             "formatter": "verbose"
                         }
                     },
-                    "additioinalProperties": true
+                    "additionalProperties": true
                 },
                 "loggers": {
                     "type": "object",
@@ -373,11 +412,11 @@
                             "level": "INFO"
                         }
                     },
-                    "additioinalProperties": true
+                    "additionalProperties": true
                 },
-                "additioinalProperties": true
+                "additionalProperties": true
             },
-            "additioinalProperties": true
+            "additionalProperties": true
         },
         "MAINTENANCE_MODE": {
             "type": "boolean",
@@ -429,6 +468,9 @@
         },
         "PER_PAGE_DEFAULTS": {
             "type": "array",
+            "items": {
+                "type": "integer"
+            },
             "default": [
                 25,
                 50,
@@ -440,6 +482,9 @@
         },
         "PLUGINS": {
             "type": "array",
+            "items": {
+                "type": "string"
+            },
             "default": []
         },
         "PLUGINS_CONFIG": {
@@ -472,6 +517,9 @@
         },
         "SANITIZER_PATTERNS": {
             "type": "array",
+            "items": {
+                "$ref": "#/definitions/regex"
+            },
             "default": []
         },
         "SECRET_KEY": {
@@ -543,7 +591,7 @@
             "default": "UTC"
         },
         "UI_RACK_VIEW_TRUNCATE_FUNCTION": {
-            "type": "callable",
+            "$ref": "#/definitions/callable",
             "default": "UI_RACK_VIEW_TRUNCATE_FUNCTION"
         }
     }

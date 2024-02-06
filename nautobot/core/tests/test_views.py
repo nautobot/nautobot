@@ -10,6 +10,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
+from jsonschema.exceptions import SchemaError, ValidationError
+from jsonschema.validators import Draft7Validator
 from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.core import settings
@@ -455,20 +457,30 @@ class DBFileStorageViewTestCase(TestCase):
         response = self.client.get(url)
         self.assertHttpStatus(response, 404)
 
+
 class SettingsJSONSchemaViewTestCase(TestCase):
-    def test_json_schema_contains_valid_setting_variables(self):
+    @classmethod
+    def setUpTestData(cls):
+        file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/settings.json"
+        with open(file_path, "r") as jsonfile:
+            cls.json_data = json.load(jsonfile)
+
+    def test_settings_json_schema_valid(self):
+        try:
+            Draft7Validator.check_schema(self.json_data)
+        except SchemaError as e:
+            raise ValidationError({"data_schema": e.message})
+
+    def test_settings_json_schema_contains_valid_setting_variables(self):
         TYPE_MAPPING = {
             "string": [str],
-            "object": [dict, None],
+            "object": [dict],
             "integer": [int],
             "boolean": [bool],
             "array": [list, tuple],
-            "callable": [types.FunctionType],
+            "#/definitions/callable": [types.FunctionType],
         }
-        file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/settings.json"
-        with open(file_path, "r") as jsonfile:
-            json_data = json.load(jsonfile)
-        for key, value in json_data["properties"].items():
+        for key, value in self.json_data["properties"].items():
             settings_value = getattr(settings, f"{key}", None)
             if settings_value:
-                self.assertIn(type(settings_value), TYPE_MAPPING[value["type"]])
+                self.assertIn(type(settings_value), TYPE_MAPPING[value.get("type", value.get("$ref", None))])
