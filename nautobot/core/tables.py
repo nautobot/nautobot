@@ -173,7 +173,13 @@ class BaseTable(django_tables2.Table):
         model = getattr(self.Meta, "model", None)
         if model and issubclass(model, TreeNode):
             # Use the TreeNode model's approach to sorting
-            self.data.data = self.data.data.extra(order_by=self.order_by)
+            queryset = self.data.data
+            # If the data passed into the Table is a list (as in cases like BulkImport post),
+            # convert this list to a queryset.
+            # This ensures consistent behavior regardless of the input type.
+            if isinstance(self.data.data, list):
+                queryset = model.objects.filter(pk__in=[instance.pk for instance in self.data.data])
+            self.data.data = queryset.extra(order_by=self.order_by)
         else:
             # Otherwise, use the default sorting method
             self.data.order_by(self._order_by)
