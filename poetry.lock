@@ -3450,19 +3450,20 @@ paramiko = "*"
 
 [[package]]
 name = "selenium"
-version = "4.9.1"
+version = "4.17.2"
 description = ""
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 files = [
-    {file = "selenium-4.9.1-py3-none-any.whl", hash = "sha256:82aedaa85d55bc861f4c89ff9609e82f6c958e2e1e3da3ffcc36703f21d3ee16"},
-    {file = "selenium-4.9.1.tar.gz", hash = "sha256:3444f4376321530c36ce8355b6b357d8cf4a7d588ce5cf772183465930bbed0e"},
+    {file = "selenium-4.17.2-py3-none-any.whl", hash = "sha256:5aee79026c07985dc1b0c909f34084aa996dfe5b307602de9016d7a621a473f2"},
+    {file = "selenium-4.17.2.tar.gz", hash = "sha256:d43d6972e516855fb242ef9ce4ce759057b115070e702e7b1c1032fe7b38d87b"},
 ]
 
 [package.dependencies]
 certifi = ">=2021.10.8"
 trio = ">=0.17,<1.0"
 trio-websocket = ">=0.9,<1.0"
+typing_extensions = ">=4.9.0"
 urllib3 = {version = ">=1.26,<3", extras = ["socks"]}
 
 [[package]]
@@ -3586,22 +3587,23 @@ files = [
 
 [[package]]
 name = "splinter"
-version = "0.18.1"
+version = "0.21.0"
 description = "browser abstraction for web acceptance testing"
 optional = false
 python-versions = "*"
 files = [
-    {file = "splinter-0.18.1-py3-none-any.whl", hash = "sha256:616da85a0c99bef00b59e75eb29e2e48162027c68ccb81a12d1dfe6d26209692"},
-    {file = "splinter-0.18.1.tar.gz", hash = "sha256:4a14a9d1f9d1372c64b666627ef4e103d759379bc1a9bde0c487e00d70976b1e"},
+    {file = "splinter-0.21.0-py3-none-any.whl", hash = "sha256:4c9e5962ce25f468b2dd52effbd1445afd7466740f238e564c6b70f7fda9368f"},
+    {file = "splinter-0.21.0.tar.gz", hash = "sha256:60cbbec9209acefccf39608d677eecdb248bbd700023663ce406595322c38fe5"},
 ]
+
+[package.dependencies]
+urllib3 = ">=1.26.14,<3.0"
 
 [package.extras]
 django = ["Django (>=2.0.6)", "cssselect", "lxml (>=4.2.4)"]
-edge = ["msedge-selenium-tools"]
-flask = ["Flask (>=2.0.2)", "cssselect", "lxml (>=4.2.4)"]
-selenium3 = ["selenium (>=3.141.0,<4.0)"]
-selenium4 = ["selenium (>=4.1.0,<5.0)"]
-zope-testbrowser = ["cssselect", "lxml (>=4.2.4)", "zope.testbrowser (>=5.5.1)"]
+flask = ["Flask (>=2.3.2)", "cssselect", "lxml (>=4.2.4)"]
+selenium = ["selenium (>=4.1.0,<4.17.0)"]
+zope-testbrowser = ["cssselect", "lxml (>=4.2.4)", "zope.testbrowser (>=6.0)"]
 
 [[package]]
 name = "sqlparse"
@@ -4099,4 +4101,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "5deabf5bdc3a66a954043a4d8798ebaf32e37aef74f35242476e1a857e31debf"
+content-hash = "8baf8e3b677295a2580b6a719278317bfd4097d40e4370a6462df46b861e663e"
