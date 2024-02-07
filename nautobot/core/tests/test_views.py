@@ -459,6 +459,8 @@ class DBFileStorageViewTestCase(TestCase):
 
 
 class SettingsJSONSchemaViewTestCase(TestCase):
+    """Test for the JSON Schema in nautobot/core/settings.json"""
+
     @classmethod
     def setUpTestData(cls):
         file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/settings.json"
@@ -466,12 +468,14 @@ class SettingsJSONSchemaViewTestCase(TestCase):
             cls.json_data = json.load(jsonfile)
 
     def test_settings_json_schema_valid(self):
+        """Test the validity of the JSON Schema in settings.json"""
         try:
             Draft7Validator.check_schema(self.json_data)
         except SchemaError as e:
             raise ValidationError({"data_schema": e.message})
 
     def test_settings_json_schema_contains_valid_setting_variables(self):
+        """Test the validity of the settings variables from settings.json and their types with those in settings.py"""
         TYPE_MAPPING = {
             "string": [str],
             "object": [dict],
