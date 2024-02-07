@@ -77,7 +77,7 @@ from .choices import (
     RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
-    SoftwareImageHashingAlgorithmChoices,
+    SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
 from .constants import (
@@ -120,7 +120,7 @@ from .models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
-    SoftwareImage,
+    SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
 )
@@ -704,10 +704,10 @@ class DeviceTypeForm(NautobotModelForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all())
     hardware_family = DynamicModelChoiceField(queryset=HardwareFamily.objects.all(), required=False)
     comments = CommentField()
-    software_images = DynamicModelMultipleChoiceField(
-        queryset=SoftwareImage.objects.all(),
+    software_image_files = DynamicModelMultipleChoiceField(
+        queryset=SoftwareImageFile.objects.all(),
         required=False,
-        label="Software images",
+        label="Software image files",
     )
 
     class Meta:
@@ -720,7 +720,7 @@ class DeviceTypeForm(NautobotModelForm):
             "u_height",
             "is_full_depth",
             "subdevice_role",
-            "software_images",
+            "software_image_files",
             "front_image",
             "rear_image",
             "comments",
@@ -770,12 +770,12 @@ class DeviceTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceType.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     hardware_family = DynamicModelChoiceField(queryset=HardwareFamily.objects.all(), required=False)
-    software_images = DynamicModelMultipleChoiceField(queryset=SoftwareImage.objects.all(), required=False)
+    software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
     u_height = forms.IntegerField(required=False)
     is_full_depth = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect(), label="Is full depth")
 
     class Meta:
-        nullable_fields = ["hardware_family", "software_images"]
+        nullable_fields = ["hardware_family", "software_image_files"]
 
 
 class DeviceTypeFilterForm(NautobotFilterForm):
@@ -822,7 +822,7 @@ class DeviceTypeFilterForm(NautobotFilterForm):
         label="Has pass-through ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    software_images = DynamicModelMultipleChoiceField(queryset=SoftwareImage.objects.all(), required=False)
+    software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
     tags = TagFilterField(model)
 
 
@@ -3819,19 +3819,19 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
 
 
 #
-# Software images
+# Software image files
 #
 
 
-class SoftwareImageBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
-    """SoftwareImage bulk edit form."""
+class SoftwareImageFileBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
+    """SoftwareImageFile bulk edit form."""
 
-    pk = forms.ModelMultipleChoiceField(queryset=SoftwareImage.objects.all(), widget=forms.MultipleHiddenInput)
+    pk = forms.ModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), widget=forms.MultipleHiddenInput)
     software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
     image_file_name = forms.CharField(required=False)
     image_file_checksum = forms.CharField(required=False)
     hashing_algorithm = forms.ChoiceField(
-        choices=add_blank_choice(SoftwareImageHashingAlgorithmChoices),
+        choices=add_blank_choice(SoftwareImageFileHashingAlgorithmChoices),
         required=False,
         widget=StaticSelect2(),
     )
@@ -3839,7 +3839,7 @@ class SoftwareImageBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMi
     download_url = forms.URLField(required=False)
 
     class Meta:
-        model = SoftwareImage
+        model = SoftwareImageFile
         nullable_fields = [
             "image_file_checksum",
             "hashing_algorithm",
@@ -3848,10 +3848,10 @@ class SoftwareImageBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMi
         ]
 
 
-class SoftwareImageFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
-    """SoftwareImage basic filter form."""
+class SoftwareImageFileFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
+    """SoftwareImageFile basic filter form."""
 
-    model = SoftwareImage
+    model = SoftwareImageFile
 
     q = forms.CharField(required=False, label="Search")
     software_version = DynamicModelMultipleChoiceField(
@@ -3862,7 +3862,7 @@ class SoftwareImageFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
     image_file_name = forms.CharField(required=False, label="Image file name")
     image_file_checksum = forms.CharField(required=False, label="Image file checksum")
     hashing_algorithm = forms.ChoiceField(
-        choices=add_blank_choice(SoftwareImageHashingAlgorithmChoices),
+        choices=add_blank_choice(SoftwareImageFileHashingAlgorithmChoices),
         required=False,
         widget=StaticSelect2(),
         label="Hashing algorithm",
@@ -3897,8 +3897,8 @@ class SoftwareImageFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
     ]
 
 
-class SoftwareImageForm(NautobotModelForm):
-    """SoftwareImage credit/edit form."""
+class SoftwareImageFileForm(NautobotModelForm):
+    """SoftwareImageFile credit/edit form."""
 
     device_types = DynamicModelMultipleChoiceField(
         queryset=DeviceType.objects.all(),
@@ -3913,7 +3913,7 @@ class SoftwareImageForm(NautobotModelForm):
     ]
 
     class Meta:
-        model = SoftwareImage
+        model = SoftwareImageFile
         fields = "__all__"
 
     def __init__(self, *args, **kwargs):
@@ -3973,14 +3973,14 @@ class SoftwareVersionFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
     pre_release = forms.NullBooleanField(
         required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES), label="Pre-Release"
     )
-    software_images = DynamicModelMultipleChoiceField(
-        queryset=SoftwareImage.objects.all(),
+    software_image_files = DynamicModelMultipleChoiceField(
+        queryset=SoftwareImageFile.objects.all(),
         required=False,
-        label="Software images",
+        label="Software image files",
     )
-    has_software_images = forms.NullBooleanField(
+    has_software_image_files = forms.NullBooleanField(
         required=False,
-        label="Has software images",
+        label="Has software image files",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     devices = DynamicModelMultipleChoiceField(
@@ -4025,8 +4025,8 @@ class SoftwareVersionFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
         "documentation_url",
         "long_term_support",
         "pre_release",
-        "software_images",
-        "has_software_images",
+        "software_image_files",
+        "has_software_image_files",
         "devices",
         "has_devices",
         "inventory_items",

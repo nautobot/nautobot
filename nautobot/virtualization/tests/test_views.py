@@ -148,7 +148,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Cluster.objects.create(name="Cluster 2", cluster_type=clustertype, location=locations[0]),
         )
 
-        software_versions = SoftwareVersion.objects.filter(software_images__isnull=False)[:3]
+        software_versions = SoftwareVersion.objects.filter(software_image_files__isnull=False)[:3]
         statuses = Status.objects.get_for_model(VirtualMachine)
         status_staged = statuses[0]
 

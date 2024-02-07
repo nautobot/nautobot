@@ -70,10 +70,10 @@ router.register("power-feeds", views.PowerFeedViewSet)
 # Device Redundancy Group
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupViewSet)
 
-# Software images
-router.register("software-images", views.SoftwareImageViewSet)
+# Software image files
+router.register("software-image-files", views.SoftwareImageFileViewSet)
 router.register("software-versions", views.SoftwareVersionViewSet)
-router.register("device-types-to-software-images", views.DeviceTypeToSoftwareImageViewSet)
+router.register("device-types-to-software-image-files", views.DeviceTypeToSoftwareImageFileViewSet)
 
 # Miscellaneous
 router.register("connected-device", views.ConnectedDeviceViewSet, basename="connected-device")

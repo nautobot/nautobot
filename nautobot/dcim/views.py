@@ -76,7 +76,7 @@ from .models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
-    SoftwareImage,
+    SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
 )
@@ -609,7 +609,7 @@ class ManufacturerBulkDeleteView(generic.BulkDeleteView):
 class DeviceTypeListView(generic.ObjectListView):
     queryset = (
         DeviceType.objects.select_related("manufacturer", "hardware_family")
-        .prefetch_related("software_images")
+        .prefetch_related("software_image_files")
         .annotate(device_count=count_related(Device, "device_type"))
     )
     filterset = filters.DeviceTypeFilterSet
@@ -619,7 +619,7 @@ class DeviceTypeListView(generic.ObjectListView):
 
 
 class DeviceTypeView(generic.ObjectView):
-    queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_images")
+    queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_image_files")
     use_new_ui = True
 
     def get_extra_context(self, request, instance):
@@ -668,9 +668,9 @@ class DeviceTypeView(generic.ObjectView):
             rear_port_table.columns.show("pk")
             devicebay_table.columns.show("pk")
 
-        software_images_table = tables.SoftwareImageTable(
-            instance.software_images.restrict(request.user, "view").annotate(
-                device_type_count=count_related(DeviceType, "software_images"),
+        software_image_files_table = tables.SoftwareImageFileTable(
+            instance.software_image_files.restrict(request.user, "view").annotate(
+                device_type_count=count_related(DeviceType, "software_image_files"),
             ),
             orderable=False,
             exclude=["actions", "tags"],
@@ -686,7 +686,7 @@ class DeviceTypeView(generic.ObjectView):
             "front_port_table": front_port_table,
             "rear_port_table": rear_port_table,
             "devicebay_table": devicebay_table,
-            "software_images_table": software_images_table,
+            "software_image_files_table": software_image_files_table,
         }
 
 
@@ -731,7 +731,7 @@ class DeviceTypeImportView(generic.ObjectImportView):
 class DeviceTypeBulkEditView(generic.BulkEditView):
     queryset = (
         DeviceType.objects.select_related("manufacturer")
-        .prefetch_related("software_images")
+        .prefetch_related("software_image_files")
         .annotate(device_count=count_related(Device, "device_type"))
     )
     filterset = filters.DeviceTypeFilterSet
@@ -742,7 +742,7 @@ class DeviceTypeBulkEditView(generic.BulkEditView):
 class DeviceTypeBulkDeleteView(generic.BulkDeleteView):
     queryset = (
         DeviceType.objects.select_related("manufacturer")
-        .prefetch_related("software_images")
+        .prefetch_related("software_image_files")
         .annotate(device_count=count_related(Device, "device_type"))
     )
     filterset = filters.DeviceTypeFilterSet
@@ -2970,23 +2970,23 @@ class HardwareFamilyUIViewSet(NautobotUIViewSet):
 
 
 #
-# Software images
+# Software image files
 #
 
 
-class SoftwareImageUIViewSet(NautobotUIViewSet):
-    filterset_class = filters.SoftwareImageFilterSet
-    filterset_form_class = forms.SoftwareImageFilterForm
-    form_class = forms.SoftwareImageForm
-    bulk_update_form_class = forms.SoftwareImageBulkEditForm
+class SoftwareImageFileUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.SoftwareImageFileFilterSet
+    filterset_form_class = forms.SoftwareImageFileFilterForm
+    form_class = forms.SoftwareImageFileForm
+    bulk_update_form_class = forms.SoftwareImageFileBulkEditForm
     queryset = (
-        SoftwareImage.objects.select_related("software_version")
+        SoftwareImageFile.objects.select_related("software_version")
         .prefetch_related("device_types")
-        .annotate(device_type_count=count_related(DeviceType, "software_images"))
+        .annotate(device_type_count=count_related(DeviceType, "software_image_files"))
     )
 
-    serializer_class = serializers.SoftwareImageSerializer
-    table_class = tables.SoftwareImageTable
+    serializer_class = serializers.SoftwareImageFileSerializer
+    table_class = tables.SoftwareImageFileTable
 
 
 class SoftwareVersionUIViewSet(NautobotUIViewSet):
@@ -2996,9 +2996,9 @@ class SoftwareVersionUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.SoftwareVersionBulkEditForm
     queryset = (
         SoftwareVersion.objects.select_related("platform")
-        .prefetch_related("devices", "inventory_items", "software_images")
+        .prefetch_related("devices", "inventory_items", "software_image_files")
         .annotate(
-            software_image_count=count_related(SoftwareImage, "software_version"),
+            software_image_file_count=count_related(SoftwareImageFile, "software_version"),
             device_count=count_related(Device, "software_version"),
             inventory_item_count=count_related(InventoryItem, "software_version"),
         )

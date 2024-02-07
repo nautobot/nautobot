@@ -314,7 +314,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         roles = Role.objects.get_for_model(VirtualMachine)
         cls.roles = roles
 
-        cls.software_versions = SoftwareVersion.objects.filter(software_images__isnull=False)[:3]
+        cls.software_versions = SoftwareVersion.objects.filter(software_image_files__isnull=False)[:3]
 
         tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
 
