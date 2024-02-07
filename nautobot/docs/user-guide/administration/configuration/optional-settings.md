@@ -495,7 +495,7 @@ The value of this variable can also be customized by setting the environment var
 
 Default: `"cpf"`
 
-By default, all computed fields in GraphQL will be prefixed with `cf`. A computed field named `my_field` will appear in GraphQL as `cpf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_COMPUTED_FIELD_PREFIX`.
+By default, all computed fields in GraphQL will be prefixed with `cpf`. A computed field named `my_field` will appear in GraphQL as `cpf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_COMPUTED_FIELD_PREFIX`.
 
 ---
 
