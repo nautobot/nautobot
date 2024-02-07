@@ -18,13 +18,16 @@ from nautobot.circuits.models import Provider
 from nautobot.core import testing
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.versioning import NautobotAPIVersioning
 from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
 from nautobot.extras import choices, models as extras_models
 from nautobot.ipam import models as ipam_models
 from nautobot.ipam.api import serializers as ipam_serializers
+from nautobot.tenancy.models import TenantGroup
 
 User = get_user_model()
 
@@ -780,6 +783,22 @@ class APIOrderingTestCase(testing.APITestCase):
             "DateTimeField": "created",
         }
 
+    def _validate_sorted_response(self, response, model, field_name, is_tree_node=False):
+        self.assertHttpStatus(response, 200)
+        if is_tree_node:
+            queryset_values_list = model.objects.extra(order_by=[field_name]).values_list("id", flat=True)[:10]
+        else:
+            queryset_values_list = model.objects.order_by(field_name).values_list("id", flat=True)[:10]
+        self.assertEqual(
+            list(map(lambda p: p["id"], response.data["results"])),
+            list(
+                map(
+                    lambda p: str(p),  # pylint: disable=unnecessary-lambda
+                    queryset_values_list,
+                )
+            ),
+        )
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_ascending_sort(self):
         """Tests that results are returned in the expected ascending order."""
@@ -787,16 +806,7 @@ class APIOrderingTestCase(testing.APITestCase):
         for field_type, field_name in self.field_type_map.items():
             with self.subTest(f"Testing {field_type}"):
                 response = self.client.get(f"{self.url}?sort={field_name}&limit=10", **self.header)
-                self.assertHttpStatus(response, 200)
-                self.assertEqual(
-                    list(map(lambda p: p["id"], response.data["results"])),
-                    list(
-                        map(
-                            lambda p: str(p),  # pylint: disable=unnecessary-lambda
-                            Provider.objects.order_by(field_name).values_list("id", flat=True)[:10],
-                        )
-                    ),
-                )
+                self._validate_sorted_response(response, Provider, field_name)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_descending_sort(self):
@@ -805,16 +815,52 @@ class APIOrderingTestCase(testing.APITestCase):
         for field_type, field_name in self.field_type_map.items():
             with self.subTest(f"Testing {field_type}"):
                 response = self.client.get(f"{self.url}?sort=-{field_name}&limit=10", **self.header)
-                self.assertHttpStatus(response, 200)
-                self.assertEqual(
-                    list(map(lambda p: p["id"], response.data["results"])),
-                    list(
-                        map(
-                            lambda p: str(p),  # pylint: disable=unnecessary-lambda
-                            Provider.objects.order_by(f"-{field_name}").values_list("id", flat=True)[:10],
-                        )
-                    ),
-                )
+                self._validate_sorted_response(response, Provider, f"-{field_name}")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_sorting_tree_node_models(self):
+        location_type = dcim_models.LocationType.objects.get(name="Campus")
+        locations = dcim_models.Location.objects.filter(location_type=location_type)
+        devices = dcim_models.Device.objects.all()
+
+        for i in range(3):
+            dcim_models.RackGroup.objects.create(name=f"Rack Group {i}", location=locations[i])
+            dcim_models.InventoryItem.objects.create(
+                device=devices[i], name=f"Inventory Item {i}", manufacturer=devices[i].device_type.manufacturer
+            )
+
+        dcim_models.RackGroup.objects.create(
+            name="Rack Group 3",
+            location=locations[2],
+            parent=dcim_models.RackGroup.objects.last(),
+        )
+        dcim_models.InventoryItem.objects.create(
+            name="Inventory Item 3",
+            device=devices[3],
+            manufacturer=devices[3].device_type.manufacturer,
+            parent=dcim_models.InventoryItem.objects.last(),
+        )
+
+        tree_node_models = [
+            dcim_models.Location,
+            dcim_models.LocationType,
+            dcim_models.RackGroup,
+            dcim_models.InventoryItem,
+            TenantGroup,
+        ]
+        # Each of the table has at-least two sortable field_names in the field_names
+        model_field_names = ["name", "location", "parent", "location_type", "manufacturer"]
+        for model_class in tree_node_models:
+            url = reverse(get_route_for_model(model_class, "list", api=True))
+            serializer = get_serializer_for_model(model_class)
+            serializer_avial_fields = set(model_field_names) & set(serializer().fields.keys())
+            for field_name in serializer_avial_fields:
+                response = self.client.get(f"{url}?sort={field_name}&limit=10", **self.header)
+                with self.subTest(f'Asset sorting "{model_class.__name__}" using "{field_name}" field name.'):
+                    self._validate_sorted_response(response, model_class, field_name, is_tree_node=True)
+
+                with self.subTest(f'Asset inverse sorting "{model_class.__name__}" using "{field_name}" field name.'):
+                    self._validate_sorted_response(response, model_class, f"-{field_name}", is_tree_node=True)
 
 
 class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
