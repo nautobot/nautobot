@@ -486,7 +486,6 @@ class SettingsJSONSchemaViewTestCase(TestCase):
             "#/definitions/callable": [types.FunctionType],
             "#/definitions/regex": [str],
             "#/definitions/relative_path": [str],
-            "#/definitions/url": [str],
         }
         for key, value in self.json_data["properties"].items():
             settings_value = getattr(settings, key, None)

@@ -12,9 +12,6 @@
         },
         "relative_path": {
             "type": "string"
-        },
-        "url": {
-            "type": "string"
         }
     },
     "properties": {
@@ -114,7 +111,8 @@
             "type": "object",
             "properties": {
                 "code": {
-                    "$ref": "#/definitions/url",
+                    "type": "string",
+                    "format": "uri",
                     "default": "https://github.com/nautobot/nautobot",
                     "description": "Code link in the footer"
                 },
@@ -124,7 +122,8 @@
                     "description": "Docs link in the footer"
                 },
                 "help": {
-                    "$ref": "#/definitions/url",
+                    "type": "string",
+                    "format": "uri",
                     "default": "https://github.com/nautobot/nautobot/wiki",
                     "description": "Help link in the footer"
                 }
@@ -146,7 +145,8 @@
                             ]
                         },
                         "LOCATION": {
-                            "$ref": "#/definitions/url",
+                            "type": "string",
+                            "format": "uri",
                             "default": "redis://localhost:6379/1"
                         },
                         "TIMEOUT": {
@@ -178,7 +178,8 @@
             "description": "A dict of additional options passed to the Celery broker transport. This is only required when configuring Celery to utilize Redis Sentinel."
         },
         "CELERY_BROKER_URL": {
-            "$ref": "#/definitions/url",
+            "type": "string",
+            "format": "uri",
             "default": "redis://localhost:6379/0",
             "description": "Celery broker URL used to tell workers where queues are located."
         },
@@ -239,7 +240,8 @@
         "CORS_ALLOWED_ORIGINS": {
             "type": "array",
             "items": {
-                "$ref": "#/definitions/url"
+                "type": "string",
+                "format": "uri"
             },
             "default": [],
             "description": "If True, all origins will be allowed. Other settings restricting allowed origins will be ignored."
@@ -608,7 +610,8 @@
             "description": "The number of seconds to retain the latest version that is fetched from the GitHub API before automatically invalidating it and fetching it from the API again."
         },
         "RELEASE_CHECK_URL": {
-            "$ref": "#/definitions/url",
+            "type": "string",
+            "format": "uri",
             "default": "",
             "description": "This parameter defines the URL of the repository that will be checked periodically for new Nautobot releases."
         },
