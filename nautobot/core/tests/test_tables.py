@@ -1,8 +1,9 @@
 from django.test import TestCase
 
 from nautobot.core.models.querysets import count_related
-from nautobot.dcim.models.racks import Rack
-from nautobot.dcim.tables import LocationTable, LocationTypeTable, RackGroupTable
+from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, Rack, RackGroup
+from nautobot.dcim.tables import InventoryItemTable, LocationTable, LocationTypeTable, RackGroupTable
+from nautobot.tenancy.tables import TenantGroupTable
 
 
 class TableTestCase(TestCase):
@@ -15,10 +16,38 @@ class TableTestCase(TestCase):
 
     def test_tree_model_table_orderable(self):
         """Assert TreeNode model table are orderable."""
-        tree_node_model_tables = [LocationTable, LocationTypeTable, RackGroupTable]
+        location_type = LocationType.objects.get(name="Campus")
+        locations = Location.objects.filter(location_type=location_type)
+        devices = Device.objects.all()
+
+        for i in range(3):
+            RackGroup.objects.create(name=f"Rack Group {i}", location=locations[i])
+            InventoryItem.objects.create(
+                device=devices[i], name=f"Inventory Item {i}", manufacturer=devices[i].device_type.manufacturer
+            )
+
+        RackGroup.objects.create(
+            name="Rack Group 3",
+            location=locations[2],
+            parent=RackGroup.objects.last(),
+        )
+        InventoryItem.objects.create(
+            name="Inventory Item 3",
+            device=devices[3],
+            manufacturer=devices[3].device_type.manufacturer,
+            parent=InventoryItem.objects.last(),
+        )
+
+        tree_node_model_tables = [
+            LocationTable,
+            LocationTypeTable,
+            RackGroupTable,
+            InventoryItemTable,
+            TenantGroupTable,
+        ]
 
         # Each of the table has at-least two sortable field_names in the field_names
-        model_field_names = ["name", "location", "parent", "location_type"]
+        model_field_names = ["name", "location", "parent", "location_type", "manufacturer"]
         for table_class in tree_node_model_tables:
             queryset = table_class.Meta.model.objects.all()
             table_avail_fields = set(model_field_names) & set(table_class.Meta.fields)
