@@ -197,9 +197,9 @@ pylint = "~2.17.7"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
 # Combination linter and code formatter
-ruff = "~0.1.15"
+ruff = "~0.2.1"
 # YAML linting
-yamllint = "~1.30.0"
+yamllint = "~1.34.0"
 
 [tool.poetry.group.testing.dependencies]
 # Test code coverage measurement
