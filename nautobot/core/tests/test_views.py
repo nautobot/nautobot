@@ -482,9 +482,13 @@ class SettingsJSONSchemaViewTestCase(TestCase):
             "integer": [int],
             "boolean": [bool],
             "array": [list, tuple],
+            "#/definitions/absolute_path": [str],
             "#/definitions/callable": [types.FunctionType],
+            "#/definitions/regex": [str],
+            "#/definitions/relative_path": [str],
+            "#/definitions/url": [str],
         }
         for key, value in self.json_data["properties"].items():
-            settings_value = getattr(settings, f"{key}", None)
+            settings_value = getattr(settings, key, None)
             if settings_value:
                 self.assertIn(type(settings_value), TYPE_MAPPING[value.get("type", value.get("$ref", None))])

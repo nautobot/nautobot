@@ -1,10 +1,19 @@
 {
     "type": "object",
     "definitions": {
+        "absolute_path": {
+            "type": "string"
+        },
         "callable": {
             "type": "string"
         },
         "regex": {
+            "type": "string"
+        },
+        "relative_path": {
+            "type": "string"
+        },
+        "url": {
             "type": "string"
         }
     },
@@ -39,39 +48,39 @@
             "type": "object",
             "properties": {
                 "logo": {
-                    "type": "string",
+                    "$ref": "#/definitions/relative_path",
                     "default": ""
                 },
                 "favicon": {
-                    "type": "string",
+                    "$ref": "#/definitions/relative_path",
                     "default": ""
                 },
                 "icon_16": {
-                    "type": "string",
+                    "$ref": "#/definitions/relative_path",
                     "default": ""
                 },
                 "icon_32": {
-                    "type": "string",
+                    "$ref": "#/definitions/relative_path",
                     "default": ""
                 },
                 "icon_180": {
-                    "type": "string",
+                    "$ref": "#/definitions/relative_path",
                     "default": ""
                 },
                 "icon_192": {
-                    "type": "string",
+                    "$ref": "#/definitions/relative_path",
                     "default": ""
                 },
                 "icon_mask": {
-                    "type": "string",
+                    "$ref": "#/definitions/relative_path",
                     "default": ""
                 },
                 "header_bullet": {
-                    "type": "string",
+                    "$ref": "#/definitions/relative_path",
                     "default": ""
                 },
                 "nav_bullet": {
-                    "type": "string",
+                    "$ref": "#/definitions/relative_path",
                     "default": ""
                 }
             }
@@ -88,15 +97,15 @@
             "type": "object",
             "properties": {
                 "code": {
-                    "type": "string",
+                    "$ref": "#/definitions/url",
                     "default": "https://github.com/nautobot/nautobot"
                 },
                 "docs": {
-                    "type": "string",
+                    "$ref": "#/definitions/relative_path",
                     "default": "static/docs/index.html"
                 },
                 "help": {
-                    "type": "string",
+                    "$ref": "#/definitions/url",
                     "default": "https://github.com/nautobot/nautobot/wiki"
                 }
             }
@@ -116,7 +125,7 @@
                             ]
                         },
                         "LOCATION": {
-                            "type": "string",
+                            "$ref": "#/definitions/url",
                             "default": "redis://localhost:6379/1"
                         },
                         "TIMEOUT": {
@@ -145,7 +154,7 @@
             "default": {}
         },
         "CELERY_BROKER_URL": {
-            "type": "string",
+            "$ref": "#/definitions/url",
             "default": "redis://localhost:6379/0"
         },
         "CELERY_TASK_DEFAULT_QUEUE": {
@@ -173,7 +182,8 @@
         },
         "CELERY_WORKER_REDIRECT_STDOUTS_LEVEL": {
             "type": "string",
-            "default": "WARNING"
+            "default": "WARNING",
+            "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         },
         "CHANGELOG_RETENTION": {
             "type": "integer",
@@ -194,7 +204,7 @@
         "CORS_ALLOWED_ORIGINS": {
             "type": "array",
             "items": {
-                "type": "string"
+                "$ref": "#/definitions/url"
             },
             "default": []
         },
@@ -252,8 +262,10 @@
                                 "django_prometheus.db.backends.mysql"
                             ]
                         }
-                    }
-                }
+                    },
+                    "additionalProperties": true
+                },
+                "additionalProperties": true
             }
         },
         "DATE_FORMAT": {
@@ -271,17 +283,9 @@
         "DEPLOYMENT_ID": {
             "type": "string"
         },
-        "DISABLE_PREFIX_LIST_HIERARCHY": {
-            "type": "boolean",
-            "default": false
-        },
         "DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT": {
             "type": "integer",
             "default": 0
-        },
-        "ENFORCE_GLOBAL_UNIQUE": {
-            "type": "boolean",
-            "default": false
         },
         "EXEMPT_VIEW_PERMISSIONS": {
             "type": "array",
@@ -306,7 +310,7 @@
             "default": ""
         },
         "GIT_ROOT": {
-            "type": "string",
+            "$ref": "#/definitions/absolute_path",
             "default": "~/.nautobot/git"
         },
         "GRAPHQL_COMPUTED_FIELD_PREFIX": {
@@ -348,7 +352,7 @@
             "default": "db_file_storage.storage.DatabaseFileStorage"
         },
         "JOBS_ROOT": {
-            "type": "string",
+            "$ref": "#/definitions/absolute_path",
             "default": "~/.nautobot/jobs"
         },
         "LOCATION_NAME_AS_NATURAL_KEY": {
@@ -427,7 +431,7 @@
             "default": 1000
         },
         "MEDIA_ROOT": {
-            "type": "string",
+            "$ref": "#/definitions/absolute_path",
             "default": "~/.nautobot/media"
         },
         "METRICS_ENABLED": {
@@ -455,7 +459,7 @@
             "default": false
         },
         "NAUTOBOT_ROOT": {
-            "type": "string",
+            "$ref": "#/definitions/absolute_path",
             "default": "~/.nautobot/"
         },
         "NETWORK_DRIVERS": {
@@ -512,7 +516,7 @@
             "default": 86400
         },
         "RELEASE_CHECK_URL": {
-            "type": "string",
+            "$ref": "#/definitions/url",
             "default": ""
         },
         "SANITIZER_PATTERNS": {
@@ -551,7 +555,7 @@
             "default": "Y-m-d H:i"
         },
         "STATIC_ROOT": {
-            "type": "string",
+            "$ref": "#/definitions/absolute_path",
             "default": "~/.nautobot/static"
         },
         "STORAGE_BACKEND": {
