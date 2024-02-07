@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.core.management import call_command
+from django.db import connections
 from django.test.runner import DiscoverRunner
+from django.test.utils import get_unique_databases_and_mirrors, NullTimeKeeper
 import yaml
 
 from nautobot.core.celery import app, setup_nautobot_job_logging
@@ -55,31 +57,90 @@ class NautobotTestRunner(DiscoverRunner):
             setup_nautobot_job_logging(None, None, app.conf)
 
     def setup_databases(self, **kwargs):
-        result = super().setup_databases(**kwargs)
+        # Adapted from Django 3.2 django.test.utils.setup_databases
+        time_keeper = self.time_keeper
+        if time_keeper is None:
+            time_keeper = NullTimeKeeper()
 
-        if settings.TEST_USE_FACTORIES and result:
-            command = ["generate_test_data", "--flush", "--no-input"]
-            if settings.TEST_FACTORY_SEED is not None:
-                command += ["--seed", settings.TEST_FACTORY_SEED]
-            if self.cache_test_fixtures:
-                command += ["--cache-test-fixtures"]
-            for connection in result:
-                db_name = connection[0].alias
-                print(f'Pre-populating test database "{db_name}" with factory data...')
-                db_command = [*command, "--database", db_name]
-                call_command(*db_command)
+        test_databases, mirrored_aliases = get_unique_databases_and_mirrors(kwargs.get("aliases", None))
 
-        return result
+        old_names = []
+
+        for db_name, aliases in test_databases.values():
+            first_alias = None
+            for alias in aliases:
+                connection = connections[alias]
+                old_names.append((connection, db_name, first_alias is None))
+
+                # Actually create the database for the first connection
+                if first_alias is None:
+                    first_alias = alias
+                    with time_keeper.timed(f"  Creating '{alias}'"):
+                        connection.creation.create_test_db(
+                            verbosity=self.verbosity,
+                            autoclobber=not self.interactive,
+                            keepdb=self.keepdb,
+                            serialize=connection.settings_dict["TEST"].get("SERIALIZE", True),
+                        )
+
+                    # Extra block added for Nautobot
+                    if settings.TEST_USE_FACTORIES:
+                        command = ["generate_test_data", "--flush", "--no-input"]
+                        if settings.TEST_FACTORY_SEED is not None:
+                            command += ["--seed", settings.TEST_FACTORY_SEED]
+                        if self.cache_test_fixtures:
+                            command += ["--cache-test-fixtures"]
+                        with time_keeper.timed(f'  Pre-populating test database "{alias}" with factory data...'):
+                            db_command = [*command, "--database", alias]
+                            call_command(*db_command)
+
+                    if self.parallel > 1:
+                        for index in range(self.parallel):
+                            with time_keeper.timed(f"  Cloning '{alias}'"):
+                                connection.creation.clone_test_db(
+                                    suffix=str(index + 1),
+                                    verbosity=self.verbosity,
+                                    keepdb=self.keepdb
+                                    # Extra check added for Nautobot:
+                                    and not settings.TEST_USE_FACTORIES,
+                                )
+
+                # Configure all other connections as mirrors of the first one
+                else:
+                    connection.creation.set_as_test_mirror(connections[first_alias].settings_dict)
+
+        # Configure the test mirrors
+        for alias, mirror_alias in mirrored_aliases.items():
+            connections[alias].creation.set_as_test_mirror(connections[mirror_alias].settings_dict)
+
+        if self.debug_sql:
+            for alias in connections:
+                connections[alias].force_debug_cursor = True
+
+        return old_names
 
     def teardown_databases(self, old_config, **kwargs):
-        if settings.TEST_USE_FACTORIES and old_config:
-            for connection in old_config:
-                db_name = connection[0].alias
-                print(f'Emptying test database "{db_name}"...')
-                call_command("flush", "--no-input", "--database", db_name)
-                print(f"Database {db_name} emptied!")
+        # Adapted from Django 3.2 django.test.utils.teardown_databases
+        for connection, old_name, destroy in old_config:
+            if destroy:
+                if self.parallel > 1:
+                    for index in range(self.parallel):
+                        connection.creation.destroy_test_db(
+                            suffix=str(index + 1),
+                            verbosity=self.verbosity,
+                            keepdb=self.keepdb
+                            # Extra check added for Nautobot
+                            and not settings.TEST_USE_FACTORIES,
+                        )
 
-        super().teardown_databases(old_config, **kwargs)
+                # Extra block added for Nautobot
+                if settings.TEST_USE_FACTORIES:
+                    db_name = connection.alias
+                    print(f'Emptying test database "{db_name}"...')
+                    call_command("flush", "--no-input", "--database", db_name)
+                    print(f"Database {db_name} emptied!")
+
+                connection.creation.destroy_test_db(old_name, self.verbosity, self.keepdb)
 
 
 # Use django_slowtests only when GENERATE_PERFORMANCE_REPORT flag is set to true
