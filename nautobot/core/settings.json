@@ -146,7 +146,8 @@
                             }
                         }
                     }
-                }
+                },
+                "additionalProperties": true
             }
         },
         "CELERY_BROKER_TRANSPORT_OPTIONS": {
@@ -267,6 +268,13 @@
                 },
                 "additionalProperties": true
             }
+        },
+        "DATABASE_ROUTERS": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "default": []
         },
         "DATE_FORMAT": {
             "type": "string",
@@ -527,6 +535,10 @@
             "default": []
         },
         "SECRET_KEY": {
+            "type": "string",
+            "default": ""
+        },
+        "SESSION_CACHE_ALIAS": {
             "type": "string",
             "default": ""
         },
