@@ -29,15 +29,19 @@
 
 {% block buttons %}
     <div class="btn-group">
-        <a class="btn btn-default set-job_list-view" data-view="tiles" href="" title="Tiles">
-            <i class="mdi mdi-view-grid{% if view == "list" %}-outline{% endif %}"></i>
+        <a class="btn btn-default set-job_list-display" data-display="tiles" href="" title="Tiles">
+            <i class="mdi mdi-view-grid{% if display == "list" %}-outline{% endif %}"></i>
         </a>
-        <a class="btn btn-default set-job_list-view" data-view="list" href="" title="List">
-            <i class="mdi mdi-view-sequential{% if view == "tiles" %}-outline{% endif %}"></i>
+        <a class="btn btn-default set-job_list-display" data-display="list" href="" title="List">
+            <i class="mdi mdi-view-sequential{% if display == "tiles" %}-outline{% endif %}"></i>
         </a>
     </div>
 
-    <button type="button" class="btn btn-default" id="accordion-toggle-all"{% if view == "tiles" %} disabled="disabled"{% endif %}>Collapse All</button>
+    <button type="button" class="btn btn-default" id="accordion-toggle-all"{% if display == "tiles" %} disabled="disabled"{% endif %}>Collapse All</button>
+{% endblock %}
+
+{% block table_config_button %}
+    <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table"{% if display == "tiles" %} disabled="disabled"{% endif %}><i class="mdi mdi-cog"></i> Configure</button>
 {% endblock %}
 
 {% block javascript %}
@@ -74,10 +78,10 @@
             }
         });
 
-        // Set view anchor links without losing other potentially active query params such as applied filters.
-        [...document.querySelectorAll('.set-job_list-view')].forEach(button => {
+        // Set display anchor links without losing other potentially active query params such as applied filters.
+        [...document.querySelectorAll('.set-job_list-display')].forEach(button => {
             const queryParams = new URLSearchParams(window.location.search);
-            queryParams.set('view', button.dataset.view);
+            queryParams.set('display', button.dataset.display);
             button.setAttribute('href', `?${queryParams.toString()}`);
         });
      </script>
