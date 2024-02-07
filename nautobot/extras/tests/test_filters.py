@@ -569,6 +569,34 @@ class ExternalIntegrationTestCase(FilterTestCases.FilterTestCase):
         for ei in external_integrations:
             ei.validated_save()
 
+    def test_search(self):
+        match_name = self.queryset.values_list("name", flat=True)[0].upper()
+        params = {"q": match_name}
+        expected_matches = (
+            Q(id__iexact=match_name) | Q(name__icontains=match_name) | Q(remote_url__icontains=match_name)  # pylint: disable=unsupported-binary-operation
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(expected_matches)
+        )
+
+        match_remote_url = self.queryset.values_list("remote_url", flat=True)[0].upper()
+        expected_matches = (
+            Q(id__iexact=match_remote_url)  # pylint: disable=unsupported-binary-operation
+            | Q(name__icontains=match_remote_url)
+            | Q(remote_url__icontains=match_remote_url)
+        )
+        params = {"q": match_remote_url}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(expected_matches)
+        )
+
+        match_pk = str(self.queryset.values_list("pk", flat=True)[0]).title()
+        expected_matches = Q(id__iexact=match_pk) | Q(name__icontains=match_pk) | Q(remote_url__icontains=match_pk)  # pylint: disable=unsupported-binary-operation
+        params = {"q": match_pk}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(expected_matches)
+        )
+
     def test_verify_ssl(self):
         params = {"verify_ssl": True}
         self.assertQuerysetEqualAndNotEmpty(

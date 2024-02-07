@@ -19,7 +19,7 @@ from django.views.generic import View
 
 from nautobot.core.forms import ConfirmationForm
 
-from .forms import LoginForm, PasswordChangeForm, TokenForm
+from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, TokenForm
 from .models import Token
 
 #
@@ -327,5 +327,55 @@ class TokenDeleteView(LoginRequiredMixin, View):
                 "obj_type": token._meta.verbose_name,
                 "form": form,
                 "return_url": reverse("user:token_list"),
+            },
+        )
+
+
+#
+# Advanced Profile Settings
+#
+
+
+class AdvancedProfileSettingsEditView(LoginRequiredMixin, View):
+    template_name = "users/advanced_settings_edit.html"
+
+    def get(self, request):
+        silk_record_requests = request.session.get("silk_record_requests", False)
+        form = AdvancedProfileSettingsForm(initial={"request_profiling": silk_record_requests})
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "active_tab": "advanced_settings",
+                "return_url": reverse("user:advanced_settings_edit"),
+                "is_django_auth_user": is_django_auth_user(request),
+            },
+        )
+
+    def post(self, request):
+        form = AdvancedProfileSettingsForm(request.POST)
+
+        if form.is_valid():
+            silk_record_requests = form.cleaned_data["request_profiling"]
+
+            # Set the value for `silk_record_requests` in the session
+            request.session["silk_record_requests"] = silk_record_requests
+
+            if silk_record_requests:
+                msg = "Enabled request profiling for the duration of the login session."
+            else:
+                msg = "Disabled request profiling."
+            messages.success(request, msg)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "active_tab": "advanced_settings",
+                "return_url": reverse("user:advanced_settings_edit"),
+                "is_django_auth_user": is_django_auth_user(request),
             },
         )

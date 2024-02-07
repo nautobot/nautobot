@@ -144,7 +144,7 @@ class ClusterGroupBulkDeleteView(generic.BulkDeleteView):
 
 class ClusterListView(generic.ObjectListView):
     permission_required = "virtualization.view_cluster"
-    queryset = Cluster.objects.select_related("cluster_type", "cluster_group").annotate(
+    queryset = Cluster.objects.annotate(
         device_count=count_related(Device, "cluster"),
         vm_count=count_related(VirtualMachine, "cluster"),
     )
@@ -296,7 +296,7 @@ class ClusterRemoveDevicesView(generic.ObjectEditView):
 
 
 class VirtualMachineListView(generic.ObjectListView):
-    queryset = VirtualMachine.objects.select_related("cluster", "tenant", "platform", "primary_ip4", "primary_ip6")
+    queryset = VirtualMachine.objects.all()
     filterset = filters.VirtualMachineFilterSet
     filterset_form = forms.VirtualMachineFilterForm
     table = tables.VirtualMachineDetailTable
