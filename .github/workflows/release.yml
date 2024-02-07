@@ -83,7 +83,7 @@ jobs:
         with:
           images: "networktocode/nautobot,ghcr.io/nautobot/nautobot"
           flavor: |
-            latest=true
+            latest=${{ matrix.python-version == 3.11 }}
           tags: |
             type=semver,pattern={{version}}-py${{ matrix.python-version }}
             type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.11 }}
@@ -115,7 +115,7 @@ jobs:
         with:
           images: "networktocode/nautobot-dev,ghcr.io/nautobot/nautobot-dev"
           flavor: |
-            latest=true
+            latest=${{ matrix.python-version == 3.11 }}
           tags: |
             type=semver,pattern={{version}}-py${{ matrix.python-version }}
             type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.11 }}
