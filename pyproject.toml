@@ -167,7 +167,7 @@ rich = "~13.7.0"
 # Change log management and generation
 towncrier = "~23.11.0"
 # Watch files for celery and mkdocs reload
-watchdog = "~3.0.0"
+watchdog = "~4.0.0"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
@@ -194,7 +194,7 @@ mkdocstrings-python = "~1.8.0"
 
 [tool.poetry.group.linting.dependencies]
 # Code static analysis
-pylint = "~2.17.7"
+pylint = "~3.0.3"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
 # Combination linter and code formatter
