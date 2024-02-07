@@ -5,7 +5,6 @@ from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.functional import classproperty
-from selenium import webdriver
 from splinter.browser import Browser
 
 from nautobot.core import testing
