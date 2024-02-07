@@ -1,6 +1,7 @@
+import datetime
 import random
 import types
-from unittest import skip
+from unittest import skip, TestCase as UnitTestTestCase
 import uuid
 
 from django.apps import apps
@@ -32,7 +33,7 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_relationships,
     extend_schema_type_tags,
 )
-from nautobot.core.graphql.types import OptimizedNautobotObjectType
+from nautobot.core.graphql.types import DateType, OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.testing import create_test_user, NautobotTestClient
 from nautobot.dcim.choices import ConsolePortTypeChoices, InterfaceModeChoices, InterfaceTypeChoices, PortTypeChoices
@@ -117,6 +118,22 @@ class GraphQLTestCase(GraphQLTestCaseBase):
         resp = execute_query(query, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
         self.assertEqual(len(resp["data"]["query"]), Location.objects.all().count())
+
+    @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_execute_query_with_custom_field_type_date(self):
+        """Test Custom Field with Date type returns valid Date object and not string. Fix for bug #3664"""
+        custom_field = CustomField(
+            type=CustomFieldTypeChoices.TYPE_DATE, label="custom_date_field", key="custom_date_field"
+        )
+        custom_field.validated_save()
+        custom_field.content_types.set([ContentType.objects.get_for_model(Location)])
+        custom_field_data = {"custom_date_field": "2023-01-23"}
+        self.locations[0]._custom_field_data = custom_field_data
+        self.locations[0].save()
+        query = "query ($name: [String!]) { locations(name:$name) {name, _custom_field_data, cf_custom_date_field} }"
+        resp = execute_query(query, user=self.user, variables={"name": "Location-1"}).to_dict()
+        self.assertEqual(resp["data"]["locations"]["cf_custom_date_field"], custom_field_data)
 
     @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -2368,3 +2385,17 @@ query {
         self.assertNotIn("error", str(result))
         expected_interfaces_first = {"ip_addresses": [{"primary_ip4_for": [{"id": str(self.device1.id)}]}]}
         self.assertEqual(result.data["device"]["interfaces"][0], expected_interfaces_first)
+
+
+class GraphQLTypeTestCase(UnitTestTestCase):
+    def test_date_type(self):
+        date_obj = datetime.date.today()
+        date_time_obj = datetime.datetime.today()
+        str_obj = date_obj.isoformat()
+        obj_not_accepted = False
+        self.assertEqual(DateType.serialize(date_obj), str_obj)
+        self.assertEqual(DateType.serialize(date_time_obj), str_obj)
+        self.assertEqual(DateType.serialize(str_obj), str_obj)
+        with self.assertRaises(GraphQLError) as cm:
+            DateType.serialize(obj_not_accepted)
+        self.assertIn("Received not compatible date", str(cm.exception))

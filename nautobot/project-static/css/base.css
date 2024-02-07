@@ -672,12 +672,9 @@ td span.hover_copy:hover .hover_copy_button {
     text-transform: uppercase;
 }
 
-.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > .buttons.pull-right {
-    padding-right: 10px;
-}
-
-.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > .buttons.pull-right + a {
-    margin-right: 43px;
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li {
+    display: flex;
+    align-items: center;
 }
 
 /* Default style for the dropdown links */
@@ -689,6 +686,27 @@ td span.hover_copy:hover .hover_copy_button {
     margin-right: 0;
     padding: 8px 20px;
     white-space: normal;
+    text-decoration: none;
+    transition: color 200ms ease;
+    flex-grow: 1;
+}
+
+/* Keep color when link item is active (after clicking) */
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li.active > a {
+    color: #ff8000 !important;
+    text-decoration: none;
+}
+
+/* Change dropdown link on hover */
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a:hover {
+    transition: background-color 200ms ease;
+    background-color: #cdf3ff1a;
+    text-decoration: none;
+    border-radius: 8px;
+}
+
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > .buttons {
+    margin: 5px;
 }
 
 .navbar-inverse .navbar-nav > li > a {
@@ -716,27 +734,54 @@ td span.hover_copy:hover .hover_copy_button {
     border-top-left-radius: 0;
     border-top-right-radius: 0;
     border-radius: 6px;
-    
+}
+
+.navbar-fixed-left .navbar-nav > .dropdown > a {
+    display: flex;
+    align-items: center;
 }
 
 /* When the dropdown is expanded, change color of the anchor text */
 .navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="true"] #dropdown_title {
     color: #ff8000; /* Color when expanded */
 }
+
+/* Remove focus color when dropdown is closed */
+.navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="false"]:focus {
+    color: #999999;
+}
+
+.navbar-fixed-left .navbar-nav > .dropdown > a > .mdi-chevron-down {
+    margin-left: auto;
+}
+
+/* Change arrow direction when the dropdown is opened */
+.navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="true"] > .mdi-chevron-down::before {
+    transition: transform 300ms ease;
+    transform: rotate(-180deg);
+    color: #ff8000; /* Color when expanded */
+}
+
+/* Change arrow direction when the dropdown is closed */
+.navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="false"] > .mdi-chevron-down::before {
+    transition: transform 300ms ease;
+}
+
 .navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu .divider {
     height: 1px;
     margin: 11px 0;
     overflow: hidden;
     background-color: #646464;
 }
+
 /* Hide scrollbar for Chrome, Safari, and Opera */
 .navbar-fixed-left::-webkit-scrollbar {
     display: none;
 }
+
 .nav-dropdown-menu .mdi {
     margin-left: 2px;
 }
-
 
 /* Collapse icon on homepage panels */
 .collapse-icon {
@@ -758,3 +803,4 @@ td span.hover_copy:hover .hover_copy_button {
 .dragging {
     opacity: 0.5;
 }
+
