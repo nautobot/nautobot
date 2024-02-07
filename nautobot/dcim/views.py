@@ -215,7 +215,7 @@ class LocationTypeBulkDeleteView(generic.BulkDeleteView):
 
 
 class LocationListView(generic.ObjectListView):
-    queryset = Location.objects.select_related("location_type", "parent", "tenant")
+    queryset = Location.objects.all()
     filterset = filters.LocationFilterSet
     filterset_form = forms.LocationFilterForm
     table = tables.LocationTable
@@ -309,7 +309,7 @@ class LocationBulkDeleteView(generic.BulkDeleteView):
 
 
 class RackGroupListView(generic.ObjectListView):
-    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group")).select_related("location")
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
     filterset = filters.RackGroupFilterSet
     filterset_form = forms.RackGroupFilterForm
     table = tables.RackGroupTable
@@ -366,11 +366,7 @@ class RackGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class RackListView(generic.ObjectListView):
-    queryset = (
-        Rack.objects.select_related("location", "rack_group", "tenant", "role", "status")
-        .prefetch_related("devices__device_type")
-        .annotate(device_count=count_related(Device, "rack"))
-    )
+    queryset = Rack.objects.annotate(device_count=count_related(Device, "rack"))
     filterset = filters.RackFilterSet
     filterset_form = forms.RackFilterForm
     table = tables.RackDetailTable
@@ -607,11 +603,7 @@ class ManufacturerBulkDeleteView(generic.BulkDeleteView):
 
 
 class DeviceTypeListView(generic.ObjectListView):
-    queryset = (
-        DeviceType.objects.select_related("manufacturer", "hardware_family")
-        .prefetch_related("software_images")
-        .annotate(device_count=count_related(Device, "device_type"))
-    )
+    queryset = DeviceType.objects.annotate(device_count=count_related(Device, "device_type"))
     filterset = filters.DeviceTypeFilterSet
     filterset_form = forms.DeviceTypeFilterForm
     table = tables.DeviceTypeTable
@@ -1123,16 +1115,7 @@ class PlatformBulkDeleteView(generic.BulkDeleteView):
 
 class DeviceListView(generic.ObjectListView):
     queryset = Device.objects.select_related(
-        "status",
-        "device_type",
-        "device_type__hardware_family",
         "device_type__manufacturer",  # Needed for __str__() on device_type
-        "role",
-        "tenant",
-        "location",
-        "rack",
-        "primary_ip4",
-        "primary_ip6",
     )
     filterset = filters.DeviceFilterSet
     filterset_form = forms.DeviceFilterForm
@@ -2522,9 +2505,7 @@ class InterfaceConnectionsListView(ConnectionsListView):
 
 
 class VirtualChassisListView(generic.ObjectListView):
-    queryset = VirtualChassis.objects.select_related("master").annotate(
-        member_count=count_related(Device, "virtual_chassis")
-    )
+    queryset = VirtualChassis.objects.annotate(member_count=count_related(Device, "virtual_chassis"))
     table = tables.VirtualChassisTable
     filterset = filters.VirtualChassisFilterSet
     filterset_form = forms.VirtualChassisFilterForm
@@ -2762,9 +2743,7 @@ class VirtualChassisBulkDeleteView(generic.BulkDeleteView):
 
 
 class PowerPanelListView(generic.ObjectListView):
-    queryset = PowerPanel.objects.select_related("location", "rack_group").annotate(
-        power_feed_count=count_related(PowerFeed, "power_panel")
-    )
+    queryset = PowerPanel.objects.annotate(power_feed_count=count_related(PowerFeed, "power_panel"))
     filterset = filters.PowerPanelFilterSet
     filterset_form = forms.PowerPanelFilterForm
     table = tables.PowerPanelTable

@@ -44,6 +44,16 @@ EXTRA_INSTALLED_APPS = [
 This will ensure your default setting's `INSTALLED_APPS` do not have to be modified, and the user
 can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can be added using `EXTRA_MIDDLEWARE`.
 
+### ALLOW_REQUEST_PROFILING
+
+Default: `False`
+
+Global setting to allow or deny users from enabling request profiling on their login session.
+
+See the administration guide on [request profiling](../guides/request-profiling.md) for more information.
+
+---
+
 ## ALLOWED_URL_SCHEMES
 
 Default: `('file', 'ftp', 'ftps', 'http', 'https', 'irc', 'mailto', 'sftp', 'ssh', 'tel', 'telnet', 'tftp', 'vnc', 'xmpp')`

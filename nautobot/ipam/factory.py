@@ -132,9 +132,6 @@ class VLANGroupFactory(OrganizationalModelFactory):
     class Params:
         unique_name = UniqueFaker("word", part_of_speech="noun")
 
-    # TODO: name is not globally unique, but (location, name) tuple must be.
-    # The likelihood of collision with random names is pretty low, but non-zero.
-    # We might want to consider *intentionally* using non-globally-unique names for testing purposes?
     name = factory.LazyAttribute(lambda o: o.unique_name.upper())
 
     has_description = NautobotBoolIterator()
