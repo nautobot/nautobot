@@ -1,7 +1,6 @@
 import json
 import os
 import re
-from string import ascii_uppercase
 import types
 from unittest import mock
 import urllib.parse
