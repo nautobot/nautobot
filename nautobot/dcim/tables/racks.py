@@ -29,7 +29,7 @@ __all__ = (
 
 class RackGroupTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
     location = tables.Column(linkify=True)
     rack_count = tables.Column(verbose_name="Racks")
     actions = ButtonsColumn(model=RackGroup, prepend_template=RACKGROUP_ELEVATIONS)
