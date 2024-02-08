@@ -589,6 +589,14 @@ class Device(PrimaryModel, ConfigContextModel):
         null=True,
     )
 
+    software_image_files = models.ManyToManyField(
+        to="dcim.SoftwareImageFile",
+        related_name="devices",
+        blank=True,
+        verbose_name="Software Image Files",
+        help_text="Override the software image files associated with the software version for this device",
+    )
+
     objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
 
     clone_fields = [

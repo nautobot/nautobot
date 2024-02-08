@@ -87,11 +87,25 @@
                                 <tr>
                                     <td>Device Types</td>
                                     <td>
-                                        {% if object.device_types.count %}
-                                        <a href="{% url 'dcim:devicetype_list' %}?software_image_files={{ object.pk }}">{{ object.device_types.count }}</a>
-                                        {% else %}
-                                        <span class="text-muted">&mdash;</span>
-                                        {% endif %}
+                                        {% with device_type_count=object.device_types.count %}
+                                            {% if device_type_count %}
+                                            <a href="{% url 'dcim:devicetype_list' %}?software_image_files={{ object.pk }}">{{ device_type_count }}</a>
+                                            {% else %}
+                                            <span class="text-muted">&mdash;</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Devices</td>
+                                    <td>
+                                        {% with device_count=object.devices.count %}
+                                            {% if device_count %}
+                                            <a href="{% url 'dcim:device_list' %}?software_image_files={{ object.pk }}">{{ device_count }}</a>
+                                            {% else %}
+                                            <span class="text-muted">&mdash;</span>
+                                            {% endif %}
+                                        {% endwith %}
                                     </td>
                                 </tr>
                             </table>

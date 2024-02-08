@@ -1563,6 +1563,13 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         required=False,
         label="VRFs",
     )
+    software_image_files = DynamicModelMultipleChoiceField(
+        queryset=SoftwareImageFile.objects.all(),
+        required=False,
+        label="Software image files",
+        help_text="Override the software image files associated with the software version for this device",
+        query_params={"device_types": "$device_type"},
+    )
     software_version = DynamicModelChoiceField(
         queryset=SoftwareVersion.objects.all(),
         required=False,
@@ -1578,6 +1585,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "device_type",
             "serial",
             "asset_tag",
+            "software_image_files",
             "software_version",
             "location",
             "rack",
@@ -1723,6 +1731,7 @@ class DeviceBulkEditForm(
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
     device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
     device_redundancy_group_priority = forms.IntegerField(required=False, min_value=1)
+    software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
     software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
 
     class Meta:
@@ -1739,6 +1748,7 @@ class DeviceBulkEditForm(
             "secrets_group",
             "device_redundancy_group",
             "device_redundancy_group_priority",
+            "software_image_files",
             "software_version",
         ]
 
@@ -1770,8 +1780,8 @@ class DeviceFilterForm(
         "manufacturer",
         "device_type",
         "mac_address",
-        "software_version",
         "has_software_version",
+        "software_version",
         "has_primary_ip",
     ]
     q = forms.CharField(required=False, label="Search")

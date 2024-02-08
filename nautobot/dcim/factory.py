@@ -120,6 +120,7 @@ class DeviceFactory(PrimaryModelFactory):
             "has_device_redundancy_group",
             "has_platform",
             "has_serial",
+            "has_software_image_files",
             "has_software_version",
             "has_tenant",
         )
@@ -173,6 +174,17 @@ class DeviceFactory(PrimaryModelFactory):
         factory.LazyAttribute(lambda o: get_random_software_version_for_device_type(o.device_type)),
         None,
     )
+
+    has_software_image_files = NautobotBoolIterator(chance_of_getting_true=20)
+
+    @factory.post_generation
+    def software_image_files(self, create, extracted, **kwargs):
+        if not create or not DeviceFactory.has_software_image_files.evaluate(None, None, None):
+            return
+        if extracted:
+            self.software_image_files.set(extracted)
+        else:
+            self.software_image_files.set(get_random_instances(SoftwareImageFile, minimum=1))
 
     # TODO to be done after these model factories are done.
     # has_cluster = NautobotBoolIterator()

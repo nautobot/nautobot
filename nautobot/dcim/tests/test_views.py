@@ -1260,9 +1260,17 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         statuses = Status.objects.get_for_model(Device)
         status_active = statuses[0]
 
-        software_versions = SoftwareVersion.objects.filter(software_image_files__isnull=False)[:2]
-        devicetypes[0].software_image_files.set(software_versions[0].software_image_files.all())
-        devicetypes[1].software_image_files.set(software_versions[1].software_image_files.all())
+        # We want unique sets of software image files for each device type
+        software_image_files = list(SoftwareImageFile.objects.all()[:4])
+        software_versions = list(SoftwareVersion.objects.filter(software_image_files__isnull=False)[:2])
+        software_image_files[0].software_version = software_versions[0]
+        software_image_files[1].software_version = software_versions[0]
+        software_image_files[2].software_version = software_versions[1]
+        software_image_files[3].software_version = software_versions[1]
+        for software_image_file in software_image_files:
+            software_image_file.save()
+        devicetypes[0].software_image_files.set(software_image_files[:2])
+        devicetypes[1].software_image_files.set(software_image_files[2:])
 
         cls.custom_fields = (
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_INTEGER, label="Crash Counter", default=0),
@@ -1372,6 +1380,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "cf_crash_counter": -1,
             "cr_router-id": None,
             "software_version": software_versions[1].pk,
+            "software_image_files": [f.pk for f in software_versions[0].software_image_files.all()],
         }
 
         cls.csv_data = (

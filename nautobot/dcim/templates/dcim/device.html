@@ -222,6 +222,24 @@
                                             {{ object.software_version|hyperlinked_object }}
                                         </td>
                                     </tr>
+                                    <tr>
+                                        <td>Software Image files</td>
+                                        <td>
+                                            {% with software_image_file_count=object.software_image_files.count %}
+                                                {% if software_image_file_count %}
+                                                <a href="{% url 'dcim:softwareimagefile_list' %}?devices={{ object.pk }}">{{ software_image_file_count }}</a>*
+                                                {% else %}
+                                                    {% with software_version_image_file_count=object.software_version.software_image_files.count %}
+                                                        {% if software_version_image_file_count %}
+                                                            <a href="{% url 'dcim:softwareimagefile_list' %}?software_version={{ object.software_version.pk }}">{{ software_version_image_file_count }}</a>
+                                                        {% else %}
+                                                            <span class="text-muted">&mdash;</span>
+                                                        {% endif %}
+                                                    {% endwith %}
+                                                {% endif %}
+                                            {% endwith %}
+                                        </td>
+                                    </tr>
                                 </table>
                             </div>
                             {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields_advanced_ui=False %}

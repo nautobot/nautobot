@@ -643,6 +643,10 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         field_name="device_bay_templates",
         label="Has device bay templates",
     )
+    has_software_image_files = RelatedMembershipBooleanFilter(
+        field_name="software_image_files",
+        label="Has software image files",
+    )
     software_image_files = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SoftwareImageFile.objects.all(),
         to_field_name="image_file_name",
@@ -661,6 +665,8 @@ class DeviceTypeFilterSet(NautobotFilterSet):
             "comments",
             "devices",
             "tags",
+            "has_software_image_files",
+            "software_image_files",
         ]
 
     def _console_ports(self, queryset, name, value):
@@ -978,6 +984,15 @@ class DeviceFilterSet(
         field_name="software_version",
         label="Has software version",
     )
+    has_software_image_files = RelatedMembershipBooleanFilter(
+        field_name="software_image_files",
+        label="Has software image files",
+    )
+    software_image_files = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareImageFile.objects.all(),
+        to_field_name="image_file_name",
+        label="Software image files (image file name or ID)",
+    )
 
     class Meta:
         model = Device
@@ -994,6 +1009,8 @@ class DeviceFilterSet(
             "interfaces",
             "software_version",
             "has_software_version",
+            "has_software_image_files",
+            "software_image_files",
         ]
 
     def generate_query__has_primary_ip(self, value):
@@ -1692,6 +1709,14 @@ class SoftwareImageFileFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     has_device_types = RelatedMembershipBooleanFilter(
         field_name="device_types",
         label="Has device types",
+    )
+    devices = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        label="Devices (name or ID)",
+    )
+    has_devices = RelatedMembershipBooleanFilter(
+        field_name="devices",
+        label="Has devices",
     )
 
     class Meta:

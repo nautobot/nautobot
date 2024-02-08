@@ -391,7 +391,7 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         "device_redundancy_group",
         "secrets_group",
         "status",
-    ).prefetch_related("tags", "primary_ip4__nat_outside_list", "primary_ip6__nat_outside_list")
+    ).prefetch_related("tags", "primary_ip4__nat_outside_list", "primary_ip6__nat_outside_list", "software_image_files")
     serializer_class = serializers.DeviceSerializer
     filterset_class = filters.DeviceFilterSet
 

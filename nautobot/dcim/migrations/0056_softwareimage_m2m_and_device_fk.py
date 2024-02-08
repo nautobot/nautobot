@@ -85,4 +85,9 @@ class Migration(migrations.Migration):
                 to="dcim.softwareversion",
             ),
         ),
+        migrations.AddField(
+            model_name="device",
+            name="software_image_files",
+            field=models.ManyToManyField(blank=True, related_name="devices", to="dcim.SoftwareImageFile"),
+        ),
     ]
