@@ -499,6 +499,11 @@
             "additionalProperties": true,
             "description": "A dictionary contains the configuration settings for logging in Nautobot."
         },
+        "LOG_DEPRECATION_WARNINGS": {
+            "type": "boolean",
+            "default": false,
+            "description": "This can be set to True to allow deprecation warnings raised by Nautobot to (additionally) be logged as WARNING level log messages."
+        },
         "MAINTENANCE_MODE": {
             "type": "boolean",
             "default": false,
@@ -538,11 +543,6 @@
             "type": "string",
             "default": "",
             "description": "Nautobot will use this optional credential with NAPALM_PASSWORD when authenticating to remote devices via the NAPALM library, if installed."
-        },
-        "NAUTOBOT_LOG_DEPRECATION_WARNINGS": {
-            "type": "boolean",
-            "default": false,
-            "description": "This can be set to True to allow deprecation warnings raised by Nautobot to (additionally) be logged as WARNING level log messages."
         },
         "NAUTOBOT_ROOT": {
             "$ref": "#/definitions/absolute_path",

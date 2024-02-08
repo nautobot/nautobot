@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from string import ascii_uppercase
 import types
 from unittest import mock
 import urllib.parse
@@ -476,13 +477,120 @@ class SettingsJSONSchemaViewTestCase(TestCase):
 
     def test_settings_json_schema_contains_valid_setting_variables(self):
         """Test the validity of the settings variables from settings.json and their types with those in settings.py"""
-        # allowed_settings_variable_list = [
-        #     "CELERY_BROKER_TRANSPORT_OPTIONS",
-        #     "CONFIG_CONTEXT_DYNAMIC_GROUPS_ENALBED",
-        #     "SESSION_ENGINE",
-        #     "DATABASE_ROUTERS",
-        #     "SESSION_CACHE_ALIAS",
-        # ]
+        # This list contains all variables that exist in settings.py but not in the JSON schema in settings.json.
+        # ADMINS does not exist in either settings.json or settings.py
+        ALLOWED_SETTINGS = [
+            "ADMINS",
+            "ALLOW_REQUEST_PROFILING",
+            "ALLOWED_URL_SCHEMES",
+            "AUTHENTICATION_BACKENDS",
+            "AUTH_USER_MODEL",
+            "BASE_DIR",
+            "BRANDING_POWERED_BY_URL",
+            "CELERY_ACCEPT_CONTENT",
+            "CELERY_BEAT_SCHEDULER",
+            "CELERY_BROKER_TRANSPORT_OPTIONS",
+            "CELERY_RESULT_ACCEPT_CONTENT",
+            "CELERY_RESULT_BACKEND",
+            "CELERY_RESULT_EXPIRES",
+            "CELERY_RESULT_EXTENDED",
+            "CELERY_RESULT_SERIALIZER",
+            "CELERY_TASK_SEND_SENT_EVENT",
+            "CELERY_TASK_SERIALIZER",
+            "CELERY_TASK_TRACK_STARTED",
+            "CELERY_WORKER_SEND_TASK_EVENTS",
+            "CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED",
+            "CONFIG_CONTEXT_DYNAMIC_GROUPS_ENALBED",
+            "CONSTANCE_ADDITIONAL_FIELDS",
+            "CONSTANCE_BACKEND",
+            "CONSTANCE_CONFIG",
+            "CONSTANCE_CONFIG_FIELDSETS",
+            "CONSTANCE_DATABASE_CACHE_BACKEND",
+            "CONSTANCE_DATABASE_PREFIX",
+            "CONSTANCE_IGNORE_ADMIN_VERSION_CHECK",
+            "CSRF_FAILURE_VIEW",
+            "DATABASE_ROUTERS",
+            "DATA_UPLOAD_MAX_NUMBER_FIELDS",
+            "DEFAULT_AUTO_FIELD",
+            "DRF_REACT_TEMPLATE_TYPE_MAP",
+            "EXEMPT_EXCLUDE_MODELS",
+            "FILTERS_NULL_CHOICE_LABEL",
+            "FILTERS_NULL_CHOICE_VALUE",
+            "GRAPHENE",
+            "HOSTNAME",
+            "HOSTNAME",
+            "INSTALLED_APPS",
+            "LANGUAGE_CODE",
+            "LOGIN_REDIRECT_URL",
+            "LOGIN_URL",
+            "LOG_DEPRECATION_WARNINGS",
+            "LOG_LEVEL",
+            "MEDIA_URL",
+            "MESSAGE_TAGS",
+            "MIDDLEWARE",
+            "PROMETHEUS_EXPORT_MIGRATIONS",
+            "REMOTE_AUTH_AUTO_CREATE_USER",
+            "REMOTE_AUTH_HEADER",
+            "REST_FRAMEWORK",
+            "REST_FRAMEWORK_ALLOWED_VERSIONS",
+            "REST_FRAMEWORK_VERSION",
+            "ROOT_URLCONF",
+            "SECURE_PROXY_SSL_HEADER",
+            "SESSION_CACHE_ALIAS",
+            "SESSION_ENGINE",
+            "SHELL_PLUS_DONT_LOAD",
+            "SHORT_TIME_FORMAT",
+            "SILKY_ANALYZE_QUERIES",
+            "SILKY_AUTHENTICATION",
+            "SILKY_AUTHORISATION",
+            "SILKY_INTERCEPT_FUNC",
+            "SILKY_PERMISSIONS",
+            "SILKY_PYTHON_PROFILER",
+            "SILKY_PYTHON_PROFILER_BINARY",
+            "SILKY_PYTHON_PROFILER_EXTENDED_FILE_NAME",
+            "SOCIAL_AUTH_BACKEND_PREFIX",
+            "SOCIAL_AUTH_POSTGRES_JSONFIELD",
+            "SPECTACULAR_SETTINGS",
+            "STATICFILES_DIRS",
+            "STATIC_URL",
+            "TEMPLATES",
+            "TESTING",
+            "TEST_RUNNER",
+            "USE_I18N",
+            "USE_TZ",
+            "USE_X_FORWARDED_HOST",
+            "VERSION",
+            "VERSION",
+            "VERSION_MAJOR",
+            "VERSION_MINOR",
+            "WEBSERVER_WARMUP",
+            "WSGI_APPLICATION",
+            "X_FRAME_OPTIONS",
+        ]
+
+        # Retrieve all variables from settings.py.
+        # and trim out all noises by retaining variables with only uppercase letters and "_".
+        existing_settings_variables = list(settings.__dict__.keys())
+        existing_settings_variables = [
+            word for word in existing_settings_variables if all([letter in ascii_uppercase + "_" for letter in word])
+        ]
+
+        # Some of the variables in the JSON schema are contained in the CONSTANCE_CONFIG setting variable, e.g. BANNER_TOP, BANNER_BOTTOM and etc.
+        existing_constance_config_variables = list(settings.__dict__.get("CONSTANCE_CONFIG").keys())
+        # All the documented settings variable in the JSON schema from settings.json
+        existing_json_schema_variables = list(self.json_data["properties"].keys())
+
+        # Check if there is any unsupported setting variable in settings.py.
+        for variable in existing_settings_variables:
+            if variable not in existing_json_schema_variables + ALLOWED_SETTINGS:
+                self.fail(f"Unsupported settings variable {variable} detected in nautobot/core/settings.py")
+
+        # Check if there is any unsupported setting variable in settings.json.
+        for variable in self.json_data["properties"].keys():
+            if variable not in existing_settings_variables + existing_constance_config_variables + ALLOWED_SETTINGS:
+                self.fail(f"Unsupported settings variable {variable} detected in nautobot/core/settings.json")
+
+        # Check if the values of the settings variables conform to what is specified in the JSON Schema.
         TYPE_MAPPING = {
             "string": [str],
             "object": [dict],
