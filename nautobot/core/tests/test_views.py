@@ -372,7 +372,7 @@ class AuthenticateMetricsTestCase(APITestCase):
 
         request = self.factory.get("/")
         response = NautobotMetricsView.as_view()(request)
-        self.assertHttpStatus(response, 200, msg="/metrics should return a 403 HTTP status code.")
+        self.assertHttpStatus(response, 200, msg="/metrics should return a 200 HTTP status code.")
 
 
 class ErrorPagesTestCase(TestCase):
