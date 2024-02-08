@@ -15,7 +15,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import resolve, reverse
-from django.utils.encoding import smart_text
+from django.utils.encoding import smart_str
 from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
@@ -34,7 +34,7 @@ from prometheus_client.registry import Collector
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.renderers import BaseRenderer
 from rest_framework.response import Response
-from rest_framework.versioning import URLPathVersioning
+from rest_framework.versioning import AcceptHeaderVersioning
 from rest_framework.views import APIView
 
 from nautobot.core.constants import SEARCH_MAX_RESULTS
@@ -296,7 +296,7 @@ class NautobotAppMetricsCollector(Collector):
         yield gauge
 
 
-class PrometheusVersioning(URLPathVersioning):
+class PrometheusVersioning(AcceptHeaderVersioning):
     """Overwrite the Nautobot API Version with the prometheus API version. Otherwise Telegraf/Prometheus won't be able to poll due to a version mismatch."""
 
     default_version = re.findall("version=(.+);", CONTENT_TYPE_LATEST)[0]
@@ -310,7 +310,7 @@ class PlainTextRenderer(BaseRenderer):
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
         """Render the data."""
-        return smart_text(data, encoding=self.charset)
+        return smart_str(data, encoding=self.charset)
 
 
 class NautobotMetricsView(APIView):
