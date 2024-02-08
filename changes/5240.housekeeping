@@ -1,1 +1,0 @@
-Changed test config to use `constance.backends.memory.MemoryBackend` to avoid intermittent failures in parallel tests.
