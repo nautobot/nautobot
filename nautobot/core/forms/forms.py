@@ -347,3 +347,23 @@ def dynamic_formset_factory(filterset, data=None, **kwargs):
 
 
 DynamicFilterFormSet = dynamic_formset_factory
+
+
+class FactoryForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        try:
+            from nautobot.core.factory import get_all_factories
+        except ImportError:
+            return
+
+        for factory in get_all_factories():
+            model = factory._meta.model
+            model_name = factory._meta.model._meta.label_lower
+            model_count = model.objects.count()
+            self.fields[model_name] = forms.IntegerField(
+                label=model_name,
+                initial=model_count,
+                min_value=model_count,
+            )

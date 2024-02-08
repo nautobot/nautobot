@@ -6,6 +6,7 @@ import time
 from db_file_storage.views import get_file
 from django.apps import apps
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
@@ -26,7 +27,7 @@ from prometheus_client.metrics_core import GaugeMetricFamily
 from prometheus_client.registry import Collector
 
 from nautobot.core.constants import SEARCH_MAX_RESULTS
-from nautobot.core.forms import SearchForm
+from nautobot.core.forms import FactoryForm, SearchForm
 from nautobot.core.releases import get_latest_release
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -111,6 +112,57 @@ class HomeView(AccessMixin, TemplateView):
                                 )
 
         return self.render_to_response(context)
+
+
+class FactoryView(LoginRequiredMixin, TemplateView):
+    template_name = "utilities/factory.html"
+
+    def get(self, request, *args, **kwargs):
+        form = FactoryForm()
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+            },
+        )
+
+    def _create_factory_batch(self, model_name, count):
+        """Create a batch of objects using the factory."""
+        from nautobot.core.factory import get_all_factories
+
+        factory_dict = {factory._meta.model._meta.label_lower: factory for factory in get_all_factories()}
+        factory = factory_dict.get(model_name, None)
+        if factory is None:
+            raise ValueError(f"No factory found for model {model_name}")
+        return factory.create_batch(count)
+
+    def post(self, request, *args, **kwargs):
+        form = FactoryForm(data=request.POST)
+
+        if form.is_valid():
+            try:
+                for name, value in form.cleaned_data.items():
+                    model = apps.get_model(name)
+                    count = model.objects.count()
+                    if value > count:
+                        msg = self._create_factory_batch(name, count=value - count)
+                        messages.success(request, msg)
+
+                return redirect(request.get_full_path())
+
+            except Exception as exc:
+                msg = f"Object creation failed: {exc}"
+                form.add_error(None, msg)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+            },
+        )
 
 
 class ThemePreviewView(LoginRequiredMixin, TemplateView):

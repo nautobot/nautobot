@@ -6,6 +6,7 @@ from django.views.static import serve
 
 from nautobot.core.views import (
     CustomGraphQLView,
+    FactoryView,
     get_file_with_authorization,
     HomeView,
     nautobot_metrics_view,
@@ -73,6 +74,7 @@ if settings.DEBUG:
 
         urlpatterns += [
             path("__debug__/", include(debug_toolbar.urls)),
+            path("factory/", FactoryView.as_view(), name="factory"),
             path("theme-preview/", ThemePreviewView.as_view(), name="theme_preview"),
         ]
     except ImportError:

@@ -1,3 +1,4 @@
+import functools
 from ipaddress import IPv6Address, IPV6LENGTH, IPv6Network
 import itertools
 
@@ -221,3 +222,35 @@ class NautobotFakerProvider(BaseProvider):
 
 
 factory.Faker.add_provider(NautobotFakerProvider)
+
+
+@functools.cache
+def get_all_factories():
+    import nautobot.circuits.factory
+    import nautobot.dcim.factory
+    import nautobot.extras.factory
+    import nautobot.ipam.factory
+    import nautobot.tenancy.factory
+    import nautobot.users.factory
+    import nautobot.virtualization.factory
+
+    factories = []
+    for module in [
+        nautobot.circuits.factory,
+        nautobot.dcim.factory,
+        nautobot.extras.factory,
+        nautobot.ipam.factory,
+        nautobot.tenancy.factory,
+        nautobot.users.factory,
+        nautobot.virtualization.factory,
+    ]:
+        for obj in dir(module):
+            if isinstance(getattr(module, obj), type) and issubclass(getattr(module, obj), DjangoModelFactory):
+                factory = getattr(module, obj)
+                if factory._meta.abstract:
+                    continue
+                if factory._meta.model is None:
+                    raise Exception(f"Factory {factory} has no model defined")
+                factories.append(factory)
+
+    return factories
