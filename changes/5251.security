@@ -1,0 +1,1 @@
+Updated `Django` dependency to 3.2.24 due to CVE-2024-24680.
