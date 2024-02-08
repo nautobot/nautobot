@@ -476,13 +476,13 @@ class SettingsJSONSchemaViewTestCase(TestCase):
 
     def test_settings_json_schema_contains_valid_setting_variables(self):
         """Test the validity of the settings variables from settings.json and their types with those in settings.py"""
-        allowed_settings_variable_list = [
-            "CELERY_BROKER_TRANSPORT_OPTIONS",
-            "CONFIG_CONTEXT_DYNAMIC_GROUPS_ENALBED",
-            "SESSION_ENGINE",
-            "DATABASE_ROUTERS",
-            "SESSION_CACHE_ALIAS",
-        ]
+        # allowed_settings_variable_list = [
+        #     "CELERY_BROKER_TRANSPORT_OPTIONS",
+        #     "CONFIG_CONTEXT_DYNAMIC_GROUPS_ENALBED",
+        #     "SESSION_ENGINE",
+        #     "DATABASE_ROUTERS",
+        #     "SESSION_CACHE_ALIAS",
+        # ]
         TYPE_MAPPING = {
             "string": [str],
             "object": [dict],
