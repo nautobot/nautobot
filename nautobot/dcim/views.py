@@ -355,7 +355,11 @@ class LocationListView(generic.ObjectListView):
 
 
 class LocationView(generic.ObjectView):
-    queryset = Location.objects.all()
+    # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
+    # key, not a tree field). If we ever do access tree fields, this will perform worse, because django will
+    # automatically issue a second query (similar to behavior for
+    # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
+    queryset = Location.objects.without_tree_fields().all()
 
     def get_extra_context(self, request, instance):
         related_locations = (
@@ -384,6 +388,11 @@ class LocationView(generic.ObjectView):
         )
         children = (
             Location.objects.restrict(request.user, "view")
+            # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
+            # key, not a tree field). If we ever do access tree fields, this will perform worse, because django will
+            # automatically issue a second query (similar to behavior for
+            # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
+            .without_tree_fields()
             .filter(parent=instance)
             .select_related("parent", "location_type")
         )
