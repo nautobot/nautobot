@@ -85,3 +85,5 @@ if settings.METRICS_ENABLED:
 
 handler404 = "nautobot.core.views.resource_not_found"
 handler500 = "nautobot.core.views.server_error"
+
+urlpatterns += [path("silk/", include("silk.urls", namespace="silk"))]

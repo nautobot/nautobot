@@ -424,19 +424,7 @@ class PrefixListView(generic.ObjectListView):
     filterset_form = forms.PrefixFilterForm
     table = tables.PrefixDetailTable
     template_name = "ipam/prefix_list.html"
-    queryset = Prefix.objects.select_related(
-        "parent",
-        "location",
-        "namespace",
-        "tenant",
-        "vlan",
-        "rir",
-        "role",
-        "status",
-    ).prefetch_related(
-        "ip_addresses",
-        "children",
-    )
+    queryset = Prefix.objects.all()
     use_new_ui = True
 
 
@@ -726,7 +714,7 @@ class PrefixBulkDeleteView(generic.BulkDeleteView):
 
 
 class IPAddressListView(generic.ObjectListView):
-    queryset = IPAddress.objects.select_related("tenant", "status", "role", "parent__namespace").annotate(
+    queryset = IPAddress.objects.annotate(
         interface_count=Count("interfaces"),
         interface_parent_count=(Count("interfaces__device", distinct=True)),
         vm_interface_count=Count("vm_interfaces"),
@@ -1210,7 +1198,7 @@ class IPAddressToInterfaceUIViewSet(view_mixins.ObjectBulkCreateViewMixin):
 
 
 class VLANGroupListView(generic.ObjectListView):
-    queryset = VLANGroup.objects.select_related("location").annotate(vlan_count=count_related(VLAN, "vlan_group"))
+    queryset = VLANGroup.objects.annotate(vlan_count=count_related(VLAN, "vlan_group"))
     filterset = filters.VLANGroupFilterSet
     filterset_form = forms.VLANGroupFilterForm
     table = tables.VLANGroupTable
@@ -1282,9 +1270,7 @@ class VLANGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class VLANListView(generic.ObjectListView):
-    queryset = VLAN.objects.annotate(location_count=Count("locations")).select_related(
-        "vlan_group", "tenant", "role", "status"
-    )
+    queryset = VLAN.objects.annotate(location_count=Count("locations"))
     filterset = filters.VLANFilterSet
     filterset_form = forms.VLANFilterForm
     table = tables.VLANDetailTable
