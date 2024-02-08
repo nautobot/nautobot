@@ -479,7 +479,7 @@ class SettingsJSONSchemaViewTestCase(TestCase):
         """Test the validity of the settings variables from settings.json and their types with those in settings.py"""
         # This list contains all variables that exist in settings.py but not in the JSON schema in settings.json.
         # ADMINS does not exist in either settings.json or settings.py
-        ALLOWED_SETTINGS = [
+        UNDOCUMENTED_SETTINGS = [
             "ADMINS",
             "ALLOW_REQUEST_PROFILING",
             "ALLOWED_URL_SCHEMES",
@@ -500,7 +500,6 @@ class SettingsJSONSchemaViewTestCase(TestCase):
             "CELERY_TASK_TRACK_STARTED",
             "CELERY_WORKER_SEND_TASK_EVENTS",
             "CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED",
-            "CONFIG_CONTEXT_DYNAMIC_GROUPS_ENALBED",
             "CONSTANCE_ADDITIONAL_FIELDS",
             "CONSTANCE_BACKEND",
             "CONSTANCE_CONFIG",
@@ -518,12 +517,10 @@ class SettingsJSONSchemaViewTestCase(TestCase):
             "FILTERS_NULL_CHOICE_VALUE",
             "GRAPHENE",
             "HOSTNAME",
-            "HOSTNAME",
             "INSTALLED_APPS",
             "LANGUAGE_CODE",
             "LOGIN_REDIRECT_URL",
             "LOGIN_URL",
-            "LOG_DEPRECATION_WARNINGS",
             "LOG_LEVEL",
             "MEDIA_URL",
             "MESSAGE_TAGS",
@@ -539,7 +536,6 @@ class SettingsJSONSchemaViewTestCase(TestCase):
             "SESSION_CACHE_ALIAS",
             "SESSION_ENGINE",
             "SHELL_PLUS_DONT_LOAD",
-            "SHORT_TIME_FORMAT",
             "SILKY_ANALYZE_QUERIES",
             "SILKY_AUTHENTICATION",
             "SILKY_AUTHORISATION",
@@ -560,19 +556,17 @@ class SettingsJSONSchemaViewTestCase(TestCase):
             "USE_TZ",
             "USE_X_FORWARDED_HOST",
             "VERSION",
-            "VERSION",
             "VERSION_MAJOR",
             "VERSION_MINOR",
             "WEBSERVER_WARMUP",
             "WSGI_APPLICATION",
             "X_FRAME_OPTIONS",
         ]
-
         # Retrieve all variables from settings.py.
         # and trim out all noises by retaining variables with only uppercase letters and "_".
         existing_settings_variables = list(settings.__dict__.keys())
         existing_settings_variables = [
-            word for word in existing_settings_variables if all([letter in ascii_uppercase + "_" for letter in word])
+            word for word in existing_settings_variables if word == word.upper() and not word.startswith("_")
         ]
 
         # Some of the variables in the JSON schema are contained in the CONSTANCE_CONFIG setting variable, e.g. BANNER_TOP, BANNER_BOTTOM and etc.
@@ -580,15 +574,18 @@ class SettingsJSONSchemaViewTestCase(TestCase):
         # All the documented settings variable in the JSON schema from settings.json
         existing_json_schema_variables = list(self.json_data["properties"].keys())
 
-        # Check if there is any unsupported setting variable in settings.py.
+        # Check if there is any undocumented setting variable in settings.py.
+        expected_variables = set(existing_json_schema_variables) | set(UNDOCUMENTED_SETTINGS)
         for variable in existing_settings_variables:
-            if variable not in existing_json_schema_variables + ALLOWED_SETTINGS:
-                self.fail(f"Unsupported settings variable {variable} detected in nautobot/core/settings.py")
-
-        # Check if there is any unsupported setting variable in settings.json.
+            if variable not in expected_variables:
+                self.fail(f"Undocumented settings variable {variable} detected in nautobot/core/settings.py")
+        # Check if there is any nonexistent settings variable in settings.json.
+        expected_variables = (
+            set(existing_settings_variables) | set(existing_constance_config_variables) | set(UNDOCUMENTED_SETTINGS)
+        )
         for variable in self.json_data["properties"].keys():
-            if variable not in existing_settings_variables + existing_constance_config_variables + ALLOWED_SETTINGS:
-                self.fail(f"Unsupported settings variable {variable} detected in nautobot/core/settings.json")
+            if variable not in expected_variables:
+                self.fail(f"Nonexistent settings variable {variable} detected in nautobot/core/settings.json")
 
         # Check if the values of the settings variables conform to what is specified in the JSON Schema.
         TYPE_MAPPING = {

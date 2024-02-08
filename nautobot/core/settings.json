@@ -225,7 +225,7 @@
             "default": 90,
             "description": "The number of days to retain logged changes (object creations, updates, and deletions)."
         },
-        "CONFIG_CONTEXT_DYNAMIC_GROUPS_ENALBED": {
+        "CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED": {
             "type": "boolean",
             "default": false,
             "description": "If True, it will be possible to apply Config Context objects to Devices and Virtual Machines via Dynamic Group membership. When set to False this behavior will not be available."
@@ -663,6 +663,10 @@
         "SHORT_DATETIME_FORMAT": {
             "type": "string",
             "default": "Y-m-d H:i"
+        },
+        "SHORT_TIME_FORMAT": {
+            "type": "string",
+            "default": "H:i"
         },
         "STATIC_ROOT": {
             "$ref": "#/definitions/absolute_path",
