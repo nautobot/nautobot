@@ -3,6 +3,7 @@ import datetime
 from django.contrib.contenttypes.models import ContentType
 import graphene
 import graphene_django_optimizer as gql_optimizer
+from graphql import GraphQLError
 
 
 class OptimizedNautobotObjectType(gql_optimizer.OptimizedDjangoObjectType):
@@ -37,10 +38,12 @@ class DateType(graphene.Date):
         if isinstance(date, datetime.datetime):
             date = date.date()
             return date.isoformat()
+        elif isinstance(date, datetime.date):
+            return date.isoformat()
         elif isinstance(date, str):
             return date
         else:
-            raise AssertionError(f'Received not compatible date "{date!r}"')
+            raise GraphQLError(f'Received not compatible date "{date!r}"')
 
 
 class JSON(graphene.Scalar):
