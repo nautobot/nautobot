@@ -162,9 +162,7 @@ jobs:
       - name: "Reinstall Nautobot Local"
         run: "poetry install"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --failfast --keepdb"
-      - name: "Run coverage"
-        run: "poetry run invoke unittest-coverage"
+        run: "poetry run invoke unittest --failfast --keepdb --parallel"
     needs:
       - "check-migrations"
       - "check-schema"
@@ -211,9 +209,7 @@ jobs:
       - name: "Install MySql Dependencies"
         run: "poetry install --no-interaction --no-root --extras mysql"
       - name: "Run unittest"
-        run: "poetry run invoke unittest --failfast --keepdb"
-      - name: "Run coverage"
-        run: "poetry run invoke unittest-coverage"
+        run: "poetry run invoke unittest --failfast --keepdb --parallel"
     needs:
       - "check-migrations"
       - "check-schema"
@@ -343,8 +339,6 @@ jobs:
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
         run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke integration-test --keepdb"
-      - name: "Run coverage"
-        run: "poetry run invoke unittest-coverage"
     needs:
       - "check-migrations"
       - "check-schema"

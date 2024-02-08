@@ -37,6 +37,8 @@ STORAGE_CONFIG = {
     "AWS_S3_REGION_NAME": "us-west-1",
 }
 
+# Use in-memory Constance backend instead of database backend so that settings don't leak between parallel tests.
+CONSTANCE_BACKEND = "constance.backends.memory.MemoryBackend"
 
 # Enable test data factories, as they're a pre-requisite for Nautobot core tests.
 TEST_USE_FACTORIES = True

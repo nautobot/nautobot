@@ -699,6 +699,7 @@ def check_schema(context, api_version=None):
         "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
+        "parallel": "Run tests in parallel.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "performance_report": "Generate Performance Testing report in the terminal. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
         "performance_snapshot": "Generate a new performance testing report to report.yml. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
@@ -716,6 +717,7 @@ def unittest(
     tag=None,
     verbose=False,
     append=False,
+    parallel=False,
     skip_docs_build=False,
     performance_report=False,
     performance_snapshot=False,
@@ -725,8 +727,12 @@ def unittest(
         # First build the docs so they are available.
         build_and_check_docs(context)
 
-    append_arg = " --append" if append else ""
-    command = f"coverage run{append_arg} --module nautobot.core.cli test {label}"
+    if not append:
+        run_command(context, "coverage erase")
+
+    append_arg = " --append" if append and not parallel else ""
+    parallel_arg = " --parallel-mode" if parallel else ""
+    command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
     command += " --config=nautobot/core/tests/nautobot_config.py"
     # booleans
     if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
@@ -735,10 +741,12 @@ def unittest(
         command += " --keepdb"
     if failfast:
         command += " --failfast"
-    if buffer:
+    if buffer and not parallel:  # Django 3.x doesn't support '--parallel --buffer'; can remove this after Django 4.x
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
+    if parallel:
+        command += " --parallel"
     if performance_report or (tag and "performance" in tag):
         command += " --slowreport"
     if performance_snapshot:
@@ -756,11 +764,15 @@ def unittest(
 
     run_command(context, command)
 
+    unittest_coverage(context)
+
 
 @task
 def unittest_coverage(context):
     """Report on code test coverage as measured by 'invoke unittest'."""
-    command = "coverage report --skip-covered --include 'nautobot/*' --omit *migrations*"
+    run_command(context, "coverage combine")
+
+    command = "coverage report --skip-covered --include 'nautobot/*'"
 
     run_command(context, command)
 

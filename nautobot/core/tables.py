@@ -1,7 +1,10 @@
+import logging
+
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist
-from django.db.models.fields.related import RelatedField
+from django.db.models.fields.related import ForeignKey, RelatedField
+from django.db.models.fields.reverse_related import ManyToOneRel
 from django.urls import reverse
 from django.utils.html import escape, format_html, format_html_join
 from django.utils.safestring import mark_safe
@@ -14,6 +17,8 @@ from tree_queries.models import TreeNode
 from nautobot.core.templatetags import helpers
 from nautobot.core.utils import lookup
 from nautobot.extras import choices, models
+
+logger = logging.getLogger(__name__)
 
 
 class BaseTable(django_tables2.Table):
@@ -101,23 +106,28 @@ class BaseTable(django_tables2.Table):
 
         # Dynamically update the table's QuerySet to ensure related fields are pre-fetched
         if isinstance(self.data, TableQuerysetData):
-            # v2 TODO(jathan): Replace prefetch_related with select_related
+            select_fields = []
             prefetch_fields = []
             for column in self.columns:
                 if column.visible:
                     model = getattr(self.Meta, "model")
                     accessor = column.accessor
+                    select_path = []
                     prefetch_path = []
                     for field_name in accessor.split(accessor.SEPARATOR):
                         try:
                             field = model._meta.get_field(field_name)
                         except FieldDoesNotExist:
                             break
-                        if isinstance(field, RelatedField):
-                            # Follow ForeignKeys to the related model
+                        if isinstance(field, ForeignKey) and not prefetch_path:
+                            # Follow ForeignKeys to the related model via select_related
+                            select_path.append(field_name)
+                            model = field.remote_field.model
+                        elif isinstance(field, (RelatedField, ManyToOneRel)) and not select_path:
+                            # Follow O2M and M2M relations to the related model via prefetch_related
                             prefetch_path.append(field_name)
                             model = field.remote_field.model
-                        elif isinstance(field, GenericForeignKey):
+                        elif isinstance(field, GenericForeignKey) and not select_path:
                             # Can't prefetch beyond a GenericForeignKey
                             prefetch_path.append(field_name)
                             break
@@ -126,9 +136,17 @@ class BaseTable(django_tables2.Table):
                             # Ex: ["_custom_field_data", "tenant_id"] needs to exit
                             # the loop as "tenant_id" would be misidentified as a RelatedField.
                             break
-                    if prefetch_path:
+                    if select_path:
+                        select_fields.append("__".join(select_path))
+                    elif prefetch_path:
                         prefetch_fields.append("__".join(prefetch_path))
-            self.data.data = self.data.data.prefetch_related(None).prefetch_related(*prefetch_fields)
+            logger.debug(
+                "Applying .select_related(%s).prefetch_related(%s) to %s QuerySet",
+                select_fields,
+                prefetch_fields,
+                self.data.data.model.__name__,
+            )
+            self.data.data = self.data.data.select_related(*select_fields).prefetch_related(*prefetch_fields)
 
     @property
     def configurable_columns(self):

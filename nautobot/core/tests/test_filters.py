@@ -19,7 +19,7 @@ from nautobot.dcim import choices as dcim_choices, filters as dcim_filters, mode
 from nautobot.dcim.models import Device
 from nautobot.extras import models as extras_models
 from nautobot.extras.utils import FeatureQuery
-from nautobot.ipam import factory as ipam_factory, models as ipam_models
+from nautobot.ipam import models as ipam_models
 
 
 class TreeNodeMultipleChoiceFilterTest(TestCase):
@@ -1583,7 +1583,6 @@ class FilterTypeTest(TestCase):
         """
         user = get_user_model().objects.create_user(username="testuser", is_superuser=True)
         self.client.force_login(user)
-        ipam_factory.PrefixFactory()
         prefix_list_url = reverse(lookup.get_route_for_model(ipam_models.Prefix, "list"))
         response = self.client.get(f"{prefix_list_url}?prefix_length__lte=20")
         self.assertNotContains(response, "Invalid filters were specified")
