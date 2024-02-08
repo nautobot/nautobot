@@ -427,6 +427,7 @@ INSTALLED_APPS = [
     "django_extensions",
     "constance.backends.database",
     "django_ajax_tables",
+    "silk",
 ]
 
 # Middleware
@@ -434,6 +435,7 @@ MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "silk.middleware.SilkyMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -569,6 +571,11 @@ CONSTANCE_ADDITIONAL_FIELDS = {
 }
 
 CONSTANCE_CONFIG = {
+    "ALLOW_REQUEST_PROFILING": ConstanceConfigItem(
+        default=False,
+        help_text="Allow users to enable request profiling on their login session.",
+        field_type=bool,
+    ),
     "BANNER_BOTTOM": ConstanceConfigItem(
         default="",
         help_text="Custom HTML to display in a banner at the bottom of all pages.",
@@ -699,6 +706,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
     "User Interface": ["SUPPORT_MESSAGE"],
+    "Debugging": ["ALLOW_REQUEST_PROFILING"],
 }
 
 #
@@ -914,3 +922,35 @@ DRF_REACT_TEMPLATE_TYPE_MAP = {
     "TimeZoneSerializerField": {"type": "string"},
     "UUIDField": {"type": "string", "format": "uuid"},
 }
+
+
+#
+# django-silk is used for optional request profiling for debugging purposes
+#
+
+SILKY_PYTHON_PROFILER = True
+SILKY_PYTHON_PROFILER_BINARY = True
+SILKY_PYTHON_PROFILER_EXTENDED_FILE_NAME = True
+SILKY_ANALYZE_QUERIES = False  # See the docs for the implications of turning this on https://github.com/jazzband/django-silk?tab=readme-ov-file#enable-query-analysis
+SILKY_AUTHENTICATION = True  # User must login
+SILKY_AUTHORISATION = True  # User must have permissions
+
+
+# This makes it so that only superusers can access the silk UI
+def silk_user_permissions(user):
+    return user.is_superuser
+
+
+SILKY_PERMISSIONS = silk_user_permissions
+
+
+# This ensures profiling only happens when enabled on the sessions. Users are able
+# to turn this on or off in their user profile. It also ignores health-check requests.
+def silk_request_logging_intercept_logic(request):
+    if request.path != "/health/":
+        if request.session.get("silk_record_requests", False):
+            return True
+    return False
+
+
+SILKY_INTERCEPT_FUNC = silk_request_logging_intercept_logic

@@ -1,0 +1,2 @@
+Added a JSON Schema for Nautobot settings in settings.json.
+Added REST API endpoint to show the JSON Schema for authenticated users.
