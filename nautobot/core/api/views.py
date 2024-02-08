@@ -1,6 +1,8 @@
 from collections import OrderedDict
 import itertools
+import json
 import logging
+import os
 import platform
 
 from django import __version__ as DJANGO_VERSION, forms
@@ -940,3 +942,16 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
         else:
             data = bound_field.as_widget()
         return Response(data)
+
+
+class SettingsJSONSchemaView(NautobotAPIVersionMixin, APIView):
+    """View that exposes the JSON Schema of the settings.json file in the REST API"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/settings.json"
+        with open(file_path, "r") as jsonfile:
+            json_data = json.load(jsonfile)
+        return Response(json_data)
