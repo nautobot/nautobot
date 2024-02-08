@@ -823,23 +823,23 @@ class APIOrderingTestCase(testing.APITestCase):
         locations = dcim_models.Location.objects.filter(location_type=location_type)
         devices = dcim_models.Device.objects.all()
 
-        for i in range(3):
-            dcim_models.RackGroup.objects.create(name=f"Rack Group {i}", location=locations[i])
-            dcim_models.InventoryItem.objects.create(
-                device=devices[i], name=f"Inventory Item {i}", manufacturer=devices[i].device_type.manufacturer
-            )
-
-        dcim_models.RackGroup.objects.create(
-            name="Rack Group 3",
-            location=locations[2],
-            parent=dcim_models.RackGroup.objects.last(),
-        )
+        dcim_models.RackGroup.objects.create(name="Rack Group 0", location=locations[0])
         dcim_models.InventoryItem.objects.create(
-            name="Inventory Item 3",
-            device=devices[3],
-            manufacturer=devices[3].device_type.manufacturer,
-            parent=dcim_models.InventoryItem.objects.last(),
+            device=devices[0], name="Inventory Item 0", manufacturer=devices[0].device_type.manufacturer
         )
+
+        for i in range(1, 3):
+            dcim_models.InventoryItem.objects.create(
+                name=f"Inventory Item {i}",
+                device=devices[i],
+                manufacturer=devices[i].device_type.manufacturer,
+                parent=dcim_models.InventoryItem.objects.all()[i - 1],
+            )
+            dcim_models.RackGroup.objects.create(
+                name=f"Rack Group {i}",
+                location=locations[i],
+                parent=dcim_models.RackGroup.objects.all()[i - 1],
+            )
 
         tree_node_models = [
             dcim_models.Location,
@@ -855,11 +855,12 @@ class APIOrderingTestCase(testing.APITestCase):
             serializer = get_serializer_for_model(model_class)
             serializer_avial_fields = set(model_field_names) & set(serializer().fields.keys())
             for field_name in serializer_avial_fields:
-                response = self.client.get(f"{url}?sort={field_name}&limit=10", **self.header)
                 with self.subTest(f'Asset sorting "{model_class.__name__}" using "{field_name}" field name.'):
+                    response = self.client.get(f"{url}?sort={field_name}&limit=10", **self.header)
                     self._validate_sorted_response(response, model_class, field_name, is_tree_node=True)
 
                 with self.subTest(f'Asset inverse sorting "{model_class.__name__}" using "{field_name}" field name.'):
+                    response = self.client.get(f"{url}?sort=-{field_name}&limit=10", **self.header)
                     self._validate_sorted_response(response, model_class, f"-{field_name}", is_tree_node=True)
 
 
