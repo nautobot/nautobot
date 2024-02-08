@@ -9,7 +9,8 @@ from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
 
-from nautobot.core.testing import TestCase
+from nautobot.core.testing import disable_warnings, TestCase
+from nautobot.core.testing.api import APITestCase
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.dcim.models.locations import Location
@@ -338,11 +339,6 @@ class MetricsViewTestCase(TestCase):
         page_content = response.content.decode(response.charset)
         return text_string_to_metric_families(page_content)
 
-    @override_settings(METRICS_AUTHENTICATED=True)
-    def query_and_parse_metrics_authenticated(self):
-        response = self.client.get(reverse("metrics"))
-        self.assertHttpStatus(response, 403, msg="/metrics should return a 403 HTTP status code.")
-
     def test_metrics_extensibility(self):
         """Assert that the example metric from the example plugin shows up _exactly_ when the plugin is enabled."""
         test_metric_name = "nautobot_example_metric_count"
@@ -358,6 +354,15 @@ class MetricsViewTestCase(TestCase):
             self.assertNotIn(test_metric_name, metric_names_without_plugin)
         metric_names_with_plugin.remove(test_metric_name)
         self.assertSetEqual(metric_names_with_plugin, metric_names_without_plugin)
+
+
+class AuthenticateMetricsTestCase(APITestCase):
+    def test_metrics_authentication(self):
+        """Assert that if metrics require authentication, a user not logged in gets a 403."""
+        self.client.logout()
+        headers = {}
+        response = self.client.get(reverse("metrics"), **headers)
+        self.assertHttpStatus(response, 403, msg="/metrics should return a 403 HTTP status code.")
 
 
 class ErrorPagesTestCase(TestCase):
