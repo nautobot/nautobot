@@ -773,6 +773,13 @@ code.hljs {
     grid-gap: 20px;
     grid-template-columns: repeat(auto-fit, minmax(445px, 1fr));
 }
+@media (max-width: 1007px) {
+    .tiles {
+        /* More than one tile won't fit into a row when the viewport is narrower than 1007px */
+        /* On the other hand this makes tiles shrink if container width becomes less than 445px */
+        grid-template-columns: 1fr;
+    }
+}
 .tile {
     background: #ffffff;
     border: 1px solid #d8d8d8;
