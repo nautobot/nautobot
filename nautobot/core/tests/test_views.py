@@ -476,6 +476,13 @@ class SettingsJSONSchemaViewTestCase(TestCase):
 
     def test_settings_json_schema_contains_valid_setting_variables(self):
         """Test the validity of the settings variables from settings.json and their types with those in settings.py"""
+        allowed_settings_variable_list = [
+            "CELERY_BROKER_TRANSPORT_OPTIONS",
+            "CONFIG_CONTEXT_DYNAMIC_GROUPS_ENALBED",
+            "SESSION_ENGINE",
+            "DATABASE_ROUTERS",
+            "SESSION_CACHE_ALIAS",
+        ]
         TYPE_MAPPING = {
             "string": [str],
             "object": [dict],
@@ -489,7 +496,7 @@ class SettingsJSONSchemaViewTestCase(TestCase):
         }
         for key, value in self.json_data["properties"].items():
             settings_value = getattr(settings, key, None)
-            if settings_value:
+            if settings_value is not None:
                 self.assertIn(type(settings_value), TYPE_MAPPING[value.get("type", value.get("$ref", None))])
 
 

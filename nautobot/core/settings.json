@@ -18,7 +18,10 @@
         "ADMINS": {
             "type": "array",
             "items": {
-                "type": "string"
+                "type": "array",
+                "items": {
+                    "type": "string"
+                }
             },
             "default": [],
             "description": "List of administrators' names and emails. e.g.[['Hank Hill', 'hhill@example.com'],['Dale Gribble', 'dgribble@example.com'],]"
@@ -235,7 +238,7 @@
         "CORS_ALLOW_ALL_ORIGINS": {
             "type": "boolean",
             "default": false,
-            "description": "The number of seconds to cache the content type accessible via a object's class property Object._content_type_cached."
+            "description": "If True, all origins will be allowed. Other settings restricting allowed origins will be ignored."
         },
         "CORS_ALLOWED_ORIGINS": {
             "type": "array",
@@ -244,7 +247,7 @@
                 "format": "uri"
             },
             "default": [],
-            "description": "If True, all origins will be allowed. Other settings restricting allowed origins will be ignored."
+            "description": "A list of origins that are authorized to make cross-site HTTP requests."
         },
         "CORS_ALLOWED_ORIGIN_REGEXES": {
             "type": "array",
