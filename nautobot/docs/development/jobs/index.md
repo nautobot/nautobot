@@ -415,8 +415,8 @@ device_type = ObjectVar(
 )
 ```
 
-In the example above, [`"depth": 1`](../../user-guide/platform-functionality/rest-api/overview/#depth-query-parameter) was needed to influence REST API to include details of the associated records.
-Another example of using the nested reference would be to access [computed fields](../../user-guide/platform-functionality/computedfield/) of the model:
+In the example above, [`"depth": 1`](../../user-guide/platform-functionality/rest-api/overview.md#depth-query-parameter) was needed to influence REST API to include details of the associated records.
+Another example of using the nested reference would be to access [computed fields](../../user-guide/platform-functionality/computedfield.md) of the model:
 
 ```python
 device_type = ObjectVar(
