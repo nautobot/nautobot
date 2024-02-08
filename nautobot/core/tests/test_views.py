@@ -12,6 +12,7 @@ from prometheus_client.parser import text_string_to_metric_families
 from nautobot.core.testing import disable_warnings, TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.views import NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.dcim.models.locations import Location
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -363,6 +364,15 @@ class AuthenticateMetricsTestCase(APITestCase):
         headers = {}
         response = self.client.get(reverse("metrics"), **headers)
         self.assertHttpStatus(response, 403, msg="/metrics should return a 403 HTTP status code.")
+
+    def test_metrics(self):
+        """Assert that if metrics don't require authentication, a user not logged in gets a 200."""
+        self.factory = RequestFactory()
+        self.client.logout()
+
+        request = self.factory.get("/")
+        response = NautobotMetricsView.as_view()(request)
+        self.assertHttpStatus(response, 200, msg="/metrics should return a 403 HTTP status code.")
 
 
 class ErrorPagesTestCase(TestCase):
