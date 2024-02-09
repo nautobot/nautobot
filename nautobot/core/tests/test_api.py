@@ -823,6 +823,13 @@ class APIOrderingTestCase(testing.APITestCase):
         locations = dcim_models.Location.objects.filter(location_type=location_type)
         devices = dcim_models.Device.objects.all()
 
+        # When sorting by the 'parent' field, we may encounter different results from API response and ORM filter due to None values.
+        # For instance, sorting tenants on `parent` = `None` might yield either `<Tenant 1 parent=None>, <Tenant 2 parent=None>`
+        # or `<Tenant 2 parent=None>, <Tenant 1 parent=None>`.
+        # To ensure consistent sorting, we'll delete all None parents except one.
+        tenant_group_pk = TenantGroup.objects.filter(parent__isnull=True).first().pk
+        TenantGroup.objects.filter(parent__isnull=True).exclude(pk=tenant_group_pk).delete()
+
         dcim_models.RackGroup.objects.create(name="Rack Group 0", location=locations[0])
         dcim_models.InventoryItem.objects.create(
             device=devices[0], name="Inventory Item 0", manufacturer=devices[0].device_type.manufacturer
