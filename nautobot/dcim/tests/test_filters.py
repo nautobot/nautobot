@@ -1387,6 +1387,8 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ("role", "role__name"),
         ("secrets_group", "secrets_group__id"),
         ("secrets_group", "secrets_group__name"),
+        ("software_image_files", "software_image_files__id"),
+        ("software_image_files", "software_image_files__image_file_name"),
         ("software_version", "software_version__id"),
         ("software_version", "software_version__version"),
         ("status", "status__id"),

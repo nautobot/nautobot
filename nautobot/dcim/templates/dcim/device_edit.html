@@ -1,6 +1,7 @@
 {% extends 'generic/object_edit.html' %}
-{% load helpers %}
 {% load form_helpers %}
+{% load helpers %}
+{% load static %}
 
 {% block form %}
     <div class="panel panel-default">
@@ -24,6 +25,17 @@
         <div class="panel-body">
             {% render_field form.platform %}
             {% render_field form.software_version %}
+            <div class="form-group" id="software_version_image_container" style="display:none">
+                <div class="col-md-3"></div>
+                <div class="col-md-9">
+                    <span class="help-block">
+                        <span id="software_version_image_description"></span>
+                        <ul id="software_version_image_list">
+                            <li> Software images go here </li>
+                        </ul>
+                    </span>
+                </div>
+            </div>
             {% render_field form.software_image_files %}
         </div>
     </div>
@@ -108,4 +120,90 @@
             {% render_field form.comments %}
         </div>
     </div>
+{% endblock %}
+
+{% block javascript %}
+<script type="text/javascript">
+
+    const software_version_image_container = document.querySelector('div#software_version_image_container');
+    const software_version_image_description = document.querySelector('span#software_version_image_description');
+    const software_version_image_list = document.querySelector('ul#software_version_image_list');
+    const software_image_url = '/api/dcim/software-image-files/';
+
+    function ajaxRequest(url, params) {
+        $.ajax({
+            url: url,
+            method: "GET",
+            data: params,
+            context: this,
+            success: function(data) {
+                software_version_image_description.innerHTML = `
+                    Software version <b>${$('select#id_software_version').find(':selected')[0].text}</b> provides the following software images
+                    for device type <b>${$('select#id_device_type').find(':selected')[0].text}</b>:
+                `;
+
+                clear_software_image_list();
+                for (result of data.results) {
+                    let li = document.createElement('li');
+                    let a = document.createElement('a');
+                    let linkText = document.createTextNode(result.display);
+                    a.title = result.display;
+                    a.href = result.url.replace('api/', '');
+                    li.appendChild(a);
+                    a.appendChild(linkText);
+                    software_version_image_list.appendChild(li);
+                }
+                software_version_image_container.style.display = 'block';
+                software_version_image_list.style.visibility = 'visible';
+
+            },
+            error: function() {
+                clear_software_image_list();
+                software_version_image_description.innerHTML = '<b>Error retrieving software image list</b>';
+                software_version_image_container.style.display = 'block';
+                software_version_image_list.style.visibility = 'visible';
+            },
+        });
+    }
+
+    function clear_software_image_list() {
+        software_version_image_list.innerHTML = '';
+    }
+
+    function hide_software_image_container(){
+        clear_software_image_list();
+        software_version_image_description.innerHTML = '';
+        software_version_image_container.style.display = 'none';
+    }
+
+    function populate_software_image_list(version_id) {
+        software_version_image_description.innerHTML = '<img src="{% static 'img/ajax-loader.gif' %}">';
+        software_version_image_list.style.visibility = 'hidden'; // prevent flicker when changing values
+        let device_type_id = $('select#id_device_type').find(':selected')[0].value;
+        if (!device_type_id) {
+            return;
+        }
+        ajaxRequest(software_image_url, {'software_version': version_id, 'device_types': device_type_id});
+    }
+
+    // on select
+    // jQuery required for triggering on select2 jQuery events
+    $('select#id_software_version').on('select2:select', function (e) {
+        populate_software_image_list(e.params.data.id);
+    });
+
+    // on unselect
+    // jQuery required for triggering on select2 jQuery events
+    $('select#id_software_version').on('select2:unselect', hide_software_image_container);
+
+    // initialize on document load
+    document.addEventListener("DOMContentLoaded", function() {
+        $('select#id_software_version').select2();
+        var selected_version = $('select#id_software_version').select2('data')[0].id;
+        if (selected_version) {
+            populate_software_image_list(selected_version);
+        }
+    });
+
+</script>
 {% endblock %}
