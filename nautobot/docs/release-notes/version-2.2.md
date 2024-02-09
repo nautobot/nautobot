@@ -31,3 +31,7 @@ Language syntax highlighting for GraphQL, JSON, XML and YAML is now supported in
 ```
 
 [`render_json`](../user-guide/platform-functionality/template-filters.md#render_json) and [`render_yaml`](../user-guide/platform-functionality/template-filters.md#render_yaml) template filters default to this new behavior with an optional opt-out `syntax_highlight=False` arg.
+
+#### Jobs tile view ([#5129](https://github.com/nautobot/nautobot/issues/5129))
+
+Job list is now available in two display variants: list and tiles. List is a standard table view with no major changes introduced. Tiles is a new type of view displaying jobs in a two-dimensional grid.
