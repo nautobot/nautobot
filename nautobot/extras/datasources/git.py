@@ -727,6 +727,14 @@ def refresh_code_from_repository(repository_slug, consumer=None, skip_reimport=F
         sys.path.append(settings.GIT_ROOT)
 
     app = consumer.app if consumer is not None else celery_app
+    # TODO: This is ugly, but when app.use_fast_trace_task is set (true by default), Celery calls
+    # celery.app.trace.fast_trace_task(...) which assumes that all tasks are cached and have a valid `__trace__()`
+    # function defined. In theory consumer.update_strategies() (below) should ensure this, but it doesn't
+    # go far enough (possibly a discrepancy between the main worker process and the prefork executors?)
+    # as we can and do still encounter errors where `task.__trace__` is unexpectedly None.
+    # For now, simply disabling use_fast_trace_task forces the task trace function to be rebuilt each time,
+    # which avoids the issue at the cost of very slight overhead.
+    app.use_fast_trace_task = False
 
     # Unload any previous version of this module and its submodules if present
     for module_name in list(sys.modules):
