@@ -72,6 +72,24 @@ Support for versions of PostgreSQL prior to 12.0 has been removed as these versi
 Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specific permissions will now always be hidden from users lacking those permissions. Additionally, users not logged in will now be automatically redirected to the login page.
 
 <!-- towncrier release notes start -->
+## v2.1.4 (2024-02-08)
+
+### Security
+
+- [#5251](https://github.com/nautobot/nautobot/issues/5251) - Updated `Django` dependency to 3.2.24 due to CVE-2024-24680.
+
+### Fixed
+
+- [#5254](https://github.com/nautobot/nautobot/issues/5254) - Fixed `TypeError` and similar exceptions thrown when rendering certain App data tables in v2.1.3.
+
+### Documentation
+
+- [#4778](https://github.com/nautobot/nautobot/issues/4778) - Added troubleshooting documentation for PostgreSQL databases with unsupported encoding settings.
+
+### Housekeeping
+
+- [#5240](https://github.com/nautobot/nautobot/issues/5240) - Changed test config to use `constance.backends.memory.MemoryBackend` to avoid intermittent failures in parallel tests.
+
 ## v2.1.3 (2024-02-05)
 
 ### Security

@@ -309,11 +309,6 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #
 # DEVICE_NAME_AS_NATURAL_KEY = False
 
-# Set to True to disable rendering of the IP prefix hierarchy in the the IPAM prefix list view.
-# Useful in case of poor performance when rendering this page.
-#
-# DISABLE_PREFIX_LIST_HIERARCHY = False
-
 # Exempt certain models from the enforcement of view permissions. Models listed here will be viewable by all users and
 # by anonymous users. List models in the form `<app>.<model>`. Add '*' to this list to exempt all models.
 # Defaults to [].
