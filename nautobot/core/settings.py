@@ -784,9 +784,6 @@ CELERY_TASK_TRACK_STARTED = True
 # If enabled, a `task-sent` event will be sent for every task so tasks can be tracked before they're consumed by a worker.
 CELERY_TASK_SEND_SENT_EVENT = True
 
-# Use threads Celery pool - required for git repository job support
-CELERY_WORKER_POOL = "threads"
-
 # If enabled stdout and stderr of running jobs will be redirected to the task logger.
 CELERY_WORKER_REDIRECT_STDOUTS = is_truthy(os.getenv("NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS", "True"))
 
