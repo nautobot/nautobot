@@ -15,6 +15,7 @@ from nautobot.core.api.views import (
     GraphQLDRFAPIView,
     NautobotSpectacularRedocView,
     NautobotSpectacularSwaggerView,
+    SettingsJSONSchemaView,
     StatusView,
 )
 from nautobot.extras.plugins.urls import plugin_api_patterns
@@ -51,6 +52,7 @@ urlpatterns = [
     path("status/", StatusView.as_view(), name="api-status"),
     path("docs/", NautobotSpectacularSwaggerView.as_view(url_name="schema"), name="api_docs"),
     path("redoc/", NautobotSpectacularRedocView.as_view(url_name="schema"), name="api_redocs"),
+    path("settings-schema/", SettingsJSONSchemaView.as_view(), name="setting_schema_json"),
     path("swagger/", SpectacularAPIView.as_view(), name="schema"),
     path("swagger.json", SpectacularJSONAPIView.as_view(), name="schema_json"),
     path("swagger.yaml", SpectacularYAMLAPIView.as_view(), name="schema_yaml"),
