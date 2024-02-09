@@ -1645,14 +1645,20 @@ class DeviceBulkEditForm(
         required=False,
         query_params={"manufacturer": "$manufacturer"},
     )
-    rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False)
+    rack = DynamicModelChoiceField(
+        queryset=Rack.objects.all(),
+        required=False,
+        query_params={"location": "$location", "rack_group": "$rack_group"},
+    )
     position = forms.IntegerField(required=False)
     face = forms.ChoiceField(
         required=False,
         choices=add_blank_choice(DeviceFaceChoices),
         widget=StaticSelect2(),
     )
-    rack_group = DynamicModelChoiceField(queryset=RackGroup.objects.all(), required=False)
+    rack_group = DynamicModelChoiceField(
+        queryset=RackGroup.objects.all(), required=False, query_params={"location": "$location"}
+    )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
     serial = forms.CharField(max_length=255, required=False, label="Serial Number")
@@ -3600,20 +3606,19 @@ class InterfaceRedundancyGroupAssociationForm(BootstrapMixin, NoteModelFormMixin
     location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         required=False,
-        query_params={"region_id": "$region"},
     )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         null_option="None",
-        query_params={"location_id": "$location"},
+        query_params={"location": "$location"},
     )
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
         query_params={
-            "location_id": "$location",
-            "rack_id": "$rack",
+            "location": "$location",
+            "rack": "$rack",
         },
     )
     interface = DynamicModelChoiceField(

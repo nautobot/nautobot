@@ -79,9 +79,24 @@ class NautobotTemplatetagsHelperTest(TestCase):
             helpers.render_markdown("**bold and _italics_**"), "<p><strong>bold and <em>italics</em></strong></p>"
         )
         self.assertEqual(helpers.render_markdown("* list"), "<ul>\n<li>list</li>\n</ul>")
-        self.assertEqual(
+        self.assertHTMLEqual(
             helpers.render_markdown("[I am a link](https://www.example.com)"),
-            '<p><a href="https://www.example.com">I am a link</a></p>',
+            '<p><a href="https://www.example.com" rel="noopener noreferrer">I am a link</a></p>',
+        )
+
+    def test_render_markdown_security(self):
+        self.assertEqual(helpers.render_markdown('<script>alert("XSS")</script>'), "")
+        self.assertHTMLEqual(
+            helpers.render_markdown('[link](javascript:alert("XSS"))'),
+            '<p><a title="XSS" rel="noopener noreferrer">link</a>)</p>',  # the trailing ) seems weird to me, but...
+        )
+        self.assertHTMLEqual(
+            helpers.render_markdown(
+                "[link\nJS]"
+                "(&#x6A&#x61&#x76&#x61&#x73&#x63&#x72&#x69&#x70&#x74&#x3A"  # '(javascript:'
+                "&#x61&#x6C&#x65&#x72&#x74&#x28&#x27&#x58&#x53&#x53&#x27&#x29)"  # 'alert("XSS"))'
+            ),
+            '<p><a rel="noopener noreferrer">link JS</a></p>',
         )
 
     def test_render_json(self):
@@ -240,8 +255,8 @@ class NautobotTemplatetagsHelperTest(TestCase):
                 self.assertHTMLEqual(
                     helpers.support_message(),
                     "<p>If further assistance is required, please join the <code>#nautobot</code> channel "
-                    'on <a href="https://slack.networktocode.com/">Network to Code\'s Slack community</a> '
-                    "and post your question.</p>",
+                    'on <a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
+                    "Slack community</a> and post your question.</p>",
                 )
 
             with override_config(SUPPORT_MESSAGE="Reach out to your support team for assistance."):

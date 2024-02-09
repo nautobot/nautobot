@@ -366,9 +366,9 @@ class ErrorPagesTestCase(TestCase):
         self.assertContains(response, "Network to Code", status_code=404)
         response_content = response.content.decode(response.charset)
         self.assertInHTML(
-            "If further assistance is required, please join the <code>#nautobot</code> channel "
-            'on <a href="https://slack.networktocode.com/">Network to Code\'s Slack community</a> '
-            "and post your question.",
+            "If further assistance is required, please join the <code>#nautobot</code> channel on "
+            '<a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
+            "Slack community</a> and post your question.",
             response_content,
         )
 
@@ -392,16 +392,16 @@ class ErrorPagesTestCase(TestCase):
         self.assertContains(response, "Network to Code", status_code=500)
         response_content = response.content.decode(response.charset)
         self.assertInHTML(
-            "If further assistance is required, please join the <code>#nautobot</code> channel "
-            'on <a href="https://slack.networktocode.com/">Network to Code\'s Slack community</a> '
-            "and post your question.",
+            "If further assistance is required, please join the <code>#nautobot</code> channel on "
+            '<a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
+            "Slack community</a> and post your question.",
             response_content,
         )
 
     @override_settings(DEBUG=False, SUPPORT_MESSAGE="Hello world!")
     @mock.patch("nautobot.core.views.HomeView.get", side_effect=Exception)
     def test_500_custom_support_message(self, mock_get):
-        """Nautobot's custom 500 page should be used and should include a default support message."""
+        """Nautobot's custom 500 page should be used and should include a custom support message if defined."""
         url = reverse("home")
         with self.assertTemplateUsed("500.html"):
             self.client.raise_request_exception = False
@@ -450,3 +450,31 @@ class DBFileStorageViewTestCase(TestCase):
         url = f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_2.file.name}"
         response = self.client.get(url)
         self.assertHttpStatus(response, 404)
+
+
+class SilkUIAccessTestCase(TestCase):
+    """Test access control related to the django-silk UI"""
+
+    def test_access_for_non_superuser(self):
+        # Login as non-superuser
+        self.user.is_superuser = False
+        self.user.save()
+        self.client.force_login(self.user)
+
+        # Attempt to access the view
+        response = self.client.get(reverse("silk:summary"))
+
+        # Check for redirect or forbidden status code (302 or 403)
+        self.assertIn(response.status_code, [302, 403])
+
+    def test_access_for_superuser(self):
+        # Login as superuser
+        self.user.is_superuser = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        # Attempt to access the view
+        response = self.client.get(reverse("silk:summary"))
+
+        # Check for success status code (e.g., 200)
+        self.assertEqual(response.status_code, 200)
