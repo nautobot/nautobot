@@ -12,23 +12,22 @@ from nautobot.utilities.testing import TestCase
 class JobButtonsTest(TestCase):
     """Test Rendering of Job Buttons."""
 
-    @classmethod
-    def setUp(cls):
-        cls.site = Site.objects.create(name="Test", slug="test")
-        cls.job = Job.objects.get(job_class_name="TestJobButtonReceiverSimple")
+    def setUp(self):
+        self.site = Site.objects.create(name="Test", slug="test")
+        self.job = Job.objects.get(job_class_name="TestJobButtonReceiverSimple")
 
-        cls.site_type = ContentType.objects.get_for_model(Site)
+        self.site_type = ContentType.objects.get_for_model(Site)
 
         job_button_config = {
             "name": "Job Button Site",
-            "job": cls.job,
+            "job": self.job,
             "defaults": {
                 "text": "Job Button Site",
                 "button_class": "primary",
             },
         }
-        cls.jobbutton, _ = JobButton.objects.get_or_create(**job_button_config)
-        cls.jobbutton.content_types.set([cls.site_type])
+        self.jobbutton, _ = JobButton.objects.get_or_create(**job_button_config)
+        self.jobbutton.content_types.set([self.site_type])
 
     def test_job_buttons_non_grouped(self):
         """Job Button without a group and missing permissions renders disabled with a confirmation."""
