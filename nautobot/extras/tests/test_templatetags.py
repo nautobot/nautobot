@@ -28,11 +28,7 @@ class JobButtonsTest(TestCase):
             },
         }
         cls.jobbutton, _ = JobButton.objects.get_or_create(**job_button_config)
-        cls.jobbutton.content_types.set(
-            [
-                cls.site_type,
-            ]
-        )
+        cls.jobbutton.content_types.set([cls.site_type])
 
     def test_job_buttons_non_grouped(self):
         """Job Button without a group and missing permissions renders disabled with a confirmation."""
@@ -131,6 +127,7 @@ class JobButtonsTest(TestCase):
         """Job Button with a group and missing permissions renders disabled with a confirmation."""
 
         self.jobbutton.group_name = "Site Buttons"
+        self.jobbutton.save()
 
         result = self._build_request()
         self.assertIn(
@@ -149,6 +146,7 @@ class JobButtonsTest(TestCase):
 
         self.add_permissions("extras.run_jobbutton", "extras.run_job")
         self.jobbutton.group_name = "Site Buttons"
+        self.jobbutton.save()
 
         result = self._build_request()
         self.assertIn(

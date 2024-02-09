@@ -1,1 +1,1 @@
-Fixed Job Button using running jobs without Commit.
+Fixed a regression introduced in v1.6.8 where Job Buttons would always run with `commit=False`.
