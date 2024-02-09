@@ -770,6 +770,24 @@ def versioned_static(file_path):
     return add_nautobot_version_query_param_to_url(url)
 
 
+@register.simple_tag
+def tree_hierarchy_ui_representation(tree_depth, hide_hierarchy_ui):
+    """Generates a visual representation of a tree record hierarchy using dots.
+
+    Args:
+        tree_depth (range): A range representing the depth of the tree nodes.
+        hide_hierarchy_ui (bool): Indicates whether to hide the hierarchy UI.
+
+    Returns:
+        str: A string containing dots (representing hierarchy levels) if `hide_hierarchy_ui` is False,
+             otherwise an empty string.
+    """
+    if hide_hierarchy_ui or tree_depth == 0:
+        return ""
+    ui_representation = " ".join(['<i class="mdi mdi-circle-small"></i>' for _ in tree_depth])
+    return mark_safe(ui_representation)  # noqa: S308 # suspicious-mark-safe-usage, OK here since its just the `i` tag
+
+
 @library.filter()
 @register.filter()
 def hyperlinked_object_with_color(obj):

@@ -2,33 +2,46 @@
 {% load helpers %}
 
 {% block extra_styles %}
-<style>
-    .accordion-toggle {
-        font-size: 14px;
-        font-weight: 700;
-    }
+    <style>
+        .accordion-toggle {
+            font-size: 14px;
+            font-weight: 700;
+        }
 
-    tr a.job_run .btn {
-        margin: -4px 10px 0 0;
-    }
+        tr a.job_run .btn {
+            margin: -4px 10px 0 0;
+        }
 
-    tr.disabled {
-        color: #7d7f7c;
-    }
+        tr.disabled {
+            color: #7d7f7c;
+        }
 
-    tr.disabled a.job_run {
-        cursor: not-allowed;
-        opacity: 0.65;
-    }
+        tr.disabled a.job_run {
+            cursor: not-allowed;
+            opacity: 0.65;
+        }
 
-    tr.disabled a.job_run .btn {
-        cursor: not-allowed;
-    }
-</style>
+        tr.disabled a.job_run .btn {
+            cursor: not-allowed;
+        }
+    </style>
 {% endblock %}
 
 {% block buttons %}
-<button type="button" class="btn btn-default" id="accordion-toggle-all">Collapse All</button>
+    <div class="btn-group">
+        <a class="btn btn-default set-job_list-display" data-display="tiles" href="" title="Tiles">
+            <i class="mdi mdi-view-grid{% if display == "list" %}-outline{% endif %}"></i>
+        </a>
+        <a class="btn btn-default set-job_list-display" data-display="list" href="" title="List">
+            <i class="mdi mdi-view-sequential{% if display == "tiles" %}-outline{% endif %}"></i>
+        </a>
+    </div>
+
+    <button type="button" class="btn btn-default" id="accordion-toggle-all"{% if display == "tiles" %} disabled="disabled"{% endif %}>Collapse All</button>
+{% endblock %}
+
+{% block table_config_button %}
+    <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table"{% if display == "tiles" %} disabled="disabled"{% endif %}><i class="mdi mdi-cog"></i> Configure</button>
 {% endblock %}
 
 {% block javascript %}
@@ -63,6 +76,13 @@
 
                 $(this).text("Expand All");
             }
+        });
+
+        // Set display anchor links without losing other potentially active query params such as applied filters.
+        [...document.querySelectorAll('.set-job_list-display')].forEach(button => {
+            const queryParams = new URLSearchParams(window.location.search);
+            queryParams.set('display', button.dataset.display);
+            button.setAttribute('href', `?${queryParams.toString()}`);
         });
      </script>
 {% endblock %}

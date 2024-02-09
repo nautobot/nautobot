@@ -3,6 +3,7 @@ import logging
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist
+from django.db import NotSupportedError
 from django.db.models.fields.related import ForeignKey, RelatedField
 from django.db.models.fields.reverse_related import ManyToOneRel
 from django.urls import reverse
@@ -11,7 +12,7 @@ from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
 import django_tables2
 from django_tables2.data import TableQuerysetData
-from django_tables2.utils import Accessor
+from django_tables2.utils import Accessor, OrderBy, OrderByTuple
 from tree_queries.models import TreeNode
 
 from nautobot.core.templatetags import helpers
@@ -61,11 +62,6 @@ class BaseTable(django_tables2.Table):
                 )
             # symmetric relationships are already handled above in the source_type case
 
-        model = getattr(self.Meta, "model", None)
-        # Disable ordering on these TreeNode Models Table because TreeNode do not support sorting
-        if model and issubclass(model, TreeNode):
-            kwargs["orderable"] = False
-
         # Init table
         super().__init__(*args, **kwargs)
 
@@ -106,27 +102,28 @@ class BaseTable(django_tables2.Table):
 
         # Dynamically update the table's QuerySet to ensure related fields are pre-fetched
         if isinstance(self.data, TableQuerysetData):
+            queryset = self.data.data
             select_fields = []
             prefetch_fields = []
             for column in self.columns:
                 if column.visible:
-                    model = getattr(self.Meta, "model")
+                    column_model = model
                     accessor = column.accessor
                     select_path = []
                     prefetch_path = []
                     for field_name in accessor.split(accessor.SEPARATOR):
                         try:
-                            field = model._meta.get_field(field_name)
+                            field = column_model._meta.get_field(field_name)
                         except FieldDoesNotExist:
                             break
                         if isinstance(field, ForeignKey) and not prefetch_path:
                             # Follow ForeignKeys to the related model via select_related
                             select_path.append(field_name)
-                            model = field.remote_field.model
+                            column_model = field.remote_field.model
                         elif isinstance(field, (RelatedField, ManyToOneRel)) and not select_path:
                             # Follow O2M and M2M relations to the related model via prefetch_related
                             prefetch_path.append(field_name)
-                            model = field.remote_field.model
+                            column_model = field.remote_field.model
                         elif isinstance(field, GenericForeignKey) and not select_path:
                             # Can't prefetch beyond a GenericForeignKey
                             prefetch_path.append(field_name)
@@ -140,13 +137,55 @@ class BaseTable(django_tables2.Table):
                         select_fields.append("__".join(select_path))
                     elif prefetch_path:
                         prefetch_fields.append("__".join(prefetch_path))
-            logger.debug(
-                "Applying .select_related(%s).prefetch_related(%s) to %s QuerySet",
-                select_fields,
-                prefetch_fields,
-                self.data.data.model.__name__,
-            )
-            self.data.data = self.data.data.select_related(*select_fields).prefetch_related(*prefetch_fields)
+
+            if select_fields:
+                # Django doesn't allow .select_related() on a QuerySet that had .values()/.values_list() applied, or
+                # one that has had union()/intersection()/difference() applied.
+                # We can detect and avoid these cases the same way that Django itself does.
+                if queryset._fields is not None:
+                    logger.debug(
+                        "NOT applying select_related(%s) to %s QuerySet as it includes .values()/.values_list()",
+                        select_fields,
+                        model.__name__,
+                    )
+                elif queryset.query.combinator:
+                    logger.debug(
+                        "NOT applying select_related(%s) to %s QuerySet as it is a combinator query",
+                        select_fields,
+                        model.__name__,
+                    )
+                else:
+                    logger.debug("Applying .select_related(%s) to %s QuerySet", select_fields, model.__name__)
+                    # Belt and suspenders - we should have avoided any error cases above, but be safe anyway:
+                    try:
+                        queryset = queryset.select_related(*select_fields)
+                    except (TypeError, ValueError, NotSupportedError) as exc:
+                        logger.warning(
+                            "Unexpected error when trying to .select_related() on %s QuerySet: %s",
+                            model.__name__,
+                            exc,
+                        )
+
+            if prefetch_fields:
+                if queryset.query.combinator:
+                    logger.debug(
+                        "NOT applying prefetch_related(%s) to %s QuerySet as it is a combinator query",
+                        prefetch_fields,
+                        model.__name__,
+                    )
+                else:
+                    logger.debug("Applying .prefetch_related(%s) to %s QuerySet", prefetch_fields, model.__name__)
+                    # Belt and suspenders - we should have avoided any error cases above, but be safe anyway:
+                    try:
+                        queryset = queryset.prefetch_related(*prefetch_fields)
+                    except (TypeError, ValueError, NotSupportedError) as exc:
+                        logger.warning(
+                            "Unexpected error when trying to .prefetch_related() on %s QuerySet: %s",
+                            model.__name__,
+                            exc,
+                        )
+
+            self.data.data = queryset
 
     @property
     def configurable_columns(self):
@@ -163,6 +202,47 @@ class BaseTable(django_tables2.Table):
     @property
     def visible_columns(self):
         return [name for name in self.sequence if self.columns[name].visible]
+
+    @property
+    def order_by(self):
+        return self._order_by
+
+    @order_by.setter
+    def order_by(self, value):
+        """
+        Order the rows of the table based on columns.
+
+        Arguments:
+            value: iterable or comma separated string of order by aliases.
+        """
+        # collapse empty values to ()
+        order_by = () if not value else value
+        # accept string
+        order_by = order_by.split(",") if isinstance(order_by, str) else order_by
+        valid = []
+
+        for alias in order_by:
+            name = OrderBy(alias).bare
+            if name in self.columns and self.columns[name].orderable:
+                valid.append(alias)
+        self._order_by = OrderByTuple(valid)
+
+        # The above block of code is copied from super().order_by
+        # due to limitations in directly calling parent class methods within a property setter.
+        # See Python bug report: https://bugs.python.org/issue14965
+        model = getattr(self.Meta, "model", None)
+        if model and issubclass(model, TreeNode):
+            # Use the TreeNode model's approach to sorting
+            queryset = self.data.data
+            # If the data passed into the Table is a list (as in cases like BulkImport post),
+            # convert this list to a queryset.
+            # This ensures consistent behavior regardless of the input type.
+            if isinstance(self.data.data, list):
+                queryset = model.objects.filter(pk__in=[instance.pk for instance in self.data.data])
+            self.data.data = queryset.extra(order_by=self._order_by)
+        else:
+            # Otherwise, use the default sorting method
+            self.data.order_by(self._order_by)
 
 
 #

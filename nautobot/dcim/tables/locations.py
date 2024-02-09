@@ -21,7 +21,7 @@ __all__ = (
 
 class LocationTypeTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
     parent = tables.Column(linkify=True)
     nestable = BooleanColumn()
     content_types = ContentTypesColumn(truncate_words=15)
@@ -46,12 +46,11 @@ class LocationTypeTable(BaseTable):
             "description",
             "actions",
         )
-        orderable = False
 
 
 class LocationTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
     location_type = tables.Column(linkify=True)
     parent = tables.Column(linkify=True)
     tenant = TenantColumn()
@@ -82,4 +81,3 @@ class LocationTable(StatusTableMixin, BaseTable):
             "actions",
         )
         default_columns = ("pk", "name", "status", "parent", "tenant", "description", "tags", "actions")
-        orderable = False

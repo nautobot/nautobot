@@ -104,7 +104,7 @@ GITREPOSITORY_BUTTONS = """
 """
 
 JOB_BUTTONS = """
-<a href="{% url 'extras:job' pk=record.pk %}" class="btn btn-primary btn-xs" title="Details"><i class="mdi mdi-information" aria-hidden="true"></i></a>
+<a href="{% url 'extras:job' pk=record.pk %}" class="btn btn-default btn-xs" title="Details"><i class="mdi mdi-information-outline" aria-hidden="true"></i></a>
 """
 
 OBJECTCHANGE_OBJECT = """
