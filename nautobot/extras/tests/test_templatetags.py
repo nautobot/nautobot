@@ -39,11 +39,11 @@ class JobButtonsTest(TestCase):
 
         result = self._build_request()
         self.assertIn(
-            f'id="confirm_modal_id_{self.jobbutton.pk}_{self.site.pk}"',
+            f'id="confirm_modal_id_{self.jobbutton.pk}"',
             result,
         )
         self.assertIn(
-            f'id="form_id_{self.jobbutton.pk}_{self.site.pk}"',
+            f'id="form_id_{self.jobbutton.pk}"',
             result,
         )
         self.assertIn("disabled", result)
@@ -53,11 +53,11 @@ class JobButtonsTest(TestCase):
 
         result = self._build_request()
         self.assertNotIn(
-            f'id="confirm_modal_id_{self.jobbutton.pk}_{self.site.pk}"',
+            f'id="confirm_modal_id_{self.jobbutton.pk}"',
             result,
         )
         self.assertIn(
-            f'id="form_id_{self.jobbutton.pk}_{self.site.pk}"',
+            f'id="form_id_{self.jobbutton.pk}"',
             result,
         )
         self.assertIn("disabled", result)
@@ -69,11 +69,11 @@ class JobButtonsTest(TestCase):
 
         result = self._build_request()
         self.assertIn(
-            f'id="confirm_modal_id_{self.jobbutton.pk}_{self.site.pk}"',
+            f'id="confirm_modal_id_{self.jobbutton.pk}"',
             result,
         )
         self.assertIn(
-            f'id="form_id_{self.jobbutton.pk}_{self.site.pk}"',
+            f'id="form_id_{self.jobbutton.pk}"',
             result,
         )
         self.assertNotIn("disabled", result)
@@ -87,11 +87,11 @@ class JobButtonsTest(TestCase):
 
         result = self._build_request()
         self.assertIn(
-            f'id="confirm_modal_id_{self.jobbutton.pk}_{self.site.pk}"',
+            f'id="confirm_modal_id_{self.jobbutton.pk}"',
             result,
         )
         self.assertIn(
-            f'id="form_id_{self.jobbutton.pk}_{self.site.pk}"',
+            f'id="form_id_{self.jobbutton.pk}"',
             result,
         )
         self.assertNotIn("disabled", result)
@@ -118,11 +118,11 @@ class JobButtonsTest(TestCase):
 
         result = self._build_request()
         self.assertNotIn(
-            f'id="confirm_modal_id_{self.jobbutton.pk}_{self.site.pk}"',
+            f'id="confirm_modal_id_{self.jobbutton.pk}"',
             result,
         )
         self.assertNotIn(
-            f'id="form_id_{self.jobbutton.pk}_{self.site.pk}"',
+            f'id="form_id_{self.jobbutton.pk}"',
             result,
         )
         self.assertIn("disabled", result)
@@ -134,11 +134,11 @@ class JobButtonsTest(TestCase):
 
         result = self._build_request()
         self.assertIn(
-            f'id="confirm_modal_id_{self.jobbutton.pk}_{self.site.pk}"',
+            f'id="confirm_modal_id_{self.jobbutton.pk}"',
             result,
         )
         self.assertIn(
-            f'id="form_id_{self.jobbutton.pk}_{self.site.pk}"',
+            f'id="form_id_{self.jobbutton.pk}"',
             result,
         )
         self.assertIn("Site Buttons", result)
@@ -152,11 +152,11 @@ class JobButtonsTest(TestCase):
 
         result = self._build_request()
         self.assertIn(
-            f'id="confirm_modal_id_{self.jobbutton.pk}_{self.site.pk}"',
+            f'id="confirm_modal_id_{self.jobbutton.pk}"',
             result,
         )
         self.assertIn(
-            f'id="form_id_{self.jobbutton.pk}_{self.site.pk}"',
+            f'id="form_id_{self.jobbutton.pk}"',
             result,
         )
         self.assertIn("Site Buttons", result)
