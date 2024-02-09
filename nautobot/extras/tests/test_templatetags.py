@@ -47,8 +47,8 @@ class JobButtonsTest(TestCase):
     def test_job_buttons_non_grouped_no_confirm(self):
         """Job Button without a group and missing permissions renders disabled without a confirmation."""
 
-self.jobbutton.confirmation = False
-self.jobbutton.save()
+        self.jobbutton.confirmation = False
+        self.jobbutton.save()
 
         result = self._build_request()
         self.assertNotIn(
