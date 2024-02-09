@@ -13,6 +13,7 @@ class JobButtonsTest(TestCase):
     """Test Rendering of Job Buttons."""
 
     def setUp(self):
+        super().setUp()
         self.site = Site.objects.create(name="Test", slug="test")
         self.job = Job.objects.get(job_class_name="TestJobButtonReceiverSimple")
 
