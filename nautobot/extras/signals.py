@@ -286,7 +286,6 @@ def git_repository_pre_delete(instance, **kwargs):
         }
         job_result.status = JobResultStatusChoices.STATUS_FAILURE
         job_result.traceback = sanitize("".join(traceback.format_exception(type(exc), exc, exc.__traceback__)))
-        raise  # TODO: This presents in the UI as a 500 error
     else:
         job_result.status = JobResultStatusChoices.STATUS_SUCCESS
     finally:
