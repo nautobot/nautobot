@@ -2967,11 +2967,7 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.SoftwareImageFileFilterForm
     form_class = forms.SoftwareImageFileForm
     bulk_update_form_class = forms.SoftwareImageFileBulkEditForm
-    queryset = (
-        SoftwareImageFile.objects.select_related("software_version")
-        .prefetch_related("device_types")
-        .annotate(device_type_count=count_related(DeviceType, "software_image_files"))
-    )
+    queryset = SoftwareImageFile.objects.annotate(device_type_count=count_related(DeviceType, "software_image_files"))
 
     serializer_class = serializers.SoftwareImageFileSerializer
     table_class = tables.SoftwareImageFileTable
@@ -2982,14 +2978,10 @@ class SoftwareVersionUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.SoftwareVersionFilterForm
     form_class = forms.SoftwareVersionForm
     bulk_update_form_class = forms.SoftwareVersionBulkEditForm
-    queryset = (
-        SoftwareVersion.objects.select_related("platform")
-        .prefetch_related("devices", "inventory_items", "software_image_files")
-        .annotate(
-            software_image_file_count=count_related(SoftwareImageFile, "software_version"),
-            device_count=count_related(Device, "software_version"),
-            inventory_item_count=count_related(InventoryItem, "software_version"),
-        )
+    queryset = SoftwareVersion.objects.annotate(
+        software_image_file_count=count_related(SoftwareImageFile, "software_version"),
+        device_count=count_related(Device, "software_version"),
+        inventory_item_count=count_related(InventoryItem, "software_version"),
     )
     serializer_class = serializers.SoftwareVersionSerializer
     table_class = tables.SoftwareVersionTable

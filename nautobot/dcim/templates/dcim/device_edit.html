@@ -176,7 +176,7 @@
         software_version_image_container.style.display = 'block';
         let device_type_id = $('select#id_device_type').find(':selected')[0].value;
         if (!device_type_id) {
-            software_version_image_description.innerHTML = '<b>Error retrieving software image list. No device type selected</b>';
+            software_version_image_description.innerHTML = '<b>Unable to display software image list. Select a device type first.</b>';
         } else {
             retrieve_software_images(software_image_url, {'software_version': version_id, 'device_types': device_type_id});
             software_version_image_list.style.visibility = 'visible';

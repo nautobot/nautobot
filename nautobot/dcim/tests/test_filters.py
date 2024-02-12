@@ -1410,8 +1410,7 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ).distinct()[:2]
         for device_type in device_types_with_software_image_files:
             device = device_type.devices.first()
-            device.software_image_file = device_type.software_image_files.first()
-            device.save()
+            device.software_image_files.set([device_type.software_image_files.first()])
 
         # Create a device with no components for testing the "has_*" filters
         device_type = DeviceType.objects.create(
@@ -3241,6 +3240,8 @@ class SoftwareImageFileFilterSetTestCase(FilterTestCases.FilterTestCase):
     generic_filter_tests = (
         ["device_types", "device_types__id"],
         ["device_types", "device_types__model"],
+        ["devices", "devices__id"],
+        ["devices", "devices__name"],
         ["hashing_algorithm"],
         ["image_file_checksum"],
         ["image_file_name"],
@@ -3256,10 +3257,8 @@ class SoftwareImageFileFilterSetTestCase(FilterTestCases.FilterTestCase):
         common_test_data(cls)
 
         device0, device1 = cls.devices[:2]
-        device0.software_image_file = SoftwareImageFile.objects.first()
-        device0.save()
-        device1.software_image_file = SoftwareImageFile.objects.last()
-        device1.save()
+        device0.software_image_files.set(SoftwareImageFile.objects.all()[:2])
+        device1.software_image_files.set(SoftwareImageFile.objects.all()[2:4])
 
         virtual_machine0, virtual_machine1 = VirtualMachine.objects.all()[:2]
         virtual_machine0.software_image_file = SoftwareImageFile.objects.first()
@@ -3273,6 +3272,8 @@ class SoftwareVersionFilterSetTestCase(FilterTestCases.FilterTestCase):
     filterset = SoftwareVersionFilterSet
     generic_filter_tests = (
         ["alias"],
+        ["devices", "devices__id"],
+        ["devices", "devices__name"],
         ["documentation_url"],
         ["end_of_support_date"],
         ["platform", "platform__id"],
