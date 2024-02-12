@@ -297,6 +297,7 @@ nav:
         - "user-guide/administration/configuration/index.md"
         - Required Settings: "user-guide/administration/configuration/required-settings.md"
         - Optional Settings: "user-guide/administration/configuration/optional-settings.md"
+        - Time Zones: "user-guide/administration/configuration/time-zones.md"
         - External Authentication:
           - LDAP: "user-guide/administration/configuration/authentication/ldap.md"
           - SSO: "user-guide/administration/configuration/authentication/sso.md"
