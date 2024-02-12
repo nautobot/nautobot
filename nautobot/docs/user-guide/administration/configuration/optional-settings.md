@@ -681,6 +681,16 @@ Toggle the availability Prometheus-compatible metrics at `/metrics`. See the [Pr
 
 ---
 
+## METRICS_AUTHENTICATED
+
+Default: `False`
+
+Environment Variable: `NAUTOBOT_METRICS_AUTHENTICATED`
+
+Toggle requiring authentication to view `/metrics`. See the [Prometheus Metrics](../guides/prometheus-metrics.md) documentation for more details.
+
+---
+
 ## NAPALM_USERNAME
 
 ## NAPALM_PASSWORD
@@ -1366,6 +1376,9 @@ Please see the [official Django documentation on `STATIC_ROOT`](https://docs.dja
 Default: `"UTC"`
 
 Environment Variable: `NAUTOBOT_TIME_ZONE`
+
+!!! warning
+    Scheduled jobs will run in the time zone configured in this setting. If you change this setting from the default UTC, you must change it on the Celery Beat server and all Nautobot web servers or your scheduled jobs may run in the wrong time zone.
 
 The time zone Nautobot will use when dealing with dates and times. It is recommended to use UTC time unless you have a specific need to use a local time zone. Please see the [list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
 
