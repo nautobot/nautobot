@@ -14,10 +14,10 @@ class QuerySetAncestorTests(TestCase):
             Location.objects.without_tree_fields().filter(location_type__name="Campus").first()
         )
 
-        self.assertEqual(
-            list(base_location_with_tree_fields.ancestors()),
-            (base_location_without_tree_fields.ancestors()),
-            "`TreeQuerySet.ancestors()` output doesn't match between custom and original implementation for empty ancestors list",
+        self.assertQuerysetEqual(
+            base_location_with_tree_fields.ancestors(),
+            base_location_without_tree_fields.ancestors(),
+            msg="`TreeQuerySet.ancestors()` output doesn't match between custom and original implementation for empty ancestors list",
         )
 
     def test_basic_path_comparison(self):
@@ -27,10 +27,10 @@ class QuerySetAncestorTests(TestCase):
             Location.objects.without_tree_fields().filter(location_type__name="Aisle").first()
         )
 
-        self.assertEqual(
-            list(base_location_with_tree_fields.ancestors()),
-            (base_location_without_tree_fields.ancestors()),
-            "`TreeQuerySet.ancestors()` output doesn't match between custom and original implementation",
+        self.assertQuerysetEqualAndNotEmpty(
+            base_location_with_tree_fields.ancestors(),
+            base_location_without_tree_fields.ancestors(),
+            msg="`TreeQuerySet.ancestors()` output doesn't match between custom and original implementation",
         )
 
     def test_tree_annotations_not_present(self):
@@ -38,6 +38,7 @@ class QuerySetAncestorTests(TestCase):
         base_location_without_tree_fields = (
             Location.objects.without_tree_fields().filter(location_type__name="Aisle").first()
         )
+        ancestors_without_tree_fields = base_location_without_tree_fields.ancestors()
         self.assertFalse(
-            hasattr(base_location_without_tree_fields, "tree_depth"), "Tree annotations should not be present."
+            hasattr(ancestors_without_tree_fields.first(), "tree_depth"), "Tree annotations should not be present."
         )

@@ -1,6 +1,7 @@
 from functools import cached_property
 
 from django.core.cache import cache
+from django.db.models import Case, When
 from tree_queries.models import TreeNode
 from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as TreeQuerySet_
 
@@ -26,13 +27,18 @@ class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
         if hasattr(of, "tree_depth") or not hasattr(of, "parent"):
             return super().ancestors(of, include_self=include_self)
         # In the other case, traverse the `parent` foreign key until the root.
-        ancestors = []
+        model_class = of._meta.concrete_model
+        ancestor_pks = []
         if include_self:
-            ancestors.append(of)
+            ancestor_pks.append(of.pk)
         while of := of.parent:
             # Insert in reverse order so that the root is the first element
-            ancestors.insert(0, of)
-        return ancestors
+            ancestor_pks.insert(0, of.pk)
+        # Maintain API compatibility by returning a queryset instead of a list directly.
+        # Reference:
+        # https://stackoverflow.com/questions/4916851/django-get-a-queryset-from-array-of-ids-in-specific-order
+        preserve_order = Case(*[When(pk=pk, then=position) for position, pk in enumerate(ancestor_pks)])
+        return model_class.objects.without_tree_fields().filter(pk__in=ancestor_pks).order_by(preserve_order)
 
     def max_tree_depth(self):
         """
