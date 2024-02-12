@@ -29,9 +29,9 @@
                 <div class="col-md-3"></div>
                 <div class="col-md-9">
                     <span class="help-block">
-                        <span id="software_version_image_description"></span>
+                        <span id="software_version_image_description"><img src="{% static 'img/ajax-loader.gif' %}"></span>
                         <ul id="software_version_image_list">
-                            <li> Software images go here </li>
+                            <li> Software images for the selected software version will appear here </li>
                         </ul>
                     </span>
                 </div>
@@ -128,9 +128,9 @@
     const software_version_image_container = document.querySelector('div#software_version_image_container');
     const software_version_image_description = document.querySelector('span#software_version_image_description');
     const software_version_image_list = document.querySelector('ul#software_version_image_list');
-    const software_image_url = '/api/dcim/software-image-files/';
+    const software_image_url = '{% url 'dcim-api:softwareimagefile-list' %}';
 
-    function ajaxRequest(url, params) {
+    function retrieve_software_images(url, params) {
         $.ajax({
             url: url,
             method: "GET",
@@ -142,26 +142,19 @@
                     for device type <b>${$('select#id_device_type').find(':selected')[0].text}</b>:
                 `;
 
-                clear_software_image_list();
                 for (result of data.results) {
                     let li = document.createElement('li');
                     let a = document.createElement('a');
-                    let linkText = document.createTextNode(result.display);
-                    a.title = result.display;
+                    let linkText = document.createTextNode(result.image_file_name);
+                    a.title = result.image_file_name;
                     a.href = result.url.replace('api/', '');
                     li.appendChild(a);
                     a.appendChild(linkText);
                     software_version_image_list.appendChild(li);
                 }
-                software_version_image_container.style.display = 'block';
-                software_version_image_list.style.visibility = 'visible';
-
             },
             error: function() {
-                clear_software_image_list();
                 software_version_image_description.innerHTML = '<b>Error retrieving software image list</b>';
-                software_version_image_container.style.display = 'block';
-                software_version_image_list.style.visibility = 'visible';
             },
         });
     }
@@ -171,19 +164,23 @@
     }
 
     function hide_software_image_container(){
-        clear_software_image_list();
-        software_version_image_description.innerHTML = '';
         software_version_image_container.style.display = 'none';
+        software_version_image_description.innerHTML = '';
+        clear_software_image_list();
     }
 
     function populate_software_image_list(version_id) {
+        clear_software_image_list();
         software_version_image_description.innerHTML = '<img src="{% static 'img/ajax-loader.gif' %}">';
         software_version_image_list.style.visibility = 'hidden'; // prevent flicker when changing values
+        software_version_image_container.style.display = 'block';
         let device_type_id = $('select#id_device_type').find(':selected')[0].value;
         if (!device_type_id) {
-            return;
+            software_version_image_description.innerHTML = '<b>Error retrieving software image list. No device type selected</b>';
+        } else {
+            retrieve_software_images(software_image_url, {'software_version': version_id, 'device_types': device_type_id});
+            software_version_image_list.style.visibility = 'visible';
         }
-        ajaxRequest(software_image_url, {'software_version': version_id, 'device_types': device_type_id});
     }
 
     // on select
