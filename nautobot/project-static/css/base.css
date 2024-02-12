@@ -749,7 +749,10 @@ td span.hover_copy:hover .hover_copy_button {
 }
 
 .navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > .buttons {
-    margin: 5px;
+    display: flex;
+    margin-left: 5px;
+    margin-right: 5px;
+    gap: 5px;
 }
 
 .navbar-fixed-left .navbar-nav > li {
