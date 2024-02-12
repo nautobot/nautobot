@@ -101,7 +101,6 @@ plugins:
   - "gen-files":
       scripts:
         - docs/generate_code_reference_pages.py
-  - "include-markdown"
   - "mkdocs-version-annotations"
   - "section-index"
   - "mkdocstrings":
@@ -113,6 +112,7 @@ plugins:
             heading_level: 1
             show_root_heading: true
             show_root_members_full_path: true
+            show_source: false
   - "redirects":
       redirect_maps:
         'additional-features/caching.md': 'user-guide/administration/guides/caching.md'
