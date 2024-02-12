@@ -1156,8 +1156,17 @@ class DeviceView(generic.ObjectView):
         vrf_assignments = instance.vrf_assignments.restrict(request.user, "view")
         vrf_table = VRFDeviceAssignmentTable(vrf_assignments, exclude=("virtual_machine", "device"))
 
+        # Software images
+        if instance.software_version is not None:
+            software_version_images = instance.software_version.software_image_files.restrict(
+                request.user, "view"
+            ).filter(device_types=instance.device_type)
+        else:
+            software_version_images = []
+
         return {
             "services": services,
+            "software_version_images": software_version_images,
             "vc_members": vc_members,
             "vrf_table": vrf_table,
             "active_tab": "device",

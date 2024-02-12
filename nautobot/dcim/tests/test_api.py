@@ -1191,6 +1191,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         device_role = Role.objects.get_for_model(Device).first()
 
         software_version = SoftwareVersion.objects.filter(software_image_files__device_types=device_type).first()
+        software_image_files = SoftwareImageFile.objects.exclude(software_version=software_version)[:2]
 
         Device.objects.create(
             device_type=device_type,
@@ -1240,6 +1241,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
                 "software_version": software_version.pk,
+                "software_image_files": [software_image_files[0].pk, software_image_files[1].pk],
             },
             {
                 "device_type": device_type.pk,
@@ -1252,6 +1254,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
                 "software_version": software_version.pk,
+                "software_image_files": [software_image_files[0].pk],
             },
             {
                 "device_type": device_type.pk,

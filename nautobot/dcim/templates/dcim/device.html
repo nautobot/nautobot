@@ -220,23 +220,24 @@
                                         <td>Software Version</td>
                                         <td>
                                             {{ object.software_version|hyperlinked_object }}
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Software Image files</td>
-                                        <td>
-                                            {% with software_image_file_count=object.software_image_files.count %}
-                                                {% if software_image_file_count %}
-                                                <a href="{% url 'dcim:softwareimagefile_list' %}?devices={{ object.pk }}">{{ software_image_file_count }}</a>*
-                                                {% else %}
-                                                    {% with software_version_image_file_count=object.software_version.software_image_files.count %}
-                                                        {% if software_version_image_file_count %}
-                                                            <a href="{% url 'dcim:softwareimagefile_list' %}?software_version={{ object.software_version.pk }}">{{ software_version_image_file_count }}</a>
-                                                        {% else %}
-                                                            <span class="text-muted">&mdash;</span>
-                                                        {% endif %}
-                                                    {% endwith %}
-                                                {% endif %}
+                                                {% with overridden_software_image_files=object.software_image_files.all %}
+                                                    <ul class="software-image-hierarchy">
+                                                        {% for software_version_image in software_version_images %}
+                                                            {% if overridden_software_image_files %}
+                                                                <li><s>{{ software_version_image|hyperlinked_object:"image_file_name" }}</s></li>
+                                                            {% else %}
+                                                                <li>{{ software_version_image|hyperlinked_object:"image_file_name" }}</li>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </ul>
+                                                    {% if overridden_software_image_files %}
+                                                        <strong>Software Image Files Overridden:</strong>
+                                                        <ul>
+                                                            {% for overridden_software_image_file in overridden_software_image_files %}
+                                                                <li>{{ overridden_software_image_file|hyperlinked_object }}</li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    {% endif %}
                                             {% endwith %}
                                         </td>
                                     </tr>
