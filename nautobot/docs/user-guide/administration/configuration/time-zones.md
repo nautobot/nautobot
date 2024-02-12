@@ -7,9 +7,9 @@ Time zones affect several aspects of the of your Nautobot implementation to incl
 * The UI time presented
 * Scheduling of jobs
 
-It's important to make sure that the time zones match on all of your Nautobot services, including the database server, Nautobot server, Celery Beat and any worker. This includes setting the system time zone on all of the servers and the configured time zone on all of the service configurations. 
+It's important to make sure that the time zones match on all of your Nautobot services, including the database server, Nautobot server, Celery Beat and any worker. This includes setting the system time zone on all of the servers and the configured time zone on all of the service configurations.
 
-We highly recommend using UTC across all spaces to avoid any issues with daylight savings time changes or misalignment in timestamps. Leverage NTP across all servers and services to ensure the times are synchronized. 
+We highly recommend using UTC across all spaces to avoid any issues with daylight savings time changes or misalignment in timestamps. Leverage NTP across all servers and services to ensure the times are synchronized.
 
 ## Nautobot Application Configuration
 
@@ -42,7 +42,6 @@ timezone = UTC
 
 !!! info
     The SQL command `SET TIME ZONE` only sets the time zone for the session.
-
 
 ## Server Configuration
 
