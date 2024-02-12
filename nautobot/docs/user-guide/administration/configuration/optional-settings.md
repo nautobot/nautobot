@@ -681,6 +681,16 @@ Toggle the availability Prometheus-compatible metrics at `/metrics`. See the [Pr
 
 ---
 
+## METRICS_AUTHENTICATED
+
+Default: `False`
+
+Environment Variable: `NAUTOBOT_METRICS_AUTHENTICATED`
+
+Toggle requiring authentication to view `/metrics`. See the [Prometheus Metrics](../guides/prometheus-metrics.md) documentation for more details.
+
+---
+
 ## NAPALM_USERNAME
 
 ## NAPALM_PASSWORD
