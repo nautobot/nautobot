@@ -594,7 +594,7 @@ def pylint(context, target=None, recursive=False):
     },
     iterable=["target"],
 )
-def ruff(context, fix=False, target=None, output_format="text"):
+def ruff(context, fix=False, target=None, output_format="concise"):
     """Run ruff to perform code formatting and linting."""
     if not target:
         target = ["development", "examples", "nautobot", "tasks.py"]

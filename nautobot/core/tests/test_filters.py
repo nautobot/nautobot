@@ -409,7 +409,7 @@ class BaseFilterSetTest(TestCase):
     Ensure that a BaseFilterSet automatically creates the expected set of filters for each filter type.
     """
 
-    class TestFilterSet(filters.BaseFilterSet):
+    class TestFilterSet(filters.BaseFilterSet):  # pylint: disable=used-before-assignment  # appears to be a pylint bug
         """Filterset for testing various fields."""
 
         class TestModel(django_models.Model):  # noqa: DJ008  # django-model-without-dunder-str -- fine since this isn't a "real" model
