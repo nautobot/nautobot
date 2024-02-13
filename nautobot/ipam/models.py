@@ -431,7 +431,6 @@ class Prefix(PrimaryModel):
     # ip_version is set internally just like network, broadcast, and prefix_length.
     ip_version = models.IntegerField(
         choices=choices.IPAddressVersionChoices,
-        null=True,
         editable=False,
         db_index=True,
         verbose_name="IP Version",
@@ -995,9 +994,9 @@ class IPAddress(PrimaryModel):
     # ip_version is set internally just like network, and mask_length.
     ip_version = models.IntegerField(
         choices=choices.IPAddressVersionChoices,
-        null=True,
         editable=False,
         db_index=True,
+        verbose_name="IP Version",
     )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
