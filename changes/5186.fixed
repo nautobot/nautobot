@@ -1,0 +1,1 @@
+Fixed a case where an IPAddress created with a `host` and `mask_length` would default to a null `ip_version`.
