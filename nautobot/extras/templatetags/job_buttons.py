@@ -29,6 +29,7 @@ HIDDEN_INPUTS = """
 <input type="hidden" name="object_model_name" value="{object_model_name}">
 <input type="hidden" name="_schedule_type" value="immediately">
 <input type="hidden" name="_return_url" value="{redirect_path}">
+<input type="hidden" name="_commit" value="on">
 """
 
 NO_CONFIRM_BUTTON = """
@@ -170,8 +171,10 @@ def job_buttons(context, obj):
         for jb in buttons:
             # Render grouped buttons as list items
             button_html, form_html = _render_job_button_for_obj(jb, obj, context, content_type)
-            buttons_rendered += format_html("<li>{}</li>", button_html)
-            forms_html += form_html
+            if button_html:
+                buttons_rendered += format_html("<li>{}</li>", button_html)
+            if form_html:
+                forms_html += form_html
 
         if buttons_rendered:
             buttons_html += format_html(
