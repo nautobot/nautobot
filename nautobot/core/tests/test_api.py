@@ -27,7 +27,7 @@ from nautobot.dcim.api import serializers as dcim_serializers
 from nautobot.extras import choices, models as extras_models
 from nautobot.ipam import models as ipam_models
 from nautobot.ipam.api import serializers as ipam_serializers
-from nautobot.tenancy.models import TenantGroup
+from nautobot.tenancy import models as tenancy_models
 
 User = get_user_model()
 
