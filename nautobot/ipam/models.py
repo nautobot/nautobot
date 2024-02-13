@@ -1276,10 +1276,7 @@ class VLANGroup(OrganizationalModel):
     description = models.CharField(max_length=200, blank=True)
 
     class Meta:
-        ordering = (
-            "location",
-            "name",
-        )  # (location, name) may be non-unique
+        ordering = ("name",)
         verbose_name = "VLAN group"
         verbose_name_plural = "VLAN groups"
 
