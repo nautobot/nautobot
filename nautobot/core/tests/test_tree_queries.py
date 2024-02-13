@@ -1,4 +1,4 @@
-from nautobot.core.testing import TestCase
+from nautobot.utilities.testing import TestCase
 from nautobot.dcim.models import Location
 
 
