@@ -261,8 +261,8 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             response_data = response.content.decode(response.charset)
             if type(obj) not in [extras_models.Contact, extras_models.Team]:
-                self.assertIn(
-                    'aria-controls="contacts" role="tab" data-toggle="tab">\n                    Contacts\n                </a>',
+                self.assertInHTML(
+                    f'<a href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">Contacts</a>',
                     response_data,
                 )
 
@@ -280,8 +280,8 @@ class ViewTestCases:
                 self.assertHttpStatus(response, 200)
                 response_data = response.content.decode(response.charset)
                 if type(obj) not in [extras_models.Contact, extras_models.Team]:
-                    self.assertIn(
-                        'aria-controls="contacts" role="tab" data-toggle="tab">\n                    Contacts\n                </a>',
+                    self.assertInHTML(
+                        f'<a href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">Contacts</a>',
                         response_data,
                     )
 
