@@ -82,7 +82,6 @@ class ObjectPermissionBackend(ModelBackend):
         if model._meta.label_lower != ".".join((app_label, model_name)):
             raise ValueError(f"Invalid permission {perm} for model {model}")
 
-        # Compile a query filter that matches all instances of the specified model
         # Compile a QuerySet filter that matches all instances of the specified model
         tokens = {
             "$user": user_obj,

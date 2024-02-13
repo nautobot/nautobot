@@ -241,7 +241,7 @@ class ObjectPermissionForm(forms.ModelForm):
             for ct in object_types:
                 model = ct.model_class()
                 try:
-                    tokens={"$user": 0} # setting token to null user ID
+                    tokens = {"$user": 0}  # setting token to null user ID
                     model.objects.filter(qs_filter_from_constraints(constraints, tokens)).exists()
                 except FieldError as e:
                     raise ValidationError({"constraints": f"Invalid filter for {model}: {e}"})
