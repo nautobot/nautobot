@@ -867,7 +867,7 @@ class APIOrderingTestCase(testing.APITestCase):
                         is_fk_field=field_name in fk_fields,
                     )
 
-                with self.subTest(f'Asset inverse sorting "{model_class.__name__}" using "{field_name}" field name.'):
+                with self.subTest(f'Assert inverse sorting "{model_class.__name__}" using "{field_name}" field name.'):
                     response = self.client.get(f"{url}?sort=-{field_name}&limit=10&depth=1", **self.header)
                     self._validate_sorted_response(
                         response=response,
