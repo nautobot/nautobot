@@ -1907,6 +1907,8 @@ class ObjectChangeLogView(View):
                 "table": objectchanges_table,
                 "base_template": self.base_template,
                 "active_tab": "changelog",
+                # Currently only Contact and Team models are not contact_associatable.
+                "is_contact_associatable_model": type(obj) not in [Contact, Team],
             },
         )
 
@@ -1988,6 +1990,8 @@ class ObjectNotesView(View):
                 "base_template": self.base_template,
                 "active_tab": "notes",
                 "form": notes_form,
+                # Currently only Contact and Team models are not contact_associatable.
+                "is_contact_associatable_model": type(obj) not in [Contact, Team],
             },
         )
 
