@@ -442,7 +442,12 @@ class PrefixView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table
-        parent_prefixes = instance.ancestors().restrict(request.user, "view").select_related("parent", "namespace")
+        parent_prefixes = (
+            instance.ancestors()
+            .restrict(request.user, "view")
+            .select_related("parent", "namespace", "status", "vlan", "role")
+            .annotate(location_count=Count("locations"))
+        )
         parent_prefix_table = tables.PrefixTable(list(parent_prefixes))
         parent_prefix_table.exclude = ("namespace",)
 
