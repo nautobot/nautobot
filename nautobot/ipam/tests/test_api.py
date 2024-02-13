@@ -27,6 +27,7 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
+    VRFDeviceAssignment,
 )
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
@@ -99,6 +100,74 @@ class VRFTest(APIViewTestCases.APIViewTestCase):
         ]
         cls.bulk_update_data = {
             "description": "New description",
+        }
+
+
+class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
+    model = VRFDeviceAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        vrfs = VRF.objects.all()
+        devices = Device.objects.all()
+        locations = Location.objects.filter(location_type__name="Campus")
+        cluster_type = ClusterType.objects.create(name="Test Cluster Type")
+        clusters = (
+            Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, location=locations[0]),
+            Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type, location=locations[1]),
+            Cluster.objects.create(name="Cluster 3", cluster_type=cluster_type, location=locations[2]),
+        )
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        vm_role = Role.objects.get_for_model(VirtualMachine).first()
+
+        test_vm = VirtualMachine.objects.create(
+            cluster=clusters[0],
+            name="VM 1",
+            role=vm_role,
+            status=vm_status,
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=vrfs[0],
+            device=devices[0],
+            rd="65000:1",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=vrfs[0],
+            device=devices[1],
+            rd="65000:2",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=vrfs[0],
+            virtual_machine=test_vm,
+            rd="65000:3",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=vrfs[1],
+            virtual_machine=test_vm,
+            rd="65000:4",
+        )
+        cls.create_data = [
+            {
+                "vrf": vrfs[2].pk,
+                "device": devices[4].pk,
+                "virtual_machine": None,
+                "rd": "65000:4",
+            },
+            {
+                "vrf": vrfs[3].pk,
+                "device": None,
+                "virtual_machine": test_vm.pk,
+                "rd": "65000:5",
+            },
+            {
+                "vrf": vrfs[4].pk,
+                "device": devices[6].pk,
+                "virtual_machine": None,
+                "rd": "65000:6",
+            },
+        ]
+        cls.bulk_update_data = {
+            "rd": "65000:7",
         }
 
 
