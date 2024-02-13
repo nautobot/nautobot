@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings, RequestFactory, TestCase
-from django.urls import resolve, reverse
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.exceptions import ParseError
 from rest_framework.settings import api_settings
@@ -783,25 +783,23 @@ class APIOrderingTestCase(testing.APITestCase):
             "DateTimeField": "created",
         }
 
-    def _validate_sorted_response(self, response, queryset, field_name, is_tree_node=False):
+    def _validate_sorted_response(self, response, queryset, field_name, is_fk_field=False):
         self.assertHttpStatus(response, 200)
-        if is_tree_node:
-            queryset_values_list = queryset.extra(order_by=[field_name]).values_list("id", flat=True)[:10]
-        else:
-            queryset_values_list = queryset.order_by(field_name).values_list("id", flat=True)[:10]
 
-        # if queryset.model.__name__ == "LocationType":
-        #     print(list(map(lambda p: p["name"], response.data["results"])))
-        #     print(list(map(lambda p: str(p),  queryset.extra(order_by=[field_name]).values_list("name", flat=True)[:10])))
-        self.assertEqual(
-            list(map(lambda p: p["id"], response.data["results"])),
-            list(
+        # If the field is a foreign key field, we cannot guarantee the relative order of objects with the same value across multiple objects.
+        # Therefore, we directly compare the names of the foreign key objects.
+        if is_fk_field:
+            api_data = list(map(lambda p: p[field_name]["name"] if p[field_name] else None, response.data["results"]))
+            queryset_data = list(queryset.values_list(f"{field_name}__name", flat=True)[:10])
+        else:
+            api_data = list(map(lambda p: p["id"], response.data["results"]))
+            queryset_data = list(
                 map(
                     lambda p: str(p),  # pylint: disable=unnecessary-lambda
-                    queryset_values_list,
+                    queryset.values_list("id", flat=True)[:10],
                 )
-            ),
-        )
+            )
+        self.assertEqual(api_data, queryset_data)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_ascending_sort(self):
@@ -810,7 +808,7 @@ class APIOrderingTestCase(testing.APITestCase):
         for field_type, field_name in self.field_type_map.items():
             with self.subTest(f"Testing {field_type}"):
                 response = self.client.get(f"{self.url}?sort={field_name}&limit=10", **self.header)
-                self._validate_sorted_response(response, Provider.objects.all(), field_name)
+                self._validate_sorted_response(response, Provider.objects.all().order_by(field_name), field_name)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_descending_sort(self):
@@ -819,20 +817,13 @@ class APIOrderingTestCase(testing.APITestCase):
         for field_type, field_name in self.field_type_map.items():
             with self.subTest(f"Testing {field_type}"):
                 response = self.client.get(f"{self.url}?sort=-{field_name}&limit=10", **self.header)
-                self._validate_sorted_response(response, Provider.objects.all(), f"-{field_name}")
+                self._validate_sorted_response(response, Provider.objects.all().order_by(f"-{field_name}"), field_name)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_sorting_tree_node_models(self):
         location_type = dcim_models.LocationType.objects.get(name="Campus")
         locations = dcim_models.Location.objects.filter(location_type=location_type)
         devices = dcim_models.Device.objects.all()
-
-        # When sorting by the 'parent' field, we may encounter different results from API response and ORM filter due to None values.
-        # For instance, sorting tenants on `parent` = `None` might yield either `<Tenant 1 parent=None>, <Tenant 2 parent=None>`
-        # or `<Tenant 2 parent=None>, <Tenant 1 parent=None>`.
-        # To ensure consistent sorting, we'll delete all None parents except one.
-        tenant_group_pk = TenantGroup.objects.filter(parent__isnull=True).first().pk
-        TenantGroup.objects.filter(parent__isnull=True).exclude(pk=tenant_group_pk).delete()
 
         dcim_models.RackGroup.objects.create(name="Rack Group 0", location=locations[0])
         dcim_models.InventoryItem.objects.create(
@@ -860,21 +851,30 @@ class APIOrderingTestCase(testing.APITestCase):
             TenantGroup,
         ]
         # Each of the table has at-least two sortable field_names in the field_names
-        model_field_names = ["name", "location", "parent", "location_type", "manufacturer"]
+        fk_fields = ["location", "parent", "location_type", "manufacturer"]
+        model_field_names = ["name", *fk_fields]
         for model_class in tree_node_models:
             url = reverse(get_route_for_model(model_class, "list", api=True))
             serializer = get_serializer_for_model(model_class)
             serializer_avial_fields = set(model_field_names) & set(serializer().fields.keys())
             for field_name in serializer_avial_fields:
                 with self.subTest(f'Asset sorting "{model_class.__name__}" using "{field_name}" field name.'):
-                    response = self.client.get(f"{url}?sort={field_name}&limit=10", **self.header)
-                    resolver_match = resolve(url)
-                    view_class = resolver_match.func.cls
-                    self._validate_sorted_response(response, view_class.queryset, field_name, is_tree_node=True)
+                    response = self.client.get(f"{url}?sort={field_name}&limit=10&depth=1", **self.header)
+                    self._validate_sorted_response(
+                        response=response,
+                        queryset=model_class.objects.extra(order_by=[field_name]),
+                        field_name=field_name,
+                        is_fk_field=field_name in fk_fields,
+                    )
 
                 with self.subTest(f'Asset inverse sorting "{model_class.__name__}" using "{field_name}" field name.'):
-                    response = self.client.get(f"{url}?sort=-{field_name}&limit=10", **self.header)
-                    self._validate_sorted_response(response, view_class.queryset, f"-{field_name}", is_tree_node=True)
+                    response = self.client.get(f"{url}?sort=-{field_name}&limit=10&depth=1", **self.header)
+                    self._validate_sorted_response(
+                        response=response,
+                        queryset=model_class.objects.extra(order_by=[f"-{field_name}"]),
+                        field_name=field_name,
+                        is_fk_field=field_name in fk_fields,
+                    )
 
 
 class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
