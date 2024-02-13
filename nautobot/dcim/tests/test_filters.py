@@ -31,7 +31,7 @@ from nautobot.dcim.filters import (
     DeviceFilterSet,
     DeviceRedundancyGroupFilterSet,
     DeviceTypeFilterSet,
-    DeviceTypeToSoftwareImageFilterSet,
+    DeviceTypeToSoftwareImageFileFilterSet,
     FrontPortFilterSet,
     FrontPortTemplateFilterSet,
     HardwareFamilyFilterSet,
@@ -55,7 +55,7 @@ from nautobot.dcim.filters import (
     RackReservationFilterSet,
     RearPortFilterSet,
     RearPortTemplateFilterSet,
-    SoftwareImageFilterSet,
+    SoftwareImageFileFilterSet,
     SoftwareVersionFilterSet,
     VirtualChassisFilterSet,
 )
@@ -70,7 +70,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
-    DeviceTypeToSoftwareImage,
+    DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -94,7 +94,7 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
-    SoftwareImage,
+    SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
 )
@@ -190,8 +190,8 @@ def common_test_data(cls):
             subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
         ),
     )
-    device_types[0].software_images.set(SoftwareImage.objects.all()[:2])
-    device_types[1].software_images.set(SoftwareImage.objects.all()[2:4])
+    device_types[0].software_image_files.set(SoftwareImageFile.objects.all()[:2])
+    device_types[1].software_image_files.set(SoftwareImageFile.objects.all()[2:4])
     cls.device_types = device_types
 
     rack_groups = (
@@ -944,8 +944,8 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         ("power_port_templates", "power_port_templates__name"),
         ("rear_port_templates", "rear_port_templates__id"),
         ("rear_port_templates", "rear_port_templates__name"),
-        ("software_images", "software_images__id"),
-        ("software_images", "software_images__image_file_name"),
+        ("software_image_files", "software_image_files__id"),
+        ("software_image_files", "software_image_files__image_file_name"),
         ("u_height",),
     ]
 
@@ -1387,6 +1387,8 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ("role", "role__name"),
         ("secrets_group", "secrets_group__id"),
         ("secrets_group", "secrets_group__name"),
+        ("software_image_files", "software_image_files__id"),
+        ("software_image_files", "software_image_files__image_file_name"),
         ("software_version", "software_version__id"),
         ("software_version", "software_version__version"),
         ("status", "status__id"),
@@ -1403,13 +1405,12 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
 
         devices = Device.objects.all()
 
-        device_types_with_software_images = DeviceType.objects.filter(
-            software_images__isnull=False, devices__isnull=False
+        device_types_with_software_image_files = DeviceType.objects.filter(
+            software_image_files__isnull=False, devices__isnull=False
         ).distinct()[:2]
-        for device_type in device_types_with_software_images:
+        for device_type in device_types_with_software_image_files:
             device = device_type.devices.first()
-            device.software_image = device_type.software_images.first()
-            device.save()
+            device.software_image_files.set([device_type.software_image_files.first()])
 
         # Create a device with no components for testing the "has_*" filters
         device_type = DeviceType.objects.create(
@@ -3233,12 +3234,14 @@ class InterfaceRedundancyGroupAssociationTestCase(FilterTestCases.FilterTestCase
             interface_redundancy_groups[i].add_interface(interface, 100 * i)
 
 
-class SoftwareImageFilterSetTestCase(FilterTestCases.FilterTestCase):
-    queryset = SoftwareImage.objects.all()
-    filterset = SoftwareImageFilterSet
+class SoftwareImageFileFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = SoftwareImageFile.objects.all()
+    filterset = SoftwareImageFileFilterSet
     generic_filter_tests = (
         ["device_types", "device_types__id"],
         ["device_types", "device_types__model"],
+        ["devices", "devices__id"],
+        ["devices", "devices__name"],
         ["hashing_algorithm"],
         ["image_file_checksum"],
         ["image_file_name"],
@@ -3254,15 +3257,13 @@ class SoftwareImageFilterSetTestCase(FilterTestCases.FilterTestCase):
         common_test_data(cls)
 
         device0, device1 = cls.devices[:2]
-        device0.software_image = SoftwareImage.objects.first()
-        device0.save()
-        device1.software_image = SoftwareImage.objects.last()
-        device1.save()
+        device0.software_image_files.set(SoftwareImageFile.objects.all()[:2])
+        device1.software_image_files.set(SoftwareImageFile.objects.all()[2:4])
 
         virtual_machine0, virtual_machine1 = VirtualMachine.objects.all()[:2]
-        virtual_machine0.software_image = SoftwareImage.objects.first()
+        virtual_machine0.software_image_file = SoftwareImageFile.objects.first()
         virtual_machine0.save()
-        virtual_machine1.software_image = SoftwareImage.objects.last()
+        virtual_machine1.software_image_file = SoftwareImageFile.objects.last()
         virtual_machine1.save()
 
 
@@ -3271,13 +3272,15 @@ class SoftwareVersionFilterSetTestCase(FilterTestCases.FilterTestCase):
     filterset = SoftwareVersionFilterSet
     generic_filter_tests = (
         ["alias"],
+        ["devices", "devices__id"],
+        ["devices", "devices__name"],
         ["documentation_url"],
         ["end_of_support_date"],
         ["platform", "platform__id"],
         ["platform", "platform__name"],
         ["release_date"],
-        ["software_images", "software_images__id"],
-        ["software_images", "software_images__image_file_name"],
+        ["software_image_files", "software_image_files__id"],
+        ["software_image_files", "software_image_files__image_file_name"],
         ["status", "status__id"],
         ["status", "status__name"],
         ["version"],
@@ -3331,12 +3334,12 @@ class SoftwareVersionFilterSetTestCase(FilterTestCases.FilterTestCase):
         )
 
 
-class DeviceTypeToSoftwareImageFilterSetTestCase(FilterTestCases.FilterTestCase):
-    queryset = DeviceTypeToSoftwareImage.objects.all()
-    filterset = DeviceTypeToSoftwareImageFilterSet
+class DeviceTypeToSoftwareImageFileFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = DeviceTypeToSoftwareImageFile.objects.all()
+    filterset = DeviceTypeToSoftwareImageFileFilterSet
     generic_filter_tests = (
-        ["software_image", "software_image__id"],
-        ["software_image", "software_image__image_file_name"],
+        ["software_image_file", "software_image_file__id"],
+        ["software_image_file", "software_image_file__image_file_name"],
         ["device_type", "device_type__id"],
         ["device_type", "device_type__model"],
     )

@@ -46,7 +46,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
-    DeviceTypeToSoftwareImage,
+    DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -70,7 +70,7 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
-    SoftwareImage,
+    SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
 )
@@ -101,7 +101,7 @@ __all__ = (
     "DeviceFilterSet",
     "DeviceRedundancyGroupFilterSet",
     "DeviceTypeFilterSet",
-    "DeviceTypeToSoftwareImageFilterSet",
+    "DeviceTypeToSoftwareImageFileFilterSet",
     "FrontPortFilterSet",
     "FrontPortTemplateFilterSet",
     "HardwareFamilyFilterSet",
@@ -129,7 +129,7 @@ __all__ = (
     "RackReservationFilterSet",
     "RearPortFilterSet",
     "RearPortTemplateFilterSet",
-    "SoftwareImageFilterSet",
+    "SoftwareImageFileFilterSet",
     "SoftwareVersionFilterSet",
     "VirtualChassisFilterSet",
 )
@@ -643,10 +643,14 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         field_name="device_bay_templates",
         label="Has device bay templates",
     )
-    software_images = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=SoftwareImage.objects.all(),
+    has_software_image_files = RelatedMembershipBooleanFilter(
+        field_name="software_image_files",
+        label="Has software image files",
+    )
+    software_image_files = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareImageFile.objects.all(),
         to_field_name="image_file_name",
-        label="Software images (image file name or ID)",
+        label="Software image files (image file name or ID)",
     )
 
     class Meta:
@@ -661,6 +665,8 @@ class DeviceTypeFilterSet(NautobotFilterSet):
             "comments",
             "devices",
             "tags",
+            "has_software_image_files",
+            "software_image_files",
         ]
 
     def _console_ports(self, queryset, name, value):
@@ -978,6 +984,15 @@ class DeviceFilterSet(
         field_name="software_version",
         label="Has software version",
     )
+    has_software_image_files = RelatedMembershipBooleanFilter(
+        field_name="software_image_files",
+        label="Has software image files",
+    )
+    software_image_files = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareImageFile.objects.all(),
+        to_field_name="image_file_name",
+        label="Software image files (image file name or ID)",
+    )
 
     class Meta:
         model = Device
@@ -994,6 +1009,8 @@ class DeviceFilterSet(
             "interfaces",
             "software_version",
             "has_software_version",
+            "has_software_image_files",
+            "software_image_files",
         ]
 
     def generate_query__has_primary_ip(self, value):
@@ -1668,8 +1685,8 @@ class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet, NameSearchFilt
         fields = ["id", "interface_redundancy_group", "interface", "priority"]
 
 
-class SoftwareImageFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
-    """Filters for SoftwareImage model."""
+class SoftwareImageFileFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
+    """Filters for SoftwareImageFile model."""
 
     q = SearchFilter(
         filter_predicates={
@@ -1693,9 +1710,17 @@ class SoftwareImageFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         field_name="device_types",
         label="Has device types",
     )
+    devices = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        label="Devices (name or ID)",
+    )
+    has_devices = RelatedMembershipBooleanFilter(
+        field_name="devices",
+        label="Has devices",
+    )
 
     class Meta:
-        model = SoftwareImage
+        model = SoftwareImageFile
         fields = "__all__"
 
 
@@ -1739,19 +1764,19 @@ class SoftwareVersionFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         label="Platform (name or ID)",
     )
     device_types = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="software_images__device_types",
+        field_name="software_image_files__device_types",
         queryset=DeviceType.objects.all(),
         to_field_name="model",
         label="Device types (model or ID)",
     )
-    software_images = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=SoftwareImage.objects.all(),
+    software_image_files = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareImageFile.objects.all(),
         to_field_name="image_file_name",
-        label="Software images (image file name or ID)",
+        label="Software image files (image file name or ID)",
     )
-    has_software_images = RelatedMembershipBooleanFilter(
-        field_name="software_images",
-        label="Has software images",
+    has_software_image_files = RelatedMembershipBooleanFilter(
+        field_name="software_image_files",
+        label="Has software image files",
     )
 
     class Meta:
@@ -1759,20 +1784,20 @@ class SoftwareVersionFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         fields = "__all__"
 
 
-class DeviceTypeToSoftwareImageFilterSet(BaseFilterSet):
-    """Filters for DeviceTypeToSoftwareImage model."""
+class DeviceTypeToSoftwareImageFileFilterSet(BaseFilterSet):
+    """Filters for DeviceTypeToSoftwareImageFile model."""
 
     device_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
         to_field_name="model",
         label="Device type (model or ID)",
     )
-    software_image = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=SoftwareImage.objects.all(),
+    software_image_file = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareImageFile.objects.all(),
         to_field_name="image_file_name",
-        label="Software image (image file name or ID)",
+        label="Software image file (image file name or ID)",
     )
 
     class Meta:
-        model = DeviceTypeToSoftwareImage
+        model = DeviceTypeToSoftwareImageFile
         fields = "__all__"

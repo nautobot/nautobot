@@ -19,7 +19,7 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import (
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
-    SoftwareImageHashingAlgorithmChoices,
+    SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.utils import get_all_network_driver_mappings
@@ -99,31 +99,35 @@ class HardwareFamily(PrimaryModel):
 
 
 @extras_features("graphql")
-class DeviceTypeToSoftwareImage(BaseModel, ChangeLoggedModel):
-    device_type = models.ForeignKey("dcim.DeviceType", on_delete=models.CASCADE, related_name="software_image_mappings")
-    software_image = models.ForeignKey(
-        "dcim.SoftwareImage", on_delete=models.PROTECT, related_name="device_type_mappings"
+class DeviceTypeToSoftwareImageFile(BaseModel, ChangeLoggedModel):
+    device_type = models.ForeignKey(
+        "dcim.DeviceType", on_delete=models.CASCADE, related_name="software_image_file_mappings"
+    )
+    software_image_file = models.ForeignKey(
+        "dcim.SoftwareImageFile", on_delete=models.PROTECT, related_name="device_type_mappings"
     )
     is_default = models.BooleanField(default=False, help_text="Is the default image for this device type")
 
     class Meta:
         unique_together = [
-            ["device_type", "software_image"],
+            ["device_type", "software_image_file"],
         ]
-        verbose_name = "device type to software image mapping"
-        verbose_name_plural = "device type to software image mappings"
+        verbose_name = "device type to software image file mapping"
+        verbose_name_plural = "device type to software image file mappings"
 
     def clean(self):
         super().clean()
 
         # Validate that only one default image is set per device type
         if self.is_default:
-            current_default = DeviceTypeToSoftwareImage.objects.filter(device_type=self.device_type, is_default=True)
+            current_default = DeviceTypeToSoftwareImageFile.objects.filter(
+                device_type=self.device_type, is_default=True
+            )
             if current_default.exists() and current_default.first().pk != self.pk:
                 raise ValidationError({"is_default": "Only one default image can be set per device type."})
 
     def __str__(self):
-        return f"{self.device_type!s} - {self.software_image!s}"
+        return f"{self.device_type!s} - {self.software_image_file!s}"
 
 
 @extras_features(
@@ -178,12 +182,12 @@ class DeviceType(PrimaryModel):
     )
     front_image = models.ImageField(upload_to="devicetype-images", blank=True)
     rear_image = models.ImageField(upload_to="devicetype-images", blank=True)
-    software_images = models.ManyToManyField(
-        to="dcim.SoftwareImage",
-        through=DeviceTypeToSoftwareImage,
+    software_image_files = models.ManyToManyField(
+        to="dcim.SoftwareImageFile",
+        through=DeviceTypeToSoftwareImageFile,
         related_name="device_types",
         blank=True,
-        verbose_name="Software Images",
+        verbose_name="Software Image Files",
     )
     comments = models.TextField(blank=True)
 
@@ -585,6 +589,14 @@ class Device(PrimaryModel, ConfigContextModel):
         null=True,
     )
 
+    software_image_files = models.ManyToManyField(
+        to="dcim.SoftwareImageFile",
+        related_name="devices",
+        blank=True,
+        verbose_name="Software Image Files",
+        help_text="Override the software image files associated with the software version for this device",
+    )
+
     objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
 
     clone_fields = [
@@ -789,15 +801,15 @@ class Device(PrimaryModel, ConfigContextModel):
                 }
             )
 
-        # Validate device software version has a software image that matches the device's device type
+        # Validate device software version has a software image file that matches the device's device type
         if (
             self.software_version is not None
-            and not self.software_version.software_images.filter(device_types=self.device_type).exists()
+            and not self.software_version.software_image_files.filter(device_types=self.device_type).exists()
         ):
             raise ValidationError(
                 {
                     "software_version": (
-                        f"No software images in version '{self.software_version}' are "
+                        f"No software image files in version '{self.software_version}' are "
                         f"associated with device type {self.device_type}."
                     )
                 }
@@ -1046,15 +1058,15 @@ class DeviceRedundancyGroup(PrimaryModel):
 
 
 #
-# Software images
+# Software image files
 #
 
 
-class SoftwareImageQuerySet(RestrictedQuerySet):
-    """Queryset for SoftwareImage objects."""
+class SoftwareImageFileQuerySet(RestrictedQuerySet):
+    """Queryset for SoftwareImageFile objects."""
 
     def get_for_object(self, obj):
-        """Return all SoftwareImages assigned to the given object."""
+        """Return all SoftwareImageFiles assigned to the given object."""
         from nautobot.virtualization.models import VirtualMachine
 
         if isinstance(obj, Device):
@@ -1080,16 +1092,19 @@ class SoftwareImageQuerySet(RestrictedQuerySet):
     "statuses",
     "webhooks",
 )
-class SoftwareImage(PrimaryModel):
-    """A software image for a Device, Virtual Machine or Inventory Item."""
+class SoftwareImageFile(PrimaryModel):
+    """A software image file for a Device, Virtual Machine or Inventory Item."""
 
     software_version = models.ForeignKey(
-        to="SoftwareVersion", on_delete=models.CASCADE, related_name="software_images", verbose_name="Software Version"
+        to="SoftwareVersion",
+        on_delete=models.CASCADE,
+        related_name="software_image_files",
+        verbose_name="Software Version",
     )
     image_file_name = models.CharField(blank=False, max_length=255, verbose_name="Image File Name")
     image_file_checksum = models.CharField(blank=True, max_length=256, verbose_name="Image File Checksum")
     hashing_algorithm = models.CharField(
-        choices=SoftwareImageHashingAlgorithmChoices,
+        choices=SoftwareImageFileHashingAlgorithmChoices,
         blank=True,
         max_length=255,
         verbose_name="Hashing Algorithm",
@@ -1104,7 +1119,7 @@ class SoftwareImage(PrimaryModel):
     download_url = models.URLField(blank=True, verbose_name="Download URL")
     status = StatusField(blank=False, null=False)
 
-    objects = BaseManager.from_queryset(SoftwareImageQuerySet)()
+    objects = BaseManager.from_queryset(SoftwareImageFileQuerySet)()
 
     class Meta:
         ordering = ("software_version", "image_file_name")
@@ -1115,8 +1130,8 @@ class SoftwareImage(PrimaryModel):
 
     def delete(self, *args, **kwargs):
         """
-        Intercept the ProtectedError for SoftwareImages that are assigned to a DeviceType and provide a better
-        error message. Instead of raising an exception on the DeviceTypeToSoftwareImage object, raise on the DeviceType.
+        Intercept the ProtectedError for SoftwareImageFiles that are assigned to a DeviceType and provide a better
+        error message. Instead of raising an exception on the DeviceTypeToSoftwareImageFile object, raise on the DeviceType.
         """
 
         try:
@@ -1125,12 +1140,12 @@ class SoftwareImage(PrimaryModel):
             protected_device_types = [
                 instance.device_type
                 for instance in exc.protected_objects
-                if isinstance(instance, DeviceTypeToSoftwareImage)
+                if isinstance(instance, DeviceTypeToSoftwareImageFile)
             ]
             if protected_device_types:
                 raise ProtectedError(
-                    "Cannot delete some instances of model 'SoftwareImage' because they are "
-                    "referenced through protected foreign keys: 'DeviceType.software_images'.",
+                    "Cannot delete some instances of model 'SoftwareImageFile' because they are "
+                    "referenced through protected foreign keys: 'DeviceType.software_image_files'.",
                     protected_device_types,
                 ) from exc
             raise exc
@@ -1148,7 +1163,7 @@ class SoftwareVersionQuerySet(RestrictedQuerySet):
         elif isinstance(obj, InventoryItem):
             qs = self.filter(inventory_items=obj)
         elif isinstance(obj, DeviceType):
-            qs = self.filter(software_images__device_types=obj)
+            qs = self.filter(software_image_files__device_types=obj)
         elif isinstance(obj, VirtualMachine):
             qs = self.filter(virtual_machines=obj)
         else:

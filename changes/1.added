@@ -1,5 +1,6 @@
-Added new models for software versions and software images.
-Added a many-to-many relationship from `DeviceType` to `SoftwareImage`.
+Added new models for software versions and software image files.
+Added a many-to-many relationship from `DeviceType` to `SoftwareImageFile`.
+Added a many-to-many relationship from `Device` to `SoftwareImageFile`.
 Added a foreign key relationship from `InventoryItem` to `SoftwareVersion`.
 Added a foreign key relationship from `Device` to `SoftwareVersion`.
 Added a foreign key relationship from `VirtualMachine` to `SoftwareVersion`.

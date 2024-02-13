@@ -21,7 +21,7 @@ from nautobot.dcim.choices import (
     RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
-    SoftwareImageHashingAlgorithmChoices,
+    SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.models import (
@@ -37,7 +37,7 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
-    SoftwareImage,
+    SoftwareImageFile,
     SoftwareVersion,
 )
 from nautobot.extras.models import Role, Status
@@ -107,7 +107,7 @@ def get_random_platform_for_manufacturer(manufacturer):
 
 
 def get_random_software_version_for_device_type(device_type):
-    qs = SoftwareVersion.objects.filter(software_images__device_types=device_type)
+    qs = SoftwareVersion.objects.filter(software_image_files__device_types=device_type)
     return factory.random.randgen.choice(qs) if qs.exists() else None
 
 
@@ -120,6 +120,7 @@ class DeviceFactory(PrimaryModelFactory):
             "has_device_redundancy_group",
             "has_platform",
             "has_serial",
+            "has_software_image_files",
             "has_software_version",
             "has_tenant",
         )
@@ -173,6 +174,17 @@ class DeviceFactory(PrimaryModelFactory):
         factory.LazyAttribute(lambda o: get_random_software_version_for_device_type(o.device_type)),
         None,
     )
+
+    has_software_image_files = NautobotBoolIterator(chance_of_getting_true=20)
+
+    @factory.post_generation
+    def software_image_files(self, create, extracted, **kwargs):
+        if not create or not DeviceFactory.has_software_image_files.evaluate(None, None, None):
+            return
+        if extracted:
+            self.software_image_files.set(extracted)
+        else:
+            self.software_image_files.set(get_random_instances(SoftwareImageFile, minimum=1))
 
     # TODO to be done after these model factories are done.
     # has_cluster = NautobotBoolIterator()
@@ -236,7 +248,7 @@ class DeviceTypeFactory(PrimaryModelFactory):
             "has_comments",
             "has_hardware_family",
             "has_part_number",
-            "has_software_images",
+            "has_software_image_files",
             "is_subdevice_child",
         )
 
@@ -266,16 +278,16 @@ class DeviceTypeFactory(PrimaryModelFactory):
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
 
-    has_software_images = NautobotBoolIterator()
+    has_software_image_files = NautobotBoolIterator()
 
     @factory.post_generation
-    def software_images(self, create, extracted, **kwargs):
-        if not create or not DeviceTypeFactory.has_software_images.evaluate(None, None, None):
+    def software_image_files(self, create, extracted, **kwargs):
+        if not create or not DeviceTypeFactory.has_software_image_files.evaluate(None, None, None):
             return
         if extracted:
-            self.software_images.set(extracted)
+            self.software_image_files.set(extracted)
         else:
-            self.software_images.set(get_random_instances(SoftwareImage, minimum=1))
+            self.software_image_files.set(get_random_instances(SoftwareImageFile, minimum=1))
 
 
 class DeviceRedundancyGroupFactory(PrimaryModelFactory):
@@ -608,9 +620,9 @@ class RackReservationFactory(PrimaryModelFactory):
     description = factory.Faker("sentence")
 
 
-class SoftwareImageFactory(PrimaryModelFactory):
+class SoftwareImageFileFactory(PrimaryModelFactory):
     class Meta:
-        model = SoftwareImage
+        model = SoftwareImageFile
 
     class Params:
         has_image_file_checksum = NautobotBoolIterator()
@@ -619,7 +631,7 @@ class SoftwareImageFactory(PrimaryModelFactory):
         has_download_url = NautobotBoolIterator()
 
     status = random_instance(
-        lambda: Status.objects.get_for_model(SoftwareImage),
+        lambda: Status.objects.get_for_model(SoftwareImageFile),
         allow_null=False,
     )
     software_version = random_instance(SoftwareVersion, allow_null=False)
@@ -627,7 +639,7 @@ class SoftwareImageFactory(PrimaryModelFactory):
     image_file_checksum = factory.Maybe("has_image_file_checksum", factory.Faker("md5"), "")
     hashing_algorithm = factory.Maybe(
         "has_hashing_algorithm",
-        factory.Faker("random_element", elements=SoftwareImageHashingAlgorithmChoices.values()),
+        factory.Faker("random_element", elements=SoftwareImageFileHashingAlgorithmChoices.values()),
         "",
     )
     image_file_size = factory.Maybe("has_image_file_size", factory.Faker("pyint"), None)
