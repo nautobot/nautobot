@@ -856,9 +856,9 @@ class APIOrderingTestCase(testing.APITestCase):
         for model_class in tree_node_models:
             url = reverse(get_route_for_model(model_class, "list", api=True))
             serializer = get_serializer_for_model(model_class)
-            serializer_avial_fields = set(model_field_names) & set(serializer().fields.keys())
-            for field_name in serializer_avial_fields:
-                with self.subTest(f'Asset sorting "{model_class.__name__}" using "{field_name}" field name.'):
+            serializer_avail_fields = set(model_field_names) & set(serializer().fields.keys())
+            for field_name in serializer_avail_fields:
+                with self.subTest(f'Assert sorting "{model_class.__name__}" using "{field_name}" field name.'):
                     response = self.client.get(f"{url}?sort={field_name}&limit=10&depth=1", **self.header)
                     self._validate_sorted_response(
                         response=response,
