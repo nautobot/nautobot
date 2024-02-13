@@ -852,7 +852,6 @@ class APIOrderingTestCase(testing.APITestCase):
                 parent=dcim_models.RackGroup.objects.all()[i - 1],
             )
 
-
         tree_node_models = [
             dcim_models.Location,
             dcim_models.LocationType,
