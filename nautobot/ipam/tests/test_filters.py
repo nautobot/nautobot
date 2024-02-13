@@ -895,12 +895,16 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
     def test_region(self):
         regions = list(self.regions[:2])
         params = {"region_id": [regions[0].pk, regions[1].pk]}
+        # For some reason, our Factory classes are now generating two VLANs with the same VID and site and a null group,
+        # and since VLAN.meta.ordering == ["site", "group", "vid"] the sort order of these two VLANs is indeterminate.
+        # This was causing this test to consistently fail on postgres (but not mysql), so we're working around it
+        # by adding the "ordered=False" parameter to both of the below assertions.
         self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
+            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions), ordered=False
         )
         params = {"region": [regions[0].slug, regions[1].slug]}
         self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions)
+            self.filterset(params, self.queryset).qs, self.queryset.filter(site__region__in=regions), ordered=False
         )
 
     def test_site(self):
