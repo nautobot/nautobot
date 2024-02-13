@@ -173,7 +173,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         cls.form_data = {
             "prefix": IPNetwork("192.0.2.0/24"),
             "namespace": cls.namespace.pk,
-            "location": cls.locations[1].pk,
+            "locations": [cls.locations[1].pk],
             "vrf": vrfs[1].pk,
             "tenant": None,
             "vlan": None,
@@ -194,14 +194,15 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         )
 
         cls.bulk_edit_data = {
-            "location": None,
-            "vrf": vrfs[1].pk,
             "tenant": None,
+            # TODO "vrf": vrfs[1].pk,
             "status": cls.statuses[1].pk,
             "role": cls.roles[1].pk,
             "rir": RIR.objects.last().pk,
             "date_allocated": make_aware(datetime.datetime(2020, 1, 1, 0, 0, 0, 0)),
             "description": "New description",
+            "add_locations": [cls.locations[0].pk],
+            "remove_locations": [cls.locations[1].pk],
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

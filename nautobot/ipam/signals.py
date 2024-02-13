@@ -4,7 +4,7 @@ from django.db.models import Q
 from django.db.models.signals import m2m_changed, pre_delete, pre_save
 from django.dispatch import receiver
 
-from nautobot.ipam.models import IPAddressToInterface, VLAN, VRF, VRFDeviceAssignment, VRFPrefixAssignment
+from nautobot.ipam.models import IPAddressToInterface, Prefix, VLAN, VRF, VRFDeviceAssignment, VRFPrefixAssignment
 
 
 @receiver(pre_save, sender=VRFDeviceAssignment)
@@ -91,6 +91,20 @@ def ip_address_to_interface_assignment_created(sender, instance, raw=False, **kw
     instance.full_clean()
 
 
+@receiver(m2m_changed, sender=Prefix.locations.through)
+def assert_prefix_locations_content_types(sender, instance, action, reverse, model, pk_set, **kwargs):
+    if action == "pre_add":
+        instance_ct = ContentType.objects.get_for_model(instance)
+        invalid_locations = model.objects.select_related("location_type").filter(
+            Q(pk__in=pk_set), ~Q(location_type__content_types__in=[instance_ct])
+        )
+        if invalid_locations.exists():
+            invalid_location_types = {location.location_type.name for location in invalid_locations}
+            raise ValidationError(
+                {"locations": f"Prefixes may not associate to Locations of types {list(invalid_location_types)}."}
+            )
+
+
 @receiver(m2m_changed, sender=VLAN.locations.through)
 def assert_vlan_locations_content_types(sender, instance, action, reverse, model, pk_set, **kwargs):
     if action == "pre_add":
@@ -101,5 +115,5 @@ def assert_vlan_locations_content_types(sender, instance, action, reverse, model
         if invalid_locations.exists():
             invalid_location_types = {location.location_type.name for location in invalid_locations}
             raise ValidationError(
-                {"locations": f"VLANs may not associate to locations of types {list(invalid_location_types)}."}
+                {"locations": f"VLANs may not associate to Locations of types {list(invalid_location_types)}."}
             )

@@ -301,7 +301,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         prefix = Prefix(prefix="192.0.2.0/24", location=location, status=self.statuses[0])
         with self.assertRaises(ValidationError) as cm:
             prefix.validated_save()
-        self.assertIn(f'Prefixes may not associate to locations of type "{location_type.name}"', str(cm.exception))
+        self.assertIn(f"Prefixes may not associate to Locations of types {[location_type.name]}", str(cm.exception))
 
     def test_tree_methods(self):
         """Test the various tree methods work as expected."""
@@ -1102,7 +1102,7 @@ class TestVLAN(ModelTestCases.BaseModelTestCase):
         vlan.status = Status.objects.get_for_model(VLAN).first()
         with self.assertRaises(ValidationError) as cm:
             vlan.validated_save()
-        self.assertIn(f"VLANs may not associate to locations of types {[location_type.name]}", str(cm.exception))
+        self.assertIn(f"VLANs may not associate to Locations of types {[location_type.name]}", str(cm.exception))
 
 
 class TestVRF(ModelTestCases.BaseModelTestCase):

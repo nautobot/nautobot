@@ -2100,13 +2100,16 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 context["ipaddress_table"] = ipaddress_table
 
             if ContentType.objects.get_for_model(Prefix) in context["content_types"]:
-                prefixes = instance.prefixes.select_related(
-                    "location",
-                    "status",
-                    "tenant",
-                    "vlan",
-                    "namespace",
-                ).restrict(request.user, "view")
+                prefixes = (
+                    instance.prefixes.select_related(
+                        "status",
+                        "tenant",
+                        "vlan",
+                        "namespace",
+                    )
+                    .restrict(request.user, "view")
+                    .annotate(location_count=Count("locations"))
+                )
                 prefix_table = PrefixTable(prefixes)
                 prefix_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(prefix_table)

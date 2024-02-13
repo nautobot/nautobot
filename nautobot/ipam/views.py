@@ -424,7 +424,7 @@ class PrefixListView(generic.ObjectListView):
     filterset_form = forms.PrefixFilterForm
     table = tables.PrefixDetailTable
     template_name = "ipam/prefix_list.html"
-    queryset = Prefix.objects.all()
+    queryset = Prefix.objects.annotate(location_count=Count("locations"))
     use_new_ui = True
 
 
@@ -433,12 +433,11 @@ class PrefixView(generic.ObjectView):
         "parent",
         "rir",
         "role",
-        "location",
         "status",
         "tenant__tenant_group",
         "vlan__vlan_group",
         "namespace",
-    )
+    ).prefetch_related("locations")
     use_new_ui = True
 
     def get_extra_context(self, request, instance):
@@ -465,7 +464,8 @@ class PrefixPrefixesView(generic.ObjectView):
         child_prefixes = (
             instance.descendants()
             .restrict(request.user, "view")
-            .select_related("parent", "location", "status", "role", "vlan", "namespace")
+            .select_related("parent", "status", "role", "vlan", "namespace")
+            .annotate(location_count=Count("locations"))
         )
 
         # Add available prefixes to the table if requested
@@ -696,14 +696,24 @@ class PrefixBulkImportView(generic.BulkImportView):
 
 
 class PrefixBulkEditView(generic.BulkEditView):
-    queryset = Prefix.objects.select_related("location", "status", "namespace", "tenant", "vlan", "role")
+    queryset = Prefix.objects.select_related("status", "namespace", "tenant", "vlan", "role").annotate(
+        location_count=Count("locations")
+    )
     filterset = filters.PrefixFilterSet
     table = tables.PrefixTable
     form = forms.PrefixBulkEditForm
 
+    def extra_post_save_action(self, obj, form):
+        if form.cleaned_data.get("add_locations", None):
+            obj.locations.add(*form.cleaned_data["add_locations"])
+        if form.cleaned_data.get("remove_locations", None):
+            obj.locations.remove(*form.cleaned_data["remove_locations"])
+
 
 class PrefixBulkDeleteView(generic.BulkDeleteView):
-    queryset = Prefix.objects.select_related("location", "status", "namespace", "tenant", "vlan", "role")
+    queryset = Prefix.objects.select_related("status", "namespace", "tenant", "vlan", "role").annotate(
+        location_count=Count("locations")
+    )
     filterset = filters.PrefixFilterSet
     table = tables.PrefixTable
 
@@ -735,7 +745,10 @@ class IPAddressView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Parent prefixes table
         parent_prefixes = (
-            instance.ancestors().restrict(request.user, "view").select_related("location", "status", "role", "tenant")
+            instance.ancestors()
+            .restrict(request.user, "view")
+            .select_related("status", "role", "tenant")
+            .annotate(location_count=Count("locations"))
         )
         parent_prefixes_table = tables.PrefixTable(list(parent_prefixes), orderable=False)
 
