@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import transaction
-from django.db.models import Count, F, Prefetch
+from django.db.models import F, Prefetch
 from django.forms import (
     modelformset_factory,
     ModelMultipleChoiceField,
@@ -1741,7 +1741,7 @@ class InterfaceView(generic.ObjectView):
 
         for vlan in (
             instance.tagged_vlans.restrict(request.user)
-            .annotate(location_count=Count("locations"))
+            .annotate(location_count=count_related(Location, "vlans"))
             .select_related("vlan_group", "tenant", "role")
         ):
             vlan.tagged = True
