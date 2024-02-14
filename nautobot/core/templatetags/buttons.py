@@ -101,9 +101,8 @@ def add_button(url):
     }
 
 
-# 3.0 TODO: remove as unused.
 @register.inclusion_tag("buttons/import.html")
-def import_button(url):
+def import_button(url):  # 3.0 TODO: remove, unused
     """Deprecated - use csv_import_button instead."""
     return {
         "import_url": url,

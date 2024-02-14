@@ -808,8 +808,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
 
-# 3.0 TODO: remove this class
-class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
+class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  # 3.0 TODO: remove as it's no longer used
     """
     Import objects in bulk (CSV format).
 
