@@ -326,7 +326,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.statuses = Status.objects.get_for_model(IPAddress)
         cls.prefix_status = Status.objects.get_for_model(Prefix).first()
         roles = Role.objects.get_for_model(IPAddress)
-        parent, _ = Prefix.objects.get_or_create(
+        Prefix.objects.get_or_create(
             prefix="192.0.2.0/24",
             defaults={"namespace": cls.namespace, "status": cls.prefix_status, "type": "network"},
         )
