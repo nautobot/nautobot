@@ -30,7 +30,7 @@ from .devices import (
     PowerOutletTable,
     PowerPortTable,
     RearPortTable,
-    SoftwareImageTable,
+    SoftwareImageFileTable,
     SoftwareVersionTable,
     VirtualChassisTable,
 )
@@ -104,7 +104,7 @@ __all__ = (
     "RackTable",
     "RearPortTable",
     "RearPortTemplateTable",
-    "SoftwareImageTable",
+    "SoftwareImageFileTable",
     "SoftwareVersionTable",
     "VirtualChassisTable",
 )

@@ -255,9 +255,16 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_get_object_changelog(self):
-            url = self._get_url("changelog", self._get_queryset().first())
+            obj = self._get_queryset().first()
+            url = self._get_url("changelog", obj)
             response = self.client.get(url)
             self.assertHttpStatus(response, 200)
+            response_data = response.content.decode(response.charset)
+            if type(obj) not in [extras_models.Contact, extras_models.Team]:
+                self.assertInHTML(
+                    f'<a href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">Contacts</a>',
+                    response_data,
+                )
 
     class GetObjectNotesViewTestCase(ModelViewTestCase):
         """
@@ -267,9 +274,16 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_get_object_notes(self):
             if hasattr(self.model, "notes"):
-                url = self._get_url("notes", self._get_queryset().first())
+                obj = self._get_queryset().first()
+                url = self._get_url("notes", obj)
                 response = self.client.get(url)
                 self.assertHttpStatus(response, 200)
+                response_data = response.content.decode(response.charset)
+                if type(obj) not in [extras_models.Contact, extras_models.Team]:
+                    self.assertInHTML(
+                        f'<a href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">Contacts</a>',
+                        response_data,
+                    )
 
     class CreateObjectViewTestCase(ModelViewTestCase):
         """

@@ -62,7 +62,7 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.CreateModel(
-            name="SoftwareImage",
+            name="SoftwareImageFile",
             fields=[
                 (
                     "id",
@@ -85,14 +85,16 @@ class Migration(migrations.Migration):
                     "software_version",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="software_images",
+                        related_name="software_image_files",
                         to="dcim.softwareversion",
                     ),
                 ),
                 (
                     "status",
                     nautobot.extras.models.statuses.StatusField(
-                        on_delete=django.db.models.deletion.PROTECT, related_name="software_images", to="extras.status"
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="software_image_files",
+                        to="extras.status",
                     ),
                 ),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),

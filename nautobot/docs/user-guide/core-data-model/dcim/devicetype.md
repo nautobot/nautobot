@@ -47,4 +47,4 @@ Once component templates have been created, every new device that you create as 
     The [Hardware Family](hardwarefamily.md) model has been introduced to represent a group of related device types. A device type can be optionally assigned to a hardware family. Each hardware family must have a unique name and may have a description assigned to it.
 
 +++ 2.2.0
-    The [Software Image](softwareimage.md) model has been introduced to represent a software image that can be installed on a device. One or more software images can be optionally assigned to a device type. The device type must be associated to a software image before devices of that type can associate to that image.
+    The [Software Image File](softwareimagefile.md) model has been introduced to represent a software image file that can be installed on a device. One or more software image files can be optionally assigned to a device type. The device type must be associated to a software image file before devices of that type can associate to that image.
