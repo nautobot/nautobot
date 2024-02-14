@@ -175,7 +175,6 @@ class CircuitTerminationTestCase(
     # create/edit views are special cases, not currently tested
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkImportObjectsViewTestCase,
     # No bulk-edit support currently
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):

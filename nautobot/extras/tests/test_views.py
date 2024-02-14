@@ -317,18 +317,7 @@ class ConfigContextTestCase(
         self.assertEqual(self._get_queryset().filter(name="Config Context with schema").count(), 0)
 
 
-# This OrganizationalObjectViewTestCase less BulkImportObjectsViewTestCase
-# because it doesn't make sense to support CSV for schemas.
-class ConfigContextSchemaTestCase(
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-    ViewTestCases.BulkEditObjectsViewTestCase,
-):
+class ConfigContextSchemaTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = ConfigContextSchema
 
     @classmethod
@@ -593,7 +582,7 @@ class CustomLinkTestCase(
 
 
 class CustomFieldTestCase(
-    # No NotesViewTestCase or BulkImportObjectsViewTestCase, at least for now
+    # No NotesViewTestCase, at least for now
     ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
@@ -900,7 +889,6 @@ class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class GitRepositoryTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
-    ViewTestCases.BulkImportObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
@@ -1037,7 +1025,6 @@ class SecretTestCase(
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkImportObjectsViewTestCase,
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Secret
@@ -1080,16 +1067,7 @@ class SecretTestCase(
         )
 
 
-# Not a full-fledged OrganizationalObjectViewTestCase as there's no BulkImportView for SecretsGroups
-class SecretsGroupTestCase(
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-):
+class SecretsGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = SecretsGroup
 
     @classmethod

@@ -49,7 +49,6 @@ class NamespaceTestCase(
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkImportObjectsViewTestCase,
     ViewTestCases.BulkEditObjectsViewTestCase,
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
@@ -1014,7 +1013,7 @@ class IPAddressMergeTestCase(ModelViewTestCase):
                     self.assertEqual(set(associations), set(correct_associations))
 
 
-class IPAddressToInterfaceTestCase(ViewTestCases.BulkImportObjectsViewTestCase):
+class IPAddressToInterfaceTestCase(ModelViewTestCase):
     model = IPAddressToInterface
 
     @classmethod
