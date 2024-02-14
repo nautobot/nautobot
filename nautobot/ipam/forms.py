@@ -424,6 +424,13 @@ class PrefixFilterForm(
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
+    locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        required=False,
+        null_option="None",
+        query_params={"content_type": VLAN._meta.label_lower},
+    )
     type = forms.MultipleChoiceField(
         required=False,
         choices=PrefixTypeChoices,
@@ -791,6 +798,13 @@ class VLANFilterForm(
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
+    locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        required=False,
+        null_option="None",
+        query_params={"content_type": VLAN._meta.label_lower},
+    )
     group_id = DynamicModelMultipleChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
