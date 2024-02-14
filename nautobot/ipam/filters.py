@@ -35,6 +35,7 @@ from .models import (
     VLANGroup,
     VRF,
     VRFDeviceAssignment,
+    VRFPrefixAssignment,
 )
 
 __all__ = (
@@ -89,7 +90,7 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     prefix = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="prefixes",
         queryset=Prefix.objects.all(),
-        to_field_name="pk",  # TODO(jathan): Make this work with `prefix` "somehow"
+        to_field_name="pk",  # TODO: Make this work with `prefix` "somehow"
         label="Prefix (ID or name)",
     )
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
@@ -114,6 +115,18 @@ class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Virtual Machine (ID or name)",
     )
+
+    class Meta:
+        model = VRFDeviceAssignment
+        fields = ["id", "vrf", "device", "virtual_machine"]
+
+
+class VRFPrefixAssignmentFilterSet(NautobotFilterSet):
+    prefix = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Prefix.objects.all(),
+        to_field_name="pk",  # TODO: Make this work with `prefix` "somehow"
+        label="Prefix (ID or name)",
+    )
     vrf = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="name",
@@ -121,8 +134,8 @@ class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
     )
 
     class Meta:
-        model = VRFDeviceAssignment
-        fields = ["id", "vrf", "device", "virtual_machine"]
+        model = VRFPrefixAssignment
+        fields = ["id", "vrf", "prefix"]
 
 
 class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):

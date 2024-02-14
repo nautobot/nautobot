@@ -28,6 +28,7 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
     VRFDeviceAssignment,
+    VRFPrefixAssignment,
 )
 
 #
@@ -71,6 +72,12 @@ class VRFDeviceAssignmentSerializer(ValidatedModelSerializer):
             )
             validator(data, self)
         return super().validate(data)
+
+
+class VRFPrefixAssignmentSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = VRFPrefixAssignment
+        fields = "__all__"
 
 
 #
