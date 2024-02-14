@@ -124,8 +124,6 @@ class Migration(migrations.Migration):
                 (
                     "role",
                     nautobot.extras.models.roles.RoleField(
-                        blank=True,
-                        null=True,
                         on_delete=django.db.models.deletion.PROTECT,
                         related_name="contact_associations",
                         to="extras.role",

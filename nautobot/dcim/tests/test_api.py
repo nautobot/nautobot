@@ -16,7 +16,7 @@ from nautobot.dcim.choices import (
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedTypeChoices,
-    SoftwareImageHashingAlgorithmChoices,
+    SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.models import (
@@ -30,7 +30,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
-    DeviceTypeToSoftwareImage,
+    DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -53,7 +53,7 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
-    SoftwareImage,
+    SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
 )
@@ -149,16 +149,20 @@ class Mixins:
     class BasePortTemplateTestMixin(BaseComponentTestMixin):
         """Mixin class for all `FooPortTemplate` tests."""
 
-    class SoftwareImageRelatedModelMixin:
+    class SoftwareImageFileRelatedModelMixin:
         """
-        The SoftwareImage hashing_algorithm field includes some values (md5, sha1, etc.) that are
+        The SoftwareImageFile hashing_algorithm field includes some values (md5, sha1, etc.) that are
         considered indicators of sensitive data which cause APITestCase.assert_no_verboten_content() to fail.
         We remove those values from the VERBOTEN_STRINGS property to allow the test to pass for any models
-        that could return a SoftwareImage representation in a depth > 0 API call.
+        that could return a SoftwareImageFile representation in a depth > 0 API call.
         """
 
         VERBOTEN_STRINGS = tuple(
-            [o for o in APITestCase.VERBOTEN_STRINGS if o not in SoftwareImageHashingAlgorithmChoices.as_dict().keys()]
+            [
+                o
+                for o in APITestCase.VERBOTEN_STRINGS
+                if o not in SoftwareImageFileHashingAlgorithmChoices.as_dict().keys()
+            ]
         )
 
 
@@ -770,7 +774,7 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
         Platform.objects.all().delete()
 
 
-class DeviceTypeTest(Mixins.SoftwareImageRelatedModelMixin, APIViewTestCases.APIViewTestCase):
+class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases.APIViewTestCase):
     model = DeviceType
     bulk_update_data = {
         "part_number": "ABC123",
@@ -1122,8 +1126,8 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        # Protected FK to SoftwareImage prevents deletion
-        DeviceTypeToSoftwareImage.objects.all().delete()
+        # Protected FK to SoftwareImageFile prevents deletion
+        DeviceTypeToSoftwareImageFile.objects.all().delete()
         # Protected FK to SoftwareVersion prevents deletion
         Device.objects.all().update(software_version=None)
 
@@ -1183,10 +1187,11 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             SecretsGroup.objects.create(name="Secrets Group 2"),
         )
 
-        device_type = DeviceType.objects.filter(software_images__isnull=False).first()
+        device_type = DeviceType.objects.filter(software_image_files__isnull=False).first()
         device_role = Role.objects.get_for_model(Device).first()
 
-        software_version = SoftwareVersion.objects.filter(software_images__device_types=device_type).first()
+        software_version = SoftwareVersion.objects.filter(software_image_files__device_types=device_type).first()
+        software_image_files = SoftwareImageFile.objects.exclude(software_version=software_version)[:2]
 
         Device.objects.create(
             device_type=device_type,
@@ -1236,6 +1241,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
                 "software_version": software_version.pk,
+                "software_image_files": [software_image_files[0].pk, software_image_files[1].pk],
             },
             {
                 "device_type": device_type.pk,
@@ -1248,6 +1254,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
                 "software_version": software_version.pk,
+                "software_image_files": [software_image_files[0].pk],
             },
             {
                 "device_type": device_type.pk,
@@ -2649,48 +2656,48 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
             interface_redundancy_groups[0].add_interface(interface, i * 100)
 
 
-class SoftwareImageTestCase(Mixins.SoftwareImageRelatedModelMixin, APIViewTestCases.APIViewTestCase):
-    model = SoftwareImage
+class SoftwareImageFileTestCase(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases.APIViewTestCase):
+    model = SoftwareImageFile
     choices_fields = ["hashing_algorithm"]
 
     @classmethod
     def setUpTestData(cls):
-        statuses = Status.objects.get_for_model(SoftwareImage)
+        statuses = Status.objects.get_for_model(SoftwareImageFile)
         software_versions = SoftwareVersion.objects.all()
 
         cls.create_data = [
             {
                 "software_version": software_versions[0].pk,
                 "status": statuses[0].pk,
-                "image_file_name": "software_image_test_case_1.bin",
+                "image_file_name": "software_image_file_test_case_1.bin",
             },
             {
                 "software_version": software_versions[1].pk,
                 "status": statuses[1].pk,
-                "image_file_name": "software_image_test_case_2.bin",
+                "image_file_name": "software_image_file_test_case_2.bin",
             },
             {
                 "software_version": software_versions[2].pk,
                 "status": statuses[2].pk,
-                "image_file_name": "software_image_test_case_3.bin",
+                "image_file_name": "software_image_file_test_case_3.bin",
             },
         ]
         cls.bulk_update_data = {
             "software_version": software_versions[0].pk,
             "status": statuses[0].pk,
             "image_file_checksum": "abcdef1234567890",
-            "hashing_algorithm": SoftwareImageHashingAlgorithmChoices.SHA512,
+            "hashing_algorithm": SoftwareImageFileHashingAlgorithmChoices.SHA512,
             "image_file_size": 1234567890,
-            "download_url": "https://example.com/software_image_test_case.bin",
+            "download_url": "https://example.com/software_image_file_test_case.bin",
         }
 
 
-class SoftwareVersionTestCase(Mixins.SoftwareImageRelatedModelMixin, APIViewTestCases.APIViewTestCase):
+class SoftwareVersionTestCase(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases.APIViewTestCase):
     model = SoftwareVersion
 
     @classmethod
     def setUpTestData(cls):
-        DeviceTypeToSoftwareImage.objects.all().delete()  # Protected FK to SoftwareImage prevents deletion
+        DeviceTypeToSoftwareImageFile.objects.all().delete()  # Protected FK to SoftwareImageFile prevents deletion
         statuses = Status.objects.get_for_model(SoftwareVersion)
         platforms = Platform.objects.all()
 
@@ -2723,45 +2730,47 @@ class SoftwareVersionTestCase(Mixins.SoftwareImageRelatedModelMixin, APIViewTest
         }
 
 
-class DeviceTypeToSoftwareImageTestCase(Mixins.SoftwareImageRelatedModelMixin, APIViewTestCases.APIViewTestCase):
-    model = DeviceTypeToSoftwareImage
+class DeviceTypeToSoftwareImageFileTestCase(
+    Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases.APIViewTestCase
+):
+    model = DeviceTypeToSoftwareImageFile
 
     @classmethod
     def setUpTestData(cls):
-        DeviceTypeToSoftwareImage.objects.all().delete()
+        DeviceTypeToSoftwareImageFile.objects.all().delete()
         device_types = DeviceType.objects.all()[:4]
-        software_images = SoftwareImage.objects.all()[:3]
+        software_image_files = SoftwareImageFile.objects.all()[:3]
 
         # deletable objects
-        DeviceTypeToSoftwareImage.objects.create(
+        DeviceTypeToSoftwareImageFile.objects.create(
             device_type=device_types[0],
-            software_image=software_images[0],
+            software_image_file=software_image_files[0],
             is_default=True,
         )
-        DeviceTypeToSoftwareImage.objects.create(
+        DeviceTypeToSoftwareImageFile.objects.create(
             device_type=device_types[0],
-            software_image=software_images[1],
+            software_image_file=software_image_files[1],
             is_default=False,
         )
-        DeviceTypeToSoftwareImage.objects.create(
+        DeviceTypeToSoftwareImageFile.objects.create(
             device_type=device_types[0],
-            software_image=software_images[2],
+            software_image_file=software_image_files[2],
             is_default=False,
         )
 
         cls.create_data = [
             {
-                "software_image": software_images[0].pk,
+                "software_image_file": software_image_files[0].pk,
                 "device_type": device_types[1].pk,
                 "is_default": True,
             },
             {
-                "software_image": software_images[1].pk,
+                "software_image_file": software_image_files[1].pk,
                 "device_type": device_types[2].pk,
                 "is_default": True,
             },
             {
-                "software_image": software_images[2].pk,
+                "software_image_file": software_image_files[2].pk,
                 "device_type": device_types[3].pk,
                 "is_default": False,
             },

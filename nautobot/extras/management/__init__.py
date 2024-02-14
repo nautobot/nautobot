@@ -23,7 +23,7 @@ CHOICESET_MAP = {
     "dcim.Rack": dcim_choices.RackStatusChoices,
     "dcim.DeviceRedundancyGroup": dcim_choices.DeviceRedundancyGroupStatusChoices,
     "dcim.InterfaceRedundancyGroup": dcim_choices.InterfaceRedundancyGroupStatusChoices,
-    "dcim.SoftwareImage": dcim_choices.SoftwareImageStatusChoices,
+    "dcim.SoftwareImageFile": dcim_choices.SoftwareImageFileStatusChoices,
     "dcim.SoftwareVersion": dcim_choices.SoftwareVersionStatusChoices,
     "ipam.IPAddress": ipam_choices.IPAddressStatusChoices,
     "ipam.Prefix": ipam_choices.PrefixStatusChoices,

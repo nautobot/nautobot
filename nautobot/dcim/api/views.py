@@ -34,7 +34,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
-    DeviceTypeToSoftwareImage,
+    DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -58,7 +58,7 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
-    SoftwareImage,
+    SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
 )
@@ -296,7 +296,7 @@ class HardwareFamilyViewSet(NautobotModelViewSet):
 class DeviceTypeViewSet(NautobotModelViewSet):
     queryset = (
         DeviceType.objects.select_related("manufacturer")
-        .prefetch_related("software_images", "tags")
+        .prefetch_related("software_image_files", "tags")
         .annotate(device_count=count_related(Device, "device_type"))
     )
     serializer_class = serializers.DeviceTypeSerializer
@@ -391,7 +391,7 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         "device_redundancy_group",
         "secrets_group",
         "status",
-    ).prefetch_related("tags", "primary_ip4__nat_outside_list", "primary_ip6__nat_outside_list")
+    ).prefetch_related("tags", "primary_ip4__nat_outside_list", "primary_ip6__nat_outside_list", "software_image_files")
     serializer_class = serializers.DeviceSerializer
     filterset_class = filters.DeviceFilterSet
 
@@ -796,25 +796,25 @@ class ConnectedDeviceViewSet(ViewSet):
 
 
 #
-# Software images
+# Software image files
 #
 
 
-class SoftwareImageViewSet(NautobotModelViewSet):
-    queryset = SoftwareImage.objects.select_related("software_version").prefetch_related("device_types")
-    serializer_class = serializers.SoftwareImageSerializer
-    filterset_class = filters.SoftwareImageFilterSet
+class SoftwareImageFileViewSet(NautobotModelViewSet):
+    queryset = SoftwareImageFile.objects.select_related("software_version").prefetch_related("device_types")
+    serializer_class = serializers.SoftwareImageFileSerializer
+    filterset_class = filters.SoftwareImageFileFilterSet
 
 
 class SoftwareVersionViewSet(NautobotModelViewSet):
     queryset = SoftwareVersion.objects.select_related("platform").prefetch_related(
-        "devices", "software_images", "inventory_items", "virtual_machines"
+        "devices", "software_image_files", "inventory_items", "virtual_machines"
     )
     serializer_class = serializers.SoftwareVersionSerializer
     filterset_class = filters.SoftwareVersionFilterSet
 
 
-class DeviceTypeToSoftwareImageViewSet(ModelViewSet):
-    queryset = DeviceTypeToSoftwareImage.objects.select_related("device_type", "software_image")
-    serializer_class = serializers.DeviceTypeToSoftwareImageSerializer
-    filterset_class = filters.DeviceTypeToSoftwareImageFilterSet
+class DeviceTypeToSoftwareImageFileViewSet(ModelViewSet):
+    queryset = DeviceTypeToSoftwareImageFile.objects.select_related("device_type", "software_image_file")
+    serializer_class = serializers.DeviceTypeToSoftwareImageFileSerializer
+    filterset_class = filters.DeviceTypeToSoftwareImageFileFilterSet
