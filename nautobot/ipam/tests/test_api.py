@@ -29,7 +29,6 @@ from nautobot.ipam.models import (
     VRF,
     VRFDeviceAssignment,
 )
-from nautobot.users import models as users_models
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 
