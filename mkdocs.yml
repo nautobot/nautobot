@@ -331,6 +331,8 @@ nav:
       - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
       - Relationships: "user-guide/feature-guides/relationships.md"
     - Core Data Model:
+      - Overview:
+        - Introduction: "user-guide/core-data-model/overview/introduction.md"
       - Circuits:
         - Circuit: "user-guide/core-data-model/circuits/circuit.md"
         - Circuit Termination: "user-guide/core-data-model/circuits/circuittermination.md"
