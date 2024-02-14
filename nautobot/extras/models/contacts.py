@@ -86,7 +86,7 @@ class ContactAssociation(OrganizationalModel):
     associated_object_id = models.UUIDField(db_index=True)
     associated_object = GenericForeignKey(ct_field="associated_object_type", fk_field="associated_object_id")
 
-    role = RoleField(blank=True, null=True)
+    role = RoleField(blank=False, null=False)
     status = StatusField(blank=False, null=False)
 
     class Meta:

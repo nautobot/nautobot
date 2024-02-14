@@ -142,7 +142,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
             ),
         )
 
-        cls.software_versions = SoftwareVersion.objects.filter(software_images__isnull=False)[:3]
+        cls.software_versions = SoftwareVersion.objects.filter(software_image_files__isnull=False)[:3]
         cls.statuses = Status.objects.get_for_model(VirtualMachine)
 
         VirtualMachine.objects.create(

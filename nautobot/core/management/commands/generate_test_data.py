@@ -66,7 +66,7 @@ class Command(BaseCommand):
                 LocationTypeFactory,
                 ManufacturerFactory,
                 PlatformFactory,
-                SoftwareImageFactory,
+                SoftwareImageFileFactory,
                 SoftwareVersionFactory,
             )
             from nautobot.extras.factory import (
@@ -155,8 +155,8 @@ class Command(BaseCommand):
         PlatformFactory.create_batch(5, has_manufacturer=False, using=db_name)
         self.stdout.write("Creating SoftwareVersions...")
         SoftwareVersionFactory.create_batch(20)
-        self.stdout.write("Creating SoftwareImages...")
-        SoftwareImageFactory.create_batch(25)
+        self.stdout.write("Creating SoftwareImageFiles...")
+        SoftwareImageFileFactory.create_batch(25)
         self.stdout.write("Creating Manufacturers without Platforms...")
         ManufacturerFactory.create_batch(4, using=db_name)  # 4 more hard-coded Manufacturers
         self.stdout.write("Creating DeviceTypes...")
@@ -169,8 +169,8 @@ class Command(BaseCommand):
         DeviceFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating SoftwareVersions with Devices, InventoryItems or VirtualMachines...")
         SoftwareVersionFactory.create_batch(5)
-        self.stdout.write("Creating SoftwareImages without DeviceTypes...")
-        SoftwareImageFactory.create_batch(5)
+        self.stdout.write("Creating SoftwareImageFiles without DeviceTypes...")
+        SoftwareImageFileFactory.create_batch(5)
         self.stdout.write("Creating CircuitTypes...")
         CircuitTypeFactory.create_batch(40, using=db_name)
         self.stdout.write("Creating Providers...")
@@ -235,7 +235,7 @@ class Command(BaseCommand):
                 RIRFactory,
                 RoleFactory,
                 RouteTargetFactory,
-                SoftwareImageFactory,
+                SoftwareImageFileFactory,
                 SoftwareVersionFactory,
                 StatusFactory,
                 TagFactory,

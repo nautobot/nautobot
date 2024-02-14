@@ -427,31 +427,33 @@ class ContactAssociationTestCase(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         roles = Role.objects.get_for_model(ContactAssociation)
         statuses = Status.objects.get_for_model(ContactAssociation)
+        ip_addresses = IPAddress.objects.all()
+        devices = Device.objects.all()
         ContactAssociation.objects.create(
             contact=Contact.objects.first(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
-            associated_object_id=IPAddress.objects.first().pk,
-            role=None,
+            associated_object_id=ip_addresses[0].pk,
+            role=roles[0],
             status=statuses[0],
         )
         ContactAssociation.objects.create(
             contact=Contact.objects.last(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
-            associated_object_id=IPAddress.objects.first().pk,
-            role=None,
+            associated_object_id=ip_addresses[1].pk,
+            role=roles[1],
             status=statuses[1],
         )
         ContactAssociation.objects.create(
             team=Team.objects.first(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
-            associated_object_id=IPAddress.objects.first().pk,
-            role=roles[0],
+            associated_object_id=ip_addresses[2].pk,
+            role=roles[1],
             status=statuses[0],
         )
         ContactAssociation.objects.create(
             team=Team.objects.last(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
-            associated_object_id=IPAddress.objects.first().pk,
+            associated_object_id=ip_addresses[3].pk,
             role=roles[2],
             status=statuses[1],
         )
@@ -460,37 +462,37 @@ class ContactAssociationTestCase(APIViewTestCases.APIViewTestCase):
                 "contact": Contact.objects.first().pk,
                 "team": None,
                 "associated_object_type": "ipam.ipaddress",
-                "associated_object_id": IPAddress.objects.first().pk,
-                "role": None,
+                "associated_object_id": ip_addresses[4].pk,
+                "role": roles[3].pk,
                 "status": statuses[0].pk,
             },
             {
                 "contact": Contact.objects.last().pk,
                 "team": None,
                 "associated_object_type": "dcim.device",
-                "associated_object_id": Device.objects.first().pk,
-                "role": roles[1].pk,
+                "associated_object_id": devices[0].pk,
+                "role": roles[3].pk,
                 "status": statuses[0].pk,
             },
             {
                 "contact": None,
                 "team": Team.objects.first().pk,
                 "associated_object_type": "ipam.ipaddress",
-                "associated_object_id": IPAddress.objects.first().pk,
-                "role": roles[2].pk,
+                "associated_object_id": ip_addresses[5].pk,
+                "role": roles[3].pk,
                 "status": statuses[2].pk,
             },
             {
                 "contact": None,
                 "team": Team.objects.last().pk,
                 "associated_object_type": "dcim.device",
-                "associated_object_id": Device.objects.first().pk,
-                "role": roles[1].pk,
+                "associated_object_id": devices[1].pk,
+                "role": roles[3].pk,
                 "status": statuses[0].pk,
             },
         ]
         cls.bulk_update_data = {
-            "role": roles[2].pk,
+            "role": roles[4].pk,
             "status": statuses[1].pk,
         }
 

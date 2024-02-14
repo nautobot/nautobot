@@ -37,7 +37,7 @@ router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet
 router.register("hardware-families", views.HardwareFamilyUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
-router.register("software-images", views.SoftwareImageUIViewSet)
+router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
 
 urlpatterns = [
