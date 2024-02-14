@@ -1416,11 +1416,11 @@ class InterfaceRedundancyGroupProtocolChoices(ChoiceSet):
 
 
 #
-# Software Images
+# Software Image Files
 #
 
 
-class SoftwareImageHashingAlgorithmChoices(ChoiceSet):
+class SoftwareImageFileHashingAlgorithmChoices(ChoiceSet):
     MD5 = "md5"
     SHA1 = "sha1"
     SHA224 = "sha224"
@@ -1444,7 +1444,7 @@ class SoftwareImageHashingAlgorithmChoices(ChoiceSet):
     )
 
 
-class SoftwareImageStatusChoices(ChoiceSet):
+class SoftwareImageFileStatusChoices(ChoiceSet):
     STATUS_ACTIVE = "active"
     STATUS_EXTENDED_SUPPORT = "extended-support"
     STATUS_END_OF_LIFE = "end-of-life"

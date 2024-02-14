@@ -25,7 +25,7 @@ from nautobot.dcim.models import (
     PowerOutlet,
     PowerPort,
     RearPort,
-    SoftwareImage,
+    SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
 )
@@ -78,7 +78,7 @@ __all__ = (
     "PowerOutletTable",
     "PowerPortTable",
     "RearPortTable",
-    "SoftwareImageTable",
+    "SoftwareImageFileTable",
     "SoftwareVersionTable",
     "VirtualChassisTable",
 )
@@ -1024,24 +1024,24 @@ class InterfaceRedundancyGroupAssociationTable(BaseTable):
 
 
 #
-# Software images
+# Software image files
 #
 
 
-class SoftwareImageTable(StatusTableMixin, BaseTable):
+class SoftwareImageFileTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     image_file_name = tables.Column(linkify=True)
     software_version = tables.Column(linkify=True)
     device_type_count = LinkedCountColumn(
         viewname="dcim:devicetype_list",
-        url_params={"software_images": "pk"},
+        url_params={"software_image_files": "pk"},
         verbose_name="Device Types",
     )
-    tags = TagColumn(url_name="dcim:softwareimage_list")
-    actions = ButtonsColumn(SoftwareImage)
+    tags = TagColumn(url_name="dcim:softwareimagefile_list")
+    actions = ButtonsColumn(SoftwareImageFile)
 
     class Meta(BaseTable.Meta):
-        model = SoftwareImage
+        model = SoftwareImageFile
         fields = (
             "pk",
             "image_file_name",
@@ -1068,10 +1068,10 @@ class SoftwareImageTable(StatusTableMixin, BaseTable):
 class SoftwareVersionTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     version = tables.Column(linkify=True)
-    software_image_count = LinkedCountColumn(
-        viewname="dcim:softwareimage_list",
+    software_image_file_count = LinkedCountColumn(
+        viewname="dcim:softwareimagefile_list",
         url_params={"software_version": "pk"},
-        verbose_name="Software Images",
+        verbose_name="Software Image Files",
     )
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
@@ -1099,7 +1099,7 @@ class SoftwareVersionTable(StatusTableMixin, BaseTable):
             "long_term_support",
             "pre_release",
             "documentation_url",
-            "software_image_count",
+            "software_image_file_count",
             "device_count",
             "inventory_item_count",
             "tags",
@@ -1113,7 +1113,7 @@ class SoftwareVersionTable(StatusTableMixin, BaseTable):
             "status",
             "release_date",
             "end_of_support_date",
-            "software_image_count",
+            "software_image_file_count",
             "device_count",
             "inventory_item_count",
             "tags",

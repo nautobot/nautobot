@@ -59,7 +59,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
-    DeviceTypeToSoftwareImage,
+    DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -84,7 +84,7 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
-    SoftwareImage,
+    SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
 )
@@ -1018,13 +1018,13 @@ class PowerFeedSerializer(
 
 
 #
-# Software images
+# Software image files
 #
 
 
-class SoftwareImageSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+class SoftwareImageFileSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
-        model = SoftwareImage
+        model = SoftwareImageFile
         fields = "__all__"
 
 
@@ -1034,7 +1034,7 @@ class SoftwareVersionSerializer(NautobotModelSerializer, TaggedModelSerializerMi
         fields = "__all__"
 
 
-class DeviceTypeToSoftwareImageSerializer(ValidatedModelSerializer):
+class DeviceTypeToSoftwareImageFileSerializer(ValidatedModelSerializer):
     class Meta:
-        model = DeviceTypeToSoftwareImage
+        model = DeviceTypeToSoftwareImageFile
         fields = "__all__"

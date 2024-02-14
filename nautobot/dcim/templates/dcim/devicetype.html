@@ -140,8 +140,8 @@
                     {% endif %}
                 </div>
             </div>
-            {% if object.software_images.count %}
-                {% include 'panel_table.html' with table=software_images_table heading='Software Images' %}
+            {% if object.software_image_files.count %}
+                {% include 'panel_table.html' with table=software_image_files_table heading='Software Image Files' %}
             {% endif %}
 {% endblock content_right_page %}
 

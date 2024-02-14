@@ -281,17 +281,17 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
-                        link="dcim:softwareimage_list",
-                        name="Software Images",
+                        link="dcim:softwareimagefile_list",
+                        name="Software Image Files",
                         weight=300,
                         permissions=[
-                            "dcim.view_softwareimage",
+                            "dcim.view_softwareimagefile",
                         ],
                         buttons=(
                             NavMenuAddButton(
-                                link="dcim:softwareimage_add",
+                                link="dcim:softwareimagefile_add",
                                 permissions=[
-                                    "dcim.add_softwareimage",
+                                    "dcim.add_softwareimagefile",
                                 ],
                             ),
                         ),
