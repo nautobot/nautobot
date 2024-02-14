@@ -193,7 +193,7 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_FILTER_BACKENDS": (
         "nautobot.core.api.filter_backends.NautobotFilterBackend",
-        "rest_framework.filters.OrderingFilter",
+        "nautobot.core.api.filter_backends.NautobotOrderingFilter",
     ),
     "DEFAULT_METADATA_CLASS": "nautobot.core.api.metadata.NautobotMetadata",
     "DEFAULT_PAGINATION_CLASS": "nautobot.core.api.pagination.OptionalLimitOffsetPagination",

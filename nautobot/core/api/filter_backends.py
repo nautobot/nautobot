@@ -1,4 +1,6 @@
 from django_filters.rest_framework.backends import DjangoFilterBackend
+from rest_framework.filters import OrderingFilter
+from tree_queries.models import TreeNode
 
 
 class NautobotFilterBackend(DjangoFilterBackend):
@@ -28,3 +30,14 @@ class NautobotFilterBackend(DjangoFilterBackend):
 
         kwargs["data"] = data
         return kwargs
+
+
+class NautobotOrderingFilter(OrderingFilter):
+    """Custom Ordering Filter backend."""
+
+    def filter_queryset(self, request, queryset, view):
+        filtered_queryset = super().filter_queryset(request, queryset, view)
+        ordering = self.get_ordering(request, queryset, view)
+        if ordering and issubclass(queryset.model, TreeNode):
+            filtered_queryset = filtered_queryset.extra(order_by=ordering)
+        return filtered_queryset
