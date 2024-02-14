@@ -3,6 +3,7 @@ from io import BytesIO
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.http import QueryDict
 from rest_framework import exceptions as drf_exceptions
 
@@ -10,6 +11,7 @@ from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app, register_jobs
+from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
 from nautobot.extras.datasources import ensure_git_repository, git_repository_dry_run, refresh_datasource_content
@@ -185,22 +187,19 @@ class ExportObjectList(Job):
             self.create_file(filename + ".csv", csv_data)
 
 
-class ImportObjectsFromCSV(Job):
+class ImportObjects(Job):
     """System Job to import CSV data to create a set of objects."""
 
-    content_type = ObjectVar(
-        model=ContentType,
-        description="Type of objects to import from CSV",
-    )
+    content_type = ObjectVar(model=ContentType, description="Type of objects to import")
     csv_data = TextVar(label="CSV Data", required=False)
     csv_file = FileVar(label="CSV File", required=False)
 
-    template_name = "system_jobs/csv_import.html"
+    template_name = "system_jobs/import_objects.html"
 
     class Meta:
-        name = "Import Objects from CSV"
+        name = "Import Objects"
         has_sensitive_variables = False
-        # Importing large CSV files may take substantial processing time
+        # Importing large files may take substantial processing time
         soft_time_limit = 1800
         time_limit = 2000
 
@@ -211,6 +210,7 @@ class ImportObjectsFromCSV(Job):
 
         model = content_type.model_class()
         serializer_class = get_serializer_for_model(model)
+        queryset = model.objects.restrict(self.user, "add")
 
         if not csv_data and not csv_file:
             raise RunJobTaskFailed("Either csv_data or csv_file must be provided")
@@ -230,9 +230,20 @@ class ImportObjectsFromCSV(Job):
             for row, entry in enumerate(data, start=1):
                 serializer = serializer_class(data=entry, context={"request": None})
                 if serializer.is_valid():
-                    new_obj = serializer.save()
-                    self.logger.info('Row %d: created record "%s"', row, new_obj, extra={"object": new_obj})
-                    new_objs.append(new_obj)
+                    try:
+                        with transaction.atomic():
+                            new_obj = serializer.save()
+                            if not queryset.filter(pk=new_obj.pk).exists():
+                                raise AbortTransaction()
+                        self.logger.info('Row %d: Created record "%s"', row, new_obj, extra={"object": new_obj})
+                        new_objs.append(new_obj)
+                    except AbortTransaction:
+                        self.logger.error(
+                            'Row %d: User "%s" does not have permission to create an object with these attributes',
+                            row,
+                            self.user,
+                        )
+                        validation_failed = True
                 else:
                     validation_failed = True
                     for field, err in serializer.errors.items():
@@ -242,13 +253,15 @@ class ImportObjectsFromCSV(Job):
             self.logger.error("`%s`", exc)
 
         if new_objs:
-            self.logger.info("Created %d %s object(s) from %d row(s) of data", len(new_objs), content_type, len(data))
+            self.logger.info(
+                "Created %d %s object(s) from %d row(s) of data", len(new_objs), content_type.model, len(data)
+            )
         else:
-            self.logger.warning("No %s objects were created", content_type)
+            self.logger.warning("No %s objects were created", content_type.model)
 
         if validation_failed:
             raise RunJobTaskFailed("CSV import not fully successful, see logs")
 
 
-jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun, ImportObjectsFromCSV]
+jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun, ImportObjects]
 register_jobs(*jobs)

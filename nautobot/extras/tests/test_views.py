@@ -2636,14 +2636,6 @@ class StatusTestCase(
             "content_types": [content_type.pk],
         }
 
-        cls.csv_data = (
-            "name,color,content_types"
-            "test_status1,ffffff,dcim.device"
-            'test_status2,ffffff,"dcim.device,dcim.location"'
-            "test_status3,ffffff,dcim.device"
-            "test_status4,ffffff,dcim.device"
-        )
-
         cls.bulk_edit_data = {
             "color": "000000",
         }

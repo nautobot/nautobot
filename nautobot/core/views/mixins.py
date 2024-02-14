@@ -901,7 +901,7 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):  # 3.0 TODO: remove, unus
     """
     UI mixin to bulk create model instances.
 
-    Deprecated - use ImportObjectsFromCSV system Job instead.
+    Deprecated - use ImportObjects system Job instead.
     """
 
     bulk_create_active_tab = "csv-data"

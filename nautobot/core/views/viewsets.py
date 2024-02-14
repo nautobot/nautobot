@@ -7,7 +7,7 @@ class NautobotUIViewSet(
     mixins.ObjectEditViewMixin,
     mixins.ObjectDestroyViewMixin,
     mixins.ObjectBulkDestroyViewMixin,
-    mixins.ObjectBulkCreateViewMixin,  # 3.0 TODO: remove, no longer needed after ImportObjectsFromCSV system Job.
+    mixins.ObjectBulkCreateViewMixin,  # 3.0 TODO: remove, no longer needed after ImportObjects system Job.
     mixins.ObjectBulkUpdateViewMixin,
     mixins.ObjectChangeLogViewMixin,
     mixins.ObjectNotesViewMixin,

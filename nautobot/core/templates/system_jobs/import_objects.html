@@ -19,7 +19,7 @@
     <div class="alert alert-info" role="alert">
         <p>
             <span class="text-success"><i class="mdi mdi-check-bold"></i></span>
-            Required columns <strong>must</strong> be present in the CSV.
+            Required fields <strong>must</strong> be present in the data.
         </p>
         <p>
             <span class="text-warning"><i class="mdi mdi-key-link"></i></span>
@@ -27,14 +27,14 @@
             For example:
             <ul>
                 <li>
-                    A <code>status</code> field could be populated by UUID or by the column <code>status__name</code>.
+                    A <code>status</code> field could be populated by UUID or by the field <code>status__name</code>.
                 </li>
                 <li>
-                    A <code>location</code> field could be identified by UUID or by the columns
+                    A <code>location</code> field could be identified by UUID or by the fields
                     <code>location__name</code> and <code>location__type</code>.
                 </li>
             </ul>
-            In either case, if no related object is intended for a given row/column, the string <code>NoObject</code>
+            In either case, if no related object is intended for a given field, the string <code>NoObject</code>
             can be given.
         </p>
         <p>
@@ -45,7 +45,7 @@
     <table class="table">
         <thead>
             <tr>
-                <th>CSV Column</th>
+                <th>Field</th>
                 <th>Required</th>
                 <th>Related Object</th>
                 <th>Choices</th>
@@ -76,7 +76,7 @@
             for (const field of data.fields) {
                 let tr = document.createElement("tr");
 
-                /* CSV Column */
+                /* Field */
                 let td = document.createElement("td");
                 td.innerHTML = `<code>${field.name}</code>`;
                 tr.appendChild(td);
@@ -108,7 +108,6 @@
                 tr.appendChild(td);
 
                 /* Choices */
-
                 td = document.createElement("td");
                 if (field.choices) {
                     let choicesHTML = "";

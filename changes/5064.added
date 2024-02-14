@@ -1,1 +1,1 @@
-Added `csv_import_button` template-tag and marked `import_button` button template-tag as deprecated.
+Added `job_import_button` template-tag and marked `import_button` button template-tag as deprecated.
