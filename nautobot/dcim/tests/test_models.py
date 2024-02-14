@@ -28,7 +28,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
-    DeviceTypeToSoftwareImage,
+    DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
     Interface,
@@ -47,7 +47,7 @@ from nautobot.dcim.models import (
     RackGroup,
     RearPort,
     RearPortTemplate,
-    SoftwareImage,
+    SoftwareImageFile,
     SoftwareVersion,
 )
 from nautobot.extras import context_managers
@@ -1160,49 +1160,49 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_software_version_device_type_validation(self):
         """
-        Device's software version must contain a software image that matches the device's device type.
+        Device's software version must contain a software image file that matches the device's device type.
         """
 
-        software_version = SoftwareVersion.objects.filter(software_images__isnull=False).first()
+        software_version = SoftwareVersion.objects.filter(software_image_files__isnull=False).first()
 
-        self.device_type.software_images.set([])
+        self.device_type.software_image_files.set([])
         self.device.software_version = software_version
         with self.assertRaises(ValidationError):
             self.device.validated_save()
 
-        self.device_type.software_images.add(software_version.software_images.first())
+        self.device_type.software_image_files.add(software_version.software_image_files.first())
         self.device.validated_save()
 
 
-class DeviceTypeToSoftwareImageTestCase(ModelTestCases.BaseModelTestCase):
-    model = DeviceTypeToSoftwareImage
+class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
+    model = DeviceTypeToSoftwareImageFile
 
     def test_is_default_uniqueness(self):
         """
-        Assert that only one default software image can be set per device type.
+        Assert that only one default software image file can be set per device type.
         """
 
         device_type = DeviceType.objects.first()
-        software_images = SoftwareImage.objects.all()[:3]
-        DeviceTypeToSoftwareImage.objects.filter(device_type=device_type).delete()
+        software_image_files = SoftwareImageFile.objects.all()[:3]
+        DeviceTypeToSoftwareImageFile.objects.filter(device_type=device_type).delete()
 
-        DeviceTypeToSoftwareImage.objects.create(
+        DeviceTypeToSoftwareImageFile.objects.create(
             device_type=device_type,
-            software_image=software_images[0],
+            software_image_file=software_image_files[0],
             is_default=True,
         )
 
-        device_type_to_software_image = DeviceTypeToSoftwareImage(
+        device_type_to_software_image_file = DeviceTypeToSoftwareImageFile(
             device_type=device_type,
-            software_image=software_images[1],
+            software_image_file=software_image_files[1],
             is_default=True,
         )
 
         with self.assertRaises(ValidationError):
-            device_type_to_software_image.validated_save()
+            device_type_to_software_image_file.validated_save()
 
-        device_type_to_software_image.is_default = False
-        device_type_to_software_image.validated_save()
+        device_type_to_software_image_file.is_default = False
+        device_type_to_software_image_file.validated_save()
 
     def test_get_docs_url(self):
         """No docs for this through table model."""
@@ -1711,8 +1711,8 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
         self.assertEqual(self.device.primary_ip6, None)
 
 
-class SoftwareImageTestCase(ModelTestCases.BaseModelTestCase):
-    model = SoftwareImage
+class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
+    model = SoftwareImageFile
 
 
 class SoftwareVersionTestCase(ModelTestCases.BaseModelTestCase):

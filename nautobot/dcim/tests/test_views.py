@@ -34,14 +34,14 @@ from nautobot.dcim.choices import (
     RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
-    SoftwareImageHashingAlgorithmChoices,
+    SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.filters import (
     ConsoleConnectionFilterSet,
     InterfaceConnectionFilterSet,
     PowerConnectionFilterSet,
-    SoftwareImageFilterSet,
+    SoftwareImageFileFilterSet,
     SoftwareVersionFilterSet,
 )
 from nautobot.dcim.models import (
@@ -56,7 +56,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
-    DeviceTypeToSoftwareImage,
+    DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -80,7 +80,7 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
-    SoftwareImage,
+    SoftwareImageFile,
     SoftwareVersion,
     VirtualChassis,
 )
@@ -1199,8 +1199,8 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
 
-        # Protected FK to SoftwareImage prevents deletion
-        DeviceTypeToSoftwareImage.objects.all().delete()
+        # Protected FK to SoftwareImageFile prevents deletion
+        DeviceTypeToSoftwareImageFile.objects.all().delete()
         # Protected FK to SoftwareVersion prevents deletion
         Device.objects.all().update(software_version=None)
 
@@ -1260,9 +1260,17 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         statuses = Status.objects.get_for_model(Device)
         status_active = statuses[0]
 
-        software_versions = SoftwareVersion.objects.filter(software_images__isnull=False)[:2]
-        devicetypes[0].software_images.set(software_versions[0].software_images.all())
-        devicetypes[1].software_images.set(software_versions[1].software_images.all())
+        # We want unique sets of software image files for each device type
+        software_image_files = list(SoftwareImageFile.objects.all()[:4])
+        software_versions = list(SoftwareVersion.objects.filter(software_image_files__isnull=False)[:2])
+        software_image_files[0].software_version = software_versions[0]
+        software_image_files[1].software_version = software_versions[0]
+        software_image_files[2].software_version = software_versions[1]
+        software_image_files[3].software_version = software_versions[1]
+        for software_image_file in software_image_files:
+            software_image_file.save()
+        devicetypes[0].software_image_files.set(software_image_files[:2])
+        devicetypes[1].software_image_files.set(software_image_files[2:])
 
         cls.custom_fields = (
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_INTEGER, label="Crash Counter", default=0),
@@ -1372,6 +1380,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "cf_crash_counter": -1,
             "cr_router-id": None,
             "software_version": software_versions[1].pk,
+            "software_image_files": [f.pk for f in software_versions[0].software_image_files.all()],
         }
 
         cls.csv_data = (
@@ -3083,24 +3092,24 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(initial_count + 2, InterfaceRedundancyGroupAssociation.objects.all().count())
 
 
-class SoftwareImageTestCase(ViewTestCases.PrimaryObjectViewTestCase):
-    model = SoftwareImage
-    filterset = SoftwareImageFilterSet
+class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = SoftwareImageFile
+    filterset = SoftwareImageFileFilterSet
 
     @classmethod
     def setUpTestData(cls):
         device_types = DeviceType.objects.all()[:2]
-        statuses = Status.objects.get_for_model(SoftwareImage)
+        statuses = Status.objects.get_for_model(SoftwareImageFile)
         software_versions = SoftwareVersion.objects.all()
 
         cls.form_data = {
             "software_version": software_versions[0].pk,
-            "image_file_name": "software_image_test_case.bin",
+            "image_file_name": "software_image_file_test_case.bin",
             "status": statuses[0].pk,
             "image_file_checksum": "abcdef1234567890",
             "image_file_size": 1234567890,
-            "hashing_algorithm": SoftwareImageHashingAlgorithmChoices.SHA512,
-            "download_url": "https://example.com/software_image_test_case.bin",
+            "hashing_algorithm": SoftwareImageFileHashingAlgorithmChoices.SHA512,
+            "download_url": "https://example.com/software_image_file_test_case.bin",
             "device_types": [device_types[0].pk, device_types[1].pk],
         }
 
@@ -3116,9 +3125,9 @@ class SoftwareImageTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "software_version": software_versions[0].pk,
             "status": statuses[0].pk,
             "image_file_checksum": "abcdef1234567890",
-            "hashing_algorithm": SoftwareImageHashingAlgorithmChoices.SHA512,
+            "hashing_algorithm": SoftwareImageFileHashingAlgorithmChoices.SHA512,
             "image_file_size": 1234567890,
-            "download_url": "https://example.com/software_image_test_case.bin",
+            "download_url": "https://example.com/software_image_file_test_case.bin",
         }
 
 
@@ -3131,8 +3140,8 @@ class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         statuses = Status.objects.get_for_model(SoftwareVersion)
         platforms = Platform.objects.all()
 
-        # Protected FK to SoftwareImage prevents deletion
-        DeviceTypeToSoftwareImage.objects.all().delete()
+        # Protected FK to SoftwareImageFile prevents deletion
+        DeviceTypeToSoftwareImageFile.objects.all().delete()
         # Protected FK to SoftwareVersion prevents deletion
         Device.objects.all().update(software_version=None)
 

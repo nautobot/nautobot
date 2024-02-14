@@ -11,7 +11,7 @@
                 <div class="col-md-12">
                     <div class="panel panel-default">
                         <div class="panel-heading">
-                            <strong>Software Image</strong>
+                            <strong>Software Image File</strong>
                         </div>
                         <div class="table-responsive">
                             <table class="table table-hover panel-body attr-table">
@@ -87,11 +87,25 @@
                                 <tr>
                                     <td>Device Types</td>
                                     <td>
-                                        {% if object.device_types.count %}
-                                        <a href="{% url 'dcim:devicetype_list' %}?software_images={{ object.pk }}">{{ object.device_types.count }}</a>
-                                        {% else %}
-                                        <span class="text-muted">&mdash;</span>
-                                        {% endif %}
+                                        {% with device_type_count=object.device_types.count %}
+                                            {% if device_type_count %}
+                                            <a href="{% url 'dcim:devicetype_list' %}?software_image_files={{ object.pk }}">{{ device_type_count }}</a>
+                                            {% else %}
+                                            <span class="text-muted">&mdash;</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Devices overridden to use this file</td>
+                                    <td>
+                                        {% with device_count=object.devices.count %}
+                                            {% if device_count %}
+                                            <a href="{% url 'dcim:device_list' %}?software_image_files={{ object.pk }}">{{ device_count }}</a>
+                                            {% else %}
+                                            <span class="text-muted">&mdash;</span>
+                                            {% endif %}
+                                        {% endwith %}
                                     </td>
                                 </tr>
                             </table>

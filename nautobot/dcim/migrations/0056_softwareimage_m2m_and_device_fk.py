@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="DeviceTypeToSoftwareImage",
+            name="DeviceTypeToSoftwareImageFile",
             fields=[
                 (
                     "id",
@@ -26,16 +26,16 @@ class Migration(migrations.Migration):
                     "device_type",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="software_image_mappings",
+                        related_name="software_image_file_mappings",
                         to="dcim.devicetype",
                     ),
                 ),
                 (
-                    "software_image",
+                    "software_image_file",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.PROTECT,
                         related_name="device_type_mappings",
-                        to="dcim.softwareimage",
+                        to="dcim.softwareimagefile",
                     ),
                 ),
                 (
@@ -48,19 +48,19 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={
-                "verbose_name": "device type to software image mapping",
-                "verbose_name_plural": "device type to software image mappings",
-                "unique_together": {("device_type", "software_image")},
+                "verbose_name": "device type to software image file mapping",
+                "verbose_name_plural": "device type to software image file mappings",
+                "unique_together": {("device_type", "software_image_file")},
             },
         ),
         migrations.AddField(
             model_name="devicetype",
-            name="software_images",
+            name="software_image_files",
             field=models.ManyToManyField(
                 blank=True,
                 related_name="device_types",
-                through="dcim.DeviceTypeToSoftwareImage",
-                to="dcim.SoftwareImage",
+                through="dcim.DeviceTypeToSoftwareImageFile",
+                to="dcim.SoftwareImageFile",
             ),
         ),
         migrations.AddField(
@@ -84,5 +84,10 @@ class Migration(migrations.Migration):
                 related_name="devices",
                 to="dcim.softwareversion",
             ),
+        ),
+        migrations.AddField(
+            model_name="device",
+            name="software_image_files",
+            field=models.ManyToManyField(blank=True, related_name="devices", to="dcim.SoftwareImageFile"),
         ),
     ]
