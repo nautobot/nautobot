@@ -848,7 +848,7 @@ class APIOrderingTestCase(testing.APITestCase):
             dcim_models.LocationType,
             dcim_models.RackGroup,
             dcim_models.InventoryItem,
-            TenantGroup,
+            tenancy_models.TenantGroup,
         ]
         # Each of the table has at-least two sortable field_names in the field_names
         fk_fields = ["location", "parent", "location_type", "manufacturer"]
