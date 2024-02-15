@@ -410,7 +410,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_user_token_constraints(self):
         """
-        Test enabling remote authentication with the default configuration.
+        Test user token as permission constraints.
         """
         url = reverse("ipam-api:prefix-list")
         data = [
@@ -460,8 +460,10 @@ class ObjectPermissionAPIViewTestCase(TestCase):
 
         # Check against 1st user's response
         self.assertEqual(response_user1.status_code, 200)
-        self.assertNotEqual(response_user1.data["count"], ObjectChange.objects.count())
+        self.assertEqual(response_user1.data["count"], 1)
+        self.assertEqual(response_user1.data["results"][0]["user"]["id"], str(self.user.pk))
 
         # Check against 2nd user's response
         self.assertEqual(response_user2.status_code, 200)
         self.assertEqual(response_user2.data["count"], 1)
+        self.assertEqual(response_user2.data["results"][0]["user"]["id"], str(obj_user2.pk))
