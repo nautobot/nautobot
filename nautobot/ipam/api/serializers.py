@@ -27,6 +27,7 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
+    VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
 
@@ -53,6 +54,24 @@ class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = "__all__"
         list_display_fields = ["name", "rd", "tenant", "description"]
         extra_kwargs = {"namespace": {"default": get_default_namespace}}
+
+
+class VRFDeviceAssignmentSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = VRFDeviceAssignment
+        fields = "__all__"
+        validators = []
+
+    def validate(self, data):
+        if data.get("device"):
+            validator = UniqueTogetherValidator(queryset=VRFDeviceAssignment.objects.all(), fields=("device", "vrf"))
+            validator(data, self)
+        if data.get("virtual_machine"):
+            validator = UniqueTogetherValidator(
+                queryset=VRFDeviceAssignment.objects.all(), fields=("virtual_machine", "vrf")
+            )
+            validator(data, self)
+        return super().validate(data)
 
 
 class VRFPrefixAssignmentSerializer(ValidatedModelSerializer):

@@ -34,6 +34,7 @@ from .models import (
     VLAN,
     VLANGroup,
     VRF,
+    VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
 
@@ -101,6 +102,23 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     class Meta:
         model = VRF
         fields = ["id", "name", "rd", "tags"]
+
+
+class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (ID or name)",
+    )
+    virtual_machine = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VirtualMachine.objects.all(),
+        to_field_name="name",
+        label="Virtual Machine (ID or name)",
+    )
+
+    class Meta:
+        model = VRFDeviceAssignment
+        fields = ["id", "vrf", "device", "virtual_machine"]
 
 
 class VRFPrefixAssignmentFilterSet(NautobotFilterSet):
