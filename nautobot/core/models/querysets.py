@@ -23,7 +23,10 @@ def count_related(model, field, *, filter_dict=None, distinct=False):
     if hasattr(model.objects, "without_tree_fields"):
         manager = manager.without_tree_fields()
     qs = manager.filter(**filters).order_by().values(field)
-    qs = qs.annotate(c=Count("pk", distinct=distinct)).values("c")
+    if distinct:
+        qs = qs.annotate(c=Count("pk", distinct=distinct)).values("c")
+    else:
+        qs = qs.annotate(c=Count("*")).values("c")
     subquery = Subquery(qs)
 
     return Coalesce(subquery, 0)
