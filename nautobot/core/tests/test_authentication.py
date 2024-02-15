@@ -320,7 +320,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"location__name": self.locations[0].name},
+            constraints={"locations__name__in": [self.locations[0].name]},
             actions=["view"],
         )
         obj_perm.users.add(self.user)
@@ -347,7 +347,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"location__name": self.locations[0].name},
+            constraints={"locations__name__in": [self.locations[0].name]},
             actions=["view"],
         )
         obj_perm.users.add(self.user)
@@ -356,7 +356,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Retrieve all objects. Only permitted objects should be returned.
         response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["count"], Prefix.objects.filter(location=self.locations[0]).count())
+        self.assertEqual(response.data["count"], Prefix.objects.filter(locations__in=[self.locations[0]]).count())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_create_object(self):
@@ -364,7 +364,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         data = {
             "prefix": "10.0.9.0/24",
             "namespace": self.namespace.pk,
-            "location": self.locations[1].pk,
+            "locations": [self.locations[1].pk],
             "status": self.statuses[1].pk,
         }
         initial_count = Prefix.objects.count()
@@ -376,7 +376,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"location__name": self.locations[0].name},
+            constraints={"locations__name__in": [self.locations[0].name]},
             actions=["add"],
         )
         obj_perm.users.add(self.user)
@@ -388,7 +388,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         self.assertEqual(Prefix.objects.count(), initial_count)
 
         # Create a permitted object
-        data["location"] = self.locations[0].pk
+        data["locations"] = [self.locations[0].pk]
         response = self.client.post(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 201)
         self.assertEqual(Prefix.objects.count(), initial_count + 1)
@@ -396,7 +396,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_edit_object(self):
         # Attempt to edit an object without permission
-        data = {"location": self.locations[0].pk}
+        data = {"locations": [self.locations[0].pk]}
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[0].pk})
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 403)
@@ -404,14 +404,14 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"location__name": f"{self.locations[0].name}"},
+            constraints={"locations__name__in": [self.locations[0].name]},
             actions=["change"],
         )
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
 
         # Attempt to edit a non-permitted object
-        data = {"location": self.locations[0].pk}
+        data = {"locations": [self.locations[0].pk]}
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[3].pk})
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 404)
@@ -423,7 +423,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Attempt to modify a permitted object to a non-permitted object
-        data["location"] = self.locations[1].pk
+        data["locations"] = [self.locations[1].pk]
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[0].pk})
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 403)
@@ -438,7 +438,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"location__name": self.locations[0].name},
+            constraints={"locations__name__in": [self.locations[0].name]},
             actions=["delete"],
         )
         obj_perm.users.add(self.user)
