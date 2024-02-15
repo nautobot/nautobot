@@ -871,28 +871,20 @@ class JobBulkEditForm(NautobotBulkEditForm):
     enabled = forms.NullBooleanField(
         required=False, widget=BulkEditNullBooleanSelect, help_text="Whether this job can be executed by users"
     )
-    has_sensitive_variables = forms.NullBooleanField(
-        required=False, widget=BulkEditNullBooleanSelect, help_text="Whether this job contains sensitive variables"
+    has_sensitive_variables = forms.BooleanField(
+        required=False, help_text="Whether this job contains sensitive variables"
     )
-    approval_required = forms.NullBooleanField(
+    approval_required = forms.BooleanField(
         required=False,
-        widget=BulkEditNullBooleanSelect,
         help_text="Whether the job requires approval from another user before running",
     )
-    hidden = forms.NullBooleanField(
+    hidden = forms.BooleanField(
         required=False,
-        widget=BulkEditNullBooleanSelect,
         help_text="Whether the job defaults to not being shown in the UI",
     )
-    dryrun_default = forms.NullBooleanField(
+    dryrun_default = forms.BooleanField(
         required=False,
-        widget=BulkEditNullBooleanSelect,
         help_text="Whether the job defaults to running with dryrun argument set to true",
-    )
-    read_only = forms.NullBooleanField(
-        required=False,
-        widget=BulkEditNullBooleanSelect,
-        help_text="Set to true if the job does not make any changes to the environment",
     )
     soft_time_limit = forms.FloatField(
         required=False,
