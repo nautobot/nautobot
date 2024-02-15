@@ -4,9 +4,9 @@ import logging
 from celery import chain
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist, ValidationError
 from django.db import transaction
-from django.db.models import Count, ProtectedError, Q
+from django.db.models import Count, ManyToManyField, ProtectedError, Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -40,7 +40,7 @@ from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device, Rack
 from nautobot.dcim.tables import DeviceTable, RackTable
 from nautobot.extras.tasks import delete_custom_field_data
-from nautobot.extras.utils import get_base_template, get_worker_count
+from nautobot.extras.utils import get_base_template, get_worker_count, remove_prefix_from_cf_key
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine
@@ -1493,8 +1493,20 @@ class JobEditView(generic.ObjectEditView):
     template_name = "extras/job_edit.html"
 
 
+class JobBulkEditView(generic.BulkEditView):
+    queryset = JobModel.objects.all()
+    table = tables.JobTable
+    form = forms.JobBulkEditForm
+    template_name = "extras/job_bulk_edit.html"
+
+
 class JobDeleteView(generic.ObjectDeleteView):
     queryset = JobModel.objects.all()
+
+
+class JobBulkDeleteView(generic.BulkDeleteView):
+    queryset = JobModel.objects.all()
+    table = tables.JobTable
 
 
 class JobApprovalRequestView(generic.ObjectView):

@@ -5,6 +5,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
+from django.db import models
 from django.db.models.fields import TextField
 from django.forms import inlineformset_factory, ModelMultipleChoiceField
 from django.urls.base import reverse
@@ -23,6 +25,7 @@ from nautobot.core.forms import (
     DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    JSONArrayFormField,
     JSONField,
     MultipleContentTypeField,
     SlugField,
@@ -121,6 +124,7 @@ __all__ = (
     "GraphQLQueryFilterForm",
     "ImageAttachmentForm",
     "JobForm",
+    "JobBulkEditForm",
     "JobButtonForm",
     "JobButtonBulkEditForm",
     "JobButtonFilterForm",
@@ -846,6 +850,122 @@ class JobEditForm(NautobotModelForm):
                 if not cleaned_data.get(f"{field_name}_override", False):
                     cleaned_data[field_name] = getattr(job_class, field_name)
         return cleaned_data
+
+
+class JobBulkEditForm(NautobotBulkEditForm):
+    """Bulk edit form for `Job` objects."""
+
+    pk = forms.ModelMultipleChoiceField(
+        queryset=Job.objects.all(),
+        widget=forms.MultipleHiddenInput(),
+    )
+    grouping = forms.CharField(
+        required=False,
+        help_text="Human-readable grouping that this job belongs to",
+    )
+    description = forms.CharField(
+        max_length=200,
+        required=False,
+        help_text="Markdown formatting and a limited subset of HTML are supported",
+    )
+    enabled = forms.NullBooleanField(
+        required=False, widget=BulkEditNullBooleanSelect, help_text="Whether this job can be executed by users"
+    )
+    has_sensitive_variables = forms.NullBooleanField(
+        required=False, widget=BulkEditNullBooleanSelect, help_text="Whether this job contains sensitive variables"
+    )
+    approval_required = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="Whether the job requires approval from another user before running",
+    )
+    hidden = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="Whether the job defaults to not being shown in the UI",
+    )
+    dryrun_default = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="Whether the job defaults to running with dryrun argument set to true",
+    )
+    read_only = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="Set to true if the job does not make any changes to the environment",
+    )
+    soft_time_limit = forms.FloatField(
+        required=False,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum runtime in seconds before the job will receive a <code>SoftTimeLimitExceeded</code> "
+        "exception.<br>Set to 0 to use Nautobot system default",
+    )
+    time_limit = forms.FloatField(
+        required=False,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum runtime in seconds before the job will be forcibly terminated."
+        "<br>Set to 0 to use Nautobot system default",
+    )
+    task_queues = JSONArrayFormField(
+        base_field=models.CharField(max_length=100, blank=True),
+        help_text="Comma separated list of task queues that this job can run on. A blank list will use the default queue",
+        required=False,
+    )
+    # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
+    grouping_override = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="If set, the configured grouping will remain even if the underlying Job source code changes",
+    )
+    name_override = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="If set, the configured name will remain even if the underlying Job source code changes",
+    )
+    description_override = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="If set, the configured description will remain even if the underlying Job source code changes",
+    )
+    approval_required_override = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    dryrun_default_override = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    hidden_override = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    soft_time_limit_override = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    time_limit_override = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    has_sensitive_variables_override = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+    task_queues_override = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+    )
+
+    class Meta:
+        model = Job
+        nullable_fields = ["grouping"]
 
 
 class JobFilterForm(BootstrapMixin, forms.Form):

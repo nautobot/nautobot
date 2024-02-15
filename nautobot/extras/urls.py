@@ -456,6 +456,8 @@ urlpatterns = [
     ),
     path("jobs/<uuid:pk>/run/", views.JobRunView.as_view(), name="job_run"),
     path("jobs/<str:class_path>/run/", views.JobRunView.as_view(), name="job_run_by_class_path"),
+    path("jobs/edit/", views.JobBulkEditView.as_view(), name="job_bulk_edit"),
+    path("jobs/delete/", views.JobBulkDeleteView.as_view(), name="job_bulk_delete"),
     # Job hooks
     path("job-hooks/", views.JobHookListView.as_view(), name="jobhook_list"),
     path("job-hooks/add/", views.JobHookEditView.as_view(), name="jobhook_add"),

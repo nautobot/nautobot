@@ -604,7 +604,7 @@ def log_entry_color_css(record):
 
 
 class JobTable(BaseTable):
-    # TODO(Glenn): pk = ToggleColumn()
+    pk = ToggleColumn()
     source = tables.Column()
     # grouping is used to, well, group the Jobs, so it isn't a column of its own.
     name = tables.Column(
@@ -651,6 +651,7 @@ class JobTable(BaseTable):
         model = JobModel
         orderable = False
         fields = (
+            "pk",
             "source",
             "name",
             "installed",
@@ -672,6 +673,7 @@ class JobTable(BaseTable):
             "actions",
         )
         default_columns = (
+            "pk",
             "name",
             "enabled",
             "description",
