@@ -73,7 +73,6 @@ router.register("device-redundancy-groups", views.DeviceRedundancyGroupViewSet)
 # Software image files
 router.register("software-image-files", views.SoftwareImageFileViewSet)
 router.register("software-versions", views.SoftwareVersionViewSet)
-router.register("device-types-to-software-image-files", views.DeviceTypeToSoftwareImageFileViewSet)
 
 # Miscellaneous
 router.register("connected-device", views.ConnectedDeviceViewSet, basename="connected-device")

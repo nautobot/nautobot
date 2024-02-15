@@ -59,7 +59,6 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
-    DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -1031,10 +1030,4 @@ class SoftwareImageFileSerializer(NautobotModelSerializer, TaggedModelSerializer
 class SoftwareVersionSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = SoftwareVersion
-        fields = "__all__"
-
-
-class DeviceTypeToSoftwareImageFileSerializer(ValidatedModelSerializer):
-    class Meta:
-        model = DeviceTypeToSoftwareImageFile
         fields = "__all__"

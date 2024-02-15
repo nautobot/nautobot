@@ -31,7 +31,6 @@ from nautobot.dcim.filters import (
     DeviceFilterSet,
     DeviceRedundancyGroupFilterSet,
     DeviceTypeFilterSet,
-    DeviceTypeToSoftwareImageFileFilterSet,
     FrontPortFilterSet,
     FrontPortTemplateFilterSet,
     HardwareFamilyFilterSet,
@@ -70,7 +69,6 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
-    DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -3332,14 +3330,3 @@ class SoftwareVersionFilterSetTestCase(FilterTestCases.FilterTestCase):
             self.filterset(params, self.queryset).qs,
             SoftwareVersion.objects.filter(pre_release=False),
         )
-
-
-class DeviceTypeToSoftwareImageFileFilterSetTestCase(FilterTestCases.FilterTestCase):
-    queryset = DeviceTypeToSoftwareImageFile.objects.all()
-    filterset = DeviceTypeToSoftwareImageFileFilterSet
-    generic_filter_tests = (
-        ["software_image_file", "software_image_file__id"],
-        ["software_image_file", "software_image_file__image_file_name"],
-        ["device_type", "device_type__id"],
-        ["device_type", "device_type__model"],
-    )

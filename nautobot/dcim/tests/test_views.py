@@ -56,7 +56,6 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
-    DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -1199,8 +1198,6 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
 
-        # Protected FK to SoftwareImageFile prevents deletion
-        DeviceTypeToSoftwareImageFile.objects.all().delete()
         # Protected FK to SoftwareVersion prevents deletion
         Device.objects.all().update(software_version=None)
 
@@ -3140,8 +3137,6 @@ class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         statuses = Status.objects.get_for_model(SoftwareVersion)
         platforms = Platform.objects.all()
 
-        # Protected FK to SoftwareImageFile prevents deletion
-        DeviceTypeToSoftwareImageFile.objects.all().delete()
         # Protected FK to SoftwareVersion prevents deletion
         Device.objects.all().update(software_version=None)
 
