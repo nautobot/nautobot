@@ -24,6 +24,7 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
+    VRFPrefixAssignment,
 )
 
 from . import serializers
@@ -60,6 +61,12 @@ class VRFViewSet(NautobotModelViewSet):
     )
     serializer_class = serializers.VRFSerializer
     filterset_class = filters.VRFFilterSet
+
+
+class VRFPrefixAssignmentViewSet(NautobotModelViewSet):
+    queryset = VRFPrefixAssignment.objects.select_related("vrf", "prefix")
+    serializer_class = serializers.VRFPrefixAssignmentSerializer
+    filterset_class = filters.VRFPrefixAssignmentFilterSet
 
 
 #
