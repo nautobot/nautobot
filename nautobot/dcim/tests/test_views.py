@@ -84,6 +84,7 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualChassis,
 )
+from nautobot.dcim.views import ConsoleConnectionsListView, InterfaceConnectionsListView, PowerConnectionsListView
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.models import (
     ConfigContextSchema,
@@ -2370,6 +2371,9 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     def get_title(self):
         return "Console Connections"
 
+    def get_list_view(self):
+        return ConsoleConnectionsListView
+
     model = ConsolePort
     filterset = ConsoleConnectionFilterSet
 
@@ -2409,6 +2413,9 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     def _get_base_url(self):
         return "dcim:power_connections_{}"
+
+    def get_list_view(self):
+        return PowerConnectionsListView
 
     model = PowerPort
     filterset = PowerConnectionFilterSet
@@ -2456,6 +2463,9 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     def get_title(self):
         return "Interface Connections"
+
+    def get_list_view(self):
+        return InterfaceConnectionsListView
 
     model = Interface
     filterset = InterfaceConnectionFilterSet

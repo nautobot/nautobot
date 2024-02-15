@@ -716,6 +716,9 @@ class ViewTestCases:
         def get_title(self):
             return helpers.bettertitle(self.model._meta.verbose_name_plural)
 
+        def get_list_view(self):
+            return lookup.get_view_for_model(self.model, view_type="List")
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
             # Make the request as an unauthenticated user
@@ -842,7 +845,7 @@ class ViewTestCases:
                 self.assertIn(instance1.get_absolute_url(), content, msg=content)
                 self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
 
-            view = lookup.get_view_for_model(self.model, view_type="List")
+            view = self.get_list_view()
             if view and hasattr(view, "action_buttons") and "import" in view.action_buttons:
                 # Check if import button is present due to user permissions
                 self.assertIn(
