@@ -1,0 +1,110 @@
+---
+version: "3.8"
+services:
+  loki:
+    image: "grafana/loki:2.9.2"
+    ports:
+      - "3100:3100"
+    command: "-config.file=/etc/loki/local-config.yaml"
+
+  otel:
+    image: otel/opentelemetry-collector:latest
+    command: ["--config=/etc/otel-collector.yaml"]
+    volumes:
+      - ./configs/otel-collector.yaml:/etc/otel-collector.yaml
+    depends_on:
+      - "tempo"
+
+  # otel-collector:
+  #   platform: linux/amd64
+  #   image: otel/opentelemetry-collector:latest
+  #   ports:
+  #     - "6831:6831"
+  #     - "14268:14268"
+  #     - "4317:4317"
+  #   volumes:
+  #     - ./config/otel-collector.yaml:/config/otel-collector.yaml
+  #   command:
+  #     - --config=/config/otel-collector.yaml
+
+  # Grafana Agent
+  # agent:
+  #   image: grafana/agent
+  #   command:
+  #     - run
+  #     - /etc/agent/agent-config.river
+  #   volumes:
+  #     - ./configs/:/etc/agent
+  #   environment:
+  #     AGENT_MODE: "flow"
+  #   ports:
+  #     - "4017:4017"
+  #     - "4018:4018"
+
+  # Tempo
+  tempo:
+    image: grafana/tempo
+    command:
+      - -config.file
+      - /etc/tempo/tempo-config.yaml
+    volumes:
+      - ./configs/:/etc/tempo
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+      - "55680:55680"
+
+  # Mimir -config.file=config-mimir.yaml -server.grpc-listen-port=9096
+  mimir:
+    image: grafana/mimir
+    command:
+      - -config.file=/etc/mimir/mimir-config.yaml
+      - -server.grpc-listen-port=9096
+    volumes:
+      - ./configs/:/etc/mimir
+    ports:
+      - "9009:9009"
+      - "9096:9096"
+
+  promtail:
+    image: "grafana/promtail:latest"
+    volumes:
+      - "./configs/promtail.yaml:/etc/promtail/docker-config.yaml"
+      - "/var/lib/docker/containers:/var/lib/docker/containers:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    command: "-config.file=/etc/promtail/docker-config.yaml"
+    depends_on:
+      - "loki"
+
+  grafana:
+    environment:
+      - "GF_PATHS_PROVISIONING=/etc/grafana/provisioning"
+      - "GF_AUTH_ANONYMOUS_ENABLED=true"
+      - "GF_AUTH_ANONYMOUS_ORG_ROLE=Admin"
+    entrypoint:
+      - "sh"
+      - "-euc"
+      - |
+        mkdir -p /etc/grafana/provisioning/datasources
+        cat <<EOF > /etc/grafana/provisioning/datasources/ds.yaml
+        apiVersion: 1
+        datasources:
+        - name: Loki
+          type: loki
+          access: proxy
+          orgId: 1
+          url: http://loki:3100
+          basicAuth: false
+          isDefault: true
+          version: 1
+          editable: false
+          jsonData:
+            httpHeaderName1: "X-Scope-OrgID"
+          secureJsonData:
+            httpHeaderValue1: "nautobot"
+        EOF
+        /run.sh
+    image: "grafana/grafana:latest"
+    ports:
+      - "3000:3000"

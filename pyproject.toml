@@ -216,6 +216,18 @@ splinter = "~0.21.0"
 # Serialization of tracebacks - used when running unittest with --parallel flag
 tblib = "~3.0.0"
 
+
+[tool.poetry.group.observability.dependencies]
+opentelemetry-api = "^1.22.0"
+opentelemetry-sdk = "^1.22.0"
+opentelemetry-exporter-otlp = "^1.22.0"
+opentelemetry-instrumentation-django = "^0.43b0"
+opentelemetry-instrumentation-celery = "^0.43b0"
+opentelemetry-instrumentation-psycopg2 = "^0.43b0"
+opentelemetry-instrumentation-dbapi = "^0.43b0"
+opentelemetry-exporter-otlp-proto-grpc = "^1.22.0"
+opentelemetry-instrumentation-redis = "^0.43b0"
+
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"
 
