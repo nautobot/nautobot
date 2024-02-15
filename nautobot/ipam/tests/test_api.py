@@ -27,6 +27,7 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
+    VRFPrefixAssignment,
 )
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
@@ -100,6 +101,70 @@ class VRFTest(APIViewTestCases.APIViewTestCase):
         cls.bulk_update_data = {
             "description": "New description",
         }
+
+
+class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
+    model = VRFPrefixAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.vrfs = VRF.objects.all()
+        cls.prefixes = Prefix.objects.all()
+
+        VRFPrefixAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            prefix=cls.prefixes.filter(namespace=cls.vrfs[0].namespace)[0],
+        )
+        VRFPrefixAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            prefix=cls.prefixes.filter(namespace=cls.vrfs[0].namespace)[1],
+        )
+        VRFPrefixAssignment.objects.create(
+            vrf=cls.vrfs[1],
+            prefix=cls.prefixes.filter(namespace=cls.vrfs[1].namespace)[0],
+        )
+        VRFPrefixAssignment.objects.create(
+            vrf=cls.vrfs[1],
+            prefix=cls.prefixes.filter(namespace=cls.vrfs[1].namespace)[1],
+        )
+        cls.create_data = [
+            {
+                "vrf": cls.vrfs[2].pk,
+                "prefix": cls.prefixes.filter(namespace=cls.vrfs[2].namespace)[0].pk,
+            },
+            {
+                "vrf": cls.vrfs[3].pk,
+                "prefix": cls.prefixes.filter(namespace=cls.vrfs[3].namespace)[0].pk,
+            },
+            {
+                "vrf": cls.vrfs[4].pk,
+                "prefix": cls.prefixes.filter(namespace=cls.vrfs[4].namespace)[0].pk,
+            },
+        ]
+
+    def test_creating_invalid_vrf_prefix_assignments(self):
+        duplicate_create_data = {
+            "vrf": self.vrfs[0].pk,
+            "prefix": self.prefixes.filter(namespace=self.vrfs[0].namespace)[0].pk,
+        }
+        wrong_namespace_create_data = {
+            "vrf": self.vrfs[0].pk,
+            "prefix": self.prefixes.exclude(namespace=self.vrfs[0].namespace)[0].pk,
+        }
+        missing_field_create_data = {
+            "vrf": self.vrfs[0].pk,
+            "prefix": None,
+        }
+        self.add_permissions("ipam.add_vrfprefixassignment")
+        response = self.client.post(self._get_list_url(), duplicate_create_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("The fields vrf, prefix must make a unique set.", str(response.content))
+        response = self.client.post(self._get_list_url(), wrong_namespace_create_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Prefix must be in same namespace as VRF", str(response.content))
+        response = self.client.post(self._get_list_url(), missing_field_create_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("This field may not be null.", str(response.content))
 
 
 class RouteTargetTest(APIViewTestCases.APIViewTestCase):
