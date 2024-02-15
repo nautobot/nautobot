@@ -1,5 +1,8 @@
+import contextvars
 import logging
+from uuid import UUID
 
+from django.db import transaction
 from django.db.models import Manager
 from taggit.managers import _TaggableManager
 
@@ -12,6 +15,33 @@ class BaseManager(Manager):
 
     Adds built-in natural key support, loosely based on `django-natural-keys`.
     """
+
+    def bulk_create(
+        self,
+        objs,
+        batch_size=None,
+        ignore_conflicts=False,
+        change_log=False
+    ):
+        if not change_log:
+            return super().bulk_create(objs, batch_size, ignore_conflicts)
+        from nautobot.extras.choices import ObjectChangeActionChoices
+        from nautobot.extras.models import ObjectChange, ChangeLoggedModel
+        with transaction.atomic():
+            created_objects = super().bulk_create(
+                objs=objs,
+                batch_size=batch_size,
+                ignore_conflicts=ignore_conflicts,
+            )
+            object_changes = []
+            for obj in created_objects:
+                if not isinstance(obj, ChangeLoggedModel):
+                    continue
+                object_change = obj.to_objectchange(action=ObjectChangeActionChoices.ACTION_CREATE)
+                object_change.request_id = obj.pk  # Hack, should probably be a common id for all the objects
+                object_changes.append(object_change)
+            ObjectChange.objects.bulk_create(object_changes, batch_size=batch_size, change_log=False)
+        return created_objects
 
     def get_by_natural_key(self, *args):
         """
