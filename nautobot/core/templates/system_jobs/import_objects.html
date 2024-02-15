@@ -76,7 +76,14 @@
 
             fetch_failure.style.display = "none";
 
-            const response = await fetch(`{% url 'ui-api:core-api:csv-import-fields' %}?content-type-id=${event.target.value}`);
+            const ct_id = event.target.value;
+            if (! ct_id) {
+                table_info.style.display = "none";
+                table.style.display = "none";
+                return;
+            }
+
+            const response = await fetch(`{% url 'ui-api:core-api:csv-import-fields' %}?content-type-id=${ct_id}`);
             const data = await response.json();
 
             if (!response.ok) {
@@ -86,7 +93,6 @@
                 fetch_failure.style.display = "";
                 return;
             }
-
 
             table_info.style.display = "";
             table.style.display = "";
