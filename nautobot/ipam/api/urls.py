@@ -10,6 +10,7 @@ router.register("namespaces", views.NamespaceViewSet)
 
 # VRFs
 router.register("vrfs", views.VRFViewSet)
+router.register("vrf-prefix-assignments", views.VRFPrefixAssignmentViewSet)
 
 # Route targets
 router.register("route-targets", views.RouteTargetViewSet)

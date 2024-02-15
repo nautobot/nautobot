@@ -27,6 +27,7 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
+    VRFPrefixAssignment,
 )
 
 #
@@ -52,6 +53,12 @@ class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = "__all__"
         list_display_fields = ["name", "rd", "tenant", "description"]
         extra_kwargs = {"namespace": {"default": get_default_namespace}}
+
+
+class VRFPrefixAssignmentSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = VRFPrefixAssignment
+        fields = "__all__"
 
 
 #
