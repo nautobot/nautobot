@@ -383,20 +383,29 @@ class PrefixFilterCustomDataTestCase(TestCase):
         )
         test_locations[1].parent = test_locations[0]
         test_prefixes = list(self.queryset[:3])
-        test_prefixes[0].location = test_locations[0]
-        test_prefixes[1].location = test_locations[1]
-        test_prefixes[2].location = test_locations[2]
-        self.queryset.bulk_update(test_prefixes, ["location"])
+        test_prefixes[0].locations.set([test_locations[0]])
+        test_prefixes[1].locations.set([test_locations[1]])
+        test_prefixes[2].locations.set([test_locations[2]])
 
         params = {"location": [test_locations[0].pk, test_locations[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(location__in=params["location"]),
+            self.queryset.filter(locations__in=params["location"]),
         )
         params = {"location": [test_locations[0].name, test_locations[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(location__name__in=params["location"]),
+            self.queryset.filter(locations__name__in=params["location"]),
+        )
+        params = {"locations": [test_locations[0].pk, test_locations[1].pk]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(locations__in=params["locations"]),
+        )
+        params = {"locations": [test_locations[0].name, test_locations[1].name]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(locations__name__in=params["locations"]),
         )
 
     def test_vlan(self):

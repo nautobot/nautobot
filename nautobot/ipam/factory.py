@@ -280,7 +280,7 @@ class PrefixFactory(PrimaryModelFactory):
     class Params:
         has_date_allocated = NautobotBoolIterator()
         has_description = NautobotBoolIterator()
-        has_location = NautobotBoolIterator()
+        has_locations = NautobotBoolIterator()
         has_rir = NautobotBoolIterator()
         has_role = NautobotBoolIterator()
         has_tenant = NautobotBoolIterator()
@@ -294,10 +294,6 @@ class PrefixFactory(PrimaryModelFactory):
         UniqueFaker("ipv4", network=True),
     )
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
-    # TODO: create a LocationGetOrCreateFactory to get or create a location
-    location = factory.Maybe(
-        "has_location", random_instance(lambda: Location.objects.get_for_model(Prefix), allow_null=False), None
-    )
     role = factory.Maybe(
         "has_role",
         random_instance(lambda: Role.objects.get_for_model(Prefix), allow_null=False),
@@ -323,6 +319,19 @@ class PrefixFactory(PrimaryModelFactory):
     # )
     rir = factory.Maybe("has_rir", random_instance(RIR, allow_null=False), None)
     date_allocated = factory.Maybe("has_date_allocated", factory.Faker("date_time", tzinfo=datetime.timezone.utc), None)
+
+    @factory.post_generation
+    def locations(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.locations.set(extracted)
+            else:
+                prefix_ct = ContentType.objects.get_for_model(Prefix)
+                self.locations.set(
+                    get_random_instances(
+                        lambda: Location.objects.filter(location_type__content_types__in=[prefix_ct]), minimum=0
+                    )
+                )
 
     @factory.post_generation
     def children(self, create, extracted, **kwargs):
@@ -402,13 +411,12 @@ class PrefixFactory(PrimaryModelFactory):
             else:
                 child_type = PrefixTypeChoices.TYPE_POOL
 
-            # Create child prefixes, preserving location, vrf and is_ipv6 from parent
+            # Create child prefixes, preserving is_ipv6 from parent
             for count, address in enumerate(self.prefix.subnet(child_cidr)):
                 if count == child_count:
                     break
                 method(
                     prefix=str(address.cidr),
-                    location=self.location,
                     is_ipv6=is_ipv6,
                     has_rir=False,
                     namespace=self.namespace,

@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
 from django.db import models, transaction
-from django.db.models import Count, Prefetch, ProtectedError, Q
+from django.db.models import Prefetch, ProtectedError, Q
 from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.templatetags.static import static
@@ -21,7 +21,7 @@ from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import handle_protectederror
-from nautobot.dcim.models import Device, Interface
+from nautobot.dcim.models import Device, Interface, Location
 from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam import choices, constants
 from nautobot.ipam.api import serializers
@@ -103,10 +103,10 @@ class NamespaceIPAddressesView(generic.ObjectView):
             instance.ip_addresses.restrict(request.user, "view")
             .select_related("role", "status", "tenant")
             .annotate(
-                interface_count=Count("interfaces"),
-                interface_parent_count=(Count("interfaces__device", distinct=True)),
-                vm_interface_count=Count("vm_interfaces"),
-                vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+                interface_count=count_related(Interface, "ip_addresses"),
+                interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
+                vm_interface_count=count_related(VMInterface, "ip_addresses"),
+                vm_interface_parent_count=count_related(VirtualMachine, "interfaces__ip_addresses", distinct=True),
             )
         )
 
@@ -424,7 +424,7 @@ class PrefixListView(generic.ObjectListView):
     filterset_form = forms.PrefixFilterForm
     table = tables.PrefixDetailTable
     template_name = "ipam/prefix_list.html"
-    queryset = Prefix.objects.all()
+    queryset = Prefix.objects.annotate(location_count=count_related(Location, "prefixes"))
     use_new_ui = True
 
 
@@ -433,17 +433,21 @@ class PrefixView(generic.ObjectView):
         "parent",
         "rir",
         "role",
-        "location",
         "status",
         "tenant__tenant_group",
         "vlan__vlan_group",
         "namespace",
-    )
+    ).prefetch_related("locations")
     use_new_ui = True
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table
-        parent_prefixes = instance.ancestors().restrict(request.user, "view").select_related("parent", "namespace")
+        parent_prefixes = (
+            instance.ancestors()
+            .restrict(request.user, "view")
+            .select_related("parent", "namespace", "status", "vlan", "role")
+            .annotate(location_count=count_related(Location, "prefixes"))
+        )
         parent_prefix_table = tables.PrefixTable(list(parent_prefixes))
         parent_prefix_table.exclude = ("namespace",)
 
@@ -465,7 +469,8 @@ class PrefixPrefixesView(generic.ObjectView):
         child_prefixes = (
             instance.descendants()
             .restrict(request.user, "view")
-            .select_related("parent", "location", "status", "role", "vlan", "namespace")
+            .select_related("parent", "status", "role", "vlan", "namespace")
+            .annotate(location_count=count_related(Location, "prefixes"))
         )
 
         # Add available prefixes to the table if requested
@@ -514,10 +519,10 @@ class PrefixIPAddressesView(generic.ObjectView):
             .select_related("role", "status", "tenant")
             .prefetch_related("primary_ip4_for", "primary_ip6_for")
             .annotate(
-                interface_count=Count("interfaces"),
-                interface_parent_count=(Count("interfaces__device", distinct=True)),
-                vm_interface_count=Count("vm_interfaces"),
-                vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+                interface_count=count_related(Interface, "ip_addresses"),
+                interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
+                vm_interface_count=count_related(VMInterface, "ip_addresses"),
+                vm_interface_parent_count=count_related(VirtualMachine, "interfaces__ip_addresses", distinct=True),
             )
         )
 
@@ -696,14 +701,24 @@ class PrefixBulkImportView(generic.BulkImportView):
 
 
 class PrefixBulkEditView(generic.BulkEditView):
-    queryset = Prefix.objects.select_related("location", "status", "namespace", "tenant", "vlan", "role")
+    queryset = Prefix.objects.select_related("status", "namespace", "tenant", "vlan", "role").annotate(
+        location_count=count_related(Location, "prefixes")
+    )
     filterset = filters.PrefixFilterSet
     table = tables.PrefixTable
     form = forms.PrefixBulkEditForm
 
+    def extra_post_save_action(self, obj, form):
+        if form.cleaned_data.get("add_locations", None):
+            obj.locations.add(*form.cleaned_data["add_locations"])
+        if form.cleaned_data.get("remove_locations", None):
+            obj.locations.remove(*form.cleaned_data["remove_locations"])
+
 
 class PrefixBulkDeleteView(generic.BulkDeleteView):
-    queryset = Prefix.objects.select_related("location", "status", "namespace", "tenant", "vlan", "role")
+    queryset = Prefix.objects.select_related("status", "namespace", "tenant", "vlan", "role").annotate(
+        location_count=count_related(Location, "prefixes")
+    )
     filterset = filters.PrefixFilterSet
     table = tables.PrefixTable
 
@@ -715,11 +730,11 @@ class PrefixBulkDeleteView(generic.BulkDeleteView):
 
 class IPAddressListView(generic.ObjectListView):
     queryset = IPAddress.objects.annotate(
-        interface_count=Count("interfaces"),
-        interface_parent_count=(Count("interfaces__device", distinct=True)),
-        vm_interface_count=Count("vm_interfaces"),
-        vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
-        assigned_count=Count("interfaces") + Count("vm_interfaces"),
+        interface_count=count_related(Interface, "ip_addresses"),
+        interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
+        vm_interface_count=count_related(VMInterface, "ip_addresses"),
+        vm_interface_parent_count=count_related(VirtualMachine, "interfaces__ip_addresses", distinct=True),
+        assigned_count=count_related(Interface, "ip_addresses") + count_related(VMInterface, "ip_addresses"),
     )
     filterset = filters.IPAddressFilterSet
     filterset_form = forms.IPAddressFilterForm
@@ -735,7 +750,10 @@ class IPAddressView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # Parent prefixes table
         parent_prefixes = (
-            instance.ancestors().restrict(request.user, "view").select_related("location", "status", "role", "tenant")
+            instance.ancestors()
+            .restrict(request.user, "view")
+            .select_related("status", "role", "tenant")
+            .annotate(location_count=count_related(Location, "prefixes"))
         )
         parent_prefixes_table = tables.PrefixTable(list(parent_prefixes), orderable=False)
 
@@ -745,10 +763,10 @@ class IPAddressView(generic.ObjectView):
             .restrict(request.user, "view")
             .select_related("role", "status", "tenant")
             .annotate(
-                interface_count=Count("interfaces"),
-                interface_parent_count=(Count("interfaces__device", distinct=True)),
-                vm_interface_count=Count("vm_interfaces"),
-                vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+                interface_count=count_related(Interface, "ip_addresses"),
+                interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
+                vm_interface_count=count_related(VMInterface, "ip_addresses"),
+                vm_interface_parent_count=count_related(VirtualMachine, "interfaces__ip_addresses", distinct=True),
             )
         )
         related_ips_table = tables.IPAddressTable(related_ips, orderable=False)
@@ -1099,10 +1117,10 @@ class IPAddressBulkImportView(generic.BulkImportView):
 class IPAddressBulkEditView(generic.BulkEditView):
     # queryset = IPAddress.objects.select_related("status", "role", "tenant", "vrf__tenant")
     queryset = IPAddress.objects.select_related("role", "status", "tenant").annotate(
-        interface_count=Count("interfaces"),
-        interface_parent_count=(Count("interfaces__device", distinct=True)),
-        vm_interface_count=Count("vm_interfaces"),
-        vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+        interface_count=count_related(Interface, "ip_addresses"),
+        interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
+        vm_interface_count=count_related(VMInterface, "ip_addresses"),
+        vm_interface_parent_count=count_related(VirtualMachine, "interfaces__ip_addresses", distinct=True),
     )
     filterset = filters.IPAddressFilterSet
     table = tables.IPAddressTable
@@ -1112,10 +1130,10 @@ class IPAddressBulkEditView(generic.BulkEditView):
 class IPAddressBulkDeleteView(generic.BulkDeleteView):
     # queryset = IPAddress.objects.select_related("status", "role", "tenant", "vrf__tenant")
     queryset = IPAddress.objects.select_related("role", "status", "tenant").annotate(
-        interface_count=Count("interfaces"),
-        interface_parent_count=(Count("interfaces__device", distinct=True)),
-        vm_interface_count=Count("vm_interfaces"),
-        vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
+        interface_count=count_related(Interface, "ip_addresses"),
+        interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
+        vm_interface_count=count_related(VMInterface, "ip_addresses"),
+        vm_interface_parent_count=count_related(VirtualMachine, "interfaces__ip_addresses", distinct=True),
     )
     filterset = filters.IPAddressFilterSet
     table = tables.IPAddressTable
@@ -1210,7 +1228,7 @@ class VLANGroupView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         vlans = (
             VLAN.objects.restrict(request.user, "view")
-            .annotate(location_count=Count("locations"))
+            .annotate(location_count=count_related(Location, "vlans"))
             .filter(vlan_group=instance)
             .prefetch_related(Prefetch("prefixes", queryset=Prefix.objects.restrict(request.user)))
         )
@@ -1270,14 +1288,14 @@ class VLANGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class VLANListView(generic.ObjectListView):
-    queryset = VLAN.objects.annotate(location_count=Count("locations"))
+    queryset = VLAN.objects.annotate(location_count=count_related(Location, "vlans"))
     filterset = filters.VLANFilterSet
     filterset_form = forms.VLANFilterForm
     table = tables.VLANDetailTable
 
 
 class VLANView(generic.ObjectView):
-    queryset = VLAN.objects.annotate(location_count=Count("locations")).select_related(
+    queryset = VLAN.objects.annotate(location_count=count_related(Location, "vlans")).select_related(
         "role",
         "status",
         "tenant__tenant_group",
