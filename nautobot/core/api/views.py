@@ -34,6 +34,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet as ModelViewSet_, ReadOnlyModelViewSet as ReadOnlyModelViewSet_
 
 from nautobot.core.api import BulkOperationSerializer
+from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
@@ -875,8 +876,27 @@ class CSVImportFieldsForContentTypeAPIView(NautobotAPIVersionMixin, APIView):
     @extend_schema(exclude=True)
     def get(self, request):
         content_type_id = request.GET.get("content-type-id")
-        content_type = ContentType.objects.get(pk=content_type_id)
-        serializer_class = get_serializer_for_model(content_type.model_class())
+        try:
+            content_type = ContentType.objects.get(pk=content_type_id)
+        except ContentType.DoesNotExist:
+            return Response({"detail": "Invalid content-type-id."}, status=404)
+        model = content_type.model_class()
+        if model is None:
+            return Response(
+                {
+                    "detail": (
+                        f"Model not found for {content_type.app_label}.{content_type.model}. Perhaps an app is missing?"
+                    ),
+                },
+                status=404,
+            )
+        try:
+            serializer_class = get_serializer_for_model(model)
+        except SerializerNotFound:
+            return Response(
+                {"detail": f"Serializer not found for {content_type.app_label}.{content_type.model}."},
+                status=404,
+            )
         fields = get_csv_form_fields_from_serializer_class(serializer_class)
         return Response({"fields": fields})
 

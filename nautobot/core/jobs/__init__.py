@@ -7,6 +7,7 @@ from django.db import transaction
 from django.http import QueryDict
 from rest_framework import exceptions as drf_exceptions
 
+from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model
@@ -209,7 +210,22 @@ class ImportObjects(Job):
             raise PermissionDenied("User does not have create permissions on the requested content-type")
 
         model = content_type.model_class()
-        serializer_class = get_serializer_for_model(model)
+        if model is None:
+            self.logger.error(
+                'Could not find the "%s.%s" data model. Perhaps an app is uninstalled?',
+                content_type.app_label,
+                content_type.model,
+            )
+            raise RunJobTaskFailed("Model not found")
+        try:
+            serializer_class = get_serializer_for_model(model)
+        except SerializerNotFound:
+            self.logger.error(
+                'Could not find the "%s.%s" data serializer. Unable to process CSV for this model.',
+                content_type.app_label,
+                content_type.model,
+            )
+            raise
         queryset = model.objects.restrict(self.user, "add")
 
         if not csv_data and not csv_file:
