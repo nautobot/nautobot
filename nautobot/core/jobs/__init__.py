@@ -82,7 +82,7 @@ class ExportObjectList(Job):
         model=ContentType,
         description="Type of objects to export",
         label="Content Type",
-        query_params={"can_view": True},
+        query_params={"can_view": True},  # not adding "has_serializer": True as it might just support export-templates
     )
     query_string = StringVar(
         description='Filterset parameters to apply, in URL query parameter format e.g. "name=test&status=Active"',
@@ -195,7 +195,7 @@ class ImportObjects(Job):
     content_type = ObjectVar(
         model=ContentType,
         description="Type of objects to import",
-        query_params={"can_add": True},
+        query_params={"can_add": True, "has_serializer": True},
     )
     csv_data = TextVar(label="CSV Data", required=False)
     csv_file = FileVar(label="CSV File", required=False)
