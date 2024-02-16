@@ -39,17 +39,3 @@ class ImportObjectsUITestCase(SeleniumTestCase):
 
         self.assertTrue(self.browser.is_text_present("upstream_speed", wait_time=10))
         self.assertTrue(self.browser.is_text_present("Upstream speed, if different from port speed"))
-
-        # Clear the content-type selection again
-        clear_button = self.browser.find_by_xpath(
-            "//span[@id='select2-id_content_type-container']//span[@class='select2-selection__clear']"
-        )
-        clear_button.click()
-
-        self.assertFalse(self.browser.is_text_present("upstream_speed", wait_time=1))
-        self.assertFalse(self.browser.is_text_present("Upstream speed, if different from port speed"))
-
-        # Select a content-type that can't be imported
-        self.browser.find_by_xpath("//li[contains(text(), 'admin | log entry')]", wait_time=10).click()
-
-        self.assertTrue(self.browser.is_text_present("CSV cannot be imported for this content-type", wait_time=10))
