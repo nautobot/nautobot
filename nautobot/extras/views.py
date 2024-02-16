@@ -39,8 +39,9 @@ from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device, Rack
 from nautobot.dcim.tables import DeviceTable, RackTable
+from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.tasks import delete_custom_field_data
-from nautobot.extras.utils import get_base_template, get_worker_count, remove_prefix_from_cf_key
+from nautobot.extras.utils import get_base_template, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine
@@ -1498,6 +1499,23 @@ class JobBulkEditView(generic.BulkEditView):
     table = tables.JobTable
     form = forms.JobBulkEditForm
     template_name = "extras/job_bulk_edit.html"
+
+    def extra_post_save_action(self, obj, form):
+        cleaned_data = form.cleaned_data
+
+        # Handle text related fields
+        for overridable_field in JOB_OVERRIDABLE_FIELDS:
+            override_field = overridable_field + "_override"
+            clear_override_field = "clear_" + overridable_field + "_override"
+            reset_override = cleaned_data.get(clear_override_field, False)
+            override_value = cleaned_data.get(overridable_field)
+            if reset_override:
+                setattr(obj, override_field, False)
+            elif not reset_override and (override_value is False or override_value):
+                setattr(obj, override_field, True)
+                setattr(obj, overridable_field, override_value)
+
+        obj.validated_save()
 
 
 class JobDeleteView(generic.ObjectDeleteView):

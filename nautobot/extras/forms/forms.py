@@ -871,19 +871,22 @@ class JobBulkEditForm(NautobotBulkEditForm):
     enabled = forms.NullBooleanField(
         required=False, widget=BulkEditNullBooleanSelect, help_text="Whether this job can be executed by users"
     )
-    has_sensitive_variables = forms.BooleanField(
-        required=False, help_text="Whether this job contains sensitive variables"
+    has_sensitive_variables = forms.NullBooleanField(
+        required=False, widget=BulkEditNullBooleanSelect, help_text="Whether this job contains sensitive variables"
     )
-    approval_required = forms.BooleanField(
+    approval_required = forms.NullBooleanField(
         required=False,
+        widget=BulkEditNullBooleanSelect,
         help_text="Whether the job requires approval from another user before running",
     )
-    hidden = forms.BooleanField(
+    hidden = forms.NullBooleanField(
         required=False,
+        widget=BulkEditNullBooleanSelect,
         help_text="Whether the job defaults to not being shown in the UI",
     )
-    dryrun_default = forms.BooleanField(
+    dryrun_default = forms.NullBooleanField(
         required=False,
+        widget=BulkEditNullBooleanSelect,
         help_text="Whether the job defaults to running with dryrun argument set to true",
     )
     soft_time_limit = forms.FloatField(
@@ -904,60 +907,47 @@ class JobBulkEditForm(NautobotBulkEditForm):
         required=False,
     )
     # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
-    grouping_override = forms.NullBooleanField(
+    # Text field overrides
+    clear_grouping_override = forms.BooleanField(
         required=False,
-        widget=BulkEditNullBooleanSelect,
-        help_text="If set, the configured grouping will remain even if the underlying Job source code changes",
+        help_text="If set, the configured grouping will be reverted back to the default value from the Job source code",
     )
-    name_override = forms.NullBooleanField(
+    clear_description_override = forms.BooleanField(
         required=False,
-        widget=BulkEditNullBooleanSelect,
-        help_text="If set, the configured name will remain even if the underlying Job source code changes",
+        help_text="If set, the configured description will be reverted back to the default value from the Job source code",
     )
-    description_override = forms.NullBooleanField(
+    clear_soft_time_limit_override = forms.BooleanField(
         required=False,
-        widget=BulkEditNullBooleanSelect,
-        help_text="If set, the configured description will remain even if the underlying Job source code changes",
+        help_text="If set, the configured value will be reverted back to the default value from the Job source code",
     )
-    approval_required_override = forms.NullBooleanField(
+    clear_time_limit_override = forms.BooleanField(
         required=False,
-        widget=BulkEditNullBooleanSelect,
-        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+        help_text="If set, the configured value will be reverted back to the default value from the Job source code",
     )
-    dryrun_default_override = forms.NullBooleanField(
+    clear_task_queues_override = forms.BooleanField(
         required=False,
-        widget=BulkEditNullBooleanSelect,
-        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+        help_text="If set, the configured value will be reverted back to the default value from the Job source code",
     )
-    hidden_override = forms.NullBooleanField(
+    # Boolean overrides
+    clear_approval_required_override = forms.BooleanField(
         required=False,
-        widget=BulkEditNullBooleanSelect,
-        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+        help_text="If set, the configured value will be reverted back to the default value from the Job source code",
     )
-    soft_time_limit_override = forms.NullBooleanField(
+    clear_dryrun_default_override = forms.BooleanField(
         required=False,
-        widget=BulkEditNullBooleanSelect,
-        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+        help_text="If set, the configured value will be reverted back to the default value from the Job source code",
     )
-    time_limit_override = forms.NullBooleanField(
+    clear_hidden_override = forms.BooleanField(
         required=False,
-        widget=BulkEditNullBooleanSelect,
-        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+        help_text="If set, the configured value will be reverted back to the default value from the Job source code",
     )
-    has_sensitive_variables_override = forms.NullBooleanField(
+    clear_has_sensitive_variables_override = forms.BooleanField(
         required=False,
-        widget=BulkEditNullBooleanSelect,
-        help_text="If set, the configured value will remain even if the underlying Job source code changes",
-    )
-    task_queues_override = forms.NullBooleanField(
-        required=False,
-        widget=BulkEditNullBooleanSelect,
-        help_text="If set, the configured value will remain even if the underlying Job source code changes",
+        help_text="If set, the configured value will be reverted back to the default value from the Job source code",
     )
 
     class Meta:
         model = Job
-        nullable_fields = ["grouping"]
 
 
 class JobFilterForm(BootstrapMixin, forms.Form):

@@ -34,23 +34,18 @@
         </div>
         <div class="col-md-4">
             <div class="panel panel-default">
-                <div class="panel-heading"><strong>Job</strong></div>
+                <div class="panel-heading"><strong>Attributes</strong></div>
                 <div class="panel-body">
                     {% render_field form.enabled %}
-                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.grouping override_field=form.grouping_override %}
-                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.description override_field=form.description_override %}
-                </div>
-            </div>
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>Properties</strong></div>
-                <div class="panel-body">
-                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.approval_required override_field=form.approval_required_override %}
-                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.dryrun_default override_field=form.dryrun_default_override %}
-                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.hidden override_field=form.hidden_override %}
-                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.soft_time_limit override_field=form.soft_time_limit_override %}
-                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.time_limit override_field=form.time_limit_override %}
-                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.has_sensitive_variables override_field=form.has_sensitive_variables_override %}
-                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.task_queues override_field=form.task_queues_override %}
+                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.grouping override_field=form.clear_grouping_override %}
+                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.description override_field=form.clear_description_override %}
+                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.approval_required override_field=form.clear_approval_required_override %}
+                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.dryrun_default override_field=form.clear_dryrun_default_override %}
+                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.hidden override_field=form.clear_hidden_override %}
+                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.soft_time_limit override_field=form.clear_soft_time_limit_override %}
+                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.time_limit override_field=form.clear_time_limit_override %}
+                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.has_sensitive_variables override_field=form.clear_has_sensitive_variables_override %}
+                    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.task_queues override_field=form.clear_task_queues_override %}
                 </div>
             </div>
 		    <div class="form-group text-right">
@@ -65,24 +60,16 @@
 {% endblock %}
 {% block javascript %}
 <script>
-    $("[id^=id_][id$=_override]").change(function() {
+    $("[id^=id_clear][id$=override]").change(function() {
         const override_id = $(this).attr("id");
         /* What's the form field this is an override for? */
-        const field_id = override_id.slice(0, -9);
+        const field_id = "id_" + override_id.slice(9, -9);
         const field = $("#" + field_id);
-        const field_name = field_id.slice(3);
-        if ($(this).val()==2) {
-            field.attr("disabled", false);
-        } else {
+        if ($(this).prop("checked")) {
             field.attr("disabled", true);
+        } else {
+            field.attr("disabled", false);
         }
-    });
-    $("[id^=id_][id$=_override]").change();
-    /* As mentioned above, we need to re-enable all checkboxes on form submission so they get included */
-    $("form").submit(function() {
-        $('input[type="checkbox"]:disabled').each(function() {
-            $(this).attr("disabled", null);
-        });
     });
 </script>
 {% endblock %}

@@ -1,20 +1,6 @@
 {% load form_helpers %}
 
 <div class="form-group{% if field.errors %} has-error{% endif %}">
-    <label class="col-md-3 control-label{% if field.field.required %} required{% endif %}">
-        {{ override_field.label }}
-    </label>
-    <div class="col-md-9">
-        <div class="{% if override_field.errors %} has-error{% endif %}">
-            <label for="{{ override_field.id_for_label }}">
-                {{ override_field }}
-                <i>Override default value</i>
-            </label>
-            {% if override_field.help_text %}
-                <span class="help-block">{{ override_field.help_text|safe }}</span>
-            {% endif %}
-        </div>
-    </div>
     <label class="col-md-3 control-label{% if field.field.required %} required{% endif %}" for="{{ field.id_for_label }}">
         {{ field.label }}
     </label>
@@ -25,10 +11,24 @@
             <ul>
                 {% for error in field.errors %}
                     {# Embed an HTML comment indicating the error for extraction by tests #}
-                    <!-- FORM-ERROR {{ field.name }}: {{ error }} -->
                     <li class="text-danger">{{ error }}</li>
                 {% endfor %}
             </ul>
         {% endif %}
+    </div>
+</div>
+<div class="form-group{% if field.errors %} has-error{% endif %}">
+    <label class="col-md-3 control-label{% if field.field.required %} required{% endif %}">
+    </label>
+    <div class="col-md-9">
+        <div class="{% if override_field.errors %} has-error{% endif %}">
+            <label for="{{ override_field.id_for_label }}">
+                {{ override_field }}
+                <i>Clear override</i>
+            </label>
+            {% if override_field.help_text %}
+                <span class="help-block">{{ override_field.help_text|safe }}</span>
+            {% endif %}
+        </div>
     </div>
 </div>
