@@ -1,6 +1,8 @@
 import logging
 import os
 
+from opentelemetry.instrumentation.wsgi import OpenTelemetryMiddleware
+
 from django.core import cache
 from django.core.wsgi import get_wsgi_application
 from django.db import connections
@@ -27,3 +29,4 @@ except ImportError:
     pass
 
 application = get_wsgi_application()
+application = OpenTelemetryMiddleware(application)

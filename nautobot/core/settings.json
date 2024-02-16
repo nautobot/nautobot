@@ -336,7 +336,7 @@
         },
         "DEBUG": {
             "type": "boolean",
-            "default": false, 
+            "default": false,
             "description": "This setting enables debugging."
         },
         "DEPLOYMENT_ID": {
@@ -563,6 +563,50 @@
             "type": "integer",
             "default": 50,
             "description": "The default maximum number of objects to display per page within each list of objects. Applies to both the UI and the REST API."
+        },
+        "OTEL_PYTHON_DJANGO_INSTRUMENT": {
+            "type": "boolean",
+            "default": false,
+            "description": "Setting this to true enables OpenTelemetry Metrics."
+        },
+        "OTEL_TRACES_EXPORTER": {
+            "type": "array",
+            "items": {
+                "type":"string",
+                "enum":["otlp", "console"]
+            },
+            "default": [
+                "otlp"
+            ],
+            "description": "Set how to export OpenTelemetry traces."
+        },
+        "OTEL_METRICS_EXPORTER": {
+            "type": "array",
+            "items": {
+                "type":"string",
+                "enum":["otlp", "console"]
+            },
+            "default": [
+                "otlp"
+            ],
+            "description": "Set how to export OpenTelemetry metrics."
+        },
+        "OTEL_EXPORTER_OTLP_ENDPOINT": {
+            "type": "string",
+            "format": "uri",
+            "default": "",
+            "description": "OTLP Exporter Endpoint."
+        },
+        "OTEL_EXPORTER_OTLP_PROTOCOL": {
+            "type": "string",
+            "enum": ["grpc", "http"],
+            "default": "grpc",
+            "description": "OTLP Exporter Protocol."
+        },
+        "OTEL_EXPORTER_OTLP_INSECURE": {
+            "type": "boolean",
+            "default": false,
+            "description": "Setting this to true will send OTLP data over insecure connection."
         },
         "PER_PAGE_DEFAULTS": {
             "type": "array",
