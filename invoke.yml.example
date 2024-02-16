@@ -10,6 +10,7 @@ nautobot:
     - "docker-compose.postgres.yml"
     - "docker-compose.dev.yml"
     - "docker-compose.override.yml"
+    # - "docker-compose.observability.yml"
   docker_image_names_main:
     - "networktocode/nautobot"
     - "ghcr.io/nautobot/nautobot"

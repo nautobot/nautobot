@@ -14,9 +14,9 @@ import sys
 from django.core import management
 
 from nautobot import __version__
+from nautobot.core.runner.tracing import instrument
 from nautobot.core.settings import OTEL_PYTHON_DJANGO_INSTRUMENT
 from nautobot.core.settings_funcs import is_truthy
-from nautobot.core.runner.tracing import instrument
 
 from . import importer
 from .settings import create_default_settings
