@@ -19,22 +19,6 @@ from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExp
 from nautobot.core import settings
 from nautobot import __version__
 
-
-def request_hook(span, request):
-    pass
-    # print("TESTING request_hook")
-
-
-def response_hook(span, request, response):
-    pass
-    # print("TESTING response_hook")
-
-
-def log_hook(span, record):
-    pass
-    # print("LOG HOOK")
-
-
 def instrument():
     """Instrument Nautobot."""
     # Service name is required for most backends,
@@ -64,7 +48,7 @@ def instrument():
             )
         )
 
-    DjangoInstrumentor().instrument(tracer_provider=provider, is_sql_commentor_enabled=True, request_hook=request_hook, response_hook=response_hook)
+    DjangoInstrumentor().instrument(tracer_provider=provider, is_sql_commentor_enabled=True)
     RedisInstrumentor().instrument(tracer_provider=provider)
     CeleryInstrumentor().instrument(tracer_provider=provider)
     LoggingInstrumentor(set_logging_format=True).instrument(tracer_provider=provider)
