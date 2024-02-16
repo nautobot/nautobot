@@ -225,8 +225,9 @@ opentelemetry-instrumentation-django = "^0.43b0"
 opentelemetry-instrumentation-celery = "^0.43b0"
 opentelemetry-instrumentation-psycopg2 = "^0.43b0"
 opentelemetry-instrumentation-dbapi = "^0.43b0"
-opentelemetry-exporter-otlp-proto-grpc = "^1.22.0"
 opentelemetry-instrumentation-redis = "^0.43b0"
+opentelemetry-instrumentation-logging = "^0.43b0"
+opentelemetry-instrumentation-mysqlclient = "^0.43b0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"

@@ -22,3 +22,8 @@ scrape_configs:
         target_label: "logstream"
       - source_labels: ["__meta_docker_container_label_logging_jobname"]
         target_label: "job"
+    pipeline_stages:
+    - regex:
+        expression: '^.*resource\.service\.name=(?P<service_name>[\S]+).*$'
+    - labels:
+        service_name:

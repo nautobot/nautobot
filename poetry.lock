@@ -2519,6 +2519,44 @@ instruments = ["django (>=1.10)"]
 test = ["opentelemetry-instrumentation-django[instruments]", "opentelemetry-test-utils (==0.43b0)"]
 
 [[package]]
+name = "opentelemetry-instrumentation-logging"
+version = "0.43b0"
+description = "OpenTelemetry Logging instrumentation"
+optional = false
+python-versions = "*"
+files = [
+    {file = "opentelemetry_instrumentation_logging-0.43b0-py2.py3-none-any.whl", hash = "sha256:a0e4ecc0562bdca3b4aeca904fd73ae046641d485fab28c0557129e5a685aeb6"},
+    {file = "opentelemetry_instrumentation_logging-0.43b0.tar.gz", hash = "sha256:306456ba13a032efc9f21461427087b11161e04e9fbedbc3a1f5b091782bd4fe"},
+]
+
+[package.dependencies]
+opentelemetry-api = ">=1.12,<2.0"
+opentelemetry-instrumentation = "0.43b0"
+
+[package.extras]
+test = ["opentelemetry-test-utils (==0.43b0)"]
+
+[[package]]
+name = "opentelemetry-instrumentation-mysqlclient"
+version = "0.43b0"
+description = "OpenTelemetry mysqlclient instrumentation"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "opentelemetry_instrumentation_mysqlclient-0.43b0-py3-none-any.whl", hash = "sha256:d3a366c55b13df80f4f7cbe64112d03fb73a98f26b4a151b1831c542664f5e89"},
+    {file = "opentelemetry_instrumentation_mysqlclient-0.43b0.tar.gz", hash = "sha256:1fc0c6c35c9772921386182a8136336c3ab12914deaf4a6270008307d8a7aca9"},
+]
+
+[package.dependencies]
+opentelemetry-api = ">=1.12,<2.0"
+opentelemetry-instrumentation = "0.43b0"
+opentelemetry-instrumentation-dbapi = "0.43b0"
+
+[package.extras]
+instruments = ["mysqlclient (<3)"]
+test = ["opentelemetry-instrumentation-mysqlclient[instruments]", "opentelemetry-test-utils (==0.43b0)"]
+
+[[package]]
 name = "opentelemetry-instrumentation-psycopg2"
 version = "0.43b0"
 description = "OpenTelemetry psycopg2 instrumentation"
@@ -4396,4 +4434,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "5d22897eee72a3d325356b3c0b79b0702311d3a159e8c9bedba688fcafefb9ba"
+content-hash = "5e88ee1a2c8a426323deaab88c4594897b20a903af612e88f4b97059c222441d"

@@ -6,9 +6,11 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
+from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
 from opentelemetry.instrumentation.django import DjangoInstrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.celery import CeleryInstrumentor
+from opentelemetry.instrumentation.logging import LoggingInstrumentor
 
 from opentelemetry import metrics
 from opentelemetry.sdk.metrics import MeterProvider
@@ -65,7 +67,8 @@ def instrument():
     DjangoInstrumentor().instrument(tracer_provider=provider, is_sql_commentor_enabled=True, request_hook=request_hook, response_hook=response_hook)
     RedisInstrumentor().instrument(tracer_provider=provider)
     CeleryInstrumentor().instrument(tracer_provider=provider)
-    # LoggingInstrumentor().instrument(tracer_provider=provider, log_hook=log_hook)
-    if "mysql" not in settings.DATABASES["default"]["ENGINE"]:
-        # Only run on Postgres, not MySQL
+    LoggingInstrumentor(set_logging_format=True).instrument(tracer_provider=provider)
+    if "mysql" in settings.DATABASES["default"]["ENGINE"]:
+        MySQLClientInstrumentor().instrument(tracer_provider=provider, skip_dep_check=True, enable_commenter=True)
+    else:
         Psycopg2Instrumentor().instrument(tracer_provider=provider, skip_dep_check=True, enable_commenter=True)

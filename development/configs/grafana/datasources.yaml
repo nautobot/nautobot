@@ -1,0 +1,44 @@
+---
+apiVersion: 1
+datasources:
+  - name: "Logs"
+    type: "loki"
+    url: "http://loki:3100"
+    editable: true
+    access: "proxy"
+    orgId: 1
+  - name: "Metrics"
+    type: "prometheus"
+    url: "http://mimir:9009/prometheus"
+    access: "proxy"
+    orgId: 1
+    version: 1
+    editable: true
+  - name: "Tempo"
+    type: "tempo"
+    url: "http://tempo:3200"
+    access: "proxy"
+    orgId: 1
+    version: 1
+    editable: true
+    basicAuth: false
+    jsonData:
+      tracesToLogsV2:
+        # Field with an internal link pointing to a logs data source in Grafana.
+        # datasourceUid value must match the uid value of the logs data source.
+        datasourceUid: 'loki'
+        spanStartTimeShift: '-5s'
+        spanEndTimeShift: '5s'
+        filterByTraceID: true
+        filterBySpanID: true
+  - name: "Nautobot"
+    type: "yesoreyeram-infinity-datasource"
+    orgId: 1
+    jsonData:
+      allowedHosts:
+        - "http://nautobot:8080"
+      apiKeyKey: "Authorization"
+      auth_method: "apiKey"
+    editable: true
+    secureJsonData:
+      apiKeyValue: "0123456789abcdef0123456789abcdef01234567"
