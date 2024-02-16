@@ -59,7 +59,9 @@ def instrument():
     LoggingInstrumentor(set_logging_format=True).instrument(tracer_provider=provider)
     if "mysql" in settings.DATABASES["default"]["ENGINE"]:
         from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
+
         MySQLClientInstrumentor().instrument(tracer_provider=provider, skip_dep_check=True, enable_commenter=True)
     else:
         from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
+
         Psycopg2Instrumentor().instrument(tracer_provider=provider, skip_dep_check=True, enable_commenter=True)
