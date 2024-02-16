@@ -5,8 +5,6 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExport
 from opentelemetry.instrumentation.celery import CeleryInstrumentor
 from opentelemetry.instrumentation.django import DjangoInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
-from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
-from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import ConsoleMetricExporter, PeriodicExportingMetricReader
@@ -50,11 +48,7 @@ def instrument():
                 )
             )
         if "console" in settings.OTEL_METRICS_EXPORTER:
-            readers.append(
-                PeriodicExportingMetricReader(
-                    ConsoleMetricExporter()
-                )
-            )
+            readers.append(PeriodicExportingMetricReader(ConsoleMetricExporter()))
 
         meter_provider = MeterProvider(resource=resource, metric_readers=readers)
         metrics.set_meter_provider(meter_provider)
@@ -64,6 +58,8 @@ def instrument():
     CeleryInstrumentor().instrument(tracer_provider=provider)
     LoggingInstrumentor(set_logging_format=True).instrument(tracer_provider=provider)
     if "mysql" in settings.DATABASES["default"]["ENGINE"]:
+        from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
         MySQLClientInstrumentor().instrument(tracer_provider=provider, skip_dep_check=True, enable_commenter=True)
     else:
+        from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
         Psycopg2Instrumentor().instrument(tracer_provider=provider, skip_dep_check=True, enable_commenter=True)
