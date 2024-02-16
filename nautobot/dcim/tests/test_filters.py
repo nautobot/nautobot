@@ -2470,6 +2470,8 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
         ("parent", "parent__id"),
         ("parent", "parent__name"),
         ("part_id",),
+        ("software_image_files", "software_image_files__id"),
+        ("software_image_files", "software_image_files__image_file_name"),
         ("software_version", "software_version__id"),
         ("software_version", "software_version__version"),
     ]
@@ -2526,6 +2528,8 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
         )
         inventory_items[0].tags.set(Tag.objects.get_for_model(InventoryItem))
         inventory_items[1].tags.set(Tag.objects.get_for_model(InventoryItem)[:3])
+        inventory_items[0].software_image_files.set(software_versions[1].software_image_files.all())
+        inventory_items[1].software_image_files.set(software_versions[0].software_image_files.all())
 
         InventoryItem.objects.create(device=devices[0], name="Inventory Item 1A", parent=inventory_items[0])
         InventoryItem.objects.create(device=devices[1], name="Inventory Item 2A", parent=inventory_items[1])

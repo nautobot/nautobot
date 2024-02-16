@@ -902,7 +902,6 @@ class InterfaceTemplateCreateView(generic.ComponentCreateView):
     queryset = InterfaceTemplate.objects.all()
     form = forms.InterfaceTemplateCreateForm
     model_form = forms.InterfaceTemplateForm
-    template_name = "dcim/device_component_add.html"
 
 
 class InterfaceTemplateEditView(generic.ObjectEditView):
@@ -940,7 +939,6 @@ class FrontPortTemplateCreateView(generic.ComponentCreateView):
     queryset = FrontPortTemplate.objects.all()
     form = forms.FrontPortTemplateCreateForm
     model_form = forms.FrontPortTemplateForm
-    template_name = "dcim/device_component_add.html"
 
 
 class FrontPortTemplateEditView(generic.ObjectEditView):
@@ -978,7 +976,6 @@ class RearPortTemplateCreateView(generic.ComponentCreateView):
     queryset = RearPortTemplate.objects.all()
     form = forms.RearPortTemplateCreateForm
     model_form = forms.RearPortTemplateForm
-    template_name = "dcim/device_component_add.html"
 
 
 class RearPortTemplateEditView(generic.ObjectEditView):
@@ -1016,7 +1013,6 @@ class DeviceBayTemplateCreateView(generic.ComponentCreateView):
     queryset = DeviceBayTemplate.objects.all()
     form = forms.DeviceBayTemplateCreateForm
     model_form = forms.DeviceBayTemplateForm
-    template_name = "dcim/device_component_add.html"
 
 
 class DeviceBayTemplateEditView(generic.ObjectEditView):
@@ -1477,7 +1473,6 @@ class ConsolePortCreateView(generic.ComponentCreateView):
     queryset = ConsolePort.objects.all()
     form = forms.ConsolePortCreateForm
     model_form = forms.ConsolePortForm
-    template_name = "dcim/device_component_add.html"
 
 
 class ConsolePortEditView(generic.ObjectEditView):
@@ -1540,7 +1535,6 @@ class ConsoleServerPortCreateView(generic.ComponentCreateView):
     queryset = ConsoleServerPort.objects.all()
     form = forms.ConsoleServerPortCreateForm
     model_form = forms.ConsoleServerPortForm
-    template_name = "dcim/device_component_add.html"
 
 
 class ConsoleServerPortEditView(generic.ObjectEditView):
@@ -1603,7 +1597,6 @@ class PowerPortCreateView(generic.ComponentCreateView):
     queryset = PowerPort.objects.all()
     form = forms.PowerPortCreateForm
     model_form = forms.PowerPortForm
-    template_name = "dcim/device_component_add.html"
 
 
 class PowerPortEditView(generic.ObjectEditView):
@@ -1666,7 +1659,6 @@ class PowerOutletCreateView(generic.ComponentCreateView):
     queryset = PowerOutlet.objects.all()
     form = forms.PowerOutletCreateForm
     model_form = forms.PowerOutletForm
-    template_name = "dcim/device_component_add.html"
 
 
 class PowerOutletEditView(generic.ObjectEditView):
@@ -1785,7 +1777,6 @@ class InterfaceCreateView(generic.ComponentCreateView):
     queryset = Interface.objects.all()
     form = forms.InterfaceCreateForm
     model_form = forms.InterfaceForm
-    template_name = "dcim/device_component_add.html"
 
 
 class InterfaceEditView(generic.ObjectEditView):
@@ -1850,7 +1841,6 @@ class FrontPortCreateView(generic.ComponentCreateView):
     queryset = FrontPort.objects.all()
     form = forms.FrontPortCreateForm
     model_form = forms.FrontPortForm
-    template_name = "dcim/device_component_add.html"
 
 
 class FrontPortEditView(generic.ObjectEditView):
@@ -1913,7 +1903,6 @@ class RearPortCreateView(generic.ComponentCreateView):
     queryset = RearPort.objects.all()
     form = forms.RearPortCreateForm
     model_form = forms.RearPortForm
-    template_name = "dcim/device_component_add.html"
 
 
 class RearPortEditView(generic.ObjectEditView):
@@ -1976,7 +1965,6 @@ class DeviceBayCreateView(generic.ComponentCreateView):
     queryset = DeviceBay.objects.all()
     form = forms.DeviceBayCreateForm
     model_form = forms.DeviceBayForm
-    template_name = "dcim/device_component_add.html"
 
 
 class DeviceBayEditView(generic.ObjectEditView):
@@ -2113,19 +2101,29 @@ class InventoryItemView(generic.ObjectView):
     queryset = InventoryItem.objects.all().select_related("device", "manufacturer", "software_version")
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_inventory"}
+        # Software images
+        if instance.software_version is not None:
+            software_version_images = instance.software_version.software_image_files.restrict(request.user, "view")
+        else:
+            software_version_images = []
+
+        return {
+            "breadcrumb_url": "dcim:device_inventory",
+            "software_version_images": software_version_images,
+        }
 
 
 class InventoryItemEditView(generic.ObjectEditView):
     queryset = InventoryItem.objects.all()
     model_form = forms.InventoryItemForm
+    template_name = "dcim/inventoryitem_edit.html"
 
 
 class InventoryItemCreateView(generic.ComponentCreateView):
     queryset = InventoryItem.objects.all()
     form = forms.InventoryItemCreateForm
     model_form = forms.InventoryItemForm
-    template_name = "dcim/device_component_add.html"
+    template_name = "dcim/inventoryitem_add.html"
 
 
 class InventoryItemDeleteView(generic.ObjectDeleteView):

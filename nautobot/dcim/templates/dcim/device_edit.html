@@ -138,8 +138,8 @@
             context: this,
             success: function(data) {
                 software_version_image_description.innerHTML = `
-                    Software version <b>${$('select#id_software_version').find(':selected')[0].text}</b> provides the following software images
-                    for device type <b>${$('select#id_device_type').find(':selected')[0].text}</b>:
+                    Software version <b class="text-nowrap">${$('select#id_software_version').find(':selected')[0].text}</b> provides the following software images
+                    for device type <b class="text-nowrap">${$('select#id_device_type').find(':selected')[0].text}</b>:
                 `;
 
                 for (result of data.results) {

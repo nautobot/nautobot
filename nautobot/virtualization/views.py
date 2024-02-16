@@ -331,9 +331,16 @@ class VirtualMachineView(generic.ObjectView):
         vrf_table = VRFDeviceAssignmentTable(vrf_assignments)
         vrf_table.exclude = ("device", "virtual_machine")
 
+        # Software images
+        if instance.software_version is not None:
+            software_version_images = instance.software_version.software_image_files.restrict(request.user, "view")
+        else:
+            software_version_images = []
+
         return {
             "vminterface_table": vminterface_table,
             "services": services,
+            "software_version_images": software_version_images,
             "vrf_table": vrf_table,
         }
 

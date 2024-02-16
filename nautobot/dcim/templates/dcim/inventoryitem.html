@@ -39,10 +39,7 @@
                         <td>Asset Tag</td>
                         <td>{{ object.asset_tag|placeholder }}</td>
                     </tr>
-                    <tr>
-                        <td>Software Version</td>
-                        <td>{{ object.software_version|hyperlinked_object }}</td>
-                    </tr>
+                    {% include 'dcim/inc/detail_softwareversion_softwareimagefile_rows.html' %}
                     <tr>
                         <td>Description</td>
                         <td>{{ object.description|placeholder }}</td>

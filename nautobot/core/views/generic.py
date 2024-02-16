@@ -1314,7 +1314,7 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
     queryset = None
     form = None
     model_form = None
-    template_name = None
+    template_name = "dcim/device_component_add.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "add")

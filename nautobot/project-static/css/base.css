@@ -324,6 +324,10 @@ ul.nav-tabs li a:hover,
 .label a {
     color: inherit;
 }
+ul.software-image-hierarchy {
+    list-style-type: "↳ ";
+    padding-left: 18px;
+}
 
 /* Filters */
 .filter-container {

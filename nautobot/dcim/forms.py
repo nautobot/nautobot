@@ -1731,8 +1731,8 @@ class DeviceBulkEditForm(
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
     device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
     device_redundancy_group_priority = forms.IntegerField(required=False, min_value=1)
-    software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
     software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
+    software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
 
     class Meta:
         model = Device
@@ -2825,6 +2825,12 @@ class InventoryItemForm(NautobotModelForm):
         required=False,
         label="Software version",
     )
+    software_image_files = DynamicModelMultipleChoiceField(
+        queryset=SoftwareImageFile.objects.all(),
+        required=False,
+        label="Software image files",
+        help_text="Override the software image files associated with the software version for this inventory item",
+    )
 
     class Meta:
         model = InventoryItem
@@ -2834,6 +2840,7 @@ class InventoryItemForm(NautobotModelForm):
             "name",
             "label",
             "manufacturer",
+            "software_image_files",
             "software_version",
             "part_id",
             "serial",
@@ -2864,6 +2871,12 @@ class InventoryItemCreateForm(ComponentCreateForm):
         required=False,
         label="Software version",
     )
+    software_image_files = DynamicModelMultipleChoiceField(
+        queryset=SoftwareImageFile.objects.all(),
+        required=False,
+        label="Software image files",
+        help_text="Override the software image files associated with the software version for this inventory item",
+    )
     field_order = (
         "device",
         "parent",
@@ -2871,6 +2884,7 @@ class InventoryItemCreateForm(ComponentCreateForm):
         "label_pattern",
         "manufacturer",
         "software_version",
+        "software_image_files",
         "part_id",
         "serial",
         "asset_tag",
@@ -2907,9 +2921,17 @@ class InventoryItemBulkEditForm(
     pk = forms.ModelMultipleChoiceField(queryset=InventoryItem.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
+    software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
 
     class Meta:
-        nullable_fields = ["description", "label", "manufacturer", "part_id", "software_version"]
+        nullable_fields = [
+            "description",
+            "label",
+            "manufacturer",
+            "part_id",
+            "software_image_files",
+            "software_version",
+        ]
 
 
 class InventoryItemFilterForm(DeviceComponentFilterForm):

@@ -85,6 +85,10 @@
                                     </td>
                                 </tr>
                                 <tr>
+                                    <td>Default Image</td>
+                                    <td>{{ object.default_image|render_boolean }}</td>
+                                </tr>
+                                <tr>
                                     <td>Device Types</td>
                                     <td>
                                         {% with device_type_count=object.device_types.count %}
@@ -102,6 +106,30 @@
                                         {% with device_count=object.devices.count %}
                                             {% if device_count %}
                                             <a href="{% url 'dcim:device_list' %}?software_image_files={{ object.pk }}">{{ device_count }}</a>
+                                            {% else %}
+                                            <span class="text-muted">&mdash;</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Inventory items overridden to use this file</td>
+                                    <td>
+                                        {% with inventory_item_count=object.inventory_items.count %}
+                                            {% if inventory_item_count %}
+                                            <a href="{% url 'dcim:inventoryitem_list' %}?software_image_files={{ object.pk }}">{{ inventory_item_count }}</a>
+                                            {% else %}
+                                            <span class="text-muted">&mdash;</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Virtual machines overridden to use this file</td>
+                                    <td>
+                                        {% with virtual_machine_count=object.virtual_machines.count %}
+                                            {% if virtual_machine_count %}
+                                            <a href="{% url 'virtualization:virtualmachine_list' %}?software_image_files={{ object.pk }}">{{ virtual_machine_count }}</a>
                                             {% else %}
                                             <span class="text-muted">&mdash;</span>
                                             {% endif %}
