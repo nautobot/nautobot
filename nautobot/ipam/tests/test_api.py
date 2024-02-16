@@ -27,6 +27,7 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
+    VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
@@ -101,6 +102,106 @@ class VRFTest(APIViewTestCases.APIViewTestCase):
         cls.bulk_update_data = {
             "description": "New description",
         }
+
+
+class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
+    model = VRFDeviceAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.vrfs = VRF.objects.all()
+        cls.devices = Device.objects.all()
+        locations = Location.objects.filter(location_type__name="Campus")
+        cluster_type = ClusterType.objects.create(name="Test Cluster Type")
+        clusters = (
+            Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, location=locations[0]),
+            Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type, location=locations[1]),
+            Cluster.objects.create(name="Cluster 3", cluster_type=cluster_type, location=locations[2]),
+        )
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        vm_role = Role.objects.get_for_model(VirtualMachine).first()
+
+        cls.test_vm = VirtualMachine.objects.create(
+            cluster=clusters[0],
+            name="VM 1",
+            role=vm_role,
+            status=vm_status,
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            device=cls.devices[0],
+            rd="65000:1",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            device=cls.devices[1],
+            rd="65000:2",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[0],
+            virtual_machine=cls.test_vm,
+            rd="65000:3",
+        )
+        VRFDeviceAssignment.objects.create(
+            vrf=cls.vrfs[1],
+            virtual_machine=cls.test_vm,
+            rd="65000:4",
+        )
+
+        cls.create_data = [
+            {
+                "vrf": cls.vrfs[2].pk,
+                "device": cls.devices[4].pk,
+                "virtual_machine": None,
+                "rd": "65000:4",
+            },
+            {
+                "vrf": cls.vrfs[3].pk,
+                "device": None,
+                "virtual_machine": cls.test_vm.pk,
+                "rd": "65000:5",
+            },
+            {
+                "vrf": cls.vrfs[4].pk,
+                "device": cls.devices[6].pk,
+                "virtual_machine": None,
+                "rd": "65000:6",
+            },
+        ]
+        cls.bulk_update_data = {
+            "rd": "65000:7",
+        }
+
+    def test_creating_invalid_vrf_device_assignments(self):
+        # Add object-level permission
+        duplicate_device_create_data = {
+            "vrf": self.vrfs[0].pk,
+            "device": self.devices[1].pk,
+            "virtual_machine": None,
+            "rd": "65000:6",
+        }
+        duplicate_vm_create_data = {
+            "vrf": self.vrfs[1].pk,
+            "device": None,
+            "virtual_machine": self.test_vm.pk,
+            "rd": "65000:6",
+        }
+        invalid_create_data = {
+            "vrf": self.vrfs[2].pk,
+            "device": self.devices[6].pk,
+            "virtual_machine": self.test_vm.pk,
+            "rd": "65000:6",
+        }
+        self.add_permissions("ipam.add_vrfdeviceassignment")
+        response = self.client.post(self._get_list_url(), duplicate_device_create_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("The fields device, vrf must make a unique set.", str(response.content))
+        response = self.client.post(self._get_list_url(), duplicate_vm_create_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("The fields virtual_machine, vrf must make a unique set.", str(response.content))
+        response = self.client.post(self._get_list_url(), invalid_create_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("A VRF cannot be associated with both a device and a virtual machine.", str(response.content))
 
 
 class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
@@ -227,6 +328,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         cls.namespace = Namespace.objects.first()
         cls.statuses = Status.objects.get_for_model(Prefix)
         cls.status = cls.statuses[0]
+        cls.locations = Location.objects.get_for_model(Prefix)
         cls.create_data = [
             {
                 "prefix": "192.168.4.0/24",
@@ -234,6 +336,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
                 "rir": rir.pk,
                 "type": choices.PrefixTypeChoices.TYPE_POOL,
                 "namespace": cls.namespace.pk,
+                "locations": [cls.locations[0].pk, cls.locations[1].pk],
             },
             {
                 "prefix": "2001:db8:abcd:12::/80",
@@ -241,6 +344,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
                 "rir": rir.pk,
                 "type": choices.PrefixTypeChoices.TYPE_NETWORK,
                 "namespace": cls.namespace.pk,
+                "locations": [cls.locations[0].pk],
             },
             {
                 "prefix": "192.168.6.0/24",
@@ -252,6 +356,62 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             "status": cls.statuses[0].pk,
         }
         cls.choices_fields = ["type"]
+
+    def test_legacy_api_behavior(self):
+        """
+        Tests for the 2.0/2.1 REST API of Prefixes.
+        """
+        self.add_permissions("ipam.view_prefix", "ipam.add_prefix", "ipam.change_prefix")
+
+        with self.subTest("valid GET"):
+            prefix = Prefix.objects.annotate(location_count=Count("locations")).filter(location_count=1).first()
+            self.assertIsNotNone(prefix)
+            url = reverse("ipam-api:prefix-detail", kwargs={"pk": prefix.pk})
+            response = self.client.get(f"{url}?api_version=2.1", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(response.data["location"]["id"], prefix.location.pk)
+
+        with self.subTest("invalid GET"):
+            prefix = Prefix.objects.annotate(location_count=Count("locations")).filter(location_count__gt=1).first()
+            self.assertIsNotNone(prefix)
+            url = reverse("ipam-api:prefix-detail", kwargs={"pk": prefix.pk})
+            response = self.client.get(f"{url}?api_version=2.1", **self.header)
+            self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
+            self.assertEqual(
+                str(response.data["detail"]),
+                "This object has multiple Locations and so cannot be represented in the 2.0 or 2.1 REST API. "
+                "Please correct the data or use a later API version.",
+            )
+
+        with self.subTest("valid POST"):
+            url = reverse("ipam-api:prefix-list")
+            data = {**self.create_data[0]}
+            data["location"] = data.pop("locations")[0]
+            response = self.client.post(f"{url}?api_version=2.1", data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_201_CREATED)
+            self.assertTrue(Prefix.objects.filter(pk=response.data["id"]).exists())
+
+        with self.subTest("valid PATCH"):
+            prefix = Prefix.objects.annotate(locations_count=Count("locations")).filter(locations_count=1).first()
+            self.assertIsNotNone(prefix)
+            url = reverse("ipam-api:prefix-detail", kwargs={"pk": prefix.pk})
+            data = {"location": self.create_data[0]["locations"][0]}
+            response = self.client.patch(f"{url}?api_version=2.1", data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(response.data["location"]["id"], data["location"])
+
+        with self.subTest("invalid PATCH"):
+            prefix = Prefix.objects.annotate(locations_count=Count("locations")).filter(locations_count__gt=1).first()
+            url = reverse("ipam-api:prefix-detail", kwargs={"pk": prefix.pk})
+            data = {**self.create_data[0]}
+            data["location"] = data.pop("locations")[0]
+            response = self.client.patch(f"{url}?api_version=2.1", data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
+            self.assertEqual(
+                str(response.data["detail"]),
+                "This object has multiple Locations and so cannot be represented in the 2.0 or 2.1 REST API. "
+                "Please correct the data or use a later API version.",
+            )
 
     def test_list_available_prefixes(self):
         """
@@ -838,7 +998,8 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
             self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
             self.assertEqual(
                 str(response.data["detail"]),
-                "This object does not conform to pre-2.2 behavior. Please correct data or use API version 2.2",
+                "This object has multiple Locations and so cannot be represented in the 2.0 or 2.1 REST API. "
+                "Please correct the data or use a later API version.",
             )
 
         with self.subTest("Assert CREATE"):
@@ -860,7 +1021,8 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
             self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
             self.assertEqual(
                 str(response.data["detail"]),
-                "This object does not conform to pre-2.2 behavior. Please correct data or use API version 2.2",
+                "This object has multiple Locations and so cannot be represented in the 2.0 or 2.1 REST API. "
+                "Please correct the data or use a later API version.",
             )
 
         with self.subTest("Assert UPDATE on single location"):

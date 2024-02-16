@@ -6,7 +6,7 @@ from nautobot.core.utils import permissions
 from nautobot.core.utils.data import merge_dicts_without_collision
 
 
-def count_related(model, field, *, filter_dict=None):
+def count_related(model, field, *, filter_dict=None, distinct=False):
     """
     Return a Subquery suitable for annotating a child object count.
 
@@ -22,7 +22,12 @@ def count_related(model, field, *, filter_dict=None):
     manager = model.objects
     if hasattr(model.objects, "without_tree_fields"):
         manager = manager.without_tree_fields()
-    subquery = Subquery(manager.filter(**filters).order_by().values(field).annotate(c=Count("*")).values("c"))
+    qs = manager.filter(**filters).order_by().values(field)
+    if distinct:
+        qs = qs.annotate(c=Count("pk", distinct=distinct)).values("c")
+    else:
+        qs = qs.annotate(c=Count("*")).values("c")
+    subquery = Subquery(qs)
 
     return Coalesce(subquery, 0)
 
