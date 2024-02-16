@@ -19,31 +19,24 @@ from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExp
 from nautobot.core import settings
 from nautobot import __version__
 
+
 def instrument():
     """Instrument Nautobot."""
     # Service name is required for most backends,
     # and although it's not necessary for console export,
     # it's good to set service name anyways.
-    resource = Resource(attributes={
-        SERVICE_NAME: "nautobot",
-        SERVICE_VERSION: __version__
-    })
+    resource = Resource(attributes={SERVICE_NAME: "nautobot", SERVICE_VERSION: __version__})
     provider = TracerProvider(resource=resource)
     trace.set_tracer_provider(provider)
 
     if "console" in settings.OTEL_TRACES_EXPORTER:
-        trace.get_tracer_provider().add_span_processor(
-            BatchSpanProcessor(
-                ConsoleSpanExporter()
-            )
-        )
+        trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
 
     if "otlp" in settings.OTEL_TRACES_EXPORTER:
         trace.get_tracer_provider().add_span_processor(
             BatchSpanProcessor(
                 OTLPSpanExporter(
-                    endpoint=settings.OTEL_EXPORTER_OTLP_ENDPOINT,
-                    insecure=settings.OTEL_EXPORTER_OTLP_INSECURE
+                    endpoint=settings.OTEL_EXPORTER_OTLP_ENDPOINT, insecure=settings.OTEL_EXPORTER_OTLP_INSECURE
                 )
             )
         )
