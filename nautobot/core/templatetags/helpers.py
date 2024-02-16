@@ -83,6 +83,24 @@ def hyperlinked_object(value, field="display"):
 
 @library.filter()
 @register.filter()
+def hyperlinked_email(value):
+    """Render an email address as a `mailto:` hyperlink."""
+    if value is None:
+        return placeholder(value)
+    return format_html('<a href="mailto:{}">{}</a>', value, value)
+
+
+@library.filter()
+@register.filter()
+def hyperlinked_phone_number(value):
+    """Render a phone number as a `tel:` hyperlink."""
+    if value is None:
+        return placeholder(value)
+    return format_html('<a href="tel:{}">{}</a>', value, value)
+
+
+@library.filter()
+@register.filter()
 def placeholder(value):
     """Render a muted placeholder if value is falsey, else render the value.
 

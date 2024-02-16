@@ -131,6 +131,18 @@ Humanize speeds given in Kbps.
 {{ speed_value | humanize_speed }}
 ```
 
+### hyperlinked_email
+
++++ 2.2.0
+
+Render an email address, if any, as a `mailto:` hyperlink, or render a placeholder if no email is given.
+
+### hyperlinked_phone_number
+
++++ 2.2.0
+
+Render a phone number string, if any, as a `tel:` hyperlink, or render a placeholder if no phone number is given.
+
 ### hyperlinked_object
 
 +++ 1.4.0

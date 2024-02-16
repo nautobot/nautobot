@@ -42,6 +42,16 @@ class NautobotTemplatetagsHelperTest(TestCase):
             f'<a href="/dcim/locations/{location.pk}/" title="An important location">{location!s}</a>',
         )
 
+    def test_hyperlinked_email(self):
+        self.assertEqual(
+            helpers.hyperlinked_email("admin@example.com"), '<a href="mailto:admin@example.com">admin@example.com</a>'
+        )
+        self.assertEqual(helpers.hyperlinked_email(None), '<span class="text-muted">&mdash;</span>')
+
+    def test_hyperlinked_phone_number(self):
+        self.assertEqual(helpers.hyperlinked_phone_number("555-1234"), '<a href="tel:555-1234">555-1234</a>')
+        self.assertEqual(helpers.hyperlinked_phone_number(None), '<span class="text-muted">&mdash;</span>')
+
     def test_placeholder(self):
         self.assertEqual(helpers.placeholder(None), '<span class="text-muted">&mdash;</span>')
         self.assertEqual(helpers.placeholder([]), '<span class="text-muted">&mdash;</span>')
