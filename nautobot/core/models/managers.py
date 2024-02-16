@@ -1,4 +1,5 @@
 import logging
+from typing import List, Optional, Tuple
 import uuid
 
 from django.db import transaction
@@ -17,12 +18,12 @@ class BaseManager(Manager):
 
     def bulk_create_with_changelog(
         self,
-        objs,
-        batch_size=None,
-        ignore_conflicts=False,
-        user=None,
-        request_id=None,
-    ):
+        objs: List["Model"],  # noqa: F821 - importing these causes import loops
+        batch_size: Optional[int] = None,
+        ignore_conflicts: bool = False,
+        user: Optional["User"] = None,  # noqa: F821 - importing these causes import loops
+        request_id: Optional[uuid.UUID] = None,
+    ) -> Tuple[List["ChangeLoggedModel"], List["ObjectChange"]]:  # noqa: F821 - importing these causes import loops
         """
         Implementation for `bulk_create` that automatically creates `ObjectChange` objects.
 
@@ -33,7 +34,8 @@ class BaseManager(Manager):
             user: User to associate the change log objects with, defaults to None.
             request_id: Request ID for the change log objects, defaults to a random UUID for all objects created.
 
-        Returns: A tuple of the form `created_object, created_object_change_objects`.
+        Returns:
+            A tuple of the form `created_object, created_object_change_objects`.
         """
         # Resolve circular imports
         from nautobot.extras.choices import ObjectChangeActionChoices
