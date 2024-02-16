@@ -1,6 +1,5 @@
-import contextvars
 import logging
-from uuid import UUID
+import uuid
 
 from django.db import transaction
 from django.db.models import Manager
@@ -16,17 +15,38 @@ class BaseManager(Manager):
     Adds built-in natural key support, loosely based on `django-natural-keys`.
     """
 
-    def bulk_create(
+    def bulk_create_with_changelog(
         self,
         objs,
         batch_size=None,
         ignore_conflicts=False,
-        change_log=False
+        user=None,
+        request_id=None,
     ):
-        if not change_log:
-            return super().bulk_create(objs, batch_size, ignore_conflicts)
+        """
+        Implementation for `bulk_create` that automatically creates `ObjectChange` objects.
+
+        Args:
+            objs: Objects to bulk create, see Django docs.
+            batch_size: Size of `INSERT` batches, see Django docs.
+            ignore_conflicts: Ignore conflicts with existing rows, see Django docs.
+            user: User to associate the change log objects with, defaults to None.
+            request_id: Request ID for the change log objects, defaults to a random UUID for all objects created.
+
+        Returns: A tuple of the form `created_object, created_object_change_objects`.
+        """
+        # Resolve circular imports
         from nautobot.extras.choices import ObjectChangeActionChoices
-        from nautobot.extras.models import ObjectChange, ChangeLoggedModel
+        from nautobot.extras.models import ChangeLoggedModel, ObjectChange
+
+        if not issubclass(self.model, ChangeLoggedModel):
+            raise ValueError(
+                "`bulk_create_with_changelog` can only be used on classes that inherit from `ChangeLoggedModel`."
+            )
+
+        # If not request ID was passed, generate a random one. This merely needs to be consistent over all the objects
+        # so that they are groupable.
+        request_id = request_id or uuid.uuid4()
         with transaction.atomic():
             created_objects = super().bulk_create(
                 objs=objs,
@@ -35,13 +55,12 @@ class BaseManager(Manager):
             )
             object_changes = []
             for obj in created_objects:
-                if not isinstance(obj, ChangeLoggedModel):
-                    continue
                 object_change = obj.to_objectchange(action=ObjectChangeActionChoices.ACTION_CREATE)
-                object_change.request_id = obj.pk  # Hack, should probably be a common id for all the objects
+                object_change.request_id = request_id
+                object_change.user = user
                 object_changes.append(object_change)
-            ObjectChange.objects.bulk_create(object_changes, batch_size=batch_size, change_log=False)
-        return created_objects
+            created_change_log_objects = ObjectChange.objects.bulk_create(object_changes, batch_size=batch_size)
+        return created_objects, created_change_log_objects
 
     def get_by_natural_key(self, *args):
         """

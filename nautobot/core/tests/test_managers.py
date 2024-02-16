@@ -1,7 +1,13 @@
+import uuid
+
+from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 from nautobot.dcim import models
 from nautobot.extras import models as extras_models
+from nautobot.extras.models import FileProxy, ObjectChange
+from nautobot.tenancy.models import Tenant
+from nautobot.users.models import User
 
 
 class NaturalOrderByManagerTest(TestCase):
@@ -188,3 +194,71 @@ class NaturalOrderByManagerTest(TestCase):
                 "999Charlie999",
             ]
         )
+
+
+class BulkCreateWithChangelogTests(TestCase):
+    """Test `bulk_create_with_changelog`."""
+
+    def setUp(self):
+        self.name_prefix = "BulkCreateWithChangelogTests"
+        self.user = User.objects.create(username=f"{self.name_prefix} Test User")
+        self.request_id = uuid.uuid4()
+        self.amount_of_tenants = 5
+        self.tenants_to_create = [Tenant(name=f"{self.name_prefix}.{i}") for i in range(self.amount_of_tenants)]
+
+    def test_no_user(self):
+        """Test that `bulk_create_with_changelog` works when `user` is None."""
+        _, change_log_objects = Tenant.objects.bulk_create_with_changelog(
+            self.tenants_to_create, request_id=self.request_id
+        )
+        for obj in change_log_objects:
+            self.assertEqual(None, obj.user)
+
+    def test_no_request_id(self):
+        """Test that `bulk_create_with_changelog` works when `request_id` is None."""
+        _, change_log_objects = Tenant.objects.bulk_create_with_changelog(self.tenants_to_create, user=self.user)
+        request_id = None
+        for obj in change_log_objects:
+            self.assertTrue(isinstance(obj.request_id, uuid.UUID))
+            if request_id is not None:
+                self.assertEqual(
+                    request_id,
+                    obj.request_id,
+                    "Objects created with `bulk_create_with_changelog` have differing request ids.",
+                )
+            request_id = obj.request_id
+
+    def test_basic(self):
+        """Test that `bulk_create_with_changelog` correctly creates both normal objects and change log entries."""
+        Tenant.objects.bulk_create_with_changelog(self.tenants_to_create, user=self.user, request_id=self.request_id)
+
+        tenant_queryset = Tenant.objects.filter(name__startswith=self.name_prefix)
+        object_change_queryset = ObjectChange.objects.filter(
+            changed_object_type=ContentType.objects.get_for_model(Tenant)
+        )
+
+        self.assertEqual(
+            self.amount_of_tenants,
+            tenant_queryset.count(),
+            "BaseManager.bulk_create_with_changelog creates wrong amount of objects.",
+        )
+        self.assertEqual(
+            self.amount_of_tenants,
+            object_change_queryset.count(),
+            "BaseManager.bulk_create_with_changelog creates wrong amount of changelog entries.",
+        )
+
+        for object_change in object_change_queryset:
+            self.assertEqual(
+                self.user, object_change.user, "BaseManager.bulk_create_with_changelog doesn't assign user."
+            )
+            self.assertEqual(
+                self.request_id,
+                object_change.request_id,
+                "BaseManager.bulk_create_with_changelog doesn't assign request_id.",
+            )
+
+    def test_wrong_class(self):
+        """Test `bulk_create_with_changelog` on a class that doesn't have a change log."""
+        with self.assertRaises(ValueError):
+            FileProxy.objects.bulk_create_with_changelog([FileProxy()])
