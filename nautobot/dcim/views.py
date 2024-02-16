@@ -198,7 +198,7 @@ class LocationTypeDeleteView(generic.ObjectDeleteView):
     queryset = LocationType.objects.all()
 
 
-class LocationTypeBulkImportView(generic.BulkImportView):
+class LocationTypeBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = LocationType.objects.all()
     table = tables.LocationTypeTable
 
@@ -292,7 +292,7 @@ class LocationBulkEditView(generic.BulkEditView):
     form = forms.LocationBulkEditForm
 
 
-class LocationBulkImportView(generic.BulkImportView):
+class LocationBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Location.objects.all()
     table = tables.LocationTable
 
@@ -349,7 +349,7 @@ class RackGroupDeleteView(generic.ObjectDeleteView):
     queryset = RackGroup.objects.all()
 
 
-class RackGroupBulkImportView(generic.BulkImportView):
+class RackGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = RackGroup.objects.all()
     table = tables.RackGroupTable
 
@@ -469,7 +469,7 @@ class RackDeleteView(generic.ObjectDeleteView):
     queryset = Rack.objects.all()
 
 
-class RackBulkImportView(generic.BulkImportView):
+class RackBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Rack.objects.all()
     table = tables.RackTable
 
@@ -520,7 +520,7 @@ class RackReservationDeleteView(generic.ObjectDeleteView):
     queryset = RackReservation.objects.all()
 
 
-class RackReservationImportView(generic.BulkImportView):
+class RackReservationImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = RackReservation.objects.all()
     table = tables.RackReservationTable
 
@@ -586,7 +586,7 @@ class ManufacturerDeleteView(generic.ObjectDeleteView):
     queryset = Manufacturer.objects.all()
 
 
-class ManufacturerBulkImportView(generic.BulkImportView):
+class ManufacturerBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Manufacturer.objects.all()
     table = tables.ManufacturerTable
 
@@ -1097,7 +1097,7 @@ class PlatformDeleteView(generic.ObjectDeleteView):
     queryset = Platform.objects.all()
 
 
-class PlatformBulkImportView(generic.BulkImportView):
+class PlatformBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Platform.objects.all()
     table = tables.PlatformTable
 
@@ -1433,7 +1433,7 @@ class DeviceDeleteView(generic.ObjectDeleteView):
     queryset = Device.objects.all()
 
 
-class DeviceBulkImportView(generic.BulkImportView):
+class DeviceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Device.objects.all()
     table = tables.DeviceImportTable
 
@@ -1490,7 +1490,7 @@ class ConsolePortDeleteView(generic.ObjectDeleteView):
     queryset = ConsolePort.objects.all()
 
 
-class ConsolePortBulkImportView(generic.BulkImportView):
+class ConsolePortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = ConsolePort.objects.all()
     table = tables.ConsolePortTable
 
@@ -1553,7 +1553,7 @@ class ConsoleServerPortDeleteView(generic.ObjectDeleteView):
     queryset = ConsoleServerPort.objects.all()
 
 
-class ConsoleServerPortBulkImportView(generic.BulkImportView):
+class ConsoleServerPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = ConsoleServerPort.objects.all()
     table = tables.ConsoleServerPortTable
 
@@ -1616,7 +1616,7 @@ class PowerPortDeleteView(generic.ObjectDeleteView):
     queryset = PowerPort.objects.all()
 
 
-class PowerPortBulkImportView(generic.BulkImportView):
+class PowerPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = PowerPort.objects.all()
     table = tables.PowerPortTable
 
@@ -1679,7 +1679,7 @@ class PowerOutletDeleteView(generic.ObjectDeleteView):
     queryset = PowerOutlet.objects.all()
 
 
-class PowerOutletBulkImportView(generic.BulkImportView):
+class PowerOutletBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = PowerOutlet.objects.all()
     table = tables.PowerOutletTable
 
@@ -1799,7 +1799,7 @@ class InterfaceDeleteView(generic.ObjectDeleteView):
     template_name = "dcim/device_interface_delete.html"
 
 
-class InterfaceBulkImportView(generic.BulkImportView):
+class InterfaceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Interface.objects.all()
     table = tables.InterfaceTable
 
@@ -1863,7 +1863,7 @@ class FrontPortDeleteView(generic.ObjectDeleteView):
     queryset = FrontPort.objects.all()
 
 
-class FrontPortBulkImportView(generic.BulkImportView):
+class FrontPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = FrontPort.objects.all()
     table = tables.FrontPortTable
 
@@ -1926,7 +1926,7 @@ class RearPortDeleteView(generic.ObjectDeleteView):
     queryset = RearPort.objects.all()
 
 
-class RearPortBulkImportView(generic.BulkImportView):
+class RearPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = RearPort.objects.all()
     table = tables.RearPortTable
 
@@ -2074,7 +2074,7 @@ class DeviceBayDepopulateView(generic.ObjectEditView):
         )
 
 
-class DeviceBayBulkImportView(generic.BulkImportView):
+class DeviceBayBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = DeviceBay.objects.all()
     table = tables.DeviceBayTable
 
@@ -2132,7 +2132,7 @@ class InventoryItemDeleteView(generic.ObjectDeleteView):
     queryset = InventoryItem.objects.all()
 
 
-class InventoryItemBulkImportView(generic.BulkImportView):
+class InventoryItemBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = InventoryItem.objects.all()
     table = tables.InventoryItemTable
 
@@ -2409,7 +2409,7 @@ class CableDeleteView(generic.ObjectDeleteView):
     queryset = Cable.objects.all()
 
 
-class CableBulkImportView(generic.BulkImportView):
+class CableBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Cable.objects.all()
     table = tables.CableTable
 
@@ -2728,7 +2728,7 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
         )
 
 
-class VirtualChassisBulkImportView(generic.BulkImportView):
+class VirtualChassisBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = VirtualChassis.objects.all()
     table = tables.VirtualChassisTable
 
@@ -2781,7 +2781,7 @@ class PowerPanelDeleteView(generic.ObjectDeleteView):
     queryset = PowerPanel.objects.all()
 
 
-class PowerPanelBulkImportView(generic.BulkImportView):
+class PowerPanelBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = PowerPanel.objects.all()
     table = tables.PowerPanelTable
 
@@ -2827,7 +2827,7 @@ class PowerFeedDeleteView(generic.ObjectDeleteView):
     queryset = PowerFeed.objects.all()
 
 
-class PowerFeedBulkImportView(generic.BulkImportView):
+class PowerFeedBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = PowerFeed.objects.all()
     table = tables.PowerFeedTable
 

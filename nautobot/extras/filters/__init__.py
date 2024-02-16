@@ -3,6 +3,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 import django_filters
 
+from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.filters import (
     BaseFilterSet,
     ContentTypeFilter,
@@ -335,10 +337,56 @@ class ContentTypeFilterSet(BaseFilterSet):
             "model": "icontains",
         },
     )
+    can_add = django_filters.BooleanFilter(method="_can_add", label="User can add objects of this type")
+    can_change = django_filters.BooleanFilter(method="_can_change", label="User can change objects of this type")
+    can_delete = django_filters.BooleanFilter(method="_can_delete", label="User can delete objects of this type")
+    can_view = django_filters.BooleanFilter(method="_can_view", label="User can view objects of this type")
+    has_serializer = django_filters.BooleanFilter(
+        method="_has_serializer", label="A REST API serializer exists for this type"
+    )
 
     class Meta:
         model = ContentType
         fields = ["id", "app_label", "model"]
+
+    def _can_action(self, queryset, name, value, action):
+        if not self.request or not self.request.user:
+            if value:
+                return queryset.none()
+            else:
+                return queryset
+        ct_pks = [
+            ct.pk for ct in queryset if value == self.request.user.has_perm(f"{ct.app_label}.{action}_{ct.model}")
+        ]
+        return queryset.filter(pk__in=ct_pks)
+
+    def _can_add(self, queryset, name, value):
+        return self._can_action(queryset, name, value, action="add")
+
+    def _can_change(self, queryset, name, value):
+        return self._can_action(queryset, name, value, action="change")
+
+    def _can_delete(self, queryset, name, value):
+        return self._can_action(queryset, name, value, action="delete")
+
+    def _can_view(self, queryset, name, value):
+        return self._can_action(queryset, name, value, action="view")
+
+    def _has_serializer(self, queryset, name, value):
+        ct_pks = []
+        for ct in queryset:
+            model = ct.model_class()
+            if not model:
+                continue
+            try:
+                get_serializer_for_model(model)
+            except SerializerNotFound:
+                continue
+            ct_pks.append(ct.pk)
+        if value:
+            return queryset.filter(pk__in=ct_pks)
+        else:
+            return queryset.exclude(pk__in=ct_pks)
 
 
 # TODO: remove in 2.2

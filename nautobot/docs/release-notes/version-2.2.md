@@ -35,3 +35,12 @@ Language syntax highlighting for GraphQL, JSON, XML and YAML is now supported in
 #### Jobs tile view ([#5129](https://github.com/nautobot/nautobot/issues/5129))
 
 Job list is now available in two display variants: list and tiles. List is a standard table view with no major changes introduced. Tiles is a new type of view displaying jobs in a two-dimensional grid.
+
+### Changed
+
+#### Data Imports as a System Job ([#5064](https://github.com/nautobot/nautobot/issues/5064))
+
+The CSV import functionality for all models has been changed from a synchronous operation to an asynchronous background task (system Job). As a result, imports of large CSV files will no longer fail due to browser timeout.
+
+!!! tip
+    Users now must have the `run` action permission for `extras > job` (specifically the `nautobot.core.jobs.ImportObjects` Job) in order to import objects, in addition to the normal `add` permissions for the object type being imported.

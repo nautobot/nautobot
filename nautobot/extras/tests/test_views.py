@@ -317,18 +317,7 @@ class ConfigContextTestCase(
         self.assertEqual(self._get_queryset().filter(name="Config Context with schema").count(), 0)
 
 
-# This OrganizationalObjectViewTestCase less BulkImportObjectsViewTestCase
-# because it doesn't make sense to support CSV for schemas.
-class ConfigContextSchemaTestCase(
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-    ViewTestCases.BulkEditObjectsViewTestCase,
-):
+class ConfigContextSchemaTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = ConfigContextSchema
 
     @classmethod
@@ -368,12 +357,6 @@ class ContactTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "email": "new-contact@example.com",
             "address": "Rainbow Road, Ramus NJ",
         }
-        cls.csv_data = (
-            "name,phone,email,address",
-            'new contact 2,555-0122,,"Rainbow Road, NJ, USA"',
-            "new contact 3,555-0123,newcontact2@example.com,",
-            "new contact 4,555-0124,,",
-        )
         cls.bulk_edit_data = {"address": "Carnegie Hall, New York, NY", "phone": "555-0125"}
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -593,7 +576,7 @@ class CustomLinkTestCase(
 
 
 class CustomFieldTestCase(
-    # No NotesViewTestCase or BulkImportObjectsViewTestCase, at least for now
+    # No NotesViewTestCase, at least for now
     ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
@@ -879,12 +862,6 @@ class ExportTemplateTestCase(
 class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = ExternalIntegration
     bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}", "headers": r"{}"}
-    csv_data = (
-        "name,remote_url,verify_ssl,timeout,http_method",
-        "Test External Integration 1,https://example.com/test1/,False,10,POST",
-        "Test External Integration 2,https://example.com/test2/,True,20,DELETE",
-        "Test External Integration 3,https://example.com/test3/,False,30,PATCH",
-    )
     form_data = {
         "name": "Test External Integration",
         "remote_url": "https://example.com/test1/",
@@ -900,7 +877,6 @@ class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class GitRepositoryTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
-    ViewTestCases.BulkImportObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
@@ -941,13 +917,6 @@ class GitRepositoryTestCase(
                 "extras.exporttemplate",
             ],
         }
-
-        cls.csv_data = (
-            "name,slug,remote_url,branch,secrets_group,provided_contents",
-            "Git Repository 5,git_repo_5,https://example.com,main,,extras.configcontext",
-            "Git Repository 6,git_repo_6,https://example.com,develop,Secrets Group 2,",
-            'Git Repository 7,git_repo_7,https://example.com,next,Secrets Group 2,"extras.job,extras.exporttemplate"',
-        )
 
         cls.slug_source = "name"
         cls.slug_test_object = "Repo 4"
@@ -1037,7 +1006,6 @@ class SecretTestCase(
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkImportObjectsViewTestCase,
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Secret
@@ -1072,24 +1040,8 @@ class SecretTestCase(
             "parameters": '{"variable": "VIEW_TEST_4"}',
         }
 
-        cls.csv_data = (
-            "name,provider,parameters",
-            'View Test 5,environment-variable,{"variable": "VIEW_TEST_5"}',
-            'View Test 6,environment-variable,{"variable": "VIEW_TEST_6"}',
-            'View Test 7,environment-variable,{"variable": "VIEW_TEST_7"}',
-        )
 
-
-# Not a full-fledged OrganizationalObjectViewTestCase as there's no BulkImportView for SecretsGroups
-class SecretsGroupTestCase(
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-):
+class SecretsGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = SecretsGroup
 
     @classmethod
@@ -2636,14 +2588,6 @@ class StatusTestCase(
             "content_types": [content_type.pk],
         }
 
-        cls.csv_data = (
-            "name,color,content_types"
-            "test_status1,ffffff,dcim.device"
-            'test_status2,ffffff,"dcim.device,dcim.location"'
-            "test_status3,ffffff,dcim.device"
-            "test_status4,ffffff,dcim.device"
-        )
-
         cls.bulk_edit_data = {
             "color": "000000",
         }
@@ -2660,12 +2604,6 @@ class TeamTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "email": "new-team@example.com",
             "address": "Rainbow Road, Ramus NJ",
         }
-        cls.csv_data = (
-            "name,phone,email,address",
-            'new team 2,555-0122,,"rainbow road, NJ, USA"',
-            "new team 3,555-0123,newteam2@example.com,",
-            "new team 4,555-0124,,",
-        )
         cls.bulk_edit_data = {"address": "Carnegie Hall, New York, NY"}
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -2715,13 +2653,6 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "comments": "Some comments",
             "content_types": [ct.id for ct in TaggableClassesQuery().as_queryset()],
         }
-
-        cls.csv_data = (
-            "name,color,description,content_types",
-            "Tag 4,ff0000,Fourth tag,dcim.device",
-            'Tag 5,00ff00,Fifth tag,"dcim.device,dcim.location"',
-            "Tag 6,0000ff,Sixth tag,dcim.location",
-        )
 
         cls.bulk_edit_data = {
             "color": "00ff00",
@@ -2857,15 +2788,6 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "color": ColorChoices.COLOR_GREY,
             "content_types": [content_type.pk],
         }
-
-        cls.csv_data = (
-            "name,weight,color,content_types,description",
-            "test_role1,1000,ffffff,dcim.device,A Role",
-            'test_role2,200,ffffff,"dcim.device,dcim.rack",A Role',
-            'test_role3,100,ffffff,"dcim.device,ipam.prefix",A Role',
-            'test_role4,50,ffffff,"ipam.ipaddress,ipam.vlan",A Role',
-            'test_role5,25,ffffff,"virtualization.virtualmachine",A Role',
-        )
 
         cls.bulk_edit_data = {
             "color": "000000",

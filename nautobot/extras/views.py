@@ -1064,7 +1064,7 @@ class GitRepositoryDeleteView(generic.ObjectDeleteView):
     queryset = GitRepository.objects.all()
 
 
-class GitRepositoryBulkImportView(generic.BulkImportView):
+class GitRepositoryBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = GitRepository.objects.all()
     table = tables.GitRepositoryBulkTable
 
@@ -2223,7 +2223,7 @@ class SecretDeleteView(generic.ObjectDeleteView):
     queryset = Secret.objects.all()
 
 
-class SecretBulkImportView(generic.BulkImportView):
+class SecretBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Secret.objects.all()
     table = tables.SecretTable
 
@@ -2395,7 +2395,7 @@ class StatusDeleteView(generic.ObjectDeleteView):
     queryset = Status.objects.all()
 
 
-class StatusBulkImportView(generic.BulkImportView):
+class StatusBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     """Bulk CSV import of multiple `Status` objects."""
 
     queryset = Status.objects.all()
@@ -2457,7 +2457,7 @@ class TagDeleteView(generic.ObjectDeleteView):
     queryset = Tag.objects.all()
 
 
-class TagBulkImportView(generic.BulkImportView):
+class TagBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Tag.objects.all()
     table = tables.TagTable
 

@@ -42,7 +42,7 @@
     <button type="button" class="btn btn-default"><i class="mdi mdi-cog"></i> Configure</button>
     <button type="button" class="btn btn-default"><i class="mdi mdi-filter"></i> Filter</button>
     {% add_button content_type.model_class|validated_viewname:"add" %}
-    {% import_button content_type.model_class|validated_viewname:"import" %}
+    {% job_import_button content_type %}
     {% export_button content_type %}
 </div>
 <h1>Object Listing</h1>

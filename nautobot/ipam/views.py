@@ -71,7 +71,7 @@ class NamespaceUIViewSet(
     view_mixins.ObjectEditViewMixin,
     view_mixins.ObjectDestroyViewMixin,
     view_mixins.ObjectChangeLogViewMixin,
-    view_mixins.ObjectBulkCreateViewMixin,
+    view_mixins.ObjectBulkCreateViewMixin,  # 3.0 TODO: remove, no longer used
     view_mixins.ObjectBulkDestroyViewMixin,
     view_mixins.ObjectBulkUpdateViewMixin,
     view_mixins.ObjectNotesViewMixin,
@@ -292,7 +292,7 @@ class VRFDeleteView(generic.ObjectDeleteView):
     queryset = VRF.objects.all()
 
 
-class VRFBulkImportView(generic.BulkImportView):
+class VRFBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = VRF.objects.all()
     table = tables.VRFTable
 
@@ -344,7 +344,7 @@ class RouteTargetDeleteView(generic.ObjectDeleteView):
     queryset = RouteTarget.objects.all()
 
 
-class RouteTargetBulkImportView(generic.BulkImportView):
+class RouteTargetBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = RouteTarget.objects.all()
     table = tables.RouteTargetTable
 
@@ -403,7 +403,7 @@ class RIRDeleteView(generic.ObjectDeleteView):
     queryset = RIR.objects.all()
 
 
-class RIRBulkImportView(generic.BulkImportView):
+class RIRBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = RIR.objects.all()
     table = tables.RIRTable
 
@@ -695,7 +695,7 @@ class PrefixDeleteView(generic.ObjectDeleteView):
     template_name = "ipam/prefix_delete.html"
 
 
-class PrefixBulkImportView(generic.BulkImportView):
+class PrefixBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Prefix.objects.all()
     table = tables.PrefixTable
 
@@ -1109,7 +1109,7 @@ class IPAddressBulkCreateView(generic.BulkCreateView):
     template_name = "ipam/ipaddress_bulk_add.html"
 
 
-class IPAddressBulkImportView(generic.BulkImportView):
+class IPAddressBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = IPAddress.objects.all()
     table = tables.IPAddressTable
 
@@ -1189,7 +1189,7 @@ class IPAddressVMInterfacesView(generic.ObjectView):
 #
 
 
-class IPAddressToInterfaceUIViewSet(view_mixins.ObjectBulkCreateViewMixin):
+class IPAddressToInterfaceUIViewSet(view_mixins.ObjectBulkCreateViewMixin):  # 3.0 TODO: use ObjectListViewMixin instead
     """
     ViewSet for IP Address (VM)Interface assignments.
 
@@ -1271,7 +1271,7 @@ class VLANGroupDeleteView(generic.ObjectDeleteView):
     queryset = VLANGroup.objects.all()
 
 
-class VLANGroupBulkImportView(generic.BulkImportView):
+class VLANGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = VLANGroup.objects.all()
     table = tables.VLANGroupTable
 
@@ -1370,7 +1370,7 @@ class VLANDeleteView(generic.ObjectDeleteView):
     queryset = VLAN.objects.all()
 
 
-class VLANBulkImportView(generic.BulkImportView):
+class VLANBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = VLAN.objects.all()
     table = tables.VLANTable
 
@@ -1437,7 +1437,7 @@ class ServiceEditView(generic.ObjectEditView):
         return obj
 
 
-class ServiceBulkImportView(generic.BulkImportView):
+class ServiceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Service.objects.all()
     table = tables.ServiceTable
 

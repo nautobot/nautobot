@@ -84,6 +84,7 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualChassis,
 )
+from nautobot.dcim.views import ConsoleConnectionsListView, InterfaceConnectionsListView, PowerConnectionsListView
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.models import (
     ConfigContextSchema,
@@ -157,17 +158,6 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "nestable": True,
         }
 
-        cls.csv_data = (
-            "name,parent,description,content_types,nestable",
-            # Import understands foreign-keys provided as either a composite-key (for LocationType, this is .name)...
-            f"Intermediate 3,{lt1.name},Another intermediate type,ipam.prefix,false",
-            # ... or as a PK value
-            f'Intermediate 4,{lt1.pk},Another intermediate type,"ipam.prefix,dcim.device",false',
-            "Root 3,,Another root type,,true",
-            # We also support later rows having back-references to previous rows now
-            "Leaf 3,Intermediate 3,Another leaf type,,FALSE",
-        )
-
     def _get_queryset(self):
         return super()._get_queryset().order_by("last_updated")
 
@@ -213,16 +203,6 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tags": [t.pk for t in Tag.objects.get_for_model(Location)],
             "description": "A new root location",
         }
-
-        cls.csv_data = (
-            "name,location_type,parent__name,status,tenant,description",
-            # Mix and match composite keys and PKs to confirm that the serializer handles both correctly
-            f'Root 3,"{lt1.name}",NoObject,{status.name},,',
-            f'Intermediate 2,"{lt2.pk}",{loc2.name},{status.pk},"{tenant.name}",Hello world!',
-            f'Leaf 2,"{lt3.name}",{loc3.name},{status.name},"{tenant.name}",',
-            # Back-reference to an instance that didn't exist until processing previous lines of this data
-            f'Leaf 3,"{lt3.pk}",Intermediate 2,{status.name},"{tenant.name}",',
-        )
 
         cls.bulk_edit_data = {
             "description": "A generic description",
@@ -284,14 +264,6 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "description": "A new rack group",
         }
 
-        cls.csv_data = (
-            "location,name,description",
-            f"{location.composite_key},Rack Group 4,Fourth rack group",
-            f"{location.pk},Rack Group 5,Fifth rack group",
-            f"{location.composite_key},Rack Group 6,Sixth rack group",
-            f"{location.pk},Rack Group 7,Seventh rack group",
-        )
-
 
 class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = RackReservation
@@ -320,13 +292,6 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "Rack reservation",
             "tags": [t.pk for t in Tag.objects.get_for_model(RackReservation)],
         }
-
-        cls.csv_data = (
-            "rack,units,description",
-            f'{rack.composite_key},"10,11,12",Reservation 1',
-            f"{rack.pk},13,Reservation 2",
-            f'{rack.composite_key},"16,17,18",Reservation 3',
-        )
 
         cls.bulk_edit_data = {
             "user": user3.pk,
@@ -437,13 +402,6 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "cf_rack-colors": ["red", "green", "blue"],
             "cr_backup-location__destination": [cls.locations[0].pk],
         }
-
-        cls.csv_data = (
-            "location,rack_group,name,width,u_height,status",
-            f"{cls.locations[0].composite_key},,Rack 4,19,42,{statuses[0].name}",
-            f"{cls.locations[0].pk},{rackgroups[0].composite_key},Rack 5,19,42,{statuses[1].name}",
-            f"{cls.locations[1].composite_key},{rackgroups[1].pk},Rack 6,19,42,{statuses[2].pk}",
-        )
 
         cls.bulk_edit_data = {
             "location": cls.locations[1].pk,
@@ -590,13 +548,6 @@ class HardwareFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             "description": "A new hardware family",
         }
-        cls.csv_data = (
-            "name,description",
-            "Hardware Family 4,Fourth hardware family",
-            "Hardware Family 5,Fifth hardware family",
-            "Hardware Family 6,Sixth hardware family",
-            "Hardware Family 7,Seventh hardware family",
-        )
         HardwareFamily.objects.create(name="Deletable Hardware Family 1")
         HardwareFamily.objects.create(name="Deletable Hardware Family 2", description="Delete this one")
         HardwareFamily.objects.create(name="Deletable Hardware Family 3")
@@ -618,13 +569,6 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "name": "Manufacturer X",
             "description": "A new manufacturer",
         }
-        cls.csv_data = (
-            "name,description",
-            "Manufacturer 4,Fourth manufacturer",
-            "Manufacturer 5,Fifth manufacturer",
-            "Manufacturer 6,Sixth manufacturer",
-            "Manufacturer 7,Seventh manufacturer",
-        )
 
 
 # TODO: Change base class to PrimaryObjectViewTestCase
@@ -1213,14 +1157,6 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "description": "A new platform",
         }
 
-        cls.csv_data = (
-            "name,description",
-            "Platform 4,Fourth platform",
-            "Platform 5,Fifth platform",
-            "Platform 6,Sixth platform",
-            "Platform 7,Seventh platform",
-        )
-
 
 class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Device
@@ -1313,8 +1249,6 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             ),
         )
 
-        device_bay = DeviceBay.objects.create(device=devices[0], name="Device Bay 1")
-
         cls.relationships = (
             Relationship(
                 label="BGP Router-ID",
@@ -1382,14 +1316,6 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "software_version": software_versions[1].pk,
             "software_image_files": [f.pk for f in software_versions[0].software_image_files.all()],
         }
-
-        cls.csv_data = (
-            "role,device_type,status,name,location,rack,position,face,secrets_group,parent_bay,software_version",
-            f"{deviceroles[0].name},{devicetypes[0].composite_key},{statuses[0].name},Device 4,{locations[0].name},{racks[0].composite_key},10,front,",
-            f"{deviceroles[0].pk},{devicetypes[0].pk},{statuses[0].pk},Device 5,{locations[0].pk},{racks[0].pk},20,front,",
-            f"{deviceroles[0].name},{devicetypes[0].composite_key},{statuses[0].name},Device 6,{locations[0].name},{racks[0].composite_key},30,front,Secrets Group 2",
-            f"{deviceroles[1].name},{devicetypes[1].composite_key},{statuses[0].name},Child Device,{locations[0].name},,,,,{device_bay.composite_key},{software_versions[1].pk}",
-        )
 
         cls.bulk_edit_data = {
             "device_type": devicetypes[1].pk,
@@ -1710,13 +1636,6 @@ class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "New description",
         }
 
-        cls.csv_data = (
-            "device,name",
-            f"{device.composite_key},Console Port 4",
-            f"{device.pk},Console Port 5",
-            f"{device.composite_key},Console Port 6",
-        )
-
 
 class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsoleServerPort
@@ -1755,13 +1674,6 @@ class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "type": ConsolePortTypeChoices.TYPE_RJ11,
             "description": "New description",
         }
-
-        cls.csv_data = (
-            "device,name",
-            f"{device.composite_key},Console Server Port 4",
-            f"{device.pk},Console Server Port 5",
-            f"{device.composite_key},Console Server Port 6",
-        )
 
 
 class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
@@ -1806,13 +1718,6 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "allocated_draw": 50,
             "description": "New description",
         }
-
-        cls.csv_data = (
-            "device,name",
-            f"{device.composite_key},Power Port 4",
-            f"{device.pk},Power Port 5",
-            f"{device.composite_key},Power Port 6",
-        )
 
 
 class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
@@ -1871,13 +1776,6 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "feed_leg": PowerOutletFeedLegChoices.FEED_LEG_B,
             "description": "New description",
         }
-
-        cls.csv_data = (
-            "device,name",
-            f"{device.composite_key},Power Outlet 4",
-            f"{device.pk},Power Outlet 5",
-            f"{device.composite_key},Power Outlet 6",
-        )
 
 
 class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
@@ -1993,13 +1891,6 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "vrf": vrfs[2].pk,
         }
 
-        cls.csv_data = (
-            "type,name,device__name,device__location__name,status",
-            f"virtual,Interface 4,{device.name},{device.location.name},{statuses[0].name}",
-            f"1000base-t,Interface 5,{device.name},{device.location.name},{statuses[0].name}",
-            f"1000base-t,Interface 6,{device.name},{device.location.name},{statuses[1].name}",
-        )
-
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_virtual_interface_with_parent_lag(self):
         """https://github.com/nautobot/nautobot/issues/4436."""
@@ -2086,13 +1977,6 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "New description",
         }
 
-        cls.csv_data = (
-            "device,name,type,rear_port,rear_port_position",
-            f"{device.composite_key},Front Port 4,8p8c,{rearports[3].composite_key},1",
-            f"{device.pk},Front Port 5,8p8c,{rearports[4].composite_key},1",
-            f"{device.composite_key},Front Port 6,8p8c,{rearports[5].pk},1",
-        )
-
     @unittest.skip("No DeviceBulkAddFrontPortView exists at present")
     def test_bulk_add_component(self):
         pass
@@ -2137,13 +2021,6 @@ class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "New description",
         }
 
-        cls.csv_data = (
-            "device,name,type,positions",
-            f"{device.composite_key},Rear Port 4,8p8c,1",
-            f"{device.pk},Rear Port 5,8p8c,1",
-            f"{device.composite_key},Rear Port 6,8p8c,1",
-        )
-
 
 class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = DeviceBay
@@ -2181,13 +2058,6 @@ class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cls.bulk_edit_data = {
             "description": "New description",
         }
-
-        cls.csv_data = (
-            "device,name",
-            f"{device.composite_key},Device Bay 4",
-            f"{device.pk},Device Bay 5",
-            f"{device.composite_key},Device Bay 6",
-        )
 
 
 class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
@@ -2241,13 +2111,6 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "software_version": software_versions[2].pk,
         }
 
-        cls.csv_data = (
-            "device,name,software_version",
-            f"{device.composite_key},Inventory Item 4,{software_versions[0].composite_key}",
-            f"{device.pk},Inventory Item 5,{software_versions[1].composite_key}",
-            f"{device.composite_key},Inventory Item 6,{software_versions[2].composite_key}",
-        )
-
 
 # TODO: Change base class to PrimaryObjectViewTestCase
 # Blocked by lack of common creation view for cables (termination A must be initialized)
@@ -2257,7 +2120,6 @@ class CableTestCase(
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkImportObjectsViewTestCase,
     ViewTestCases.BulkEditObjectsViewTestCase,
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
@@ -2416,13 +2278,6 @@ class CableTestCase(
             "tags": [t.pk for t in Tag.objects.get_for_model(Cable)],
         }
 
-        cls.csv_data = (
-            "termination_a_id,termination_a_type,termination_b_id,termination_b_type,status",
-            f"{interfaces[6].id},dcim.interface,{interfaces[9].id},dcim.interface,{statuses[0].name}",
-            f"{interfaces[7].id},dcim.interface,{interfaces[10].id},dcim.interface,{statuses[0].name}",
-            f"{interfaces[8].id},dcim.interface,{interfaces[11].id},dcim.interface,{statuses[0].name}",
-        )
-
         cls.bulk_edit_data = {
             "type": CableTypeChoices.TYPE_CAT5E,
             "status": statuses[0].pk,
@@ -2516,6 +2371,9 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     def get_title(self):
         return "Console Connections"
 
+    def get_list_view(self):
+        return ConsoleConnectionsListView
+
     model = ConsolePort
     filterset = ConsoleConnectionFilterSet
 
@@ -2555,6 +2413,9 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     def _get_base_url(self):
         return "dcim:power_connections_{}"
+
+    def get_list_view(self):
+        return PowerConnectionsListView
 
     model = PowerPort
     filterset = PowerConnectionFilterSet
@@ -2602,6 +2463,9 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     def get_title(self):
         return "Interface Connections"
+
+    def get_list_view(self):
+        return InterfaceConnectionsListView
 
     model = Interface
     filterset = InterfaceConnectionFilterSet
@@ -2732,13 +2596,6 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "form-MAX_NUM_FORMS": 1000,
         }
 
-        cls.csv_data = (
-            "name,domain,master",
-            f"VC4,Domain 4,{cls.devices[9].composite_key}",
-            f"VC5,Domain 5,{cls.devices[10].pk}",
-            f"VC6,Domain 6,{cls.devices[11].composite_key}",
-        )
-
         cls.bulk_edit_data = {
             "domain": "domain-x",
         }
@@ -2793,13 +2650,6 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "name": "Power Panel X",
             "tags": [t.pk for t in Tag.objects.get_for_model(PowerPanel)],
         }
-
-        cls.csv_data = (
-            "location,rack_group,name",
-            f"{locations[0].composite_key},{rackgroups[0].composite_key},Power Panel 4",
-            f"{locations[0].pk},{rackgroups[0].composite_key},Power Panel 5",
-            f"{locations[0].composite_key},{rackgroups[0].pk},Power Panel 6",
-        )
 
         cls.bulk_edit_data = {
             "location": locations[1].pk,
@@ -2860,13 +2710,6 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "comments": "New comments",
             "tags": [t.pk for t in Tag.objects.get_for_model(PowerFeed)],
         }
-
-        cls.csv_data = (
-            "power_panel,name,voltage,amperage,max_utilization,status",
-            f"{powerpanels[0].composite_key},Power Feed 4,120,20,80,{statuses[0].name}",
-            f"{powerpanels[0].pk},Power Feed 5,120,20,80,{statuses[0].pk}",
-            f"{powerpanels[0].composite_key},Power Feed 6,120,20,80,{statuses[1].name}",
-        )
 
         cls.bulk_edit_data = {
             "power_panel": powerpanels[1].pk,
@@ -2951,14 +2794,6 @@ class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses[3].pk,
             "local_config_context_data": None,
         }
-
-        cls.csv_data = (
-            "name,failover_strategy,status",
-            f"DRG δ,,{statuses[0].name}",
-            f"DRG ε,,{statuses[0].name}",
-            f"DRG ζ,active-active,{statuses[1].name}",
-            f"DRG 7,active-passive,{statuses[1].name}",
-        )
 
         cls.bulk_edit_data = {
             "failover_strategy": DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
@@ -3050,14 +2885,6 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "priority": 100,
         }
 
-        cls.csv_data = (
-            "name,protocol,status",
-            f"IRG δ,hsrp,{statuses[0].name}",
-            f"IRG ε,glbp,{statuses[1].name}",
-            f"IRG ζ,hsrp,{statuses[0].name}",
-            f"IRG 7,carp,{statuses[2].name}",
-        )
-
         cls.bulk_edit_data = {
             "protocol": InterfaceRedundancyGroupProtocolChoices.HSRP,
             "status": statuses[0].pk,
@@ -3113,14 +2940,6 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "device_types": [device_types[0].pk, device_types[1].pk],
         }
 
-        cls.csv_data = (
-            "software_version__platform__name,software_version__version,status__name,image_file_name",
-            f"{software_versions[0].platform.name},{software_versions[0].version},{statuses[0].name},sofware_image_test_case_1.bin",
-            f"{software_versions[1].platform.name},{software_versions[1].version},{statuses[1].name},sofware_image_test_case_2.bin",
-            f"{software_versions[2].platform.name},{software_versions[2].version},{statuses[0].name},sofware_image_test_case_3.bin",
-            f"{software_versions[3].platform.name},{software_versions[3].version},{statuses[2].name},sofware_image_test_case_4.bin",
-        )
-
         cls.bulk_edit_data = {
             "software_version": software_versions[0].pk,
             "status": statuses[0].pk,
@@ -3156,14 +2975,6 @@ class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "long_term_support": True,
             "pre_release": False,
         }
-
-        cls.csv_data = (
-            "platform__name,version,status__name",
-            f"{platforms[0].name},version 1.1.0,{statuses[0].name}",
-            f"{platforms[1].name},version 1.2.0,{statuses[1].name}",
-            f"{platforms[2].name},version 1.3.0,{statuses[2].name}",
-            f"{platforms[3].name},version 1.4.0,{statuses[0].name}",
-        )
 
         cls.bulk_edit_data = {
             "platform": platforms[0].pk,

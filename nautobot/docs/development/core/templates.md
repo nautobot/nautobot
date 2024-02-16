@@ -79,13 +79,6 @@ The base template for object deletion is `generic/object_delete.html`, with the 
 The base template for bulk object change is `generic/object_bulk_edit.html`. It
 does not provide any blocks for customizing the user experience.
 
-## Bulk Import
-
-The base template for bulk object import is `generic/object_bulk_import.html`, with the following blocks:
-
-* `tabs`: may provide tabs at the top of the page. The default import view is
-  not tabbed.
-
 ## Bulk Deletion
 
 The base template for bulk object deletion is `generic/object_bulk_delete.html`, with the following blocks:

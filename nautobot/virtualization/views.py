@@ -67,7 +67,7 @@ class ClusterTypeDeleteView(generic.ObjectDeleteView):
     queryset = ClusterType.objects.all()
 
 
-class ClusterTypeBulkImportView(generic.BulkImportView):
+class ClusterTypeBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = ClusterType.objects.all()
     table = tables.ClusterTypeTable
 
@@ -126,7 +126,7 @@ class ClusterGroupDeleteView(generic.ObjectDeleteView):
     queryset = ClusterGroup.objects.all()
 
 
-class ClusterGroupBulkImportView(generic.BulkImportView):
+class ClusterGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = ClusterGroup.objects.all()
     table = tables.ClusterGroupTable
 
@@ -181,7 +181,7 @@ class ClusterDeleteView(generic.ObjectDeleteView):
     queryset = Cluster.objects.all()
 
 
-class ClusterBulkImportView(generic.BulkImportView):
+class ClusterBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Cluster.objects.all()
     table = tables.ClusterTable
 
@@ -359,7 +359,7 @@ class VirtualMachineDeleteView(generic.ObjectDeleteView):
     queryset = VirtualMachine.objects.all()
 
 
-class VirtualMachineBulkImportView(generic.BulkImportView):
+class VirtualMachineBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = VirtualMachine.objects.all()
     table = tables.VirtualMachineTable
 
@@ -424,7 +424,6 @@ class VMInterfaceView(generic.ObjectView):
         }
 
 
-# 2.0 TODO: This will be collapsed into `InterfaceCreateView` and will go away.
 class VMInterfaceCreateView(generic.ComponentCreateView):
     queryset = VMInterface.objects.all()
     form = forms.VMInterfaceCreateForm
@@ -443,7 +442,7 @@ class VMInterfaceDeleteView(generic.ObjectDeleteView):
     template_name = "virtualization/virtual_machine_vminterface_delete.html"
 
 
-class VMInterfaceBulkImportView(generic.BulkImportView):
+class VMInterfaceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = VMInterface.objects.all()
     table = tables.VMInterfaceTable
 
