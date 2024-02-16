@@ -104,7 +104,7 @@ class CheckFilterForDisplayTest(TestCase):
 
 class CheckCountRelatedSubquery(TestCase):
     def test_count_related(self):
-        """Assert that InventoryItems with the same Manufacuturers do not cause issues in count_related subquery."""
+        """Assert that InventoryItems with the same Manufacturers do not cause issues in count_related subquery."""
         location = Location.objects.filter(parent__isnull=False).first()
         self.manufacturers = Manufacturer.objects.all()[:3]
         devicetype = DeviceType.objects.first()
@@ -135,6 +135,15 @@ class CheckCountRelatedSubquery(TestCase):
             device=device1, manufacturer=self.manufacturers[2], name="Inv 4"
         )
         try:
-            list(Manufacturer.objects.annotate(inventory_item_count=count_related(InventoryItem, "manufacturer")))
+            qs = Manufacturer.objects.annotate(inventory_item_count=count_related(InventoryItem, "manufacturer"))
+            list(qs)
+            self.assertEqual(qs.get(pk=self.manufacturers[0].pk).inventory_item_count, 2)
+            self.assertEqual(qs.get(pk=self.manufacturers[1].pk).inventory_item_count, 1)
+            self.assertEqual(qs.get(pk=self.manufacturers[2].pk).inventory_item_count, 2)
         except ProgrammingError:
             self.fail("count_related subquery failed with ProgrammingError")
+
+        qs = Device.objects.annotate(
+            manufacturer_count=count_related(Manufacturer, "inventory_items__device", distinct=True)
+        )
+        self.assertEqual(qs.get(pk=device1.pk).manufacturer_count, 3)
