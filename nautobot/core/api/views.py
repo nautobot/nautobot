@@ -898,6 +898,7 @@ class CSVImportFieldsForContentTypeAPIView(NautobotAPIVersionMixin, APIView):
                 status=404,
             )
         fields = get_csv_form_fields_from_serializer_class(serializer_class)
+        fields.sort(key=lambda field: (not field["required"], field["name"]))
         return Response({"fields": fields})
 
 
