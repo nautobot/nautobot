@@ -2,12 +2,20 @@
 apiVersion: 1
 datasources:
   - name: "Logs"
+    uid: "loki"
     type: "loki"
     url: "http://loki:3100"
     editable: true
     access: "proxy"
     orgId: 1
+    jsonData:
+      derivedFields:
+        - datasourceUid: "tempo"
+          matcherRegex: "trace_id=([\\S]+)"
+          url: '$${__value.raw}'
+          name: "trace_id"
   - name: "Metrics"
+    uid: "mimir"
     type: "prometheus"
     url: "http://mimir:9009/prometheus"
     access: "proxy"
@@ -15,6 +23,7 @@ datasources:
     version: 1
     editable: true
   - name: "Tempo"
+    uid: "tempo"
     type: "tempo"
     url: "http://tempo:3200"
     access: "proxy"
@@ -30,7 +39,11 @@ datasources:
         spanStartTimeShift: '-5s'
         spanEndTimeShift: '5s'
         filterByTraceID: true
-        filterBySpanID: true
+        filterBySpanID: false
+      serviceMap:
+        datasourceUid: "mimir"
+      lokiSearch:
+        datasourceUid: 'loki'
   - name: "Nautobot"
     type: "yesoreyeram-infinity-datasource"
     orgId: 1
