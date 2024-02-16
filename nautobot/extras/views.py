@@ -4,9 +4,9 @@ import logging
 from celery import chain
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
-from django.db.models import Count, ManyToManyField, ProtectedError, Q
+from django.db.models import ProtectedError, Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -37,14 +37,14 @@ from nautobot.core.views.mixins import (
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.models import Device, Rack
+from nautobot.dcim.models import Device, Interface, Location, Rack
 from nautobot.dcim.tables import DeviceTable, RackTable
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
-from nautobot.virtualization.models import VirtualMachine
+from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable
 
 from . import filters, forms, tables
@@ -1065,7 +1065,7 @@ class GitRepositoryDeleteView(generic.ObjectDeleteView):
     queryset = GitRepository.objects.all()
 
 
-class GitRepositoryBulkImportView(generic.BulkImportView):
+class GitRepositoryBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = GitRepository.objects.all()
     table = tables.GitRepositoryBulkTable
 
@@ -2121,11 +2121,12 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                     instance.ip_addresses.select_related("status", "tenant")
                     .restrict(request.user, "view")
                     .annotate(
-                        interface_count=Count("interfaces"),
-                        interface_parent_count=(Count("interfaces__device", distinct=True)),
-                        vm_interface_count=Count("vm_interfaces"),
-                        vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
-                        assigned_count=Count("interfaces") + Count("vm_interfaces"),
+                        interface_count=count_related(Interface, "ip_addresses"),
+                        interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
+                        vm_interface_count=count_related(VMInterface, "ip_addresses"),
+                        vm_interface_parent_count=count_related(
+                            VirtualMachine, "interfaces__ip_addresses", distinct=True
+                        ),
                     )
                 )
                 ipaddress_table = IPAddressTable(ipaddress)
@@ -2134,13 +2135,16 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 context["ipaddress_table"] = ipaddress_table
 
             if ContentType.objects.get_for_model(Prefix) in context["content_types"]:
-                prefixes = instance.prefixes.select_related(
-                    "location",
-                    "status",
-                    "tenant",
-                    "vlan",
-                    "namespace",
-                ).restrict(request.user, "view")
+                prefixes = (
+                    instance.prefixes.select_related(
+                        "status",
+                        "tenant",
+                        "vlan",
+                        "namespace",
+                    )
+                    .restrict(request.user, "view")
+                    .annotate(location_count=count_related(Location, "prefixes"))
+                )
                 prefix_table = PrefixTable(prefixes)
                 prefix_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(prefix_table)
@@ -2170,7 +2174,7 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
 
             if ContentType.objects.get_for_model(VLAN) in context["content_types"]:
                 vlans = (
-                    instance.vlans.annotate(location_count=Count("locations"))
+                    instance.vlans.annotate(location_count=count_related(Location, "vlans"))
                     .select_related(
                         "vlan_group",
                         "status",
@@ -2249,7 +2253,7 @@ class SecretDeleteView(generic.ObjectDeleteView):
     queryset = Secret.objects.all()
 
 
-class SecretBulkImportView(generic.BulkImportView):
+class SecretBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Secret.objects.all()
     table = tables.SecretTable
 
@@ -2421,7 +2425,7 @@ class StatusDeleteView(generic.ObjectDeleteView):
     queryset = Status.objects.all()
 
 
-class StatusBulkImportView(generic.BulkImportView):
+class StatusBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     """Bulk CSV import of multiple `Status` objects."""
 
     queryset = Status.objects.all()
@@ -2483,7 +2487,7 @@ class TagDeleteView(generic.ObjectDeleteView):
     queryset = Tag.objects.all()
 
 
-class TagBulkImportView(generic.BulkImportView):
+class TagBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Tag.objects.all()
     table = tables.TagTable
 

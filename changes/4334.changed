@@ -1,0 +1,2 @@
+Changed `Prefix.location` to `Prefix.locations` allowing multiple Locations to be associated with a given Prefix.
+Changed VLANGroup default ordering to be sorted by `name` alone since it is a unique field.

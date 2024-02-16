@@ -435,12 +435,10 @@ class Prefix(PrimaryModel):
         db_index=True,
         verbose_name="IP Version",
     )
-    location = models.ForeignKey(
+    locations = models.ManyToManyField(
         to="dcim.Location",
-        on_delete=models.PROTECT,
         related_name="prefixes",
         blank=True,
-        null=True,
     )
     namespace = models.ForeignKey(
         to="ipam.Namespace",
@@ -484,7 +482,7 @@ class Prefix(PrimaryModel):
     clone_fields = [
         "date_allocated",
         "description",
-        "location",
+        "locations",
         "namespace",
         "rir",
         "role",
@@ -525,6 +523,7 @@ class Prefix(PrimaryModel):
 
     def __init__(self, *args, **kwargs):
         prefix = kwargs.pop("prefix", None)
+        self._location = kwargs.pop("location", None)
         super().__init__(*args, **kwargs)
         self._deconstruct_prefix(prefix)
 
@@ -548,16 +547,6 @@ class Prefix(PrimaryModel):
             self.broadcast = str(broadcast)
             self.prefix_length = prefix.prefixlen
             self.ip_version = prefix.version
-
-    def clean(self):
-        super().clean()
-
-        # Validate location
-        if self.location is not None:
-            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
-                raise ValidationError(
-                    {"location": f'Prefixes may not associate to locations of type "{self.location.location_type}".'}
-                )
 
     def delete(self, *args, **kwargs):
         """
@@ -654,7 +643,10 @@ class Prefix(PrimaryModel):
         #     )
         #     raise ValidationError({"__all__": err_msg})
 
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            if self._location is not None:
+                self.location = self._location
 
         # Determine the subnets and reparent them to this prefix.
         self.reparent_subnets()
@@ -676,6 +668,22 @@ class Prefix(PrimaryModel):
     @prefix.setter
     def prefix(self, prefix):
         self._deconstruct_prefix(prefix)
+
+    @property
+    def location(self):
+        if self.locations.count() > 1:
+            raise self.locations.model.MultipleObjectsReturned(
+                "Multiple Location objects returned. Please refer to locations."
+            )
+        return self.locations.first()
+
+    @location.setter
+    def location(self, value):
+        if self.locations.count() > 1:
+            raise self.locations.model.MultipleObjectsReturned(
+                "Multiple Location objects returned. Please refer to locations."
+            )
+        self.locations.set([value])
 
     def reparent_subnets(self):
         """
@@ -1268,10 +1276,7 @@ class VLANGroup(OrganizationalModel):
     description = models.CharField(max_length=200, blank=True)
 
     class Meta:
-        ordering = (
-            "location",
-            "name",
-        )  # (location, name) may be non-unique
+        ordering = ("name",)
         verbose_name = "VLAN group"
         verbose_name_plural = "VLAN groups"
 

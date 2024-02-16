@@ -210,6 +210,14 @@ class VLANLegacySerializer(VLANSerializer):
 class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     prefix = IPFieldSerializer()
     type = ChoiceField(choices=PrefixTypeChoices, default=PrefixTypeChoices.TYPE_NETWORK)
+    # for backward compatibility with 2.0-2.1 where a Prefix had only a single Location
+    location = NautobotHyperlinkedRelatedField(
+        allow_null=True,
+        queryset=Location.objects.all(),
+        required=False,
+        view_name="dcim-api:location-detail",
+        write_only=True,
+    )
 
     class Meta:
         model = Prefix
@@ -221,7 +229,7 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "status",
             "vrf",
             "tenant",
-            "location",
+            "locations",
             "vlan",
             "role",
             "description",
@@ -248,7 +256,7 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                             "description",
                             "role",
                             "vlan",
-                            "location",
+                            "locations",
                             "tenant",
                             "rir",
                             "date_allocated",
@@ -257,6 +265,44 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                 },
             ],
         }
+
+
+class PrefixLegacySerializer(PrefixSerializer):
+    """Serializer for API versions 2.0-2.1 where a Prefix only had a single Location."""
+
+    location = NautobotHyperlinkedRelatedField(
+        allow_null=True, queryset=Location.objects.all(), required=False, view_name="dcim-api:location-detail"
+    )
+
+    class Meta(PrefixSerializer.Meta):
+        fields = [
+            "id",
+            "object_type",
+            "display",
+            "url",
+            "natural_slug",
+            "prefix",
+            "network",
+            "broadcast",
+            "prefix_length",
+            "type",
+            "status",
+            "role",
+            "parent",
+            "ip_version",
+            "location",
+            "namespace",
+            "tenant",
+            "vlan",
+            "rir",
+            "date_allocated",
+            "description",
+            "created",
+            "last_updated",
+            "tags",
+            "notes_url",
+            "custom_fields",
+        ]
 
 
 class PrefixLengthSerializer(serializers.Serializer):

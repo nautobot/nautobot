@@ -8,6 +8,7 @@ from drf_spectacular.views import (
 
 from nautobot.core.api.views import (
     APIRootView,
+    CSVImportFieldsForContentTypeAPIView,
     GetFilterSetFieldDOMElementAPIView,
     GetFilterSetFieldLookupExpressionChoicesAPIView,
     GetMenuAPIView,
@@ -21,6 +22,7 @@ from nautobot.core.api.views import (
 from nautobot.extras.plugins.urls import plugin_api_patterns
 
 core_api_patterns = [
+    path("csv-import-fields/", CSVImportFieldsForContentTypeAPIView.as_view(), name="csv-import-fields"),
     path(
         "filterset-fields/lookup-choices/",
         GetFilterSetFieldLookupExpressionChoicesAPIView.as_view(),

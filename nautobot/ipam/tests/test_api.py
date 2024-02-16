@@ -328,6 +328,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         cls.namespace = Namespace.objects.first()
         cls.statuses = Status.objects.get_for_model(Prefix)
         cls.status = cls.statuses[0]
+        cls.locations = Location.objects.get_for_model(Prefix)
         cls.create_data = [
             {
                 "prefix": "192.168.4.0/24",
@@ -335,6 +336,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
                 "rir": rir.pk,
                 "type": choices.PrefixTypeChoices.TYPE_POOL,
                 "namespace": cls.namespace.pk,
+                "locations": [cls.locations[0].pk, cls.locations[1].pk],
             },
             {
                 "prefix": "2001:db8:abcd:12::/80",
@@ -342,6 +344,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
                 "rir": rir.pk,
                 "type": choices.PrefixTypeChoices.TYPE_NETWORK,
                 "namespace": cls.namespace.pk,
+                "locations": [cls.locations[0].pk],
             },
             {
                 "prefix": "192.168.6.0/24",
@@ -353,6 +356,62 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             "status": cls.statuses[0].pk,
         }
         cls.choices_fields = ["type"]
+
+    def test_legacy_api_behavior(self):
+        """
+        Tests for the 2.0/2.1 REST API of Prefixes.
+        """
+        self.add_permissions("ipam.view_prefix", "ipam.add_prefix", "ipam.change_prefix")
+
+        with self.subTest("valid GET"):
+            prefix = Prefix.objects.annotate(location_count=Count("locations")).filter(location_count=1).first()
+            self.assertIsNotNone(prefix)
+            url = reverse("ipam-api:prefix-detail", kwargs={"pk": prefix.pk})
+            response = self.client.get(f"{url}?api_version=2.1", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(response.data["location"]["id"], prefix.location.pk)
+
+        with self.subTest("invalid GET"):
+            prefix = Prefix.objects.annotate(location_count=Count("locations")).filter(location_count__gt=1).first()
+            self.assertIsNotNone(prefix)
+            url = reverse("ipam-api:prefix-detail", kwargs={"pk": prefix.pk})
+            response = self.client.get(f"{url}?api_version=2.1", **self.header)
+            self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
+            self.assertEqual(
+                str(response.data["detail"]),
+                "This object has multiple Locations and so cannot be represented in the 2.0 or 2.1 REST API. "
+                "Please correct the data or use a later API version.",
+            )
+
+        with self.subTest("valid POST"):
+            url = reverse("ipam-api:prefix-list")
+            data = {**self.create_data[0]}
+            data["location"] = data.pop("locations")[0]
+            response = self.client.post(f"{url}?api_version=2.1", data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_201_CREATED)
+            self.assertTrue(Prefix.objects.filter(pk=response.data["id"]).exists())
+
+        with self.subTest("valid PATCH"):
+            prefix = Prefix.objects.annotate(locations_count=Count("locations")).filter(locations_count=1).first()
+            self.assertIsNotNone(prefix)
+            url = reverse("ipam-api:prefix-detail", kwargs={"pk": prefix.pk})
+            data = {"location": self.create_data[0]["locations"][0]}
+            response = self.client.patch(f"{url}?api_version=2.1", data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(response.data["location"]["id"], data["location"])
+
+        with self.subTest("invalid PATCH"):
+            prefix = Prefix.objects.annotate(locations_count=Count("locations")).filter(locations_count__gt=1).first()
+            url = reverse("ipam-api:prefix-detail", kwargs={"pk": prefix.pk})
+            data = {**self.create_data[0]}
+            data["location"] = data.pop("locations")[0]
+            response = self.client.patch(f"{url}?api_version=2.1", data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
+            self.assertEqual(
+                str(response.data["detail"]),
+                "This object has multiple Locations and so cannot be represented in the 2.0 or 2.1 REST API. "
+                "Please correct the data or use a later API version.",
+            )
 
     def test_list_available_prefixes(self):
         """
@@ -939,7 +998,8 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
             self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
             self.assertEqual(
                 str(response.data["detail"]),
-                "This object does not conform to pre-2.2 behavior. Please correct data or use API version 2.2",
+                "This object has multiple Locations and so cannot be represented in the 2.0 or 2.1 REST API. "
+                "Please correct the data or use a later API version.",
             )
 
         with self.subTest("Assert CREATE"):
@@ -961,7 +1021,8 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
             self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
             self.assertEqual(
                 str(response.data["detail"]),
-                "This object does not conform to pre-2.2 behavior. Please correct data or use API version 2.2",
+                "This object has multiple Locations and so cannot be represented in the 2.0 or 2.1 REST API. "
+                "Please correct the data or use a later API version.",
             )
 
         with self.subTest("Assert UPDATE on single location"):

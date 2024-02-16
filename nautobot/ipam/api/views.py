@@ -103,9 +103,21 @@ class RIRViewSet(NautobotModelViewSet):
 #
 
 
+@extend_schema_view(
+    bulk_update=extend_schema(
+        responses={"200": serializers.PrefixLegacySerializer(many=True)}, versions=["2.0", "2.1"]
+    ),
+    bulk_partial_update=extend_schema(
+        responses={"200": serializers.PrefixLegacySerializer(many=True)}, versions=["2.0", "2.1"]
+    ),
+    create=extend_schema(responses={"201": serializers.PrefixLegacySerializer}, versions=["2.0", "2.1"]),
+    list=extend_schema(responses={"200": serializers.PrefixLegacySerializer(many=True)}, versions=["2.0", "2.1"]),
+    partial_update=extend_schema(responses={"200": serializers.PrefixLegacySerializer}, versions=["2.0", "2.1"]),
+    retrieve=extend_schema(responses={"200": serializers.PrefixLegacySerializer}, versions=["2.0", "2.1"]),
+    update=extend_schema(responses={"200": serializers.PrefixLegacySerializer}, versions=["2.0", "2.1"]),
+)
 class PrefixViewSet(NautobotModelViewSet):
     queryset = Prefix.objects.select_related(
-        "location",
         "namespace",
         "parent",
         "rir",
@@ -113,14 +125,47 @@ class PrefixViewSet(NautobotModelViewSet):
         "status",
         "tenant",
         "vlan",
-    ).prefetch_related("tags")
+    ).prefetch_related("locations", "tags")
     serializer_class = serializers.PrefixSerializer
     filterset_class = filters.PrefixFilterSet
 
     def get_serializer_class(self):
         if self.action == "available_prefixes" and self.request.method == "POST":
             return serializers.PrefixLengthSerializer
+        if (
+            not getattr(self, "swagger_fake_view", False)
+            and self.request.major_version == 2
+            and self.request.minor_version < 2
+        ):
+            # API version 2.0 or 2.1 - use the legacy serializer
+            return serializers.PrefixLegacySerializer
         return super().get_serializer_class()
+
+    class LocationIncompatibleLegacyBehavior(APIException):
+        status_code = 412
+        default_detail = (
+            "This object has multiple Locations and so cannot be represented in the 2.0 or 2.1 REST API. "
+            "Please correct the data or use a later API version."
+        )
+        default_code = "precondition_failed"
+
+    def retrieve(self, request, pk=None):
+        try:
+            return super().retrieve(request, pk)
+        except Location.MultipleObjectsReturned as e:
+            raise self.LocationIncompatibleLegacyBehavior from e
+
+    def list(self, request):
+        try:
+            return super().list(request)
+        except Location.MultipleObjectsReturned as e:
+            raise self.LocationIncompatibleLegacyBehavior from e
+
+    def update(self, request, *args, **kwargs):
+        try:
+            return super().update(request, *args, **kwargs)
+        except Location.MultipleObjectsReturned as e:
+            raise self.LocationIncompatibleLegacyBehavior from e
 
     @extend_schema(methods=["get"], responses={200: serializers.AvailablePrefixSerializer(many=True)})
     @extend_schema(methods=["post"], responses={201: serializers.PrefixSerializer(many=False)})
@@ -351,7 +396,10 @@ class VLANViewSet(NautobotModelViewSet):
 
     class LocationIncompatibleLegacyBehavior(APIException):
         status_code = 412
-        default_detail = "This object does not conform to pre-2.2 behavior. Please correct data or use API version 2.2"
+        default_detail = (
+            "This object has multiple Locations and so cannot be represented in the 2.0 or 2.1 REST API. "
+            "Please correct the data or use a later API version."
+        )
         default_code = "precondition_failed"
 
     def get_serializer_class(self):

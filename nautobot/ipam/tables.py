@@ -53,7 +53,7 @@ PREFIX_LINK = """
 {% else %}\
 {% url 'ipam:prefix_add' %}\
 ?prefix={{ record }}&namespace={{ object.namespace.pk }}\
-{% if object.location %}&location={{ object.location.pk }}{% endif %}\
+{% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}\
 {% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
 {% endif %}\
 ">{{ record.prefix }}</a>
@@ -71,7 +71,7 @@ PREFIX_COPY_LINK = """
 {% else %}\
 {% url 'ipam:prefix_add' %}\
 ?prefix={{ record }}&namespace={{ object.namespace.pk }}\
-{% if object.location %}&location={{ object.location.pk }}{% endif %}\
+{% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}\
 {% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
 {% endif %}\
 " id="copy_{{record.id}}">{{ record.prefix }}</a>
@@ -366,12 +366,14 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     )
     # vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
-    location = tables.Column(linkify=True)
     namespace = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
     rir = tables.Column(linkify=True)
     children = tables.Column(accessor="descendants_count")
     date_allocated = tables.DateTimeColumn()
+    location_count = LinkedCountColumn(
+        viewname="dcim:location_list", url_params={"prefixes": "pk"}, verbose_name="Locations"
+    )
 
     class Meta(BaseTable.Meta):
         model = Prefix
@@ -385,7 +387,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             # "vrf",
             "namespace",
             "tenant",
-            "location",
+            "location_count",
             "vlan",
             "role",
             "rir",
@@ -400,7 +402,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             # "vrf",
             "namespace",
             "tenant",
-            "location",
+            "location_count",
             "vlan",
             "role",
             "description",
@@ -426,7 +428,7 @@ class PrefixDetailTable(PrefixTable):
             # "vrf",
             "utilization",
             "tenant",
-            "location",
+            "location_count",
             "vlan",
             "role",
             "description",
@@ -442,7 +444,7 @@ class PrefixDetailTable(PrefixTable):
             # "vrf",
             "utilization",
             "tenant",
-            "location",
+            "location_count",
             "vlan",
             "role",
             "description",

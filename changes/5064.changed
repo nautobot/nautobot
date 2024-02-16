@@ -1,0 +1,2 @@
+Changed CSV import functionality to run as a system Job, avoiding HTTP timeouts when importing large data sets.
+Updated JobResult main tab to render any return value from the Job as syntax-highlighted JSON.

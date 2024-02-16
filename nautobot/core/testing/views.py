@@ -7,7 +7,6 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.validators import URLValidator
 from django.test import override_settings, tag, TestCase as _TestCase
 from django.urls import NoReverseMatch, reverse
@@ -717,6 +716,9 @@ class ViewTestCases:
         def get_title(self):
             return helpers.bettertitle(self.model._meta.verbose_name_plural)
 
+        def get_list_view(self):
+            return lookup.get_view_for_model(self.model, view_type="List")
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
             # Make the request as an unauthenticated user
@@ -811,6 +813,12 @@ class ViewTestCases:
                 response_body,
             )
 
+            # Check if import button is absent due to user permissions
+            self.assertNotIn(
+                reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"}),
+                response_body,
+            )
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_with_constrained_permission(self):
             instance1, instance2 = self._get_queryset().all()[:2]
@@ -819,7 +827,7 @@ class ViewTestCases:
             obj_perm = users_models.ObjectPermission(
                 name="Test permission",
                 constraints={"pk": instance1.pk},
-                actions=["view"],
+                actions=["view", "add"],
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
@@ -836,6 +844,25 @@ class ViewTestCases:
             elif hasattr(self.model, "get_absolute_url"):
                 self.assertIn(instance1.get_absolute_url(), content, msg=content)
                 self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
+
+            view = self.get_list_view()
+            if view and hasattr(view, "action_buttons") and "import" in view.action_buttons:
+                # Check if import button is present due to user permissions
+                self.assertIn(
+                    (
+                        reverse(
+                            "extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"}
+                        )
+                        + f"?content_type={ContentType.objects.get_for_model(self.model).pk}"
+                    ),
+                    content,
+                )
+            else:
+                # Import not supported, no button should be present
+                self.assertNotIn(
+                    reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"}),
+                    content,
+                )
 
         @skipIf(
             "example_app" not in settings.PLUGINS,
@@ -953,14 +980,14 @@ class ViewTestCases:
                     pass
             self.assertEqual(matching_count, self.bulk_create_count)
 
-    class BulkImportObjectsViewTestCase(ModelViewTestCase):
+    class BulkImportObjectsViewTestCase(ModelViewTestCase):  # 3.0 TODO: remove this test mixin, no longer relevant.
         """
-        Create multiple instances from imported data.
+        Vestigial test case, to be removed in 3.0.
 
-        Note that CSV import, since it's now implemented via the REST API,
-        is also exercised by APIViewTestCases.CreateObjectViewTestCase.test_recreate_object_csv().
-
-        :csv_data: A list of CSV-formatted lines (starting with the headers) to be used for bulk object import.
+        This is vestigial since the introduction of the ImportObjects system Job to handle bulk-import of all
+        content-types via REST API serializers. The parsing of CSV data by the serializer is exercised by
+        APIViewTestCases.CreateObjectViewTestCase.test_recreate_object_csv(), and the basic operation of the Job is
+        exercised by nautobot.core.tests.test_jobs.
         """
 
         csv_data = ()
@@ -968,95 +995,18 @@ class ViewTestCases:
         def _get_csv_data(self):
             return "\n".join(self.csv_data)
 
+        # Just in case Apps are extending any of these tests and calling super() in them.
         def test_bulk_import_objects_without_permission(self):
-            data = {
-                "csv_data": self._get_csv_data(),
-            }
+            pass
 
-            # Test GET without permission
-            with testing.disable_warnings("django.request"):
-                self.assertHttpStatus(self.client.get(self._get_url("import")), 403)
-
-            # Try POST without permission
-            response = self.client.post(self._get_url("import"), data)
-            with testing.disable_warnings("django.request"):
-                self.assertHttpStatus(response, 403)
-
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_import_objects_with_permission(self):
-            initial_count = self._get_queryset().count()
-            data = {
-                "csv_data": self._get_csv_data(),
-            }
+            pass
 
-            # Assign model-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
-
-            # Try GET with model-level permission
-            self.assertHttpStatus(self.client.get(self._get_url("import")), 200)
-
-            # Test POST with permission
-            self.assertHttpStatus(self.client.post(self._get_url("import"), data), 200)
-            self.assertEqual(self._get_queryset().count(), initial_count + len(self.csv_data) - 1)
-
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_import_objects_with_permission_csv_file(self):
-            initial_count = self._get_queryset().count()
-            self.file_contents = bytes(self._get_csv_data(), "utf-8")
-            self.bulk_import_file = SimpleUploadedFile(name="bulk_import_data.csv", content=self.file_contents)
-            data = {
-                "csv_file": self.bulk_import_file,
-            }
+            pass
 
-            # Assign model-level permission
-            obj_perm = users_models.ObjectPermission(name="Test permission", actions=["add"])
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
-
-            # Try GET with model-level permission
-            self.assertHttpStatus(self.client.get(self._get_url("import")), 200)
-
-            # Test POST with permission
-            response = self.client.post(self._get_url("import"), data)
-            self.assertHttpStatus(response, 200)
-            self.assertEqual(
-                self._get_queryset().count(),
-                initial_count + len(self.csv_data) - 1,
-                testing.extract_page_body(response.content.decode(response.charset)),
-            )
-
-        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_import_objects_with_constrained_permission(self):
-            initial_count = self._get_queryset().count()
-            data = {
-                "csv_data": self._get_csv_data(),
-            }
-
-            # Assign constrained permission
-            obj_perm = users_models.ObjectPermission(
-                name="Test permission",
-                constraints={"pk": str(uuid.uuid4())},  # Match a non-existent pk (i.e., deny all)
-                actions=["add"],
-            )
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
-
-            # Attempt to import non-permitted objects
-            self.assertHttpStatus(self.client.post(self._get_url("import"), data), 200)
-            self.assertEqual(self._get_queryset().count(), initial_count)
-
-            # Update permission constraints
-            obj_perm.constraints = {"pk__isnull": False}  # Set permission to allow all
-            obj_perm.save()
-
-            # Import permitted objects
-            self.assertHttpStatus(self.client.post(self._get_url("import"), data), 200)
-            self.assertEqual(self._get_queryset().count(), initial_count + len(self.csv_data) - 1)
+            pass
 
     class BulkEditObjectsViewTestCase(ModelViewTestCase):
         """
@@ -1441,7 +1391,6 @@ class ViewTestCases:
         EditObjectViewTestCase,
         DeleteObjectViewTestCase,
         ListObjectsViewTestCase,
-        BulkImportObjectsViewTestCase,
         BulkEditObjectsViewTestCase,
         BulkDeleteObjectsViewTestCase,
     ):
@@ -1459,7 +1408,6 @@ class ViewTestCases:
         EditObjectViewTestCase,
         DeleteObjectViewTestCase,
         ListObjectsViewTestCase,
-        BulkImportObjectsViewTestCase,
         BulkDeleteObjectsViewTestCase,
     ):
         """
@@ -1490,7 +1438,6 @@ class ViewTestCases:
         DeleteObjectViewTestCase,
         ListObjectsViewTestCase,
         CreateMultipleObjectsViewTestCase,
-        BulkImportObjectsViewTestCase,
         BulkEditObjectsViewTestCase,
         BulkRenameObjectsViewTestCase,
         BulkDeleteObjectsViewTestCase,
