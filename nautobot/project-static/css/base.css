@@ -612,6 +612,7 @@ td span.hover_copy:hover .hover_copy_button {
     height: auto;
     margin: 0;
     padding: 29px 60px 10px 20px;
+    background-color: transparent;
 }
 
 .navbar-fixed-left .navbar-form {
