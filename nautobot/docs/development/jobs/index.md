@@ -403,6 +403,31 @@ device_type = ObjectVar(
 )
 ```
 
+Additionally, the `.` notation can be used to reference nested fields:
+
+```python
+device_type = ObjectVar(
+    model=VLAN,
+    display_field="vlan_group.name",
+    query_params={
+        "depth": 1
+    },
+)
+```
+
+In the example above, [`"depth": 1`](../../user-guide/platform-functionality/rest-api/overview.md#depth-query-parameter) was needed to influence REST API to include details of the associated records.
+Another example of using the nested reference would be to access [computed fields](../../user-guide/platform-functionality/computedfield.md) of the model:
+
+```python
+device_type = ObjectVar(
+    model=Interface,
+    display_field="computed_fields.mycustomfield",
+    query_params={
+        "include": "computed_fields"
+    },
+)
+```
+
 To limit the selections available within the list, additional query parameters can be passed as the `query_params` dictionary. For example, to show only devices with an "active" status:
 
 ```python
