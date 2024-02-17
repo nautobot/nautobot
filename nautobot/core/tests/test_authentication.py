@@ -477,15 +477,13 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         data = [
             {
                 "prefix": "10.0.9.0/24",
-                "namespace": self.namespace.pk,
-                "location": self.locations[1].pk,
-                "status": self.statuses[1].pk,
+                "site": self.sites[1].pk,
+                "status": "active",
             },
             {
                 "prefix": "10.0.10.0/24",
-                "namespace": self.namespace.pk,
-                "location": self.locations[1].pk,
-                "status": self.statuses[1].pk,
+                "site": self.sites[1].pk,
+                "status": "active",
             },
         ]
 
@@ -513,7 +511,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         obj_perm.object_types.add(ContentType.objects.get_for_model(ObjectChange))
 
         # Retrieve all ObjectChange Log entries for every user
-        url = reverse(lookup.get_route_for_model(ObjectChange, "list", api=True))
+        url = reverse("extras-api:objectchange-list")
         response_user1 = self.client.get(url, **self.header)
         response_user2 = self.client.get(url, **header_user2)
 
@@ -524,9 +522,9 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Check against 1st user's response
         self.assertEqual(response_user1.status_code, 200)
         self.assertEqual(response_user1.data["count"], 1)
-        self.assertEqual(response_user1.data["results"][0]["user"]["id"], self.user.pk)
+        self.assertEqual(response_user1.data["results"][0]["user"]["id"], str(self.user.pk))
 
         # Check against 2nd user's response
         self.assertEqual(response_user2.status_code, 200)
         self.assertEqual(response_user2.data["count"], 1)
-        self.assertEqual(response_user2.data["results"][0]["user"]["id"], obj_user2.pk)
+        self.assertEqual(response_user2.data["results"][0]["user"]["id"], str(obj_user2.pk))
