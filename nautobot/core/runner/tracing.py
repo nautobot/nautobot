@@ -1,7 +1,5 @@
 """Enable OTEL Tracing"""
 from opentelemetry import metrics, trace
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.celery import CeleryInstrumentor
 from opentelemetry.instrumentation.django import DjangoInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
@@ -29,22 +27,34 @@ def instrument():
         trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
 
     if "otlp" in settings.OTEL_TRACES_EXPORTER:
+        otlp_settings = {
+                    "endpoint": settings.OTEL_EXPORTER_OTLP_ENDPOINT
+                }
+        if settings.OTEL_EXPORTER_OTLP_PROTOCOL == "http":
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        else:
+            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+            otlp_settings["insecure"] = settings.OTEL_EXPORTER_OTLP_INSECURE
         trace.get_tracer_provider().add_span_processor(
             BatchSpanProcessor(
-                OTLPSpanExporter(
-                    endpoint=settings.OTEL_EXPORTER_OTLP_ENDPOINT, insecure=settings.OTEL_EXPORTER_OTLP_INSECURE
-                )
+                OTLPSpanExporter(**otlp_settings)
             )
         )
 
     if settings.OTEL_METRICS_EXPORTER:
         readers = []
         if "otlp" in settings.OTEL_METRICS_EXPORTER:
+            otlp_settings = {
+                    "endpoint": settings.OTEL_EXPORTER_OTLP_ENDPOINT
+                }
+            if settings.OTEL_EXPORTER_OTLP_PROTOCOL == "http":
+                from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+            else:
+                from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+                otlp_settings["insecure"] = settings.OTEL_EXPORTER_OTLP_INSECURE
             readers.append(
                 PeriodicExportingMetricReader(
-                    OTLPMetricExporter(
-                        endpoint=settings.OTEL_EXPORTER_OTLP_ENDPOINT, insecure=settings.OTEL_EXPORTER_OTLP_INSECURE
-                    )
+                    OTLPMetricExporter(**otlp_settings)
                 )
             )
         if "console" in settings.OTEL_METRICS_EXPORTER:
@@ -56,7 +66,8 @@ def instrument():
     DjangoInstrumentor().instrument(tracer_provider=provider, is_sql_commentor_enabled=True)
     RedisInstrumentor().instrument(tracer_provider=provider)
     CeleryInstrumentor().instrument(tracer_provider=provider)
-    LoggingInstrumentor(set_logging_format=True).instrument(tracer_provider=provider)
+    if settings.OTEL_PYTHON_LOG_CORRELATION:
+        LoggingInstrumentor(set_logging_format=True).instrument(tracer_provider=provider)
     if "mysql" in settings.DATABASES["default"]["ENGINE"]:
         from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
 
