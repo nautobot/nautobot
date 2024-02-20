@@ -2488,7 +2488,7 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
             Device.objects.get(name="Device 3"),
         )
 
-        software_versions = SoftwareVersion.objects.all()[:3]
+        software_versions = SoftwareVersion.objects.filter(software_image_files__isnull=False)[:3]
 
         inventory_items = (
             InventoryItem.objects.create(
