@@ -16,19 +16,20 @@ To create a new Software Version, navigate to **Devices > Software Versions** an
 !!! note
     Before creating a Software Image File, you must have an existing Software Version to associate the Software Image File to.
 
-To create a new Software Image File, navigate to **Devices > Software Image Files** and click **Add**. (`/dcim/software-image-files/add/`) The `Software Version`, `Image File Name` and `Status` fields are all required. There are optional fields for `Image File Checksum`, `Hashing Algorithm`, `Image File Size`, `Download URL`, and `Device Types`.
+To create a new Software Image File, navigate to **Devices > Software Image Files** and click **Add**. (`/dcim/software-image-files/add/`) The `Software Version`, `Image File Name` and `Status` fields are all required. There are optional fields for `Image File Checksum`, `Hashing Algorithm`, `Image File Size`, `Download URL`, `Default Image`, and `Device Types`.
 
 ![Create a Software Image File](images/software-image-files-and-versions/software-image-file-create.png)
 
 ## Assigning Software Image Files to Device Types
 
-[Device Types](../core-data-model/dcim/devicetype.md) must be associated to Software Image Files before Devices of that type can be associated to any Software Versions. In the UI, the Device Type / Software Image File association can be made either on the Device Type form or the Software Image File form. Through the REST API, you must make these associations using the through model `dcim.DeviceTypeToSoftwareImageFile` at `/api/dcim/device-types-to-software-image-files/`.
+Before a Device can be associated to a Software Version, the Software Version must contain either a Software Image File marked as the default image, or one or more Software Image Files associated to the Device's [Device Type](../core-data-model/dcim/devicetype.md). In the UI, Device Types can be associated to Software Image Files either on the Device Type form or the Software Image File form. Through the REST API, you must make these associations using the through model `dcim.DeviceTypeToSoftwareImageFile` at `/api/dcim/device-types-to-software-image-files/`.
 
 ## Assigning Software Versions to Devices, Inventory Items and Virtual Machines
-
-!!! note
-    Devices can only be associated to a Software Version if their Device Type is associated to a Software Image File for that version.
 
 Devices, Inventory Items and Virtual Machines may be associated to one Software Version to track their current version. This association can be made in the UI on the Device, Inventory Item or Virtual Machine forms. Through the REST API, the Software Version can be associated on the Device, Inventory Item and Virtual Machine REST API POST/PUT/PATCH views.
 
 ![Assign Software Version to Device](images/software-image-files-and-versions/assign-software-version-to-device.png)
+
+### Assigning Software Image Files to Devices, Inventory Items and Virtual Machines
+
+By default, the Software Image Files associated to a Software Version will be inherited by a Device, Inventory Item or Virtual Machine with the same Software Version. However, you can override this behavior by directly associating Software Image File to the Device, Inventory Item or Virtual Machine. This association can be made in the UI on the Device, Inventory Item or Virtual Machine forms. Through the REST API, the Software Image File can be associated on the Device, Inventory Item and Virtual Machine REST API POST/PUT/PATCH views.
