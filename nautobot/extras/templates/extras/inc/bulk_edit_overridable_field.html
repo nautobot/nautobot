@@ -1,5 +1,6 @@
 {% load form_helpers %}
 
+<hr>
 <div class="form-group{% if field.errors %} has-error{% endif %}">
     <label class="col-md-3 control-label{% if field.field.required %} required{% endif %}" for="{{ field.id_for_label }}">
         {{ field.label }}
