@@ -790,15 +790,16 @@ class Device(PrimaryModel, ConfigContextModel):
             )
 
         # Validate device software version has a software image file that matches the device's device type or is a default image
-        if (
-            self.software_version is not None
-            and not self.software_version.software_image_files.filter(device_types=self.device_type).exists()
-            and not self.software_version.software_image_files.filter(default_image=True).exists()
+        if self.software_version is not None and not any(
+            (
+                self.software_version.software_image_files.filter(device_types=self.device_type).exists(),
+                self.software_version.software_image_files.filter(default_image=True).exists(),
+            )
         ):
             raise ValidationError(
                 {
                     "software_version": (
-                        f"No software image files in version '{self.software_version}' are "
+                        f"No software image files for version '{self.software_version}' are "
                         f"valid for device type {self.device_type}."
                     )
                 }
