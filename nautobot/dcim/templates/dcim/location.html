@@ -121,23 +121,11 @@
             </tr>
             <tr>
                 <td>Contact Phone</td>
-                <td>
-                    {% if object.contact_phone %}
-                        <a href="tel:{{ object.contact_phone }}">{{ object.contact_phone }}</a>
-                    {% else %}
-                        <span class="text-muted">&mdash;</span>
-                    {% endif %}
-                </td>
+                <td>{{ object.contact_phone|hyperlinked_phone_number }}</td>
             </tr>
             <tr>
                 <td>Contact E-Mail</td>
-                <td>
-                    {% if object.contact_email %}
-                        <a href="mailto:{{ object.contact_email }}">{{ object.contact_email }}</a>
-                    {% else %}
-                        <span class="text-muted">&mdash;</span>
-                    {% endif %}
-                </td>
+                <td>{{ object.contact_email|hyperlinked_email }}</td>
             </tr>
         </table>
     </div>

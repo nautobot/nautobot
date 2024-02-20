@@ -13,23 +13,11 @@
         </tr>
         <tr>
             <td>Phone</td>
-            <td>
-                {% if object.phone %}
-                    <a href="tel:{{ object.phone }}">{{ object.phone }}</a>
-                {% else %}
-                    <span class="text-muted">&mdash;</span>
-                {% endif %}
-            </td>
+            <td>{{ object.phone|hyperlinked_phone_number }}</td>
         </tr>
         <tr>
             <td>E-mail</td>
-            <td>
-                {% if object.email %}
-                    <a href="mailto:{{ object.email }}">{{ object.email }}</a>
-                {% else %}
-                    <span class="text-muted">&mdash;</span>
-                {% endif %}
-            </td>
+            <td>{{ object.email|hyperlinked_email }}</td>
         </tr>
         <tr>
             <td>Address</td>
