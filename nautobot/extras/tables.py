@@ -66,19 +66,13 @@ CONTACT_OR_TEAM = """
 """
 
 PHONE = """
-{% if value %}
-    <a href="tel:{{ value }}">{{ value }}</a>
-{% else %}
-    <span class="text-muted">&mdash;</span>
-{% endif %}
+{% load helpers %}
+{{ value|hyperlinked_phone_number }}
 """
 
 EMAIL = """
-{% if value %}
-    <a href="mailto:{{ value }}">{{ value }}</a>
-{% else %}
-    <span class="text-muted">&mdash;</span>
-{% endif %}
+{% load helpers %}
+{{ value|hyperlinked_email }}
 """
 
 TAGGED_ITEM = """
