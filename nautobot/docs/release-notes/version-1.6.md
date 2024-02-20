@@ -74,6 +74,10 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 <!-- towncrier release notes start -->
 ## v1.6.12 (2024-02-20)
 
+### Added
+
+- [#5104](https://github.com/nautobot/nautobot/issues/5104) - Added User Token as permission constraints.
+
 ### Security
 
 - [#5251](https://github.com/nautobot/nautobot/issues/5251) - Updated `Django` dependency to 3.2.24 due to CVE-2024-24680.
