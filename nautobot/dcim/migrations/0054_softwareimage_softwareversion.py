@@ -110,6 +110,46 @@ class Migration(migrations.Migration):
                 nautobot.extras.models.mixins.NotesMixin,
             ),
         ),
+        migrations.CreateModel(
+            name="DeviceTypeToSoftwareImageFile",
+            fields=[
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                (
+                    "device_type",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="software_image_file_mappings",
+                        to="dcim.devicetype",
+                    ),
+                ),
+                (
+                    "software_image_file",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="device_type_mappings",
+                        to="dcim.softwareimagefile",
+                    ),
+                ),
+                (
+                    "created",
+                    models.DateTimeField(auto_now_add=True, null=True),
+                ),
+                (
+                    "last_updated",
+                    models.DateTimeField(auto_now=True, null=True),
+                ),
+            ],
+            options={
+                "verbose_name": "device type to software image file mapping",
+                "verbose_name_plural": "device type to software image file mappings",
+                "unique_together": {("device_type", "software_image_file")},
+            },
+        ),
         migrations.AddField(
             model_name="device",
             name="software_image_files",
@@ -129,7 +169,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="devicetype",
             name="software_image_files",
-            field=models.ManyToManyField(blank=True, related_name="device_types", to="dcim.SoftwareImageFile"),
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="device_types",
+                through="dcim.DeviceTypeToSoftwareImageFile",
+                to="dcim.SoftwareImageFile",
+            ),
         ),
         migrations.AddField(
             model_name="inventoryitem",

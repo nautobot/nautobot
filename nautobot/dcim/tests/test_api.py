@@ -30,6 +30,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -1125,6 +1126,8 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        # Protected FK to SoftwareImageFile prevents deletion
+        DeviceTypeToSoftwareImageFile.objects.all().delete()
         # Protected FK to SoftwareVersion prevents deletion
         Device.objects.all().update(software_version=None)
 
@@ -2694,6 +2697,7 @@ class SoftwareVersionTestCase(Mixins.SoftwareImageFileRelatedModelMixin, APIView
 
     @classmethod
     def setUpTestData(cls):
+        DeviceTypeToSoftwareImageFile.objects.all().delete()  # Protected FK to SoftwareImageFile prevents deletion
         statuses = Status.objects.get_for_model(SoftwareVersion)
         platforms = Platform.objects.all()
 
@@ -2724,3 +2728,44 @@ class SoftwareVersionTestCase(Mixins.SoftwareImageFileRelatedModelMixin, APIView
             "long_term_support": False,
             "pre_release": True,
         }
+
+
+class DeviceTypeToSoftwareImageFileTestCase(
+    Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases.APIViewTestCase
+):
+    model = DeviceTypeToSoftwareImageFile
+
+    @classmethod
+    def setUpTestData(cls):
+        DeviceTypeToSoftwareImageFile.objects.all().delete()
+        device_types = DeviceType.objects.all()[:4]
+        software_image_files = SoftwareImageFile.objects.all()[:3]
+
+        # deletable objects
+        DeviceTypeToSoftwareImageFile.objects.create(
+            device_type=device_types[0],
+            software_image_file=software_image_files[0],
+        )
+        DeviceTypeToSoftwareImageFile.objects.create(
+            device_type=device_types[0],
+            software_image_file=software_image_files[1],
+        )
+        DeviceTypeToSoftwareImageFile.objects.create(
+            device_type=device_types[0],
+            software_image_file=software_image_files[2],
+        )
+
+        cls.create_data = [
+            {
+                "software_image_file": software_image_files[0].pk,
+                "device_type": device_types[1].pk,
+            },
+            {
+                "software_image_file": software_image_files[1].pk,
+                "device_type": device_types[2].pk,
+            },
+            {
+                "software_image_file": software_image_files[2].pk,
+                "device_type": device_types[3].pk,
+            },
+        ]

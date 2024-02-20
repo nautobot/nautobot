@@ -1573,7 +1573,6 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
     software_version = DynamicModelChoiceField(
         queryset=SoftwareVersion.objects.all(),
         required=False,
-        query_params={"device_types": "$device_type"},
     )
     comments = CommentField()
 
@@ -3867,6 +3866,7 @@ class SoftwareImageFileBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFo
         widget=StaticSelect2(),
     )
     image_file_size = forms.IntegerField(required=False)
+    default_image = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Is default image")
     download_url = forms.URLField(required=False)
 
     class Meta:

@@ -14,7 +14,7 @@ import yaml
 
 from nautobot.core.models import BaseManager, RestrictedQuerySet
 from nautobot.core.models.fields import NaturalOrderingField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import (
     DeviceFaceChoices,
@@ -23,7 +23,7 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.utils import get_all_network_driver_mappings
-from nautobot.extras.models import ConfigContextModel, RoleField, StatusField
+from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
 
@@ -98,6 +98,26 @@ class HardwareFamily(PrimaryModel):
         return self.name
 
 
+@extras_features("graphql")
+class DeviceTypeToSoftwareImageFile(BaseModel, ChangeLoggedModel):
+    device_type = models.ForeignKey(
+        "dcim.DeviceType", on_delete=models.CASCADE, related_name="software_image_file_mappings"
+    )
+    software_image_file = models.ForeignKey(
+        "dcim.SoftwareImageFile", on_delete=models.PROTECT, related_name="device_type_mappings"
+    )
+
+    class Meta:
+        unique_together = [
+            ["device_type", "software_image_file"],
+        ]
+        verbose_name = "device type to software image file mapping"
+        verbose_name_plural = "device type to software image file mappings"
+
+    def __str__(self):
+        return f"{self.device_type!s} - {self.software_image_file!s}"
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -152,6 +172,7 @@ class DeviceType(PrimaryModel):
     rear_image = models.ImageField(upload_to="devicetype-images", blank=True)
     software_image_files = models.ManyToManyField(
         to="dcim.SoftwareImageFile",
+        through=DeviceTypeToSoftwareImageFile,
         related_name="device_types",
         blank=True,
         verbose_name="Software Image Files",
@@ -1109,6 +1130,28 @@ class SoftwareImageFile(PrimaryModel):
 
     def __str__(self):
         return f"{self.software_version} - {self.image_file_name}"
+
+    def delete(self, *args, **kwargs):
+        """
+        Intercept the ProtectedError for SoftwareImageFiles that are assigned to a DeviceType and provide a better
+        error message. Instead of raising an exception on the DeviceTypeToSoftwareImageFile object, raise on the DeviceType.
+        """
+
+        try:
+            return super().delete(*args, **kwargs)
+        except models.ProtectedError as exc:
+            protected_device_types = [
+                instance.device_type
+                for instance in exc.protected_objects
+                if isinstance(instance, DeviceTypeToSoftwareImageFile)
+            ]
+            if protected_device_types:
+                raise ProtectedError(
+                    "Cannot delete some instances of model 'SoftwareImageFile' because they are "
+                    "referenced through protected foreign keys: 'DeviceType.software_image_files'.",
+                    protected_device_types,
+                ) from exc
+            raise exc
 
 
 class SoftwareVersionQuerySet(RestrictedQuerySet):

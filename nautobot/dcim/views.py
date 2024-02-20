@@ -1157,6 +1157,10 @@ class DeviceView(generic.ObjectView):
             software_version_images = instance.software_version.software_image_files.restrict(
                 request.user, "view"
             ).filter(device_types=instance.device_type)
+            if not software_version_images.exists():
+                software_version_images = instance.software_version.software_image_files.restrict(
+                    request.user, "view"
+                ).filter(default_image=True)
         else:
             software_version_images = []
 

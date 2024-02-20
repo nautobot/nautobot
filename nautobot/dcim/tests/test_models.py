@@ -28,6 +28,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
     Interface,
@@ -1184,6 +1185,13 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         software_image_file.save()
         self.device_type.software_image_files.add(software_image_file)
         self.device.validated_save()
+
+
+class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
+    model = DeviceTypeToSoftwareImageFile
+
+    def test_get_docs_url(self):
+        """No docs for this through table model."""
 
 
 class CableTestCase(ModelTestCases.BaseModelTestCase):

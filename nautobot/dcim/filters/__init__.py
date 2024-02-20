@@ -6,6 +6,7 @@ from timezone_field import TimeZoneField
 
 from nautobot.core.filters import (
     BaseFilterSet,
+    ConditionalRelatedMembershipBooleanFilter,
     ContentTypeMultipleChoiceFilter,
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
@@ -46,6 +47,7 @@ from nautobot.dcim.models import (
     DeviceBayTemplate,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
     HardwareFamily,
@@ -100,6 +102,7 @@ __all__ = (
     "DeviceFilterSet",
     "DeviceRedundancyGroupFilterSet",
     "DeviceTypeFilterSet",
+    "DeviceTypeToSoftwareImageFileFilterSet",
     "FrontPortFilterSet",
     "FrontPortTemplateFilterSet",
     "HardwareFamilyFilterSet",
@@ -1727,6 +1730,9 @@ class SoftwareImageFileFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         field_name="devices",
         label="Has devices",
     )
+    default_image = django_filters.BooleanFilter(
+        label="Is default image for associated software version",
+    )
 
     class Meta:
         model = SoftwareImageFile
@@ -1790,4 +1796,23 @@ class SoftwareVersionFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
 
     class Meta:
         model = SoftwareVersion
+        fields = "__all__"
+
+
+class DeviceTypeToSoftwareImageFileFilterSet(BaseFilterSet):
+    """Filters for DeviceTypeToSoftwareImageFile model."""
+
+    device_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DeviceType.objects.all(),
+        to_field_name="model",
+        label="Device type (model or ID)",
+    )
+    software_image_file = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareImageFile.objects.all(),
+        to_field_name="image_file_name",
+        label="Software image file (image file name or ID)",
+    )
+
+    class Meta:
+        model = DeviceTypeToSoftwareImageFile
         fields = "__all__"
