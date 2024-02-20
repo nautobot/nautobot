@@ -1,2 +1,0 @@
-Changed `TreeQuerySet.ancestors` implementation to a more efficient approach for shallow trees.
-Changed the location detail view not to annotate tree fields on its queries.
