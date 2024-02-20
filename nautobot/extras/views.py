@@ -1496,6 +1496,7 @@ class JobEditView(generic.ObjectEditView):
 
 class JobBulkEditView(generic.BulkEditView):
     queryset = JobModel.objects.all()
+    filterset = filters.JobFilterSet
     table = tables.JobTable
     form = forms.JobBulkEditForm
     template_name = "extras/job_bulk_edit.html"
@@ -1524,6 +1525,7 @@ class JobDeleteView(generic.ObjectDeleteView):
 
 class JobBulkDeleteView(generic.BulkDeleteView):
     queryset = JobModel.objects.all()
+    filterset = filters.JobFilterSet
     table = tables.JobTable
 
 

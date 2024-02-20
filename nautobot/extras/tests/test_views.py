@@ -26,7 +26,7 @@ from nautobot.extras.choices import (
     SecretsGroupSecretTypeChoices,
     WebhookHttpMethodChoices,
 )
-from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
+from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON, JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -1639,6 +1639,8 @@ class JobResultTestCase(
 
 class JobTestCase(
     # note no CreateObjectViewTestCase - we do not support user creation of Job records
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.GetObjectViewTestCase,
@@ -1722,6 +1724,144 @@ class JobTestCase(
             "task_queues": "overridden,priority",
             "task_queues_override": True,
         }
+        # This form is emulating the non-conventional JobBulkEditForm
+        cls.bulk_edit_data = {
+            "enabled": True,
+            "clear_grouping_override": True,
+            "grouping": "",
+            "clear_description_override": False,
+            "description": "Overriden Description",
+            "clear_dryrun_default_override": False,
+            "dryrun_default": "",
+            "clear_hidden_override": True,
+            "hidden": False,
+            "clear_approval_required_override": True,
+            "approval_required": True,
+            "clear_soft_time_limit_override": False,
+            "soft_time_limit": 350,
+            "clear_time_limit_override": True,
+            "time_limit": "",
+            "has_sensitive_variables": False,
+            "clear_has_sensitive_variables_override": False,
+            "task_queues": "overridden,priority",
+            "clear_task_queues_override": False,
+        }
+
+    def validate_job_data_after_bulk_edit(self, pk_list, old_data):
+        # Name is bulk-editable
+        overridable_fields = [field for field in JOB_OVERRIDABLE_FIELDS if field != "name"]
+        clear_override_fields = ["clear_" + field + "_override" for field in overridable_fields]
+        for instance in self._get_queryset().filter(pk__in=pk_list):
+            self.assertEqual(instance.enabled, True)
+            job_class = instance.job_class
+            if job_class is not None:
+                for clear_override_field in clear_override_fields:
+                    overridable_field = clear_override_field[6:-9]
+                    override_field = clear_override_field[6:]
+                    reset_override = self.bulk_edit_data.get(clear_override_field, False)
+                    if overridable_field == "task_queues":
+                        override_value = self.bulk_edit_data.get(overridable_field).split(",")
+                    else:
+                        override_value = self.bulk_edit_data.get(overridable_field)
+                    # if clear_override is true, assert that values are reverted back to default values
+                    if reset_override is True:
+                        self.assertEqual(getattr(instance, overridable_field), getattr(job_class, overridable_field))
+                        self.assertEqual(getattr(instance, override_field), False)
+                    # if clear_override is false, assert that job attribute is set to the new value from the form
+                    elif reset_override is False and (override_value is False or override_value):
+                        self.assertEqual(getattr(instance, overridable_field), override_value)
+                        self.assertEqual(getattr(instance, override_field), True)
+                    # if clear_override is false and no new value is entered, assert that value of the job is unchanged
+                    else:
+                        self.assertEqual(getattr(instance, overridable_field), old_data[instance.pk][overridable_field])
+                        self.assertEqual(getattr(instance, override_field), old_data[instance.pk][overridable_field])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_edit_objects_with_permission(self):
+        pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
+        instances = self._get_queryset().filter(pk__in=pk_list)
+        overridable_fields = [field for field in JOB_OVERRIDABLE_FIELDS if field != "name"]
+        old_data = {}
+        for instance in instances:
+            old_data[instance.pk] = {}
+            job_class = instance.job_class
+            if job_class is not None:
+                for field in overridable_fields:
+                    old_data[instance.pk][field] = getattr(job_class, field)
+
+        data = {
+            "pk": pk_list,
+            "_apply": True,  # Form button
+        }
+        # Append the form data to the request
+        data.update(post_data(self.bulk_edit_data))
+        # Assign model-level permission
+        self.add_permissions("extras.change_job")
+        # Try POST with model-level permission
+        self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 302)
+        self.validate_job_data_after_bulk_edit(pk_list, old_data)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_edit_objects_with_constrained_permission(self):
+        # Select some objects that are *not* already set to match the first value in self.bulk_edit_data or null.
+        # We have to exclude null cases because Django filter()/exclude() doesn't like `__in=[None]` as a case.
+        overridable_fields = [field for field in JOB_OVERRIDABLE_FIELDS if field != "name"]
+        attr_name = "description"
+        objects = (
+            self._get_queryset()
+            .exclude(**{attr_name: self.bulk_edit_data[attr_name]})
+            .exclude(**{f"{attr_name}__isnull": True})
+        )[:3]
+        self.assertEqual(objects.count(), 3)
+        pk_list = list(objects.values_list("pk", flat=True))
+
+        # Store old Job data before Bulk Edit so we can compare later
+        old_data = {}
+        for instance in objects:
+            old_data[instance.pk] = {}
+            job_class = instance.job_class
+            if job_class is not None:
+                for field in overridable_fields:
+                    old_data[instance.pk][field] = getattr(job_class, field)
+
+        # Define a permission that permits the above objects, but will not permit them after updating them.
+        field = self.model._meta.get_field(attr_name)
+        values = [field.value_from_object(obj) for obj in objects]
+
+        # Assign constrained permission
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={f"{attr_name}__in": values},
+            actions=["change"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # Build form data
+        data = {
+            "pk": pk_list,
+            "_apply": True,  # Form button
+        }
+        data.update(post_data(self.bulk_edit_data))
+
+        # Attempt to bulk edit permitted objects into a non-permitted state
+        response = self.client.post(self._get_url("bulk_edit"), data)
+        # 200 because we're sent back to the edit form to try again; if the update were successful it'd be a 302
+        self.assertHttpStatus(response, 200)
+        # Assert that the objects are NOT updated
+        for instance in self._get_queryset().filter(pk__in=pk_list):
+            self.assertIn(field.value_from_object(instance), values)
+            self.assertNotEqual(field.value_from_object(instance), self.bulk_edit_data[attr_name])
+
+        # Update permission constraints to permit all objects
+        obj_perm.constraints = {"pk__gt": 0}
+        obj_perm.save()
+
+        # Bulk edit permitted objects and expect a redirect back to the list view
+        self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 302)
+        # Assert that the objects were all updated correctly
+        self.validate_job_data_after_bulk_edit(pk_list, old_data)
 
     #
     # Additional test cases for the "job" (legacy run) and "job_run" (updated run) views follow

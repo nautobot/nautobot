@@ -902,7 +902,7 @@ class JobBulkEditForm(NautobotBulkEditForm):
         "<br>Set to 0 to use Nautobot system default",
     )
     task_queues = JSONArrayFormField(
-        base_field=models.CharField(max_length=100, blank=True),
+        base_field=forms.CharField(max_length=100),
         help_text="Comma separated list of task queues that this job can run on. A blank list will use the default queue",
         required=False,
     )
