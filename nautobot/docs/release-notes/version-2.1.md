@@ -95,7 +95,7 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 ### Fixed
 
 - [#5058](https://github.com/nautobot/nautobot/issues/5058) - Changed more filter parameters from location_id to location in virtualization/forms.py
-- [#5121](https://github.com/nautobot/nautobot/issues/5121) - Fix deleting git repository results in creation of job result stuck in running state.
+- [#5121](https://github.com/nautobot/nautobot/issues/5121) - Fixed an issue where deleting a git repository resulted in a job result stuck in running state.
 - [#5186](https://github.com/nautobot/nautobot/issues/5186) - Fixed a case where an IPAddress created with a `host` and `mask_length` would default to a null `ip_version`.
 - [#5267](https://github.com/nautobot/nautobot/issues/5267) - Fixed hover coloring after closing/reopening navbar dropdown.
 - [#5267](https://github.com/nautobot/nautobot/issues/5267) - Fixed button spacing when there are multiple buttons in navbar.
