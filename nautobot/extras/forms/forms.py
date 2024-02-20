@@ -910,40 +910,40 @@ class JobBulkEditForm(NautobotBulkEditForm):
     # Text field overrides
     clear_grouping_override = forms.BooleanField(
         required=False,
-        help_text="If set, the configured grouping will be reverted back to the default value from the Job source code",
+        help_text="If checked, groupings will be reverted to the default values defined in each Job's source code",
     )
     clear_description_override = forms.BooleanField(
         required=False,
-        help_text="If set, the configured description will be reverted back to the default value from the Job source code",
+        help_text="If checked, descriptions will be reverted to the default values defined in each Job's source code",
     )
     clear_soft_time_limit_override = forms.BooleanField(
         required=False,
-        help_text="If set, the configured value will be reverted back to the default value from the Job source code",
+        help_text="If checked, soft time limits will be reverted to the default values defined in each Job's source code",
     )
     clear_time_limit_override = forms.BooleanField(
         required=False,
-        help_text="If set, the configured value will be reverted back to the default value from the Job source code",
+        help_text="If checked, time limits will be reverted to the default values defined in each Job's source code",
     )
     clear_task_queues_override = forms.BooleanField(
         required=False,
-        help_text="If set, the configured value will be reverted back to the default value from the Job source code",
+        help_text="If checked, task queue overrides will be reverted to the default values defined in each Job's source code",
     )
     # Boolean overrides
     clear_approval_required_override = forms.BooleanField(
         required=False,
-        help_text="If set, the configured value will be reverted back to the default value from the Job source code",
+        help_text="If checked, the values of approval required will be reverted to the default values defined in each Job's source code",
     )
     clear_dryrun_default_override = forms.BooleanField(
         required=False,
-        help_text="If set, the configured value will be reverted back to the default value from the Job source code",
+        help_text="If checked, the values of dryrun default will be reverted to the default values defined in each Job's source code",
     )
     clear_hidden_override = forms.BooleanField(
         required=False,
-        help_text="If set, the configured value will be reverted back to the default value from the Job source code",
+        help_text="If checked, the values of hidden will be reverted to the default values defined in each Job's source code",
     )
     clear_has_sensitive_variables_override = forms.BooleanField(
         required=False,
-        help_text="If set, the configured value will be reverted back to the default value from the Job source code",
+        help_text="If checked, the values of has sensitive variables will be reverted to the default values defined in each Job's source code",
     )
 
     class Meta:

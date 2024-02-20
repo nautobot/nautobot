@@ -1,1 +1,1 @@
-Added JobBulkDeleteView and JobBulkEditView.
+Added bulk-edit and bulk-delete capabilities for Jobs.
