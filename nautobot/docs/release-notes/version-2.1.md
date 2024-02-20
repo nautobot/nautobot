@@ -88,6 +88,10 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#5267](https://github.com/nautobot/nautobot/issues/5267) - Updated navbar user dropdown with chevron.
 - [#5267](https://github.com/nautobot/nautobot/issues/5267) - Reorganized navbar css rules in `base.css`.
 
+### Security
+
+- [#5303](https://github.com/nautobot/nautobot/pull/5303) - Updated `cryptography` to 42.0.2 due to CVE-2024-0727. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
 ### Fixed
 
 - [#5058](https://github.com/nautobot/nautobot/issues/5058) - Changed more filter parameters from location_id to location in virtualization/forms.py
