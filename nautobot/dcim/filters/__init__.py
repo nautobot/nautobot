@@ -6,7 +6,6 @@ from timezone_field import TimeZoneField
 
 from nautobot.core.filters import (
     BaseFilterSet,
-    ConditionalRelatedMembershipBooleanFilter,
     ContentTypeMultipleChoiceFilter,
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
