@@ -259,6 +259,9 @@ A template can provide additional JavaScript, CSS, or even display HTML. A good 
 {% endblock javascript %}
 ```
 
++++ 2.2.0
+    Added the `job_form` and `schedule_form` sub-blocks to `extras/job.html`, for use by Jobs that just want to override the rendered forms without replacing all of `{% block content %}`.
+
 For another example checkout [the template used in the Example App](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/templates/example_app/example_with_custom_template.html) in the GitHub repo.
 
 #### `time_limit`

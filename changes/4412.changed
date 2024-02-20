@@ -1,0 +1,1 @@
+Changed `VLAN.location` to `VLAN.locations` allowing multiple Locations to be associated with a given VLAN.

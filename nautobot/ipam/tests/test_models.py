@@ -301,7 +301,14 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         prefix = Prefix(prefix="192.0.2.0/24", location=location, status=self.statuses[0])
         with self.assertRaises(ValidationError) as cm:
             prefix.validated_save()
-        self.assertIn(f'Prefixes may not associate to locations of type "{location_type.name}"', str(cm.exception))
+        self.assertIn(f"Prefixes may not associate to Locations of types {[location_type.name]}", str(cm.exception))
+
+    def test_location_validation(self):
+        location_type = LocationType.objects.get(name="Room")
+        location = Location.objects.filter(location_type=location_type).first()
+        with self.assertRaises(ValidationError) as cm:
+            location.prefixes.add(self.root)
+        self.assertIn(f"{location} is a Room and may not have Prefixes associated to it.", str(cm.exception))
 
     def test_tree_methods(self):
         """Test the various tree methods work as expected."""
@@ -1094,15 +1101,21 @@ class TestVLAN(ModelTestCases.BaseModelTestCase):
     model = VLAN
 
     def test_vlan_validation(self):
-        location_type = LocationType.objects.get(name="Root")
-        location_type.content_types.set([])
-        location_type.validated_save()
+        location_type = LocationType.objects.get(name="Floor")  # Floors may not have VLANs according to our factory
         location = Location.objects.filter(location_type=location_type).first()
         vlan = VLAN(name="Group 1", vid=1, location=location)
         vlan.status = Status.objects.get_for_model(VLAN).first()
         with self.assertRaises(ValidationError) as cm:
             vlan.validated_save()
-        self.assertIn(f"VLANs may not associate to locations of types {[location_type.name]}", str(cm.exception))
+        self.assertIn(f"VLANs may not associate to Locations of types {[location_type.name]}", str(cm.exception))
+
+    def test_location_validation(self):
+        location_type = LocationType.objects.get(name="Floor")  # Floors may not have VLANs according to our factory
+        location = Location.objects.filter(location_type=location_type).first()
+        vlan = VLAN.objects.first()
+        with self.assertRaises(ValidationError) as cm:
+            location.vlans.add(vlan)
+        self.assertIn(f"{location} is a Floor and may not have VLANs associated to it.", str(cm.exception))
 
 
 class TestVRF(ModelTestCases.BaseModelTestCase):

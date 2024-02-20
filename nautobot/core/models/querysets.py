@@ -6,7 +6,7 @@ from nautobot.core.utils import permissions
 from nautobot.core.utils.data import merge_dicts_without_collision
 
 
-def count_related(model, field, *, filter_dict=None):
+def count_related(model, field, *, filter_dict=None, distinct=False):
     """
     Return a Subquery suitable for annotating a child object count.
 
@@ -22,7 +22,12 @@ def count_related(model, field, *, filter_dict=None):
     manager = model.objects
     if hasattr(model.objects, "without_tree_fields"):
         manager = manager.without_tree_fields()
-    subquery = Subquery(manager.filter(**filters).order_by().values(field).annotate(c=Count("*")).values("c"))
+    qs = manager.filter(**filters).order_by().values(field)
+    if distinct:
+        qs = qs.annotate(c=Count("pk", distinct=distinct)).values("c")
+    else:
+        qs = qs.annotate(c=Count("*")).values("c")
+    subquery = Subquery(qs)
 
     return Coalesce(subquery, 0)
 
@@ -125,16 +130,11 @@ class RestrictedQuerySet(CompositeKeyQuerySetMixin, QuerySet):
         # Filter the queryset to include only objects with allowed attributes
         else:
             attrs = Q()
-            for perm_attrs in user._object_perm_cache[permission_required]:
-                if isinstance(perm_attrs, list):
-                    for p in perm_attrs:
-                        attrs |= Q(**p)
-                elif perm_attrs:
-                    attrs |= Q(**perm_attrs)
-                else:
-                    # Any permission with null constraints grants access to _all_ instances
-                    attrs = Q()
-                    break
+            tokens = {
+                "$user": user,
+            }
+
+            attrs = permissions.qs_filter_from_constraints(user._object_perm_cache[permission_required], tokens)
             qs = self.filter(attrs)
 
         return qs

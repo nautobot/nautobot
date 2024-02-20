@@ -328,7 +328,7 @@ urlpatterns = [
     ),
     path(
         "git-repositories/import/",
-        views.GitRepositoryBulkImportView.as_view(),
+        views.GitRepositoryBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="gitrepository_import",
     ),
     path(
@@ -561,7 +561,7 @@ urlpatterns = [
     path("secrets/", views.SecretListView.as_view(), name="secret_list"),
     path("secrets/add/", views.SecretEditView.as_view(), name="secret_add"),
     path("secrets/delete/", views.SecretBulkDeleteView.as_view(), name="secret_bulk_delete"),
-    path("secrets/import/", views.SecretBulkImportView.as_view(), name="secret_import"),
+    path("secrets/import/", views.SecretBulkImportView.as_view(), name="secret_import"),  # 3.0 TODO: remove, unused
     path(
         "secrets/provider/<str:provider_slug>/form/",
         views.SecretProviderParametersFormView.as_view(),
@@ -609,7 +609,7 @@ urlpatterns = [
         views.StatusBulkDeleteView.as_view(),
         name="status_bulk_delete",
     ),
-    path("statuses/import/", views.StatusBulkImportView.as_view(), name="status_import"),
+    path("statuses/import/", views.StatusBulkImportView.as_view(), name="status_import"),  # 3.0 TODO: remove, unused
     path("statuses/<uuid:pk>/", views.StatusView.as_view(), name="status"),
     path("statuses/<uuid:pk>/edit/", views.StatusEditView.as_view(), name="status_edit"),
     path(
@@ -632,7 +632,7 @@ urlpatterns = [
     # Tags
     path("tags/", views.TagListView.as_view(), name="tag_list"),
     path("tags/add/", views.TagEditView.as_view(), name="tag_add"),
-    path("tags/import/", views.TagBulkImportView.as_view(), name="tag_import"),
+    path("tags/import/", views.TagBulkImportView.as_view(), name="tag_import"),  # 3.0 TODO: remove, unused
     path("tags/edit/", views.TagBulkEditView.as_view(), name="tag_bulk_edit"),
     path("tags/delete/", views.TagBulkDeleteView.as_view(), name="tag_bulk_delete"),
     path("tags/<uuid:pk>/", views.TagView.as_view(), name="tag"),

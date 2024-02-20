@@ -306,7 +306,7 @@ class BaseJob(Task):
 
         # Cleanup FileProxy objects
         file_fields = list(self._get_file_vars())
-        file_ids = [kwargs[f] for f in file_fields]
+        file_ids = [kwargs[f] for f in file_fields if f in kwargs]
         if file_ids:
             self._delete_file_proxies(*file_ids)
 

@@ -34,6 +34,7 @@ from .models import (
     VLAN,
     VLANGroup,
     VRF,
+    VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
 
@@ -103,6 +104,23 @@ class VRFFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         fields = ["id", "name", "rd", "tags"]
 
 
+class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Device (ID or name)",
+    )
+    virtual_machine = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VirtualMachine.objects.all(),
+        to_field_name="name",
+        label="Virtual Machine (ID or name)",
+    )
+
+    class Meta:
+        model = VRFDeviceAssignment
+        fields = ["id", "vrf", "device", "virtual_machine"]
+
+
 class VRFPrefixAssignmentFilterSet(NautobotFilterSet):
     prefix = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Prefix.objects.all(),
@@ -169,7 +187,6 @@ class IPAMFilterSetMixin(django_filters.FilterSet):
 class PrefixFilterSet(
     NautobotFilterSet,
     IPAMFilterSetMixin,
-    LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
@@ -236,6 +253,17 @@ class PrefixFilterSet(
         label="Namespace (name or ID)",
     )
     ip_version = django_filters.NumberFilter()
+    location = TreeNodeMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        field_name="locations",
+        label='Location (name or ID) (deprecated, use "locations" filter instead)',
+    )
+    locations = TreeNodeMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        label="Locations (name or ID)",
+    )
 
     class Meta:
         model = Prefix

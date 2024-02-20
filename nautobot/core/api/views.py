@@ -8,6 +8,7 @@ import platform
 from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.db.models import ProtectedError
@@ -33,6 +34,8 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet as ModelViewSet_, ReadOnlyModelViewSet as ReadOnlyModelViewSet_
 
 from nautobot.core.api import BulkOperationSerializer
+from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.utils.data import is_uuid
@@ -40,6 +43,7 @@ from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_fil
 from nautobot.core.utils.lookup import get_form_for_model, get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
+from nautobot.core.views.utils import get_csv_form_fields_from_serializer_class
 from nautobot.extras.registry import registry
 
 from . import serializers
@@ -862,6 +866,40 @@ class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
             entry.update(data)
 
         return Response(object_counts)
+
+
+class CSVImportFieldsForContentTypeAPIView(NautobotAPIVersionMixin, APIView):
+    """Get information about CSV import fields for a given ContentType."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        content_type_id = request.GET.get("content-type-id")
+        try:
+            content_type = ContentType.objects.get(pk=content_type_id)
+        except ContentType.DoesNotExist:
+            return Response({"detail": "Invalid content-type-id."}, status=404)
+        model = content_type.model_class()
+        if model is None:
+            return Response(
+                {
+                    "detail": (
+                        f"Model not found for {content_type.app_label}.{content_type.model}. Perhaps an app is missing?"
+                    ),
+                },
+                status=404,
+            )
+        try:
+            serializer_class = get_serializer_for_model(model)
+        except SerializerNotFound:
+            return Response(
+                {"detail": f"Serializer not found for {content_type.app_label}.{content_type.model}."},
+                status=404,
+            )
+        fields = get_csv_form_fields_from_serializer_class(serializer_class)
+        fields.sort(key=lambda field: (not field["required"], field["name"]))
+        return Response({"fields": fields})
 
 
 #
