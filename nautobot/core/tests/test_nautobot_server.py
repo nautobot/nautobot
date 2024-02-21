@@ -12,6 +12,7 @@ import tempfile
 from unittest import mock, TestCase
 
 from django import __version__ as django_version
+from django.conf import settings
 
 from nautobot import __version__ as nautobot_version
 
@@ -44,7 +45,7 @@ class NautobotServerTestCase(TestCase):
         self.assertIn(f"Configuration file: {modified_environ['NAUTOBOT_CONFIG']}", result.stdout)
 
         # Case #4 - if `--config-path` is passed, it takes precedence
-        actual_config = os.environ["NAUTOBOT_CONFIG"]
+        actual_config = settings.SETTINGS_PATH
         with mock.patch.dict(os.environ, modified_environ, clear=True):
             result = subprocess.run(
                 ["nautobot-server", "--config-path", actual_config, "version"],
