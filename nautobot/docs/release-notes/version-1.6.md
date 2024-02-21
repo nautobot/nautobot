@@ -72,6 +72,26 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.12 (2024-02-20)
+
+### Added
+
+- [#5104](https://github.com/nautobot/nautobot/issues/5104) - Added User Token as permission constraints.
+
+### Security
+
+- [#5251](https://github.com/nautobot/nautobot/issues/5251) - Updated `Django` dependency to 3.2.24 due to CVE-2024-24680.
+
+### Changed
+
+- [#5254](https://github.com/nautobot/nautobot/issues/5254) - Changed `TreeQuerySet.ancestors` implementation to a more efficient approach for shallow trees.
+- [#5254](https://github.com/nautobot/nautobot/issues/5254) - Changed the location detail view not to annotate tree fields on its queries.
+
+### Fixed
+
+- [#5253](https://github.com/nautobot/nautobot/issues/5253) - Fixed issue with Job Button Groups displaying when Conditional Rendering should remove the button.
+- [#5261](https://github.com/nautobot/nautobot/issues/5261) - Fixed a regression introduced in v1.6.8 where Job Buttons would always run with `commit=False`.
+
 ## v1.6.11 (2024-02-05)
 
 ### Security
