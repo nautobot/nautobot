@@ -1,1 +1,1 @@
-Adjusted Edit / Create panels to accommodate larger sizes on  medium and large screens by updating classes to `col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1`
+Adjusted Edit / Create panels to occupy more page width on medium and large screens.
