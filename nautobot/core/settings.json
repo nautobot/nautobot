@@ -519,6 +519,11 @@
             "default": "~/.nautobot/media",
             "description": "The file path to the location where media files (such as image attachments) are stored."
         },
+        "METRICS_AUTHENTICATED": {
+            "type": "boolean",
+            "default": false,
+            "description": "Toggle requiring authentication to view `/metrics`."
+        },
         "METRICS_ENABLED": {
             "type": "boolean",
             "default": false,
