@@ -72,7 +72,7 @@ Support for versions of PostgreSQL prior to 12.0 has been removed as these versi
 Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specific permissions will now always be hidden from users lacking those permissions. Additionally, users not logged in will now be automatically redirected to the login page.
 
 <!-- towncrier release notes start -->
-## v2.1.5 (2024-02-20)
+## v2.1.5 (2024-02-21)
 
 ### Security
 
