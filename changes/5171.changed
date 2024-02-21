@@ -1,1 +1,0 @@
-Changed the tagging of `nautobot-dev` Docker images to reserve the `latest` and `latest-py<version>` tags for the latest stable release of Nautobot, rather than the latest build from the `develop` branch.
