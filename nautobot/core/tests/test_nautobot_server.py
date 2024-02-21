@@ -102,7 +102,12 @@ class NautobotServerTestCase(TestCase):
         self.assertNotEqual(secret_key_1, secret_key_2)
 
     def test_settings_processing(self):
-        result = subprocess.run(["nautobot-server", "print_settings"], capture_output=True, check=True, text=True)
+        result = subprocess.run(
+            ["nautobot-server", "--config", settings.SETTINGS_PATH, "print_settings"],
+            capture_output=True,
+            check=True,
+            text=True,
+        )
         # TODO: we should add a test nautobot_config.py that uses the EXTRA_* settings extensions and test that here.
 
         # Make sure directories exist
