@@ -1,0 +1,1 @@
+Fixed a `ValidationError` that was being thrown when a user logged out.
