@@ -156,6 +156,7 @@ class _VersionAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string):
         print(f"Nautobot version: {__version__}")
         print(f"Django version: {django.__version__}")
+        print(f"Configuration file: {namespace.config_path}")
         parser.exit(0)
 
 
@@ -255,9 +256,7 @@ def main():
         action="store_true",
         help="Disable sending of anonymized installation metrics for this configuration",
     )
-    init_parser.add_argument(
-        "config_path", default=config_path, nargs="?", help="Path to write generated configuration file"
-    )
+    init_parser.add_argument("config_path", default=None, nargs="?", help="Path to write generated configuration file")
     version_parser = subparsers.add_parser("version", help="Show version numbers and exit")
 
     try:
@@ -265,8 +264,13 @@ def main():
         subcommand_and_args = parser.parse_args(unparsed_args)
 
         if subcommand_and_args.subcommand == "init":
+            # Support both "nautobot-server init CONFIG_PATH" and "nautobot-server --config-path CONFIG_PATH init"
+            # In the (gross) case of "nautobot-server --config-path PATH_A init PATH_B", PATH_B will win out
+            if not subcommand_and_args.config_path:
+                subcommand_and_args.config_path = args.config_path
             _init_settings(subcommand_and_args)
         elif subcommand_and_args.subcommand == "version":
+            subcommand_and_args.config_path = args.config_path
             _VersionAction(["version"], None)(version_parser, subcommand_and_args, [], "version")
         else:  # No subcommand specified
             parser.print_help()
