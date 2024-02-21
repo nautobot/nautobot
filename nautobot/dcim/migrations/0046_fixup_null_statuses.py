@@ -42,7 +42,9 @@ def migrate_null_statuses(apps, schema):
 
 class Migration(migrations.Migration):
     dependencies = [
+        ("contenttypes", "0002_remove_content_type_name"),
         ("dcim", "0045_ipam__namespaces"),
+        ("extras", "0061_role_and_alter_status"),
     ]
 
     operations = [
