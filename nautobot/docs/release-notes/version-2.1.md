@@ -72,7 +72,7 @@ Support for versions of PostgreSQL prior to 12.0 has been removed as these versi
 Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specific permissions will now always be hidden from users lacking those permissions. Additionally, users not logged in will now be automatically redirected to the login page.
 
 <!-- towncrier release notes start -->
-## v2.1.5 (2024-02-20)
+## v2.1.5 (2024-02-21)
 
 ### Security
 
@@ -93,7 +93,7 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 
 ### Fixed
 
-- [#5058](https://github.com/nautobot/nautobot/issues/5058) - Changed more filter parameters from location_id to location in virtualization/forms.py
+- [#5058](https://github.com/nautobot/nautobot/issues/5058) - Changed more filter parameters from `location_id` to `location` in `virtualization/forms.py`.
 - [#5121](https://github.com/nautobot/nautobot/issues/5121) - Fixed an issue where deleting a git repository resulted in a job result stuck in running state.
 - [#5186](https://github.com/nautobot/nautobot/issues/5186) - Fixed a case where an IPAddress created with a `host` and `mask_length` would default to a null `ip_version`.
 - [#5267](https://github.com/nautobot/nautobot/issues/5267) - Fixed hover coloring after closing/reopening navbar dropdown.
