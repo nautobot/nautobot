@@ -23,6 +23,9 @@ from nautobot.core.celery.log import NautobotDatabaseHandler
 logger = logging.getLogger(__name__)
 
 
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "nautobot_config")
+
+
 class NautobotCelery(Celery):
     task_cls = "nautobot.core.celery.task:NautobotTask"
 
