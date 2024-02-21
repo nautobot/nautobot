@@ -617,6 +617,8 @@ class Prefix(PrimaryModel):
     def save(self, *args, **kwargs):
         if isinstance(self.prefix, netaddr.IPNetwork):
             # Clear host bits from prefix
+            # This also has the subtle side effect of calling self._deconstruct_prefix(),
+            # which will (re)set the broadcast and ip_version values of this instance to their correct values.
             self.prefix = self.prefix.cidr
 
         # Determine if a parent exists and set it to the closest ancestor by `prefix_length`.
@@ -1116,6 +1118,8 @@ class IPAddress(PrimaryModel):
         # if self.parent.type != choices.PrefixTypeChoices.TYPE_NETWORK:
         #     err_msg = f"IP addresses cannot be created in {self.parent.type} prefixes. You must create a network prefix first."
         #     raise ValidationError({"address": err_msg})
+
+        self.address = self.address  # not a no-op - forces re-calling of self._deconstruct_address()
 
         # Force dns_name to lowercase
         if not self.dns_name.islower:
