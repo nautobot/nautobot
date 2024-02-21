@@ -25,6 +25,8 @@ from nautobot.dcim.models import (
     PowerOutlet,
     PowerPort,
     RearPort,
+    SoftwareImageFile,
+    SoftwareVersion,
     VirtualChassis,
 )
 from nautobot.dcim.utils import cable_status_color_css
@@ -76,6 +78,8 @@ __all__ = (
     "PowerOutletTable",
     "PowerPortTable",
     "RearPortTable",
+    "SoftwareImageFileTable",
+    "SoftwareVersionTable",
     "VirtualChassisTable",
 )
 
@@ -1017,3 +1021,101 @@ class InterfaceRedundancyGroupAssociationTable(BaseTable):
         )
 
         default_columns = ("priority", "actions")
+
+
+#
+# Software image files
+#
+
+
+class SoftwareImageFileTable(StatusTableMixin, BaseTable):
+    pk = ToggleColumn()
+    image_file_name = tables.Column(linkify=True)
+    software_version = tables.Column(linkify=True)
+    device_type_count = LinkedCountColumn(
+        viewname="dcim:devicetype_list",
+        url_params={"software_image_files": "pk"},
+        verbose_name="Device Types",
+    )
+    tags = TagColumn(url_name="dcim:softwareimagefile_list")
+    actions = ButtonsColumn(SoftwareImageFile)
+
+    class Meta(BaseTable.Meta):
+        model = SoftwareImageFile
+        fields = (
+            "pk",
+            "image_file_name",
+            "status",
+            "software_version",
+            "image_file_checksum",
+            "hashing_algorithm",
+            "download_url",
+            "device_type_count",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "image_file_name",
+            "status",
+            "software_version",
+            "device_type_count",
+            "tags",
+            "actions",
+        )
+
+
+class SoftwareVersionTable(StatusTableMixin, BaseTable):
+    pk = ToggleColumn()
+    version = tables.Column(linkify=True)
+    software_image_file_count = LinkedCountColumn(
+        viewname="dcim:softwareimagefile_list",
+        url_params={"software_version": "pk"},
+        verbose_name="Software Image Files",
+    )
+    device_count = LinkedCountColumn(
+        viewname="dcim:device_list",
+        url_params={"software_version": "pk"},
+        verbose_name="Devices",
+    )
+    inventory_item_count = LinkedCountColumn(
+        viewname="dcim:inventoryitem_list",
+        url_params={"software_version": "pk"},
+        verbose_name="Inventory Items",
+    )
+    tags = TagColumn(url_name="dcim:softwareversion_list")
+    actions = ButtonsColumn(SoftwareVersion)
+
+    class Meta(BaseTable.Meta):
+        model = SoftwareVersion
+        fields = (
+            "pk",
+            "version",
+            "alias",
+            "status",
+            "platform",
+            "release_date",
+            "end_of_support_date",
+            "long_term_support",
+            "pre_release",
+            "documentation_url",
+            "software_image_file_count",
+            "device_count",
+            "inventory_item_count",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "version",
+            "alias",
+            "platform",
+            "status",
+            "release_date",
+            "end_of_support_date",
+            "software_image_file_count",
+            "device_count",
+            "inventory_item_count",
+            "tags",
+            "actions",
+        )

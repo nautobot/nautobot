@@ -10,6 +10,7 @@ from nautobot.core.api import (
     NautobotModelSerializer,
     ValidatedModelSerializer,
 )
+from nautobot.dcim.models.locations import Location
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.ipam import constants
 from nautobot.ipam.api.fields import IPFieldSerializer
@@ -26,6 +27,8 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
+    VRFDeviceAssignment,
+    VRFPrefixAssignment,
 )
 
 #
@@ -51,6 +54,30 @@ class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = "__all__"
         list_display_fields = ["name", "rd", "tenant", "description"]
         extra_kwargs = {"namespace": {"default": get_default_namespace}}
+
+
+class VRFDeviceAssignmentSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = VRFDeviceAssignment
+        fields = "__all__"
+        validators = []
+
+    def validate(self, data):
+        if data.get("device"):
+            validator = UniqueTogetherValidator(queryset=VRFDeviceAssignment.objects.all(), fields=("device", "vrf"))
+            validator(data, self)
+        if data.get("virtual_machine"):
+            validator = UniqueTogetherValidator(
+                queryset=VRFDeviceAssignment.objects.all(), fields=("virtual_machine", "vrf")
+            )
+            validator(data, self)
+        return super().validate(data)
+
+
+class VRFPrefixAssignmentSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = VRFPrefixAssignment
+        fields = "__all__"
 
 
 #
@@ -100,6 +127,13 @@ class VLANGroupSerializer(NautobotModelSerializer):
 
 class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     prefix_count = serializers.IntegerField(read_only=True)
+    location = NautobotHyperlinkedRelatedField(
+        allow_null=True,
+        queryset=Location.objects.all(),
+        required=False,
+        view_name="dcim-api:location-detail",
+        write_only=True,
+    )
 
     class Meta:
         model = VLAN
@@ -108,7 +142,7 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = "__all__"
         list_display_fields = [
             "vid",
-            "location",
+            "locations",
             "vlan_group",
             "name",
             "prefixes",
@@ -132,6 +166,42 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         return data
 
 
+class VLANLegacySerializer(VLANSerializer):
+    """
+    This legacy serializer is used for API versions 2.0 and 2.1.
+    And it is not longer valid for API version 2.2 and so on.
+    """
+
+    location = NautobotHyperlinkedRelatedField(
+        allow_null=True, queryset=Location.objects.all(), required=False, view_name="dcim-api:location-detail"
+    )
+
+    class Meta:
+        model = VLAN
+        fields = [
+            "id",
+            "object_type",
+            "display",
+            "url",
+            "natural_slug",
+            "prefix_count",
+            "vid",
+            "name",
+            "description",
+            "vlan_group",
+            "status",
+            "role",
+            "tenant",
+            "location",
+            "created",
+            "last_updated",
+            "tags",
+            "notes_url",
+            "custom_fields",
+        ]
+        validators = []
+
+
 #
 # Prefixes
 #
@@ -140,6 +210,14 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     prefix = IPFieldSerializer()
     type = ChoiceField(choices=PrefixTypeChoices, default=PrefixTypeChoices.TYPE_NETWORK)
+    # for backward compatibility with 2.0-2.1 where a Prefix had only a single Location
+    location = NautobotHyperlinkedRelatedField(
+        allow_null=True,
+        queryset=Location.objects.all(),
+        required=False,
+        view_name="dcim-api:location-detail",
+        write_only=True,
+    )
 
     class Meta:
         model = Prefix
@@ -151,7 +229,7 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "status",
             "vrf",
             "tenant",
-            "location",
+            "locations",
             "vlan",
             "role",
             "description",
@@ -178,7 +256,7 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                             "description",
                             "role",
                             "vlan",
-                            "location",
+                            "locations",
                             "tenant",
                             "rir",
                             "date_allocated",
@@ -187,6 +265,44 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                 },
             ],
         }
+
+
+class PrefixLegacySerializer(PrefixSerializer):
+    """Serializer for API versions 2.0-2.1 where a Prefix only had a single Location."""
+
+    location = NautobotHyperlinkedRelatedField(
+        allow_null=True, queryset=Location.objects.all(), required=False, view_name="dcim-api:location-detail"
+    )
+
+    class Meta(PrefixSerializer.Meta):
+        fields = [
+            "id",
+            "object_type",
+            "display",
+            "url",
+            "natural_slug",
+            "prefix",
+            "network",
+            "broadcast",
+            "prefix_length",
+            "type",
+            "status",
+            "role",
+            "parent",
+            "ip_version",
+            "location",
+            "namespace",
+            "tenant",
+            "vlan",
+            "rir",
+            "date_allocated",
+            "description",
+            "created",
+            "last_updated",
+            "tags",
+            "notes_url",
+            "custom_fields",
+        ]
 
 
 class PrefixLengthSerializer(serializers.Serializer):

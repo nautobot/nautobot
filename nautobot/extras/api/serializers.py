@@ -5,6 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 
 from nautobot.core.api import (
     BaseModelSerializer,
@@ -17,6 +18,7 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
 )
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.fields import NautobotHyperlinkedRelatedField
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
     get_nested_serializer_depth,
@@ -45,6 +47,8 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
+    ContactAssociation,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -72,6 +76,7 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
 from nautobot.extras.models.mixins import NotesMixin
@@ -173,6 +178,59 @@ class ConfigContextSchemaSerializer(NautobotModelSerializer):
             return None
         depth = get_nested_serializer_depth(self)
         return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.owner, "owner")
+
+
+#
+# Contacts
+#
+
+
+class ContactSerializer(NautobotModelSerializer):
+    # needed since this is the reverse side of the M2M field.
+    teams = NautobotHyperlinkedRelatedField(queryset=Team.objects.all(), many=True, required=False)
+
+    class Meta:
+        model = Contact
+        fields = "__all__"
+
+    def validate(self, data):
+        attrs = data.copy()
+        attrs.pop("teams", None)
+        super().validate(attrs)
+        return data
+
+
+class ContactAssociationSerializer(NautobotModelSerializer):
+    associated_object_type = ContentTypeField(queryset=ContentType.objects.all(), many=False)
+
+    class Meta:
+        model = ContactAssociation
+        fields = "__all__"
+        validators = []
+        extra_kwargs = {
+            "role": {"required": False},
+            "contact": {"required": False},
+            "team": {"required": False},
+        }
+
+    def validate(self, data):
+        # Validate uniqueness of (contact/team, role)
+        if data.get("contact") and data.get("role"):
+            validator = UniqueTogetherValidator(
+                queryset=ContactAssociation.objects.all(),
+                fields=("contact", "role"),
+            )
+            validator(data, self)
+        elif data.get("team") and data.get("role"):
+            validator = UniqueTogetherValidator(
+                queryset=ContactAssociation.objects.all(),
+                fields=("team", "role"),
+            )
+            validator(data, self)
+
+        super().validate(data)
+
+        return data
 
 
 #
@@ -876,6 +934,18 @@ class TagSerializer(NautobotModelSerializer):
                 raise serializers.ValidationError(errors)
 
         return data
+
+
+#
+# Teams
+#
+
+
+class TeamSerializer(NautobotModelSerializer):
+    class Meta:
+        model = Team
+        fields = "__all__"
+        extra_kwargs = {"contacts": {"required": False}}
 
 
 #

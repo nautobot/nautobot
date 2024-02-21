@@ -2,7 +2,7 @@ from django.db.models import Q
 
 from nautobot.core.testing import FilterTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer, Platform
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer, Platform, SoftwareVersion
 from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import ServiceProtocolChoices
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN
@@ -256,6 +256,11 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
     filterset = VirtualMachineFilterSet
     tenancy_related_name = "virtual_machines"
 
+    generic_filter_tests = (
+        ["software_version", "software_version__id"],
+        ["software_version", "software_version__version"],
+    )
+
     @classmethod
     def setUpTestData(cls):
         cluster_types = (
@@ -309,6 +314,8 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         roles = Role.objects.get_for_model(VirtualMachine)
         cls.roles = roles
 
+        cls.software_versions = SoftwareVersion.objects.filter(software_image_files__isnull=False)[:3]
+
         tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
 
         cls.statuses = Status.objects.get_for_model(VirtualMachine)
@@ -326,6 +333,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 disk=1,
                 local_config_context_data={"foo": 123},
                 comments="This is VM 1",
+                software_version=cls.software_versions[0],
             ),
             VirtualMachine.objects.create(
                 name="Virtual Machine 2",
@@ -338,6 +346,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 memory=2,
                 disk=2,
                 comments="This is VM 2",
+                software_version=cls.software_versions[1],
             ),
             VirtualMachine.objects.create(
                 name="Virtual Machine 3",
@@ -350,6 +359,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 memory=3,
                 disk=3,
                 comments="This is VM 3",
+                software_version=cls.software_versions[2],
             ),
             VirtualMachine.objects.create(
                 name="Virtual Machine 4",
@@ -640,7 +650,10 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
 
         statuses = Status.objects.get_for_model(VMInterface)
 
-        vlans = VLAN.objects.filter(location=None)[:2]
+        vlans = VLAN.objects.filter()[:2]
+        vlans[0].locations.clear()
+        vlans[1].locations.clear()
+
         cls.vlan1 = vlans[0]
         cls.vlan2 = vlans[1]
 

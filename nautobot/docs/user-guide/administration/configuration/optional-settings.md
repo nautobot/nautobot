@@ -387,14 +387,6 @@ Default: `False`
 
 `Device` names are not guaranteed globally-unique by Nautobot but in practice they often are. Set this to `True` to use the device `name` alone as the natural key for `Device` objects. Set this to `False` to use the sequence `(name, tenant, location)` as the natural key instead.
 
-## DISABLE_PREFIX_LIST_HIERARCHY
-
-Default: `False`
-
-This setting disables rendering of the IP prefix hierarchy (parent/child relationships) in the IPAM prefix list view. With large sets of prefixes, users may encounter a performance penalty when trying to load the prefix list view due to the nature of calculating the parent/child relationships. This setting allows users to disable the hierarchy and instead only render a flat list of all prefixes in the table.
-
-A later release of Nautobot will address the underlying performance issues, and likely remove this configuration option.
-
 ---
 
 ## DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT
@@ -404,16 +396,6 @@ A later release of Nautobot will address the underlying performance issues, and 
 Default: `0` (disabled)
 
 The number of seconds to cache the member list of dynamic groups. With large datasets (those in scope of a Dynamic Group and number of Dynamic Groups themselves), users will encounter a performance penalty using or accessing the membership lists. This setting allows users to accept a cached list for common use cases (particularly in the UI) that expires after the configured time. Set this to `0` to disable caching.
-
----
-
-## ENFORCE_GLOBAL_UNIQUE
-
-Default: `False`
-
-Environment Variable: `NAUTOBOT_ENFORCE_GLOBAL_UNIQUE`
-
-By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting `ENFORCE_GLOBAL_UNIQUE` to `True`.
 
 ---
 
@@ -513,7 +495,7 @@ The value of this variable can also be customized by setting the environment var
 
 Default: `"cpf"`
 
-By default, all computed fields in GraphQL will be prefixed with `cf`. A computed field named `my_field` will appear in GraphQL as `cpf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_COMPUTED_FIELD_PREFIX`.
+By default, all computed fields in GraphQL will be prefixed with `cpf`. A computed field named `my_field` will appear in GraphQL as `cpf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_COMPUTED_FIELD_PREFIX`.
 
 ---
 

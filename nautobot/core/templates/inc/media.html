@@ -22,6 +22,12 @@
     <link rel="stylesheet"
           href="{% static 'flatpickr-4.6.9/themes/light.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/themes/light.min.css'">
+    <link rel="stylesheet"
+          href="{% static 'highlight.js-11.9.0/github.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=highlight.js-11.9.0/github.min.css'"{% if request.COOKIES|get_item:"theme" == 'dark' %} disabled="disabled"{% endif %} >
+    <link rel="stylesheet"
+          href="{% static 'highlight.js-11.9.0/github-dark.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=highlight.js-11.9.0/github-dark.min.css'"{% if request.COOKIES|get_item:"theme" != 'dark' %} disabled="disabled"{% endif %} />
     <link rel="stylesheet" id="dark-theme"
           href="{% versioned_static 'css/dark.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=css/dark.css'"{% if request.COOKIES|get_item:"theme" != 'dark' %} disabled="disabled"{% endif %} />

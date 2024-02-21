@@ -110,3 +110,123 @@ class ExportObjectListTest(TransactionTestCase):
         yaml_data = job_result.files.first().file.read().decode("utf-8")
         data = yaml.safe_load(yaml_data)
         self.assertEqual(data["manufacturer"], "Cisco")
+
+
+class ImportObjectsTestCase(TransactionTestCase):
+    databases = ("default", "job_logs")
+
+    csv_data = "\n".join(
+        [
+            "name,color,content_types",
+            "test_status1,111111,dcim.device",
+            'test_status2,222222,"dcim.device,dcim.location"',
+            "test_status3,333333,dcim.device",
+            "test_status4,444444,dcim.device",
+        ]
+    )
+
+    def test_csv_import_without_permission(self):
+        """Job should enforce user permissions on the content-type being imported."""
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            username=self.user.username,  # otherwise run_job_for_testing defaults to a superuser account
+            content_type=ContentType.objects.get_for_model(Status).pk,
+            csv_data=self.csv_data,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        log_error = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(log_error.message, f'User "{self.user}" does not have permission to create status objects')
+        self.assertFalse(Status.objects.filter(name__startswith="test_status").exists())
+
+    def test_import_without_data(self):
+        """Either csv_data or csv_file arguments must be provided."""
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            username=self.user.username,  # otherwise run_job_for_testing defaults to a superuser account
+            content_type=ContentType.objects.get_for_model(Status).pk,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+
+    def test_csv_import_with_constrained_permission(self):
+        """Job should only allow the user to import objects they have permission to add."""
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"color__in": ["111111", "222222"]},
+            actions=["add"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Status))
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            username=self.user.username,  # otherwise run_job_for_testing defaults to a superuser account
+            content_type=ContentType.objects.get_for_model(Status).pk,
+            csv_data=self.csv_data,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        log_successes = JobLogEntry.objects.filter(
+            job_result=job_result, log_level=LogLevelChoices.LOG_INFO, message__icontains="created"
+        )
+        self.assertEqual(log_successes[0].message, 'Row 1: Created record "test_status1"')
+        self.assertTrue(Status.objects.filter(name="test_status1").exists())
+        self.assertEqual(log_successes[1].message, 'Row 2: Created record "test_status2"')
+        self.assertTrue(Status.objects.filter(name="test_status2").exists())
+        log_errors = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(
+            log_errors[0].message,
+            f'Row 3: User "{self.user}" does not have permission to create an object with these attributes',
+        )
+        self.assertFalse(Status.objects.filter(name="test_status3").exists())
+        self.assertEqual(
+            log_errors[1].message,
+            f'Row 4: User "{self.user}" does not have permission to create an object with these attributes',
+        )
+        self.assertFalse(Status.objects.filter(name="test_status4").exists())
+        self.assertEqual(log_successes[2].message, "Created 2 status object(s) from 4 row(s) of data")
+
+    def test_csv_import_with_permission(self):
+        """A superuser running the job with valid data should successfully create all specified objects."""
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            content_type=ContentType.objects.get_for_model(Status).pk,
+            csv_data=self.csv_data,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        )
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
+        )
+        self.assertEqual(4, Status.objects.filter(name__startswith="test_status").count())
+
+    def test_csv_import_bad_row(self):
+        """A row of incorrect data should fail validation for that object but import all others successfully."""
+        csv_data = self.csv_data.split("\n")
+        csv_data.insert(1, "test_status0,notacolor,dcim.device")
+        csv_data = "\n".join(csv_data)
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            content_type=ContentType.objects.get_for_model(Status).pk,
+            csv_data=csv_data,
+        )
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        log_errors = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(log_errors[0].message, "Row 1: `color`: `Enter a valid hexadecimal RGB color code.`")
+        log_successes = JobLogEntry.objects.filter(
+            job_result=job_result, log_level=LogLevelChoices.LOG_INFO, message__icontains="created"
+        )
+        self.assertEqual(log_successes[0].message, 'Row 2: Created record "test_status1"')
+        self.assertTrue(Status.objects.filter(name="test_status1").exists())
+        self.assertEqual(log_successes[1].message, 'Row 3: Created record "test_status2"')
+        self.assertTrue(Status.objects.filter(name="test_status2").exists())
+        self.assertEqual(log_successes[2].message, 'Row 4: Created record "test_status3"')
+        self.assertTrue(Status.objects.filter(name="test_status3").exists())
+        self.assertEqual(log_successes[3].message, 'Row 5: Created record "test_status4"')
+        self.assertTrue(Status.objects.filter(name="test_status4").exists())
+        self.assertEqual(log_successes[4].message, "Created 4 status object(s) from 5 row(s) of data")

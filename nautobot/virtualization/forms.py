@@ -25,7 +25,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFormMixin,
 )
 from nautobot.dcim.forms import INTERFACE_MODE_HELP_TEXT, InterfaceCommonForm
-from nautobot.dcim.models import Device, Location, Platform, Rack
+from nautobot.dcim.models import Device, Location, Platform, Rack, SoftwareVersion
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     LocalContextFilterForm,
@@ -207,6 +207,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
         queryset=Cluster.objects.all(), query_params={"cluster_group_id": "$cluster_group"}
     )
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
+    software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
     vrfs = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),
         required=False,
@@ -227,6 +228,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
             "platform",
             "primary_ip4",
             "primary_ip6",
+            "software_version",
             "vcpus",
             "memory",
             "disk",
@@ -315,6 +317,7 @@ class VirtualMachineBulkEditForm(
     memory = forms.IntegerField(required=False, label="Memory (MB)")
     disk = forms.IntegerField(required=False, label="Disk (GB)")
     comments = CommentField(widget=SmallTextarea, label="Comments")
+    software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
 
     class Meta:
         nullable_fields = [
@@ -324,6 +327,7 @@ class VirtualMachineBulkEditForm(
             "memory",
             "disk",
             "comments",
+            "software_version",
         ]
 
 
@@ -375,6 +379,16 @@ class VirtualMachineFilterForm(
         label="Has a primary IP",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
+    software_version = DynamicModelMultipleChoiceField(
+        queryset=SoftwareVersion.objects.all(),
+        required=False,
+        label="Software version",
+    )
+    has_software_version = forms.NullBooleanField(
+        required=False,
+        label="Has software version",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
     tags = TagFilterField(model)
 
 
@@ -404,7 +418,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         required=False,
         label="Untagged VLAN",
         query_params={
-            "location": "null",
+            "locations": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
@@ -412,7 +426,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         required=False,
         label="Tagged VLANs",
         query_params={
-            "location": "null",
+            "locations": "null",
         },
     )
     ip_addresses = DynamicModelMultipleChoiceField(
@@ -502,14 +516,14 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location": "null",
+            "locations": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location": "null",
+            "locations": "null",
         },
     )
     status = DynamicModelChoiceField(
@@ -570,14 +584,14 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location": "null",
+            "locations": "null",
         },
     )
     tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
-            "location": "null",
+            "locations": "null",
         },
     )
 

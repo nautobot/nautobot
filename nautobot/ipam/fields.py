@@ -3,6 +3,7 @@ from django.db import models
 import netaddr
 
 from . import lookups
+from .constants import IPV4_BYTE_LENGTH
 from .formfields import IPNetworkFormField
 
 
@@ -40,7 +41,7 @@ class VarbinaryIPField(models.BinaryField):
             # Distinguish between
             # \x00\x00\x00\x01 (IPv4 0.0.0.1) and
             # \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01 (IPv6 ::1), among other cases
-            version = 4 if len(value) == 4 else 6
+            version = 4 if len(value) == IPV4_BYTE_LENGTH else 6
             value = int_value
         except TypeError:
             version = None  # It's a string, IP version should be self-evident

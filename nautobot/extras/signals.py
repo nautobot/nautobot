@@ -26,6 +26,7 @@ from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionCh
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import (
     ComputedField,
+    ContactAssociation,
     CustomField,
     DynamicGroup,
     DynamicGroupMembership,
@@ -166,6 +167,10 @@ def _handle_deleted_object(sender, instance, **kwargs):
     if change_context_state.get() is None:
         return
 
+    associations = ContactAssociation.objects.filter(
+        associated_object_type=ContentType.objects.get_for_model(type(instance)), associated_object_id=instance.pk
+    )
+    associations.delete()
     if hasattr(instance, "notes") and isinstance(instance.notes, NotesQuerySet):
         notes = instance.notes
         notes.delete()

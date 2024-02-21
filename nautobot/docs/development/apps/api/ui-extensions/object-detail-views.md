@@ -44,18 +44,18 @@ class DeviceExtraTabs(TemplateExtension):
         return [
             {
                 "title": "App Tab 1",
-                "url": reverse("plugins:example_plugin:device_detail_tab_1", kwargs={"pk": self.context["object"].pk}),
+                "url": reverse("plugins:example_app:device_detail_tab_1", kwargs={"pk": self.context["object"].pk}),
             },
         ]
 ```
 
 ```html
-<!-- example_plugin/tab_device_detail_1.html -->
+<!-- example_app/tab_device_detail_1.html -->
 {% extends 'dcim/device.html' %}
 
 {% block content %}
     <h2>Device App Tab 1</h2>
-    <p>I am some content for the example plugin's device ({{ object.pk }}) detail tab 1.</p>
+    <p>I am some content for the Example App's device ({{ object.pk }}) detail tab 1.</p>
 {% endblock %}
 ```
 
@@ -76,7 +76,7 @@ class DeviceDetailAppTabOne(ObjectView):
     """
 
     queryset = Device.objects.all()
-    template_name = "example_plugin/tab_device_detail_1.html"
+    template_name = "example_app/tab_device_detail_1.html"
 ```
 
 You must also add the view to the `url_patterns` like so (make sure to read the note after this code snippet):
@@ -85,11 +85,11 @@ You must also add the view to the `url_patterns` like so (make sure to read the 
 # urls.py
 from django.urls import path
 
-from example_plugin import views
+from example_app import views
 
 urlpatterns = [
     # ... previously defined urls
-    path("devices/<uuid:pk>/example-plugin-tab-1/", views.DeviceDetailAppTabOne.as_view(), name="device_detail_tab_1"),
+    path("devices/<uuid:pk>/example-app-tab-1/", views.DeviceDetailAppTabOne.as_view(), name="device_detail_tab_1"),
 ]
 ```
 
@@ -139,11 +139,11 @@ class DeviceExtraTabs(TemplateExtension):
         return [
             {
                 "title": "App Tab 1",
-                "url": reverse("plugins:example_plugin:device_detail_tab_1", kwargs={"pk": self.context["object"].pk}),
+                "url": reverse("plugins:example_app:device_detail_tab_1", kwargs={"pk": self.context["object"].pk}),
             },
             {
                 "title": "App Tab 2",
-                "url": reverse("plugins:example_plugin:device_detail_tab_2", kwargs={"pk": self.context["object"].pk}),
+                "url": reverse("plugins:example_app:device_detail_tab_2", kwargs={"pk": self.context["object"].pk}),
             },
         ]
 

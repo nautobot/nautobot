@@ -1,4 +1,5 @@
 from .change_logging import ChangeLoggedModel, ObjectChange
+from .contacts import Contact, ContactAssociation, Team
 from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel
 from .datasources import GitRepository
 from .groups import DynamicGroup, DynamicGroupMembership
@@ -38,6 +39,8 @@ __all__ = (
     "ConfigContext",
     "ConfigContextModel",
     "ConfigContextSchema",
+    "Contact",
+    "ContactAssociation",
     "CustomField",
     "CustomFieldChoice",
     "CustomFieldModel",
@@ -74,5 +77,6 @@ __all__ = (
     "StatusModel",
     "Tag",
     "TaggedItem",
+    "Team",
     "Webhook",
 )

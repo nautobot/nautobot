@@ -21,6 +21,8 @@ from .models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
+    ContactAssociation,
     CustomField,
     CustomLink,
     DynamicGroup,
@@ -45,9 +47,33 @@ from .models import (
     Status,
     Tag,
     TaggedItem,
+    Team,
     Webhook,
 )
 from .registry import registry
+
+CONTACT_OR_TEAM_ICON = """
+{% if record.contact %}
+<i class="mdi mdi-account" title="Contact"></i>
+{% else %}
+<i class="mdi mdi-account-group" title="Team"></i>
+{% endif %}
+"""
+
+CONTACT_OR_TEAM = """
+{% load helpers %}
+{{ record.contact_or_team|hyperlinked_object:"name"}}
+"""
+
+PHONE = """
+{% load helpers %}
+{{ value|hyperlinked_phone_number }}
+"""
+
+EMAIL = """
+{% load helpers %}
+{{ value|hyperlinked_email }}
+"""
 
 TAGGED_ITEM = """
 {% if value.get_absolute_url %}
@@ -72,7 +98,7 @@ GITREPOSITORY_BUTTONS = """
 """
 
 JOB_BUTTONS = """
-<a href="{% url 'extras:job_run' pk=record.pk %}" class="btn btn-primary btn-xs" title="Run/Schedule" {% if not perms.extras.run_job or not record.runnable %}disabled="disabled"{% endif %}><i class="mdi mdi-play" aria-hidden="true"></i></a>
+<a href="{% url 'extras:job' pk=record.pk %}" class="btn btn-default btn-xs" title="Details"><i class="mdi mdi-information-outline" aria-hidden="true"></i></a>
 """
 
 OBJECTCHANGE_OBJECT = """
@@ -202,6 +228,35 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
 
         # Return a green check (like a boolean column)
         return render_boolean(True)
+
+
+class ContactTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    phone = tables.TemplateColumn(PHONE)
+    tags = TagColumn(url_name="extras:contact_list")
+    actions = ButtonsColumn(Contact)
+
+    class Meta(BaseTable.Meta):
+        model = Contact
+        fields = (
+            "pk",
+            "name",
+            "phone",
+            "email",
+            "address",
+            "comments",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "phone",
+            "email",
+            "tags",
+            "actions",
+        )
 
 
 class CustomFieldTable(BaseTable):
@@ -546,7 +601,10 @@ class JobTable(BaseTable):
     # TODO(Glenn): pk = ToggleColumn()
     source = tables.Column()
     # grouping is used to, well, group the Jobs, so it isn't a column of its own.
-    name = tables.Column(linkify=True)
+    name = tables.Column(
+        attrs={"a": {"class": "job_run", "title": "Run/Schedule"}},
+        linkify=("extras:job_run", {"pk": tables.A("pk")}),
+    )
     installed = BooleanColumn()
     enabled = BooleanColumn()
     has_sensitive_variables = BooleanColumn()
@@ -579,6 +637,9 @@ class JobTable(BaseTable):
 
     def render_description(self, value):
         return render_markdown(value)
+
+    def render_name(self, value):
+        return format_html('<span class="btn btn-primary btn-xs"><i class="mdi mdi-play"></i></span>{}', value)
 
     class Meta(BaseTable.Meta):
         model = JobModel
@@ -1015,6 +1076,35 @@ class TaggedItemTable(BaseTable):
         fields = ("content_object", "content_type")
 
 
+class TeamTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    phone = tables.TemplateColumn(PHONE)
+    tags = TagColumn(url_name="extras:team_list")
+    actions = ButtonsColumn(Team)
+
+    class Meta(BaseTable.Meta):
+        model = Team
+        fields = (
+            "pk",
+            "name",
+            "phone",
+            "email",
+            "address",
+            "comments",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "phone",
+            "email",
+            "tags",
+            "actions",
+        )
+
+
 class WebhookTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
@@ -1049,3 +1139,47 @@ class WebhookTable(BaseTable):
             "http_content_type",
             "enabled",
         )
+
+
+class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
+    pk = ToggleColumn()
+    contact_type = tables.TemplateColumn(
+        CONTACT_OR_TEAM_ICON, verbose_name="Type", attrs={"td": {"style": "width:20px;"}}
+    )
+    name = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Name")
+    contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team.phone", verbose_name="Phone")
+    contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team.email", verbose_name="E-Mail")
+    actions = actions = ButtonsColumn(model=ContactAssociation, buttons=("edit", "delete"))
+
+    class Meta(BaseTable.Meta):
+        model = ContactAssociation
+        fields = (
+            "pk",
+            "contact_type",
+            "name",
+            "status",
+            "role",
+            "contact_or_team_phone",
+            "contact_or_team_email",
+            "actions",
+        )
+        default_columns = [
+            "pk",
+            "contact_type",
+            "name",
+            "status",
+            "role",
+            "contact_or_team_phone",
+            "contact_or_team_email",
+            "actions",
+        ]
+        orderable = False
+
+
+class ContactAssociationTable(StatusTableMixin, RoleTableMixin, BaseTable):
+    associated_object_type = tables.Column(verbose_name="Object Type")
+    associated_object = tables.Column(linkify=True, verbose_name="Object")
+
+    class Meta(BaseTable.Meta):
+        model = ContactAssociation
+        fields = ("role", "status", "associated_object_type", "associated_object")

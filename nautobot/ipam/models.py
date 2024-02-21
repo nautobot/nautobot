@@ -4,7 +4,7 @@ import operator
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q
 from django.utils.functional import cached_property
 import netaddr
@@ -431,17 +431,14 @@ class Prefix(PrimaryModel):
     # ip_version is set internally just like network, broadcast, and prefix_length.
     ip_version = models.IntegerField(
         choices=choices.IPAddressVersionChoices,
-        null=True,
         editable=False,
         db_index=True,
         verbose_name="IP Version",
     )
-    location = models.ForeignKey(
+    locations = models.ManyToManyField(
         to="dcim.Location",
-        on_delete=models.PROTECT,
         related_name="prefixes",
         blank=True,
-        null=True,
     )
     namespace = models.ForeignKey(
         to="ipam.Namespace",
@@ -485,7 +482,7 @@ class Prefix(PrimaryModel):
     clone_fields = [
         "date_allocated",
         "description",
-        "location",
+        "locations",
         "namespace",
         "rir",
         "role",
@@ -526,6 +523,7 @@ class Prefix(PrimaryModel):
 
     def __init__(self, *args, **kwargs):
         prefix = kwargs.pop("prefix", None)
+        self._location = kwargs.pop("location", None)
         super().__init__(*args, **kwargs)
         self._deconstruct_prefix(prefix)
 
@@ -549,16 +547,6 @@ class Prefix(PrimaryModel):
             self.broadcast = str(broadcast)
             self.prefix_length = prefix.prefixlen
             self.ip_version = prefix.version
-
-    def clean(self):
-        super().clean()
-
-        # Validate location
-        if self.location is not None:
-            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
-                raise ValidationError(
-                    {"location": f'Prefixes may not associate to locations of type "{self.location.location_type}".'}
-                )
 
     def delete(self, *args, **kwargs):
         """
@@ -657,7 +645,10 @@ class Prefix(PrimaryModel):
         #     )
         #     raise ValidationError({"__all__": err_msg})
 
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            if self._location is not None:
+                self.location = self._location
 
         # Determine the subnets and reparent them to this prefix.
         self.reparent_subnets()
@@ -679,6 +670,22 @@ class Prefix(PrimaryModel):
     @prefix.setter
     def prefix(self, prefix):
         self._deconstruct_prefix(prefix)
+
+    @property
+    def location(self):
+        if self.locations.count() > 1:
+            raise self.locations.model.MultipleObjectsReturned(
+                "Multiple Location objects returned. Please refer to locations."
+            )
+        return self.locations.first()
+
+    @location.setter
+    def location(self, value):
+        if self.locations.count() > 1:
+            raise self.locations.model.MultipleObjectsReturned(
+                "Multiple Location objects returned. Please refer to locations."
+            )
+        self.locations.set([value])
 
     def reparent_subnets(self):
         """
@@ -997,9 +1004,9 @@ class IPAddress(PrimaryModel):
     # ip_version is set internally just like network, and mask_length.
     ip_version = models.IntegerField(
         choices=choices.IPAddressVersionChoices,
-        null=True,
         editable=False,
         db_index=True,
+        verbose_name="IP Version",
     )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
@@ -1273,10 +1280,7 @@ class VLANGroup(OrganizationalModel):
     description = models.CharField(max_length=200, blank=True)
 
     class Meta:
-        ordering = (
-            "location",
-            "name",
-        )  # (location, name) may be non-unique
+        ordering = ("name",)
         verbose_name = "VLAN group"
         verbose_name_plural = "VLAN groups"
 
@@ -1323,12 +1327,10 @@ class VLAN(PrimaryModel):
     or more Prefixes assigned to it.
     """
 
-    location = models.ForeignKey(
+    locations = models.ManyToManyField(
         to="dcim.Location",
-        on_delete=models.PROTECT,
         related_name="vlans",
         blank=True,
-        null=True,
     )
     vlan_group = models.ForeignKey(
         to="ipam.VLANGroup",
@@ -1353,7 +1355,7 @@ class VLAN(PrimaryModel):
     description = models.CharField(max_length=200, blank=True)
 
     clone_fields = [
-        "location",
+        "locations",
         "vlan_group",
         "tenant",
         "status",
@@ -1365,7 +1367,6 @@ class VLAN(PrimaryModel):
 
     class Meta:
         ordering = (
-            "location",
             "vlan_group",
             "vid",
         )  # (location, group, vid) may be non-unique
@@ -1381,28 +1382,33 @@ class VLAN(PrimaryModel):
     def __str__(self):
         return self.display or super().__str__()
 
-    def clean(self):
-        super().clean()
+    def __init__(self, *args, **kwargs):
+        # TODO: Remove self._location, location @property once legacy `location` field is no longer supported
+        self._location = kwargs.pop("location", None)
+        super().__init__(*args, **kwargs)
 
-        # Validate location
-        if self.location is not None:
-            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
-                raise ValidationError(
-                    {"location": f'VLANs may not associate to locations of type "{self.location.location_type}".'}
-                )
+    def save(self, *args, **kwargs):
+        # Using atomic here cause legacy `location` is inserted into `locations`() which might result in an error.
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            if self._location:
+                self.location = self._location
 
-        # Validate VLAN group
-        if (
-            self.vlan_group is not None
-            and self.location is not None
-            and self.vlan_group.location is not None
-            and self.vlan_group.location not in self.location.ancestors(include_self=True)
-        ):
-            raise ValidationError(
-                {
-                    "vlan_group": f'The assigned group belongs to a location that does not include location "{self.location}".'
-                }
+    @property
+    def location(self):
+        if self.locations.count() > 1:
+            raise self.locations.model.MultipleObjectsReturned(
+                "Multiple Location objects returned. Please refer to locations."
             )
+        return self.locations.first()
+
+    @location.setter
+    def location(self, value):
+        if self.locations.count() > 1:
+            raise self.locations.model.MultipleObjectsReturned(
+                "Multiple Location objects returned. Please refer to locations."
+            )
+        self.locations.set([value])
 
     @property
     def display(self):

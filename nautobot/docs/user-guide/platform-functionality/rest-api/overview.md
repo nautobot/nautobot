@@ -524,7 +524,7 @@ http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/ | jq '.
     ],
     "notes_url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/notes/",
     "custom_fields": {
-        "example_plugin_auto_custom_field": null
+        "example_app_auto_custom_field": null
     }
 }
 ```
@@ -568,7 +568,7 @@ http://nautobot/api/dcim/locations/ce69530e-6a4a-4d3c-9f95-fc326ec39abf/?depth=1
         "display": "Campus-01",
         "url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/",
         "custom_fields": {
-            "example_plugin_auto_custom_field": null
+            "example_app_auto_custom_field": null
         },
         "notes_url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/notes/",
         "tree_depth": null,
@@ -698,7 +698,7 @@ http://nautobot/api/dcim/locations/3b71a669-faa4-4f8d-a72a-8c94d121b793/?depth=2
             "tenant": "http://nautobot/api/tenancy/tenants/5b1feadb-fab0-4f81-a53f-5192d83b0216/",
             "notes_url": "http://nautobot/api/dcim/locations/0e19e475-89c9-4cf4-8b5f-a0589f0950cd/notes/",
             "custom_fields": {
-                "example_plugin_auto_custom_field": null
+                "example_app_auto_custom_field": null
             }
         },
         "location_type": {

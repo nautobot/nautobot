@@ -518,7 +518,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
         if side == RelationshipSideChoices.SIDE_SOURCE:
             destination_model = self.destination_type.model_class()
-            if not destination_model:  # perhaps a plugin was uninstalled?
+            if not destination_model:  # perhaps an App was uninstalled?
                 return str(self)
             if self.type in (
                 RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -531,7 +531,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
         elif side == RelationshipSideChoices.SIDE_DESTINATION:
             source_model = self.source_type.model_class()
-            if not source_model:  # perhaps a plugin was uninstalled?
+            if not source_model:  # perhaps an App was uninstalled?
                 return str(self)
             if self.type in (
                 RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -582,7 +582,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         model_class = object_type.model_class()
         if model_class:
             queryset = model_class.objects.all()
-        else:  # maybe a relationship to a model that no longer exists, such as a removed plugin?
+        else:  # maybe a relationship to a model that no longer exists, such as a removed App?
             queryset = None
 
         field_class = None
@@ -620,7 +620,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
             filter_ = getattr(self, f"{side}_filter")
             side_model = getattr(self, f"{side}_type").model_class()
-            if not side_model:  # can happen if for example a plugin providing the model was uninstalled
+            if not side_model:  # can happen if for example an App providing the model was uninstalled
                 raise ValidationError({f"{side}_type": "Unable to locate model class"})
             model_name = side_model._meta.label
             if not isinstance(filter_, dict):
@@ -711,7 +711,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         be skipped or not when validating required relationships.
         It will skip when any of the following conditions are True:
          - a relationship is marked as symmetric
-         - if a required model class is None (if it doesn't exist yet -- unimplemented/uninstalled plugins for instance)
+         - if a required model class is None (if it doesn't exist yet -- unimplemented/uninstalled Apps for instance)
 
         Args:
             referenced_instance_or_class: model instance or class
@@ -725,8 +725,8 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
             return True
 
         required_model_class = getattr(self, f"{RelationshipSideChoices.OPPOSITE[side]}_type").model_class()
-        # Handle the case where required_model_class is None (e.g., relationship to a plugin
-        # model for a plugin that's not installed at present):
+        # Handle the case where required_model_class is None (e.g., relationship to an App model for
+        # an App that's not installed at present):
         if required_model_class is None:
             logger.info("Relationship enforcement skipped as required model class doesn't exist yet.")
             return True
@@ -768,7 +768,7 @@ class RelationshipAssociation(BaseModel):
         """
         Backend for get_source and get_destination methods.
 
-        In the case where we have a RelationshipAssociation to a plugin-provided model, but the plugin is
+        In the case where we have a RelationshipAssociation to an App-provided model, but the App is
         not presently installed/enabled, dereferencing the peer GenericForeignKey will throw an AttributeError:
             AttributeError: 'NoneType' object has no attribute '_base_manager'
         because ContentType.model_class() returned None unexpectedly.
@@ -781,7 +781,7 @@ class RelationshipAssociation(BaseModel):
             return getattr(self, name)
         except AttributeError:
             logger.error(
-                "Unable to locate RelationshipAssociation %s (of type %s). Perhaps a plugin is missing?",
+                "Unable to locate RelationshipAssociation %s (of type %s). Perhaps an App is missing?",
                 name,
                 getattr(self, f"{name}_type"),
             )

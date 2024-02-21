@@ -20,7 +20,7 @@ from nautobot.extras.choices import ObjectChangeActionChoices, RelationshipTypeC
 from nautobot.extras.models import ObjectChange
 from nautobot.extras.registry import registry
 
-from example_plugin.models import ExampleModel
+from example_app.models import ExampleModel
 
 
 class DictToFilterParamsTest(TestCase):
@@ -192,10 +192,10 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(lookup.get_route_for_model("dcim.location", "list"), "dcim:location_list")
         self.assertEqual(lookup.get_route_for_model(dcim_models.Location, "list"), "dcim:location_list")
         self.assertEqual(
-            lookup.get_route_for_model("example_plugin.examplemodel", "list"),
-            "plugins:example_plugin:examplemodel_list",
+            lookup.get_route_for_model("example_app.examplemodel", "list"),
+            "plugins:example_app:examplemodel_list",
         )
-        self.assertEqual(lookup.get_route_for_model(ExampleModel, "list"), "plugins:example_plugin:examplemodel_list")
+        self.assertEqual(lookup.get_route_for_model(ExampleModel, "list"), "plugins:example_app:examplemodel_list")
 
         # API
         self.assertEqual(lookup.get_route_for_model("dcim.device", "list", api=True), "dcim-api:device-list")
@@ -209,12 +209,12 @@ class GetFooForModelTest(TestCase):
             lookup.get_route_for_model(dcim_models.Location, "detail", api=True), "dcim-api:location-detail"
         )
         self.assertEqual(
-            lookup.get_route_for_model("example_plugin.examplemodel", "list", api=True),
-            "plugins-api:example_plugin-api:examplemodel-list",
+            lookup.get_route_for_model("example_app.examplemodel", "list", api=True),
+            "plugins-api:example_app-api:examplemodel-list",
         )
         self.assertEqual(
             lookup.get_route_for_model(ExampleModel, "list", api=True),
-            "plugins-api:example_plugin-api:examplemodel-list",
+            "plugins-api:example_app-api:examplemodel-list",
         )
 
     def test_get_table_for_model(self):
@@ -357,7 +357,7 @@ class SlugifyFunctionsTest(TestCase):
     def test_slugify_dots_to_dashes(self):
         for content, expected in (
             ("Hello.World", "hello-world"),
-            ("plugins.my_plugin.jobs", "plugins-my_plugin-jobs"),
+            ("apps.my_app.jobs", "apps-my_app-jobs"),
             ("Lots of . spaces  ... and such", "lots-of-spaces-and-such"),
         ):
             self.assertEqual(core_fields.slugify_dots_to_dashes(content), expected)
