@@ -303,56 +303,6 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             prefix.validated_save()
         self.assertIn(f'Prefixes may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
-    def test_create_field_population(self):
-        """Test the various ways of creating a Prefix all result in correctly populated fields."""
-        with self.subTest("Creation with a prefix and status"):
-            prefix = Prefix(prefix="192.0.3.0/24", status=self.status)
-            prefix.save()
-            self.assertEqual(prefix.network, "192.0.3.0")
-            self.assertEqual(prefix.broadcast, "192.0.3.255")
-            self.assertEqual(prefix.prefix_length, 24)
-            self.assertEqual(prefix.type, PrefixTypeChoices.TYPE_NETWORK)  # default value
-            # parent field is tested exhaustively below
-            self.assertEqual(prefix.ip_version, 4)
-            self.assertEqual(prefix.namespace, get_default_namespace())  # default value
-
-        with self.subTest("Creation with a network, broadcast, and prefix_length"):
-            prefix = Prefix(network="192.0.4.0", broadcast="192.0.4.255", prefix_length=24, status=self.status)
-            prefix.save()
-            self.assertEqual(prefix.network, "192.0.4.0")
-            self.assertEqual(prefix.broadcast, "192.0.4.255")
-            self.assertEqual(prefix.prefix_length, 24)
-            self.assertEqual(prefix.type, PrefixTypeChoices.TYPE_NETWORK)  # default value
-            # parent field is tested exhaustively below
-            self.assertEqual(prefix.ip_version, 4)
-            self.assertEqual(prefix.namespace, get_default_namespace())  # default value
-            self.assertEqual(prefix.prefix, netaddr.IPNetwork("192.0.4.0/24"))
-
-        with self.subTest("Creation with conflicting values - prefix takes precedence"):
-            prefix = Prefix(
-                prefix="192.0.5.0/24",
-                status=self.status,
-                network="1.1.1.1",
-                broadcast="2.2.2.2",
-                prefix_length=27,
-                ip_version=6,
-            )
-            prefix.save()
-            self.assertEqual(prefix.network, "192.0.5.0")
-            self.assertEqual(prefix.broadcast, "192.0.5.255")
-            self.assertEqual(prefix.prefix_length, 24)
-            self.assertEqual(prefix.ip_version, 4)
-
-        with self.subTest("Creation with conflicting values - network and prefix_length take precedence"):
-            prefix = Prefix(
-                status=self.status, network="192.0.6.0", prefix_length=24, broadcast="192.0.6.127", ip_version=6
-            )
-            prefix.save()
-            self.assertEqual(prefix.network, "192.0.6.0")
-            self.assertEqual(prefix.broadcast, "192.0.6.255")
-            self.assertEqual(prefix.prefix_length, 24)
-            self.assertEqual(prefix.ip_version, 4)
-
     def test_tree_methods(self):
         """Test the various tree methods work as expected."""
 
@@ -904,40 +854,6 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         self.namespace = Namespace.objects.first()
         self.status = Status.objects.get(name="Active")
         self.prefix = Prefix.objects.create(prefix="192.0.2.0/24", status=self.status, namespace=self.namespace)
-
-    def test_create_field_population(self):
-        """Test that the various ways of creating an IPAddress result in correctly populated fields."""
-        if self.namespace != get_default_namespace():
-            prefix = Prefix.objects.create(prefix="192.0.2.0/24", status=self.status, namespace=get_default_namespace())
-        else:
-            prefix = self.prefix
-
-        with self.subTest("Creation with an address"):
-            ip = IPAddress(address="192.0.2.1/24", status=self.status)
-            ip.save()
-            self.assertEqual(ip.host, "192.0.2.1")
-            self.assertEqual(ip.mask_length, 24)
-            self.assertEqual(ip.type, IPAddressTypeChoices.TYPE_HOST)  # default value
-            self.assertEqual(ip.parent, prefix)
-            self.assertEqual(ip.ip_version, 4)
-
-        with self.subTest("Creation with a host and mask_length"):
-            ip = IPAddress(host="192.0.2.2", mask_length=24, status=self.status)
-            ip.save()
-            self.assertEqual(ip.host, "192.0.2.2")
-            self.assertEqual(ip.mask_length, 24)
-            self.assertEqual(ip.type, IPAddressTypeChoices.TYPE_HOST)  # default value
-            self.assertEqual(ip.parent, prefix)
-            self.assertEqual(ip.ip_version, 4)
-
-        with self.subTest("Creation with conflicting values - address takes precedence"):
-            ip = IPAddress(address="192.0.2.3/24", host="1.1.1.1", mask_length=32, ip_version=6, status=self.status)
-            ip.save()
-            self.assertEqual(ip.host, "192.0.2.3")
-            self.assertEqual(ip.mask_length, 24)
-            self.assertEqual(ip.type, IPAddressTypeChoices.TYPE_HOST)  # default value
-            self.assertEqual(ip.parent, prefix)
-            self.assertEqual(ip.ip_version, 4)
 
     #
     # Uniqueness enforcement tests

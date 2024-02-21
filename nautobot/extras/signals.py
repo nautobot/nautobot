@@ -4,7 +4,6 @@ import logging
 import os
 import secrets
 import shutil
-import traceback
 
 from db_file_storage.model_utils import delete_file
 from db_file_storage.storage import DatabaseFileStorage
@@ -21,7 +20,6 @@ from django_prometheus.models import model_deletes, model_inserts, model_updates
 
 from nautobot.core.celery import app, import_jobs_as_celery_tasks
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import (
@@ -266,31 +264,18 @@ def git_repository_pre_delete(instance, **kwargs):
     # In fact, attempting to do so would cause database IntegrityErrors!
     job_result.use_job_logs_db = False
 
-    try:
-        refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
+    refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
 
-        # In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
-        # of this repository; we need some way to ensure that all such clones are deleted.
-        # In the Celery worker case, we can broadcast a control message to all workers to do so:
-        app.control.broadcast("discard_git_repository", repository_slug=instance.slug)
-        # But we don't have an equivalent way to broadcast to any other Django instances.
-        # For now we just delete the one that we have locally and rely on other methods,
-        # such as the import_jobs_as_celery_tasks() signal that runs on server startup,
-        # to clean up other clones as they're encountered.
-        if os.path.isdir(instance.filesystem_path):
-            shutil.rmtree(instance.filesystem_path)
-    except Exception as exc:
-        job_result.result = {
-            "exc_type": type(exc).__name__,
-            "exc_message": sanitize(str(exc)),
-        }
-        job_result.status = JobResultStatusChoices.STATUS_FAILURE
-        job_result.traceback = sanitize("".join(traceback.format_exception(type(exc), exc, exc.__traceback__)))
-    else:
-        job_result.status = JobResultStatusChoices.STATUS_SUCCESS
-    finally:
-        job_result.date_done = timezone.now()
-        job_result.save()
+    # In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
+    # of this repository; we need some way to ensure that all such clones are deleted.
+    # In the Celery worker case, we can broadcast a control message to all workers to do so:
+    app.control.broadcast("discard_git_repository", repository_slug=instance.slug)
+    # But we don't have an equivalent way to broadcast to any other Django instances.
+    # For now we just delete the one that we have locally and rely on other methods,
+    # such as the import_jobs_as_celery_tasks() signal that runs on server startup,
+    # to clean up other clones as they're encountered.
+    if os.path.isdir(instance.filesystem_path):
+        shutil.rmtree(instance.filesystem_path)
 
 
 #

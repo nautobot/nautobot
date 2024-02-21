@@ -246,8 +246,15 @@ jobs:
           export TAG_LATEST_FOR_BRANCH="false"
           export TAG_LATEST_FOR_PY="false"
 
+          if [[ $BRANCH == "develop" ]]; then
+            export TAG_LATEST_FOR_PY="true"
+          fi
+
           if [[ "${{ matrix.python-version }}" == "3.11" ]]; then
             export TAG_LATEST_FOR_BRANCH="true"
+            if [[ $TAG_LATEST_FOR_PY == "true" ]]; then
+              export TAG_LATEST="true"
+            fi
           fi
 
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT

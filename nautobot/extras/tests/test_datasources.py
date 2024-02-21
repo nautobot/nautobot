@@ -737,10 +737,6 @@ class GitTest(TransactionTestCase):
                 # Now delete the GitRepository
                 self.repo.delete()
 
-                with self.subTest("Assert Deleted GitRepo do not create a never ending JobResult record"):
-                    # Bug fix test for https://github.com/nautobot/nautobot/issues/5121
-                    self.assertEqual(JobResult.objects.last().status, JobResultStatusChoices.STATUS_SUCCESS)
-
                 with self.assertRaises(ConfigContext.DoesNotExist):
                     ConfigContext.objects.get(
                         owner_object_id=self.repo.pk,
