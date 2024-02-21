@@ -90,7 +90,6 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#5254](https://github.com/nautobot/nautobot/issues/5254) - Changed `TreeQuerySet.ancestors` implementation to a more efficient approach for shallow trees.
 - [#5254](https://github.com/nautobot/nautobot/issues/5254) - Changed the location detail view not to annotate tree fields on its queries.
 - [#5267](https://github.com/nautobot/nautobot/issues/5267) - Updated navbar user dropdown with chevron.
-- [#5267](https://github.com/nautobot/nautobot/issues/5267) - Reorganized navbar css rules in `base.css`.
 
 ### Fixed
 
@@ -105,6 +104,10 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 
 - [#3349](https://github.com/nautobot/nautobot/issues/3349) - Added annotations to document the importance of keeping the TIME_ZONE setting consistent on Nautobot web servers and Celery Beat servers.
 - [#5297](https://github.com/nautobot/nautobot/issues/5297) - Updated the low level application stack diagram to orient user traffic coming from the top.
+
+### Housekeeping
+
+- [#5267](https://github.com/nautobot/nautobot/issues/5267) - Reorganized navbar css rules in `base.css`.
 
 ## v2.1.4 (2024-02-08)
 
