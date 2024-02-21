@@ -1,6 +1,5 @@
 import os
 import platform
-import re
 import sys
 import time
 
@@ -10,32 +9,21 @@ from django.conf import settings
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
-from django.http import HttpResponseForbidden, HttpResponseServerError, JsonResponse
+from django.http import HttpResponse, HttpResponseForbidden, HttpResponseServerError, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import resolve, reverse
-from django.utils.encoding import smart_str
 from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
 from django.views.generic import TemplateView, View
 from graphene_django.views import GraphQLView
 from packaging import version
-from prometheus_client import (
-    CollectorRegistry,
-    CONTENT_TYPE_LATEST,
-    generate_latest,
-    multiprocess,
-    REGISTRY,
-)
+import prometheus_client
+from prometheus_client import multiprocess
 from prometheus_client.metrics_core import GaugeMetricFamily
 from prometheus_client.registry import Collector
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.renderers import BaseRenderer
-from rest_framework.response import Response
-from rest_framework.versioning import AcceptHeaderVersioning
-from rest_framework.views import APIView
 
 from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.forms import SearchForm
@@ -296,54 +284,29 @@ class NautobotAppMetricsCollector(Collector):
         yield gauge
 
 
-class PrometheusVersioning(AcceptHeaderVersioning):
-    """Overwrite the Nautobot API Version with the prometheus API version. Otherwise Telegraf/Prometheus won't be able to poll due to a version mismatch."""
+def nautobot_metrics_view(request):
+    """Exports /metrics.
 
-    default_version = re.findall("version=(.+);", CONTENT_TYPE_LATEST)[0]
+    This overwrites the default django_prometheus view to inject metrics from Nautobot apps.
 
-
-class PlainTextRenderer(BaseRenderer):
-    """Render API as plain text instead of JSON."""
-
-    media_type = "text/plain"
-    format = "txt"
-
-    def render(self, data, accepted_media_type=None, renderer_context=None):
-        """Render the data."""
-        return smart_str(data, encoding=self.charset)
-
-
-class NautobotMetricsView(APIView):
-    renderer_classes = [PlainTextRenderer]
-    versioning_class = PrometheusVersioning
-    permission_classes = [AllowAny]
-    serializer_class = None
-
-    def get(self, request):
-        """Exports /metrics.
-        This overwrites the default django_prometheus view to inject metrics from Nautobot apps.
-        Note that we cannot use `prometheus_django.ExportToDjangoView`, as that is a simple function, and we need access to
-        the `prometheus_registry` variable that is defined inside of it."""
-        if "PROMETHEUS_MULTIPROC_DIR" in os.environ or "prometheus_multiproc_dir" in os.environ:
-            prometheus_registry = CollectorRegistry()
-            multiprocess.MultiProcessCollector(prometheus_registry)
-        else:
-            prometheus_registry = REGISTRY
-        # Instantiate and register the collector. Note that this has to be done every time this view is accessed, because
-        # the registry for multiprocess metrics is also instantiated every time this view is accessed. As a result, the
-        # same goes for the registration of the collector to the registry.
-        try:
-            nb_app_collector = NautobotAppMetricsCollector()
-            prometheus_registry.register(nb_app_collector)
-        except ValueError:
-            # Collector already registered, we are running without multiprocessing
-            pass
-        metrics_page = generate_latest(prometheus_registry)
-        return Response(metrics_page, content_type=CONTENT_TYPE_LATEST)
-
-
-class NautobotMetricsViewAuth(NautobotMetricsView):
-    permission_classes = [IsAuthenticated]
+    Note that we cannot use `prometheus_django.ExportToDjangoView`, as that is a simple function, and we need access to
+    the `prometheus_registry` variable that is defined inside of it."""
+    if "PROMETHEUS_MULTIPROC_DIR" in os.environ or "prometheus_multiproc_dir" in os.environ:
+        prometheus_registry = prometheus_client.CollectorRegistry()
+        multiprocess.MultiProcessCollector(prometheus_registry)
+    else:
+        prometheus_registry = prometheus_client.REGISTRY
+    # Instantiate and register the collector. Note that this has to be done every time this view is accessed, because
+    # the registry for multiprocess metrics is also instantiated every time this view is accessed. As a result, the
+    # same goes for the registration of the collector to the registry.
+    try:
+        nb_app_collector = NautobotAppMetricsCollector()
+        prometheus_registry.register(nb_app_collector)
+    except ValueError:
+        # Collector already registered, we are running without multiprocessing
+        pass
+    metrics_page = prometheus_client.generate_latest(prometheus_registry)
+    return HttpResponse(metrics_page, content_type=prometheus_client.CONTENT_TYPE_LATEST)
 
 
 @permission_required(get_permission_for_model(FileProxy, "view"), raise_exception=True)

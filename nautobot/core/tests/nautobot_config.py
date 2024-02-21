@@ -56,7 +56,5 @@ CELERY_BROKER_URL = "memory://"
 # Metrics need to enabled in this config as overriding them with override_settings will not actually enable them
 METRICS_ENABLED = True
 
-METRICS_AUTHENTICATED = True
-
 DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT = 0
 CONTENT_TYPE_CACHE_TIMEOUT = 0

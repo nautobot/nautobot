@@ -160,53 +160,6 @@ function initializeColorPicker(context, dropdownParent=null){
     });
 }
 
-/**
- * Retrieves the value of a property from a nested object using a string path.
- *
- * This method supports accessing deeply nested properties within an object.
- * It is created to support extraction of nested values in the display-field
- * and value-field for DynamicChoiceField.
- *
- * @param {Object} response - The object from which to retrieve the value.
- * @param {string} fieldPath - The string representing the path to the desired property.
- * @returns {*} The value of the specified property, or null if the path is invalid or the object is not found.
- *
- * @example
- * let response = {
- *   "id": 1234,
- *   "vlan": {
- *     "name": "myvlan"
- *   },
- *   "interfaces": [
- *     { "name": "eth0", "status": "up" },
- *     { "name": "eth1", "status": "down" }
- *   ]
- * }
- * // returns "myvlan"
- * resolvePath(response, "vlan.name")
- *
- * // returns "eth0"
- * resolvePath(response, "interfaces[0].name")
- *
- * // returns "eth0"
- * resolvePath(response, "interfaces.0.name")
- */
-function resolvePath(response, fieldPath) {
-    if (!fieldPath)
-        return null;
-
-    if (typeof response !== 'object' || response === null || !response) {
-        console.error('Invalid response object');
-        return null;
-    }
-
-    return fieldPath
-           .replace(/\[|\]\.?/g, '.')
-           .split('.')
-           .filter(value => value)
-           .reduce((memo, value) => memo && memo[value], response);
-}
-
 // Dynamic Choice Selection
 function initializeDynamicChoiceSelection(context, dropdownParent=null){
     this_context = $(context);
@@ -310,8 +263,8 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                     var results = data.results;
 
                     results = results.reduce((results,record,idx) => {
-                        record.text = resolvePath(record, element.getAttribute('display-field')) || record.name;
-                        record.id = resolvePath(record, element.getAttribute('value-field')) || record.id;
+                        record.text = record[element.getAttribute('display-field')] || record.name;
+                        record.id = record[element.getAttribute('value-field')] || record.id;
                         if(element.getAttribute('disabled-indicator') && record[element.getAttribute('disabled-indicator')]) {
                             // The disabled-indicator equated to true, so we disable this option
                             record.disabled = true;
