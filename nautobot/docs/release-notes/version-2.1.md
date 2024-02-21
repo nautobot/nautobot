@@ -74,6 +74,10 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 <!-- towncrier release notes start -->
 ## v2.1.5 (2024-02-20)
 
+### Security
+
+- [#5303](https://github.com/nautobot/nautobot/pull/5303) - Updated `cryptography` to 42.0.2 due to CVE-2024-0727. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
 ### Added
 
 - [#5171](https://github.com/nautobot/nautobot/issues/5171) - Added `latest` and `latest-py<version>` tags to the `nautobot` Docker images published for the latest stable release of Nautobot.
@@ -87,10 +91,6 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#5254](https://github.com/nautobot/nautobot/issues/5254) - Changed the location detail view not to annotate tree fields on its queries.
 - [#5267](https://github.com/nautobot/nautobot/issues/5267) - Updated navbar user dropdown with chevron.
 - [#5267](https://github.com/nautobot/nautobot/issues/5267) - Reorganized navbar css rules in `base.css`.
-
-### Security
-
-- [#5303](https://github.com/nautobot/nautobot/pull/5303) - Updated `cryptography` to 42.0.2 due to CVE-2024-0727. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
 
 ### Fixed
 
