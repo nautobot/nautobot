@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
@@ -15,6 +15,7 @@ import yaml
 from nautobot.core.models import BaseManager, RestrictedQuerySet
 from nautobot.core.models.fields import NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
+from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import (
     DeviceFaceChoices,
@@ -1209,3 +1210,105 @@ class SoftwareVersion(PrimaryModel):
         if self.alias:
             return self.alias
         return f"{self.platform} - {self.version}"
+
+
+#
+# Controller
+#
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "dynamic_groups",
+    "export_templates",
+    "graphql",
+    "locations",
+    "statuses",
+    "webhooks",
+)
+class Controller(PrimaryModel, ConfigContextModel):
+    """Controller model."""  # TODO: (whitej6) finialize description
+
+    name = models.CharField(max_length=100, unique=True)
+    status = StatusField(blank=False, null=False)
+    description = models.CharField(max_length=200, blank=True)
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="controllers",
+    )
+    platform = models.ForeignKey(
+        to="dcim.Platform",
+        on_delete=models.SET_NULL,
+        related_name="controllers",
+        blank=True,
+        null=True,
+    )
+    role = RoleField(blank=False, null=False)
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="controllers",
+        blank=True,
+        null=True,
+    )
+    external_integration = models.ForeignKey(
+        to="extras.ExternalIntegration",
+        on_delete=models.PROTECT,
+        related_name="controllers",
+        blank=True,
+        null=True,
+    )
+    deployed_controller_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        blank=True,
+        null=True,
+    )
+    deployed_controller_id = models.UUIDField(blank=True, null=True)
+    deployed_controller = GenericForeignKey(ct_field="deployed_controller_type", fk_field="deployed_controller_id")
+    device_groups = models.ManyToManyField(
+        to="dcim.DeviceGroup", related_name="controllers", through="ControllerDeviceGroupAssociation"
+    )
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "dynamic_groups",
+    "export_templates",
+    "graphql",
+    "locations",
+    "statuses",
+    "webhooks",
+)
+class DeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
+    """Controller model."""  # TODO: (whitej6) finialize description
+
+    name = models.CharField(max_length=48)
+    devices = models.ManyToManyField(
+        to="dcim.Device",
+        related_name="device_groups",
+    )
+
+
+class ControllerDeviceGroupAssociation(BaseModel):
+    """Controller model."""  # TODO: (whitej6) finialize description
+
+    weight = models.PositiveIntegerField(default=1000)
+    controller = models.ForeignKey(
+        to="dcim.Controller",
+        on_delete=models.CASCADE,
+        related_name="+",
+        blank=False,
+        null=False,
+    )
+    device = models.ForeignKey(
+        to="dcim.DeviceGroup",
+        on_delete=models.CASCADE,
+        related_name="+",
+        blank=False,
+        null=False,
+    )
