@@ -17,6 +17,8 @@ def migrate_null_statuses(apps, schema):
 
 class Migration(migrations.Migration):
     dependencies = [
+        ("contenttypes", "0002_remove_content_type_name"),
+        ("extras", "0001_initial_part_1"),
         ("virtualization", "0023_ipam__namespaces"),
     ]
 

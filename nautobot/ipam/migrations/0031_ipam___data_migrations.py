@@ -116,8 +116,10 @@ def revert_ipaddress_type_to_status(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("ipam", "0030_ipam__namespaces"),
+        ("contenttypes", "0002_remove_content_type_name"),
         ("dcim", "0045_ipam__namespaces"),
+        ("extras", "0001_initial_part_1"),
+        ("ipam", "0030_ipam__namespaces"),
         ("virtualization", "0023_ipam__namespaces"),
     ]
 
