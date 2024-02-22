@@ -9,7 +9,6 @@ import sys
 
 from celery import Celery, shared_task, signals
 from celery.app.log import TaskFormatter
-from celery.fixups.django import DjangoFixup
 from celery.utils.log import get_logger
 from django.conf import settings
 from django.utils.functional import SimpleLazyObject
@@ -22,17 +21,9 @@ from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.celery.log import NautobotDatabaseHandler
 
 logger = logging.getLogger(__name__)
-# The Celery documentation tells us to call setup on the app to initialize
-# settings, but we will NOT be doing that because of a chicken-and-egg problem
-# when bootstrapping the Django settings with `nautobot-server`.
-#
-# Note this would normally set the `DJANGO_SETTINGS_MODULE` environment variable
-# which Celery and its workers need under the hood.The Celery docs and examples
-# normally have you set it here, but because of our custom settings bootstrapping
-# it is handled in the `nautobot.setup() call, and we have implemented a
-# `nautobot-server celery` command to provide the correct context so this does
-# NOT need to be called here.
-# nautobot.setup()
+
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "nautobot_config")
 
 
 class NautobotCelery(Celery):
@@ -52,16 +43,10 @@ class NautobotCelery(Celery):
 app = NautobotCelery("nautobot")
 
 # Using a string here means the worker doesn't have to serialize
-# the configuration object to child processes. Again, this is possible
-# only after calling `nautobot.setup()` which sets `DJANGO_SETTINGS_MODULE`.
+# the configuration object to child processes.
 # - namespace='CELERY' means all celery-related configuration keys
 #   should have a `CELERY_` prefix.
 app.config_from_object("django.conf:settings", namespace="CELERY")
-
-# Because of the chicken-and-egg Django settings bootstrapping issue,
-# Celery doesn't automatically install its Django-specific patches.
-# So we need to explicitly do so ourselves:
-DjangoFixup(app).install()
 
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()

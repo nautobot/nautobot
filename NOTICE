@@ -1,8 +1,6 @@
 Nautobot
-Copyright 2021-2023 Network to Code, LLC
+Copyright 2021-2024 Network to Code, LLC
 
 Nautobot is based in part upon NetBox. NetBox is copyrighted and licensed under Apache License 2.0 by DigitalOcean, LLC.
-
-Some parts of Nautobot are based upon Logan and licensed under Apache License 2.0 by David Cramer.
 
 Some parts of Nautobot are based upon `django-natural-keys`, licensed under MIT License by S. Andrew Sheppard.
