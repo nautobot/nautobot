@@ -1,22 +1,10 @@
-{% extends 'base.html' %}
+{% extends 'generic/object_create.html' %}
 {% load form_helpers %}
 {% load static %}
 
 {% block title %}Create {{ component_type }}{% endblock %}
 
-{% block content %}
-<form action="" method="post" class="form form-horizontal">
-    {% csrf_token %}
-    <div class="row">
-        <div class="col-md-6 col-md-offset-3">
-            {% if form.non_field_errors %}
-                <div class="panel panel-danger">
-                    <div class="panel-heading"><strong>Errors</strong></div>
-                    <div class="panel-body">
-                        {{ form.non_field_errors }}
-                    </div>
-                </div>
-            {% endif %}
+{% block form %}
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <strong>{{ component_type|title }}</strong>
@@ -48,16 +36,11 @@
                 </div>
             </div>
             {% include 'inc/extras_features_edit_form_fields.html' with form=model_form %}
-            <div class="form-group">
-                <div class="col-md-9 col-md-offset-3 text-right">
+{% endblock %}
+{% block buttons %}
                     <button type="submit" name="_create" class="btn btn-primary">Create</button>
                     <button type="submit" name="_addanother" class="btn btn-primary">Create and Add More</button>
                     <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
-                </div>
-            </div>
-        </div>
-    </div>
-</form>
 {% endblock %}
 
 {% block javascript %}
