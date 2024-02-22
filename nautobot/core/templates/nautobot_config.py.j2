@@ -380,6 +380,10 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #
 # METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_METRICS_ENABLED", "False"))
 
+# Require API Authentication to HTTP endpoint '/metrics'
+#
+# METRICS_AUTHENTICATED = is_truthy(os.getenv("NAUTOBOT_METRICS_AUTHENTICATED", "False"))
+
 # Credentials that Nautobot will uses to authenticate to devices when connecting via NAPALM.
 #
 # NAPALM_USERNAME = os.getenv("NAUTOBOT_NAPALM_USERNAME", "")
