@@ -37,6 +37,8 @@ STORAGE_CONFIG = {
     "AWS_S3_REGION_NAME": "us-west-1",
 }
 
+# Use in-memory Constance backend instead of database backend so that settings don't leak between parallel tests.
+CONSTANCE_BACKEND = "constance.backends.memory.MemoryBackend"
 
 # Enable test data factories, as they're a pre-requisite for Nautobot core tests.
 TEST_USE_FACTORIES = True
@@ -53,6 +55,8 @@ CELERY_BROKER_URL = "memory://"
 
 # Metrics need to enabled in this config as overriding them with override_settings will not actually enable them
 METRICS_ENABLED = True
+
+METRICS_AUTHENTICATED = True
 
 DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT = 0
 CONTENT_TYPE_CACHE_TIMEOUT = 0

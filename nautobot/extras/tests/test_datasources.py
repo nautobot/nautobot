@@ -122,6 +122,7 @@ class GitTest(TransactionTestCase):
             del sys.modules[f"{self.repo.slug}.jobs"]
         if f"{self.repo.slug}" in sys.modules:
             del sys.modules[f"{self.repo.slug}"]
+        super().tearDown()
 
     def populate_repo(self, path, url, *args, **kwargs):
         os.makedirs(path)
@@ -735,6 +736,10 @@ class GitTest(TransactionTestCase):
 
                 # Now delete the GitRepository
                 self.repo.delete()
+
+                with self.subTest("Assert Deleted GitRepo do not create a never ending JobResult record"):
+                    # Bug fix test for https://github.com/nautobot/nautobot/issues/5121
+                    self.assertEqual(JobResult.objects.last().status, JobResultStatusChoices.STATUS_SUCCESS)
 
                 with self.assertRaises(ConfigContext.DoesNotExist):
                     ConfigContext.objects.get(
