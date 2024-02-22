@@ -20,10 +20,10 @@ To see all available management commands as the Nautobot user:
 nautobot-server help
 ```
 
-All management commands have a `-h/--help` flag to list all available arguments for that command, for example:
+You can also provide a specific subcommand to list available arguments for that command, for example:
 
 ```no-highlight
-nautobot-server migrate --help
+nautobot-server help migrate
 ```
 
 ## Available Commands
@@ -366,7 +366,7 @@ Please see the [healthcheck documentation](../guides/healthcheck.md) for more in
 
 `nautobot-server init [--disable-installation-metrics] [config_path]`
 
-Generates a new configuration with all of the default settings provided for you, and will also generate a unique[`SECRET_KEY`](../configuration/required-settings.md#secret_key).
+Generates a new configuration with all of the default settings provided for you, and will also generate a unique [`SECRET_KEY`](../configuration/required-settings.md#secret_key).
 
 By default the file will be created at `$HOME/.nautobot/nautobot_config.py`:
 
@@ -806,7 +806,25 @@ Finished.
 ```
 
 !!! note
-    This command is safe to run at any time. If it does detect any changes, it will exit cleanly.
+    This command is safe to run at any time. If it does not detect any changes, it will exit cleanly.
+
+### `version`
+
+`nautobot-server version`
+
+Report the Nautobot version and Django version, as well as the current configuration file in use.
+
+```no-highlight
+nautobot-server version
+```
+
+Example output:
+
+```no-highlight
+Nautobot version: 2.2.0a1
+Django version: 3.2.24
+Configuration file: /opt/nautobot/nautobot_config.py
+```
 
 ### `webhook_receiver`
 
