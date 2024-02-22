@@ -42,7 +42,7 @@ Install the system dependencies as `root`:
 sudo apt install -y libxmlsec1-dev libxmlsec1-openssl pkg-config
 ```
 
-Install the `sso` Python extra as the `nautobot` user.
+Install the `sso` Python extra as the `nautobot` user.  It is included in the standard docker image but the system dependencies are not.
 
 ```no-highlight
 pip3 install "nautobot[sso]"
@@ -245,7 +245,7 @@ OKTA_SSO_URL = "<Sign On URL from Okta>"
 OKTA_CERTIFICATE = "<Signing Certificate from Okta>"
 
 # The most important setting. List the Entity ID (Issuer), SSO URL (Sign On URL), and x.509 public key certificate
-# for each provider that you app wants to support. 
+# for each provider that you app wants to support.
 SOCIAL_AUTH_SAML_ENABLED_IDPS = {
     "okta": {
         'force_authn': "true",
@@ -468,6 +468,45 @@ This should be the URL that is mapped to the "Log in" button on the top right of
 ---
 
 Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) next.
+
+---
+
+#### SAML Metadata
+
+If you need to collect SAML metadata from your Nautobot host to provide to the IDP, you can add a simple view to gather and display metadata.
+
+```python
+from django.http import HttpResponse
+from django.urls import reverse
+from django.views.generic import View
+from onelogin.saml2.errors import OneLogin_Saml2_Error
+from social_django.utils import load_backend, load_strategy
+
+
+class MetadataView(View):
+    """Simple metadata view to display metadata on a nautobot page.
+    Import this view into your url file then add a uri path:
+    path("metadata/", MetadataView.as_view(), name="metadata"),
+    """
+
+    def get(self, request):
+        complete_url = reverse("social:complete", args=("saml",))
+        saml_backend = load_backend(
+                load_strategy(request),
+                "saml",
+                redirect_uri=complete_url,
+            )
+        try:
+            metadata, errors = saml_backend.generate_metadata_xml()
+            if not errors:
+                return HttpResponse(content=metadata, content_type="text/xml")
+        except OneLogin_Saml2_Error as saml_error:
+            config = saml_backend.generate_saml_config()
+            return HttpResponse(
+                content=f"ERROR: {saml_error}, SAML backend config is {config}",
+                content_type="text/xml"
+            )
+```
 
 ### Azure AD
 
