@@ -19,6 +19,14 @@ Where possible, try to merge related changes into a single migration. For exampl
 !!! note
     Migrations can only be merged within a release. Once a new release has been published, its migrations cannot be altered (other than for the purpose of correcting a bug).
 
+### Advanced Database Migration Topics
+
+Before creating any custom database migration files it's a good idea to read Django's excellent [documentation on migrations](https://docs.djangoproject.com/en/stable/topics/migrations/). Here are some common pitfalls to avoid when writing migrations:
+
+* **Data Migrations**: If you need to write a migration that manipulates data using the `RunPython` operation, make sure to put this in a separate migration file from any schema changes (`CreateModel`, `AddField`, etc.).
+
+* **Dependencies**: It's important to declare the correct dependencies for your migrations. Django does a good job of determining the dependencies for automatically generated schema migrations, but if you're writing a custom migration you will need to specify dependencies manually. A good rule of thumb for data migrations is to always include a dependency for any app used in an `apps.get_model` call. For example, if your migration includes a line containing `apps.get_model("dcim", "Device")`, you should include a dependency on the `dcim` app.
+
 ## Add validation logic to `clean()`
 
 If the new field introduces additional validation requirements (beyond what's included with the field itself), implement them in the model's `clean()` method. Remember to call the model's original method using `super()` before or after your custom validation as appropriate:
