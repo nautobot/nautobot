@@ -1512,7 +1512,7 @@ class JobBulkEditView(generic.BulkEditView):
             override_value = cleaned_data.get(overridable_field)
             if reset_override:
                 setattr(obj, override_field, False)
-            elif not reset_override and (override_value is False or override_value):
+            elif not reset_override and override_value not in [None, ""]:
                 setattr(obj, override_field, True)
                 setattr(obj, overridable_field, override_value)
 

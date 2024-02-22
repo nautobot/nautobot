@@ -15,16 +15,17 @@
 {% endblock %}
 {% block javascript %}
 <script>
-    $("[id^=id_clear][id$=override]").change(function() {
-        const override_id = $(this).attr("id");
-        /* What's the form field this is an override for? */
-        const field_id = "id_" + override_id.slice(9, -9);
-        const field = $("#" + field_id);
-        if ($(this).prop("checked")) {
-            field.attr("disabled", true);
-        } else {
-            field.attr("disabled", false);
+    document.querySelectorAll("[id^=id_clear][id$=override]").forEach(
+        el => el.addEventListener("change", () => {
+            const override_id = el.id;
+            const field_id = "id_" + override_id.slice(9, -9);
+            const field = document.getElementById(field_id);
+            if(el.checked === true){
+                field.disabled = true;
+            } else {
+                field.disabled = false;
+            }
         }
-    });
+    ))
 </script>
 {% endblock %}

@@ -1730,7 +1730,7 @@ class JobTestCase(
             "clear_grouping_override": True,
             "grouping": "",
             "clear_description_override": False,
-            "description": "Overriden Description",
+            "description": "Overridden Description",
             "clear_dryrun_default_override": False,
             "dryrun_default": "",
             "clear_hidden_override": True,
@@ -1750,14 +1750,17 @@ class JobTestCase(
     def validate_job_data_after_bulk_edit(self, pk_list, old_data):
         # Name is bulk-editable
         overridable_fields = [field for field in JOB_OVERRIDABLE_FIELDS if field != "name"]
-        clear_override_fields = ["clear_" + field + "_override" for field in overridable_fields]
         for instance in self._get_queryset().filter(pk__in=pk_list):
             self.assertEqual(instance.enabled, True)
             job_class = instance.job_class
             if job_class is not None:
-                for clear_override_field in clear_override_fields:
-                    overridable_field = clear_override_field[6:-9]
-                    override_field = clear_override_field[6:]
+                for overridable_field in overridable_fields:
+                    # clear_override_field is obtained from adding "clear_" to the front and "_override" to the back of overridable_field
+                    # e.g grouping -> clear_grouping_override
+                    clear_override_field = "clear_" + overridable_field + "_override"
+                    # override_field is obtained from adding "_override" to the back of overridable_field
+                    # e.g grouping -> grouping_override
+                    override_field = overridable_field + "_override"
                     reset_override = self.bulk_edit_data.get(clear_override_field, False)
                     if overridable_field == "task_queues":
                         override_value = self.bulk_edit_data.get(overridable_field).split(",")
