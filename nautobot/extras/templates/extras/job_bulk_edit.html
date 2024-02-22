@@ -1,7 +1,7 @@
 {% extends 'generic/object_bulk_update.html' %}
 {% load form_helpers %}
 
-{% block fields %}
+{% block form_fields %}
     {% render_field form.enabled %}
     {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.grouping override_field=form.clear_grouping_override %}
     {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.description override_field=form.clear_description_override %}

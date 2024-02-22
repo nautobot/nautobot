@@ -36,7 +36,7 @@
             <div class="panel panel-default">
                 <div class="panel-heading"><strong>{% block form_title %}Attributes{% endblock %}</strong></div>
                 <div class="panel-body">
-                    {% block fields %}
+                    {% block form_fields %}
                         {% for field in form.visible_fields %}
                             {% if field.name in form.nullable_fields %}
                                 {% render_field field bulk_nullable=True %}
