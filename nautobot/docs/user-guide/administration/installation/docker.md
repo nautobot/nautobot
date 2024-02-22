@@ -48,6 +48,8 @@ The following tags are available on both Docker Hub and the GitHub Container Reg
 
 | Tag                                                           | Nautobot Version      | Python Version | Example        |
 | ------------------------------------------------------------- | --------------------- | -------------- | -------------- |
+| `latest`                                                      | Latest stable release | 3.11           | `latest`       |
+| `latest-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `latest-py3.8` |
 | `${NAUTOBOT_VER}`                                             | As specified          | 3.11           | `2.0.0`        |
 | `${NAUTOBOT_VER}-py${PYTHON_VER}`                             | As specified          | As specified   | `2.0.0-py3.8`  |
 | `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}`                 | As specified          | 3.11           | `2.0`          |
@@ -63,8 +65,6 @@ In addition to all tags described in the previous section, the following additio
 
 | Tag                                                  | Nautobot Branch              | Python Version |
 | ---------------------------------------------------- | ---------------------------- | -------------- |
-| `latest`                                             | `develop`, the latest commit | 3.11           |
-| `latest-py${PYTHON_VER}`                             | `develop`, the latest commit | As specified   |
 | `develop`                                            | `develop`, the latest commit | 3.11           |
 | `develop-py${PYTHON_VER}`                            | `develop`, the latest commit | As specified   |
 | `ltm-1.6`                                            | `ltm-1.6`, the latest commit | 3.11           |

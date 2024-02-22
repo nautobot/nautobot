@@ -72,6 +72,43 @@ Support for versions of PostgreSQL prior to 12.0 has been removed as these versi
 Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specific permissions will now always be hidden from users lacking those permissions. Additionally, users not logged in will now be automatically redirected to the login page.
 
 <!-- towncrier release notes start -->
+## v2.1.5 (2024-02-21)
+
+### Security
+
+- [#5303](https://github.com/nautobot/nautobot/pull/5303) - Updated `cryptography` to 42.0.2 due to CVE-2024-0727. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+### Added
+
+- [#5171](https://github.com/nautobot/nautobot/issues/5171) - Added `latest` and `latest-py<version>` tags to the `nautobot` Docker images published for the latest stable release of Nautobot.
+- [#5210](https://github.com/nautobot/nautobot/issues/5210) - Added `METRICS_AUTHENTICATED` setting to control authentication for the HTTP endpoint `/metrics`.
+- [#5243](https://github.com/nautobot/nautobot/issues/5243) - Added support for setting display_field on DynamicModelChoiceField to nested values in suggested choices list.
+
+### Changed
+
+- [#5171](https://github.com/nautobot/nautobot/issues/5171) - Changed the tagging of `nautobot-dev` Docker images to reserve the `latest` and `latest-py<version>` tags for the latest stable release of Nautobot, rather than the latest build from the `develop` branch.
+- [#5254](https://github.com/nautobot/nautobot/issues/5254) - Changed `TreeQuerySet.ancestors` implementation to a more efficient approach for shallow trees.
+- [#5254](https://github.com/nautobot/nautobot/issues/5254) - Changed the location detail view not to annotate tree fields on its queries.
+- [#5267](https://github.com/nautobot/nautobot/issues/5267) - Updated navbar user dropdown with chevron.
+
+### Fixed
+
+- [#5058](https://github.com/nautobot/nautobot/issues/5058) - Changed more filter parameters from `location_id` to `location` in `virtualization/forms.py`.
+- [#5121](https://github.com/nautobot/nautobot/issues/5121) - Fixed an issue where deleting a git repository resulted in a job result stuck in running state.
+- [#5186](https://github.com/nautobot/nautobot/issues/5186) - Fixed a case where an IPAddress created with a `host` and `mask_length` would default to a null `ip_version`.
+- [#5267](https://github.com/nautobot/nautobot/issues/5267) - Fixed hover coloring after closing/reopening navbar dropdown.
+- [#5267](https://github.com/nautobot/nautobot/issues/5267) - Fixed button spacing when there are multiple buttons in navbar.
+- [#5283](https://github.com/nautobot/nautobot/issues/5283) - Fixed inconsistent ordering of IP addresses in various tables.
+
+### Documentation
+
+- [#3349](https://github.com/nautobot/nautobot/issues/3349) - Added annotations to document the importance of keeping the TIME_ZONE setting consistent on Nautobot web servers and Celery Beat servers.
+- [#5297](https://github.com/nautobot/nautobot/issues/5297) - Updated the low level application stack diagram to orient user traffic coming from the top.
+
+### Housekeeping
+
+- [#5267](https://github.com/nautobot/nautobot/issues/5267) - Reorganized navbar css rules in `base.css`.
+
 ## v2.1.4 (2024-02-08)
 
 ### Security
