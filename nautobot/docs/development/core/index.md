@@ -82,7 +82,7 @@ The guiding principals behind Nautobot's SemVer strategy is scoped to adhering t
 * GraphQL data structures
 * URL structures for primary navigation and feature access
 * Any Django model and their relationships for models provided by Nautobot
-* Functions, classes, and modules in `nautobot.apps.*` and there backwards-compatible signatures
+* Functions, classes, and modules in `nautobot.apps.*` and their backwards-compatible signatures
 * Any management commands provided by Nautobot
 * Documented configuration options
 
