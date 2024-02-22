@@ -8,7 +8,8 @@ from nautobot.core.views import (
     CustomGraphQLView,
     get_file_with_authorization,
     HomeView,
-    nautobot_metrics_view,
+    NautobotMetricsView,
+    NautobotMetricsViewAuth,
     SearchView,
     StaticMediaFailureView,
     ThemePreviewView,
@@ -79,9 +80,14 @@ if settings.DEBUG:
         pass
 
 if settings.METRICS_ENABLED:
-    urlpatterns += [
-        path("metrics/", nautobot_metrics_view, name="metrics"),
-    ]
+    if settings.METRICS_AUTHENTICATED:
+        urlpatterns += [
+            path("metrics/", NautobotMetricsViewAuth.as_view(), name="metrics"),
+        ]
+    else:
+        urlpatterns += [
+            path("metrics/", NautobotMetricsView.as_view(), name="metrics"),
+        ]
 
 handler404 = "nautobot.core.views.resource_not_found"
 handler500 = "nautobot.core.views.server_error"
