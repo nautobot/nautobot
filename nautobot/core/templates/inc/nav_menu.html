@@ -11,11 +11,7 @@
             </a>
             <!-- Collapsible button -->
             <button type="button" class="navbar-toggler" aria-label="Collapse navbar">
-                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" class="navbar-toggler-arrow">
-                    <path d="M10 4L8.26274 5.73726C7.47071 6.52929 7.07469 6.92531 6.92631 7.38197C6.7958 7.78365 6.7958 8.21635 6.92631 8.61803C7.07469 9.07469 7.47071 9.47071 8.26274 10.2627L10 12" 
-                    stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    </path>
-                </svg>
+                <img src="{% static 'img/navbar_toggler_arrow.svg' %}" class="navbar-toggler-arrow">
             </button>
         </div>
 
@@ -156,14 +152,13 @@
         });
 
         function adjustElementsForNavbarState(isCollapsed) {
-            const marginLeftValue = isCollapsed ? '-240px' : '0px'; // Adjust based on your collapsed state
+            const marginLeftValue = isCollapsed ? '-240px' : '0px';
             mainContent.style.marginLeft = marginLeftValue;
             bannerAlertArea.classList.toggle('collapsed', isCollapsed);
             if(!bannerAlert && breadcrumb) {
                 breadcrumb.classList.toggle('collapsed', isCollapsed);
-                console.log('toggling breadcrumb');
             };
-            if(footer) footer.style.marginLeft = marginLeftValue; // You might need to adjust this logic based on your layout
+            if(footer) footer.style.marginLeft = marginLeftValue; 
         }
 
         // Expand navbar when hovering near the left edge of the screen
