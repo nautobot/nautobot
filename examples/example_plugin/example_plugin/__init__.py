@@ -3,7 +3,7 @@ from importlib import metadata
 __version__ = metadata.version(__name__)
 
 
-from nautobot.apps import ConstanceConfigItem, NautobotAppConfig, nautobot_database_ready
+from nautobot.apps import ConstanceConfigItem, nautobot_database_ready, NautobotAppConfig
 
 from example_plugin.signals import nautobot_database_ready_callback
 
@@ -26,6 +26,9 @@ class ExamplePluginConfig(NautobotAppConfig):
     constance_config = {
         "SAMPLE_VARIABLE": ConstanceConfigItem(
             default="example_default_value", help_text="Example of supplying a setting through Django Constance."
+        ),
+        "lowercase_example": ConstanceConfigItem(
+            default="example_lowercase_variable", help_text="Example of all lowercase variable name."
         ),
     }
     searchable_models = ["examplemodel"]

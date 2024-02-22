@@ -1,9 +1,8 @@
-from io import BytesIO
 import logging
 
 from django.contrib import messages
-from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.mixins import AccessMixin
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
     ImproperlyConfigured,
@@ -18,20 +17,17 @@ from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import select_template, TemplateDoesNotExist
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
-from django.utils.http import is_safe_url
-from django.utils.html import escape
-from django.utils.safestring import mark_safe
+from django.utils.encoding import iri_to_uri
+from django.utils.html import format_html
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic.edit import FormView
-
-from rest_framework import mixins, exceptions
+from drf_spectacular.utils import extend_schema
+from rest_framework import exceptions, mixins
 from rest_framework.decorators import action as drf_action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from drf_spectacular.utils import extend_schema
-
-from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -41,16 +37,17 @@ from nautobot.core.forms import (
     restrict_form_fields,
 )
 from nautobot.core.utils import lookup, permissions
-from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
+from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import (
     get_csv_form_fields_from_serializer_class,
     handle_protectederror,
+    import_csv_helper,
     prepare_cloned_fields,
 )
-from nautobot.extras.models import ExportTemplate
 from nautobot.extras.forms import NoteForm
-from nautobot.extras.tables import ObjectChangeTable, NoteTable
+from nautobot.extras.models import ExportTemplate
+from nautobot.extras.tables import NoteTable, ObjectChangeTable
 from nautobot.extras.utils import remove_prefix_from_cf_key
 
 PERMISSIONS_ACTION_MAP = {
@@ -175,12 +172,12 @@ class GetReturnURLMixin:
 
     default_return_url = None
 
-    def get_return_url(self, request, obj=None):
+    def get_return_url(self, request, obj=None, default_return_url=None):
         # First, see if `return_url` was specified as a query parameter or form data. Use this URL only if it's
         # considered safe.
         query_param = request.GET.get("return_url") or request.POST.get("return_url")
-        if query_param and is_safe_url(url=query_param, allowed_hosts=request.get_host()):
-            return query_param
+        if url_has_allowed_host_and_scheme(url=query_param, allowed_hosts=request.get_host()):
+            return iri_to_uri(query_param)
 
         # Next, check if the object being modified (if any) has an absolute URL.
         # Note that the use of both `obj.present_in_database` and `obj.pk` is correct here because this conditional
@@ -192,6 +189,9 @@ class GetReturnURLMixin:
         except AttributeError:
             # Model has no get_absolute_url() method or no reverse match
             pass
+
+        if default_return_url is not None:
+            return reverse(default_return_url)
 
         # Fall back to the default URL (if specified) for the view.
         if self.default_return_url is not None:
@@ -241,8 +241,6 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         model_permissions = []
         for action in actions:
-            if action not in ("view", "add", "change", "delete"):
-                raise ValueError(f"Unsupported action: {action}")
             model_permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
         return model_permissions
 
@@ -252,7 +250,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         queryset = self.get_queryset()
         try:
-            actions = [PERMISSIONS_ACTION_MAP[self.action]]
+            actions = [self.get_action()]
         except KeyError:
             messages.error(
                 self.request,
@@ -307,9 +305,10 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         elif self.action == "changelog":
             return ObjectChangeTable
 
-        assert (
-            self.table_class is not None
-        ), f"'{self.__class__.__name__}' should include a `table_class` attribute for bulk operations"
+        if self.table_class is None:
+            raise NotImplementedError(
+                f"'{self.__class__.__name__}' should include a `table_class` attribute for bulk operations"
+            )
 
         return self.table_class
 
@@ -473,7 +472,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         Override the original `get_queryset()` to apply permission specific to the user and action.
         """
         queryset = super().get_queryset()
-        return queryset.restrict(self.request.user, PERMISSIONS_ACTION_MAP[self.action])
+        return queryset.restrict(self.request.user, self.get_action())
+
+    def get_action(self):
+        """Helper method for retrieving action and if action not set defaulting to action name."""
+        return PERMISSIONS_ACTION_MAP.get(self.action, self.action)
 
     def get_extra_context(self, request, instance=None):
         """
@@ -605,7 +608,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
     filterset_class = None
     filterset_form_class = None
     non_filter_params = (
-        "export",  # trigger for CSV/export-template/YAML export
+        "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
@@ -622,11 +625,12 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             if not self.filterset.is_valid():
                 messages.error(
                     self.request,
-                    mark_safe(f"Invalid filters were specified: {self.filterset.errors}"),
+                    format_html("Invalid filters were specified: {}", self.filterset.errors),
                 )
                 queryset = queryset.none()
         return queryset
 
+    # 3.0 TODO: remove, irrelevant after #4746
     def check_for_export(self, request, model, content_type):
         # Check for export template rendering
         queryset = self.filter_queryset(self.get_queryset())
@@ -653,6 +657,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
 
         return None
 
+    # 3.0 TODO: remove, irrelevant after #4746
     def queryset_to_yaml(self):
         """
         Export the queryset of objects as concatenated YAML documents.
@@ -667,7 +672,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         List the model instances.
         """
         context = {"use_new_ui": True}
-        if "export" in request.GET:
+        if "export" in request.GET:  # 3.0 TODO: remove, irrelevant after #4746
             queryset = self.get_queryset()
             model = queryset.model
             content_type = ContentType.objects.get_for_model(model)
@@ -747,11 +752,11 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
 
             msg = f'{"Created" if object_created else "Modified"} {queryset.model._meta.verbose_name}'
             self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
-            if hasattr(obj, "get_absolute_url"):
-                msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
-            else:
-                msg = f"{msg} { escape(obj)}"
-            messages.success(request, mark_safe(msg))
+            try:
+                msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+            except AttributeError:
+                msg = format_html("{} {}", msg, obj)
+            messages.success(request, msg)
             if "_addanother" in request.POST:
                 # If the object has clone_fields, pre-populate a new instance of the form
                 if hasattr(obj, "clone_fields"):
@@ -760,8 +765,8 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
                 self.success_url = request.get_full_path()
             else:
                 return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    self.success_url = return_url
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    self.success_url = iri_to_uri(return_url)
                 else:
                     self.success_url = self.get_return_url(request, obj)
 
@@ -861,10 +866,13 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         model = queryset.model
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
-            if self.filterset_class is not None:
-                self.pk_list = self.filterset_class(request.POST, model.objects.only("pk")).qs
+            filter_params = self.get_filter_params(request)
+            if not filter_params:
+                self.pk_list = model.objects.only("pk").all().values_list("pk", flat=True)
+            elif self.filterset_class is None:
+                raise NotImplementedError("filterset_class must be defined to use _all")
             else:
-                self.pk_list = model.objects.all()
+                self.pk_list = self.filterset_class(filter_params, model.objects.only("pk")).qs
         else:
             self.pk_list = request.POST.getlist("pk")
         form_class = self.get_form_class(**kwargs)
@@ -902,31 +910,11 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):
         queryset = self.get_queryset()
         with transaction.atomic():
             if request.FILES:
-                field_name = "csv_file"
                 # Set the bulk_create_active_tab to "csv-file"
                 # In case the form validation fails, the user will be redirected
                 # to the tab with errors rendered on the form.
                 self.bulk_create_active_tab = "csv-file"
-            else:
-                field_name = "csv_data"
-
-            csvtext = form.cleaned_data[field_name]
-            try:
-                data = NautobotCSVParser().parse(
-                    stream=BytesIO(csvtext.encode("utf-8")),
-                    parser_context={"request": request, "serializer_class": self.serializer_class},
-                )
-                serializer = self.serializer_class(data=data, context={"request": request}, many=True)
-                if serializer.is_valid():
-                    new_objs = serializer.save()
-                else:
-                    for row, errors in enumerate(serializer.errors, start=1):
-                        for field, err in errors.items():
-                            form.add_error(field_name, f"Row {row}: {field}: {err[0]}")
-                    raise ValidationError("")
-            except exceptions.ParseError as exc:
-                form.add_error(None, str(exc))
-                raise ValidationError("")
+            new_objs = import_csv_helper(request=request, form=form, serializer_class=self.serializer_class)
 
             # Enforce object-level permissions
             if queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
@@ -1055,10 +1043,13 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
         if request.POST.get("_all"):
-            if self.filterset_class is not None:
-                self.pk_list = self.filterset_class(request.POST, model.objects.only("pk")).qs
+            filter_params = self.get_filter_params(request)
+            if not filter_params:
+                self.pk_list = model.objects.only("pk").all().values_list("pk", flat=True)
+            elif self.filterset_class is None:
+                raise NotImplementedError("filterset_class must be defined to use _all")
             else:
-                self.pk_list = model.objects.all()
+                self.pk_list = self.filterset_class(filter_params, model.objects.only("pk")).qs
         else:
             self.pk_list = request.POST.getlist("pk")
         data = {}

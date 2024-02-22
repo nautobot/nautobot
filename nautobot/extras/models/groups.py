@@ -3,7 +3,6 @@
 import logging
 import pickle
 
-import django_filters
 from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -11,6 +10,7 @@ from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.utils.functional import cached_property
+import django_filters
 
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import DynamicModelChoiceField
@@ -20,9 +20,8 @@ from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices
-from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
+from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGroupQuerySet
 from nautobot.extras.utils import extras_features
-
 
 logger = logging.getLogger(__name__)
 
@@ -302,6 +301,10 @@ class DynamicGroup(OrganizationalModel):
             raise RuntimeError(f"Could not determine queryset for model '{model}'")
 
         filterset = self.filterset_class(self.filter, model.objects.all())
+        if not filterset.is_valid():
+            logger.warning('Filter for DynamicGroup "%s" is not valid', self)
+            return model.objects.none()
+
         qs = filterset.qs
 
         # Make sure that this instance can't be a member of its own group.
@@ -332,7 +335,7 @@ class DynamicGroup(OrganizationalModel):
         try:
             cached_query = cache.get(self.members_cache_key)
             if cached_query is not None:
-                unpickled_query = pickle.loads(cached_query)
+                unpickled_query = pickle.loads(cached_query)  # noqa: S301  # suspicious-pickle-usage -- we know, but we control what's in the DB
         except pickle.UnpicklingError:
             logger.warning("Failed to unpickle cached members for %s", self)
         finally:
@@ -405,6 +408,17 @@ class DynamicGroup(OrganizationalModel):
         """
         # Get the authoritative source of filter fields we want to keep.
         filter_fields = self.get_filter_fields()
+
+        # Check for potential legacy filters from v1.x that is no longer valid in v2.x.
+        # Raise the validation error in DynamicGroup form handling.
+        error_message = ""
+        invalid_filter_exist = False
+        for key, value in self.filter.items():
+            if key not in filter_fields:
+                invalid_filter_exist = True
+                error_message += f"Invalid filter '{key}' detected with value {value}\n"
+        if invalid_filter_exist:
+            raise ValidationError(error_message)
 
         # Populate the filterset from the incoming `form_data`. The filterset's internal form is
         # used for validation, will be used by us to extract cleaned data for final processing.
@@ -543,6 +557,10 @@ class DynamicGroup(OrganizationalModel):
             Value passed to the filter
         """
         query = models.Q()
+        if filter_field is None:
+            logger.warning(f"Filter data is not valid for DynamicGroup {self}")
+            return query
+
         field_name = filter_field.field_name
 
         # Attempt to account for `ModelChoiceFilter` where `to_field_name` MAY be set.
@@ -605,7 +623,7 @@ class DynamicGroup(OrganizationalModel):
         # In this case we want all filters for a group's filter dict in a set intersection (boolean
         # AND) because ALL filter conditions must match for the filter parameters to be valid.
         for field_name, value in fs.data.items():
-            filter_field = fs.filters[field_name]
+            filter_field = fs.filters.get(field_name)
             query &= self.generate_query_for_filter(filter_field, value)
 
         return query

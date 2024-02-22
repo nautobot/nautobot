@@ -1,6 +1,0 @@
-"""Views for {{ app_name }}."""
-
-from django.shortcuts import render
-from nautobot.apps.views import NautobotUIViewSet
-
-from {{ app_name }} import models

@@ -29,7 +29,10 @@ Types are used to indicate special functions of an IP address such as DHCP or SL
 * DHCP
 * SLAAC (IPv6 Stateless Address Autoconfiguration)
 
-An IP address can be assigned to any device or virtual machine interface, and an interface may have multiple IP addresses assigned to it. Further, each device and virtual machine may have one of its interface IPs designated as its primary IP per address family (one for IPv4 and one for IPv6).
++/- 2.0.0
+    The relationship to device and virtual machine interfaces has been changed to a many-to-many relationship. This allows an IP address to be assigned to multiple interfaces, and an interface to have multiple IP addresses assigned to it.
+
+An IP address can be assigned to device or virtual machine interfaces, and an interface may have multiple IP addresses assigned to it. Further, each device and virtual machine may have one of its interface IPs designated as its primary IP per address family (one for IPv4 and one for IPv6).
 
 !!! note
     When primary IPs are set for both IPv4 and IPv6, Nautobot will prefer IPv6. This can be changed by setting the `PREFER_IPV4` configuration parameter.

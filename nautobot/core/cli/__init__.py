@@ -2,7 +2,6 @@
 Utilities and primitives for the `nautobot-server` CLI command.
 """
 
-from pathlib import Path
 import os
 
 from django.core.exceptions import ImproperlyConfigured
@@ -11,7 +10,6 @@ from jinja2 import BaseLoader, Environment
 
 from nautobot.core.runner import run_app
 from nautobot.extras.plugins.utils import load_plugins
-
 
 # Default file location for the generated config emitted by `init`
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
@@ -74,7 +72,8 @@ def generate_settings(config_template=CONFIG_TEMPLATE, **kwargs):
     }
 
     with open(config_template) as fh:
-        environment = Environment(loader=BaseLoader, keep_trailing_newline=True)
+        # We don't need autoescape=True since we control the template file
+        environment = Environment(loader=BaseLoader, keep_trailing_newline=True)  # noqa: S701  # jinja2-autoescape-false
         config = environment.from_string(fh.read())
 
     return config.render(**template_vars)
@@ -111,20 +110,12 @@ def _configure_settings(config):
     #
     # Storage directories
     #
-    if not os.path.exists(settings.GIT_ROOT):
-        os.makedirs(settings.GIT_ROOT)
-    if not os.path.exists(settings.JOBS_ROOT):
-        os.makedirs(settings.JOBS_ROOT)
-    if not os.path.exists(os.path.join(settings.JOBS_ROOT, "__init__.py")):
-        Path(os.path.join(settings.JOBS_ROOT, "__init__.py")).touch()
-    if not os.path.exists(settings.MEDIA_ROOT):
-        os.makedirs(settings.MEDIA_ROOT)
-    if not os.path.exists(os.path.join(settings.MEDIA_ROOT, "devicetype-images")):
-        os.makedirs(os.path.join(settings.MEDIA_ROOT, "devicetype-images"))
-    if not os.path.exists(os.path.join(settings.MEDIA_ROOT, "image-attachments")):
-        os.makedirs(os.path.join(settings.MEDIA_ROOT, "image-attachments"))
-    if not os.path.exists(settings.STATIC_ROOT):
-        os.makedirs(settings.STATIC_ROOT)
+    os.makedirs(settings.GIT_ROOT, exist_ok=True)
+    os.makedirs(settings.JOBS_ROOT, exist_ok=True)
+    os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
+    os.makedirs(os.path.join(settings.MEDIA_ROOT, "devicetype-images"), exist_ok=True)
+    os.makedirs(os.path.join(settings.MEDIA_ROOT, "image-attachments"), exist_ok=True)
+    os.makedirs(settings.STATIC_ROOT, exist_ok=True)
 
     #
     # Databases

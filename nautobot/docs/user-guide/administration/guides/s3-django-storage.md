@@ -1,6 +1,6 @@
 # AWS S3 using Django-Storage Backend
 
-The backend storage engine is used for Nautobot to handle uploaded files (e.g. image attachments), as well as static files (e.g. css, js). Nautobot supports integration with the django-storages package, which provides backends for several popular file storage services. If not configured, local filesystem storage will be used; however this user-guide will demonstrate how to use AWS S3 buckets to store these files.
+The backend storage engine is used for Nautobot to handle uploaded files (e.g. image attachments), as well as static files (e.g. css, js), and optionally also generated files (e.g. Job output files). Nautobot supports integration with the `django-storages` package, which provides backends for several popular file storage services. This user-guide will demonstrate how to use AWS S3 buckets to store these files.
 
 ## Installation
 
@@ -10,7 +10,7 @@ TLDR:
 
 ```shell
 $ echo "nautobot[remote_storage]" >> $NAUTOBOT_ROOT/local_requirements.txt
-$ pip3 install "nautobot[remote_storage]"
+$ pip3 install "nautobot[remote_storage]" boto3
 ```
 
 ## Bucket Creation Terraform
@@ -56,6 +56,7 @@ STORAGE_CONFIG = {
     "AWS_QUERYSTRING_AUTH": False,
     "AWS_LOCATION": "subfolder/name/static/"
 }
+JOB_FILE_IO_STORAGE = STORAGE_BACKEND
 STATICFILES_STORAGE = STORAGE_BACKEND
 ```
 

@@ -1,11 +1,10 @@
 """Helper functions to detect settings after app initialization (AKA 'dynamic settings')."""
 
 from collections import namedtuple
-
-from django.conf import settings
 from functools import lru_cache
 import os
 
+from django.conf import settings
 
 ConstanceConfigItem = namedtuple("ConstanceConfigItem", ["default", "help_text", "field_type"], defaults=[str])
 

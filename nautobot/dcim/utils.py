@@ -7,14 +7,15 @@ from netutils.lib_mapper import (
     HIERCONFIG_LIB_MAPPER_REVERSE,
     NAPALM_LIB_MAPPER_REVERSE,
     NETMIKO_LIB_MAPPER_REVERSE,
+    NETUTILSPARSER_LIB_MAPPER_REVERSE,
     NTCTEMPLATES_LIB_MAPPER_REVERSE,
     PYATS_LIB_MAPPER_REVERSE,
     PYNTC_LIB_MAPPER_REVERSE,
     SCRAPLI_LIB_MAPPER_REVERSE,
 )
 
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.color import hex_to_rgb, lighten_color, rgb_to_hex
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.constants import NETUTILS_NETWORK_DRIVER_MAPPING_NAMES
 
@@ -98,6 +99,7 @@ def get_all_network_driver_mappings():
         ("hier_config", HIERCONFIG_LIB_MAPPER_REVERSE),
         ("napalm", NAPALM_LIB_MAPPER_REVERSE),
         ("netmiko", NETMIKO_LIB_MAPPER_REVERSE),
+        ("netutils_parser", NETUTILSPARSER_LIB_MAPPER_REVERSE),
         ("ntc_templates", NTCTEMPLATES_LIB_MAPPER_REVERSE),
         ("pyats", PYATS_LIB_MAPPER_REVERSE),
         ("pyntc", PYNTC_LIB_MAPPER_REVERSE),

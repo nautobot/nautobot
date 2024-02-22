@@ -10,7 +10,7 @@ from textwrap import dedent
 from typing import final
 import warnings
 
-from billiard.einfo import ExceptionInfo
+from billiard.einfo import ExceptionInfo, ExceptionWithTraceback
 from celery import states
 from celery.exceptions import NotRegistered, Retry
 from celery.result import EagerResult
@@ -21,12 +21,12 @@ from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
 from django.db.models import Model
 from django.db.models.query import QuerySet
-from django.core.exceptions import ObjectDoesNotExist
 from django.forms import ValidationError
 from django.utils.functional import classproperty
 from kombu.utils.uuid import uuid
@@ -38,10 +38,12 @@ from nautobot.core.celery.task import Task
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    JSONField,
 )
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_model_from_name
-from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
-from nautobot.extras.context_managers import change_logging, JobChangeContext, JobHookChangeContext
+from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.forms import JobForm
 from nautobot.extras.models import (
     FileProxy,
@@ -58,7 +60,6 @@ from nautobot.ipam.validators import (
     prefix_validator,
 )
 
-
 User = get_user_model()
 
 
@@ -71,6 +72,7 @@ __all__ = [
     "IPAddressVar",
     "IPAddressWithMaskVar",
     "IPNetworkVar",
+    "JSONVar",
     "MultiChoiceVar",
     "MultiObjectVar",
     "ObjectVar",
@@ -120,11 +122,14 @@ class BaseJob(Task):
         try:
             deserialized_kwargs = self.deserialize_data(kwargs)
         except Exception as err:
+            self.logger.error("%s", err)
             raise RunJobTaskFailed("Error initializing job") from err
-        context_class = JobHookChangeContext if isinstance(self, JobHookReceiver) else JobChangeContext
-        change_context = context_class(user=self.user, context_detail=self.class_path)
+        if isinstance(self, JobHookReceiver):
+            change_context = ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK
+        else:
+            change_context = ObjectChangeEventContextChoices.CONTEXT_JOB
 
-        with change_logging(change_context):
+        with web_request_context(user=self.user, context_detail=self.class_path, context=change_context):
             if self.celery_kwargs.get("nautobot_job_profile", False) is True:
                 import cProfile
 
@@ -193,7 +198,7 @@ class BaseJob(Task):
             kwargs (Dict): Original keyword arguments for the task to execute.
 
         Returns:
-            None: The return value of this handler is ignored.
+            (None): The return value of this handler is ignored.
         """
         self.clear_cache()
 
@@ -248,7 +253,7 @@ class BaseJob(Task):
             kwargs (Dict): Original keyword arguments for the executed task.
 
         Returns:
-            None: The return value of this handler is ignored.
+            (None): The return value of this handler is ignored.
         """
 
     def on_retry(self, exc, task_id, args, kwargs, einfo):
@@ -264,7 +269,7 @@ class BaseJob(Task):
             einfo (~billiard.einfo.ExceptionInfo): Exception information.
 
         Returns:
-            None: The return value of this handler is ignored.
+            (None): The return value of this handler is ignored.
         """
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
@@ -280,34 +285,33 @@ class BaseJob(Task):
             einfo (~billiard.einfo.ExceptionInfo): Exception information.
 
         Returns:
-            None: The return value of this handler is ignored.
+            (None): The return value of this handler is ignored.
         """
 
     def after_return(self, status, retval, task_id, args, kwargs, einfo):
         """
         Handler called after the task returns.
 
-        Parameters
-            status - Current task state.
-            retval - Task return value/exception.
-            task_id - Unique id of the task.
-            args - Original arguments for the task that returned.
-            kwargs - Original keyword arguments for the task that returned.
-
-        Keyword Arguments
-            einfo - ExceptionInfo instance, containing the traceback (if any).
+        Arguments:
+            status (str): Current task state.
+            retval (Any): Task return value/exception.
+            task_id (str): Unique id of the task.
+            args (tuple):  Original arguments for the task that returned.
+            kwargs (dict): Original keyword arguments for the task that returned.
+            einfo (ExceptionInfo): ExceptionInfo instance, containing the traceback (if any).
 
         Returns:
-            None: The return value of this handler is ignored.
+            (None): The return value of this handler is ignored.
         """
 
         # Cleanup FileProxy objects
         file_fields = list(self._get_file_vars())
         file_ids = [kwargs[f] for f in file_fields]
         if file_ids:
-            self.delete_files(*file_ids)
+            self._delete_file_proxies(*file_ids)
 
-        self.logger.info("Job completed", extra={"grouping": "post_run"})
+        if status == JobResultStatusChoices.STATUS_SUCCESS:
+            self.logger.info("Job completed", extra={"grouping": "post_run"})
 
         # TODO(gary): document this in job author docs
         # Super.after_return must be called for chords to function properly
@@ -361,6 +365,10 @@ class BaseJob(Task):
             },
             "properties": options,  # one line fix to overloaded method
         }
+        if "stamped_headers" in options:
+            request["stamped_headers"] = maybe_list(options["stamped_headers"])
+            request["stamps"] = {header: maybe_list(options.get(header, [])) for header in request["stamped_headers"]}
+
         tb = None
         tracer = build_tracer(
             task.name,
@@ -373,6 +381,8 @@ class BaseJob(Task):
         retval = ret.retval
         if isinstance(retval, ExceptionInfo):
             retval, tb = retval.exception, retval.traceback
+            if isinstance(retval, ExceptionWithTraceback):
+                retval = retval.exc
         if isinstance(retval, Retry) and retval.sig is not None:
             return retval.sig.apply(retries=retries + 1)
         state = states.SUCCESS if ret.info is None else ret.info.state
@@ -390,10 +400,10 @@ class BaseJob(Task):
         Unique identifier of a specific Job class, in the form <module_name>.<ClassName>.
 
         Examples:
-        my_script.MyScript - Local Job
-        nautobot.core.jobs.MySystemJob - System Job
-        my_plugin.jobs.MyPluginJob - App-provided Job
-        git_repository.jobs.myjob.MyJob - GitRepository Job
+        - my_script.MyScript - Local Job
+        - nautobot.core.jobs.MySystemJob - System Job
+        - my_plugin.jobs.MyPluginJob - App-provided Job
+        - git_repository.jobs.myjob.MyJob - GitRepository Job
         """
         return f"{cls.__module__}.{cls.__name__}"
 
@@ -524,8 +534,10 @@ class BaseJob(Task):
     @classmethod
     def _get_vars(cls):
         """
-        Return dictionary of ScriptVariable attributes defined on this class and any base classes to the top of the inheritance chain.
-        The variables are sorted in the order that they were defined, with variables defined on base classes appearing before subclass variables.
+        Return dictionary of ScriptVariable attributes defined on this class or any of its base parent classes.
+
+        The variables are sorted in the order that they were defined,
+        with variables defined on base classes appearing before subclass variables.
         """
         cls_vars = {}
         # get list of base classes, including cls, in reverse method resolution order: [BaseJob, Job, cls]
@@ -654,7 +666,7 @@ class BaseJob(Task):
                 return_data[field_name] = value.pk
             # FileVar (Save each FileVar as a FileProxy)
             elif isinstance(value, InMemoryUploadedFile):
-                return_data[field_name] = BaseJob.save_file(value)
+                return_data[field_name] = BaseJob._save_file_to_proxy(value)
             # IPAddressVar, IPAddressWithMaskVar, IPNetworkVar
             elif isinstance(value, netaddr.ip.BaseIP):
                 return_data[field_name] = str(value)
@@ -714,7 +726,7 @@ class BaseJob(Task):
                 else:
                     return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
             elif isinstance(var, FileVar):
-                return_data[field_name] = cls.load_file(value)
+                return_data[field_name] = cls._load_file_from_proxy(value)
             # IPAddressVar is a netaddr.IPAddress object
             elif isinstance(var, IPAddressVar):
                 return_data[field_name] = netaddr.IPAddress(value)
@@ -751,20 +763,20 @@ class BaseJob(Task):
         return {k: v for k, v in job_kwargs.items() if k in job_vars}
 
     @staticmethod
-    def load_file(pk):
+    def _load_file_from_proxy(pk):
         """Load a file proxy stored in the database by primary key.
 
         Args:
             pk (uuid): Primary key of the `FileProxy` to retrieve
 
         Returns:
-            File-like object
+            (File): A File-like object
         """
         fp = FileProxy.objects.get(pk=pk)
         return fp.file
 
     @staticmethod
-    def save_file(uploaded_file):
+    def _save_file_to_proxy(uploaded_file):
         """
         Save an uploaded file to the database as a file proxy and return the
         primary key.
@@ -773,19 +785,19 @@ class BaseJob(Task):
             uploaded_file (file): File handle of file to save to database
 
         Returns:
-            uuid
+            (uuid): The pk of the `FileProxy` object
         """
         fp = FileProxy.objects.create(name=uploaded_file.name, file=uploaded_file)
         return fp.pk
 
-    def delete_files(self, *files_to_delete):
+    def _delete_file_proxies(self, *files_to_delete):
         """Given an unpacked list of primary keys for `FileProxy` objects, delete them.
 
         Args:
             files_to_delete (*args): List of primary keys to delete
 
         Returns:
-            int (number of objects deleted)
+            (int): number of objects deleted
         """
         files = FileProxy.objects.filter(pk__in=files_to_delete)
         num = 0
@@ -816,6 +828,32 @@ class BaseJob(Task):
             data = json.load(datafile)
 
         return data
+
+    def create_file(self, filename, content):
+        """
+        Create a file that can later be downloaded by users.
+
+        Args:
+            filename (str): Name of the file to create, including extension
+            content (str, bytes): Content to populate the created file with.
+
+        Raises:
+            (ValueError): if the provided content exceeds JOB_CREATE_FILE_MAX_SIZE in length
+
+        Returns:
+            (FileProxy): record that was created
+        """
+        if isinstance(content, str):
+            content = content.encode("utf-8")
+        max_size = get_settings_or_config("JOB_CREATE_FILE_MAX_SIZE")
+        actual_size = len(content)
+        if actual_size > max_size:
+            raise ValueError(f"Provided {actual_size} bytes of content, but JOB_CREATE_FILE_MAX_SIZE is {max_size}")
+        fp = FileProxy.objects.create(
+            name=filename, job_result=self.job_result, file=ContentFile(content, name=filename)
+        )
+        self.logger.info("Created file [%s](%s)", filename, fp.file.url)
+        return fp
 
 
 class Job(BaseJob):
@@ -891,7 +929,7 @@ class StringVar(ScriptVariable):
 
 class TextVar(ScriptVariable):
     """
-    Free-form text data. Renders as a <textarea>.
+    Free-form text data. Renders as a `<textarea>`.
     """
 
     form_field = forms.CharField
@@ -984,10 +1022,11 @@ class ObjectVar(ScriptVariable):
     """
     A single object within Nautobot.
 
-    :param model: The Nautobot model being referenced
-    :param display_field: The attribute of the returned object to display in the selection list (default: 'name')
-    :param query_params: A dictionary of additional query parameters to attach when making REST API requests (optional)
-    :param null_option: The label to use as a "null" selection option (optional)
+    Args:
+        model (Model): The Nautobot model being referenced
+        display_field (str): The attribute of the returned object to display in the selection list
+        query_params (dict): Additional query parameters to attach when making REST API requests
+        null_option (str): The label to use as a "null" selection option
     """
 
     form_field = DynamicModelChoiceField
@@ -1080,6 +1119,14 @@ class IPNetworkVar(ScriptVariable):
             self.field_attrs["validators"].append(MaxPrefixLengthValidator(max_prefix_length))
 
 
+class JSONVar(ScriptVariable):
+    """
+    Like TextVar but with native serializing of JSON data.
+    """
+
+    form_field = JSONField
+
+
 class JobHookReceiver(Job):
     """
     Base class for job hook receivers. Job hook receivers are jobs that are initiated
@@ -1100,9 +1147,10 @@ class JobHookReceiver(Job):
         """
         Method to be implemented by concrete JobHookReceiver subclasses.
 
-        :param change: an instance of `nautobot.extras.models.ObjectChange`
-        :param action: a string with the action performed on the changed object ("create", "update" or "delete")
-        :param changed_object: an instance of the object that was changed, or `None` if the object has been deleted
+        Args:
+            change (ObjectChange): an instance of `nautobot.extras.models.ObjectChange`
+            action (str): a string with the action performed on the changed object ("create", "update" or "delete")
+            changed_object (Model): an instance of the object that was changed, or `None` if the object has been deleted
         """
         raise NotImplementedError
 
@@ -1127,7 +1175,8 @@ class JobButtonReceiver(Job):
         """
         Method to be implemented by concrete JobButtonReceiver subclasses.
 
-        :param obj: an instance of the object
+        Args:
+            obj (Model): an instance of the object that triggered this job
         """
         raise NotImplementedError
 
@@ -1151,7 +1200,7 @@ def is_variable(obj):
 
 def get_job(class_path):
     """
-    Retrieve a specific job class by its class_path (<module_name>.<JobClassName>).
+    Retrieve a specific job class by its class_path (`<module_name>.<JobClassName>`).
 
     May return None if the job isn't properly registered with Celery at this time.
     """
@@ -1172,12 +1221,11 @@ def enqueue_job_hooks(object_change):
         return
 
     # Determine whether this type of object supports job hooks
-    model_type = object_change.changed_object._meta.model
-    if model_type not in ChangeLoggedModelsQuery().list_subclasses():
+    content_type = object_change.changed_object_type
+    if content_type not in ChangeLoggedModelsQuery().as_queryset():
         return
 
     # Retrieve any applicable job hooks
-    content_type = ContentType.objects.get_for_model(object_change.changed_object)
     action_flag = {
         ObjectChangeActionChoices.ACTION_CREATE: "type_create",
         ObjectChangeActionChoices.ACTION_UPDATE: "type_update",

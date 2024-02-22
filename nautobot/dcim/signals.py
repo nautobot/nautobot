@@ -2,21 +2,23 @@ import logging
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db.models.signals import m2m_changed, post_save, pre_delete
 from django.db import transaction
+from django.db.models.signals import m2m_changed, post_save, pre_delete
 from django.dispatch import receiver
 
 from nautobot.core.signals import disable_for_loaddata
+
 from .models import (
     Cable,
     CablePath,
     Device,
+    DeviceRedundancyGroup,
+    Interface,
     PathEndpoint,
     PowerPanel,
     Rack,
     RackGroup,
     VirtualChassis,
-    Interface,
 )
 from .utils import validate_interface_tagged_vlans
 
@@ -144,6 +146,22 @@ def handle_rack_location_change(instance, created, raw=False, **kwargs):
                     )
                 device.location = instance.location
                 device.save()
+
+
+#
+# Device redundancy group
+#
+
+
+@receiver(pre_delete, sender=DeviceRedundancyGroup)
+def clear_deviceredundancygroup_members(instance, **kwargs):
+    """
+    When a DeviceRedundancyGroup is deleted, nullify the device_redundancy_group_priority field of its prior members.
+    """
+    devices = Device.objects.filter(device_redundancy_group=instance.pk)
+    for device in devices:
+        device.device_redundancy_group_priority = None
+        device.save()
 
 
 #

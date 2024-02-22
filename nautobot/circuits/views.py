@@ -2,16 +2,13 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.http import is_safe_url
 from django_tables2 import RequestConfig
-
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.models.querysets import count_related
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
-
 
 from . import filters, forms, tables
 from .api import serializers
@@ -82,14 +79,8 @@ class CircuitTerminationUIViewSet(
         return obj
 
     def get_return_url(self, request, obj=None):
-        # First, see if `return_url` was specified as a query parameter or form data. Use this URL only if it's
-        # considered safe.
-        query_param = request.GET.get("return_url") or request.POST.get("return_url")
-        if query_param and is_safe_url(url=query_param, allowed_hosts=request.get_host()):
-            return query_param
-
         if obj is not None and obj.present_in_database and obj.pk:
-            return obj.circuit.get_absolute_url()
+            return super().get_return_url(request, obj=obj.circuit)
 
         return super().get_return_url(request, obj=obj)
 
@@ -135,6 +126,8 @@ class CircuitUIViewSet(NautobotUIViewSet):
     queryset = Circuit.objects.all()
     serializer_class = serializers.CircuitSerializer
     table_class = tables.CircuitTable
+    # NOTE: This is how `NautobotUIViewSet` would define use_new_ui attr
+    # use_new_ui = ["list", "retrieve"]
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

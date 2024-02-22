@@ -1,5 +1,5 @@
-import uuid
 from collections import OrderedDict
+import uuid
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -7,14 +7,13 @@ from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import transaction
 from django.db.models import F, Prefetch
 from django.forms import (
+    modelformset_factory,
     ModelMultipleChoiceField,
     MultipleHiddenInput,
-    modelformset_factory,
 )
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.functional import cached_property
-from django.utils.html import escape
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
@@ -31,11 +30,12 @@ from nautobot.core.views.mixins import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.utils import get_network_driver_mapping_tool_names, get_all_network_driver_mappings
+from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
 from nautobot.virtualization.models import VirtualMachine
+
 from . import filters, forms, tables
 from .api import serializers
 from .choices import DeviceFaceChoices
@@ -143,7 +143,7 @@ class BaseDeviceComponentsBulkRenameView(generic.BulkRenameView):
         selected_object = selected_objects.first()
         if selected_object and selected_object.device:
             return selected_object.device.name
-        return None
+        return ""
 
 
 #
@@ -212,14 +212,20 @@ class LocationTypeBulkDeleteView(generic.BulkDeleteView):
 
 
 class LocationListView(generic.ObjectListView):
-    queryset = Location.objects.select_related("location_type", "parent", "tenant")
+    queryset = Location.objects.all()
     filterset = filters.LocationFilterSet
     filterset_form = forms.LocationFilterForm
     table = tables.LocationTable
+    use_new_ui = True
 
 
 class LocationView(generic.ObjectView):
-    queryset = Location.objects.all()
+    # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
+    # key, not a tree field). If we ever do access tree fields, this will perform worse, because django will
+    # automatically issue a second query (similar to behavior for
+    # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
+    queryset = Location.objects.without_tree_fields().all()
+    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         related_locations = (
@@ -248,6 +254,11 @@ class LocationView(generic.ObjectView):
         )
         children = (
             Location.objects.restrict(request.user, "view")
+            # We aren't accessing tree fields anywhere so this is safe (note that `parent` itself is a normal foreign
+            # key, not a tree field). If we ever do access tree fields, this will perform worse, because django will
+            # automatically issue a second query (similar to behavior for
+            # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only)
+            .without_tree_fields()
             .filter(parent=instance)
             .select_related("parent", "location_type")
         )
@@ -301,7 +312,7 @@ class LocationBulkDeleteView(generic.BulkDeleteView):
 
 
 class RackGroupListView(generic.ObjectListView):
-    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group")).select_related("location")
+    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
     filterset = filters.RackGroupFilterSet
     filterset_form = forms.RackGroupFilterForm
     table = tables.RackGroupTable
@@ -358,11 +369,7 @@ class RackGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class RackListView(generic.ObjectListView):
-    queryset = (
-        Rack.objects.select_related("location", "rack_group", "tenant", "role", "status")
-        .prefetch_related("devices__device_type")
-        .annotate(device_count=count_related(Device, "rack"))
-    )
+    queryset = Rack.objects.annotate(device_count=count_related(Device, "rack"))
     filterset = filters.RackFilterSet
     filterset_form = forms.RackFilterForm
     table = tables.RackDetailTable
@@ -590,6 +597,7 @@ class ManufacturerBulkImportView(generic.BulkImportView):
 class ManufacturerBulkDeleteView(generic.BulkDeleteView):
     queryset = Manufacturer.objects.annotate(device_type_count=count_related(DeviceType, "manufacturer"))
     table = tables.ManufacturerTable
+    filterset = filters.ManufacturerFilterSet
 
 
 #
@@ -598,16 +606,16 @@ class ManufacturerBulkDeleteView(generic.BulkDeleteView):
 
 
 class DeviceTypeListView(generic.ObjectListView):
-    queryset = DeviceType.objects.select_related("manufacturer").annotate(
-        device_count=count_related(Device, "device_type")
-    )
+    queryset = DeviceType.objects.annotate(device_count=count_related(Device, "device_type"))
     filterset = filters.DeviceTypeFilterSet
     filterset_form = forms.DeviceTypeFilterForm
     table = tables.DeviceTypeTable
+    use_new_ui = True
 
 
 class DeviceTypeView(generic.ObjectView):
     queryset = DeviceType.objects.select_related("manufacturer")
+    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         instance_count = Device.objects.restrict(request.user).filter(device_type=instance).count()
@@ -748,6 +756,7 @@ class ConsolePortTemplateBulkEditView(generic.BulkEditView):
     queryset = ConsolePortTemplate.objects.all()
     table = tables.ConsolePortTemplateTable
     form = forms.ConsolePortTemplateBulkEditForm
+    filterset = filters.ConsolePortTemplateFilterSet
 
 
 class ConsolePortTemplateBulkRenameView(generic.BulkRenameView):
@@ -757,6 +766,7 @@ class ConsolePortTemplateBulkRenameView(generic.BulkRenameView):
 class ConsolePortTemplateBulkDeleteView(generic.BulkDeleteView):
     queryset = ConsolePortTemplate.objects.all()
     table = tables.ConsolePortTemplateTable
+    filterset = filters.ConsolePortTemplateFilterSet
 
 
 #
@@ -784,6 +794,7 @@ class ConsoleServerPortTemplateBulkEditView(generic.BulkEditView):
     queryset = ConsoleServerPortTemplate.objects.all()
     table = tables.ConsoleServerPortTemplateTable
     form = forms.ConsoleServerPortTemplateBulkEditForm
+    filterset = filters.ConsoleServerPortTemplateFilterSet
 
 
 class ConsoleServerPortTemplateBulkRenameView(generic.BulkRenameView):
@@ -793,6 +804,7 @@ class ConsoleServerPortTemplateBulkRenameView(generic.BulkRenameView):
 class ConsoleServerPortTemplateBulkDeleteView(generic.BulkDeleteView):
     queryset = ConsoleServerPortTemplate.objects.all()
     table = tables.ConsoleServerPortTemplateTable
+    filterset = filters.ConsoleServerPortTemplateFilterSet
 
 
 #
@@ -820,6 +832,7 @@ class PowerPortTemplateBulkEditView(generic.BulkEditView):
     queryset = PowerPortTemplate.objects.all()
     table = tables.PowerPortTemplateTable
     form = forms.PowerPortTemplateBulkEditForm
+    filterset = filters.PowerPortTemplateFilterSet
 
 
 class PowerPortTemplateBulkRenameView(generic.BulkRenameView):
@@ -829,6 +842,7 @@ class PowerPortTemplateBulkRenameView(generic.BulkRenameView):
 class PowerPortTemplateBulkDeleteView(generic.BulkDeleteView):
     queryset = PowerPortTemplate.objects.all()
     table = tables.PowerPortTemplateTable
+    filterset = filters.PowerPortTemplateFilterSet
 
 
 #
@@ -856,6 +870,7 @@ class PowerOutletTemplateBulkEditView(generic.BulkEditView):
     queryset = PowerOutletTemplate.objects.all()
     table = tables.PowerOutletTemplateTable
     form = forms.PowerOutletTemplateBulkEditForm
+    filterset = filters.PowerOutletTemplateFilterSet
 
 
 class PowerOutletTemplateBulkRenameView(generic.BulkRenameView):
@@ -865,6 +880,7 @@ class PowerOutletTemplateBulkRenameView(generic.BulkRenameView):
 class PowerOutletTemplateBulkDeleteView(generic.BulkDeleteView):
     queryset = PowerOutletTemplate.objects.all()
     table = tables.PowerOutletTemplateTable
+    filterset = filters.PowerOutletTemplateFilterSet
 
 
 #
@@ -892,6 +908,7 @@ class InterfaceTemplateBulkEditView(generic.BulkEditView):
     queryset = InterfaceTemplate.objects.all()
     table = tables.InterfaceTemplateTable
     form = forms.InterfaceTemplateBulkEditForm
+    filterset = filters.InterfaceTemplateFilterSet
 
 
 class InterfaceTemplateBulkRenameView(generic.BulkRenameView):
@@ -901,6 +918,7 @@ class InterfaceTemplateBulkRenameView(generic.BulkRenameView):
 class InterfaceTemplateBulkDeleteView(generic.BulkDeleteView):
     queryset = InterfaceTemplate.objects.all()
     table = tables.InterfaceTemplateTable
+    filterset = filters.InterfaceTemplateFilterSet
 
 
 #
@@ -928,6 +946,7 @@ class FrontPortTemplateBulkEditView(generic.BulkEditView):
     queryset = FrontPortTemplate.objects.all()
     table = tables.FrontPortTemplateTable
     form = forms.FrontPortTemplateBulkEditForm
+    filterset = filters.FrontPortTemplateFilterSet
 
 
 class FrontPortTemplateBulkRenameView(generic.BulkRenameView):
@@ -937,6 +956,7 @@ class FrontPortTemplateBulkRenameView(generic.BulkRenameView):
 class FrontPortTemplateBulkDeleteView(generic.BulkDeleteView):
     queryset = FrontPortTemplate.objects.all()
     table = tables.FrontPortTemplateTable
+    filterset = filters.FrontPortTemplateFilterSet
 
 
 #
@@ -964,6 +984,7 @@ class RearPortTemplateBulkEditView(generic.BulkEditView):
     queryset = RearPortTemplate.objects.all()
     table = tables.RearPortTemplateTable
     form = forms.RearPortTemplateBulkEditForm
+    filterset = filters.RearPortTemplateFilterSet
 
 
 class RearPortTemplateBulkRenameView(generic.BulkRenameView):
@@ -973,6 +994,7 @@ class RearPortTemplateBulkRenameView(generic.BulkRenameView):
 class RearPortTemplateBulkDeleteView(generic.BulkDeleteView):
     queryset = RearPortTemplate.objects.all()
     table = tables.RearPortTemplateTable
+    filterset = filters.RearPortTemplateFilterSet
 
 
 #
@@ -1000,6 +1022,7 @@ class DeviceBayTemplateBulkEditView(generic.BulkEditView):
     queryset = DeviceBayTemplate.objects.all()
     table = tables.DeviceBayTemplateTable
     form = forms.DeviceBayTemplateBulkEditForm
+    filterset = filters.DeviceBayTemplateFilterSet
 
 
 class DeviceBayTemplateBulkRenameView(generic.BulkRenameView):
@@ -1009,6 +1032,7 @@ class DeviceBayTemplateBulkRenameView(generic.BulkRenameView):
 class DeviceBayTemplateBulkDeleteView(generic.BulkDeleteView):
     queryset = DeviceBayTemplate.objects.all()
     table = tables.DeviceBayTemplateTable
+    filterset = filters.DeviceBayTemplateFilterSet
 
 
 #
@@ -1071,6 +1095,7 @@ class PlatformBulkImportView(generic.BulkImportView):
 class PlatformBulkDeleteView(generic.BulkDeleteView):
     queryset = Platform.objects.all()
     table = tables.PlatformTable
+    filterset = filters.PlatformFilterSet
 
 
 #
@@ -1080,19 +1105,13 @@ class PlatformBulkDeleteView(generic.BulkDeleteView):
 
 class DeviceListView(generic.ObjectListView):
     queryset = Device.objects.select_related(
-        "status",
-        "device_type",
-        "role",
-        "tenant",
-        "location",
-        "rack",
-        "primary_ip4",
-        "primary_ip6",
+        "device_type__manufacturer",  # Needed for __str__() on device_type
     )
     filterset = filters.DeviceFilterSet
     filterset_form = forms.DeviceFilterForm
     table = tables.DeviceTable
     template_name = "dcim/device_list.html"
+    use_new_ui = True
 
 
 class DeviceView(generic.ObjectView):
@@ -1106,6 +1125,7 @@ class DeviceView(generic.ObjectView):
         "primary_ip6",
         "status",
     )
+    use_new_ui = True
 
     def get_extra_context(self, request, instance):
         # VirtualChassis members
@@ -2110,6 +2130,7 @@ class InventoryItemBulkDeleteView(generic.BulkDeleteView):
     queryset = InventoryItem.objects.select_related("device", "manufacturer")
     table = tables.InventoryItemTable
     template_name = "dcim/inventoryitem_bulk_delete.html"
+    filterset = filters.InventoryItemFilterSet
 
 
 #
@@ -2471,9 +2492,7 @@ class InterfaceConnectionsListView(ConnectionsListView):
 
 
 class VirtualChassisListView(generic.ObjectListView):
-    queryset = VirtualChassis.objects.select_related("master").annotate(
-        member_count=count_related(Device, "virtual_chassis")
-    )
+    queryset = VirtualChassis.objects.annotate(member_count=count_related(Device, "virtual_chassis"))
     table = tables.VirtualChassisTable
     filterset = filters.VirtualChassisFilterSet
     filterset_form = forms.VirtualChassisFilterForm
@@ -2609,8 +2628,8 @@ class VirtualChassisAddMemberView(ObjectPermissionRequiredMixin, GetReturnURLMix
 
             if membership_form.is_valid():
                 membership_form.save()
-                msg = f'Added member <a href="{device.get_absolute_url()}">{escape(device)}</a>'
-                messages.success(request, mark_safe(msg))
+                msg = format_html('Added member <a href="{}">{}</a>', device.get_absolute_url(), device)
+                messages.success(request, msg)
 
                 if "_addanother" in request.POST:
                     return redirect(request.get_full_path())
@@ -2659,8 +2678,8 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
         # Protect master device from being removed
         virtual_chassis = VirtualChassis.objects.filter(master=device).first()
         if virtual_chassis is not None:
-            msg = f"Unable to remove master device {escape(device)} from the virtual chassis."
-            messages.error(request, mark_safe(msg))
+            msg = format_html("Unable to remove master device {} from the virtual chassis.", device)
+            messages.error(request, msg)
             return redirect(device.get_absolute_url())
 
         if form.is_valid():
@@ -2711,9 +2730,7 @@ class VirtualChassisBulkDeleteView(generic.BulkDeleteView):
 
 
 class PowerPanelListView(generic.ObjectListView):
-    queryset = PowerPanel.objects.select_related("location", "rack_group").annotate(
-        power_feed_count=count_related(PowerFeed, "power_panel")
-    )
+    queryset = PowerPanel.objects.annotate(power_feed_count=count_related(PowerFeed, "power_panel"))
     filterset = filters.PowerPanelFilterSet
     filterset_form = forms.PowerPanelFilterForm
     table = tables.PowerPanelTable

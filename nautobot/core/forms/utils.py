@@ -26,6 +26,8 @@ def parse_numeric_range(string, base=10):
       '2,8-b,d,f' => [2, 8, 9, a, b, d, f]
     """
     values = []
+    if not string:
+        return values
     for dash_range in string.split(","):
         try:
             begin, end = dash_range.split("-")
@@ -111,7 +113,7 @@ def add_blank_choice(choices):
     """
     Add a blank choice to the beginning of a choices list.
     """
-    return ((None, "---------"),) + tuple(choices)
+    return ((None, "---------"), *tuple(choices))
 
 
 def form_from_model(model, fields):

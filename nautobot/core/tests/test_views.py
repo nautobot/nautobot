@@ -1,17 +1,58 @@
 import re
+from unittest import mock
 import urllib.parse
 
 from django.contrib.contenttypes.models import ContentType
-from django.test import override_settings
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings, RequestFactory
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.core.testing import TestCase
+from nautobot.core.testing.api import APITestCase
+from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.views import NautobotMetricsView
+from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.dcim.models.locations import Location
 from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models import FileProxy
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
+from nautobot.users.models import ObjectPermission
+
+
+class GetReturnURLMixinTestCase(TestCase):
+    """Tests for the API of GetReturnURLMixin."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.factory = RequestFactory(SERVER_NAME="nautobot.example.com")
+        cls.mixin = GetReturnURLMixin()
+
+    def test_get_return_url_explicit(self):
+        request = self.factory.get("/", {"return_url": "/dcim/devices/"})
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=None), "/dcim/devices/")
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=Location.objects.first()), "/dcim/devices/")
+
+        request = self.factory.get("/", {"return_url": "/dcim/devices/?status=Active"})
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=None), "/dcim/devices/?status=Active")
+
+    def test_get_return_url_explicit_unsafe(self):
+        request = self.factory.get("/", {"return_url": "http://example.com"})
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=None), reverse("home"))
+
+    def test_get_return_url_explicit_punycode(self):
+        """
+        Replace the 'i' in '/dcim/' with a unicode dotless 'ı' and make sure we're not fooled by it.
+        """  # noqa: RUF002  # ambiguous-unicode-character-docstring -- fully intentional here!
+        request = self.factory.get("/", {"return_url": "/dcım/devices/"})  # noqa: RUF001  # ambiguous-unicode-character-string -- fully intentional here!
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=None), "/dc%C4%B1m/devices/")
+
+    def test_get_return_url_default_with_obj(self):
+        request = self.factory.get("/")
+        location = Location.objects.first()
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=location), location.get_absolute_url())
 
 
 class HomeViewTestCase(TestCase):
@@ -36,7 +77,7 @@ class HomeViewTestCase(TestCase):
 
         # Search bar in nav
         nav_search_bar_pattern = re.compile(
-            '<nav.*<form action="/search/" method="get" class="navbar-form navbar-right" id="navbar_search" role="search">.*</form>.*</nav>'
+            '<nav.*<form action="/search/" method="get" class="navbar-form" id="navbar_search" role="search">.*</form>.*</nav>'
         )
         nav_search_bar_result = nav_search_bar_pattern.search(
             response.content.decode(response.charset).replace("\n", "")
@@ -52,8 +93,7 @@ class HomeViewTestCase(TestCase):
 
         return nav_search_bar_result, body_search_bar_result
 
-    @override_settings(HIDE_RESTRICTED_UI=True)
-    def test_search_bar_not_visible_if_user_not_authenticated_and_hide_restricted_ui_True(self):
+    def test_search_bar_not_visible_if_user_not_authenticated(self):
         self.client.logout()
 
         nav_search_bar_result, body_search_bar_result = self.make_request()
@@ -61,23 +101,7 @@ class HomeViewTestCase(TestCase):
         self.assertIsNone(nav_search_bar_result)
         self.assertIsNone(body_search_bar_result)
 
-    @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_search_bar_visible_if_user_authenticated_and_hide_restricted_ui_True(self):
-        nav_search_bar_result, body_search_bar_result = self.make_request()
-
-        self.assertIsNotNone(nav_search_bar_result)
-        self.assertIsNotNone(body_search_bar_result)
-
-    @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_search_bar_visible_if_hide_restricted_ui_False(self):
-        # Assert if user is authenticated
-        nav_search_bar_result, body_search_bar_result = self.make_request()
-
-        self.assertIsNotNone(nav_search_bar_result)
-        self.assertIsNotNone(body_search_bar_result)
-
-        # Assert if user is logout
-        self.client.logout()
+    def test_search_bar_visible_if_user_authenticated(self):
         nav_search_bar_result, body_search_bar_result = self.make_request()
 
         self.assertIsNotNone(nav_search_bar_result)
@@ -228,9 +252,8 @@ class NavRestrictedUI(TestCase):
         response = self.client.get(reverse("home"))
         return response.content.decode(response.charset)
 
-    @override_settings(HIDE_RESTRICTED_UI=True)
-    def test_installed_apps_visible_to_staff_with_hide_restricted_ui_true(self):
-        """The "Installed Apps" menu item should be available to is_staff user regardless of HIDE_RESTRICTED_UI."""
+    def test_installed_apps_visible_to_staff(self):
+        """The "Installed Apps" menu item should be available to is_staff user."""
         # Make user admin
         self.user.is_staff = True
         self.user.save()
@@ -246,47 +269,11 @@ class NavRestrictedUI(TestCase):
             response_content,
         )
 
-    @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_installed_apps_visible_to_staff_with_hide_restricted_ui_false(self):
-        """The "Installed Apps" menu item should be available to is_staff user regardless of HIDE_RESTRICTED_UI."""
-        # Make user admin
-        self.user.is_staff = True
-        self.user.save()
-
-        response_content = self.make_request()
-        self.assertInHTML(
-            f"""
-            <a href="{self.url}"
-                data-item-weight="{self.item_weight}">
-                Installed Plugins
-            </a>
-            """,
-            response_content,
-        )
-
-    @override_settings(HIDE_RESTRICTED_UI=True)
-    def test_installed_apps_not_visible_to_non_staff_user_with_hide_restricted_ui_true(self):
-        """The "Installed Apps" menu item should be hidden from a non-staff user when HIDE_RESTRICTED_UI=True."""
+    def test_installed_apps_not_visible_to_non_staff_user_without_permission(self):
+        """The "Installed Apps" menu item should be hidden from a non-staff user without permission."""
         response_content = self.make_request()
 
-        self.assertNotRegex(response_content, r"Installed\s+Apps")
-
-    @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_installed_apps_disabled_to_non_staff_user_with_hide_restricted_ui_false(self):
-        """The "Installed Apps" menu item should be disabled for a non-staff user when HIDE_RESTRICTED_UI=False."""
-        response_content = self.make_request()
-
-        # print(response_content)
-
-        self.assertInHTML(
-            f"""
-            <a href="{self.url}"
-                data-item-weight="{self.item_weight}">
-                Installed Plugins
-            </a>
-            """,
-            response_content,
-        )
+        self.assertNotRegex(response_content, r"Installed\s+Plugins")
 
 
 class LoginUI(TestCase):
@@ -325,9 +312,9 @@ class LoginUI(TestCase):
         sso_login_search_result = self.make_request()
         self.assertIsNotNone(sso_login_search_result)
 
-    @override_settings(HIDE_RESTRICTED_UI=True, BANNER_TOP="Hello, Banner Top", BANNER_BOTTOM="Hello, Banner Bottom")
-    def test_routes_redirect_back_to_login_if_hide_restricted_ui_true(self):
-        """Assert that api docs and graphql redirects to login page if user is unauthenticated and HIDE_RESTRICTED_UI=True."""
+    @override_settings(BANNER_TOP="Hello, Banner Top", BANNER_BOTTOM="Hello, Banner Bottom")
+    def test_routes_redirect_back_to_login_unauthenticated(self):
+        """Assert that api docs and graphql redirects to login page if user is unauthenticated."""
         self.client.logout()
         headers = {"HTTP_ACCEPT": "text/html"}
         urls = [reverse("api_docs"), reverse("graphql")]
@@ -344,26 +331,6 @@ class LoginUI(TestCase):
             if url == urls[0]:
                 self.assertNotIn("Hello, Banner Top", response_content)
                 self.assertNotIn("Hello, Banner Bottom", response_content)
-
-    @override_settings(HIDE_RESTRICTED_UI=False, BANNER_TOP="Hello, Banner Top", BANNER_BOTTOM="Hello, Banner Bottom")
-    def test_routes_no_redirect_back_to_login_if_hide_restricted_ui_false(self):
-        """Assert that api docs and graphql do not redirects to login page if user is unauthenticated and HIDE_RESTRICTED_UI=False."""
-        self.client.logout()
-        headers = {"HTTP_ACCEPT": "text/html"}
-        urls = [reverse("api_docs"), reverse("graphql")]
-        for url in urls:
-            response = self.client.get(url, **headers)
-            self.assertHttpStatus(response, 200)
-            self.assertEqual(response.request["PATH_INFO"], url)
-            response_content = response.content.decode(response.charset).replace("\n", "")
-            # Assert Footer items(`self.footer_elements`), Banner and Banner Top is not hidden
-            for footer_text in self.footer_elements:
-                self.assertInHTML(footer_text, response_content)
-
-            # Only API Docs implements BANNERS
-            if url == urls[0]:
-                self.assertInHTML("Hello, Banner Top", response_content)
-                self.assertInHTML("Hello, Banner Bottom", response_content)
 
 
 class MetricsViewTestCase(TestCase):
@@ -388,3 +355,146 @@ class MetricsViewTestCase(TestCase):
             self.assertNotIn(test_metric_name, metric_names_without_plugin)
         metric_names_with_plugin.remove(test_metric_name)
         self.assertSetEqual(metric_names_with_plugin, metric_names_without_plugin)
+
+
+class AuthenticateMetricsTestCase(APITestCase):
+    def test_metrics_authentication(self):
+        """Assert that if metrics require authentication, a user not logged in gets a 403."""
+        self.client.logout()
+        headers = {}
+        response = self.client.get(reverse("metrics"), **headers)
+        self.assertHttpStatus(response, 403, msg="/metrics should return a 403 HTTP status code.")
+
+    def test_metrics(self):
+        """Assert that if metrics don't require authentication, a user not logged in gets a 200."""
+        self.factory = RequestFactory()
+        self.client.logout()
+
+        request = self.factory.get("/")
+        response = NautobotMetricsView.as_view()(request)
+        self.assertHttpStatus(response, 200, msg="/metrics should return a 200 HTTP status code.")
+
+
+class ErrorPagesTestCase(TestCase):
+    """Tests for 4xx and 5xx error page rendering."""
+
+    @override_settings(DEBUG=False)
+    def test_404_default_support_message(self):
+        """Nautobot's custom 404 page should be used and should include a default support message."""
+        with self.assertTemplateUsed("404.html"):
+            response = self.client.get("/foo/bar")
+        self.assertContains(response, "Network to Code", status_code=404)
+        response_content = response.content.decode(response.charset)
+        self.assertInHTML(
+            "If further assistance is required, please join the <code>#nautobot</code> channel on "
+            '<a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
+            "Slack community</a> and post your question.",
+            response_content,
+        )
+
+    @override_settings(DEBUG=False, SUPPORT_MESSAGE="Hello world!")
+    def test_404_custom_support_message(self):
+        """Nautobot's custom 404 page should be used and should include a custom support message if defined."""
+        with self.assertTemplateUsed("404.html"):
+            response = self.client.get("/foo/bar")
+        self.assertNotContains(response, "Network to Code", status_code=404)
+        response_content = response.content.decode(response.charset)
+        self.assertInHTML("Hello world!", response_content)
+
+    @override_settings(DEBUG=False)
+    @mock.patch("nautobot.core.views.HomeView.get", side_effect=Exception)
+    def test_500_default_support_message(self, mock_get):
+        """Nautobot's custom 500 page should be used and should include a default support message."""
+        url = reverse("home")
+        with self.assertTemplateUsed("500.html"):
+            self.client.raise_request_exception = False
+            response = self.client.get(url)
+        self.assertContains(response, "Network to Code", status_code=500)
+        response_content = response.content.decode(response.charset)
+        self.assertInHTML(
+            "If further assistance is required, please join the <code>#nautobot</code> channel on "
+            '<a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
+            "Slack community</a> and post your question.",
+            response_content,
+        )
+
+    @override_settings(DEBUG=False, SUPPORT_MESSAGE="Hello world!")
+    @mock.patch("nautobot.core.views.HomeView.get", side_effect=Exception)
+    def test_500_custom_support_message(self, mock_get):
+        """Nautobot's custom 500 page should be used and should include a custom support message if defined."""
+        url = reverse("home")
+        with self.assertTemplateUsed("500.html"):
+            self.client.raise_request_exception = False
+            response = self.client.get(url)
+        self.assertNotContains(response, "Network to Code", status_code=500)
+        response_content = response.content.decode(response.charset)
+        self.assertInHTML("Hello world!", response_content)
+
+
+class DBFileStorageViewTestCase(TestCase):
+    """Test authentication/permission enforcement for django_db_file_storage views."""
+
+    def setUp(self):
+        super().setUp()
+        self.test_file_1 = SimpleUploadedFile(name="test_file_1.txt", content=b"I am content.\n")
+        self.file_proxy_1 = FileProxy.objects.create(name=self.test_file_1.name, file=self.test_file_1)
+        self.test_file_2 = SimpleUploadedFile(name="test_file_2.txt", content=b"I am content.\n")
+        self.file_proxy_2 = FileProxy.objects.create(name=self.test_file_2.name, file=self.test_file_2)
+        self.url = f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_1.file.name}"
+
+    def test_get_file_anonymous(self):
+        self.client.logout()
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 403)
+
+    def test_get_file_without_permission(self):
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 403)
+
+    def test_get_object_with_permission(self):
+        self.add_permissions(get_permission_for_model(FileProxy, "view"))
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
+
+    def test_get_object_with_constrained_permission(self):
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": self.file_proxy_1.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(FileProxy))
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
+        url = f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_2.file.name}"
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 404)
+
+
+class SilkUIAccessTestCase(TestCase):
+    """Test access control related to the django-silk UI"""
+
+    def test_access_for_non_superuser(self):
+        # Login as non-superuser
+        self.user.is_superuser = False
+        self.user.save()
+        self.client.force_login(self.user)
+
+        # Attempt to access the view
+        response = self.client.get(reverse("silk:summary"))
+
+        # Check for redirect or forbidden status code (302 or 403)
+        self.assertIn(response.status_code, [302, 403])
+
+    def test_access_for_superuser(self):
+        # Login as superuser
+        self.user.is_superuser = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        # Attempt to access the view
+        response = self.client.get(reverse("silk:summary"))
+
+        # Check for success status code (e.g., 200)
+        self.assertEqual(response.status_code, 200)

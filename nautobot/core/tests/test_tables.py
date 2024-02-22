@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from nautobot.dcim.tables import ManufacturerTable, DeviceTypeTable, LocationTable, LocationTypeTable, RackGroupTable
+from nautobot.dcim.tables import DeviceTypeTable, LocationTable, LocationTypeTable, ManufacturerTable, RackGroupTable
 
 
 class TableTestCase(TestCase):

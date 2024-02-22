@@ -1,7 +1,8 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
-from nautobot.core.testing import TestCase, FilterTestCases
+from nautobot.core.testing import FilterTestCases, TestCase
+from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import (
     Device,
     DeviceType,
@@ -14,6 +15,7 @@ from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.filters import (
     IPAddressFilterSet,
+    IPAddressToInterfaceFilterSet,
     PrefixFilterSet,
     RIRFilterSet,
     RouteTargetFilterSet,
@@ -24,6 +26,8 @@ from nautobot.ipam.filters import (
 )
 from nautobot.ipam.models import (
     IPAddress,
+    IPAddressToInterface,
+    Namespace,
     Prefix,
     RIR,
     RouteTarget,
@@ -31,7 +35,6 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
-    Namespace,
 )
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import (
@@ -162,6 +165,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ["rir", "rir__name"],
         ["role", "role__id"],
         ["role", "role__name"],
+        ["status", "status__id"],
         ["status", "status__name"],
         ["type"],
     )
@@ -306,10 +310,9 @@ class PrefixFilterCustomDataTestCase(TestCase):
     def test_contains(self):
         matches_ipv4 = self.queryset.filter(network__in=["10.0.0.0", "10.0.1.0"])
         matches_ipv6 = self.queryset.filter(network__in=["2001:db8::", "2001:db8:0:1::"])
-        params = {"contains": "10.0.1.0/24"}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, matches_ipv4)
-        params = {"contains": "2001:db8:0:1::/64"}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, matches_ipv6)
+
+        params = {"contains": ["10.0.1.0/24", "2001:db8:0:1::"]}
+        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, matches_ipv4 | matches_ipv6)
 
     def test_vrfs(self):
         prefixes = self.queryset[:2]
@@ -423,15 +426,15 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
     def setUpTestData(cls):
         # Create some VRFs that belong to the same Namespace and have an rd
         cls.namespace = Namespace.objects.create(name="IP Address Test Case Namespace")
-        VRF.objects.create(name="VRF 1", rd="65000:100", namespace=cls.namespace)
-        VRF.objects.create(name="VRF 2", rd="65000:200", namespace=cls.namespace)
-        VRF.objects.create(name="VRF 3", rd="65000:300", namespace=cls.namespace)
+        vrfs = (
+            VRF.objects.create(name="VRF 1", rd="65000:100", namespace=cls.namespace),
+            VRF.objects.create(name="VRF 2", rd="65000:200", namespace=cls.namespace),
+            VRF.objects.create(name="VRF 3", rd="65000:300", namespace=cls.namespace),
+        )
         # Create some VRFs without an rd
         VRF.objects.create(name="VRF 4", namespace=cls.namespace)
         VRF.objects.create(name="VRF 5", namespace=cls.namespace)
         VRF.objects.create(name="VRF 6", namespace=cls.namespace)
-        vrfs = VRF.objects.filter(namespace=cls.namespace, rd__isnull=False)
-        assert len(vrfs) == 3, f"This Namespace {cls.namespace} does not contain enough VRFs."
 
         cls.interface_ct = ContentType.objects.get_for_model(Interface)
         cls.vm_interface_ct = ContentType.objects.get_for_model(VMInterface)
@@ -660,14 +663,11 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     def test_prefix(self):
         ipv4_parent = self.queryset.filter(ip_version=4).first().address.supernet()[-1]
-        params = {"prefix": str(ipv4_parent)}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.net_host_contained(ipv4_parent)
-        )
         ipv6_parent = self.queryset.filter(ip_version=6).first().address.supernet()[-1]
-        params = {"prefix": str(ipv6_parent)}
+
+        params = {"prefix": [str(ipv4_parent), str(ipv6_parent)]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.net_host_contained(ipv6_parent)
+            self.filterset(params, self.queryset).qs, self.queryset.net_host_contained(ipv4_parent, ipv6_parent)
         )
 
     def test_filter_address(self):
@@ -793,8 +793,8 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     def test_present_in_vrf(self):
         # clear out all the randomly generated route targets and vrfs before running this custom test
-        test_ip_addresses_pk_list = list(self.queryset.values_list("pk", flat=True)[:10])
-        test_ip_addresses = self.queryset[:10]
+        test_ip_addresses = self.queryset.filter(parent__namespace=self.namespace)
+        test_ip_addresses_pk_list = list(test_ip_addresses.values_list("pk", flat=True))
         # With advent of `IPAddress.parent`, IPAddresses can't just be bulk deleted without clearing their
         # `parent` first in an `update()` query which doesn't call `save()` or `fire `(pre|post)_save` signals.
         unwanted_ips = self.queryset.exclude(pk__in=test_ip_addresses_pk_list)
@@ -812,12 +812,6 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             VRF.objects.create(name="VRF 2", rd="65000:200", namespace=self.namespace),
             VRF.objects.create(name="VRF 3", rd="65000:300", namespace=self.namespace),
         )
-        test_ip_addresses[0].parent.namespace = self.namespace
-        test_ip_addresses[0].validated_save()
-        test_ip_addresses[1].parent.namespace = self.namespace
-        test_ip_addresses[1].validated_save()
-        test_ip_addresses[2].parent.namespace = self.namespace
-        test_ip_addresses[2].validated_save()
         vrfs[0].import_targets.add(route_targets[0], route_targets[1], route_targets[2])
         vrfs[1].export_targets.add(route_targets[1])
         vrfs[2].export_targets.add(route_targets[2])
@@ -852,7 +846,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
 
     def test_status(self):
         statuses = list(Status.objects.get_for_model(IPAddress).filter(ip_addresses__isnull=False)[:2])
-        params = {"status": [statuses[0].name, statuses[1].name]}
+        params = {"status": [statuses[0].name, statuses[1].id]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(status__in=statuses)
         )
@@ -864,6 +858,88 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(role__in=roles),
         )
+
+
+class IPAddressToInterfaceTestCase(FilterTestCases.FilterTestCase):
+    queryset = IPAddressToInterface.objects.all()
+    filterset = IPAddressToInterfaceFilterSet
+    generic_filter_tests = (
+        ["ip_address"],
+        ["interface", "interface__id"],
+        ["interface", "interface__name"],
+        ["vm_interface", "vm_interface__id"],
+        ["vm_interface", "vm_interface__name"],
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        ip_addresses = list(IPAddress.objects.all()[:5])
+        location = Location.objects.get_for_model(Device).first()
+        devicetype = DeviceType.objects.first()
+        devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
+        device = Device.objects.create(
+            name="Device 1",
+            location=location,
+            device_type=devicetype,
+            role=devicerole,
+            status=devicestatus,
+        )
+        int_status = Status.objects.get_for_model(Interface).first()
+        int_type = InterfaceTypeChoices.TYPE_1GE_FIXED
+        interfaces = [
+            Interface.objects.create(device=device, name="eth0", status=int_status, type=int_type),
+            Interface.objects.create(device=device, name="eth1", status=int_status, type=int_type),
+            Interface.objects.create(device=device, name="eth2", status=int_status, type=int_type),
+        ]
+
+        clustertype = ClusterType.objects.create(name="Cluster Type 1")
+        cluster = Cluster.objects.create(cluster_type=clustertype, name="Cluster 1")
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        virtual_machine = (VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, status=vm_status),)
+        vm_int_status = Status.objects.get_for_model(VMInterface).first()
+        vm_interfaces = [
+            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status),
+            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth1", status=vm_int_status),
+        ]
+
+        IPAddressToInterface.objects.create(ip_address=ip_addresses[0], interface=interfaces[0], vm_interface=None)
+        IPAddressToInterface.objects.create(ip_address=ip_addresses[1], interface=interfaces[1], vm_interface=None)
+        IPAddressToInterface.objects.create(ip_address=ip_addresses[2], interface=interfaces[2], vm_interface=None)
+        IPAddressToInterface.objects.create(ip_address=ip_addresses[3], interface=None, vm_interface=vm_interfaces[0])
+        IPAddressToInterface.objects.create(ip_address=ip_addresses[4], interface=None, vm_interface=vm_interfaces[1])
+
+    def test_boolean_filters(self):
+        filters = [
+            "is_source",
+            "is_destination",
+            "is_default",
+            "is_preferred",
+            "is_primary",
+            "is_secondary",
+            "is_standby",
+        ]
+
+        ip_association1 = IPAddressToInterface.objects.first()
+        ip_association2 = IPAddressToInterface.objects.last()
+        for test_filter in filters:
+            setattr(ip_association1, test_filter, True)
+            setattr(ip_association2, test_filter, True)
+        ip_association1.validated_save()
+        ip_association2.validated_save()
+
+        for test_filter in filters:
+            with self.subTest(filter=test_filter):
+                params = {test_filter: True}
+                self.assertQuerysetEqualAndNotEmpty(
+                    self.filterset(params, self.queryset).qs, self.queryset.filter(**{test_filter: True}), ordered=False
+                )
+                params = {test_filter: False}
+                self.assertQuerysetEqualAndNotEmpty(
+                    self.filterset(params, self.queryset).qs,
+                    self.queryset.filter(**{test_filter: False}),
+                    ordered=False,
+                )
 
 
 class VLANGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
@@ -1029,7 +1105,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
 
     def test_status(self):
         statuses = list(Status.objects.get_for_model(VLAN).filter(vlans__isnull=False).distinct())[:2]
-        params = {"status": [statuses[0].name, statuses[1].name]}
+        params = {"status": [statuses[0].name, statuses[1].id]}
         self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(status__in=statuses))
 
     def test_search(self):

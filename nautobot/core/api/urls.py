@@ -12,11 +12,10 @@ from nautobot.core.api.views import (
     GetFilterSetFieldLookupExpressionChoicesAPIView,
     GetMenuAPIView,
     GetObjectCountsView,
-    GetSettingsView,
     GraphQLDRFAPIView,
-    StatusView,
-    NautobotSpectacularSwaggerView,
     NautobotSpectacularRedocView,
+    NautobotSpectacularSwaggerView,
+    StatusView,
 )
 from nautobot.extras.plugins.urls import plugin_api_patterns
 
@@ -37,7 +36,6 @@ ui_api_patterns = [
     path("core/", include((core_api_patterns, "core-api"))),
     path("get-menu/", GetMenuAPIView.as_view(), name="get-menu"),
     path("get-object-counts/", GetObjectCountsView.as_view(), name="get-object-counts"),
-    path("settings/", GetSettingsView.as_view(), name="settings"),
 ]
 
 urlpatterns = [

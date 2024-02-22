@@ -74,36 +74,36 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
         Get a JSON representation of all relationships and associations applicable to this model.
 
         Returns:
-            {
-                "<relationship_key>": {
-                    "id": ...,
-                    "url": ...,
-                    "label": ...,
-                    "type": "one-to-one|one-to-many|many-to-many|...",
-                    # if this model can be the destination of the relationship:
-                    "source": {
+            (dict): `{
+                    "<relationship_key>": {
+                        "id": ...,
+                        "url": ...,
                         "label": ...,
-                        "object_type": "dcim.device|ipam.ipaddress|...",
-                        "objects": [{...}, {...}, ...],
+                        "type": "one-to-one|one-to-many|many-to-many|...",
+                        # if this model can be the destination of the relationship:
+                        "source": {
+                            "label": ...,
+                            "object_type": "dcim.device|ipam.ipaddress|...",
+                            "objects": [{...}, {...}, ...],
+                        },
+                        # if this model can be the source of the relationship:
+                        "destination": {
+                            "label": ...,
+                            "object_type": "dcim.device|ipam.ipaddress|...",
+                            "objects": [{...}, {...}, ...],
+                        },
+                        # if this relationship is symmetric, instead of source/destination above:
+                        "peer": {
+                            "label": ...,
+                            "object_type": "dcim.device|ipam.ipaddress|...",
+                            "objects": [{...}, {...}, ...],
+                        },
                     },
-                    # if this model can be the source of the relationship:
-                    "destination": {
-                        "label": ...,
-                        "object_type": "dcim.device|ipam.ipaddress|...",
-                        "objects": [{...}, {...}, ...],
+                    "<relationship_key>": {
+                        ...
                     },
-                    # if this relationship is symmetric, instead of source/destination above:
-                    "peer": {
-                        "label": ...,
-                        "object_type": "dcim.device|ipam.ipaddress|...",
-                        "objects": [{...}, {...}, ...],
-                    },
-                },
-                "<relationship_key>": {
                     ...
-                },
-                ...
-            }
+                }`
         """
         data = {}
         relationships_data = value.get_relationships(include_hidden=True)
@@ -174,21 +174,21 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
         Allow for updates to some relationships without overriding others.
 
         Returns:
-            <self.field_name>: {
-                <relationship>: {
-                    "source": [<object>, <object>,...]
-                },
-                <relationship>: {
-                    "destination": [<object>, <object>,...]
-                },
-                <relationship>: {
-                    "destination": [<object>, ...],
-                    "source": [...],
-                },
-                <relationship>: {
-                    "peer": [<object>, <object>, ...],
-                },
-            }
+            (dict): `{ <self.field_name>: {
+                    <relationship>: {
+                        "source": [<object>, <object>,...]
+                    },
+                    <relationship>: {
+                        "destination": [<object>, <object>,...]
+                    },
+                    <relationship>: {
+                        "destination": [<object>, ...],
+                        "source": [...],
+                    },
+                    <relationship>: {
+                        "peer": [<object>, <object>, ...],
+                    },
+                } }`
         """
         # Set up the skeleton of the output data for all relevant relationships
         output_data = {}

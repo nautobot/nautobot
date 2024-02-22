@@ -1,6 +1,5 @@
 import logging
 
-
 from nautobot.core.api import (
     BaseModelSerializer,
 )
@@ -43,3 +42,10 @@ class TaggedModelSerializerMixin(BaseModelSerializer):
             instance.tags.clear()
 
         return instance
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if self._is_csv_request() and data.get("tags"):
+            # Export tag names for CSV
+            data["tags"] = list(instance.tags.values_list("name", flat=True))
+        return data

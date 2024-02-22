@@ -1,13 +1,13 @@
 import re
 from unittest import skipIf
 
-import netaddr
 from django.db import connection
+import netaddr
 
 from nautobot.core.testing import TestCase
 from nautobot.extras.models import Status
 from nautobot.ipam import choices
-from nautobot.ipam.models import Prefix, IPAddress, Namespace
+from nautobot.ipam.models import IPAddress, Namespace, Prefix
 
 
 class IPAddressQuerySet(TestCase):
@@ -49,10 +49,6 @@ class IPAddressQuerySet(TestCase):
                 address="2001:db8::3/64", namespace=cls.namespace, tenant=None, status=cls.ipaddr_status
             ),
         }
-
-    def test_ip_family(self):
-        self.assertEqual(self.queryset.ip_family(4).count(), 5)
-        self.assertEqual(self.queryset.ip_family(6).count(), 3)
 
     def test_net_host_contained(self):
         self.assertQuerysetEqualAndNotEmpty(

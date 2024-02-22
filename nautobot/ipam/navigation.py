@@ -5,10 +5,8 @@ from nautobot.core.apps import (
     NavMenuAddButton,
     NavMenuGroup,
     NavMenuItem,
-    NavMenuImportButton,
     NavMenuTab,
 )
-
 
 menu_items = (
     NavMenuTab(
@@ -33,13 +31,16 @@ menu_items = (
                                     "ipam.add_ipaddress",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="ipam:ipaddress_import",
-                                permissions=[
-                                    "ipam.add_ipaddress",
-                                ],
-                            ),
                         ),
+                    ),
+                    NavMenuItem(
+                        link="ipam:ipaddresstointerface_import",
+                        name="IP Address Assignments",
+                        weight=200,
+                        permissions=[
+                            "ipam.add_ipaddresstointerface",
+                        ],
+                        buttons=(),
                     ),
                 ),
             ),
@@ -57,12 +58,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="ipam:prefix_add",
-                                permissions=[
-                                    "ipam.add_prefix",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="ipam:prefix_import",
                                 permissions=[
                                     "ipam.add_prefix",
                                 ],
@@ -85,12 +80,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="ipam:rir_add",
-                                permissions=[
-                                    "ipam.add_rir",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="ipam:rir_import",
                                 permissions=[
                                     "ipam.add_rir",
                                 ],
@@ -133,12 +122,6 @@ menu_items = (
                                     "ipam.add_vrf",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="ipam:vrf_import",
-                                permissions=[
-                                    "ipam.add_vrf",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -151,12 +134,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="ipam:routetarget_add",
-                                permissions=[
-                                    "ipam.add_routetarget",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="ipam:routetarget_import",
                                 permissions=[
                                     "ipam.add_routetarget",
                                 ],
@@ -183,12 +160,6 @@ menu_items = (
                                     "ipam.add_vlan",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="ipam:vlan_import",
-                                permissions=[
-                                    "ipam.add_vlan",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -201,12 +172,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="ipam:vlangroup_add",
-                                permissions=[
-                                    "ipam.add_vlangroup",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="ipam:vlangroup_import",
                                 permissions=[
                                     "ipam.add_vlangroup",
                                 ],
@@ -226,14 +191,7 @@ menu_items = (
                         permissions=[
                             "ipam.view_service",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="ipam:service_import",
-                                permissions=[
-                                    "ipam.add_service",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                 ),
             ),

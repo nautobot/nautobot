@@ -1,3 +1,5 @@
+import contextlib
+
 from django.contrib.contenttypes.models import ContentType
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -129,8 +131,9 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_connected_endpoint_type(self, obj):
-        if obj._path is not None and obj._path.destination is not None:
-            return f"{obj._path.destination._meta.app_label}.{obj._path.destination._meta.model_name}"
+        with contextlib.suppress(CablePath.DoesNotExist):
+            if obj._path is not None and obj._path.destination is not None:
+                return f"{obj._path.destination._meta.app_label}.{obj._path.destination._meta.model_name}"
         return None
 
     @extend_schema_field(
@@ -145,17 +148,19 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
         """
         Return the appropriate serializer for the type of connected object.
         """
-        if obj._path is not None and obj._path.destination is not None:
-            depth = get_nested_serializer_depth(self)
-            return return_nested_serializer_data_based_on_depth(
-                self, depth, obj, obj._path.destination, "connected_endpoint"
-            )
+        with contextlib.suppress(CablePath.DoesNotExist):
+            if obj._path is not None and obj._path.destination is not None:
+                depth = get_nested_serializer_depth(self)
+                return return_nested_serializer_data_based_on_depth(
+                    self, depth, obj, obj._path.destination, "connected_endpoint"
+                )
         return None
 
     @extend_schema_field(serializers.BooleanField(allow_null=True))
     def get_connected_endpoint_reachable(self, obj):
-        if obj._path is not None:
-            return obj._path.is_active
+        with contextlib.suppress(CablePath.DoesNotExist):
+            if obj._path is not None:
+                return obj._path.is_active
         return None
 
 
@@ -228,9 +233,6 @@ class LocationSerializer(
                         ]
                     },
                 },
-                {
-                    "Comments": {"fields": ["comments"]},
-                },
             ],
         }
 
@@ -273,9 +275,9 @@ class RackSerializer(
         model = Rack
         fields = "__all__"
         list_display_fields = ["name", "location", "rack_group", "status", "facility_id", "tenant", "role", "u_height"]
-        # Omit the UniqueTogetherValidator that would be automatically added to validate (rack_group, facility_id).
-        # This prevents facility_id from being interpreted as a required field.
-        validators = [UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("rack_group", "name"))]
+        # Omit the UniqueTogetherValidators that would be automatically added to validate (rack_group, facility_id) and (rack_group, name).
+        # This prevents facility_id and rack_group from being interpreted as required fields.
+        validators = []
         detail_view_config = {
             "layout": [
                 {
@@ -287,16 +289,17 @@ class RackSerializer(
                         ]
                     },
                 },
-                {
-                    "Comments": {"fields": ["comments"]},
-                },
             ],
             "include_others": True,
         }
 
     def validate(self, data):
+        # Validate uniqueness of (rack_group, name) since we omitted the automatically-created validator above.
+        if data.get("rack_group", None):
+            validator = UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("rack_group", "name"))
+            validator(data, self)
         # Validate uniqueness of (rack_group, facility_id) since we omitted the automatically-created validator above.
-        if data.get("facility_id", None):
+        if data.get("facility_id", None) and data.get("rack_group", None):
             validator = UniqueTogetherValidator(queryset=Rack.objects.all(), fields=("rack_group", "facility_id"))
             validator(data, self)
 
@@ -400,11 +403,6 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                             "rear_image",
                             "device_count",
                         ]
-                    },
-                },
-                {
-                    "Comments": {
-                        "fields": ["comments"],
                     },
                 },
             ],
@@ -558,13 +556,17 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                 {
                     "Device": {
                         "fields": [
+                            "name",
                             "location",
                             "rack",
+                            "face",
                             "position",
                             "tenant",
                             "device_type",
                             "serial",
                             "asset_tag",
+                            "cluster",
+                            "parent_bay",
                         ]
                     },
                     "Device Management": {
@@ -575,17 +577,21 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                             "primary_ip6",
                             "secrets_group",
                             "device_redundancy_group",
+                            "device_redundancy_group_priority",
                         ]
                     },
                 },
-                {
-                    "Comments": {
-                        "fields": ["comments"],
-                    },
-                },
             ],
-            "include_others": True,
+            "include_others": False,  # TODO: config_context, local_config_context_data, local_config_context_schema
         }
+
+    def get_additional_detail_view_tabs(self):
+        """Add "Virtual Chassis" as a separate detail tab."""
+        tabs = super().get_additional_detail_view_tabs()
+        tabs["Virtual Chassis"] = [
+            {"Virtual Chassis": {"fields": ["virtual_chassis", "vc_position", "vc_priority"]}},
+        ]
+        return tabs
 
     def get_field_names(self, declared_fields, info):
         """

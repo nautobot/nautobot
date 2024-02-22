@@ -19,6 +19,9 @@ Interfaces may be physical or virtual in nature, but only physical interfaces ma
 
 Physical interfaces may be arranged into a link aggregation group (LAG) and associated with a parent LAG (virtual) interface. LAG interfaces can be recursively nested to model bonding of trunk groups. Like all virtual interfaces, LAG interfaces cannot be connected physically.
 
++/- 2.0.0
+    The relationship to IP addresses has been changed to a many-to-many relationship. This allows an IP address to be assigned to multiple interfaces, and an interface to have multiple IP addresses assigned to it.
+
 IP addresses can be assigned to interfaces. VLANs can also be assigned to each interface as either tagged or untagged. (An interface may have only one untagged VLAN.)
 
 !!! note

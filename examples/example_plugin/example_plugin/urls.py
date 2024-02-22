@@ -3,11 +3,10 @@ from django.urls import path
 from django.views.generic import RedirectView
 
 from nautobot.apps.urls import NautobotUIViewSetRouter
-from nautobot.extras.views import ObjectDynamicGroupsView
+from nautobot.apps.views import ObjectDynamicGroupsView
 
 from example_plugin import views
 from example_plugin.models import AnotherExampleModel, ExampleModel
-
 
 app_name = "example_plugin"
 router = NautobotUIViewSetRouter()

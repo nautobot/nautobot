@@ -1,6 +1,5 @@
 from nautobot.core.choices import ChoiceSet
 
-
 #
 # Locations
 #
@@ -753,6 +752,7 @@ class InterfaceTypeChoices(ChoiceSet):
     TYPE_100GE_QSFP28 = "100gbase-x-qsfp28"
     TYPE_200GE_CFP2 = "200gbase-x-cfp2"
     TYPE_200GE_QSFP56 = "200gbase-x-qsfp56"
+    TYPE_400GE_QSFP112 = "400gbase-x-qsfp112"
     TYPE_400GE_QSFP_DD = "400gbase-x-qsfpdd"
     TYPE_400GE_OSFP = "400gbase-x-osfp"
     TYPE_800GE_QSFP_DD = "800gbase-x-qsfpdd"
@@ -820,6 +820,22 @@ class InterfaceTypeChoices(ChoiceSet):
     TYPE_E1 = "e1"
     TYPE_T3 = "t3"
     TYPE_E3 = "e3"
+    TYPE_DA15 = "da15"
+    TYPE_DA26 = "da26"
+    TYPE_DA31 = "da31"
+    TYPE_DB25 = "db25"
+    TYPE_DB44 = "db44"
+    TYPE_DB60 = "db60"
+    TYPE_DC37 = "dc37"
+    TYPE_DC62 = "dc62"
+    TYPE_DC79 = "dc79"
+    TYPE_DD50 = "dd50"
+    TYPE_DD78 = "dd78"
+    TYPE_DD100 = "dd100"
+    TYPE_DE9 = "de9"
+    TYPE_DE15 = "de15"
+    TYPE_DE19 = "de19"
+    TYPE_DF104 = "df104"
 
     # ATM/DSL
     TYPE_XDSL = "xdsl"
@@ -897,6 +913,7 @@ class InterfaceTypeChoices(ChoiceSet):
                 (TYPE_100GE_CPAK, "Cisco CPAK (100GE)"),
                 (TYPE_100GE_QSFP28, "QSFP28 (100GE)"),
                 (TYPE_200GE_QSFP56, "QSFP56 (200GE)"),
+                (TYPE_400GE_QSFP112, "QSFP112 (400GE)"),
                 (TYPE_400GE_QSFP_DD, "QSFP-DD (400GE)"),
                 (TYPE_400GE_OSFP, "OSFP (400GE)"),
                 (TYPE_800GE_QSFP_DD, "QSFP-DD (800GE)"),
@@ -985,6 +1002,22 @@ class InterfaceTypeChoices(ChoiceSet):
                 (TYPE_E1, "E1 (2.048 Mbps)"),
                 (TYPE_T3, "T3 (45 Mbps)"),
                 (TYPE_E3, "E3 (34 Mbps)"),
+                (TYPE_DA15, "DA15"),
+                (TYPE_DA26, "DA26"),
+                (TYPE_DA31, "DA31"),
+                (TYPE_DB25, "DB25"),
+                (TYPE_DB44, "DB44"),
+                (TYPE_DB60, "DB60"),
+                (TYPE_DC37, "DC37"),
+                (TYPE_DC62, "DC62"),
+                (TYPE_DC79, "DC79"),
+                (TYPE_DD50, "DD50"),
+                (TYPE_DD78, "DD78"),
+                (TYPE_DD100, "DD100"),
+                (TYPE_DE9, "DE9"),
+                (TYPE_DE15, "DE15"),
+                (TYPE_DE19, "DE19"),
+                (TYPE_DF104, "DF104"),
             ),
         ),
         ("ATM", ((TYPE_XDSL, "xDSL"),)),
@@ -1181,6 +1214,7 @@ class CableTypeChoices(ChoiceSet):
     TYPE_MMF_OM2 = "mmf-om2"
     TYPE_MMF_OM3 = "mmf-om3"
     TYPE_MMF_OM4 = "mmf-om4"
+    TYPE_MMF_OM5 = "mmf-om5"
     TYPE_SMF = "smf"
     TYPE_SMF_OS1 = "smf-os1"
     TYPE_SMF_OS2 = "smf-os2"
@@ -1214,6 +1248,7 @@ class CableTypeChoices(ChoiceSet):
                 (TYPE_MMF_OM2, "Multimode Fiber (OM2)"),
                 (TYPE_MMF_OM3, "Multimode Fiber (OM3)"),
                 (TYPE_MMF_OM4, "Multimode Fiber (OM4)"),
+                (TYPE_MMF_OM5, "Multimode Fiber (OM5)"),
                 (TYPE_SMF, "Singlemode Fiber"),
                 (TYPE_SMF_OS1, "Singlemode Fiber (OS1)"),
                 (TYPE_SMF_OS2, "Singlemode Fiber (OS2)"),

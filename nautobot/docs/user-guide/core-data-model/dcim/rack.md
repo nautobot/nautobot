@@ -23,3 +23,19 @@ Similarly, each rack must be assigned an operational [`status`](../../platform-f
 * Deprecated
 
 Each rack has two faces (front and rear) on which devices can be mounted. Rail-to-rail width may be 10, 19, 21, or 23 inches. The outer width and depth of a rack or cabinet can also be annotated in millimeters or inches.
+
+## Rack Power Utilization
+
+The power utilization of a rack is calculated when one or more power feeds are assigned to the rack and connected to devices that draw power.
+
+Here are the typical instances required for the power utilization of a rack to be calculated and shown in the web UI:
+
+* **Power Panel** in the same location as the rack
+* **Power Feed** assigned to the power panel and to the rack
+* 1 **Device** (i.e. PDU)
+    * power port connected to the power feed
+    * power outlet(s) connected to the power port of itself
+* 1 or more **Devices**
+    * power port connected to a power outlet of the PDU
+
+The total power utilization for a rack is calculated as the sum of all allocated draw (from power ports of devices either directly connected to a power feed or connected to a power outlet of a device that is connected to a power feed) divided by the Total Power (Amps × Volts × Max Utilization %) for all power feeds.

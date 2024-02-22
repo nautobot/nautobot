@@ -5,7 +5,7 @@
 
 import os
 
-from nautobot.core.settings import *  # noqa: F401,F403
+from nautobot.core.settings import *  # noqa: F403  # undefined-local-with-import-star
 from nautobot.core.settings_funcs import parse_redis_connection
 
 ALLOWED_HOSTS = ["nautobot.example.com"]
@@ -22,12 +22,12 @@ PLUGINS = [
 ]
 
 # Hard-code the SECRET_KEY for simplicity
-SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"  # noqa: S105  # hardcoded-password-string
 
 # Redis variables
 
 # Use *different* redis_databases than the ones (0 and 1) used during non-automated-testing operations.
-CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=2)  # noqa: F405
+CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=2)  # noqa: F405  # undefined-local-with-import-star-usage
 
 # Testing storages within cli.py
 STORAGE_CONFIG = {
@@ -37,6 +37,8 @@ STORAGE_CONFIG = {
     "AWS_S3_REGION_NAME": "us-west-1",
 }
 
+# Use in-memory Constance backend instead of database backend so that settings don't leak between parallel tests.
+CONSTANCE_BACKEND = "constance.backends.memory.MemoryBackend"
 
 # Enable test data factories, as they're a pre-requisite for Nautobot core tests.
 TEST_USE_FACTORIES = True
@@ -53,6 +55,8 @@ CELERY_BROKER_URL = "memory://"
 
 # Metrics need to enabled in this config as overriding them with override_settings will not actually enable them
 METRICS_ENABLED = True
+
+METRICS_AUTHENTICATED = True
 
 DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT = 0
 CONTENT_TYPE_CACHE_TIMEOUT = 0

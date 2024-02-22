@@ -11,7 +11,8 @@ from nautobot.core.tables import (
 from nautobot.dcim.models import Rack, RackGroup, RackReservation
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
-from .template_code import TREE_LINK, RACKGROUP_ELEVATIONS, UTILIZATION_GRAPH
+
+from .template_code import RACKGROUP_ELEVATIONS, TREE_LINK, UTILIZATION_GRAPH
 
 __all__ = (
     "RackTable",

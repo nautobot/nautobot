@@ -5,7 +5,7 @@ import os
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import DEFAULT_DB_ALIAS, connections
+from django.db import connections, DEFAULT_DB_ALIAS
 from django.utils.crypto import get_random_string
 
 from nautobot.core.settings_funcs import is_truthy
@@ -58,17 +58,16 @@ class Command(BaseCommand):
                 ProviderNetworkFactory,
             )
             from nautobot.dcim.factory import (
+                DeviceFactory,
                 DeviceRedundancyGroupFactory,
                 DeviceTypeFactory,
+                LocationFactory,
+                LocationTypeFactory,
                 ManufacturerFactory,
                 PlatformFactory,
             )
-            from nautobot.extras.factory import RoleFactory, StatusFactory, TagFactory
+            from nautobot.extras.factory import ExternalIntegrationFactory, RoleFactory, StatusFactory, TagFactory
             from nautobot.extras.management import populate_status_choices
-            from nautobot.dcim.factory import (
-                LocationTypeFactory,
-                LocationFactory,
-            )
             from nautobot.extras.utils import TaggableClassesQuery
             from nautobot.ipam.choices import PrefixTypeChoices
             from nautobot.ipam.factory import (
@@ -77,8 +76,8 @@ class Command(BaseCommand):
                 PrefixFactory,
                 RIRFactory,
                 RouteTargetFactory,
-                VLANGroupFactory,
                 VLANFactory,
+                VLANGroupFactory,
                 VRFFactory,
             )
             from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
@@ -146,6 +145,8 @@ class Command(BaseCommand):
         ManufacturerFactory.create_batch(2, using=db_name)  # Last 2 hard-coded Manufacturers
         self.stdout.write("Creating DeviceRedundancyGroups...")
         DeviceRedundancyGroupFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating Devices...")
+        DeviceFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating CircuitTypes...")
         CircuitTypeFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Providers...")
@@ -172,6 +173,11 @@ class Command(BaseCommand):
             has_description=True,
             using=db_name,
         )
+        self.stdout.write("Creating ExternalIntegrations...")
+        ExternalIntegrationFactory.create_batch(20, using=db_name)
+        # make sure we have some tenants that have null relationships to make filter tests happy
+        self.stdout.write("Creating Tenants without Circuits, Locations, IPAddresses, or Prefixes...")
+        TenantFactory.create_batch(10, using=db_name)
         # TODO: nautobot.tenancy.tests.test_filters currently calls the following additional factories:
         # UserFactory.create_batch(10)
         # RackFactory.create_batch(10)
@@ -248,7 +254,7 @@ Type 'yes' to continue, or 'no' to cancel: """
 
         if options["cache_test_fixtures"] and os.path.exists(options["fixture_file"]):
             self.stdout.write(self.style.WARNING(f"Loading factory data from file {options['fixture_file']}"))
-            call_command("loaddata", options["fixture_file"])
+            call_command("loaddata", "--database", options["database"], options["fixture_file"])
         else:
             self._generate_factory_data(options["seed"], options["database"])
 

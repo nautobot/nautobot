@@ -8,14 +8,16 @@ from nautobot.core.api import (
     ChoiceField,
     NautobotHyperlinkedRelatedField,
     NautobotModelSerializer,
+    ValidatedModelSerializer,
 )
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
+from nautobot.ipam import constants
 from nautobot.ipam.api.fields import IPFieldSerializer
 from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
-from nautobot.ipam import constants
 from nautobot.ipam.models import (
     get_default_namespace,
     IPAddress,
+    IPAddressToInterface,
     Namespace,
     Prefix,
     RIR,
@@ -25,7 +27,6 @@ from nautobot.ipam.models import (
     VLANGroup,
     VRF,
 )
-
 
 #
 # Namespaces
@@ -45,9 +46,6 @@ class NamespaceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 
 class VRFSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    ipaddress_count = serializers.IntegerField(read_only=True)
-    prefix_count = serializers.IntegerField(read_only=True)
-
     class Meta:
         model = VRF
         fields = "__all__"
@@ -148,6 +146,7 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = "__all__"
         list_display_fields = [
             "prefix",
+            "namespace",
             "type",
             "status",
             "vrf",
@@ -161,6 +160,32 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "ip_version": {"read_only": True},
             "namespace": {"default": get_default_namespace},
             "prefix_length": {"read_only": True},
+        }
+
+        detail_view_config = {
+            "layout": [
+                {
+                    "Prefix": {
+                        "fields": [
+                            "prefix",
+                            "parent",
+                            "namespace",
+                            "type",
+                            "network",
+                            "broadcast",
+                            "prefix_length",
+                            "ip_version",
+                            "description",
+                            "role",
+                            "vlan",
+                            "location",
+                            "tenant",
+                            "rir",
+                            "date_allocated",
+                        ]
+                    },
+                },
+            ],
         }
 
 
@@ -265,6 +290,7 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         if self.instance is None and not any([namespace, parent]):
             raise ValidationError({"__all__": "One of parent or namespace must be provided"})
 
+        super().validate(data)
         return data
 
     def get_field_names(self, declared_fields, info):
@@ -291,6 +317,32 @@ class AvailableIPSerializer(serializers.Serializer):
                 ("address", f"{instance}/{self.context['prefix'].prefixlen}"),
             ]
         )
+
+
+#
+# IP address to interface
+#
+
+
+class IPAddressToInterfaceSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = IPAddressToInterface
+        fields = "__all__"
+        validators = []
+
+    def validate(self, data):
+        # Validate uniqueness of (parent, name) since we omitted the automatically created validator from Meta.
+        if data.get("interface"):
+            validator = UniqueTogetherValidator(
+                queryset=IPAddressToInterface.objects.all(), fields=("interface", "ip_address")
+            )
+            validator(data, self)
+        if data.get("vm_interface"):
+            validator = UniqueTogetherValidator(
+                queryset=IPAddressToInterface.objects.all(), fields=("vm_interface", "ip_address")
+            )
+            validator(data, self)
+        return super().validate(data)
 
 
 #

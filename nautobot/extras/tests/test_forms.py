@@ -1,18 +1,18 @@
 import json
 import warnings
 
-from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from django.test import TestCase, override_settings
+from django.test import override_settings, TestCase
 
 from nautobot.dcim.forms import DeviceForm, LocationBulkEditForm, LocationForm
 import nautobot.dcim.models as dcim_models
 from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras.choices import RelationshipTypeChoices
 from nautobot.extras.forms import (
-    ConfigContextForm,
     ConfigContextFilterForm,
+    ConfigContextForm,
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelFilterFormMixin,
     CustomFieldModelFormMixin,
@@ -37,9 +37,8 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.ipam.choices import IPAddressTypeChoices
-from nautobot.ipam.forms import IPAddressForm, IPAddressBulkEditForm, VLANGroupForm
+from nautobot.ipam.forms import IPAddressBulkEditForm, IPAddressForm, VLANGroupForm
 import nautobot.ipam.models as ipam_models
-
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -1088,8 +1087,8 @@ class DeprecatedAliasesTestCase(TestCase):
         # Importing these mixin classes doesn't directly warn, but subclassing them does.
         from nautobot.extras.forms import (
             AddRemoveTagsForm,
-            CustomFieldBulkEditForm,
             CustomFieldBulkCreateForm,
+            CustomFieldBulkEditForm,
             CustomFieldFilterForm,
             CustomFieldModelForm,
             RelationshipModelForm,
@@ -1195,3 +1194,27 @@ class ConfigContextFilterFormTestCase(TestCase):
         """Asserts that `ConfigContextFilterForm.dynamic_group` is NOT present when feature flag is disabled."""
         context_filter_form = ConfigContextFilterForm()
         self.assertNotIn("dynamic_groups", context_filter_form.fields)
+
+
+class CustomFieldModelFormMixinTestCase(TestCase):
+    def test_custom_field_data_removed_in_all(self):
+        """Asserts that when `__all__` is set on a CustomFieldModelFormMixin, _custom_field_data is stripped."""
+
+        class TestForm(CustomFieldModelFormMixin):
+            class Meta:
+                model = dcim_models.InterfaceRedundancyGroup
+                fields = "__all__"
+
+        custom_field_form = TestForm()
+        self.assertNotIn("_custom_field_data", custom_field_form.fields)
+
+    def test_custom_field_data_kept_if_explicit(self):
+        """Asserts that _custom_field_data will still show up if explicitly set."""
+
+        class TestForm(CustomFieldModelFormMixin):
+            class Meta:
+                model = dcim_models.InterfaceRedundancyGroup
+                fields = ["_custom_field_data"]
+
+        custom_field_form = TestForm()
+        self.assertIn("_custom_field_data", custom_field_form.fields)

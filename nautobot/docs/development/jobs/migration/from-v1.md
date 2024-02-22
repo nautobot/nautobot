@@ -60,6 +60,15 @@ The signature of the `run()` method for Jobs must now accept keyword arguments f
             return a + b
     ```
 
+    ```py title="v2.0 Job - Easy Migration"
+    class AddJob(Job):
+        a = IntegerVar()
+        b = IntegerVar()
+
+        def run(self, **data):
+            return data["a"] + data["b"]
+    ```
+
 ### `test_*` and `post_run()` Methods
 
 The `test_*` and `post_run` methods, previously provided for backwards compatibility to NetBox scripts and reports, have been removed. Celery implements `before_start`, `on_success`, `on_retry`, `on_failure`, and `after_return` methods that can be used by Job authors to perform similar functions.
@@ -74,8 +83,8 @@ Jobs no longer run in a single atomic [database transaction](https://docs.django
 !!! example
     ```py
     from django.db import transaction
+    from nautobot.apps.jobs import Job, ObjectVar
     from nautobot.dcim import models
-    from nautobot.extras.jobs import Job, ObjectVar
 
     class UpdateDeviceTypeHeightJob(Job):
         device_type = ObjectVar(model=models.DeviceType)
@@ -101,19 +110,34 @@ The `read_only` Job field no longer forces an automatic database rollback at the
 
 ### Job Registration
 
-All Jobs must be registered in the Celery task registry to be available in Nautobot. This must be accomplished by calling `nautobot.core.celery.register_jobs(*job_classes)` at the top level of a Job module so that it is registered when the module is imported. The `register_jobs` method accepts one or more job classes as arguments.
++/- 2.0.0
 
-!!! example
-    ```py
-    from nautobot.core.celery import register_jobs
-    from nautobot.extras.jobs import Job
+All Job classes, including `JobHookReceiver` and `JobButtonReceiver` classes must be registered at **import time** using the `nautobot.apps.jobs.register_jobs` method. This method accepts one or more job classes as arguments. You must account for how your jobs are imported when deciding where to call this method.
 
-    class MyJob(Job):
-        def run(self):
-            pass
+#### Registering Jobs in JOBS_ROOT or Git Repositories
 
-    register_jobs(MyJob)
-    ```
+Only top level module names within JOBS_ROOT are imported by Nautobot at runtime. This means that if you're using submodules, you need to ensure that your jobs are either registered in your top level `__init__.py` or that this file imports your submodules where the jobs are registered:
+
+```py title="$JOBS_ROOT/my_jobs/__init__.py"
+from . import my_job_module
+```
+
+```py title="$JOBS_ROOT/my_jobs/my_job_module.py"
+from nautobot.apps.jobs import Job, register_jobs
+
+class MyJob(Job):
+    ...
+
+register_jobs(MyJob)
+```
+
+Similarly, only the `jobs` module is loaded from Git repositories. If you're using submodules, you need to ensure that your jobs are either registered in the repository's `jobs/__init__.py` or that this file imports your submodules where the jobs are registered.
+
+If not using submodules, you should register your job in the file where your job is defined.
+
+#### Registering Jobs in a Plugin
+
+Plugins should register jobs in the module defined in their [`NautobotAppConfig.jobs`](../../apps/api/nautobot-app-config.md#nautobotappconfig-code-location-attributes) property. This defaults to the `jobs` module of the plugin.
 
 ### Job Logging
 

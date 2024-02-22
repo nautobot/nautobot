@@ -8,7 +8,7 @@ import django.forms
 from django.utils.safestring import mark_safe
 
 from nautobot import __version__
-from nautobot.core.settings_funcs import is_truthy, parse_redis_connection, ConstanceConfigItem  # noqa: F401
+from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
 
 #
 # Environment setup
@@ -29,7 +29,7 @@ AUTH_USER_MODEL = "users.User"
 
 # Set the default AutoField for 3rd party apps
 # N.B. Ideally this would be a `UUIDField`, but due to Django restrictions
-#      we can’t do that yet
+#      we can't do that yet
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
@@ -60,9 +60,6 @@ ALLOWED_URL_SCHEMES = (
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
-# The directory where the Nautobot UI packaging is stored.
-NAUTOBOT_UI_DIR = os.path.join(NAUTOBOT_ROOT, "ui")
-
 # Disable linking of Config Context objects via Dynamic Groups by default. This could cause performance impacts
 # when a large number of dynamic groups are present
 CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED", "False"))
@@ -87,6 +84,9 @@ HTTP_PROXIES = None
 # Send anonymized installation metrics when post_upgrade or send_installation_metrics management commands are run
 INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "True"))
 
+# The storage backend to use for Job input files and Job output files
+JOB_FILE_IO_STORAGE = os.getenv("NAUTOBOT_JOB_FILE_IO_STORAGE", "db_file_storage.storage.DatabaseFileStorage")
+
 # The file path to a directory where locally installed Jobs can be discovered
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 
@@ -96,6 +96,7 @@ LOG_DEPRECATION_WARNINGS = is_truthy(os.getenv("NAUTOBOT_LOG_DEPRECATION_WARNING
 MAINTENANCE_MODE = is_truthy(os.getenv("NAUTOBOT_MAINTENANCE_MODE", "False"))
 # Metrics
 METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_METRICS_ENABLED", "False"))
+METRICS_AUTHENTICATED = is_truthy(os.getenv("NAUTOBOT_METRICS_AUTHENTICATED", "False"))
 
 # Napalm
 NAPALM_ARGS = {}
@@ -124,7 +125,10 @@ SOCIAL_AUTH_BACKEND_PREFIX = "social_core.backends"
 SANITIZER_PATTERNS = [
     # General removal of username-like and password-like tokens
     (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
-    (re.compile(r"(username|password|passwd|pwd)((?:\s+is.?|:)?\s+)\S+", re.IGNORECASE), r"\1\2{replacement}"),
+    (
+        re.compile(r"(username|password|passwd|pwd|secret|secrets)([\"']?(?:\s+is.?|:)?\s+)\S+[\"']?", re.IGNORECASE),
+        r"\1\2{replacement}",
+    ),
 ]
 
 # Storage
@@ -178,7 +182,8 @@ REST_FRAMEWORK_VERSION = VERSION.rsplit(".", 1)[0]  # Use major.minor as API ver
 VERSION_MAJOR, VERSION_MINOR = [int(v) for v in REST_FRAMEWORK_VERSION.split(".")]
 # We support all major.minor API versions from 2.0 to the present latest version.
 # Similar logic exists in tasks.py, please keep them in sync!
-assert VERSION_MAJOR == 2, f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {VERSION_MAJOR}"
+if VERSION_MAJOR != 2:
+    raise RuntimeError(f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {VERSION_MAJOR}")
 REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{VERSION_MAJOR}.{minor}" for minor in range(0, VERSION_MINOR + 1)]
 
 REST_FRAMEWORK = {
@@ -240,6 +245,10 @@ SPECTACULAR_SETTINGS = {
     # use sidecar - locally packaged UI files, not CDN
     "SWAGGER_UI_DIST": "SIDECAR",
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "displayOperationId": True,
+    },
     "REDOC_DIST": "SIDECAR",
     # Do not list all possible enum values in the description of filter fields and the like
     # In addition to being highly verbose, it's inaccurate for filter fields like *__ic and *__re
@@ -419,6 +428,7 @@ INSTALLED_APPS = [
     "django_extensions",
     "constance.backends.database",
     "django_ajax_tables",
+    "silk",
 ]
 
 # Middleware
@@ -426,6 +436,7 @@ MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "silk.middleware.SilkyMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -503,10 +514,7 @@ X_FRAME_OPTIONS = "DENY"
 # Static files (CSS, JavaScript, Images)
 STATIC_ROOT = os.path.join(NAUTOBOT_ROOT, "static")
 STATIC_URL = "static/"
-STATICFILES_DIRS = (
-    os.path.join(BASE_DIR, "project-static"),
-    os.path.join(NAUTOBOT_UI_DIR, "build", "static"),
-)
+STATICFILES_DIRS = (os.path.join(BASE_DIR, "project-static"),)
 
 # Media
 MEDIA_URL = "media/"
@@ -564,6 +572,11 @@ CONSTANCE_ADDITIONAL_FIELDS = {
 }
 
 CONSTANCE_CONFIG = {
+    "ALLOW_REQUEST_PROFILING": ConstanceConfigItem(
+        default=False,
+        help_text="Allow users to enable request profiling on their login session.",
+        field_type=bool,
+    ),
     "BANNER_BOTTOM": ConstanceConfigItem(
         default="",
         help_text="Custom HTML to display in a banner at the bottom of all pages.",
@@ -602,11 +615,12 @@ CONSTANCE_CONFIG = {
         "member list. This cache is invalidated when a Dynamic Group is saved. Set to 0 to disable caching.",
         field_type=int,
     ),
-    "HIDE_RESTRICTED_UI": ConstanceConfigItem(
-        default=False,
-        help_text="If set to True, users with limited permissions will not be shown menu items and home-page elements that "
-        "they do not have permission to access.",
-        field_type=bool,
+    "JOB_CREATE_FILE_MAX_SIZE": ConstanceConfigItem(
+        default=10 << 20,
+        help_text=mark_safe(  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
+            "Maximum size (in bytes) of any single file generated by a <code>Job.create_file()</code> call."
+        ),
+        field_type=int,
     ),
     "LOCATION_NAME_AS_NATURAL_KEY": ConstanceConfigItem(
         default=False,
@@ -636,7 +650,7 @@ CONSTANCE_CONFIG = {
     ),
     "NETWORK_DRIVERS": ConstanceConfigItem(
         default={},
-        help_text=mark_safe(
+        help_text=mark_safe(  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
             "Extend or override default Platform.network_driver translations provided by "
             '<a href="https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/">netutils</a>. '
             "Enter a dictionary in JSON format, for example:\n"
@@ -674,10 +688,11 @@ CONSTANCE_CONFIG = {
         # Use custom field type defined above
         field_type="release_check_url_field",
     ),
-    "FEEDBACK_BUTTON_ENABLED": ConstanceConfigItem(
-        default=True,
-        help_text="Whether to show the Feedback button in the new UI sidebar.",
-        field_type=bool,
+    "SUPPORT_MESSAGE": ConstanceConfigItem(
+        default="",
+        help_text="Help message to include on 4xx and 5xx error pages. "
+        "Markdown is supported, as are some HTML tags and attributes.\n"
+        "If unspecified, instructions to join Network to Code's Slack community will be provided.",
     ),
 }
 
@@ -688,10 +703,11 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_NAME_AS_NATURAL_KEY", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
-    "Performance": ["DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"],
+    "Performance": ["DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT", "JOB_CREATE_FILE_MAX_SIZE"],
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["HIDE_RESTRICTED_UI", "FEEDBACK_BUTTON_ENABLED"],
+    "User Interface": ["SUPPORT_MESSAGE"],
+    "Debugging": ["ALLOW_REQUEST_PROFILING"],
 }
 
 #
@@ -766,7 +782,7 @@ CELERY_RESULT_EXPIRES = None
 # Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
 CELERY_TASK_TRACK_STARTED = True
 
-# If enabled, a `task-sent` event will be sent for every task so tasks can be tracked before they’re consumed by a worker.
+# If enabled, a `task-sent` event will be sent for every task so tasks can be tracked before they're consumed by a worker.
 CELERY_TASK_SEND_SENT_EVENT = True
 
 # If enabled stdout and stderr of running jobs will be redirected to the task logger.
@@ -830,6 +846,10 @@ BRANDING_FILEPATHS = {
     "icon_mask": os.getenv(
         "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None
     ),  # mono-chrome icon used for the mask-icon header
+    "header_bullet": os.getenv(
+        "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
+    ),  # bullet image used for various view headers
+    "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None),  # bullet image used for nav menu headers
 }
 
 # Title to use in place of "Nautobot"
@@ -903,3 +923,35 @@ DRF_REACT_TEMPLATE_TYPE_MAP = {
     "TimeZoneSerializerField": {"type": "string"},
     "UUIDField": {"type": "string", "format": "uuid"},
 }
+
+
+#
+# django-silk is used for optional request profiling for debugging purposes
+#
+
+SILKY_PYTHON_PROFILER = True
+SILKY_PYTHON_PROFILER_BINARY = True
+SILKY_PYTHON_PROFILER_EXTENDED_FILE_NAME = True
+SILKY_ANALYZE_QUERIES = False  # See the docs for the implications of turning this on https://github.com/jazzband/django-silk?tab=readme-ov-file#enable-query-analysis
+SILKY_AUTHENTICATION = True  # User must login
+SILKY_AUTHORISATION = True  # User must have permissions
+
+
+# This makes it so that only superusers can access the silk UI
+def silk_user_permissions(user):
+    return user.is_superuser
+
+
+SILKY_PERMISSIONS = silk_user_permissions
+
+
+# This ensures profiling only happens when enabled on the sessions. Users are able
+# to turn this on or off in their user profile. It also ignores health-check requests.
+def silk_request_logging_intercept_logic(request):
+    if request.path != "/health/":
+        if request.session.get("silk_record_requests", False):
+            return True
+    return False
+
+
+SILKY_INTERCEPT_FUNC = silk_request_logging_intercept_logic

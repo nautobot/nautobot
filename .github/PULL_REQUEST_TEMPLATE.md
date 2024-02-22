@@ -7,18 +7,19 @@
 
     Please indicate the relevant feature request or bug report below.
 -->
-# Closes: #<ISSUE NUMBER GOES HERE>
+# Closes #<ISSUE NUMBER GOES HERE>
 # What's Changed
 <!--
     Please include:
     - A summary of the proposed changes
     - A sectioned breakdown for larger features under ## subheadings
+-->
+# Screenshots
+<!--
     - Screenshots, example payloads where relevant:
       - Before/After for bugfixes
       - Using a new feature
 -->
-
-
 # TODO
 <!--
     Please feel free to update todos to keep track of your own notes for WIP PRs.

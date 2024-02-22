@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest import mock
 import urllib.parse
 import uuid
 
@@ -8,13 +9,13 @@ from django.core.exceptions import ValidationError
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
-from unittest import mock
+from django.utils.html import format_html
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
-from nautobot.core.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
+from nautobot.core.testing import extract_form_failures, extract_page_body, TestCase, ViewTestCases
 from nautobot.core.testing.utils import disable_warnings, post_data
-from nautobot.dcim.models import ConsolePort, Device, DeviceType, Interface, Manufacturer, Location, LocationType
+from nautobot.dcim.models import ConsolePort, Device, DeviceType, Interface, Location, LocationType, Manufacturer
 from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
@@ -22,15 +23,18 @@ from nautobot.extras.choices import (
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
+    WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import (
+    ComputedField,
     ConfigContext,
     ConfigContextSchema,
     CustomField,
     CustomLink,
     DynamicGroup,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     Job,
@@ -48,14 +52,13 @@ from nautobot.extras.models import (
     Status,
     Tag,
     Webhook,
-    ComputedField,
 )
+from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
-from nautobot.extras.utils import TaggableClassesQuery
+from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
-
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -128,6 +131,63 @@ class ComputedFieldTestCase(
         }
 
         cls.slug_test_object = "Computed Field Five"
+
+
+class ComputedFieldRenderingTestCase(TestCase):
+    """Tests for the inclusion of ComputedFields, distinct from tests of the ComputedField views themselves."""
+
+    user_permissions = ["dcim.view_locationtype"]
+
+    def setUp(self):
+        super().setUp()
+        self.computedfield = ComputedField(
+            content_type=ContentType.objects.get_for_model(LocationType),
+            key="test",
+            label="Computed Field",
+            template="FOO {{ obj.name }} BAR",
+            fallback_value="Fallback Value",
+            weight=100,
+        )
+        self.computedfield.validated_save()
+        self.location_type = LocationType.objects.get(name="Campus")
+
+    def test_view_object_with_computed_field(self):
+        """Ensure that the computed field template is rendered."""
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(f"FOO {self.location_type.name} BAR", content, content)
+
+    def test_view_object_with_computed_field_fallback_value(self):
+        """Ensure that the fallback_value is rendered if the template fails to render."""
+        # Make the template invalid to demonstrate the fallback value
+        self.computedfield.template = "FOO {{ obj."
+        self.computedfield.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Fallback Value", content, content)
+
+    def test_view_object_with_computed_field_unsafe_template(self):
+        """Ensure that computed field templates can't be used as an XSS vector."""
+        self.computedfield.template = '<script>alert("Hello world!"</script>'
+        self.computedfield.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
+
+    def test_view_object_with_computed_field_unsafe_fallback_value(self):
+        """Ensure that computed field fallback values can't be used as an XSS vector."""
+        self.computedfield.template = "FOO {{ obj."
+        self.computedfield.fallback_value = '<script>alert("Hello world!"</script>'
+        self.computedfield.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
 
 
 # TODO: Change base class to PrimaryObjectViewTestCase
@@ -432,7 +492,9 @@ class CustomFieldTestCase(
         super().test_create_object_with_constrained_permission()
 
 
-class CustomLinkTest(TestCase):
+class CustomLinkRenderingTestCase(TestCase):
+    """Tests for the inclusion of CustomLinks, distinct from tests of the CustomLink views themselves."""
+
     user_permissions = ["dcim.view_location"]
 
     def test_view_object_with_custom_link(self):
@@ -453,6 +515,71 @@ class CustomLinkTest(TestCase):
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn(f"FOO {location.name} BAR", content, content)
+
+    def test_view_object_with_unsafe_custom_link_text(self):
+        """Ensure that custom links can't be used as a vector for injecting scripts or breaking HTML."""
+        customlink = CustomLink(
+            content_type=ContentType.objects.get_for_model(Location),
+            name="Test",
+            text='<script>alert("Hello world!")</script>',
+            target_url="http://example.com/?location=None",
+            new_window=False,
+        )
+        customlink.validated_save()
+        location_type = LocationType.objects.get(name="Campus")
+        status = Status.objects.get_for_model(Location).first()
+        location = Location(name="Test Location", location_type=location_type, status=status)
+        location.save()
+
+        response = self.client.get(location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
+        self.assertIn(format_html('<a href="{}"', customlink.target_url), content, content)
+
+    def test_view_object_with_unsafe_custom_link_url(self):
+        """Ensure that custom links can't be used as a vector for injecting scripts or breaking HTML."""
+        customlink = CustomLink(
+            content_type=ContentType.objects.get_for_model(Location),
+            name="Test",
+            text="Hello",
+            target_url='"><script>alert("Hello world!")</script><a href="',
+            new_window=False,
+        )
+        customlink.validated_save()
+        location_type = LocationType.objects.get(name="Campus")
+        status = Status.objects.get_for_model(Location).first()
+        location = Location(name="Test Location", location_type=location_type, status=status)
+        location.save()
+
+        response = self.client.get(location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
+        self.assertIn(format_html('<a href="{}"', customlink.target_url), content, content)
+
+    def test_view_object_with_unsafe_custom_link_name(self):
+        """Ensure that custom links can't be used as a vector for injecting scripts or breaking HTML."""
+        customlink = CustomLink(
+            content_type=ContentType.objects.get_for_model(Location),
+            name='<script>alert("Hello World")</script>',
+            text="Hello",
+            target_url="http://example.com/?location={{ obj.name ",  # intentionally bad jinja2 to trigger error case
+            new_window=False,
+        )
+        customlink.validated_save()
+        location_type = LocationType.objects.get(name="Campus")
+        status = Status.objects.get_for_model(Location).first()
+        location = Location(name="Test Location", location_type=location_type, status=status)
+        location.save()
+
+        response = self.client.get(location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
 
 
 class DynamicGroupTestCase(
@@ -568,6 +695,28 @@ class ExportTemplateTestCase(
         }
 
 
+class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = ExternalIntegration
+    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}", "headers": r"{}"}
+    csv_data = (
+        "name,remote_url,verify_ssl,timeout,http_method",
+        "Test External Integration 1,https://example.com/test1/,False,10,POST",
+        "Test External Integration 2,https://example.com/test2/,True,20,DELETE",
+        "Test External Integration 3,https://example.com/test3/,False,30,PATCH",
+    )
+    form_data = {
+        "name": "Test External Integration",
+        "remote_url": "https://example.com/test1/",
+        "verify_ssl": False,
+        "secrets_group": None,
+        "timeout": 10,
+        "extra_config": '{"foo": "bar"}',
+        "http_method": WebhookHttpMethodChoices.METHOD_GET,
+        "headers": '{"header": "fake header"}',
+        "ca_file_path": "this/is/a/file/path",
+    }
+
+
 class GitRepositoryTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.BulkImportObjectsViewTestCase,
@@ -616,7 +765,7 @@ class GitRepositoryTestCase(
             "name,slug,remote_url,branch,secrets_group,provided_contents",
             "Git Repository 5,git_repo_5,https://example.com,main,,extras.configcontext",
             "Git Repository 6,git_repo_6,https://example.com,develop,Secrets Group 2,",
-            'Git Repository 7,git_repo_7,https://example.com,next,Secrets Group 2,"extras.job,extras.configcontext"',
+            'Git Repository 7,git_repo_7,https://example.com,next,Secrets Group 2,"extras.job,extras.exporttemplate"',
         )
 
         cls.slug_source = "name"
@@ -771,9 +920,9 @@ class SecretsGroupTestCase(
         )
 
         secrets = (
-            Secret.objects.create(name="secret 1", provider="text-file", parameters={"path": "/tmp"}),
-            Secret.objects.create(name="secret 2", provider="text-file", parameters={"path": "/tmp"}),
-            Secret.objects.create(name="secret 3", provider="text-file", parameters={"path": "/tmp"}),
+            Secret.objects.create(name="secret 1", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file -- false positive
+            Secret.objects.create(name="secret 2", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file -- false positive
+            Secret.objects.create(name="secret 3", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file -- false positive
         )
 
         SecretsGroupAssociation.objects.create(
@@ -888,7 +1037,7 @@ class ScheduledJobTestCase(
     def test_only_enabled_is_listed(self):
         self.add_permissions("extras.view_scheduledjob")
 
-        # this should not appear, since it’s not enabled
+        # this should not appear, since it's not enabled
         ScheduledJob.objects.create(
             enabled=False,
             name="test4",
@@ -1811,7 +1960,7 @@ class JobTestCase(
         content = extract_page_body(response.content.decode(response.charset))
 
         self.assertHttpStatus(response, 200)
-        self.assertIn(f"<h1>{instance.name} - Change Log</h1>", content)
+        self.assertIn(f"{instance.name} - Change Log", content)
 
 
 class JobButtonTestCase(
@@ -1861,6 +2010,137 @@ class JobButtonTestCase(
             "button_class": "default",
             "confirmation": False,
         }
+
+
+class JobButtonRenderingTestCase(TestCase):
+    """Tests for the rendering of JobButtons, distinct from tests of the JobButton views themselves."""
+
+    user_permissions = ["dcim.view_locationtype"]
+
+    def setUp(self):
+        super().setUp()
+        self.job_button_1 = JobButton(
+            name="JobButton 1",
+            text="JobButton {{ obj.name }}",
+            job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+            confirmation=False,
+        )
+        self.job_button_1.validated_save()
+        self.job_button_1.content_types.add(ContentType.objects.get_for_model(LocationType))
+
+        self.job_button_2 = JobButton(
+            name="JobButton 2",
+            text="Click me!",
+            job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+            confirmation=False,
+        )
+        self.job_button_2.validated_save()
+        self.job_button_2.content_types.add(ContentType.objects.get_for_model(LocationType))
+
+        self.location_type = LocationType.objects.get(name="Campus")
+
+    def test_view_object_with_job_button(self):
+        """Ensure that the job button is rendered."""
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(f"JobButton {self.location_type.name}", content, content)
+        self.assertIn("Click me!", content, content)
+
+    def test_view_object_with_unsafe_text(self):
+        """Ensure that JobButton text can't be used as a vector for XSS."""
+        self.job_button_1.text = '<script>alert("Hello world!")</script>'
+        self.job_button_1.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
+
+        # Make sure grouped rendering is safe too
+        self.job_button_1.group_name = '<script>alert("Goodbye")</script>'
+        self.job_button_1.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
+
+    def test_view_object_with_unsafe_name(self):
+        """Ensure that JobButton names can't be used as a vector for XSS."""
+        self.job_button_1.text = "JobButton {{ obj"
+        self.job_button_1.name = '<script>alert("Yo")</script>'
+        self.job_button_1.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
+
+    def test_render_constrained_run_permissions(self):
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": self.job_button_1.job.pk},
+            actions=["run"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+
+        with self.subTest("Ungrouped buttons"):
+            response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+            self.assertEqual(response.status_code, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertInHTML(
+                NO_CONFIRM_BUTTON.format(
+                    button_id=self.job_button_1.pk,
+                    button_text=f"JobButton {self.location_type.name}",
+                    button_class=self.job_button_1.button_class,
+                    disabled="",
+                ),
+                content,
+            )
+            self.assertInHTML(
+                NO_CONFIRM_BUTTON.format(
+                    button_id=self.job_button_2.pk,
+                    button_text="Click me!",
+                    button_class=self.job_button_2.button_class,
+                    disabled="disabled",
+                ),
+                content,
+            )
+
+        with self.subTest("Grouped buttons"):
+            self.job_button_1.group_name = "Grouping"
+            self.job_button_1.validated_save()
+            self.job_button_2.group_name = "Grouping"
+            self.job_button_2.validated_save()
+
+            response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+            self.assertEqual(response.status_code, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertInHTML(
+                "<li>"
+                + NO_CONFIRM_BUTTON.format(
+                    button_id=self.job_button_1.pk,
+                    button_text=f"JobButton {self.location_type.name}",
+                    button_class="link",
+                    disabled="",
+                )
+                + "</li>",
+                content,
+            )
+            self.assertInHTML(
+                "<li>"
+                + NO_CONFIRM_BUTTON.format(
+                    button_id=self.job_button_2.pk,
+                    button_text="Click me!",
+                    button_class="link",
+                    disabled="disabled",
+                )
+                + "</li>",
+                content,
+            )
 
 
 # TODO: Convert to StandardTestCases.Views
@@ -2013,7 +2293,7 @@ class RelationshipTestCase(
             "relationship &quot;VLANs require at least one Device&quot;",
         )
         for vlan in vlans[:3]:
-            self.assertContains(response, f"{str(vlan)}")
+            self.assertContains(response, str(vlan))
 
         # Try editing 6 VLANs and adding the required device (succeeds):
         response = self.client.post(
@@ -2101,7 +2381,7 @@ class RelationshipAssociationTestCase(
             ),
         )
         vlan_status = Status.objects.get_for_model(VLAN).first()
-        vlan_group = VLANGroup.objects.first()
+        vlan_group = VLANGroup.objects.create(name="Test VLANGroup 1")
         vlans = (
             VLAN.objects.create(vid=1, name="VLAN 1", status=vlan_status, vlan_group=vlan_group),
             VLAN.objects.create(vid=2, name="VLAN 2", status=vlan_status, vlan_group=vlan_group),
@@ -2348,8 +2628,33 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             'test_role2,200,ffffff,"dcim.device,dcim.rack",A Role',
             'test_role3,100,ffffff,"dcim.device,ipam.prefix",A Role',
             'test_role4,50,ffffff,"ipam.ipaddress,ipam.vlan",A Role',
+            'test_role5,25,ffffff,"virtualization.virtualmachine",A Role',
         )
 
         cls.bulk_edit_data = {
             "color": "000000",
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_view_with_content_types(self):
+        """
+        Check that the expected panel headings are rendered and unexpected panel headings are not rendered
+        """
+        eligible_ct_model_classes = RoleModelsQuery().list_subclasses()
+        for instance in self._get_queryset().all():
+            response = self.client.get(instance.get_absolute_url())
+            response_body = extract_page_body(response.content.decode(response.charset))
+            role_content_types = instance.content_types.all()
+            for model_class in eligible_ct_model_classes:
+                verbose_name_plural = model_class._meta.verbose_name_plural
+                content_type = ContentType.objects.get_for_model(model_class)
+                result = " ".join(elem.capitalize() for elem in verbose_name_plural.split())
+                if result == "Ip Addresses":
+                    result = "IP Addresses"
+                elif result == "Vlans":
+                    result = "VLANs"
+                # Assert tables are correctly rendered
+                if content_type not in role_content_types:
+                    self.assertNotIn(f"<strong>{result}</strong>", response_body)
+                else:
+                    self.assertIn(f"<strong>{result}</strong>", response_body)

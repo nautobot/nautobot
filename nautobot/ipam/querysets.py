@@ -1,13 +1,11 @@
 import re
 
-import netaddr
 from django.core.exceptions import ValidationError
-from django.db.models import F, ProtectedError, Q
-from django.db.models.functions import Length
+from django.db.models import ProtectedError, Q
+import netaddr
 
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import merge_dicts_without_collision
-from nautobot.ipam.constants import IPV4_BYTE_LENGTH, IPV6_BYTE_LENGTH
 
 
 class RIRQuerySet(RestrictedQuerySet):
@@ -19,11 +17,6 @@ class RIRQuerySet(RestrictedQuerySet):
 
 class BaseNetworkQuerySet(RestrictedQuerySet):
     """Base class for network-related querysets."""
-
-    ip_family_map = {
-        4: IPV4_BYTE_LENGTH,
-        6: IPV6_BYTE_LENGTH,
-    }
 
     # Match string with ending in "::"
     RE_COLON = re.compile(".*::$")
@@ -194,58 +187,50 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
 
         return self.filter(the_filter)
 
+    def _build_prefix_and_last_ip(self, ip):
+        if isinstance(ip, str):
+            ip = netaddr.IPNetwork(ip)
+        last_ip = self._get_last_ip(ip)
+        return ip, last_ip
+
 
 class PrefixQuerySet(BaseNetworkQuerySet):
     """Queryset for `Prefix` objects."""
 
-    def ip_family(self, family):
-        try:
-            byte_len = self.ip_family_map[family]
-        except KeyError:
-            raise ValueError(f"invalid IP family {family}")
+    def net_equals(self, *prefixes):
+        query = Q()
+        for prefix in prefixes:
+            prefix, last_ip = self._build_prefix_and_last_ip(prefix)
+            query |= Q(prefix_length=prefix.prefixlen, network=prefix.network, broadcast=last_ip)
+        return self.filter(query) if query else self.none()
 
-        return self.annotate(address_len=Length(F("network"))).filter(address_len=byte_len)
+    def net_contained(self, *prefixes):
+        query = Q()
+        for prefix in prefixes:
+            prefix, last_ip = self._build_prefix_and_last_ip(prefix)
+            query |= Q(prefix_length__gt=prefix.prefixlen, network__gte=prefix.network, broadcast__lte=last_ip)
+        return self.filter(query) if query else self.none()
 
-    def net_equals(self, prefix):
-        prefix = netaddr.IPNetwork(prefix)
-        last_ip = self._get_last_ip(prefix)
-        return self.filter(prefix_length=prefix.prefixlen, network=prefix.network, broadcast=last_ip)
+    def net_contained_or_equal(self, *prefixes):
+        query = Q()
+        for prefix in prefixes:
+            prefix, last_ip = self._build_prefix_and_last_ip(prefix)
+            query |= Q(prefix_length__gte=prefix.prefixlen, network__gte=prefix.network, broadcast__lte=last_ip)
+        return self.filter(query) if query else self.none()
 
-    def net_contained(self, prefix):
-        prefix = netaddr.IPNetwork(prefix)
-        last_ip = self._get_last_ip(prefix)
-        return self.filter(
-            prefix_length__gt=prefix.prefixlen,
-            network__gte=prefix.network,
-            broadcast__lte=last_ip,
-        )
+    def net_contains(self, *prefixes):
+        query = Q()
+        for prefix in prefixes:
+            prefix, last_ip = self._build_prefix_and_last_ip(prefix)
+            query |= Q(prefix_length__lt=prefix.prefixlen, network__lte=prefix.network, broadcast__gte=last_ip)
+        return self.filter(query) if query else self.none()
 
-    def net_contained_or_equal(self, prefix):
-        prefix = netaddr.IPNetwork(prefix)
-        last_ip = self._get_last_ip(prefix)
-        return self.filter(
-            prefix_length__gte=prefix.prefixlen,
-            network__gte=prefix.network,
-            broadcast__lte=last_ip,
-        )
-
-    def net_contains(self, prefix):
-        prefix = netaddr.IPNetwork(prefix)
-        last_ip = self._get_last_ip(prefix)
-        return self.filter(
-            prefix_length__lt=prefix.prefixlen,
-            network__lte=prefix.network,
-            broadcast__gte=last_ip,
-        )
-
-    def net_contains_or_equals(self, prefix):
-        prefix = netaddr.IPNetwork(prefix)
-        last_ip = self._get_last_ip(prefix)
-        return self.filter(
-            prefix_length__lte=prefix.prefixlen,
-            network__lte=prefix.network,
-            broadcast__gte=last_ip,
-        )
+    def net_contains_or_equals(self, *prefixes):
+        query = Q()
+        for prefix in prefixes:
+            prefix, last_ip = self._build_prefix_and_last_ip(prefix)
+            query |= Q(prefix_length__lte=prefix.prefixlen, network__lte=prefix.network, broadcast__gte=last_ip)
+        return self.filter(query) if query else self.none()
 
     def get(self, *args, **kwargs):
         """
@@ -320,7 +305,7 @@ class PrefixQuerySet(BaseNetworkQuerySet):
             return super().delete(*args, **kwargs)
         except ProtectedError as err:
             # This will be either IPAddress or Prefix.
-            protected_instance = tuple(err.protected_objects)[0]
+            protected_instance = next(iter(err.protected_objects))
             protected_model = protected_instance._meta.model
             protected_parent = protected_instance.parent
             new_parent = protected_parent.parent_id
@@ -411,14 +396,6 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         """
         return super().order_by("host")
 
-    def ip_family(self, family):
-        try:
-            byte_len = self.ip_family_map[family]
-        except KeyError:
-            raise ValueError(f"invalid IP family {family}")
-
-        return self.annotate(address_len=Length(F("host"))).filter(address_len=byte_len)
-
     def string_search(self, search):
         """
         Interpret a search string and return useful results.
@@ -445,15 +422,14 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
 
         return self.filter(the_filter)
 
-    def net_host_contained(self, network):
+    def net_host_contained(self, *networks):
         # consider only host ip address when
         # filtering for membership in |network|
-        network = netaddr.IPNetwork(network)
-        last_ip = self._get_last_ip(network)
-        return self.filter(
-            host__lte=last_ip,
-            host__gte=network.network,
-        )
+        query = Q()
+        for ip in networks:
+            ip, last_ip = self._build_prefix_and_last_ip(ip)
+            query |= Q(host__lte=last_ip, host__gte=ip.network)
+        return self.filter(query) if query else self.none()
 
     def net_in(self, networks):
         # for a tuple of IP addresses, filter queryset for matches.

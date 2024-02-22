@@ -3,7 +3,6 @@ from celery import states
 from nautobot.core.choices import ChoiceSet
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 
-
 #
 # Banners (currently plugin-specific)
 #
@@ -130,20 +129,6 @@ class DynamicGroupOperatorChoices(ChoiceSet):
 #
 
 
-class JobSourceChoices(ChoiceSet):
-    SOURCE_LOCAL = "local"
-    SOURCE_GIT = "git"
-    SOURCE_PLUGIN = "plugins"
-    SOURCE_SYSTEM = "system"
-
-    CHOICES = (
-        (SOURCE_LOCAL, "Installed in $JOBS_ROOT"),
-        (SOURCE_GIT, "Provided by a Git repository"),
-        (SOURCE_PLUGIN, "Part of a plugin"),
-        (SOURCE_SYSTEM, "Provided by Nautobot"),
-    )
-
-
 class JobExecutionType(ChoiceSet):
     TYPE_IMMEDIATELY = "immediately"
     TYPE_FUTURE = "future"
@@ -228,7 +213,7 @@ class JobResultStatusChoices(ChoiceSet):
             state (str): One of the status choices.
 
         Returns:
-            int: Precedence value.
+            (int): Precedence value.
 
         Examples:
             >>> JobResultStatusChoices.precedence(JobResultStatusChoices.STATUS_SUCCESS)
@@ -389,9 +374,9 @@ class SecretsGroupAccessTypeChoices(ChoiceSet):
 
 class SecretsGroupSecretTypeChoices(ChoiceSet):
     TYPE_KEY = "key"
-    TYPE_PASSWORD = "password"
-    TYPE_SECRET = "secret"
-    TYPE_TOKEN = "token"
+    TYPE_PASSWORD = "password"  # noqa: S105  # hardcoded-password-string -- false positive
+    TYPE_SECRET = "secret"  # noqa: S105  # hardcoded-password-string -- false positive
+    TYPE_TOKEN = "token"  # noqa: S105  # hardcoded-password-string -- false positive
     TYPE_USERNAME = "username"
 
     CHOICES = (

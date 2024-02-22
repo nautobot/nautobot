@@ -1,8 +1,0 @@
-"""Model definition for {{ app_name }}."""
-
-from django.db import models
-
-from nautobot.apps.models import PrimaryModel
-
-
-# Create your models here. Models should inherit from BaseModel.

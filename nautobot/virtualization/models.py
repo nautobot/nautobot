@@ -2,12 +2,12 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.models import BaseManager
 from nautobot.core.models.fields import NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.models import BaseInterface, Device
 from nautobot.extras.models import (
     ConfigContextModel,
@@ -16,7 +16,6 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
-
 
 __all__ = (
     "Cluster",
@@ -273,10 +272,10 @@ class VirtualMachine(PrimaryModel, ConfigContextModel):
             ip = getattr(self, field)
             if ip is not None:
                 if field == "primary_ip4":
-                    if ip.family != 4:
+                    if ip.ip_version != 4:
                         raise ValidationError({f"{field}": f"{ip} is not an IPv4 address."})
                 else:
-                    if ip.family != 6:
+                    if ip.ip_version != 6:
                         raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
                 if IPAddressToInterface.objects.filter(ip_address=ip, vm_interface__in=vm_interfaces).exists():
                     pass

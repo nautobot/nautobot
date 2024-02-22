@@ -1,13 +1,14 @@
+import inspect
+
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models.fields import TextField
-from django.forms import ModelMultipleChoiceField, inlineformset_factory
+from django.forms import inlineformset_factory, ModelMultipleChoiceField
 from django.urls.base import reverse
 
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.forms import (
     add_blank_choice,
     APISelect,
@@ -30,12 +31,14 @@ from nautobot.core.forms import (
     TagFilterField,
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
     RelationshipTypeChoices,
+    WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.datasources import get_datasource_content_choices
@@ -49,6 +52,7 @@ from nautobot.extras.models import (
     DynamicGroup,
     DynamicGroupMembership,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -73,6 +77,7 @@ from nautobot.extras.registry import registry
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
+
 from .base import (
     NautobotBulkEditForm,
     NautobotFilterForm,
@@ -85,7 +90,6 @@ from .mixins import (
     NoteModelFormMixin,
     RelationshipModelFormMixin,
 )
-
 
 __all__ = (
     "BaseDynamicGroupMembershipFormSet",
@@ -108,6 +112,8 @@ __all__ = (
     "DynamicGroupMembershipFormSet",
     "ExportTemplateForm",
     "ExportTemplateFilterForm",
+    "ExternalIntegrationForm",
+    "ExternalIntegrationBulkEditForm",
     "GitRepositoryForm",
     "GitRepositoryBulkEditForm",
     "GitRepositoryFilterForm",
@@ -128,6 +134,7 @@ __all__ = (
     "LocalContextModelForm",
     "LocalContextModelBulkEditForm",
     "NoteForm",
+    "NoteFilterForm",
     "ObjectChangeFilterForm",
     "PasswordInputWithPlaceholder",
     "RelationshipForm",
@@ -361,6 +368,12 @@ CustomFieldChoiceFormSet = inlineformset_factory(
 )
 
 
+class CustomFieldDescriptionField(CommentField):
+    @property
+    def default_helptext(self):
+        return "Also used as the help text when editing models using this custom field.<br>" + super().default_helptext
+
+
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
     label = forms.CharField(required=True, max_length=50, help_text="Name of the field as displayed to users.")
     key = SlugField(
@@ -369,11 +382,9 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         slug_source="label",
         help_text="Internal name of this field. Please use underscores rather than dashes.",
     )
-    description = forms.CharField(
+    description = CustomFieldDescriptionField(
+        label="Description",
         required=False,
-        help_text="Also used as the help text when editing models using this custom field.<br>"
-        '<a href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet" target="_blank">'
-        "Markdown</a> syntax is supported.",
     )
     content_types = MultipleContentTypeField(
         feature="custom_fields", help_text="The object(s) to which this field applies."
@@ -565,6 +576,61 @@ class ExportTemplateFilterForm(BootstrapMixin, forms.Form):
         required=False,
         label="Content Type",
     )
+
+
+#
+# External integrations
+#
+
+
+class ExternalIntegrationForm(NautobotModelForm):
+    class Meta:
+        model = ExternalIntegration
+        fields = "__all__"
+
+        HEADERS_HELP_TEXT = """
+            Optional user-defined <a href="https://json.org/">JSON</a> data for this integration. Example:
+            <pre>{
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            }</pre>
+        """
+        EXTRA_CONFIG_HELP_TEXT = """
+            Optional user-defined <a href="https://json.org/">JSON</a> data for this integration. Example:
+            <pre>{
+                "key": "value",
+                "key2": [
+                    "value1",
+                    "value2"
+                ]
+            }</pre>
+        """
+        help_texts = {
+            "headers": inspect.cleandoc(HEADERS_HELP_TEXT),
+            "extra_config": inspect.cleandoc(EXTRA_CONFIG_HELP_TEXT),
+        }
+
+
+class ExternalIntegrationBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        widget=forms.MultipleHiddenInput(),
+    )
+    remote_url = forms.CharField(required=False, label="Remote URL")
+    secrets_group = DynamicModelChoiceField(required=False, queryset=SecretsGroup.objects.all())
+    verify_ssl = forms.NullBooleanField(required=False, label="Verify SSL", widget=BulkEditNullBooleanSelect)
+    timeout = forms.IntegerField(required=False, min_value=0)
+    extra_config = forms.JSONField(required=False)
+    http_method = forms.ChoiceField(
+        required=False,
+        label="HTTP Method",
+        choices=add_blank_choice(WebhookHttpMethodChoices),
+    )
+    headers = forms.JSONField(required=False, label="HTTP Request headers")
+
+    class Meta:
+        model = ExternalIntegration
+        nullable_fields = ["extra_config", "secrets_group", "headers"]
 
 
 #
@@ -1036,7 +1102,7 @@ class JobButtonFilterForm(BootstrapMixin, forms.Form):
 
 
 class NoteForm(BootstrapMixin, forms.ModelForm):
-    note = CommentField
+    note = CommentField()
 
     class Meta:
         model = Note
@@ -1045,6 +1111,20 @@ class NoteForm(BootstrapMixin, forms.ModelForm):
             "assigned_object_type": forms.HiddenInput,
             "assigned_object_id": forms.HiddenInput,
         }
+
+
+class NoteFilterForm(BootstrapMixin, forms.Form):
+    model = Note
+    q = forms.CharField(required=False, label="Search")
+
+    assigned_object_type_id = DynamicModelMultipleChoiceField(
+        queryset=ContentType.objects.all(),
+        required=False,
+        label="Object Type",
+        widget=APISelectMultiple(
+            api_url="/api/extras/content-types/",
+        ),
+    )
 
 
 #

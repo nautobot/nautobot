@@ -1,6 +1,6 @@
 from nautobot.core.api.routers import OrderedDefaultRouter
-from . import views
 
+from . import views
 
 router = OrderedDefaultRouter()
 router.APIRootView = views.IPAMRootView
@@ -22,6 +22,9 @@ router.register("prefixes", views.PrefixViewSet)
 
 # IP addresses
 router.register("ip-addresses", views.IPAddressViewSet)
+
+# IP address To interface
+router.register("ip-address-to-interface", views.IPAddressToInterfaceViewSet)
 
 # VLANs
 router.register("vlan-groups", views.VLANGroupViewSet)

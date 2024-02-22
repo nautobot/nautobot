@@ -13,7 +13,7 @@ A number of settings can alternatively be configured via the Nautobot Admin UI. 
 * [DEPLOYMENT_ID](#deployment_id)
 * [DEVICE_NAME_AS_NATURAL_KEY](#device_name_as_natural_key)
 * [DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT](#dynamic_groups_member_cache_timeout)
-* [HIDE_RESTRICTED_UI](#hide_restricted_ui)
+* [JOB_CREATE_FILE_MAX_SIZE](#job_create_file_max_size)
 * [LOCATION_NAME_AS_NATURAL_KEY](#location_name_as_natural_key)
 * [MAX_PAGE_SIZE](#max_page_size)
 * [NETWORK_DRIVERS](#network_drivers)
@@ -24,6 +24,7 @@ A number of settings can alternatively be configured via the Nautobot Admin UI. 
 * [RACK_ELEVATION_DEFAULT_UNIT_WIDTH](#rack_elevation_default_unit_width)
 * [RELEASE_CHECK_TIMEOUT](#release_check_timeout)
 * [RELEASE_CHECK_URL](#release_check_url)
+* [SUPPORT_MESSAGE](#support_message)
 
 ## Extra Applications
 
@@ -42,6 +43,16 @@ EXTRA_INSTALLED_APPS = [
 
 This will ensure your default setting's `INSTALLED_APPS` do not have to be modified, and the user
 can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can be added using `EXTRA_MIDDLEWARE`.
+
+### ALLOW_REQUEST_PROFILING
+
+Default: `False`
+
+Global setting to allow or deny users from enabling request profiling on their login session.
+
+See the administration guide on [request profiling](../guides/request-profiling.md) for more information.
+
+---
 
 ## ALLOWED_URL_SCHEMES
 
@@ -82,6 +93,8 @@ This defines custom content to be displayed on the login page above the login fo
 
 ## BRANDING_FILEPATHS
 
++++ 1.2.0
+
 Default:
 
 ```python
@@ -93,6 +106,8 @@ Default:
     "icon_180": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_180", None),  # 180x180px icon - used for the apple-touch-icon header
     "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192px icon
     "icon_mask": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None),  # mono-chrome icon used for the mask-icon header
+    "header_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None),  # bullet image used for various view headers
+    "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None)   # bullet image used for nav menu headers
 }
 ```
 
@@ -107,6 +122,12 @@ These environment variables may be used to specify the values:
 * `NAUTOBOT_BRANDING_FILEPATHS_ICON_180`
 * `NAUTOBOT_BRANDING_FILEPATHS_ICON_192`
 * `NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK`
+
++++ 2.1.0
+    <!-- markdownlint-disable MD037 -->
+    * `NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET`
+    * `NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET`
+    <!-- markdownlint-enable MD037 -->
 
 If a custom image asset is not provided for any of the above options, the stock Nautobot asset is used.
 
@@ -126,6 +147,8 @@ Defines the prefix of the filename when exporting to CSV/YAML or export template
 
 ## BRANDING_TITLE
 
++++ 1.2.0
+
 Default: `"Nautobot"`
 
 Environment Variable: `NAUTOBOT_BRANDING_TITLE`
@@ -135,6 +158,8 @@ The defines the custom branding title that should be used in place of "Nautobot"
 ---
 
 ## BRANDING_URLS
+
++++ 1.2.0
 
 Default:
 
@@ -378,8 +403,6 @@ A later release of Nautobot will address the underlying performance issues, and 
 
 Default: `0` (disabled)
 
-Environment Variable: `NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT`
-
 The number of seconds to cache the member list of dynamic groups. With large datasets (those in scope of a Dynamic Group and number of Dynamic Groups themselves), users will encounter a performance penalty using or accessing the membership lists. This setting allows users to accept a cached list for common use cases (particularly in the UI) that expires after the configured time. Set this to `0` to disable caching.
 
 ---
@@ -510,20 +533,6 @@ By default, all relationship associations in GraphQL will be prefixed with `rel`
 
 ---
 
-## HIDE_RESTRICTED_UI
-
-Default: `False`
-
-When set to `True`, users with limited permissions will only be able to see items in the UI they have access to.
-
-+++ 1.2.0
-    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
-
-+++ 1.3.10
-    When this setting is set to `True`, logged out users will be redirected to the login page when navigating to the Nautobot home page.
-
----
-
 ## HTTP_PROXIES
 
 Default: `None` (Disabled)
@@ -557,6 +566,51 @@ Environment Variable: `NAUTOBOT_INSTALLATION_METRICS_ENABLED`
 
 When set to `True`, Nautobot will send anonymized installation metrics to the Nautobot maintainers when running the [`post_upgrade`](../tools/nautobot-server.md#post_upgrade) or [`send_installation_metrics`](../tools/nautobot-server.md#send_installation_metrics) management commands. See the documentation for the [`send_installation_metrics`](../tools/nautobot-server.md#send_installation_metrics) management command for more details.
 
+---
+
+## JOB_FILE_IO_STORAGE
+
++++ 2.1.0
+
+Default: `"db_file_storage.storage.DatabaseFileStorage"`
+
+Environment Variable: `NAUTOBOT_JOB_FILE_IO_STORAGE`
+
+The backend storage engine for handling files provided as input to Jobs and files generated as output by Jobs.
+
+!!! warning
+    For backwards compatibility with storage of Job inputs in prior versions of Nautobot, this currently defaults to using `DatabaseFileStorage` to store such files directly in Nautobot's database, however this is not typically the best option (see below) and may change in a future major release.
+
+If your Nautobot server instance(s) and your Celery worker instance(s) share a common [`MEDIA_ROOT`](#media_root) filesystem (as would typically be the case in a single-server installation of Nautobot) then we recommend changing this to `"django.core.files.storage.FileSystemStorage"` to store Job files on the filesystem (which will place them into a `files/` subdirectory under [`MEDIA_ROOT`](#media_root)) instead of in the database.
+
+If your Nautobot server instance(s) and Celery worker instance(s) do _not_ share a common filesystem, we recommend using one of the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) options such as S3 to provide a storage backend that can be accessed by the server(s) and worker(s) alike.
+
+!!! tip
+    For an example of using `django-storages` with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md) user-guide.
+
+If you have neither a common `MEDIA_ROOT` filesystem nor an appropriate remote storage option, then it's permissible to leave this at its default, but know that storing files in the database is provided here as a "least-worst" option only.
+
+!!! caution
+    It's typically safe to change this setting when initially updating to Nautobot 2.1.0 or later, as there should be no pre-existing Job output files, although any existing scheduled Jobs that have file _inputs_ may need to be deleted and recreated after doing so. However, once you've run any Jobs that output to a file, changing storage backends will of course break any existing links to Job output files in the previous storage backend. Migrating Job stored files from one backend to another is out of scope for this document.
+
+> See also: [`STORAGE_BACKEND`](#storage_backend) and [`JOB_CREATE_FILE_MAX_SIZE`](#job_create_file_max_size).
+
+---
+
+## JOB_CREATE_FILE_MAX_SIZE
+
++++ 2.1.0
+
+Default: `10485760` (10 MiB)
+
+The maximum file size (in bytes) that a running Job will be allowed to create in a single call to `Job.create_file()`.
+
+If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value in `nautobot_config.py`, it will override any dynamically configured value.
+
+> See also: [`JOB_FILE_IO_STORAGE`](#job_file_io_storage)
+
+---
+
 ## JOBS_ROOT
 
 Default: `os.path.join(NAUTOBOT_ROOT, "jobs")`
@@ -565,8 +619,8 @@ Environment Variable: `NAUTOBOT_JOBS_ROOT`
 
 The file path to a directory where [Jobs](../../platform-functionality/jobs/index.md) can be discovered.
 
-!!! caution
-    This directory **must** contain an `__init__.py` file.
++/- 2.0.0
+    This directory no longer requires an `__init__.py` file.
 
 ---
 
@@ -624,6 +678,16 @@ Default: `False`
 Environment Variable: `NAUTOBOT_METRICS_ENABLED`
 
 Toggle the availability Prometheus-compatible metrics at `/metrics`. See the [Prometheus Metrics](../guides/prometheus-metrics.md) documentation for more details.
+
+---
+
+## METRICS_AUTHENTICATED
+
+Default: `False`
+
+Environment Variable: `NAUTOBOT_METRICS_AUTHENTICATED`
+
+Toggle requiring authentication to view `/metrics`. See the [Prometheus Metrics](../guides/prometheus-metrics.md) documentation for more details.
 
 ---
 
@@ -700,7 +764,7 @@ NETWORK_DRIVERS = {
 }
 ```
 
-The default top-level keys are `ansible`, `hier_config`, `napalm`, `netmiko`, `ntc_templates`, `pyats`, `pyntc`, and `scrapli`, but you can also add additional keys if you have an alternative network driver that you want your Nautobot instance to include.
+The default top-level keys are `ansible`, `hier_config`, `napalm`, `netmiko`, `netutils_parser`, `ntc_templates`, `pyats`, `pyntc`, and `scrapli`, but you can also add additional keys if you have an alternative network driver that you want your Nautobot instance to include.
 
 !!! tip
     If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
@@ -839,11 +903,34 @@ Default:
 ```python
 [
     (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
-    (re.compile(r"(username|password|passwd|pwd)((?:\s+is.?|:)?\s+)\S+", re.IGNORECASE), r"\1\2{replacement}"),
+    (
+        re.compile(r"(username|password|passwd|pwd|secret|secrets)([\"']?(?:\s+is.?|:)?\s+)\S+[\"']?", re.IGNORECASE),
+        r"\1\2{replacement}",
+    ),
 ]
 ```
 
 List of (regular expression, replacement pattern) tuples used by the `nautobot.core.utils.logging.sanitize()` function. As of Nautobot 1.3.4 this function is used primarily for sanitization of Job log entries, but it may be used in other scopes in the future.
+
+This pattern catches patterns such as:
+
+| Pattern Match Examples |
+| --- |
+| Password is1234 |
+| Password: is1234 |
+| Password is: is1234 |
+| Password is is1234 |
+| secret is: is1234 |
+| secret is is1234 |
+| secrets is: is1234 |
+| secrets is is1234 |
+| {"username": "is1234"} |
+| {"password": "is1234"} |
+| {"secret": "is1234"} |
+| {"secrets": "is1234"} |
+
+!!! info
+    is1234 would be replaced in the Job logs with `(redacted)`.
 
 ---
 
@@ -853,9 +940,12 @@ Default: `None` (local storage)
 
 The backend storage engine for handling uploaded files (e.g. image attachments). Nautobot supports integration with the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) package, which provides backends for several popular file storage services. If not configured, local filesystem storage will be used.
 
-An example of using django-storages with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md) user-guide.
+!!! tip
+    For an example of using `django-storages` with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md) user-guide.
 
 The configuration parameters for the specified storage backend are defined under the [`STORAGE_CONFIG`](#storage_config) setting.
+
+> See also: [`JOB_FILE_IO_STORAGE`](#job_file_io_storage)
 
 ---
 
@@ -883,6 +973,23 @@ If set to `False`, unknown/unrecognized filter parameters will be discarded and 
 
 !!! warning
     Setting this to `False` can result in unexpected filtering results in the case of user error, for example `/dcim/devices/?has_primry_ip=false` (note the typo `primry`) will result in a list of all devices, rather than the intended list of only devices that lack a primary IP address. In the case of Jobs or external automation making use of such a filter, this could have wide-ranging consequences.
+
+---
+
+## SUPPORT_MESSAGE
+
++++ 1.6.4
+
++++ 2.0.2
+
+Default: `""`
+
+A message to include on error pages (status code 403, 404, 500, etc.) when an error occurs. You can configure this to direct users to the appropriate contact(s) within your organization that provide support for Nautobot. Markdown formatting is supported within this message, as well as [a limited subset of HTML](../../platform-functionality/template-filters.md#render_markdown).
+
+If unset, the default message that will appear is `If further assistance is required, please join the #nautobot channel on [Network to Code's Slack community](https://slack.networktocode.com) and post your question.`
+
+!!! tip
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 
 ---
 
@@ -1270,12 +1377,9 @@ Default: `"UTC"`
 
 Environment Variable: `NAUTOBOT_TIME_ZONE`
 
+!!! warning
+    Scheduled jobs will run in the time zone configured in this setting. If you change this setting from the default UTC, you must change it on the Celery Beat server and all Nautobot web servers or your scheduled jobs may run in the wrong time zone.
+
 The time zone Nautobot will use when dealing with dates and times. It is recommended to use UTC time unless you have a specific need to use a local time zone. Please see the [list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
 
 Please see the [official Django documentation on `TIME_ZONE`](https://docs.djangoproject.com/en/stable/ref/settings/#time-zone) for more information.
-
-### FEEDBACK_BUTTON_ENABLED
-
-Default: `True`
-
-If set to `True`, a "Submit Feedback" button is added to the New UI sidebar secondary menu, which is used to collect user feedback.

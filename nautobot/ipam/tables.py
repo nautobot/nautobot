@@ -1,5 +1,5 @@
-import django_tables2 as tables
 from django.utils.safestring import mark_safe
+import django_tables2 as tables
 from django_tables2.utils import Accessor
 
 from nautobot.core.tables import (
@@ -18,8 +18,11 @@ from nautobot.dcim.utils import cable_status_color_css
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
 from nautobot.virtualization.models import VMInterface
+from nautobot.virtualization.tables import VMInterfaceTable
+
 from .models import (
     IPAddress,
+    IPAddressToInterface,
     Namespace,
     Prefix,
     RIR,
@@ -32,7 +35,7 @@ from .models import (
     VRFPrefixAssignment,
 )
 
-AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')
+AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')  # noqa: S308  # suspicious-mark-safe-usage -- known safe string here
 
 UTILIZATION_GRAPH = """
 {% load helpers %}
@@ -263,6 +266,11 @@ class VRFDeviceAssignmentTable(BaseTable):
     """Table for displaying VRF Device Assignments with RD."""
 
     vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf.name")
+    namespace = tables.Column(
+        verbose_name="Namespace",
+        linkify=lambda record: record.vrf.namespace.get_absolute_url(),
+        accessor="vrf.namespace.name",
+    )
     device = tables.Column(
         linkify=lambda record: record.device.get_absolute_url(), accessor="device.name", verbose_name="Device"
     )
@@ -277,7 +285,7 @@ class VRFDeviceAssignmentTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = VRFDeviceAssignment
         orderable = False
-        fields = ("vrf", "device", "virtual_machine", "rd", "tenant")
+        fields = ("vrf", "namespace", "device", "virtual_machine", "rd", "tenant")
 
 
 class VRFPrefixAssignmentTable(BaseTable):
@@ -546,7 +554,7 @@ class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
     List IP addresses assigned to a specific Interface.
     """
 
-    address = tables.TemplateColumn(template_code=IPADDRESS_ASSIGN_COPY_LINK, verbose_name="IP Address")
+    address = tables.TemplateColumn(template_code=IPADDRESS_COPY_LINK, verbose_name="IP Address")
     # vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
 
@@ -614,6 +622,45 @@ class IPAddressInterfaceTable(InterfaceTable):
             "style": cable_status_color_css,
             "data-name": lambda record: record.name,
         }
+
+
+class IPAddressVMInterfaceTable(VMInterfaceTable):
+    class Meta(VMInterfaceTable.Meta):
+        row_attrs = {
+            "data-name": lambda record: record.name,
+        }
+
+
+#
+# IPAddress to Interface
+#
+
+
+class IPAddressToInterfaceTable(BaseTable):
+    pk = ToggleColumn()
+    ip_address = tables.Column(linkify=True, verbose_name="IP Address")
+    # TODO(jathan): Probably should crib from something like the CABLETERMINATION column template so
+    # that these columns show something like device1 > interface1 instead of just interface1 for
+    # usability?
+    interface = tables.Column(linkify=True)
+    vm_interface = tables.Column(linkify=True, verbose_name="VM Interface")
+
+    class Meta(BaseTable.Meta):
+        model = IPAddressToInterface
+        fields = (
+            "pk",
+            "ip_address",
+            "interface",
+            "vm_interface",
+            "is_source",
+            "is_destination",
+            "is_default",
+            "is_preferred",
+            "is_primary",
+            "is_secondary",
+            "is_standby",
+        )
+        default_columns = ("pk", "ip_address", "interface", "vm_interface")
 
 
 #

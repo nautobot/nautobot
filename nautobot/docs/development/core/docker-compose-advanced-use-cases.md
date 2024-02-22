@@ -44,7 +44,7 @@ In the `docker` directory you will find the following files:
 - `docker-entrypoint.sh` - Commands and operations ran once Nautobot container is started including database migrations and optionally creating a superuser
 - `uwsgi.ini` - The [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) ini file used in the production docker container
 
-## Docker-Compose Overrides
+## Docker Compose Overrides
 
 If you require changing any of the defaults found in `docker-compose.yml`, create a file inside the `development` directory called `docker-compose.override.yml` and add this file to the `compose_files` setting in your `invoke.yml` file, for example:
 
@@ -62,11 +62,9 @@ This file will override any configuration in the main `docker-compose.yml` file,
 
 Please see the [official documentation on extending Docker Compose](https://docs.docker.com/compose/extends/) for more information.
 
-### Automatically Creating a Superuser
+### Override Environment Variables
 
-There may be times where you want to bootstrap Nautobot with a superuser account and API token already created for quick access or for running within a CI/CD pipeline. By using a custom `invoke.yml` as described above, in combination with custom `docker-compose.override.yml` and `override.env` files, you can automatically bootstrap Nautobot with a user and token.
-
-Create `invoke.yml` as described above, then create `development/docker-compose.override.yml` with the following contents:
+A common use case is for developers to override the default environment variables in the development containers. This can be accomplished with the `env_file` property. Create `invoke.yml` as described above, then create `development/docker-compose.override.yml` with the following contents:
 
 ```yaml
 ---
@@ -76,12 +74,24 @@ services:
       - "override.env"
 ```
 
-The `docker-entrypoint.sh` script will run any migrations and then look for specific variables set to create the superuser. The `docker-entrypoint.sh` script is copied in during the Docker image build and will read from the default `dev.env` as the `env_file` until you override it as seen above.
-
-Any variables defined in this file will override the defaults. The `override.env` should be located in the `development/` directory, and should look like the following:
+Environment variables can be added to `development/override.env` using the [env file syntax](https://docs.docker.com/compose/environment-variables/env-file/):
 
 ```bash
-# Superuser information. NAUTOBOT_CREATE_SUPERUSER defaults to false.
+NAUTOBOT_SUPERUSER_PASSWORD=changeme
+NAUTOBOT_SUPERUSER_API_TOKEN=1111111111111111111111111111111111111111
+```
+
+This file can be used to add new environment variables or override default environment variables found in `development/dev.env` but it cannot override any environment variables defined in any docker compose yml files.
+
+### Automatically Creating a Superuser
+
++/- 2.1.2
+
+The Nautobot docker compose development environment automatically bootstraps the database with a default superuser with a static password and API token. This is performed by the `docker-entrypoint.sh` script. The `docker-entrypoint.sh` script is copied in during the Docker image build and will read from the default `dev.env` as the `env_file` until you override it as seen above.
+
+The following environment variables can be used to disable or modify this behavior:
+
+```bash
 NAUTOBOT_CREATE_SUPERUSER=true
 NAUTOBOT_SUPERUSER_NAME=admin
 NAUTOBOT_SUPERUSER_EMAIL=admin@example.com
@@ -89,15 +99,11 @@ NAUTOBOT_SUPERUSER_PASSWORD=admin
 NAUTOBOT_SUPERUSER_API_TOKEN=0123456789abcdef0123456789abcdef01234567
 ```
 
-The variables defined above within `override.env` will signal the `docker-entrypoint.sh` script to create the superuser with the specified username, email, password, and API token.
-
-After these two files are created, you can use the `invoke` tasks to manage the development containers.
-
 ### Using MySQL instead of PostgreSQL
 
 By default the Docker development environment is configured to use a PostgreSQL container as the database backend. For development or testing purposes, you might optionally choose to use MySQL instead. In order to do so, you need to make the following changes to your environment:
 
-- Set up `invoke.yml` as described above and use it to override the postgres docker-compose file:
+- Set up `invoke.yml` as described above and use it to override the postgres docker compose file:
 
 ```yaml
 ---
@@ -112,9 +118,9 @@ Then `invoke stop` (if you previously had the docker environment running with Po
 
 ### SSO Auth Backend with Keycloak
 
-Keycloak and its database are run in the same docker-compose project as Nautobot. A separate database is used to ensure you are able to have two separate instances of Postgres, one for Nautobot and one for Keycloak, and allows you to use a MySQL database for Nautobot but maintain Keycloaks required Postgres DB. This setup is meant for local development and testing, and should not be used as a reference for deploying Keycloak in production.
+Keycloak and its database are run in the same docker compose project as Nautobot. A separate database is used to ensure you are able to have two separate instances of Postgres, one for Nautobot and one for Keycloak, and allows you to use a MySQL database for Nautobot but maintain Keycloaks required Postgres DB. This setup is meant for local development and testing, and should not be used as a reference for deploying Keycloak in production.
 
-The `invoke.yml` file must be updated to add `development/docker-compose.keycloak.yml` to the docker-compose project and to enable OIDC. These setting are solely for local development inside the Nautobot repository and is not applicable to any other deployment. An example `invoke.yml` file:
+The `invoke.yml` file must be updated to add `development/docker-compose.keycloak.yml` to the docker compose project and to enable OIDC. These setting are solely for local development inside the Nautobot repository and is not applicable to any other deployment. An example `invoke.yml` file:
 
 ```yaml
 ---
@@ -144,11 +150,58 @@ Keycloak admin console is reachable via `http://localhost:8087/admin/` with user
 
 For users of Microsoft Visual Studio Code, several files are included to ease development and integrate with the [VS Code Remote - Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers). The following related files are found relative to the root of the project:
 
-- `.devcontainers/devcontainer.json` - Dev. container definition
+- `.devcontainer/devcontainer.json` - Configuration for the [`Dev Containers`](https://code.visualstudio.com/docs/devcontainers/containers) extension
 - `nautobot.code-workspace` - VS Code workspace configuration for Nautobot
 - `development/docker-compose.debug.yml` - Docker Compose file with debug configuration for VS Code
 
-After opening the project directory in VS Code in a supported environment, you will be prompted by VS Code to **Reopen in Container** and **Open Workspace**. Select **Reopen in Container** to build and start the development containers. Once your window is connected to the container, you can open the workspace which enables support for Run/Debug.
+### Dev Containers Setup
+
++/- 2.1.2
+
+#### ARM64 Build Argument
+
+Due to a bug in Dev Containers, when using VS Code to build your docker containers, docker cannot automatically determine the CPU architecture. To work around this bug, we have set a default value of `amd64` (x86_64). If you're running on another architecture like Apple Silicon or Raspberry Pi you will need to override this setting.
+
+!!! info
+    If you're unsure what architecture you're using you can run `uname -m` in a terminal. If this command outputs `x86_64` you're on an `amd64` architecture. If it outputs `aarch64` or `arm64`, you're on `arm64`. These are the only supported CPU architectures for VS Code Dev Containers.
+
+If running on an `arm64` architecture, create a `docker-compose.override.yml` file in the `development` directory with the following content:
+
+```yml title="development/docker-compose.override.yml"
+---
+version: "3.9"
+services:
+  nautobot:
+    build:
+      args:
+        ARCH: arm64
+```
+
+Then add this file to the list of docker compose files in `.devcontainer/devcontainer.json`:
+
+```json title=".devcontainer/devcontainer.json"
+{
+    "name": "Nautobot Dev Container",
+    "dockerComposeFile": [
+        "../development/docker-compose.yml",
+        "../development/docker-compose.postgres.yml",
+        "../development/docker-compose.dev.yml",
+        "../development/docker-compose.override.yml"
+    ]
+    ...
+```
+
+#### PYTHON_VER Environment Variable
+
+The `PYTHON_VER` environment variable must be set in the `development/.env` file or the container build will fail. An example file exists and can be used as-is if you don't need to change the default version:
+
+```bash
+cp development/.env.example development/.env
+```
+
+### Using Dev Containers
+
+To open VS Code in the development container, first open VS Code in your local copy of the Nautobot Git repository. Open the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and select **Reopen in Container** to build and start the development containers. Once your window is connected to the container, you can open the workspace file `nautobot.code-workspace` which enables support for Run/Debug.
 
 To start Nautobot, select **Run Without Debugging** or **Start Debugging** from the Run menu. Once Nautobot has started, you will be prompted to open a browser to connect to Nautobot.
 
@@ -163,7 +216,7 @@ To work with remote containers, after `invoke build` use `docker-compose` as fol
 
 ```no-highlight
 cd development
-docker-compose -f docker-compose.yml -f docker-compose.debug.yml up
+docker compose -f docker-compose.yml -f docker-compose.debug.yml up
 ```
 
 - Now open the VS Code Docker extension. In the `CONTAINERS/development` section, right click on a running container and select the **Attach Visual Studio Code** menu item.

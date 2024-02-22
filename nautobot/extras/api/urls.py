@@ -1,6 +1,6 @@
 from nautobot.core.api.routers import OrderedDefaultRouter
-from . import views
 
+from . import views
 
 router = OrderedDefaultRouter()
 router.APIRootView = views.ExtrasRootView
@@ -31,6 +31,12 @@ router.register("dynamic-group-memberships", views.DynamicGroupMembershipViewSet
 # Export templates
 router.register("export-templates", views.ExportTemplateViewSet)
 
+# External integrations
+router.register("external-integrations", views.ExternalIntegrationViewSet)
+
+# File proxies
+router.register("file-proxies", views.FileProxyViewSet)
+
 # Git repositories
 router.register("git-repositories", views.GitRepositoryViewSet)
 
@@ -42,6 +48,7 @@ router.register("image-attachments", views.ImageAttachmentViewSet)
 
 # Jobs
 router.register("jobs", views.JobViewSet)
+router.register("jobs", views.JobByNameViewSet)
 
 # Job Buttons
 router.register("job-buttons", views.JobButtonViewSet)

@@ -160,6 +160,53 @@ function initializeColorPicker(context, dropdownParent=null){
     });
 }
 
+/**
+ * Retrieves the value of a property from a nested object using a string path.
+ *
+ * This method supports accessing deeply nested properties within an object.
+ * It is created to support extraction of nested values in the display-field
+ * and value-field for DynamicChoiceField.
+ *
+ * @param {Object} response - The object from which to retrieve the value.
+ * @param {string} fieldPath - The string representing the path to the desired property.
+ * @returns {*} The value of the specified property, or null if the path is invalid or the object is not found.
+ *
+ * @example
+ * let response = {
+ *   "id": 1234,
+ *   "vlan": {
+ *     "name": "myvlan"
+ *   },
+ *   "interfaces": [
+ *     { "name": "eth0", "status": "up" },
+ *     { "name": "eth1", "status": "down" }
+ *   ]
+ * }
+ * // returns "myvlan"
+ * resolvePath(response, "vlan.name")
+ *
+ * // returns "eth0"
+ * resolvePath(response, "interfaces[0].name")
+ *
+ * // returns "eth0"
+ * resolvePath(response, "interfaces.0.name")
+ */
+function resolvePath(response, fieldPath) {
+    if (!fieldPath)
+        return null;
+
+    if (typeof response !== 'object' || response === null || !response) {
+        console.error('Invalid response object');
+        return null;
+    }
+
+    return fieldPath
+           .replace(/\[|\]\.?/g, '.')
+           .split('.')
+           .filter(value => value)
+           .reduce((memo, value) => memo && memo[value], response);
+}
+
 // Dynamic Choice Selection
 function initializeDynamicChoiceSelection(context, dropdownParent=null){
     this_context = $(context);
@@ -263,8 +310,8 @@ function initializeDynamicChoiceSelection(context, dropdownParent=null){
                     var results = data.results;
 
                     results = results.reduce((results,record,idx) => {
-                        record.text = record[element.getAttribute('display-field')] || record.name;
-                        record.id = record[element.getAttribute('value-field')] || record.id;
+                        record.text = resolvePath(record, element.getAttribute('display-field')) || record.name;
+                        record.id = resolvePath(record, element.getAttribute('value-field')) || record.id;
                         if(element.getAttribute('disabled-indicator') && record[element.getAttribute('disabled-indicator')]) {
                             // The disabled-indicator equated to true, so we disable this option
                             record.disabled = true;
@@ -611,8 +658,8 @@ function initializeDynamicFilterForm(context){
         dynamic_form.append(q_field_phantom);
 
         // Get the serialize data from the forms and filter out query_params which values are empty e.g ?sam=&dan=2 becomes dan=2
-        let dynamic_filter_form_query = $("#dynamic-filter-form").serialize().split("&").filter(params => params.split("=")[1].length)
-        let default_filter_form_query = $("#default-filter form").serialize().split("&").filter(params => params.split("=")[1].length)
+        let dynamic_filter_form_query = $("#dynamic-filter-form").serialize().split("&").filter(params => params.split("=")[1]?.length || 0 )
+        let default_filter_form_query = $("#default-filter form").serialize().split("&").filter(params => params.split("=")[1]?.length || 0 )
         // Union Operation
         let search_query = [...new Set([...default_filter_form_query, ...dynamic_filter_form_query])].join("&")
         location.replace("?" + search_query)

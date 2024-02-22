@@ -39,7 +39,7 @@ class FilterTestCases:
             values_with_count = queryset.values(field_name).annotate(count=Count(field_name)).order_by("count")
             for value in values_with_count:
                 # randomly break out of loop after 2 values have been selected
-                if len(test_values) > 1 and random.choice([True, False]):
+                if len(test_values) > 1 and random.choice([True, False]):  # noqa: S311  # suspicious-non-cryptographic-random-usage
                     break
                 if value[field_name] and value["count"] < qs_count:
                     qs_count -= value["count"]
@@ -113,7 +113,7 @@ class FilterTestCases:
                     params = {filter_name: test_data}
                     filterset_result = self.filterset(params, self.queryset).qs
                     qs_result = self.queryset.filter(**{f"{field_name}__in": test_data}).distinct()
-                    self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+                    self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result, ordered=False)
 
         def test_boolean_filters_generic(self):
             """Test all `RelatedMembershipBooleanFilter` filters found in `self.filterset.get_filters()`

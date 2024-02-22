@@ -4,18 +4,18 @@ import logging
 from celery import chain
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
-from django.db.models import Count, ProtectedError, Q
+from django.db.models import ProtectedError, Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import TemplateDoesNotExist, get_template
+from django.template.loader import get_template, TemplateDoesNotExist
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.html import escape
-from django.utils.http import is_safe_url
-from django.utils.safestring import mark_safe
+from django.utils.encoding import iri_to_uri
+from django.utils.html import format_html
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
@@ -27,21 +27,22 @@ from nautobot.core.tables import ButtonsColumn
 from nautobot.core.utils.lookup import get_table_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic, viewsets
-from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.core.views.mixins import ObjectPermissionRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
-from nautobot.dcim.models import Device
-from nautobot.dcim.tables import DeviceTable
+from nautobot.core.views.viewsets import NautobotUIViewSet
+from nautobot.dcim.models import Device, Interface, Rack
+from nautobot.dcim.tables import DeviceTable, RackTable
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_worker_count
+from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
-from nautobot.virtualization.models import VirtualMachine
+from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable
 
 from . import filters, forms, tables
 from .api import serializers
-from .choices import JobExecutionType, JobResultStatusChoices
+from .choices import JobExecutionType, JobResultStatusChoices, LogLevelChoices
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
     enqueue_pull_git_repository_and_refresh_data,
@@ -58,11 +59,14 @@ from .models import (
     CustomLink,
     DynamicGroup,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
+    Job as JobModel,
     JobButton,
     JobHook,
+    JobLogEntry,
     JobResult,
     Note,
     ObjectChange,
@@ -78,7 +82,6 @@ from .models import (
     TaggedItem,
     Webhook,
 )
-from .models import Job as JobModel
 from .registry import registry
 from .tables import RoleTable
 
@@ -115,6 +118,7 @@ class ComputedFieldDeleteView(generic.ObjectDeleteView):
 class ComputedFieldBulkDeleteView(generic.BulkDeleteView):
     queryset = ComputedField.objects.all()
     table = tables.ComputedFieldTable
+    filterset = filters.ComputedFieldFilterSet
 
 
 #
@@ -172,6 +176,7 @@ class ConfigContextDeleteView(generic.ObjectDeleteView):
 class ConfigContextBulkDeleteView(generic.BulkDeleteView):
     queryset = ConfigContext.objects.all()
     table = tables.ConfigContextTable
+    filterset = filters.ConfigContextFilterSet
 
 
 class ObjectConfigContextView(generic.ObjectView):
@@ -272,13 +277,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Device table
         device_table = DeviceTable(
-            data=instance.devices.select_related(
-                "tenant",
-                "location",
-                "rack",
-                "device_type",
-                "role",
-            ).prefetch_related("primary_ip"),
+            data=instance.devices.all(),
             orderable=False,
             extra_columns=[
                 (
@@ -298,11 +297,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Virtual machine table
         virtual_machine_table = VirtualMachineTable(
-            data=instance.virtual_machines.select_related(
-                "cluster",
-                "role",
-                "tenant",
-            ).prefetch_related("primary_ip"),
+            data=instance.virtual_machines.all(),
             orderable=False,
             extra_columns=[
                 (
@@ -348,6 +343,7 @@ class ConfigContextSchemaDeleteView(generic.ObjectDeleteView):
 class ConfigContextSchemaBulkDeleteView(generic.BulkDeleteView):
     queryset = ConfigContextSchema.objects.all()
     table = tables.ConfigContextSchemaTable
+    filterset = filters.ConfigContextSchemaFilterSet
 
 
 #
@@ -409,11 +405,11 @@ class CustomFieldEditView(generic.ObjectEditView):
                 verb = "Created" if object_created else "Modified"
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                if hasattr(obj, "get_absolute_url"):
-                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
-                else:
-                    msg = f"{msg} {escape(obj)}"
-                messages.success(request, mark_safe(msg))
+                try:
+                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+                except AttributeError:
+                    msg = format_html("{} {}", msg, obj)
+                messages.success(request, msg)
 
                 if "_addanother" in request.POST:
                     # If the object has clone_fields, pre-populate a new instance of the form
@@ -424,8 +420,8 @@ class CustomFieldEditView(generic.ObjectEditView):
                     return redirect(request.get_full_path())
 
                 return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(return_url)
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
                 else:
                     return redirect(self.get_return_url(request, obj))
 
@@ -471,6 +467,7 @@ class CustomFieldDeleteView(generic.ObjectDeleteView):
 class CustomFieldBulkDeleteView(generic.BulkDeleteView):
     queryset = CustomField.objects.all()
     table = tables.CustomFieldTable
+    filterset = filters.CustomFieldFilterSet
 
     def construct_custom_field_delete_tasks(self, queryset):
         """
@@ -646,11 +643,11 @@ class DynamicGroupEditView(generic.ObjectEditView):
                 verb = "Created" if object_created else "Modified"
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                if hasattr(obj, "get_absolute_url"):
-                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
-                else:
-                    msg = f"{msg} {escape(obj)}"
-                messages.success(request, mark_safe(msg))
+                try:
+                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+                except AttributeError:
+                    msg = format_html("{} {}", msg, obj)
+                messages.success(request, msg)
 
                 if "_addanother" in request.POST:
                     # If the object has clone_fields, pre-populate a new instance of the form
@@ -661,8 +658,8 @@ class DynamicGroupEditView(generic.ObjectEditView):
                     return redirect(request.get_full_path())
 
                 return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(return_url)
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
                 else:
                     return redirect(self.get_return_url(request, obj))
 
@@ -681,6 +678,13 @@ class DynamicGroupEditView(generic.ObjectEditView):
                 msg = f"{protected_obj.value}: {err_msg} Please cancel this edit and start again."
                 logger.debug(msg)
                 form.add_error(None, msg)
+            except ValidationError as err:
+                msg = "Invalid filter detected in existing DynamicGroup filter data."
+                logger.debug(msg)
+                err_messages = err.args[0].split("\n")
+                for message in err_messages:
+                    if message:
+                        form.add_error(None, message)
 
         else:
             logger.debug("Form validation failed")
@@ -706,6 +710,7 @@ class DynamicGroupDeleteView(generic.ObjectDeleteView):
 class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
     queryset = DynamicGroup.objects.all()
     table = tables.DynamicGroupTable
+    filterset = filters.DynamicGroupFilterSet
 
 
 class ObjectDynamicGroupsView(View):
@@ -778,6 +783,20 @@ class ExportTemplateDeleteView(generic.ObjectDeleteView):
 class ExportTemplateBulkDeleteView(generic.BulkDeleteView):
     queryset = ExportTemplate.objects.all()
     table = tables.ExportTemplateTable
+
+
+#
+# External integrations
+#
+
+
+class ExternalIntegrationUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ExternalIntegrationBulkEditForm
+    filterset_class = filters.ExternalIntegrationFilterSet
+    form_class = forms.ExternalIntegrationForm
+    queryset = ExternalIntegration.objects.select_related("secrets_group")
+    serializer_class = serializers.ExternalIntegrationSerializer
+    table_class = tables.ExternalIntegrationTable
 
 
 #
@@ -867,6 +886,7 @@ class GitRepositoryBulkEditView(generic.BulkEditView):
 class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
     queryset = GitRepository.objects.all()
     table = tables.GitRepositoryBulkTable
+    filterset = filters.GitRepositoryFilterSet
 
     def extra_context(self):
         return {
@@ -877,11 +897,12 @@ class GitRepositoryBulkDeleteView(generic.BulkDeleteView):
 def check_and_call_git_repository_function(request, pk, func):
     """Helper for checking Git permissions and worker availability, then calling provided function if all is well
     Args:
-        request: request object.
+        request (HttpRequest): request object.
         pk (UUID): GitRepository pk value.
         func (function): Enqueue git repo function.
     Returns:
-        HttpResponseForbidden or a redirect
+        (Union[HttpResponseForbidden,redirect]): HttpResponseForbidden if user does not have permission to run the job,
+            otherwise redirect to the job result page.
     """
     if not request.user.has_perm("extras.change_gitrepository"):
         return HttpResponseForbidden()
@@ -889,6 +910,7 @@ def check_and_call_git_repository_function(request, pk, func):
     # Allow execution only if a worker process is running.
     if not get_worker_count():
         messages.error(request, "Unable to run job: Celery worker process not running.")
+        return redirect(request.get_full_path(), permanent=False)
     else:
         repository = get_object_or_404(GitRepository, pk=pk)
         job_result = func(repository, request.user)
@@ -1022,16 +1044,11 @@ class JobListView(generic.ObjectListView):
 
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
-        # Default to hiding "hidden", non-installed jobs and job hook receivers
+        # Default to hiding "hidden" and non-installed jobs
         if "hidden" not in request.GET:
             queryset = queryset.filter(hidden=False)
         if "installed" not in request.GET:
             queryset = queryset.filter(installed=True)
-        if "is_job_hook_receiver" not in request.GET:
-            queryset = queryset.filter(is_job_hook_receiver=False)
-        if "is_job_button_receiver" not in request.GET:
-            queryset = queryset.filter(is_job_button_receiver=False)
-        queryset = queryset.prefetch_related("results")
         return queryset
 
     def extra_context(self):
@@ -1122,6 +1139,12 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         schedule_form = forms.JobScheduleForm(request.POST)
         task_queue = request.POST.get("_task_queue")
 
+        return_url = request.POST.get("_return_url")
+        if return_url is not None and url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+            return_url = iri_to_uri(return_url)
+        else:
+            return_url = None
+
         # Allow execution only if a worker process is running and the job is runnable.
         if not get_worker_count(queue=task_queue):
             messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
@@ -1129,7 +1152,10 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             messages.error(request, "Unable to run or schedule job: Job is not presently installed.")
         elif not job_model.enabled:
             messages.error(request, "Unable to run or schedule job: Job is not enabled to be run.")
-        elif job_model.has_sensitive_variables and request.POST["_schedule_type"] != JobExecutionType.TYPE_IMMEDIATELY:
+        elif (
+            job_model.has_sensitive_variables
+            and request.POST.get("_schedule_type") != JobExecutionType.TYPE_IMMEDIATELY
+        ):
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
         elif job_model.has_sensitive_variables and job_model.approval_required:
             messages.error(
@@ -1191,10 +1217,10 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
                 if job_model.approval_required:
                     messages.success(request, f"Job {schedule_name} successfully submitted for approval")
-                    return redirect("extras:scheduledjob_approval_queue_list")
+                    return redirect(return_url if return_url else "extras:scheduledjob_approval_queue_list")
                 else:
                     messages.success(request, f"Job {schedule_name} successfully scheduled")
-                    return redirect("extras:scheduledjob_list")
+                    return redirect(return_url if return_url else "extras:scheduledjob_list")
 
             else:
                 # Enqueue job for immediate execution
@@ -1207,7 +1233,20 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     **job_model.job_class.serialize_data(job_kwargs),
                 )
 
+                if return_url:
+                    messages.info(
+                        request,
+                        format_html(
+                            'Job enqueued. <a href="{}">Click here for the results.</a>',
+                            job_result.get_absolute_url(),
+                        ),
+                    )
+                    return redirect(return_url)
+
                 return redirect("extras:jobresult", pk=job_result.pk)
+
+        if return_url:
+            return redirect(return_url)
 
         template_name = "extras/job.html"
         if job_model.job_class is not None and hasattr(job_model.job_class, "template_name"):
@@ -1454,12 +1493,35 @@ class JobHookBulkDeleteView(generic.BulkDeleteView):
 #
 
 
+def get_annotated_jobresult_queryset():
+    return (
+        JobResult.objects.defer("result")
+        .select_related("job_model", "user")
+        .annotate(
+            debug_log_count=count_related(
+                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_DEBUG}
+            ),
+            info_log_count=count_related(
+                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_INFO}
+            ),
+            warning_log_count=count_related(
+                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_WARNING}
+            ),
+            error_log_count=count_related(
+                JobLogEntry,
+                "job_result",
+                filter_dict={"log_level__in": [LogLevelChoices.LOG_ERROR, LogLevelChoices.LOG_CRITICAL]},
+            ),
+        )
+    )
+
+
 class JobResultListView(generic.ObjectListView):
     """
     List JobResults
     """
 
-    queryset = JobResult.objects.defer("result").select_related("job_model", "user").prefetch_related("logs")
+    queryset = get_annotated_jobresult_queryset()
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -1471,8 +1533,9 @@ class JobResultDeleteView(generic.ObjectDeleteView):
 
 
 class JobResultBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobResult.objects.defer("result").all()
+    queryset = get_annotated_jobresult_queryset()
     table = tables.JobResultTable
+    filterset = filters.JobResultFilterSet
 
 
 class JobResultView(generic.ObjectView):
@@ -1505,7 +1568,14 @@ class JobLogEntryTableView(View):
 
     def get(self, request, pk=None):
         instance = self.queryset.get(pk=pk)
-        log_table = tables.JobLogEntryTable(data=instance.job_log_entries.all(), user=request.user)
+        filter_q = request.GET.get("q")
+        if filter_q:
+            queryset = instance.job_log_entries.filter(
+                Q(message__icontains=filter_q) | Q(log_level__icontains=filter_q)
+            )
+        else:
+            queryset = instance.job_log_entries.all()
+        log_table = tables.JobLogEntryTable(data=queryset, user=request.user)
         RequestConfig(request).configure(log_table)
         return HttpResponse(log_table.as_html(request))
 
@@ -1523,31 +1593,6 @@ class JobButtonUIViewSet(NautobotUIViewSet):
     queryset = JobButton.objects.all()
     serializer_class = serializers.JobButtonSerializer
     table_class = tables.JobButtonTable
-
-
-class JobButtonRunView(ObjectPermissionRequiredMixin, View):
-    """
-    View to run the Job linked to the Job Button.
-    """
-
-    queryset = JobButton.objects.all()
-
-    def get_required_permission(self):
-        return "extras.run_job"
-
-    def post(self, request, pk):
-        post_data = request.POST
-        job_button = JobButton.objects.get(pk=pk)
-        job_model = job_button.job
-        result = JobResult.enqueue_job(
-            job_model=job_model,
-            user=request.user,
-            object_pk=post_data["object_pk"],
-            object_model_name=post_data["object_model_name"],
-        )
-        msg = f'Job enqueued. <a href="{result.get_absolute_url()}">Click here for the results.</a>'
-        messages.info(request=request, message=mark_safe(msg))
-        return redirect(post_data["redirect_path"])
 
 
 #
@@ -1660,6 +1705,18 @@ class NoteView(generic.ObjectView):
     queryset = Note.objects.all()
 
 
+class NoteListView(generic.ObjectListView):
+    """
+    List Notes
+    """
+
+    queryset = Note.objects.all()
+    filterset = filters.NoteFilterSet
+    filterset_form = forms.NoteFilterForm
+    table = tables.NoteTable
+    action_buttons = ()
+
+
 class NoteEditView(generic.ObjectEditView):
     queryset = Note.objects.all()
     model_form = forms.NoteForm
@@ -1675,7 +1732,7 @@ class NoteDeleteView(generic.ObjectDeleteView):
 
 class ObjectNotesView(View):
     """
-    Present a history of changes made to a particular object.
+    Present a list of notes associated to a particular object.
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
     """
 
@@ -1746,6 +1803,7 @@ class RelationshipEditView(generic.ObjectEditView):
 class RelationshipBulkDeleteView(generic.BulkDeleteView):
     queryset = Relationship.objects.all()
     table = tables.RelationshipTable
+    filterset = filters.RelationshipFilterSet
 
 
 class RelationshipDeleteView(generic.ObjectDeleteView):
@@ -1763,6 +1821,7 @@ class RelationshipAssociationListView(generic.ObjectListView):
 class RelationshipAssociationBulkDeleteView(generic.BulkDeleteView):
     queryset = RelationshipAssociation.objects.all()
     table = tables.RelationshipAssociationTable
+    filterset = filters.RelationshipAssociationFilterSet
 
 
 class RelationshipAssociationDeleteView(generic.ObjectDeleteView):
@@ -1789,74 +1848,89 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
         if self.action == "retrieve":
             context["content_types"] = instance.content_types.order_by("app_label", "model")
 
-            devices = instance.devices.select_related(
-                "status",
-                "location",
-                "tenant",
-                "role",
-                "rack",
-                "device_type",
-            )
-            ipaddress = instance.ip_addresses.select_related("status", "tenant").annotate(
-                interface_count=Count("interfaces"),
-                interface_parent_count=(Count("interfaces__device", distinct=True)),
-                vm_interface_count=Count("vm_interfaces"),
-                vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
-                assigned_count=Count("interfaces") + Count("vm_interfaces"),
-            )
-            prefixes = instance.prefixes.select_related(
-                "location",
-                "status",
-                "tenant",
-                "vlan",
-                # "vrf",
-                "namespace",
-            )
-            virtual_machines = instance.virtual_machines.select_related(
-                "cluster",
-                "role",
-                "status",
-                "tenant",
-            )
-            vlans = instance.vlans.select_related(
-                "vlan_group",
-                "location",
-                "status",
-                "tenant",
-            )
-
-            device_table = DeviceTable(devices)
-            device_table.columns.hide("role")
-            ipaddress_table = IPAddressTable(ipaddress)
-            ipaddress_table.columns.hide("role")
-            prefix_table = PrefixTable(prefixes)
-            prefix_table.columns.hide("role")
-            virtual_machine_table = VirtualMachineTable(virtual_machines)
-            virtual_machine_table.columns.hide("role")
-            vlan_table = VLANTable(vlans)
-            vlan_table.columns.hide("role")
-
             paginate = {
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request),
             }
 
-            RequestConfig(request, paginate).configure(device_table)
-            RequestConfig(request, paginate).configure(ipaddress_table)
-            RequestConfig(request, paginate).configure(prefix_table)
-            RequestConfig(request, paginate).configure(virtual_machine_table)
-            RequestConfig(request, paginate).configure(vlan_table)
+            if ContentType.objects.get_for_model(Device) in context["content_types"]:
+                devices = instance.devices.select_related(
+                    "status",
+                    "location",
+                    "tenant",
+                    "role",
+                    "rack",
+                    "device_type",
+                ).restrict(request.user, "view")
+                device_table = DeviceTable(devices)
+                device_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(device_table)
+                context["device_table"] = device_table
 
-            context.update(
-                {
-                    "device_table": device_table,
-                    "ipaddress_table": ipaddress_table,
-                    "prefix_table": prefix_table,
-                    "virtual_machine_table": virtual_machine_table,
-                    "vlan_table": vlan_table,
-                }
-            )
+            if ContentType.objects.get_for_model(IPAddress) in context["content_types"]:
+                ipaddress = (
+                    instance.ip_addresses.select_related("status", "tenant")
+                    .restrict(request.user, "view")
+                    .annotate(
+                        interface_count=count_related(Interface, "ip_addresses"),
+                        interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
+                        vm_interface_count=count_related(VMInterface, "ip_addresses"),
+                        vm_interface_parent_count=count_related(
+                            VirtualMachine, "interfaces__ip_addresses", distinct=True
+                        ),
+                    )
+                )
+                ipaddress_table = IPAddressTable(ipaddress)
+                ipaddress_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(ipaddress_table)
+                context["ipaddress_table"] = ipaddress_table
 
+            if ContentType.objects.get_for_model(Prefix) in context["content_types"]:
+                prefixes = instance.prefixes.select_related(
+                    "location",
+                    "status",
+                    "tenant",
+                    "vlan",
+                    "namespace",
+                ).restrict(request.user, "view")
+                prefix_table = PrefixTable(prefixes)
+                prefix_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(prefix_table)
+                context["prefix_table"] = prefix_table
+            if ContentType.objects.get_for_model(Rack) in context["content_types"]:
+                racks = instance.racks.select_related(
+                    "location",
+                    "status",
+                    "tenant",
+                    "rack_group",
+                ).restrict(request.user, "view")
+                rack_table = RackTable(racks)
+                rack_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(rack_table)
+                context["rack_table"] = rack_table
+            if ContentType.objects.get_for_model(VirtualMachine) in context["content_types"]:
+                virtual_machines = instance.virtual_machines.select_related(
+                    "cluster",
+                    "role",
+                    "status",
+                    "tenant",
+                ).restrict(request.user, "view")
+                virtual_machine_table = VirtualMachineTable(virtual_machines)
+                virtual_machine_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(virtual_machine_table)
+                context["virtual_machine_table"] = virtual_machine_table
+
+            if ContentType.objects.get_for_model(VLAN) in context["content_types"]:
+                vlans = instance.vlans.select_related(
+                    "vlan_group",
+                    "location",
+                    "status",
+                    "tenant",
+                ).restrict(request.user, "view")
+                vlan_table = VLANTable(vlans)
+                vlan_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(vlan_table)
+                context["vlan_table"] = vlan_table
         return context
 
 
@@ -1991,11 +2065,11 @@ class SecretsGroupEditView(generic.ObjectEditView):
                 verb = "Created" if object_created else "Modified"
                 msg = f"{verb} {self.queryset.model._meta.verbose_name}"
                 logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                if hasattr(obj, "get_absolute_url"):
-                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
-                else:
-                    msg = f"{msg} {escape(obj)}"
-                messages.success(request, mark_safe(msg))
+                try:
+                    msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+                except AttributeError:
+                    msg = format_html("{} {}", msg, obj)
+                messages.success(request, msg)
 
                 if "_addanother" in request.POST:
                     # If the object has clone_fields, pre-populate a new instance of the form
@@ -2006,8 +2080,8 @@ class SecretsGroupEditView(generic.ObjectEditView):
                     return redirect(request.get_full_path())
 
                 return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(return_url)
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
                 else:
                     return redirect(self.get_return_url(request, obj))
 
@@ -2167,11 +2241,13 @@ class TagBulkEditView(generic.BulkEditView):
     queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
     table = tables.TagTable
     form = forms.TagBulkEditForm
+    filterset = filters.TagFilterSet
 
 
 class TagBulkDeleteView(generic.BulkDeleteView):
     queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
     table = tables.TagTable
+    filterset = filters.TagFilterSet
 
 
 #

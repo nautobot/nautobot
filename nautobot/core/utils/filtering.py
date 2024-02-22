@@ -2,6 +2,7 @@ import re
 
 from django import forms
 from django_filters import (
+    BooleanFilter,
     ChoiceFilter,
     ModelMultipleChoiceFilter,
     MultipleChoiceFilter,
@@ -11,7 +12,6 @@ from django_filters.utils import verbose_lookup_expr
 
 from nautobot.core import exceptions
 from nautobot.core.utils.lookup import get_filterset_for_model
-
 
 # Check if field name contains a lookup expr
 # e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr
@@ -87,16 +87,18 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     Return the relevant form field instance for a filterset parameter e.g DynamicModelMultipleChoiceField, forms.IntegerField e.t.c
     """
     # Avoid circular import
+    from nautobot.core.filters import MultiValueDecimalFilter, MultiValueFloatFilter
+    from nautobot.core.forms import (
+        BOOLEAN_CHOICES,
+        DynamicModelMultipleChoiceField,
+        MultipleContentTypeField,
+        StaticSelect2,
+        StaticSelect2Multiple,
+    )
     from nautobot.dcim.models import Device
     from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, CustomFieldFilterMixin, StatusFilter
     from nautobot.extras.models import ConfigContext, Role, Status, Tag
     from nautobot.extras.utils import ChangeLoggedModelsQuery, RoleModelsQuery, TaggableClassesQuery
-    from nautobot.core.filters import MultiValueDecimalFilter, MultiValueFloatFilter
-    from nautobot.core.forms import (
-        DynamicModelMultipleChoiceField,
-        MultipleContentTypeField,
-        StaticSelect2Multiple,
-    )
     from nautobot.virtualization.models import VirtualMachine
 
     if filterset is None or filterset.Meta.model != model:
@@ -150,11 +152,10 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
                 choices_as_strings=True, queryset=queryset_map[plural_name]().as_queryset()
             )
     elif isinstance(field, (MultipleChoiceFilter, ChoiceFilter)) and "choices" in field.extra:
-        form_field_class = forms.ChoiceField
-        form_field_class.widget = StaticSelect2Multiple()
-        form_attr = {"choices": field.extra.get("choices")}
+        form_field = forms.MultipleChoiceField(choices=field.extra.get("choices"), widget=StaticSelect2Multiple)
 
-        form_field = form_field_class(**form_attr)
+    elif isinstance(field, BooleanFilter):
+        form_field = forms.ChoiceField(choices=BOOLEAN_CHOICES, widget=StaticSelect2)
 
     form_field.required = False
     form_field.initial = None
@@ -170,7 +171,7 @@ def get_filter_field_label(filter_field):
     Return a label for a given field name and value.
 
     Args:
-        field (Filter): The filter to get a label for
+        filter_field (Filter): The filter to get a label for
 
     Returns:
         (str): The label for the given field

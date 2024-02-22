@@ -1,8 +1,7 @@
 from django.test import TestCase
 
-from nautobot.dcim.forms import DeviceForm, InterfaceCreateForm, RackForm
 from nautobot.dcim.choices import DeviceFaceChoices, InterfaceTypeChoices, RackWidthChoices
-
+from nautobot.dcim.forms import DeviceFilterForm, DeviceForm, InterfaceCreateForm, RackForm
 from nautobot.dcim.models import (
     Device,
     DeviceType,
@@ -13,8 +12,8 @@ from nautobot.dcim.models import (
     Platform,
     Rack,
 )
-from nautobot.tenancy.models import Tenant
 from nautobot.extras.models import Role, SecretsGroup, Status
+from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 
 
@@ -148,6 +147,12 @@ class DeviceTestCase(TestCase):
         )
         self.assertFalse(form.is_valid())
         self.assertIn("position", form.errors)
+
+    def test_filter_form_dg_priority_correct_value(self):
+        """Validate the form allows a string separated by a comma for multiple values."""
+        form = DeviceFilterForm(data={"device_redundancy_group_priority": "1,2"})
+        self.assertTrue(form.is_valid())
+        self.assertListEqual(form.cleaned_data["device_redundancy_group_priority"], [1, 2])
 
 
 class LabelTestCase(TestCase):

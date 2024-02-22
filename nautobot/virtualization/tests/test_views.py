@@ -1,8 +1,8 @@
-from django.test import override_settings
 from django.contrib.contenttypes.models import ContentType
+from django.test import override_settings
 from netaddr import EUI
 
-from nautobot.core.testing import ViewTestCases, post_data
+from nautobot.core.testing import post_data, ViewTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, Location, LocationType, Platform
 from nautobot.extras.models import ConfigContextSchema, CustomField, Role, Status, Tag
@@ -315,7 +315,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cf.content_types.set([obj_type])
 
         cls.form_data = {
-            "virtual_machine": virtualmachines[1].pk,
+            "virtual_machine": virtualmachines[0].pk,
             "name": "Interface X",
             "status": status.pk,
             "enabled": False,

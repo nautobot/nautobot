@@ -3,7 +3,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.functional import classproperty
-
 from timezone_field import TimeZoneField
 
 from nautobot.core.models.fields import NaturalOrderingField
@@ -44,6 +43,12 @@ class LocationType(TreeModel, OrganizationalModel):
         default=False,
         help_text="Allow Locations of this type to be parents/children of other Locations of this same type",
     )
+
+    clone_fields = [
+        "parent",
+        "nestable",
+        "content_types",
+    ]
 
     class Meta:
         ordering = ("name",)
@@ -231,7 +236,7 @@ class Location(TreeModel, PrimaryModel):
 
         lookups = []
         name = "name"
-        for _ in range(cls.objects.max_tree_depth() + 1):
+        for _ in range(cls.objects.max_depth + 1):
             lookups.append(name)
             name = f"parent__{name}"
         return lookups

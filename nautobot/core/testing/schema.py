@@ -1,10 +1,10 @@
 from io import StringIO
-import yaml
 
 from django.conf import settings
 from django.core.management import call_command
 from django.test import tag
 from rest_framework.settings import api_settings
+import yaml
 
 from nautobot.core.testing import views
 
@@ -106,7 +106,7 @@ class OpenAPISchemaTestCases:
             - The property's referenced component is polymorphic and has the expected set of model content-types.
 
             Returns:
-                tuple: (ref_component_name, ref_component_schema)
+                (Tuple[ref_component_name, ref_component_schema]): The referenced component's name and schema.
             """
             component_schema = self.get_component_schema(component_name)
 

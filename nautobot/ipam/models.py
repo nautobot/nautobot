@@ -1,13 +1,13 @@
 import logging
 import operator
 
-import netaddr
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError, MultipleObjectsReturned
+from django.core.exceptions import MultipleObjectsReturned, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 from django.utils.functional import cached_property
+import netaddr
 
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField
@@ -19,10 +19,10 @@ from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices, constants
 from nautobot.virtualization.models import VMInterface
+
 from .fields import VarbinaryIPField
 from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet
 from .validators import DNSValidator
-
 
 __all__ = (
     "IPAddress",
@@ -101,10 +101,10 @@ class VRF(PrimaryModel):
     """
 
     name = models.CharField(max_length=100, db_index=True)
-    rd = models.CharField(
+    rd = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- see below
         max_length=constants.VRF_RD_MAX_LENGTH,
         blank=True,
-        null=True,
+        null=True,  # because rd is optional but part of a uniqueness constraint
         verbose_name="Route distinguisher",
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
@@ -257,6 +257,7 @@ class VRF(PrimaryModel):
         return instance.delete()
 
 
+@extras_features("graphql")
 class VRFDeviceAssignment(BaseModel):
     vrf = models.ForeignKey("ipam.VRF", on_delete=models.CASCADE, related_name="device_assignments")
     device = models.ForeignKey(
@@ -265,10 +266,10 @@ class VRFDeviceAssignment(BaseModel):
     virtual_machine = models.ForeignKey(
         "virtualization.VirtualMachine", null=True, blank=True, on_delete=models.CASCADE, related_name="vrf_assignments"
     )
-    rd = models.CharField(
+    rd = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- see below
         max_length=constants.VRF_RD_MAX_LENGTH,
         blank=True,
-        null=True,
+        null=True,  # because rd is optional but (will be) part of a uniqueness constraint
         verbose_name="Route distinguisher",
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
@@ -306,6 +307,7 @@ class VRFDeviceAssignment(BaseModel):
             raise ValidationError("A VRF must be associated with either a device or a virtual machine.")
 
 
+@extras_features("graphql")
 class VRFPrefixAssignment(BaseModel):
     vrf = models.ForeignKey("ipam.VRF", on_delete=models.CASCADE, related_name="+")
     prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="vrf_assignments")
@@ -432,6 +434,7 @@ class Prefix(PrimaryModel):
         null=True,
         editable=False,
         db_index=True,
+        verbose_name="IP Version",
     )
     location = models.ForeignKey(
         to="dcim.Location",
@@ -529,8 +532,6 @@ class Prefix(PrimaryModel):
     def __str__(self):
         return str(self.prefix)
 
-    natural_key_field_names = ["namespace", "prefix"]
-
     def _deconstruct_prefix(self, prefix):
         if prefix:
             if isinstance(prefix, str):
@@ -616,6 +617,8 @@ class Prefix(PrimaryModel):
     def save(self, *args, **kwargs):
         if isinstance(self.prefix, netaddr.IPNetwork):
             # Clear host bits from prefix
+            # This also has the subtle side effect of calling self._deconstruct_prefix(),
+            # which will (re)set the broadcast and ip_version values of this instance to their correct values.
             self.prefix = self.prefix.cidr
 
         # Determine if a parent exists and set it to the closest ancestor by `prefix_length`.
@@ -1040,18 +1043,14 @@ class IPAddress(PrimaryModel):
         verbose_name_plural = "IP addresses"
         unique_together = ["parent", "host"]
 
-    def __init__(self, *args, **kwargs):
-        address = kwargs.pop("address", None)
-        namespace = kwargs.pop("namespace", None)
-        # We don't want users providing their own parent since it will be derived automatically.
-        parent = kwargs.pop("parent", None)
-        # If namespace wasn't provided, but parent was, we'll use the parent's namespace.
-        if namespace is None and parent is not None:
-            namespace = parent.namespace
-        self._namespace = namespace
-
+    def __init__(self, *args, address=None, namespace=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self._deconstruct_address(address)
+
+        if namespace is not None and not self.present_in_database:
+            self._provided_namespace = namespace
+
+        if address is not None and not self.present_in_database:
+            self._deconstruct_address(address)
 
     def __str__(self):
         return str(self.address)
@@ -1066,6 +1065,26 @@ class IPAddress(PrimaryModel):
 
     natural_key_field_names = ["parent__namespace", "host"]
 
+    def _get_closest_parent(self):
+        # TODO: Implement proper caching of `closest_parent` and ensure the cache is invalidated when
+        #  `_namespace` changes. Currently, `_get_closest_parent` is called twice, in the `clean` and `save` methods.
+        #  Caching would improve performance.
+
+        # Host and maxlength are required to get the closest_parent
+        empty_values = [None, b"", ""]
+        if self.host in empty_values or self.mask_length in empty_values:
+            return None
+        try:
+            closest_parent = (
+                Prefix.objects.filter(namespace=self._namespace)
+                # 3.0 TODO: disallow IPAddress from parenting to a TYPE_POOL prefix, instead pick closest TYPE_NETWORK
+                # .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
+                .get_closest_parent(self.host, include_self=True)
+            )
+            return closest_parent
+        except Prefix.DoesNotExist as e:
+            raise ValidationError({"namespace": "No suitable parent Prefix exists in this Namespace"}) from e
+
     def clean(self):
         super().clean()
 
@@ -1079,30 +1098,38 @@ class IPAddress(PrimaryModel):
         if self.type == choices.IPAddressTypeChoices.TYPE_SLAAC and self.ip_version != 6:
             raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
 
-        # Force dns_name to lowercase
-        self.dns_name = self.dns_name.lower()
+        closest_parent = self._get_closest_parent()
+        # Validate `parent` can be used as the parent for this ipaddress
+        if self.parent and closest_parent:
+            if self.parent != closest_parent:
+                raise ValidationError(
+                    {
+                        "parent": (
+                            f"{self.parent} cannot be assigned as the parent of {self}. "
+                            f" In namespace {self._namespace}, the expected parent would be {closest_parent}."
+                        )
+                    }
+                )
+            self.parent = closest_parent
+            self._namespace = None
 
     def save(self, *args, **kwargs):
-        if not self.present_in_database:
-            if self._namespace is None:
-                raise ValidationError({"parent": "Namespace could not be determined."})
-            namespace = self._namespace
-        else:
-            namespace = self._namespace or self.parent.namespace
-
-        # Determine the closest parent automatically based on the Namespace.
-        self.parent = (
-            Prefix.objects.filter(namespace=namespace)
-            # 3.0 TODO: disallow IPAddress from parenting to a TYPE_POOL prefix, instead pick closest TYPE_NETWORK
-            # .exclude(type=choices.PrefixTypeChoices.TYPE_POOL)
-            .get_closest_parent(self.host, include_self=True)
-        )
-
         # 3.0 TODO: uncomment the below to enforce this constraint
         # if self.parent.type != choices.PrefixTypeChoices.TYPE_NETWORK:
         #     err_msg = f"IP addresses cannot be created in {self.parent.type} prefixes. You must create a network prefix first."
         #     raise ValidationError({"address": err_msg})
 
+        self.address = self.address  # not a no-op - forces re-calling of self._deconstruct_address()
+
+        # Force dns_name to lowercase
+        if not self.dns_name.islower:
+            self.dns_name = self.dns_name.lower()
+
+        # Host and mask_length are required to get closest parent
+        closest_parent = self._get_closest_parent()
+        if closest_parent is not None:
+            self.parent = closest_parent
+            self._namespace = None
         super().save(*args, **kwargs)
 
     @property
@@ -1149,6 +1176,22 @@ class IPAddress(PrimaryModel):
 
         return query
 
+    @property
+    def _namespace(self):
+        # if a namespace was explicitly set, use it
+        if getattr(self, "_provided_namespace", None):
+            return self._provided_namespace
+        if self.parent is not None:
+            return self.parent.namespace
+        return get_default_namespace()
+
+    @_namespace.setter
+    def _namespace(self, namespace):
+        # unset parent when namespace is changed
+        if namespace:
+            self.parent = None
+        self._provided_namespace = namespace
+
     # 2.0 TODO: Remove exception, getter, setter below when we can safely deprecate previous properties
     class NATOutsideMultipleObjectsReturned(MultipleObjectsReturned):
         """
@@ -1162,8 +1205,9 @@ class IPAddress(PrimaryModel):
             return f"Multiple IPAddress objects specify this object (pk: {self.obj.pk}) as nat_inside. Please refer to nat_outside_list."
 
 
+@extras_features("graphql")
 class IPAddressToInterface(BaseModel):
-    ip_address = models.ForeignKey("ipam.IPAddress", on_delete=models.CASCADE, related_name="+")
+    ip_address = models.ForeignKey("ipam.IPAddress", on_delete=models.CASCADE, related_name="interface_assignments")
     interface = models.ForeignKey(
         "dcim.Interface", blank=True, null=True, on_delete=models.CASCADE, related_name="ip_address_assignments"
     )
@@ -1187,6 +1231,8 @@ class IPAddressToInterface(BaseModel):
             ["ip_address", "interface"],
             ["ip_address", "vm_interface"],
         ]
+        verbose_name = "IP Address Assignment"
+        verbose_name_plural = "IP Address Assignments"
 
     def clean(self):
         super().clean()

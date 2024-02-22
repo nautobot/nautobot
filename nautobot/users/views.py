@@ -12,14 +12,15 @@ from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.decorators import method_decorator
-from django.utils.http import is_safe_url
+from django.utils.encoding import iri_to_uri
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
 from nautobot.core.forms import ConfirmationForm
-from .forms import LoginForm, PasswordChangeForm, TokenForm
-from .models import Token
 
+from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, TokenForm
+from .models import Token
 
 #
 # Login/logout
@@ -32,6 +33,7 @@ class LoginView(View):
     """
 
     template_name = "login.html"
+    use_new_ui = True
 
     @method_decorator(sensitive_post_parameters("password"))
     def dispatch(self, *args, **kwargs):
@@ -82,12 +84,12 @@ class LoginView(View):
         else:
             redirect_to = request.GET.get("next", reverse("home"))
 
-        if redirect_to and not is_safe_url(url=redirect_to, allowed_hosts=request.get_host()):
+        if redirect_to and not url_has_allowed_host_and_scheme(url=redirect_to, allowed_hosts=request.get_host()):
             logger.warning(f"Ignoring unsafe 'next' URL passed to login form: {redirect_to}")
             redirect_to = reverse("home")
 
         logger.debug(f"Redirecting user to {redirect_to}")
-        return HttpResponseRedirect(redirect_to)
+        return HttpResponseRedirect(iri_to_uri(redirect_to))
 
 
 class LogoutView(View):
@@ -325,5 +327,55 @@ class TokenDeleteView(LoginRequiredMixin, View):
                 "obj_type": token._meta.verbose_name,
                 "form": form,
                 "return_url": reverse("user:token_list"),
+            },
+        )
+
+
+#
+# Advanced Profile Settings
+#
+
+
+class AdvancedProfileSettingsEditView(LoginRequiredMixin, View):
+    template_name = "users/advanced_settings_edit.html"
+
+    def get(self, request):
+        silk_record_requests = request.session.get("silk_record_requests", False)
+        form = AdvancedProfileSettingsForm(initial={"request_profiling": silk_record_requests})
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "active_tab": "advanced_settings",
+                "return_url": reverse("user:advanced_settings_edit"),
+                "is_django_auth_user": is_django_auth_user(request),
+            },
+        )
+
+    def post(self, request):
+        form = AdvancedProfileSettingsForm(request.POST)
+
+        if form.is_valid():
+            silk_record_requests = form.cleaned_data["request_profiling"]
+
+            # Set the value for `silk_record_requests` in the session
+            request.session["silk_record_requests"] = silk_record_requests
+
+            if silk_record_requests:
+                msg = "Enabled request profiling for the duration of the login session."
+            else:
+                msg = "Disabled request profiling."
+            messages.success(request, msg)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "active_tab": "advanced_settings",
+                "return_url": reverse("user:advanced_settings_edit"),
+                "is_django_auth_user": is_django_auth_user(request),
             },
         )
