@@ -42,7 +42,7 @@ Install the system dependencies as `root`:
 sudo apt install -y libxmlsec1-dev libxmlsec1-openssl pkg-config
 ```
 
-Install the `sso` Python extra as the `nautobot` user.  It is included in the standard docker image but the system dependencies are not.
+Install the `sso` Python extra as the `nautobot` user.
 
 ```no-highlight
 pip3 install "nautobot[sso]"
@@ -492,10 +492,10 @@ class MetadataView(View):
     def get(self, request):
         complete_url = reverse("social:complete", args=("saml",))
         saml_backend = load_backend(
-                load_strategy(request),
-                "saml",
-                redirect_uri=complete_url,
-            )
+            load_strategy(request),
+            "saml",
+            redirect_uri=complete_url,
+        )
         try:
             metadata, errors = saml_backend.generate_metadata_xml()
             if not errors:
@@ -504,7 +504,7 @@ class MetadataView(View):
             config = saml_backend.generate_saml_config()
             return HttpResponse(
                 content=f"ERROR: {saml_error}, SAML backend config is {config}",
-                content_type="text/xml"
+                content_type="text/plain"
             )
 ```
 
