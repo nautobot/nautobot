@@ -104,7 +104,7 @@ class ChangeLoggedModelsQuery(FeaturedQueryMixin):
         return [_class for _class in apps.get_models() if hasattr(_class, "to_objectchange")]
 
 
-@lru_cache
+@lru_cache(maxsize=5)
 def change_logged_models_queryset():
     """
     Cacheable function for cases where we need this queryset many times, such as when saving multiple objects.
