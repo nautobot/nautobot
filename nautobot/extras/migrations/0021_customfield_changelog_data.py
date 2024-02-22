@@ -95,6 +95,8 @@ def migrate_history(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
+        ("admin", "0001_initial"),
+        ("contenttypes", "0001_initial"),
         ("extras", "0020_customfield_changelog"),
     ]
 
