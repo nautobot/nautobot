@@ -1,1 +1,0 @@
-Provides ability to overload the default `PERMISSIONS_ACTION_MAP` for a viewset.
