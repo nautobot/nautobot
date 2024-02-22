@@ -10,7 +10,9 @@ from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.core.testing import TestCase
+from nautobot.core.testing.api import APITestCase
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.views import NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.dcim.models.locations import Location
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -355,6 +357,24 @@ class MetricsViewTestCase(TestCase):
         self.assertSetEqual(metric_names_with_plugin, metric_names_without_plugin)
 
 
+class AuthenticateMetricsTestCase(APITestCase):
+    def test_metrics_authentication(self):
+        """Assert that if metrics require authentication, a user not logged in gets a 403."""
+        self.client.logout()
+        headers = {}
+        response = self.client.get(reverse("metrics"), **headers)
+        self.assertHttpStatus(response, 403, msg="/metrics should return a 403 HTTP status code.")
+
+    def test_metrics(self):
+        """Assert that if metrics don't require authentication, a user not logged in gets a 200."""
+        self.factory = RequestFactory()
+        self.client.logout()
+
+        request = self.factory.get("/")
+        response = NautobotMetricsView.as_view()(request)
+        self.assertHttpStatus(response, 200, msg="/metrics should return a 200 HTTP status code.")
+
+
 class ErrorPagesTestCase(TestCase):
     """Tests for 4xx and 5xx error page rendering."""
 
@@ -450,3 +470,31 @@ class DBFileStorageViewTestCase(TestCase):
         url = f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_2.file.name}"
         response = self.client.get(url)
         self.assertHttpStatus(response, 404)
+
+
+class SilkUIAccessTestCase(TestCase):
+    """Test access control related to the django-silk UI"""
+
+    def test_access_for_non_superuser(self):
+        # Login as non-superuser
+        self.user.is_superuser = False
+        self.user.save()
+        self.client.force_login(self.user)
+
+        # Attempt to access the view
+        response = self.client.get(reverse("silk:summary"))
+
+        # Check for redirect or forbidden status code (302 or 403)
+        self.assertIn(response.status_code, [302, 403])
+
+    def test_access_for_superuser(self):
+        # Login as superuser
+        self.user.is_superuser = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        # Attempt to access the view
+        response = self.client.get(reverse("silk:summary"))
+
+        # Check for success status code (e.g., 200)
+        self.assertEqual(response.status_code, 200)

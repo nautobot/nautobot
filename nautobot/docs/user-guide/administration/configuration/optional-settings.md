@@ -44,6 +44,16 @@ EXTRA_INSTALLED_APPS = [
 This will ensure your default setting's `INSTALLED_APPS` do not have to be modified, and the user
 can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can be added using `EXTRA_MIDDLEWARE`.
 
+### ALLOW_REQUEST_PROFILING
+
+Default: `False`
+
+Global setting to allow or deny users from enabling request profiling on their login session.
+
+See the administration guide on [request profiling](../guides/request-profiling.md) for more information.
+
+---
+
 ## ALLOWED_URL_SCHEMES
 
 Default: `('file', 'ftp', 'ftps', 'http', 'https', 'irc', 'mailto', 'sftp', 'ssh', 'tel', 'telnet', 'tftp', 'vnc', 'xmpp')`
@@ -668,6 +678,16 @@ Default: `False`
 Environment Variable: `NAUTOBOT_METRICS_ENABLED`
 
 Toggle the availability Prometheus-compatible metrics at `/metrics`. See the [Prometheus Metrics](../guides/prometheus-metrics.md) documentation for more details.
+
+---
+
+## METRICS_AUTHENTICATED
+
+Default: `False`
+
+Environment Variable: `NAUTOBOT_METRICS_AUTHENTICATED`
+
+Toggle requiring authentication to view `/metrics`. See the [Prometheus Metrics](../guides/prometheus-metrics.md) documentation for more details.
 
 ---
 
@@ -1356,6 +1376,9 @@ Please see the [official Django documentation on `STATIC_ROOT`](https://docs.dja
 Default: `"UTC"`
 
 Environment Variable: `NAUTOBOT_TIME_ZONE`
+
+!!! warning
+    Scheduled jobs will run in the time zone configured in this setting. If you change this setting from the default UTC, you must change it on the Celery Beat server and all Nautobot web servers or your scheduled jobs may run in the wrong time zone.
 
 The time zone Nautobot will use when dealing with dates and times. It is recommended to use UTC time unless you have a specific need to use a local time zone. Please see the [list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
 

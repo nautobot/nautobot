@@ -15,6 +15,8 @@ def migrate_null_statuses(apps, schema):
 class Migration(migrations.Migration):
     dependencies = [
         ("circuits", "0016_tagsfield"),
+        ("contenttypes", "0002_remove_content_type_name"),
+        ("extras", "0001_initial_part_1"),
     ]
 
     operations = [
