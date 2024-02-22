@@ -1305,7 +1305,7 @@ class ControllerDeviceGroupAssociation(BaseModel):
         blank=False,
         null=False,
     )
-    device = models.ForeignKey(
+    device_group = models.ForeignKey(
         to="dcim.DeviceGroup",
         on_delete=models.CASCADE,
         related_name="+",
