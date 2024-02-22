@@ -1,1 +1,0 @@
-Fix deleting git repository results in creation of job result stuck in running state.
