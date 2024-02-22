@@ -1,2 +1,1 @@
 Fixed Brand Icon mouseover Background: Fix for mouseover effect on the Brand / Icon (was flashing white background vs being transparent) when in dark mode.
-Fixed Menu Button alignment Behavior: Fix that prevents menu item buttons from wrapping. Previously menu item buttons might stack on top of each other and look misaligned if there were more than one button. 
