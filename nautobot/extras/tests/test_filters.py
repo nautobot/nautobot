@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import Q
-from django.test import override_settings
+from django.test import override_settings, RequestFactory
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import FilterTestCases
@@ -30,6 +30,7 @@ from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.filters import (
     ComputedFieldFilterSet,
     ConfigContextFilterSet,
+    ContactFilterSet,
     ContentTypeFilterSet,
     CustomFieldChoiceFilterSet,
     CustomLinkFilterSet,
@@ -53,11 +54,13 @@ from nautobot.extras.filters import (
     SecretsGroupFilterSet,
     StatusFilterSet,
     TagFilterSet,
+    TeamFilterSet,
     WebhookFilterSet,
 )
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
+    Contact,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -81,6 +84,7 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
@@ -344,6 +348,16 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = ContentType.objects.order_by("app_label", "model")
     filterset = ContentTypeFilterSet
+    user_permissions = [
+        "dcim.add_location",
+        "extras.change_status",
+        "ipam.delete_prefix",
+        "tenancy.view_tenant",
+    ]
+
+    def setUp(self):
+        super().setUp()
+        self.factory = RequestFactory(SERVER_NAME="nautobot.example.com")
 
     def test_app_label(self):
         params = {"app_label": ["dcim"]}
@@ -355,12 +369,105 @@ class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
             self.filterset(params, self.queryset).qs, self.queryset.filter(model__in=["device", "virtualmachine"])
         )
 
+    def test_can_add(self):
+        # With no request user, can't add anything
+        params = {"can_add": True}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+        params = {"can_add": False}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset)
+        # With user, filter by permissions
+        request = self.factory.get("/api/extras/content-types/")
+        request.user = self.user
+        params = {"can_add": True}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.filter(app_label="dcim", model="location"),
+        )
+        params = {"can_add": False}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.exclude(app_label="dcim", model="location"),
+        )
+
+    def test_can_change(self):
+        # With no request user, can't change anything
+        params = {"can_change": True}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+        params = {"can_change": False}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset)
+        # With user, filter by permissions
+        request = self.factory.get("/api/extras/content-types/")
+        request.user = self.user
+        params = {"can_change": True}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.filter(app_label="extras", model="status"),
+        )
+        params = {"can_change": False}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.exclude(app_label="extras", model="status"),
+        )
+
+    def test_can_delete(self):
+        # With no request user, can't delete anything
+        params = {"can_delete": True}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+        params = {"can_delete": False}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset)
+        # With user, filter by permissions
+        request = self.factory.get("/api/extras/content-types/")
+        request.user = self.user
+        params = {"can_delete": True}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.filter(app_label="ipam", model="prefix"),
+        )
+        params = {"can_delete": False}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.exclude(app_label="ipam", model="prefix"),
+        )
+
+    def test_can_view(self):
+        # With no request user, can't view anything
+        params = {"can_view": True}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+        params = {"can_view": False}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset)
+        # With user, filter by permissions
+        request = self.factory.get("/api/extras/content-types/")
+        request.user = self.user
+        params = {"can_view": True}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.filter(app_label="tenancy", model="tenant"),
+        )
+        params = {"can_view": False}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.exclude(app_label="tenancy", model="tenant"),
+        )
+
     def test_search(self):
         params = {"q": "circ"}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(Q(app_label__icontains="circ") | Q(model__icontains="circ")),
         )
+
+
+class ContactFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = Contact.objects.all()
+    filterset = ContactFilterSet
+
+    generic_filter_tests = (
+        ["name"],
+        ["phone"],
+        ["email"],
+        ["address"],
+        ["comments"],
+    )
 
 
 class CustomFieldChoiceFilterSetTestCase(FilterTestCases.FilterTestCase):
@@ -557,6 +664,34 @@ class ExternalIntegrationTestCase(FilterTestCases.FilterTestCase):
         external_integrations[1].secrets_group = secrets_groups[1]
         for ei in external_integrations:
             ei.validated_save()
+
+    def test_search(self):
+        match_name = self.queryset.values_list("name", flat=True)[0].upper()
+        params = {"q": match_name}
+        expected_matches = (
+            Q(id__iexact=match_name) | Q(name__icontains=match_name) | Q(remote_url__icontains=match_name)  # pylint: disable=unsupported-binary-operation
+        )
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(expected_matches)
+        )
+
+        match_remote_url = self.queryset.values_list("remote_url", flat=True)[0].upper()
+        expected_matches = (
+            Q(id__iexact=match_remote_url)  # pylint: disable=unsupported-binary-operation
+            | Q(name__icontains=match_remote_url)
+            | Q(remote_url__icontains=match_remote_url)
+        )
+        params = {"q": match_remote_url}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(expected_matches)
+        )
+
+        match_pk = str(self.queryset.values_list("pk", flat=True)[0]).title()
+        expected_matches = Q(id__iexact=match_pk) | Q(name__icontains=match_pk) | Q(remote_url__icontains=match_pk)  # pylint: disable=unsupported-binary-operation
+        params = {"q": match_pk}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(expected_matches)
+        )
 
     def test_verify_ssl(self):
         params = {"verify_ssl": True}
@@ -1619,6 +1754,19 @@ class TagTestCase(FilterTestCases.NameOnlyFilterTestCase):
         value = self.queryset.values_list("pk", flat=True)[0]
         params = {"q": value}
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
+
+
+class TeamFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = Team.objects.all()
+    filterset = TeamFilterSet
+
+    generic_filter_tests = (
+        ["name"],
+        ["phone"],
+        ["email"],
+        ["address"],
+        ["comments"],
+    )
 
 
 class WebhookTestCase(FilterTestCases.FilterTestCase):

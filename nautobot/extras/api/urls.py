@@ -14,6 +14,10 @@ router.register("config-contexts", views.ConfigContextViewSet)
 # Config context schemas
 router.register("config-context-schemas", views.ConfigContextSchemaViewSet)
 
+# Contacts
+router.register("contacts", views.ContactViewSet)
+router.register("contact-associations", views.ContactAssociationViewSet)
+
 # ContentTypes
 router.register("content-types", views.ContentTypeViewSet)
 
@@ -88,6 +92,9 @@ router.register("statuses", views.StatusViewSet)
 
 # Tags
 router.register("tags", views.TagViewSet)
+
+# Teams
+router.register("teams", views.TeamViewSet)
 
 # Webhooks
 router.register("webhooks", views.WebhooksViewSet)

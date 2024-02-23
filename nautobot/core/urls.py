@@ -8,7 +8,8 @@ from nautobot.core.views import (
     CustomGraphQLView,
     get_file_with_authorization,
     HomeView,
-    nautobot_metrics_view,
+    NautobotMetricsView,
+    NautobotMetricsViewAuth,
     SearchView,
     StaticMediaFailureView,
     ThemePreviewView,
@@ -60,12 +61,6 @@ urlpatterns = [
         {"add_attachment_headers": True},
         name="db_file_storage.download_file",
     ),
-    url(
-        "files/get/",
-        get_file_with_authorization,
-        {"add_attachment_headers": False},
-        name="db_file_storage.get_file",
-    ),
     # Templated css file
     path(
         "template.css", TemplateView.as_view(template_name="template.css", content_type="text/css"), name="template_css"
@@ -85,9 +80,16 @@ if settings.DEBUG:
         pass
 
 if settings.METRICS_ENABLED:
-    urlpatterns += [
-        path("metrics/", nautobot_metrics_view, name="metrics"),
-    ]
+    if settings.METRICS_AUTHENTICATED:
+        urlpatterns += [
+            path("metrics/", NautobotMetricsViewAuth.as_view(), name="metrics"),
+        ]
+    else:
+        urlpatterns += [
+            path("metrics/", NautobotMetricsView.as_view(), name="metrics"),
+        ]
 
 handler404 = "nautobot.core.views.resource_not_found"
 handler500 = "nautobot.core.views.server_error"
+
+urlpatterns += [path("silk/", include("silk.urls", namespace="silk"))]

@@ -47,7 +47,7 @@ def get_model_from_name(model_name):
 def get_route_for_model(model, action, api=False):
     """
     Return the URL route name for the given model and action. Does not perform any validation.
-    Supports both core and plugin routes.
+    Supports both core and App routes.
 
     Args:
         model (models.Model, str): Class, Instance, or dotted string of a Django Model
@@ -67,9 +67,9 @@ def get_route_for_model(model, action, api=False):
         >>> get_route_for_model("dcim.location", "list", api=True)
         "dcim-api:location-list"
         >>> get_route_for_model(ExampleModel, "list")
-        "plugins:example_plugin:examplemodel_list"
+        "plugins:example_app:examplemodel_list"
         >>> get_route_for_model(ExampleModel, "list", api=True)
-        "plugins-api:example_plugin-api:examplemodel-list"
+        "plugins-api:example_app-api:examplemodel-list"
     """
 
     if isinstance(model, str):
@@ -190,6 +190,20 @@ def get_table_for_model(model):
         (Union[Table, None]): Either the `Table` class or `None`
     """
     return get_related_class_for_model(model, module_name="tables", object_suffix="Table")
+
+
+def get_view_for_model(model, view_type=""):
+    """Return the `UIViewSet` or `<view_type>View` class associated with a given `model`.
+
+    The view class is expected to be in the `views` module within the app associated with the model,
+    and its name is expected to be either `{ModelName}UIViewSet` or `{ModelName}{view_type}View`.
+
+    If neither view class is found, this will return `None`.
+    """
+    result = get_related_class_for_model(model, module_name="views", object_suffix="UIViewSet")
+    if result is None:
+        result = get_related_class_for_model(model, module_name="views", object_suffix=f"{view_type}View")
+    return result
 
 
 def get_created_and_last_updated_usernames_for_model(instance):

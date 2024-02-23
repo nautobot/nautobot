@@ -72,6 +72,7 @@ class VirtualMachineViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         "primary_ip6",
         "status",
         "role",
+        "software_version",
         "tenant",
     ).prefetch_related("tags")
     serializer_class = serializers.VirtualMachineSerializer

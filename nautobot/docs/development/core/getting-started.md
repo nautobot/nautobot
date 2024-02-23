@@ -193,6 +193,8 @@ If you run into issues, you may also deliberately tell `pip3` to install into yo
 pip3 install --user invoke
 ```
 
+If you encounter an [`externally-managed-environment`](https://peps.python.org/pep-0668/) error, you may need to install invoke through your OS's package manager. For example, `apt-get install python3-invoke` for Debian.
+
 Please see the [official documentation on Pip user installs](https://pip.pypa.io/en/stable/user_guide/#user-installs) for more information.
 
 #### List Invoke Tasks
@@ -247,11 +249,13 @@ Available tasks:
 
 #### Using Docker with Invoke
 
++/- 2.1.2
+    The Docker dev environment creates a superuser account by default with the username and password "admin". To disable this behavior, you must set the environment variable `NAUTOBOT_CREATE_SUPERUSER=false` using an [override file](./docker-compose-advanced-use-cases.md#docker-compose-overrides).
+
 A development environment can be easily started up from the root of the project using the following commands:
 
 * `invoke build` - Builds Nautobot docker images
 * `invoke migrate` - Performs database migration operation in Django
-* `invoke createsuperuser` - Creates a superuser account for the Nautobot application
 * `invoke debug` - Starts Docker containers for Nautobot, PostgreSQL, Redis, Celery, and Celery Beat in debug mode and attaches their output to the terminal in the foreground. You may enter Control-C to stop the containers
 
 Additional useful commands for the development environment:
@@ -259,9 +263,10 @@ Additional useful commands for the development environment:
 * `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, NGINX, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background with debug disabled
 * `invoke cli [-s servicename]` - Launch a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
 * `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
+* `invoke createsuperuser` - Creates a superuser account for the Nautobot application
 
 !!! note
-    The `mkdocs` and `storybook` containers (see later) are not started automatically by `invoke start` or `invoke debug`. If desired, these may be started manually with `invoke start -s mkdocs` or `invoke start -s storybook` as appropriate.
+    The `mkdocs` container is not started automatically by `invoke start` or `invoke debug`. If desired, this container may be started manually with `invoke start -s mkdocs`.
 
 !!! tip
     The Nautobot server uses a Django webservice and worker uses watchdog to provide automatic reload of your web and worker servers in **most** cases when using `invoke start` or `invoke debug`.
@@ -466,6 +471,9 @@ Below are common commands for working your development environment.
 
 ### Creating a Superuser
 
++/- 2.1.2
+    The Docker dev environment creates a superuser account by default with the username and password "admin". To disable this behavior, you must set the environment variable `NAUTOBOT_CREATE_SUPERUSER=false` using an [override file](./docker-compose-advanced-use-cases.md#docker-compose-overrides).
+
 You'll need to create a administrative superuser account to be able to log into the Nautobot Web UI for the first time. Specifying an email address for the user is not required, but be sure to use a very strong password.
 
 | Docker Compose Workflow  | Virtual Environment Workflow      |
@@ -624,20 +632,40 @@ Unit tests are run using the `invoke unittest` command (if using the Docker deve
 !!! info
     By default `invoke unittest` will start and run the unit tests inside the Docker development container; this ensures that PostgreSQL and Redis servers are available during the test. However, if you have your environment configured such that `nautobot-server` can run locally, outside of the Docker environment, you may wish to set the environment variable `INVOKE_NAUTOBOT_LOCAL=True` to execute these tests in your local environment instead.
 
-In cases where you haven't made any changes to the database (which is most of the time), you can append the `--keepdb` argument to this command to reuse the test database between runs. This cuts down on the time it takes to run the test suite since the database doesn't have to be rebuilt each time.
+##### Useful Unit Test Parameters
 
-| Docker Compose Workflow    | Virtual Environment Workflow                                                             |
-| -------------------------- | ---------------------------------------------------------------------------------------- |
-| `invoke unittest --keepdb` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test --keepdb nautobot` |
+The `invoke unittest` command supports a number of optional parameters to influence its behavior. Careful use of these parameters can greatly reduce the time it takes to run and re-run tests during development.
 
-!!! note
-    Using the `--keepdb` argument will raise errors if you've modified any model fields since the previous test run.
+* `--cache-test-fixtures` - Cache [test factory data](./testing.md#factory-caching) to disk, or if a cache is already present, load from that cache when initializing the test environment. Can significantly improve the initial startup time of the test suite after your first test run.
+* `--failfast` - Fail as soon as any test failure or error condition is encountered, instead of running to completion.
+* `--keepdb` - Save and reuse the initialized test database between test runs. Can significantly improve the initial startup time of the test suite after your first test run. **Do not use if you're actively making changes to model definitions or migrations.**
+* `--label <module.path>` - Only run the specific subset of tests. Can be broad (`--label nautobot.core.tests`) or specific (`--label nautobot.core.tests.test_graphql.GraphQLQueryTestCase`).
+* `--no-buffer` - Allow stdout/stderr output from the test to be seen in your terminal, instead of being hidden. **If you're debugging code with `breakpoint()`, you should use this option, as otherwise you'll never see the breakpoint happen.**
+* `--parallel` - Split the tests across multiple parallel subprocesses. Can greatly reduce the runtime of the entire test suite when used.
+* `--skip-docs-build` - Skip building/rebuilding the static Nautobot documentation before running the test. Saves some time on reruns when you haven't changed the documentation source files.
+* `--verbose` - Run tests more verbosely, including describing each test case as it is run.
 
-!!! warning
-    In some cases when tests fail and exit uncleanly it may leave the test database in an inconsistent state. If you encounter errors about missing objects, remove `--keepdb` and run the tests again.
+##### Unit Test Invocation Examples
 
-+/- 1.5.11
-    The `--cache-test-fixtures` argument was added to the `invoke unittest` and `nautobot-server test` commands to allow for caching of test factory data between test runs. See the [factories documentation](./testing.md#factory-caching) for more information.
+In general, when you first run the Nautobot tests in your local copy of the repository, we'd recommend:
+
+```no-highlight
+invoke unittest --cache-test-fixtures --keepdb --parallel
+```
+
+On subsequent reruns, you can add the other performance-related options:
+
+```no-highlight
+invoke unittest --cache-test-fixtures --keepdb --parallel --skip-docs-build
+invoke unittest --cache-test-fixtures --keepdb --parallel --skip-docs-build --label nautobot.core.tests
+```
+
+When switching between significantly different branches of the code base (e.g. `main` vs `develop` vs `next`), you'll need to remove the cached test factory data, and for once omit the `--keepdb` option so that the test database can be destroyed and recreated appropriately:
+
+```no-highlight
+rm development/factory_dump.json
+invoke unittest --cache-test-fixtures --parallel
+```
 
 #### Integration Tests
 
@@ -663,7 +691,7 @@ Integration tests are run using the `invoke integration-test` command. All integ
 | `invoke integration-test` | `nautobot-server --config=nautobot/core/tests/nautobot_config.py test --tag integration nautobot` |
 
 !!! info
-    The same arguments supported by `invoke unittest` are supported by `invoke integration-test`. The key difference being the dependency upon the Selenium container, and inclusion of the `integration` tag.
+    The same arguments supported by `invoke unittest` are supported by `invoke integration-test`, with the exception of `--parallel` at this time. The key difference being the dependency upon the Selenium container, and inclusion of the `integration` tag.
 
 !!! tip
     You may also use `invoke integration-test` in the Virtual Environment workflow given that the `selenium` container is running, and that the `INVOKE_NAUTOBOT_LOCAL=True` environment variable has been set.

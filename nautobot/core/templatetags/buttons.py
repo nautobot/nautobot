@@ -102,10 +102,21 @@ def add_button(url):
 
 
 @register.inclusion_tag("buttons/import.html")
-def import_button(url):
+def import_button(url):  # 3.0 TODO: remove, unused
+    """Deprecated - use job_import_button instead."""
     return {
         "import_url": url,
     }
+
+
+@register.inclusion_tag("buttons/job_import.html")
+def job_import_button(content_type):
+    try:
+        import_url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"})
+        import_url += f"?content_type={content_type.id}"
+    except NoReverseMatch:
+        import_url = None
+    return {"import_url": import_url}
 
 
 @register.inclusion_tag("buttons/export.html", takes_context=True)

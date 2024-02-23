@@ -1,4 +1,3 @@
-from io import BytesIO
 import logging
 
 from django.contrib import messages
@@ -29,7 +28,6 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -44,6 +42,7 @@ from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import (
     get_csv_form_fields_from_serializer_class,
     handle_protectederror,
+    import_csv_helper,
     prepare_cloned_fields,
 )
 from nautobot.extras.forms import NoteForm
@@ -57,7 +56,7 @@ PERMISSIONS_ACTION_MAP = {
     "destroy": "delete",
     "create": "add",
     "update": "change",
-    "bulk_create": "add",
+    "bulk_create": "add",  # 3.0 TODO: remove, replaced by system Job
     "bulk_destroy": "delete",
     "bulk_update": "change",
     "changelog": "view",
@@ -173,7 +172,7 @@ class GetReturnURLMixin:
 
     default_return_url = None
 
-    def get_return_url(self, request, obj=None):
+    def get_return_url(self, request, obj=None, default_return_url=None):
         # First, see if `return_url` was specified as a query parameter or form data. Use this URL only if it's
         # considered safe.
         query_param = request.GET.get("return_url") or request.POST.get("return_url")
@@ -190,6 +189,9 @@ class GetReturnURLMixin:
         except AttributeError:
             # Model has no get_absolute_url() method or no reverse match
             pass
+
+        if default_return_url is not None:
+            return reverse(default_return_url)
 
         # Fall back to the default URL (if specified) for the view.
         if self.default_return_url is not None:
@@ -224,6 +226,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     create_form_class = None
     update_form_class = None
     parser_classes = [FormParser, MultiPartParser]
+    is_contact_associatable_model = True
     queryset = None
     # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
     serializer_class = None
@@ -334,7 +337,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         raise NotImplementedError("_process_bulk_update_form() is not implemented")
 
-    def _process_bulk_create_form(self, form):
+    def _process_bulk_create_form(self, form):  # 3.0 TODO: remove, replaced by system Job
         """
         Helper method to create objects in bulk after the form is validated successfully.
         """
@@ -356,7 +359,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     def _handle_validation_error(self, e):
         # For bulk_create/bulk_update view, self.obj is not set since there are multiple
         # The errors will be rendered on the form itself.
-        if self.action not in ["bulk_create", "bulk_update"]:
+        if self.action not in ["bulk_create", "bulk_update"]:  # 3.0 TODO: remove bulk_create
             messages.error(self.request, f"{self.obj} failed validation: {e}")
         self.has_error = True
 
@@ -376,7 +379,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
                 self._process_create_or_update_form(form)
             elif self.action == "bulk_update":
                 self._process_bulk_update_form(form)
-            elif self.action == "bulk_create":
+            elif self.action == "bulk_create":  # 3.0 TODO: remove, replaced by system Job
                 self.obj_table = self._process_bulk_create_form(form)
         except ValidationError as e:
             self._handle_validation_error(e)
@@ -387,7 +390,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
 
         if not self.has_error:
             self.logger.debug("Form validation was successful")
-            if self.action == "bulk_create":
+            if self.action == "bulk_create":  # 3.0 TODO: remove, replaced by system Job
                 return Response(
                     {
                         "table": self.obj_table,
@@ -537,7 +540,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
                 form_class = getattr(self, f"{self.action}_form_class")
             else:
                 form_class = getattr(self, "form_class", None)
-        elif self.action == "bulk_create":
+        elif self.action == "bulk_create":  # 3.0 TODO: remove, replaced by system Job
             required_field_names = [
                 field["name"]
                 for field in get_csv_form_fields_from_serializer_class(self.serializer_class)
@@ -894,9 +897,11 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         return Response(data)
 
 
-class ObjectBulkCreateViewMixin(NautobotViewSetMixin):
+class ObjectBulkCreateViewMixin(NautobotViewSetMixin):  # 3.0 TODO: remove, unused
     """
     UI mixin to bulk create model instances.
+
+    Deprecated - use ImportObjects system Job instead.
     """
 
     bulk_create_active_tab = "csv-data"
@@ -908,31 +913,11 @@ class ObjectBulkCreateViewMixin(NautobotViewSetMixin):
         queryset = self.get_queryset()
         with transaction.atomic():
             if request.FILES:
-                field_name = "csv_file"
                 # Set the bulk_create_active_tab to "csv-file"
                 # In case the form validation fails, the user will be redirected
                 # to the tab with errors rendered on the form.
                 self.bulk_create_active_tab = "csv-file"
-            else:
-                field_name = "csv_data"
-
-            csvtext = form.cleaned_data[field_name]
-            try:
-                data = NautobotCSVParser().parse(
-                    stream=BytesIO(csvtext.encode("utf-8")),
-                    parser_context={"request": request, "serializer_class": self.serializer_class},
-                )
-                serializer = self.serializer_class(data=data, context={"request": request}, many=True)
-                if serializer.is_valid():
-                    new_objs = serializer.save()
-                else:
-                    for row, errors in enumerate(serializer.errors, start=1):
-                        for field, err in errors.items():
-                            form.add_error(field_name, f"Row {row}: {field}: {err[0]}")
-                    raise ValidationError("")
-            except exceptions.ParseError as exc:
-                form.add_error(None, str(exc))
-                raise ValidationError("")
+            new_objs = import_csv_helper(request=request, form=form, serializer_class=self.serializer_class)
 
             # Enforce object-level permissions
             if queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):

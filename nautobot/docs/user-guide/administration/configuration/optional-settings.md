@@ -44,6 +44,16 @@ EXTRA_INSTALLED_APPS = [
 This will ensure your default setting's `INSTALLED_APPS` do not have to be modified, and the user
 can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can be added using `EXTRA_MIDDLEWARE`.
 
+### ALLOW_REQUEST_PROFILING
+
+Default: `False`
+
+Global setting to allow or deny users from enabling request profiling on their login session.
+
+See the administration guide on [request profiling](../guides/request-profiling.md) for more information.
+
+---
+
 ## ALLOWED_URL_SCHEMES
 
 Default: `('file', 'ftp', 'ftps', 'http', 'https', 'irc', 'mailto', 'sftp', 'ssh', 'tel', 'telnet', 'tftp', 'vnc', 'xmpp')`
@@ -377,14 +387,6 @@ Default: `False`
 
 `Device` names are not guaranteed globally-unique by Nautobot but in practice they often are. Set this to `True` to use the device `name` alone as the natural key for `Device` objects. Set this to `False` to use the sequence `(name, tenant, location)` as the natural key instead.
 
-## DISABLE_PREFIX_LIST_HIERARCHY
-
-Default: `False`
-
-This setting disables rendering of the IP prefix hierarchy (parent/child relationships) in the IPAM prefix list view. With large sets of prefixes, users may encounter a performance penalty when trying to load the prefix list view due to the nature of calculating the parent/child relationships. This setting allows users to disable the hierarchy and instead only render a flat list of all prefixes in the table.
-
-A later release of Nautobot will address the underlying performance issues, and likely remove this configuration option.
-
 ---
 
 ## DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT
@@ -394,16 +396,6 @@ A later release of Nautobot will address the underlying performance issues, and 
 Default: `0` (disabled)
 
 The number of seconds to cache the member list of dynamic groups. With large datasets (those in scope of a Dynamic Group and number of Dynamic Groups themselves), users will encounter a performance penalty using or accessing the membership lists. This setting allows users to accept a cached list for common use cases (particularly in the UI) that expires after the configured time. Set this to `0` to disable caching.
-
----
-
-## ENFORCE_GLOBAL_UNIQUE
-
-Default: `False`
-
-Environment Variable: `NAUTOBOT_ENFORCE_GLOBAL_UNIQUE`
-
-By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting `ENFORCE_GLOBAL_UNIQUE` to `True`.
 
 ---
 
@@ -503,7 +495,7 @@ The value of this variable can also be customized by setting the environment var
 
 Default: `"cpf"`
 
-By default, all computed fields in GraphQL will be prefixed with `cf`. A computed field named `my_field` will appear in GraphQL as `cpf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_COMPUTED_FIELD_PREFIX`.
+By default, all computed fields in GraphQL will be prefixed with `cpf`. A computed field named `my_field` will appear in GraphQL as `cpf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_COMPUTED_FIELD_PREFIX`.
 
 ---
 
@@ -668,6 +660,16 @@ Default: `False`
 Environment Variable: `NAUTOBOT_METRICS_ENABLED`
 
 Toggle the availability Prometheus-compatible metrics at `/metrics`. See the [Prometheus Metrics](../guides/prometheus-metrics.md) documentation for more details.
+
+---
+
+## METRICS_AUTHENTICATED
+
+Default: `False`
+
+Environment Variable: `NAUTOBOT_METRICS_AUTHENTICATED`
+
+Toggle requiring authentication to view `/metrics`. See the [Prometheus Metrics](../guides/prometheus-metrics.md) documentation for more details.
 
 ---
 
@@ -883,11 +885,34 @@ Default:
 ```python
 [
     (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
-    (re.compile(r"(username|password|passwd|pwd)((?:\s+is.?|:)?\s+)\S+", re.IGNORECASE), r"\1\2{replacement}"),
+    (
+        re.compile(r"(username|password|passwd|pwd|secret|secrets)([\"']?(?:\s+is.?|:)?\s+)\S+[\"']?", re.IGNORECASE),
+        r"\1\2{replacement}",
+    ),
 ]
 ```
 
 List of (regular expression, replacement pattern) tuples used by the `nautobot.core.utils.logging.sanitize()` function. As of Nautobot 1.3.4 this function is used primarily for sanitization of Job log entries, but it may be used in other scopes in the future.
+
+This pattern catches patterns such as:
+
+| Pattern Match Examples |
+| --- |
+| Password is1234 |
+| Password: is1234 |
+| Password is: is1234 |
+| Password is is1234 |
+| secret is: is1234 |
+| secret is is1234 |
+| secrets is: is1234 |
+| secrets is is1234 |
+| {"username": "is1234"} |
+| {"password": "is1234"} |
+| {"secret": "is1234"} |
+| {"secrets": "is1234"} |
+
+!!! info
+    is1234 would be replaced in the Job logs with `(redacted)`.
 
 ---
 
@@ -941,7 +966,7 @@ If set to `False`, unknown/unrecognized filter parameters will be discarded and 
 
 Default: `""`
 
-A message to include on error pages (status code 403, 404, 500, etc.) when an error occurs. You can configure this to direct users to the appropriate contact(s) within your organization that provide support for Nautobot. Markdown formatting is supported within this message (raw HTML is not).
+A message to include on error pages (status code 403, 404, 500, etc.) when an error occurs. You can configure this to direct users to the appropriate contact(s) within your organization that provide support for Nautobot. Markdown formatting is supported within this message, as well as [a limited subset of HTML](../../platform-functionality/template-filters.md#render_markdown).
 
 If unset, the default message that will appear is `If further assistance is required, please join the #nautobot channel on [Network to Code's Slack community](https://slack.networktocode.com) and post your question.`
 
@@ -1333,6 +1358,9 @@ Please see the [official Django documentation on `STATIC_ROOT`](https://docs.dja
 Default: `"UTC"`
 
 Environment Variable: `NAUTOBOT_TIME_ZONE`
+
+!!! warning
+    Scheduled jobs will run in the time zone configured in this setting. If you change this setting from the default UTC, you must change it on the Celery Beat server and all Nautobot web servers or your scheduled jobs may run in the wrong time zone.
 
 The time zone Nautobot will use when dealing with dates and times. It is recommended to use UTC time unless you have a specific need to use a local time zone. Please see the [list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
 

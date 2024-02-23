@@ -5,7 +5,7 @@ from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
-from django.db.models import JSONField, ManyToManyField
+from django.db.models import JSONField, ManyToManyField, ManyToManyRel
 from django.forms.models import model_to_dict
 from netaddr import IPNetwork
 from rest_framework.test import APIClient, APIRequestFactory
@@ -13,7 +13,7 @@ from rest_framework.test import APIClient, APIRequestFactory
 from nautobot.core import testing
 from nautobot.core.models import fields as core_fields
 from nautobot.core.utils import permissions
-from nautobot.extras import management, models as extras_models
+from nautobot.extras import management, models as extras_models, signals as extras_signals
 from nautobot.users import models as users_models
 
 # Use the proper swappable User model
@@ -62,6 +62,13 @@ class NautobotTestCaseMixin:
             # Force login explicitly with the first-available backend
             self.client.force_login(self.user)
 
+    def tearDown(self):
+        """Clear lru_cache data to avoid leakage of information between test cases when running in parallel."""
+        extras_signals.invalidate_lru_cache(extras_models.CustomField)
+        extras_signals.invalidate_lru_cache(extras_models.ComputedField)
+        extras_signals.invalidate_lru_cache(extras_models.Relationship)
+        super().tearDown()
+
     def prepare_instance(self, instance):
         """
         Test cases can override this method to perform any necessary manipulation of an instance prior to its evaluation
@@ -90,12 +97,14 @@ class NautobotTestCaseMixin:
                 field = None
 
             # Handle ManyToManyFields
-            if value and isinstance(field, (ManyToManyField, core_fields.TagsField)):
+            if value and isinstance(field, (ManyToManyField, ManyToManyRel, core_fields.TagsField)):
                 # Only convert ContentType to <app_label>.<model> for API serializers/views
                 if api and field.related_model is ContentType:
                     model_dict[key] = sorted([f"{ct.app_label}.{ct.model}" for ct in value])
                 # Otherwise always convert object instances to pk
                 else:
+                    if isinstance(field, ManyToManyRel):
+                        value = value.all()
                     model_dict[key] = sorted([obj.pk for obj in value])
 
             if api:

@@ -309,11 +309,6 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #
 # DEVICE_NAME_AS_NATURAL_KEY = False
 
-# Set to True to disable rendering of the IP prefix hierarchy in the the IPAM prefix list view.
-# Useful in case of poor performance when rendering this page.
-#
-# DISABLE_PREFIX_LIST_HIERARCHY = False
-
 # Exempt certain models from the enforcement of view permissions. Models listed here will be viewable by all users and
 # by anonymous users. List models in the form `<app>.<model>`. Add '*' to this list to exempt all models.
 # Defaults to [].
@@ -385,6 +380,10 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #
 # METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_METRICS_ENABLED", "False"))
 
+# Require API Authentication to HTTP endpoint '/metrics'
+#
+# METRICS_AUTHENTICATED = is_truthy(os.getenv("NAUTOBOT_METRICS_AUTHENTICATED", "False"))
+
 # Credentials that Nautobot will uses to authenticate to devices when connecting via NAPALM.
 #
 # NAPALM_USERNAME = os.getenv("NAUTOBOT_NAPALM_USERNAME", "")
@@ -450,7 +449,10 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # SANITIZER_PATTERNS = [
 #     # General removal of username-like and password-like tokens
 #     (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
-#     (re.compile(r"(username|password|passwd|pwd)((?:\s+is.?|:)?\s+)\S+", re.IGNORECASE), r"\1\2{replacement}"),
+#     (
+#         re.compile(r"(username|password|passwd|pwd|secret|secrets)([\"']?(?:\s+is.?|:)?\s+)\S+[\"']?", re.IGNORECASE),
+#         r"\1\2{replacement}",
+#     ),
 # ]
 
 # Configure SSO, for more information see docs/configuration/authentication/sso.md
@@ -498,3 +500,6 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # or a package containing an application.
 # https://docs.nautobot.com/projects/core/en/latest/configuration/optional-settings/#extra-applications
 # EXTRA_INSTALLED_APPS = []
+
+# Allow users to enable request profiling on their login session
+# ALLOW_REQUEST_PROFILING = False

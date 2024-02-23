@@ -38,6 +38,8 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
+    ContactAssociation,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -66,6 +68,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
     TaggedItem,
+    Team,
     Webhook,
 )
 from nautobot.extras.secrets.exceptions import SecretError
@@ -260,6 +263,23 @@ class NautobotModelViewSet(NotesViewSetMixin, CustomFieldModelViewSet):
 
 
 #
+# Contacts
+#
+
+
+class ContactViewSet(NautobotModelViewSet):
+    queryset = Contact.objects.all()
+    serializer_class = serializers.ContactSerializer
+    filterset_class = filters.ContactFilterSet
+
+
+class ContactAssociationViewSet(NautobotModelViewSet):
+    queryset = ContactAssociation.objects.all()
+    serializer_class = serializers.ContactAssociationSerializer
+    filterset_class = filters.ContactAssociationFilterSet
+
+
+#
 # Custom Links
 #
 
@@ -375,7 +395,10 @@ class GitRepositoryViewSet(NautobotModelViewSet):
     filterset_class = filters.GitRepositoryFilterSet
 
     @extend_schema(methods=["post"], request=serializers.GitRepositorySerializer)
-    @action(detail=True, methods=["post"])
+    # Since we are explicitly checking for `extras:change_gitrepository` in the API sync() method
+    # We explicitly set the permission_classes to IsAuthenticated in the @action decorator
+    # bypassing the default DRF permission check for `extras:add_gitrepository` and the permission check fall through to the function itself.
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def sync(self, request, pk):
         """
         Enqueue pull git repository and refresh data.
@@ -1102,6 +1125,17 @@ class TagViewSet(NautobotModelViewSet):
     queryset = Tag.objects.annotate(tagged_items=count_related(TaggedItem, "tag"))
     serializer_class = serializers.TagSerializer
     filterset_class = filters.TagFilterSet
+
+
+#
+# Teams
+#
+
+
+class TeamViewSet(NautobotModelViewSet):
+    queryset = Team.objects.all()
+    serializer_class = serializers.TeamSerializer
+    filterset_class = filters.TeamFilterSet
 
 
 #

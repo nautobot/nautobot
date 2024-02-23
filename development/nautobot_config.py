@@ -42,7 +42,7 @@ LOGGING["loggers"]["nautobot"]["level"] = LOG_LEVEL  # noqa: F405
 #
 
 PLUGINS = [
-    "example_plugin",
+    "example_app",
 ]
 
 CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]
@@ -72,5 +72,6 @@ if is_truthy(os.getenv("ENABLE_OIDC", "False")):
     SOCIAL_AUTH_KEYCLOAK_VERIFY_SSL = False
 
 METRICS_ENABLED = True
+METRICS_AUTHENTICATED = False
 
 CELERY_WORKER_PROMETHEUS_PORTS = [8080]

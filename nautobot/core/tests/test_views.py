@@ -1,4 +1,7 @@
+import json
+import os
 import re
+import types
 from unittest import mock
 import urllib.parse
 
@@ -7,10 +10,15 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
+from jsonschema.exceptions import SchemaError, ValidationError
+from jsonschema.validators import Draft7Validator
 from prometheus_client.parser import text_string_to_metric_families
 
+from nautobot.core import settings
 from nautobot.core.testing import TestCase
+from nautobot.core.testing.api import APITestCase
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.views import NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.dcim.models.locations import Location
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -339,20 +347,38 @@ class MetricsViewTestCase(TestCase):
         return text_string_to_metric_families(page_content)
 
     def test_metrics_extensibility(self):
-        """Assert that the example metric from the example plugin shows up _exactly_ when the plugin is enabled."""
+        """Assert that the example metric from the Example App shows up _exactly_ when the app is enabled."""
         test_metric_name = "nautobot_example_metric_count"
-        metrics_with_plugin = self.query_and_parse_metrics()
-        metric_names_with_plugin = {metric.name for metric in metrics_with_plugin}
-        self.assertIn(test_metric_name, metric_names_with_plugin)
+        metrics_with_app = self.query_and_parse_metrics()
+        metric_names_with_app = {metric.name for metric in metrics_with_app}
+        self.assertIn(test_metric_name, metric_names_with_app)
         with override_settings(PLUGINS=[]):
             # Clear out the app metric registry because it is not updated when settings are changed but Nautobot is not
             # restarted.
             registry["app_metrics"].clear()
-            metrics_without_plugin = self.query_and_parse_metrics()
-            metric_names_without_plugin = {metric.name for metric in metrics_without_plugin}
-            self.assertNotIn(test_metric_name, metric_names_without_plugin)
-        metric_names_with_plugin.remove(test_metric_name)
-        self.assertSetEqual(metric_names_with_plugin, metric_names_without_plugin)
+            metrics_without_app = self.query_and_parse_metrics()
+            metric_names_without_app = {metric.name for metric in metrics_without_app}
+            self.assertNotIn(test_metric_name, metric_names_without_app)
+        metric_names_with_app.remove(test_metric_name)
+        self.assertSetEqual(metric_names_with_app, metric_names_without_app)
+
+
+class AuthenticateMetricsTestCase(APITestCase):
+    def test_metrics_authentication(self):
+        """Assert that if metrics require authentication, a user not logged in gets a 403."""
+        self.client.logout()
+        headers = {}
+        response = self.client.get(reverse("metrics"), **headers)
+        self.assertHttpStatus(response, 403, msg="/metrics should return a 403 HTTP status code.")
+
+    def test_metrics(self):
+        """Assert that if metrics don't require authentication, a user not logged in gets a 200."""
+        self.factory = RequestFactory()
+        self.client.logout()
+
+        request = self.factory.get("/")
+        response = NautobotMetricsView.as_view()(request)
+        self.assertHttpStatus(response, 200, msg="/metrics should return a 200 HTTP status code.")
 
 
 class ErrorPagesTestCase(TestCase):
@@ -366,9 +392,9 @@ class ErrorPagesTestCase(TestCase):
         self.assertContains(response, "Network to Code", status_code=404)
         response_content = response.content.decode(response.charset)
         self.assertInHTML(
-            "If further assistance is required, please join the <code>#nautobot</code> channel "
-            'on <a href="https://slack.networktocode.com/">Network to Code\'s Slack community</a> '
-            "and post your question.",
+            "If further assistance is required, please join the <code>#nautobot</code> channel on "
+            '<a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
+            "Slack community</a> and post your question.",
             response_content,
         )
 
@@ -392,16 +418,16 @@ class ErrorPagesTestCase(TestCase):
         self.assertContains(response, "Network to Code", status_code=500)
         response_content = response.content.decode(response.charset)
         self.assertInHTML(
-            "If further assistance is required, please join the <code>#nautobot</code> channel "
-            'on <a href="https://slack.networktocode.com/">Network to Code\'s Slack community</a> '
-            "and post your question.",
+            "If further assistance is required, please join the <code>#nautobot</code> channel on "
+            '<a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
+            "Slack community</a> and post your question.",
             response_content,
         )
 
     @override_settings(DEBUG=False, SUPPORT_MESSAGE="Hello world!")
     @mock.patch("nautobot.core.views.HomeView.get", side_effect=Exception)
     def test_500_custom_support_message(self, mock_get):
-        """Nautobot's custom 500 page should be used and should include a default support message."""
+        """Nautobot's custom 500 page should be used and should include a custom support message if defined."""
         url = reverse("home")
         with self.assertTemplateUsed("500.html"):
             self.client.raise_request_exception = False
@@ -420,30 +446,21 @@ class DBFileStorageViewTestCase(TestCase):
         self.file_proxy_1 = FileProxy.objects.create(name=self.test_file_1.name, file=self.test_file_1)
         self.test_file_2 = SimpleUploadedFile(name="test_file_2.txt", content=b"I am content.\n")
         self.file_proxy_2 = FileProxy.objects.create(name=self.test_file_2.name, file=self.test_file_2)
-        self.urls = [
-            f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_1.file.name}",
-            f"{reverse('db_file_storage.get_file')}?name={self.file_proxy_1.file.name}",
-        ]
+        self.url = f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_1.file.name}"
 
     def test_get_file_anonymous(self):
         self.client.logout()
-        for url in self.urls:
-            with self.subTest(url):
-                response = self.client.get(url)
-                self.assertHttpStatus(response, 403)
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 403)
 
     def test_get_file_without_permission(self):
-        for url in self.urls:
-            with self.subTest(url):
-                response = self.client.get(url)
-                self.assertHttpStatus(response, 403)
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 403)
 
     def test_get_object_with_permission(self):
         self.add_permissions(get_permission_for_model(FileProxy, "view"))
-        for url in self.urls:
-            with self.subTest(url):
-                response = self.client.get(url)
-                self.assertHttpStatus(response, 200)
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
 
     def test_get_object_with_constrained_permission(self):
         obj_perm = ObjectPermission(
@@ -454,14 +471,182 @@ class DBFileStorageViewTestCase(TestCase):
         obj_perm.save()
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(FileProxy))
-        for url in self.urls:
-            with self.subTest(url):
-                response = self.client.get(url)
-                self.assertHttpStatus(response, 200)
-        for url in [
-            f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_2.file.name}",
-            f"{reverse('db_file_storage.get_file')}?name={self.file_proxy_2.file.name}",
-        ]:
-            with self.subTest(url):
-                response = self.client.get(url)
-                self.assertHttpStatus(response, 404)
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
+        url = f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_2.file.name}"
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 404)
+
+
+class SettingsJSONSchemaViewTestCase(TestCase):
+    """Test for the JSON Schema in nautobot/core/settings.json"""
+
+    @classmethod
+    def setUpTestData(cls):
+        file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/settings.json"
+        with open(file_path, "r") as jsonfile:
+            cls.json_data = json.load(jsonfile)
+
+    def test_settings_json_schema_valid(self):
+        """Test the validity of the JSON Schema in settings.json"""
+        try:
+            Draft7Validator.check_schema(self.json_data)
+        except SchemaError as e:
+            raise ValidationError({"data_schema": e.message})
+
+    def test_settings_json_schema_contains_valid_setting_variables(self):
+        """Test the validity of the settings variables from settings.json and their types with those in settings.py"""
+        # This list contains all variables that exist in settings.py but not in the JSON schema in settings.json.
+        # ADMINS does not exist in either settings.json or settings.py
+        UNDOCUMENTED_SETTINGS = [
+            "ADMINS",
+            "ALLOW_REQUEST_PROFILING",
+            "ALLOWED_URL_SCHEMES",
+            "AUTHENTICATION_BACKENDS",
+            "AUTH_USER_MODEL",
+            "BASE_DIR",
+            "BRANDING_POWERED_BY_URL",
+            "CELERY_ACCEPT_CONTENT",
+            "CELERY_BEAT_SCHEDULER",
+            "CELERY_BROKER_TRANSPORT_OPTIONS",
+            "CELERY_RESULT_ACCEPT_CONTENT",
+            "CELERY_RESULT_BACKEND",
+            "CELERY_RESULT_EXPIRES",
+            "CELERY_RESULT_EXTENDED",
+            "CELERY_RESULT_SERIALIZER",
+            "CELERY_TASK_SEND_SENT_EVENT",
+            "CELERY_TASK_SERIALIZER",
+            "CELERY_TASK_TRACK_STARTED",
+            "CELERY_WORKER_SEND_TASK_EVENTS",
+            "CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED",
+            "CONSTANCE_ADDITIONAL_FIELDS",
+            "CONSTANCE_BACKEND",
+            "CONSTANCE_CONFIG",
+            "CONSTANCE_CONFIG_FIELDSETS",
+            "CONSTANCE_DATABASE_CACHE_BACKEND",
+            "CONSTANCE_DATABASE_PREFIX",
+            "CONSTANCE_IGNORE_ADMIN_VERSION_CHECK",
+            "CSRF_FAILURE_VIEW",
+            "DATABASE_ROUTERS",
+            "DATA_UPLOAD_MAX_NUMBER_FIELDS",
+            "DEFAULT_AUTO_FIELD",
+            "DRF_REACT_TEMPLATE_TYPE_MAP",
+            "EXEMPT_EXCLUDE_MODELS",
+            "FILTERS_NULL_CHOICE_LABEL",
+            "FILTERS_NULL_CHOICE_VALUE",
+            "GRAPHENE",
+            "HOSTNAME",
+            "INSTALLED_APPS",
+            "LANGUAGE_CODE",
+            "LOGIN_REDIRECT_URL",
+            "LOGIN_URL",
+            "LOG_LEVEL",
+            "MEDIA_URL",
+            "MESSAGE_TAGS",
+            "MIDDLEWARE",
+            "PROMETHEUS_EXPORT_MIGRATIONS",
+            "REMOTE_AUTH_AUTO_CREATE_USER",
+            "REMOTE_AUTH_HEADER",
+            "REST_FRAMEWORK",
+            "REST_FRAMEWORK_ALLOWED_VERSIONS",
+            "REST_FRAMEWORK_VERSION",
+            "ROOT_URLCONF",
+            "SECURE_PROXY_SSL_HEADER",
+            "SESSION_CACHE_ALIAS",
+            "SESSION_ENGINE",
+            "SHELL_PLUS_DONT_LOAD",
+            "SILKY_ANALYZE_QUERIES",
+            "SILKY_AUTHENTICATION",
+            "SILKY_AUTHORISATION",
+            "SILKY_INTERCEPT_FUNC",
+            "SILKY_PERMISSIONS",
+            "SILKY_PYTHON_PROFILER",
+            "SILKY_PYTHON_PROFILER_BINARY",
+            "SILKY_PYTHON_PROFILER_EXTENDED_FILE_NAME",
+            "SOCIAL_AUTH_BACKEND_PREFIX",
+            "SOCIAL_AUTH_POSTGRES_JSONFIELD",
+            "SPECTACULAR_SETTINGS",
+            "STATICFILES_DIRS",
+            "STATIC_URL",
+            "TEMPLATES",
+            "TESTING",
+            "TEST_RUNNER",
+            "USE_I18N",
+            "USE_TZ",
+            "USE_X_FORWARDED_HOST",
+            "VERSION",
+            "VERSION_MAJOR",
+            "VERSION_MINOR",
+            "WEBSERVER_WARMUP",
+            "WSGI_APPLICATION",
+            "X_FRAME_OPTIONS",
+        ]
+        # Retrieve all variables from settings.py.
+        # and trim out all noises by retaining variables with only uppercase letters and "_".
+        existing_settings_variables = list(settings.__dict__.keys())
+        existing_settings_variables = [
+            word for word in existing_settings_variables if word == word.upper() and not word.startswith("_")
+        ]
+
+        # Some of the variables in the JSON schema are contained in the CONSTANCE_CONFIG setting variable, e.g. BANNER_TOP, BANNER_BOTTOM and etc.
+        existing_constance_config_variables = list(settings.__dict__.get("CONSTANCE_CONFIG").keys())
+        # All the documented settings variable in the JSON schema from settings.json
+        existing_json_schema_variables = list(self.json_data["properties"].keys())
+
+        # Check if there is any undocumented setting variable in settings.py.
+        expected_variables = set(existing_json_schema_variables) | set(UNDOCUMENTED_SETTINGS)
+        for variable in existing_settings_variables:
+            if variable not in expected_variables:
+                self.fail(f"Undocumented settings variable {variable} detected in nautobot/core/settings.py")
+        # Check if there is any nonexistent settings variable in settings.json.
+        expected_variables = (
+            set(existing_settings_variables) | set(existing_constance_config_variables) | set(UNDOCUMENTED_SETTINGS)
+        )
+        for variable in self.json_data["properties"].keys():
+            if variable not in expected_variables:
+                self.fail(f"Nonexistent settings variable {variable} detected in nautobot/core/settings.json")
+
+        # Check if the values of the settings variables conform to what is specified in the JSON Schema.
+        TYPE_MAPPING = {
+            "string": [str],
+            "object": [dict],
+            "integer": [int],
+            "boolean": [bool],
+            "array": [list, tuple],
+            "#/definitions/absolute_path": [str],
+            "#/definitions/callable": [types.FunctionType],
+            "#/definitions/regex": [str],
+            "#/definitions/relative_path": [str],
+        }
+        for key, value in self.json_data["properties"].items():
+            settings_value = getattr(settings, key, None)
+            if settings_value is not None:
+                self.assertIn(type(settings_value), TYPE_MAPPING[value.get("type", value.get("$ref", None))])
+
+
+class SilkUIAccessTestCase(TestCase):
+    """Test access control related to the django-silk UI"""
+
+    def test_access_for_non_superuser(self):
+        # Login as non-superuser
+        self.user.is_superuser = False
+        self.user.save()
+        self.client.force_login(self.user)
+
+        # Attempt to access the view
+        response = self.client.get(reverse("silk:summary"))
+
+        # Check for redirect or forbidden status code (302 or 403)
+        self.assertIn(response.status_code, [302, 403])
+
+    def test_access_for_superuser(self):
+        # Login as superuser
+        self.user.is_superuser = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        # Attempt to access the view
+        response = self.client.get(reverse("silk:summary"))
+
+        # Check for success status code (e.g., 200)
+        self.assertEqual(response.status_code, 200)

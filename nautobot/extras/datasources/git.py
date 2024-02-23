@@ -153,10 +153,9 @@ def ensure_git_repository(repository_record, logger=None, head=None):  # pylint:
     if head is not None:
         # If the repo exists and has HEAD already checked out, the repo is present and has the correct branch selected.
         with suppress(InvalidGitRepositoryError):
-            if (
-                Path(repository_record.filesystem_path).exists()
-                and Repo(repository_record.filesystem_path).rev_parse("HEAD") == head
-            ):
+            if Path(repository_record.filesystem_path).exists() and str(
+                Repo(repository_record.filesystem_path).rev_parse("HEAD")
+            ) == str(head):
                 return False
 
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
@@ -743,14 +742,15 @@ def refresh_code_from_repository(repository_slug, consumer=None, skip_reimport=F
             logger.debug("Unloading module %s", module_name)
             if module_name in app.loader.task_modules:
                 app.loader.task_modules.remove(module_name)
-            del sys.modules[module_name]
+            if module_name in sys.modules:
+                del sys.modules[module_name]
 
     # Unregister any previous Celery tasks from this module
     for task_name in list(app.tasks):
         if task_name.startswith(f"{repository_slug}."):
             logger.debug("Unregistering Celery task %s", task_name)
             app.tasks.unregister(task_name)
-            if consumer is not None:
+            if consumer is not None and task_name in consumer.strategies:
                 del consumer.strategies[task_name]
 
     if not skip_reimport:

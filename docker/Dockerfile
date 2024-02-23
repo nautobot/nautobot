@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1
 ARG PYTHON_VER
+# Small hack to make the devcontainer work until https://github.com/devcontainers/cli/issues/275 is fixed.
+ARG ARCH=${TARGETARCH:-amd64}
 
 ################################ Overview
 
@@ -126,14 +128,14 @@ RUN poetry config virtualenvs.create ${POETRY_VIRTUALENVS_CREATE} && \
 ################################ Stage: python-dependencies (intermediate build target)
 
 # hadolint ignore=DL3006
-FROM system-dev-dependencies-$TARGETARCH AS python-dependencies
+FROM system-dev-dependencies-${ARCH} AS python-dependencies
 
 ARG POETRY_HOME=/opt/poetry
 COPY --from=poetry ${POETRY_HOME} ${POETRY_HOME}
 COPY --from=poetry /root/.config/pypoetry /root/.config/pypoetry
 ENV PATH="${POETRY_HOME}/bin:${PATH}"
 
-# The example_plugin is only a dev dependency, but Poetry fails to install non-dev dependencies if its source is missing
+# The example_app is only a dev dependency, but Poetry fails to install non-dev dependencies if its source is missing
 COPY --chown=nautobot:nautobot pyproject.toml poetry.lock README.md /source/
 COPY --chown=nautobot:nautobot examples /source/examples
 
@@ -198,7 +200,7 @@ COPY --from=build-nautobot --chown=nautobot:nautobot /source/dist /source/dist
 # hadolint ignore=DL3042
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     pip install --no-deps /source/dist/*.whl && \
-    pip uninstall -y example-plugin example-plugin-with-view-override && \
+    pip uninstall -y example-app example-app-with-view-override && \
     rm -rf /source/*
 
 USER nautobot

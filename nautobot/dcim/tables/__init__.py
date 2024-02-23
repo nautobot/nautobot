@@ -30,6 +30,8 @@ from .devices import (
     PowerOutletTable,
     PowerPortTable,
     RearPortTable,
+    SoftwareImageFileTable,
+    SoftwareVersionTable,
     VirtualChassisTable,
 )
 from .devicetypes import (
@@ -38,6 +40,7 @@ from .devicetypes import (
     DeviceBayTemplateTable,
     DeviceTypeTable,
     FrontPortTemplateTable,
+    HardwareFamilyTable,
     InterfaceTemplateTable,
     ManufacturerTable,
     PowerOutletTemplateTable,
@@ -77,6 +80,7 @@ __all__ = (
     "DeviceTypeTable",
     "FrontPortTable",
     "FrontPortTemplateTable",
+    "HardwareFamilyTable",
     "InterfaceConnectionTable",
     "InterfaceTable",
     "InterfaceRedundancyGroupTable",
@@ -100,6 +104,8 @@ __all__ = (
     "RackTable",
     "RearPortTable",
     "RearPortTemplateTable",
+    "SoftwareImageFileTable",
+    "SoftwareVersionTable",
     "VirtualChassisTable",
 )
 
