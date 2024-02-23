@@ -132,7 +132,6 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         self.browser.links.find_by_partial_text("1234").click()
 
         # Verify custom relationships are visible
-        time.sleep(10)
         self.assertTrue(self.browser.is_text_present("Test Power Panel"))
         self.assertTrue(self.browser.is_text_present("2 providers"))
         self.assertTrue(self.browser.is_text_present("1 location"))
