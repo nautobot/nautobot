@@ -443,6 +443,7 @@ class Command(BaseCommand):
             check_interface_ipaddress_vrf_uniqueness(self)
         except ValidationError as err:
             errors.append(err)
+
         check_permissions_constraints(self)
 
         if errors:
