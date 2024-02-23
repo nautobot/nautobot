@@ -1,1 +1,1 @@
-Added a pre-migration helper to identify Interfaces and VMInterfaces with multiple VRFs through IPAddress relationships.
+Added a check to the pre_migrate management command to identify Interfaces and VMInterfaces with multiple VRFs through IPAddress relationships.
