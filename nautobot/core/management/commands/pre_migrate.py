@@ -129,6 +129,8 @@ def check_interface_ipaddress_vrf_uniqueness(command):
 
     failed = False
 
+    command.stdout.write(command.style.WARNING(">>> Running interface/vminterface vrf uniqueness checks..."))
+
     for ip_address_assignment in (
         IPAddress.objects.values("assigned_object_type", "assigned_object_id")
         .annotate(
