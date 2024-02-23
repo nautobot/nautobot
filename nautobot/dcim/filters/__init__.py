@@ -1791,6 +1791,13 @@ class SoftwareVersionFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
 class DeviceTypeToSoftwareImageFileFilterSet(BaseFilterSet):
     """Filters for DeviceTypeToSoftwareImageFile model."""
 
+    q = SearchFilter(
+        filter_predicates={
+            "device_type__model": "icontains",
+            "software_image_file__image_file_name": "icontains",
+        }
+    )
+
     device_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
         to_field_name="model",
