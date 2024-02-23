@@ -23,6 +23,9 @@ body {
     margin: 0 auto -48px; /* the bottom margin is the negative value of the footer's height */
     padding-bottom: 30px;
 }
+#main-content > .form {
+    margin-top: 20px;
+}
 .footer, .push {
     height: 48px; /* .push must be the same height as .footer */
 }
@@ -819,14 +822,6 @@ td span.hover_copy:hover .hover_copy_button {
 .navbar-fixed-left.collapsed {
     width: 0px; 
 }
-.main-content {
-    transition: margin-left var(--navbar-transition-duration) ease-in-out;
-    margin-left: 0px; 
-    position: relative;
-}
-.navbar-fixed-left.collapsed ~ .main-content {
-    margin-left: 0px; 
-}
 /* When navbar is expanded, show the search form */
 .navbar-fixed-left:not(.collapsed) .navbar-search-form {
     display: block;
@@ -904,10 +899,6 @@ td span.hover_copy:hover .hover_copy_button {
     left: 0;
     width: 240px; 
     z-index: 1031; /* Above the navbar-fixed-left */
-}
-
-.navbar-fixed-left, .main-content, .navbar-toggler .navbar-toggler-arrow {
-    transition-duration: var(--navbar-transition-duration);
 }
 
 .navbar-fixed-left, 
