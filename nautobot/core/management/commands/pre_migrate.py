@@ -120,6 +120,46 @@ def check_configcontext_uniqueness():
         )
 
 
+def check_interface_ipaddress_vrf_uniqueness(command):
+    """
+    Check for uniqueness enforcement changes for Interface and VMInterface IPAddress assignments.
+
+    - All IP Addresses assigned to a specific Interface or VMInterface must share the same VRF or have no VRF.
+    """
+
+    failed = False
+
+    for ip_address_assignment in (
+        IPAddress.objects.values("assigned_object_type", "assigned_object_id")
+        .annotate(
+            vrf_count=models.Count("vrf_id", distinct=True),
+            vrf_null_count=models.Count("pk", filter=models.Q(vrf_id__isnull=True)),
+        )
+        .order_by()
+    ):
+        has_null_vrf = 1 if ip_address_assignment["vrf_null_count"] > 0 else 0
+        if (
+            ip_address_assignment["vrf_count"] + has_null_vrf > 1
+            and ip_address_assignment["assigned_object_id"] is not None
+        ):
+            failed = True
+            assigned_object_type = ContentType.objects.get_for_id(
+                ip_address_assignment["assigned_object_type"]
+            ).model_class()
+            assigned_object = assigned_object_type.objects.get(pk=ip_address_assignment["assigned_object_id"])
+            command.stdout.write(
+                command.style.WARNING(
+                    f"{assigned_object_type._meta.label} {assigned_object} ({ip_address_assignment['assigned_object_id']}) "
+                    "is associated to IP Addresses with different VRFs."
+                )
+            )
+
+    if failed:
+        raise ValidationError(
+            "You cannot migrate Interface or VMInterfaces associated to IP Addresses with different VRFs."
+        )
+
+
 def check_permissions_constraints(command):
     """
     Check for permission constraints that are referencing an object or field
@@ -397,6 +437,10 @@ class Command(BaseCommand):
             except ValidationError as err:
                 errors.append(err)
 
+        try:
+            check_interface_ipaddress_vrf_uniqueness(self)
+        except ValidationError as err:
+            errors.append(err)
         check_permissions_constraints(self)
 
         if errors:
