@@ -190,13 +190,13 @@
         }
 
         // Performant way to handle window resize events
-        var debouncedToggleNavbarOnResize = debounce(toggleNavbarOnResize, 100);
+        let debouncedToggleNavbarOnResize = debounce(toggleNavbarOnResize, 100);
 
         // Listen for window resize events on initial page load
         window.addEventListener('resize', debouncedToggleNavbarOnResize);
 
         // Select the navbar dropdown elements
-        var navbarItems = document.querySelectorAll('.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-toggle > #dropdown_title');
+        let navbarItems = document.querySelectorAll('.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-toggle > #dropdown_title');
 
         // Add a title attribute and tooltip, only if necessary
         navbarItems.forEach(function(item) {
@@ -211,7 +211,7 @@
         });
 
         // Add an event listener for the home link click
-        var homeLink = document.querySelector('.navbar-fixed-left .navbar-brand');
+        const homeLink = document.querySelector('.navbar-fixed-left .navbar-brand');
         if (homeLink) {
             homeLink.addEventListener('click', function() {
                 resetNavbarState();
@@ -229,7 +229,7 @@
 
         // Add click event listener to the dropdown links and save the clicked one
         function addLinkClickListeners() {
-            var dropdownLinks = document.querySelectorAll('.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a');
+            const dropdownLinks = document.querySelectorAll('.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a');
 
             dropdownLinks.forEach(function(link) {
                 link.addEventListener('click', function() {
@@ -242,7 +242,7 @@
         dropdownToggles.forEach(function(toggle) {
             toggle.addEventListener('click', function(event) {
                 event.preventDefault();
-                var collapseElement = document.getElementById(this.getAttribute('href').substring(1));
+                const collapseElement = document.getElementById(this.getAttribute('href').substring(1));
 
                 if (!collapseElement.classList.contains('in')) {
                     closeAllDropdownsExcept(collapseElement.id);
@@ -257,7 +257,7 @@
 
         // Open the last opened dropdown
         if (lastDropdownId) {
-            var lastDropdownMenu = document.getElementById(lastDropdownId);
+            let lastDropdownMenu = document.getElementById(lastDropdownId);
             if (lastDropdownMenu && !lastDropdownMenu.classList.contains('in')) {
                 $(lastDropdownMenu).collapse('show');
             }
@@ -292,14 +292,14 @@
 
         // Debounce function to limit the rate at which the handleScroll function is executed
         function debounce(func, wait, immediate) {
-            var timeout;
+            let timeout;
             return function() {
-                var context = this, args = arguments;
-                var later = function() {
+                const context = this, args = arguments;
+                const later = function() {
                     timeout = null;
                     if (!immediate) func.apply(context, args);
                 };
-                var callNow = immediate && !timeout;
+                const callNow = immediate && !timeout;
                 clearTimeout(timeout);
                 timeout = setTimeout(later, wait);
                 if (callNow) func.apply(context, args);
@@ -316,8 +316,8 @@
 
         // Apply the 'active' class to the previously clicked link
         if (activeLink) {
-            var previouslyClickedLink = document.querySelector('.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a[href="' + activeLink + '"]');
-            var currentLocation = window.location.pathname + window.location.search;
+            let previouslyClickedLink = document.querySelector('.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a[href="' + activeLink + '"]');
+            let currentLocation = window.location.pathname + window.location.search;
             
             if (previouslyClickedLink && currentLocation.includes(previouslyClickedLink.getAttribute('href'))) {
                 previouslyClickedLink.parentElement.classList.add('active');
