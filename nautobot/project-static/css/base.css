@@ -1,4 +1,9 @@
 /* Layout */
+
+:root {
+    --navbar-transition-duration: 350ms;
+}
+
 * {
     margin: 0;
 }
@@ -755,6 +760,7 @@ td span.hover_copy:hover .hover_copy_button {
     margin-left: 5px;
     margin-right: 5px;
     gap: 5px;
+    text-wrap: nowrap;
 }
 
 .navbar-fixed-left .navbar-nav > li {
@@ -793,12 +799,6 @@ td span.hover_copy:hover .hover_copy_button {
     margin-left: 2px;
 }
 
-:root {
-    --navbar-transition-duration: 350ms;
-}
-.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > .buttons {
-    text-wrap: nowrap;
-}
 .navbar-fixed-left.collapsed:hover {
     cursor: pointer;
 }
@@ -880,7 +880,7 @@ td span.hover_copy:hover .hover_copy_button {
     position: absolute;
     right: 20px;
     top: 25px;
-    z-index: 1;
+    z-index: 1031;
     transform: translateX(50%);
     border-color: transparent;
     justify-content: flex-start;
@@ -902,7 +902,7 @@ td span.hover_copy:hover .hover_copy_button {
     position: fixed;
     top: 0;
     left: 0;
-    width: 240px; /* or whatever your full navbar width is */
+    width: 240px; 
     z-index: 1031; /* Above the navbar-fixed-left */
 }
 
