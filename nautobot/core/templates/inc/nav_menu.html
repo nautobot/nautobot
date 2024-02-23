@@ -140,16 +140,25 @@
             sessionStorage.removeItem('lastOpenedDropdown');
             sessionStorage.removeItem('savedScrollPosition');
             sessionStorage.removeItem('activeLink');
+            sessionStorage.removeItem('navbarCollapsed');
             expandedByHover = false;
         }
 
-        // Toggle navbar on button click
+        // Toggle navbar on button click and store the state in session storage
         toggler.addEventListener('click', function() {
             const isCollapsed = navbar.classList.toggle('collapsed');
+            sessionStorage.setItem('navbarCollapsed', isCollapsed); // Save the collapsed state
             togglerIcon.style.transform = isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
-
             adjustElementsForNavbarState(isCollapsed);
         });
+
+        // Retrieve the navbar collapsed state from session storage on page load
+        const navbarCollapsed = sessionStorage.getItem('navbarCollapsed') === 'true';
+        if (navbarCollapsed) {
+            navbar.classList.add('collapsed');
+            togglerIcon.style.transform = 'rotate(180deg)';
+            adjustElementsForNavbarState(true);
+        }
 
         function adjustElementsForNavbarState(isCollapsed) {
             const marginLeftValue = isCollapsed ? '-240px' : '0px';
@@ -158,7 +167,7 @@
             if(!bannerAlert && breadcrumb) {
                 breadcrumb.classList.toggle('collapsed', isCollapsed);
             };
-            if(footer) footer.style.marginLeft = marginLeftValue; 
+            if(footer) footer.style.marginLeft = marginLeftValue;
         }
 
         // Expand navbar when hovering near the left edge of the screen
@@ -179,22 +188,27 @@
             }
         });
 
-        // Function to check and toggle navbar based on window width
-        function toggleNavbarOnResize() {
-            const isCollapsed = window.innerWidth < 1007; // mobile breakpoint
-            navbar.classList.toggle('collapsed', isCollapsed);
-            togglerIcon.style.transform = isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
-            adjustElementsForNavbarState(isCollapsed);
-            adjustNavbarHeaderVisibility()
-
+        // Function to collapse the navbar based on window width
+        function collapseNavbarIfNeeded() {
+            const windowWidth = window.innerWidth;
+            if (windowWidth < 1007) {
+                if (!navbar.classList.contains('collapsed')) {
+                    navbar.classList.add('collapsed');
+                    togglerIcon.style.transform = 'rotate(180deg)';
+                    adjustElementsForNavbarState(true);
+                    sessionStorage.setItem('navbarCollapsed', true);
+                }
+            }
         }
 
-        // Performant way to handle window resize events
-        let debouncedToggleNavbarOnResize = debounce(toggleNavbarOnResize, 100);
-
-        // Listen for window resize events on initial page load
+        // Update the window resize listener
+        function toggleNavbarOnResize() {
+            collapseNavbarIfNeeded(); // Use the new function to decide whether to collapse
+        }
+        
+        let debouncedToggleNavbarOnResize = debounce(toggleNavbarOnResize, 50);
         window.addEventListener('resize', debouncedToggleNavbarOnResize);
-
+        
         // Select the navbar dropdown elements
         let navbarItems = document.querySelectorAll('.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-toggle > #dropdown_title');
 
@@ -236,6 +250,7 @@
                     sessionStorage.setItem('activeLink', link.getAttribute('href'));
                 });
             });
+            collapseNavbarIfNeeded();
         }
 
         // Close all dropdowns except the last opened one
