@@ -158,7 +158,7 @@ def check_interface_ipaddress_vrf_uniqueness(command):
 
     if failed:
         raise ValidationError(
-            "You cannot migrate Interfaces or VMInterfaces associated to IP Addresses with different VRFs."
+            "You cannot migrate Interfaces or VMInterfaces associated to multiple IP Addresses with different VRFs."
         )
 
 
