@@ -163,7 +163,7 @@
 
         // Expand navbar when hovering near the left edge of the screen
         document.addEventListener('mousemove', function(e) {
-            if (navbar.classList.contains('collapsed') && e.clientX < 10) { // 10px from the left edge
+            if (e.clientX < 20 && navbar.classList.contains('collapsed')) { // 20px from the left edge
                 navbar.classList.remove('collapsed');
                 togglerIcon.style.transform = 'rotate(0deg)';
                 expandedByHover = true; // Set flag when expanded by hover

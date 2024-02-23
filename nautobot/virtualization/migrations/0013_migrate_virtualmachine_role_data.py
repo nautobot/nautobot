@@ -35,6 +35,8 @@ def reverse_role_data_migrate(apps, schema):
 
 class Migration(migrations.Migration):
     dependencies = [
+        ("dcim", "0001_initial_part_1"),
+        ("extras", "0061_role_and_alter_status"),
         ("virtualization", "0012_alter_virtualmachine_role_add_new_role"),
     ]
 

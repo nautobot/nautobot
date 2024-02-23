@@ -1,1 +1,0 @@
-Added `METRICS_AUTHENTICATED` setting to control authentication for the HTTP endpoint `/metrics`.

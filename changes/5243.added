@@ -1,1 +1,0 @@
-Added support for setting display_field on DynamicModelChoiceField to nested values in suggested choices list.
