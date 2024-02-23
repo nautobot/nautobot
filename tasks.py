@@ -14,6 +14,7 @@ limitations under the License.
 
 import os
 import re
+import shutil
 
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit
@@ -147,7 +148,7 @@ def docker_compose(context, command, **kwargs):
         **kwargs: Passed through to the context.run() call.
     """
     compose_command_tokens = [
-        "docker-compose",
+        "docker-compose" if shutil.which("docker-compose") else "docker compose",
         f'--project-name "{context.nautobot.project_name}"',
         f'--project-directory "{context.nautobot.compose_dir}"',
     ]
