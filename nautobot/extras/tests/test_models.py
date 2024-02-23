@@ -18,7 +18,6 @@ from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
 from nautobot.circuits.models import CircuitType
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import TestCase
-from nautobot.core.testing.mixins import NautobotTestCaseMixin
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import (
     Device,
@@ -1271,7 +1270,7 @@ class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual("", log.absolute_url)
 
 
-class RoleTest(NautobotTestCaseMixin, ModelTestCases.BaseModelTestCase):
+class RoleTest(ModelTestCases.BaseModelTestCase):
     """Tests for `Role` model class."""
 
     model = Role

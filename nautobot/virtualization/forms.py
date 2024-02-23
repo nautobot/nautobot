@@ -25,7 +25,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFormMixin,
 )
 from nautobot.dcim.forms import INTERFACE_MODE_HELP_TEXT, InterfaceCommonForm
-from nautobot.dcim.models import Device, Location, Platform, Rack, SoftwareVersion
+from nautobot.dcim.models import Device, Location, Platform, Rack, SoftwareImageFile, SoftwareVersion
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     LocalContextFilterForm,
@@ -207,6 +207,12 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
         queryset=Cluster.objects.all(), query_params={"cluster_group_id": "$cluster_group"}
     )
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
+    software_image_files = DynamicModelMultipleChoiceField(
+        queryset=SoftwareImageFile.objects.all(),
+        required=False,
+        label="Software image files",
+        help_text="Override the software image files associated with the software version for this virtual machine",
+    )
     software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
     vrfs = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),
@@ -228,6 +234,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
             "platform",
             "primary_ip4",
             "primary_ip6",
+            "software_image_files",
             "software_version",
             "vcpus",
             "memory",
@@ -318,6 +325,7 @@ class VirtualMachineBulkEditForm(
     disk = forms.IntegerField(required=False, label="Disk (GB)")
     comments = CommentField(widget=SmallTextarea, label="Comments")
     software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
+    software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
 
     class Meta:
         nullable_fields = [
@@ -327,6 +335,7 @@ class VirtualMachineBulkEditForm(
             "memory",
             "disk",
             "comments",
+            "software_image_files",
             "software_version",
         ]
 

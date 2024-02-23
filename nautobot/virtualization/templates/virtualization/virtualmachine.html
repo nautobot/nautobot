@@ -111,12 +111,7 @@
                         {% endif %}
                     </td>
                 </tr>
-                <tr>
-                    <td>Software Version</td>
-                    <td>
-                        {{ object.software_version|hyperlinked_object }}
-                    </td>
-                </tr>
+                {% include 'dcim/inc/detail_softwareversion_softwareimagefile_rows.html' %}
             </table>
         </div>
         <div class="panel panel-default">

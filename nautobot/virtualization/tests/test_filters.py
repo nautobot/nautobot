@@ -257,6 +257,8 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
     tenancy_related_name = "virtual_machines"
 
     generic_filter_tests = (
+        ["software_image_files", "software_image_files__id"],
+        ["software_image_files", "software_image_files__image_file_name"],
         ["software_version", "software_version__id"],
         ["software_version", "software_version__version"],
     )
@@ -398,6 +400,8 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 comments="This is VM 6",
             ),
         )
+        vms[0].software_image_files.set(cls.software_versions[1].software_image_files.all())
+        vms[1].software_image_files.set(cls.software_versions[0].software_image_files.all())
 
         int_status = Status.objects.get_for_model(VMInterface).first()
         cls.interfaces = (

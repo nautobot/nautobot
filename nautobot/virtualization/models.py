@@ -229,6 +229,13 @@ class VirtualMachine(PrimaryModel, ConfigContextModel):
         null=True,
         help_text="The software version installed on this virtual machine",
     )
+    software_image_files = models.ManyToManyField(
+        to="dcim.SoftwareImageFile",
+        related_name="virtual_machines",
+        blank=True,
+        verbose_name="Software Image Files",
+        help_text="Override the software image files associated with the software version for this virtual machine",
+    )
 
     objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
 

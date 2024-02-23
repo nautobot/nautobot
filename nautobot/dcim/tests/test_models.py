@@ -34,6 +34,7 @@ from nautobot.dcim.models import (
     Interface,
     InterfaceRedundancyGroup,
     InterfaceTemplate,
+    InventoryItem,
     Location,
     LocationType,
     Manufacturer,
@@ -57,6 +58,7 @@ from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import User
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
 class CableLengthTestCase(TestCase):
@@ -1160,49 +1162,33 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_software_version_device_type_validation(self):
         """
-        Device's software version must contain a software image file that matches the device's device type.
+        Assert that device's software version contains a software image file that matches the device's device type or a default image.
         """
 
         software_version = SoftwareVersion.objects.filter(software_image_files__isnull=False).first()
-
+        software_version.software_image_files.all().update(default_image=False)
         self.device_type.software_image_files.set([])
         self.device.software_version = software_version
+
+        # No device type or default image match
         with self.assertRaises(ValidationError):
             self.device.validated_save()
 
-        self.device_type.software_image_files.add(software_version.software_image_files.first())
+        # Default image matches
+        software_image_file = software_version.software_image_files.first()
+        software_image_file.default_image = True
+        software_image_file.save()
+        self.device.validated_save()
+
+        # Device type matches
+        software_image_file.default_image = False
+        software_image_file.save()
+        self.device_type.software_image_files.add(software_image_file)
         self.device.validated_save()
 
 
 class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
     model = DeviceTypeToSoftwareImageFile
-
-    def test_is_default_uniqueness(self):
-        """
-        Assert that only one default software image file can be set per device type.
-        """
-
-        device_type = DeviceType.objects.first()
-        software_image_files = SoftwareImageFile.objects.all()[:3]
-        DeviceTypeToSoftwareImageFile.objects.filter(device_type=device_type).delete()
-
-        DeviceTypeToSoftwareImageFile.objects.create(
-            device_type=device_type,
-            software_image_file=software_image_files[0],
-            is_default=True,
-        )
-
-        device_type_to_software_image_file = DeviceTypeToSoftwareImageFile(
-            device_type=device_type,
-            software_image_file=software_image_files[1],
-            is_default=True,
-        )
-
-        with self.assertRaises(ValidationError):
-            device_type_to_software_image_file.validated_save()
-
-        device_type_to_software_image_file.is_default = False
-        device_type_to_software_image_file.validated_save()
 
     def test_get_docs_url(self):
         """No docs for this through table model."""
@@ -1714,6 +1700,185 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
 class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
     model = SoftwareImageFile
 
+    def test_queryset_get_for_object(self):
+        """
+        Test that the queryset get_for_object method returns the expected results for Device, DeviceType, InventoryItem and VirtualMachine
+        """
+        qs = SoftwareImageFile.objects.all()
+        location = Location.objects.first()
+        manufacturer = Manufacturer.objects.first()
+        platform = Platform.objects.first()
+        role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        software_version_status = Status.objects.get_for_model(SoftwareVersion).first()
+        software_image_file_status = Status.objects.get_for_model(SoftwareImageFile).first()
+        virtual_machine_status = Status.objects.get_for_model(VirtualMachine).first()
+
+        software_versions = (
+            SoftwareVersion.objects.create(
+                platform=platform, version="Test version 1.0.0", status=software_version_status
+            ),
+            SoftwareVersion.objects.create(
+                platform=platform, version="Test version 2.0.0", status=software_version_status
+            ),
+        )
+        software_image_files = (
+            SoftwareImageFile.objects.create(
+                software_version=software_versions[0],
+                image_file_name="software_image_file_qs_test_1.bin",
+                status=software_image_file_status,
+            ),
+            SoftwareImageFile.objects.create(
+                software_version=software_versions[0],
+                image_file_name="software_image_file_qs_test_2.bin",
+                status=software_image_file_status,
+                default_image=True,
+            ),
+            SoftwareImageFile.objects.create(
+                software_version=software_versions[1],
+                image_file_name="software_image_file_qs_test_3.bin",
+                status=software_image_file_status,
+            ),
+            SoftwareImageFile.objects.create(
+                software_version=software_versions[1],
+                image_file_name="software_image_file_qs_test_4.bin",
+                status=software_image_file_status,
+            ),
+        )
+
+        device_types = (
+            DeviceType.objects.create(
+                manufacturer=manufacturer,
+                model="Test SoftwareImageFileQs Device Type 1",
+            ),
+            DeviceType.objects.create(
+                manufacturer=manufacturer,
+                model="Test SoftwareImageFileQs Device Type 2",
+            ),
+        )
+        device_types[0].software_image_files.set(software_image_files[0:2])
+        device_types[1].software_image_files.set(software_image_files[2:4])
+
+        # This should only return the device types with a direct m2m relationship to the software image files
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(device_types[0]), software_image_files[0:2])
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(device_types[1]), software_image_files[2:4])
+
+        devices = (
+            Device.objects.create(
+                device_type=device_types[0],
+                role=role,
+                name="Test SoftwareImageFileQs Device1",
+                location=location,
+                status=device_status,
+                software_version=software_versions[0],
+            ),
+            Device.objects.create(
+                device_type=device_types[1],
+                role=role,
+                name="Test SoftwareImageFileQs Device2",
+                location=location,
+                status=device_status,
+                software_version=software_versions[0],
+            ),
+        )
+
+        # Only return the software image files associated with the device's software version and device type
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(devices[0]), software_image_files[0:2])
+
+        # When the device's software image files are overridden with the direct m2m relationship, return those
+        devices[1].software_image_files.set(software_image_files[1:3])
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(devices[1]), software_image_files[1:3])
+
+        # If no device types are associated with the software image files, return the default software image file
+        device_types[0].software_image_files.clear()
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(devices[0]), [software_image_files[1]])
+
+        inventory_items = (
+            InventoryItem.objects.create(
+                device=devices[0],
+                name="Test SoftwareImageFileQs Inventory Item 1",
+                software_version=software_versions[0],
+            ),
+            InventoryItem.objects.create(
+                device=devices[1],
+                name="Test SoftwareImageFileQs Inventory Item 2",
+                software_version=software_versions[1],
+            ),
+        )
+
+        # Only return the software image files associated with the inventory item's software version
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(inventory_items[0]), software_image_files[0:2])
+
+        # When the inventory item's software image files are overridden with the direct m2m relationship, return those
+        inventory_items[1].software_image_files.set(software_image_files[1:3])
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(inventory_items[1]), software_image_files[1:3])
+
+        cluster_type = ClusterType.objects.create(name="Test SoftwareImageFileQs Cluster Type 1")
+        cluster = Cluster.objects.create(name="Test SoftwareImageFileQs Cluster 1", cluster_type=cluster_type)
+        virtual_machines = (
+            VirtualMachine.objects.create(
+                cluster=cluster,
+                name="Test SoftwareImageFileQs Virtual Machine 1",
+                status=virtual_machine_status,
+                software_version=software_versions[0],
+            ),
+            VirtualMachine.objects.create(
+                cluster=cluster,
+                name="Test SoftwareImageFileQs Virtual Machine 2",
+                status=virtual_machine_status,
+                software_version=software_versions[1],
+            ),
+        )
+
+        # Only return the software image files associated with the virtual machine's software version
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(virtual_machines[0]), software_image_files[0:2])
+
+        # When the virtual machine's software image files are overridden with the direct m2m relationship, return those
+        virtual_machines[1].software_image_files.set(software_image_files[1:3])
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(virtual_machines[1]), software_image_files[1:3])
+
+        with self.assertRaises(TypeError):
+            qs.get_for_object(Circuit)
+
 
 class SoftwareVersionTestCase(ModelTestCases.BaseModelTestCase):
     model = SoftwareVersion
+
+    def test_queryset_get_for_object(self):
+        """
+        Test that the queryset get_for_object method returns the expected results for Device, DeviceType, InventoryItem and VirtualMachine
+        """
+        qs = SoftwareVersion.objects.all()
+
+        # Only return the device types with a direct m2m relationship to the version's software image files
+        device_type = DeviceType.objects.filter(software_image_files__isnull=False).first()
+        self.assertQuerysetEqualAndNotEmpty(
+            qs.get_for_object(device_type), qs.filter(software_image_files__device_types=device_type)
+        )
+
+        # Only return the software version set on the device's software_version foreign key
+        device = Device.objects.filter(software_version__isnull=False).first()
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(device), [device.software_version])
+
+        # Only return the software version set on the inventory item's software_version foreign key
+        software_version = SoftwareVersion.objects.first()
+        inventory_item = InventoryItem.objects.create(
+            device=device,
+            name="Test SoftwareVersionQs Inventory Item 1",
+            software_version=software_version,
+        )
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(inventory_item), [inventory_item.software_version])
+
+        # Only return the software version set on the virtual machine's software_version foreign key
+        cluster_type = ClusterType.objects.create(name="Test SoftwareImageFileQs Cluster Type 1")
+        cluster = Cluster.objects.create(name="Test SoftwareImageFileQs Cluster 1", cluster_type=cluster_type)
+        virtual_machine = VirtualMachine.objects.create(
+            cluster=cluster,
+            name="Test SoftwareImageFileQs Virtual Machine",
+            status=Status.objects.get_for_model(VirtualMachine).first(),
+            software_version=software_version,
+        )
+        self.assertQuerysetEqualAndNotEmpty(qs.get_for_object(virtual_machine), [virtual_machine.software_version])
+
+        with self.assertRaises(TypeError):
+            qs.get_for_object(Circuit)
