@@ -1570,8 +1570,12 @@ class InterfaceRedundancyGroupFilterSet(BaseFilterSet, NameSearchFilterSet):
         return queryset.filter(virtual_ip__in=ip_queryset)
 
 
-class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet, NameSearchFilterSet):
+class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet):
     """Filter for InterfaceRedundancyGroupAssociation."""
+
+    q = SearchFilter(
+        filter_predicates={"interface_redundancy_group__name": "icontains", "interface__name": "icontains"}
+    )
 
     interface_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=InterfaceRedundancyGroup.objects.all(),

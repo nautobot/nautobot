@@ -8,6 +8,7 @@ from nautobot.core.filters import (
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
     MultiValueUUIDFilter,
+    NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
@@ -493,6 +494,12 @@ class ExportTemplateFilterSet(BaseFilterSet):
 
 
 class ExternalIntegrationFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "remote_url": "icontains",
+        },
+    )
     has_secrets_group = RelatedMembershipBooleanFilter(
         field_name="secrets_group",
         label="Has secrets group",
@@ -589,7 +596,7 @@ class GraphQLQueryFilterSet(BaseFilterSet):
 #
 
 
-class ImageAttachmentFilterSet(BaseFilterSet):
+class ImageAttachmentFilterSet(BaseFilterSet, NameSearchFilterSet):
     content_type = ContentTypeFilter()
 
     class Meta:
@@ -857,6 +864,13 @@ class RelationshipFilterSet(BaseFilterSet):
 
 
 class RelationshipAssociationFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "relationship__label": "icontains",
+            "relationship__key": "icontains",
+        }
+    )
+
     relationship = django_filters.ModelMultipleChoiceFilter(
         field_name="relationship__key",
         queryset=Relationship.objects.all(),
@@ -932,6 +946,13 @@ class SecretsGroupFilterSet(
 
 class SecretsGroupAssociationFilterSet(BaseFilterSet):
     """Filterset for the SecretsGroupAssociation through model."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "secrets_group__name": "icontains",
+            "secret__name": "icontains",
+        },
+    )
 
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),

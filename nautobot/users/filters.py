@@ -4,6 +4,7 @@ import django_filters
 
 from nautobot.core.filters import (
     BaseFilterSet,
+    NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
@@ -99,7 +100,7 @@ class TokenFilterSet(BaseFilterSet):
         fields = ["id", "key", "write_enabled", "created", "expires", "description"]
 
 
-class ObjectPermissionFilterSet(BaseFilterSet):
+class ObjectPermissionFilterSet(BaseFilterSet, NameSearchFilterSet):
     users = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),
         to_field_name="username",
