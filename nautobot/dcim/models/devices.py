@@ -106,7 +106,6 @@ class DeviceTypeToSoftwareImageFile(BaseModel, ChangeLoggedModel):
     software_image_file = models.ForeignKey(
         "dcim.SoftwareImageFile", on_delete=models.PROTECT, related_name="device_type_mappings"
     )
-    is_default = models.BooleanField(default=False, help_text="Is the default image for this device type")
 
     class Meta:
         unique_together = [
@@ -114,17 +113,6 @@ class DeviceTypeToSoftwareImageFile(BaseModel, ChangeLoggedModel):
         ]
         verbose_name = "device type to software image file mapping"
         verbose_name_plural = "device type to software image file mappings"
-
-    def clean(self):
-        super().clean()
-
-        # Validate that only one default image is set per device type
-        if self.is_default:
-            current_default = DeviceTypeToSoftwareImageFile.objects.filter(
-                device_type=self.device_type, is_default=True
-            )
-            if current_default.exists() and current_default.first().pk != self.pk:
-                raise ValidationError({"is_default": "Only one default image can be set per device type."})
 
     def __str__(self):
         return f"{self.device_type!s} - {self.software_image_file!s}"
@@ -801,16 +789,18 @@ class Device(PrimaryModel, ConfigContextModel):
                 }
             )
 
-        # Validate device software version has a software image file that matches the device's device type
-        if (
-            self.software_version is not None
-            and not self.software_version.software_image_files.filter(device_types=self.device_type).exists()
+        # Validate device software version has a software image file that matches the device's device type or is a default image
+        if self.software_version is not None and not any(
+            (
+                self.software_version.software_image_files.filter(device_types=self.device_type).exists(),
+                self.software_version.software_image_files.filter(default_image=True).exists(),
+            )
         ):
             raise ValidationError(
                 {
                     "software_version": (
-                        f"No software image files in version '{self.software_version}' are "
-                        f"associated with device type {self.device_type}."
+                        f"No software image files for version '{self.software_version}' are "
+                        f"valid for device type {self.device_type}."
                     )
                 }
             )
@@ -1070,13 +1060,24 @@ class SoftwareImageFileQuerySet(RestrictedQuerySet):
         from nautobot.virtualization.models import VirtualMachine
 
         if isinstance(obj, Device):
-            qs = self.filter(software_version__devices=obj)
+            if obj.software_image_files.exists():
+                return obj.software_image_files.all()
+            device_type_qs = self.filter(software_version__devices=obj, device_types=obj.device_type)
+            if device_type_qs.exists():
+                return device_type_qs
+            return self.filter(software_version__devices=obj, default_image=True)
         elif isinstance(obj, InventoryItem):
-            qs = self.filter(software_version__inventory_items=obj)
+            if obj.software_image_files.exists():
+                return obj.software_image_files.all()
+            else:
+                return self.filter(software_version__inventory_items=obj)
         elif isinstance(obj, DeviceType):
             qs = self.filter(device_types=obj)
         elif isinstance(obj, VirtualMachine):
-            qs = self.filter(software_version__virtual_machines=obj)
+            if obj.software_image_files.exists():
+                return obj.software_image_files.all()
+            else:
+                qs = self.filter(software_version__virtual_machines=obj)
         else:
             valid_types = "Device, DeviceType, InventoryItem and VirtualMachine"
             raise TypeError(f"{obj} is not a valid object type. Valid types are {valid_types}.")
@@ -1117,6 +1118,9 @@ class SoftwareImageFile(PrimaryModel):
         help_text="Image file size in bytes",
     )
     download_url = models.URLField(blank=True, verbose_name="Download URL")
+    default_image = models.BooleanField(
+        verbose_name="Default Image", help_text="Is the default image for this software version", default=False
+    )
     status = StatusField(blank=False, null=False)
 
     objects = BaseManager.from_queryset(SoftwareImageFileQuerySet)()

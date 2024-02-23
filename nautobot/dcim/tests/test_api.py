@@ -2745,36 +2745,27 @@ class DeviceTypeToSoftwareImageFileTestCase(
         DeviceTypeToSoftwareImageFile.objects.create(
             device_type=device_types[0],
             software_image_file=software_image_files[0],
-            is_default=True,
         )
         DeviceTypeToSoftwareImageFile.objects.create(
             device_type=device_types[0],
             software_image_file=software_image_files[1],
-            is_default=False,
         )
         DeviceTypeToSoftwareImageFile.objects.create(
             device_type=device_types[0],
             software_image_file=software_image_files[2],
-            is_default=False,
         )
 
         cls.create_data = [
             {
                 "software_image_file": software_image_files[0].pk,
                 "device_type": device_types[1].pk,
-                "is_default": True,
             },
             {
                 "software_image_file": software_image_files[1].pk,
                 "device_type": device_types[2].pk,
-                "is_default": True,
             },
             {
                 "software_image_file": software_image_files[2].pk,
                 "device_type": device_types[3].pk,
-                "is_default": False,
             },
         ]
-        cls.bulk_update_data = {
-            "is_default": False,
-        }
