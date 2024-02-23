@@ -179,6 +179,22 @@
             }
         });
 
+        // Function to check and toggle navbar based on window width
+        function toggleNavbarOnResize() {
+            const isCollapsed = window.innerWidth < 1007; // mobile breakpoint
+            navbar.classList.toggle('collapsed', isCollapsed);
+            togglerIcon.style.transform = isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
+            adjustElementsForNavbarState(isCollapsed);
+            adjustNavbarHeaderVisibility()
+
+        }
+
+        // Performant way to handle window resize events
+        var debouncedToggleNavbarOnResize = debounce(toggleNavbarOnResize, 100);
+
+        // Listen for window resize events on initial page load
+        window.addEventListener('resize', debouncedToggleNavbarOnResize);
+
         // Select the navbar dropdown elements
         var navbarItems = document.querySelectorAll('.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-toggle > #dropdown_title');
 
@@ -260,7 +276,7 @@
                 // Show or hide the navbar header based on mainContent's position
                 if (mainContentTop < 0) {
                     // Main content top is out of view, hide navbar header
-                    navbarHeader.style.top = '-56px'; // height of navbar header
+                    navbarHeader.style.top = '-60px'; // height of navbar header
                 } else {
                     // Main content top is in view, show navbar header
                     navbarHeader.style.top = '0';
