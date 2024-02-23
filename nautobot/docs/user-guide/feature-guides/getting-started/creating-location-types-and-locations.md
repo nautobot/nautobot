@@ -8,7 +8,7 @@ Locations retain hierarchical nature of Location Types but are more specific. Fo
 Additional information on Location Types is in the [Location Type section of the Nautobot documentation](../../core-data-model/dcim/locationtype.md).
 Additional information on Locations is in the [Location section of the Nautobot documentation](../../core-data-model/dcim/location.md).
 
-In the following exercise, we will create three Location Types and their corresponding locations:
+In the following exercise, we will create four Location Types and their corresponding locations:
 
 Location Types:
 
