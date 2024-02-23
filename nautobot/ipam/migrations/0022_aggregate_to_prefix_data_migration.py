@@ -158,7 +158,11 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
             prefix_length=instance.prefix_length,
             vrf__isnull=True,
         ).exists():
-            prefix = Prefix.objects.get(network=instance.network, prefix_length=instance.prefix_length)
+            prefix = Prefix.objects.filter(
+                network=instance.network,
+                prefix_length=instance.prefix_length,
+                vrf__isnull=True,
+            ).first()
             mismatches.update(_migrate_aggregate_to_existing_prefix(instance, prefix))
 
         else:
