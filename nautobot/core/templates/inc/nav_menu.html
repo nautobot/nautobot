@@ -134,6 +134,8 @@
         let savedScrollPosition = sessionStorage.getItem('navbarScrollPosition');
         let activeLink = sessionStorage.getItem('activeLink');
         let expandedByHover = false;
+        let manuallyToggled = sessionStorage.getItem('manuallyToggled') === 'true';
+
     
         // Function to reset stored dropdown state information
         function resetNavbarState() {
@@ -144,13 +146,17 @@
             expandedByHover = false;
         }
 
-        // Toggle navbar on button click and store the state in session storage
         toggler.addEventListener('click', function() {
-            const isCollapsed = navbar.classList.toggle('collapsed');
-            sessionStorage.setItem('navbarCollapsed', isCollapsed); // Save the collapsed state
-            togglerIcon.style.transform = isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
-            adjustElementsForNavbarState(isCollapsed);
+            const isNowCollapsed = navbar.classList.toggle('collapsed');
+            sessionStorage.setItem('navbarCollapsed', isNowCollapsed ? 'true' : 'false');
+            // Set 'navbarManuallyToggled' to track any manual toggle
+            sessionStorage.setItem('navbarManuallyToggled', 'true');
+            // Track if the action was an expansion or a collapse
+            sessionStorage.setItem('navbarExpanded', !isNowCollapsed ? 'true' : 'false');
+            togglerIcon.style.transform = isNowCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
+            adjustElementsForNavbarState(isNowCollapsed);
         });
+        
 
         // Retrieve the navbar collapsed state from session storage on page load
         const navbarCollapsed = sessionStorage.getItem('navbarCollapsed') === 'true';
@@ -188,18 +194,33 @@
             }
         });
 
-        // Function to collapse the navbar based on window width
         function collapseNavbarIfNeeded() {
             const windowWidth = window.innerWidth;
+            const navbarManuallyToggled = sessionStorage.getItem('navbarManuallyToggled') === 'true';
+            const navbarExpanded = sessionStorage.getItem('navbarExpanded') === 'true';
+            const isCollapsed = navbar.classList.contains('collapsed');
+        
             if (windowWidth < 1007) {
-                if (!navbar.classList.contains('collapsed')) {
+                if (!isCollapsed) {
                     navbar.classList.add('collapsed');
                     togglerIcon.style.transform = 'rotate(180deg)';
                     adjustElementsForNavbarState(true);
-                    sessionStorage.setItem('navbarCollapsed', true);
+                    sessionStorage.setItem('navbarCollapsed', 'true');
                 }
+            } else if (windowWidth >= 1007) {
+                // Only expand automatically if it was not manually collapsed
+                if (isCollapsed && (navbarManuallyToggled && navbarExpanded)) {
+                    navbar.classList.remove('collapsed');
+                    togglerIcon.style.transform = 'rotate(0deg)';
+                    adjustElementsForNavbarState(false);
+                    sessionStorage.setItem('navbarCollapsed', 'false');
+                }
+                // Do not automatically change the state if it was manually collapsed
             }
         }
+        
+        
+
 
         // Update the window resize listener
         function toggleNavbarOnResize() {
