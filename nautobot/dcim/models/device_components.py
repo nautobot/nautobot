@@ -1063,7 +1063,14 @@ class InventoryItem(TreeModel, ComponentModel):
         related_name="inventory_items",
         blank=True,
         null=True,
-        verbose_name="The software version installed on this item",
+        verbose_name="The software version installed on this inventory item",
+    )
+    software_image_files = models.ManyToManyField(
+        to="dcim.SoftwareImageFile",
+        related_name="inventory_items",
+        blank=True,
+        verbose_name="Software Image Files",
+        help_text="Override the software image files associated with the software version for this inventory item",
     )
 
     class Meta:

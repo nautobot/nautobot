@@ -1,11 +1,12 @@
 from django.test import tag, TestCase
 
 from nautobot.core.templatetags.helpers import get_docs_url
+from nautobot.core.testing.mixins import NautobotTestCaseMixin
 
 
 @tag("unit")
 class ModelTestCases:
-    class BaseModelTestCase(TestCase):
+    class BaseModelTestCase(NautobotTestCaseMixin, TestCase):
         """Base class for generic model tests."""
 
         model = None

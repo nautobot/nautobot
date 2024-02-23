@@ -52,7 +52,10 @@ The base template for listing objects is `generic/object_list.html`, with the fo
 
 ## Object Edit
 
-The base template for object addition or change is `generic/object_edit.html`,
++/- 2.2.0
+    The base template for object edit was changed from `generic/object_edit.html` to `generic/object_create.html`.
+
+The base template for object addition or change is `generic/object_create.html`,
 with the following blocks:
 
 * `form`: is the block in which the form gets rendered. This can be overridden

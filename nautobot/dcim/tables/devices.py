@@ -1032,6 +1032,7 @@ class SoftwareImageFileTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     image_file_name = tables.Column(linkify=True)
     software_version = tables.Column(linkify=True)
+    default_image = BooleanColumn()
     device_type_count = LinkedCountColumn(
         viewname="dcim:devicetype_list",
         url_params={"software_image_files": "pk"},
@@ -1047,6 +1048,7 @@ class SoftwareImageFileTable(StatusTableMixin, BaseTable):
             "image_file_name",
             "status",
             "software_version",
+            "default_image",
             "image_file_checksum",
             "hashing_algorithm",
             "download_url",
@@ -1059,6 +1061,7 @@ class SoftwareImageFileTable(StatusTableMixin, BaseTable):
             "image_file_name",
             "status",
             "software_version",
+            "default_image",
             "device_type_count",
             "tags",
             "actions",

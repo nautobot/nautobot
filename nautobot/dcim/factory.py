@@ -175,16 +175,14 @@ class DeviceFactory(PrimaryModelFactory):
         None,
     )
 
-    has_software_image_files = NautobotBoolIterator(chance_of_getting_true=20)
-
     @factory.post_generation
     def software_image_files(self, create, extracted, **kwargs):
-        if not create or not DeviceFactory.has_software_image_files.evaluate(None, None, None):
+        if not create:
             return
         if extracted:
             self.software_image_files.set(extracted)
         else:
-            self.software_image_files.set(get_random_instances(SoftwareImageFile, minimum=1))
+            self.software_image_files.set(get_random_instances(SoftwareImageFile))
 
     # TODO to be done after these model factories are done.
     # has_cluster = NautobotBoolIterator()
@@ -644,6 +642,9 @@ class SoftwareImageFileFactory(PrimaryModelFactory):
     )
     image_file_size = factory.Maybe("has_image_file_size", factory.Faker("pyint"), None)
     download_url = factory.Maybe("has_download_url", factory.Faker("uri"), "")
+    default_image = factory.LazyAttribute(
+        lambda o: not o.software_version.software_image_files.filter(default_image=True).exists()
+    )
 
 
 class SoftwareVersionFactory(PrimaryModelFactory):
