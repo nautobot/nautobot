@@ -1,0 +1,1 @@
+Fixed incorrect reference for `device.device_role` on the Rack detail view for non-racked device objects.
