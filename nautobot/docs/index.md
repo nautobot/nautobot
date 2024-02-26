@@ -9,7 +9,7 @@ Welcome to the Nautobot Core Documentation! Use the top navigation bar to read a
 
 - [Installing Nautobot](user-guide/administration/installation/index.md), [Configuring Nautobot](user-guide/administration/configuration/index.md), [Getting Started with the Web Interface](user-guide/feature-guides/getting-started/index.md), [REST](user-guide/platform-functionality/rest-api/overview.md) and [GraphQL](user-guide/platform-functionality/graphql.md) APIs, [Apps](apps/index.md), additional features and much more can be found under the **Documentation** section.
 - Learn about how to [Develop and Contribute to Nautobot](development/index.md), [Set up your Development Environment](development/core/getting-started.md), and more under the **Development Guide** section.
-- Nautobot has a thriving ecosystem of **Apps** (also known as Plugins), developed as separate projects, for which you can find links to documentation under the [Nautobot Apps](apps/index.md) section.
+- Nautobot has a thriving ecosystem of **Apps** (formerly known as Plugins), developed as separate projects, for which you can find links to documentation under the [Nautobot Apps](apps/index.md) section.
 
 ## What is Nautobot?
 
@@ -23,18 +23,18 @@ Nautobot enables three (3) key use cases.
 
 1. **Flexible Source of Truth for Networking** - Nautobot core data models are used to define the intended state of network infrastructure enabling it as a Source of Truth. While a baseline set of models are provided (such as IP networks and addresses, devices and racks, circuits and cable, etc.) it is Nautobot's goal to offer maximum data model flexibility. This is enabled through features such as user-defined relationships, custom fields on any model, and data validation that permits users to codify everything from naming standards to having automated tests run before data can be populated into Nautobot.
 
-2. **Extensible Data Platform for Automation** - Nautobot has a rich feature set to seamlessly integrate with network automation solutions.  Nautobot offers GraphQL and native Git integration along with REST APIs and webhooks.  Git integration dynamically loads YAML data files as Nautobot config contexts.  Nautobot also has an evolving plugin system that enables users to create custom models, APIs, and UI elements.  The plugin system is also used to unify and aggregate disparate data sources creating a Single Source of Truth to streamline data management for network automation.
+2. **Extensible Data Platform for Automation** - Nautobot has a rich feature set to seamlessly integrate with network automation solutions.  Nautobot offers GraphQL and native Git integration along with REST APIs and webhooks.  Git integration dynamically loads YAML data files as Nautobot config contexts.  Nautobot also has an evolving App system that enables users to create custom models, APIs, and UI elements.  The App system is also used to unify and aggregate disparate data sources creating a Single Source of Truth to streamline data management for network automation.
 
-3. **Platform for Network Automation Apps** - The Nautobot plugin system enables users to create Network Automation Apps.  Apps can be as lightweight or robust as needed based on user needs.  Using Nautobot for creating custom applications saves up to 70% development time by re-using features such as authentication, permissions, webhooks, GraphQL, change logging, etc. all while having access to the data already stored in Nautobot. Some production ready applications include:
+3. **Platform for Network Automation Apps** - The Nautobot App system enables users to create Network Automation Apps.  Apps can be as lightweight or robust as needed based on user needs.  Using Nautobot for creating custom applications saves up to 70% development time by re-using features such as authentication, permissions, webhooks, GraphQL, change logging, etc. all while having access to the data already stored in Nautobot. Some production ready applications include:
 
-    - [Golden Configuration](https://github.com/nautobot/nautobot-plugin-golden-config)
-    - [Device Lifecycle](https://github.com/nautobot/nautobot-plugin-device-lifecycle-mgmt)
-    - [Firewall Models](https://github.com/nautobot/nautobot-plugin-firewall-models)
-    - [SSoT](https://github.com/nautobot/nautobot-plugin-ssot)
-    - [ChatOps](https://github.com/nautobot/nautobot-plugin-chatops)
-    - [Circuit Maintenance](https://github.com/nautobot/nautobot-plugin-circuit-maintenance)
-    - [Capacity Metrics](https://github.com/nautobot/nautobot-plugin-capacity-metrics)
-    - [Device Onboarding](https://github.com/nautobot/nautobot-plugin-device-onboarding)
+    - [Golden Configuration](https://github.com/nautobot/nautobot-app-golden-config)
+    - [Device Lifecycle](https://github.com/nautobot/nautobot-app-device-lifecycle-mgmt)
+    - [Firewall Models](https://github.com/nautobot/nautobot-app-firewall-models)
+    - [SSoT](https://github.com/nautobot/nautobot-app-ssot)
+    - [ChatOps](https://github.com/nautobot/nautobot-app-chatops)
+    - [Circuit Maintenance](https://github.com/nautobot/nautobot-app-circuit-maintenance)
+    - [Capacity Metrics](https://github.com/nautobot/nautobot-app-capacity-metrics)
+    - [Device Onboarding](https://github.com/nautobot/nautobot-app-device-onboarding)
 
 ## Screenshots
 
@@ -48,9 +48,9 @@ Nautobot enables three (3) key use cases.
 
 ### App Screenshots
 
-![Golden Config App](media/ss_plugin_golden_config.png)
+![Golden Config App](media/ss_app_golden_config.png)
 
-![ChatOps App](media/ss_plugin_chatops.png)
+![ChatOps App](media/ss_app_chatops.png)
 
 ## Design Philosophy
 
@@ -62,11 +62,11 @@ Careful consideration has been given to the data model to ensure that it can acc
 
 ### Serve as a Source of Truth (SoT)
 
-Nautobot intends to represent the _desired_ state of a network versus its _operational_ state. While plugins and apps can be built and integrated with Nautobot to extend its capabilities to various aspects of the _operational_ state, the core platform's focus is on the _desired_ state.
+Nautobot intends to represent the _desired_ state of a network versus its _operational_ state. While Apps can be built and integrated with Nautobot to extend its capabilities to various aspects of the _operational_ state, the core platform's focus is on the _desired_ state.
 
 ### Serve as a Network Automation Platform
 
-Nautobot intends to be a vehicle to deliver high-value network automation apps.  Using the extensible plugin system, users have the choice and freedom to create the integrations that make sense for them.
+Nautobot intends to be a vehicle to deliver high-value network automation apps.  Using the extensible App system, users have the choice and freedom to create the integrations that make sense for them.
 
 ### Ensure Maximum Flexibility & Extensibility
 

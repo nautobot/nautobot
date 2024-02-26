@@ -33,7 +33,7 @@ class NautobotConfig(AppConfig):
     All core apps should inherit from this class instead of using AppConfig directly.
 
     Adds functionality to generate the HTML navigation menu and homepage content using `navigation.py`
-    and `homepage.py` files from installed Nautobot applications and plugins.
+    and `homepage.py` files from installed Nautobot core applications and Apps.
     """
 
     homepage_layout = "homepage.layout"
@@ -96,7 +96,10 @@ def register_menu_items(tab_list):
     """
     for nav_tab in tab_list:
         if isinstance(nav_tab, NavMenuTab):
-            create_or_check_entry(registry["nav_menu"]["tabs"], nav_tab, nav_tab.name, f"{nav_tab.name}")
+            # Handle Apps that haven't been updated yet
+            if nav_tab.name == "Plugins":
+                nav_tab.name = "Apps"
+            create_or_check_entry(registry["nav_menu"]["tabs"], nav_tab, nav_tab.name, nav_tab.name)
 
             tab_perms = set()
             registry_groups = registry["nav_menu"]["tabs"][nav_tab.name]["groups"]
@@ -785,7 +788,7 @@ class NavItem(NavMenuBase, PermissionsMixin):
 
 def post_migrate_send_nautobot_database_ready(sender, app_config, signal, **kwargs):
     """
-    Send the `nautobot_database_ready` signal to all installed apps and plugins.
+    Send the `nautobot_database_ready` signal to all installed core apps and Apps.
 
     Signal handler for Django's post_migrate() signal.
     """

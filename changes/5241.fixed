@@ -1,0 +1,1 @@
+Fixed rendering of `NavMenuItems` that do not define any specific required `permissions`.

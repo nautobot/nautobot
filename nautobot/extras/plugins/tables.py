@@ -4,14 +4,12 @@ from django.utils.html import format_html
 import django_tables2 as tables
 
 
-class InstalledPluginsTable(tables.Table):
+class InstalledAppsTable(tables.Table):
     """
     Custom table class based on nautobot.core.tables.BaseTable, but without a dependency on QuerySets.
     """
 
-    name = tables.Column(
-        linkify=lambda record: reverse("plugins:plugin_detail", kwargs={"plugin": record["app_label"]})
-    )
+    name = tables.Column(linkify=lambda record: reverse("apps:app_detail", kwargs={"app": record["app_label"]}))
     package_name = tables.Column()
     author = tables.Column()
     author_email = tables.Column()
@@ -55,7 +53,7 @@ class InstalledPluginsTable(tables.Table):
         super().__init__(*args, **kwargs)
 
         if self.empty_text is None:
-            self.empty_text = "No installed plugins found"
+            self.empty_text = "No installed Apps found"
 
         # Hide non-default columns
         default_columns = list(self.Meta.default_columns)

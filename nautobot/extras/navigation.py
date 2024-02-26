@@ -444,7 +444,7 @@ menu_items = (
         ),
     ),
     NavMenuTab(
-        name="Plugins",
+        name="Apps",
         weight=5000,
         groups=(
             NavMenuGroup(
@@ -452,11 +452,9 @@ menu_items = (
                 weight=100,
                 items=(
                     NavMenuItem(
-                        link="plugins:plugins_list",
-                        name="Installed Plugins",
+                        link="apps:apps_list",
+                        name="Installed Apps",
                         weight=100,
-                        permissions=["is_staff"],
-                        buttons=(),
                     ),
                 ),
             ),
