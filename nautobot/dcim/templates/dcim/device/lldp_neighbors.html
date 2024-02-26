@@ -21,7 +21,7 @@
             </thead>
             <tbody>
                 {% for iface in interfaces %}
-                    <tr id="{{ iface.name }}">
+                    <tr data-interface-name="{{ iface.name }}">
                         <td>{{ iface }}</td>
                         {% if iface.connected_endpoint.device %}
                             <td class="configured_device" data="{{ iface.connected_endpoint.device }}" data-chassis="{{ iface.connected_endpoint.device.virtual_chassis.name }}">
@@ -59,7 +59,7 @@ $(document).ready(function() {
         success: function(json) {
             $.each(json['get_lldp_neighbors_detail'], function(iface, neighbors) {
                 var neighbor = neighbors[0];
-                var row = $('#' + iface.split(".")[0].replace(/([\/:])/g, "\\$1"));
+                var row = $('*[data-interface-name="' + iface.split(".")[0].replace(/([\/:])/g, "\\$1") + '"]');
 
                 // Glean configured hostnames/interfaces from the DOM
                 var configured_device = row.children('td.configured_device').attr('data');
