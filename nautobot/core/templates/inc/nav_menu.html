@@ -9,10 +9,6 @@
             <a class="navbar-brand" href="{% url 'home' %}">
                 <img src="{% custom_branding_or_static 'logo' 'img/nautobot_logo.svg' %}" height="30" />
             </a>
-            <!-- Collapsible button -->
-            <button type="button" class="btn btn-xs btn-warning navbar-toggler" aria-label="Collapse navbar">
-                <span class="mdi mdi-chevron-up mdi-rotate-270 navbar-toggler-arrow"></span>
-            </button>
         </div>
 
         <div id="navbar">
@@ -116,6 +112,10 @@
         </div>
     </div>
 </nav>
+<!-- Collapsible button -->
+<button type="button" class="btn btn-xs btn-warning navbar-toggler" aria-label="Collapse navbar">
+    <span class="mdi mdi-chevron-up mdi-rotate-270 navbar-toggler-arrow"></span>
+</button>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -146,7 +146,13 @@
         }
 
         toggler.addEventListener('click', function() {
-            const isNowCollapsed = navbar.classList.toggle('collapsed');
+            let isNowCollapsed;
+            if (expandedByHover) {
+                expandedByHover = false;
+                isNowCollapsed = false;
+            } else {
+                isNowCollapsed = navbar.classList.toggle('collapsed');
+            }
             sessionStorage.setItem('navbarCollapsed', isNowCollapsed ? 'true' : 'false');
             // Set 'navbarManuallyToggled' to track any manual toggle
             sessionStorage.setItem('navbarManuallyToggled', 'true');
@@ -179,24 +185,22 @@
                 breadcrumb.classList.toggle('collapsed', isCollapsed);
             };
             if(footer) footer.style.marginLeft = marginLeftValue;
+            toggler.style.left = isCollapsed ? '-5px' : '225px';
         }
 
         // Expand navbar when hovering near the left edge of the screen
         document.addEventListener('mousemove', function(e) {
-            if (e.clientX < 20 && navbar.classList.contains('collapsed')) { // 20px from the left edge
+            if (
+                e.clientX < 20  // 20px from the left edge
+                && (e.clientY < 20 || e.clientY > 50) // not near the toggle button
+                && navbar.classList.contains('collapsed')
+            ) {
                 navbar.classList.remove('collapsed');
-                togglerIcon.classList.add("mdi-rotate-270");
-                togglerIcon.classList.remove("mdi-rotate-90");
+                toggler.style.left = '225px';
                 expandedByHover = true; // Set flag when expanded by hover
-            }
-        });
-
-        // Collapse navbar when the mouse leaves its area, only if expanded by hover
-        navbar.addEventListener('mouseleave', function() {
-            if (expandedByHover) {
+            } else if (expandedByHover && e.clientX > 240) {
                 navbar.classList.add('collapsed');
-                togglerIcon.classList.remove("mdi-rotate-270");
-                togglerIcon.classList.add("mdi-rotate-90");
+                toggler.style.left = '-5px';
                 expandedByHover = false; // Reset flag after auto-collapse
             }
         });

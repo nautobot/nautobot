@@ -604,7 +604,6 @@ td span.hover_copy:hover .hover_copy_button {
     z-index: 1030; /* `1030` is taken from Bootstrap's `navbar-fixed-top` */
     -ms-overflow-style: none;  /* Hide scrollbar IE and Edge */
     scrollbar-width: none;  /* Hide scrollbar Firefox */
-    padding-top: 56px;
 }
 
 .navbar-fixed-left > .container-fluid {
@@ -840,18 +839,12 @@ td span.hover_copy:hover .hover_copy_button {
 
 .navbar-toggler {
     position: absolute;
-    right: 20px;
+    left: 225px;
     top: 25px;
-    z-index: 1031;
+    z-index: 1035;
     justify-content: flex-start;
-}
-
-.navbar-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 240px;
-    z-index: 1031; /* Above the navbar-fixed-left */
+    transition-duration: var(--navbar-transition-duration);
+    transition-timing-function: ease-in-out;
 }
 
 .navbar-fixed-left,
@@ -864,9 +857,6 @@ td span.hover_copy:hover .hover_copy_button {
 }
 .banner-alert-area {
     transition-duration: 0ms !important;
-}
-.banner-alert-area.collapsed {
-    margin-left: 240px;
 }
 .breadcrumb.collapsed {
     margin-left: 240px;
