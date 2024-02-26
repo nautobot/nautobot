@@ -136,7 +136,6 @@
         let expandedByHover = false;
         let manuallyToggled = sessionStorage.getItem('manuallyToggled') === 'true';
 
-    
         // Function to reset stored dropdown state information
         function resetNavbarState() {
             sessionStorage.removeItem('lastOpenedDropdown');
@@ -156,7 +155,6 @@
             togglerIcon.style.transform = isNowCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
             adjustElementsForNavbarState(isNowCollapsed);
         });
-        
 
         // Retrieve the navbar collapsed state from session storage on page load
         const navbarCollapsed = sessionStorage.getItem('navbarCollapsed') === 'true';
@@ -199,7 +197,7 @@
             const navbarManuallyToggled = sessionStorage.getItem('navbarManuallyToggled') === 'true';
             const navbarExpanded = sessionStorage.getItem('navbarExpanded') === 'true';
             const isCollapsed = navbar.classList.contains('collapsed');
-        
+
             if (windowWidth < 1007) {
                 if (!isCollapsed) {
                     navbar.classList.add('collapsed');
@@ -218,18 +216,15 @@
                 // Do not automatically change the state if it was manually collapsed
             }
         }
-        
-        
-
 
         // Update the window resize listener
         function toggleNavbarOnResize() {
             collapseNavbarIfNeeded(); // Use the new function to decide whether to collapse
         }
-        
+
         let debouncedToggleNavbarOnResize = debounce(toggleNavbarOnResize, 50);
         window.addEventListener('resize', debouncedToggleNavbarOnResize);
-        
+
         // Select the navbar dropdown elements
         let navbarItems = document.querySelectorAll('.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-toggle > #dropdown_title');
 
@@ -354,7 +349,7 @@
         if (activeLink) {
             let previouslyClickedLink = document.querySelector('.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a[href="' + activeLink + '"]');
             let currentLocation = window.location.pathname + window.location.search;
-            
+
             if (previouslyClickedLink && currentLocation.includes(previouslyClickedLink.getAttribute('href'))) {
                 previouslyClickedLink.parentElement.classList.add('active');
             }

@@ -1,4 +1,3 @@
-import time
 import uuid
 
 from django.contrib.contenttypes.models import ContentType

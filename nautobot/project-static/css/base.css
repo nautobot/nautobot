@@ -820,7 +820,7 @@ td span.hover_copy:hover .hover_copy_button {
     transition: width var(--navbar-transition-duration);
 }
 .navbar-fixed-left.collapsed {
-    width: 0px; 
+    width: 0px;
 }
 /* When navbar is expanded, show the search form */
 .navbar-fixed-left:not(.collapsed) .navbar-search-form {
@@ -897,21 +897,21 @@ td span.hover_copy:hover .hover_copy_button {
     position: fixed;
     top: 0;
     left: 0;
-    width: 240px; 
+    width: 240px;
     z-index: 1031; /* Above the navbar-fixed-left */
 }
 
-.navbar-fixed-left, 
-#main-content, 
-.navbar-toggler .navbar-toggler-arrow, 
-.breadcrumb, 
+.navbar-fixed-left,
+#main-content,
+.navbar-toggler .navbar-toggler-arrow,
+.breadcrumb,
 #footer {
     transition-duration: var(--navbar-transition-duration);
     transition-timing-function: ease-in-out;
     transition-property: margin-left, width;
 }
 .banner-alert-area {
-    transition-duration: 0ms !important; 
+    transition-duration: 0ms !important;
 }
 .banner-alert-area.collapsed {
     margin-left: 240px;
