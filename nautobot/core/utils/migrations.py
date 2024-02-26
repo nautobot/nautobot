@@ -61,3 +61,121 @@ def update_object_change_ct_for_replaced_models(apps, new_app_model, replaced_ap
         else:
             ObjectChange.objects.filter(changed_object_type=replaced_model_ct).update(changed_object_type=new_model_ct)
             ObjectChange.objects.filter(related_object_type=replaced_model_ct).update(related_object_type=new_model_ct)
+
+
+def migrate_content_type_references_to_new_model(apps, old_ct, new_ct):
+    """When replacing a model, this will update references to the content type on related models such as tags and object changes.
+
+    Since this only updates the content type and not the primary key, this is typically only useful when migrating to a new model
+    and preserving the old instance's primary key.
+
+    This will replace the old content type with the new content type on the following models:
+        - ComputedField.content_type
+        - CustomLink.content_type
+        - ExportTemplate.content_type
+        - Note.assigned_object_type
+        - ObjectChange.changed_object_type
+        - Relationship.source_type
+        - Relationship.destination_type
+        - RelationshipAssociation.source_type
+        - RelationshipAssociation.destination_type
+        - TaggedItem.content_type
+
+    For these one-to-many and many-to-many relationships, the new content type is added
+    to the related model's content type list, but the old content type is not removed:
+        - CustomField.content_types
+        - JobButton.content_types
+        - JobHook.content_types
+        - ObjectPermission.object_types
+        - Status.content_types
+        - Tag.content_types
+        - WebHook.content_types
+
+    This will also fix tags that were not properly enforced by adding the new model's content type to the tag's
+    content types if an instance of the new model is using the tag.
+
+    Args:
+        apps (obj): An instance of the Django 'apps' object.
+        old_ct (obj): An instance of ContentType for the old model.
+        new_ct (obj): An instance of ContentType for the new model.
+
+    """
+    ComputedField = apps.get_model("extras", "ComputedField")
+    CustomField = apps.get_model("extras", "CustomField")
+    CustomLink = apps.get_model("extras", "CustomLink")
+    ExportTemplate = apps.get_model("extras", "ExportTemplate")
+    JobButton = apps.get_model("extras", "JobButton")
+    JobHook = apps.get_model("extras", "JobHook")
+    Note = apps.get_model("extras", "Note")
+    ObjectChange = apps.get_model("extras", "ObjectChange")
+    ObjectPermission = apps.get_model("users", "ObjectPermission")
+    Relationship = apps.get_model("extras", "Relationship")
+    RelationshipAssociation = apps.get_model("extras", "RelationshipAssociation")
+    Status = apps.get_model("extras", "Status")
+    Tag = apps.get_model("extras", "Tag")
+    TaggedItem = apps.get_model("extras", "TaggedItem")
+    WebHook = apps.get_model("extras", "WebHook")
+
+    # Migrate ComputedField content type
+    ComputedField.objects.filter(content_type=old_ct).update(content_type=new_ct)
+
+    # Migrate CustomField content type
+    for cf in CustomField.objects.filter(content_types=old_ct):
+        cf.content_types.add(new_ct)
+
+    # Migrate CustomLink content type
+    CustomLink.objects.filter(content_type=old_ct).update(content_type=new_ct)
+
+    # Migrate ExportTemplate content type - skip git export templates
+    ExportTemplate.objects.filter(content_type=old_ct, owner_content_type=None).update(content_type=new_ct)
+
+    # Migrate JobButton content type
+    for job_button in JobButton.objects.filter(content_types=old_ct):
+        job_button.content_types.add(new_ct)
+
+    # Migrate JobHook content type
+    for job_hook in JobHook.objects.filter(content_types=old_ct):
+        job_hook.content_types.add(new_ct)
+
+    # Migrate Note content type
+    Note.objects.filter(assigned_object_type=old_ct).update(assigned_object_type=new_ct)
+
+    # Migrate ObjectChange content type
+    ObjectChange.objects.filter(changed_object_type=old_ct).update(changed_object_type=new_ct)
+
+    # Migrate ObjectPermission content type
+    for object_permission in ObjectPermission.objects.filter(object_types=old_ct):
+        object_permission.object_types.add(new_ct)
+
+    # Migrate Relationship content type
+    Relationship.objects.filter(source_type=old_ct).update(source_type=new_ct)
+    Relationship.objects.filter(destination_type=old_ct).update(destination_type=new_ct)
+
+    # Migration RelationshipAssociation content type
+    RelationshipAssociation.objects.filter(source_type=old_ct).update(source_type=new_ct)
+    RelationshipAssociation.objects.filter(destination_type=old_ct).update(destination_type=new_ct)
+
+    # Migrate Status content type
+    for status in Status.objects.filter(content_types=old_ct):
+        status.content_types.add(new_ct)
+
+    # Migrate Tag content type
+    for tag in Tag.objects.filter(content_types=old_ct):
+        tag.content_types.add(new_ct)
+
+    # Migrate TaggedItem content type
+    TaggedItem.objects.filter(content_type=old_ct).update(content_type=new_ct)
+
+    # Fix tags that were implemented incorrectly and didn't enforce content type
+    # If a tag is related to an instance of a model, make sure the content type for that model exists on the tag object
+    for tag_id in TaggedItem.objects.filter(content_type=new_ct).values_list("tag_id", flat=True).distinct():
+        try:
+            tag = Tag.objects.get(id=tag_id)
+            if not tag.content_types.filter(id=new_ct.id).exists():
+                tag.content_types.add(new_ct)
+        except Tag.DoesNotExist:
+            pass
+
+    # Migrate WebHook content type
+    for web_hook in WebHook.objects.filter(content_types=old_ct):
+        web_hook.content_types.add(new_ct)
