@@ -1673,8 +1673,12 @@ class InterfaceRedundancyGroupFilterSet(BaseFilterSet, NameSearchFilterSet):
         return queryset.filter(virtual_ip__in=ip_queryset)
 
 
-class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet, NameSearchFilterSet):
+class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet):
     """Filter for InterfaceRedundancyGroupAssociation."""
+
+    q = SearchFilter(
+        filter_predicates={"interface_redundancy_group__name": "icontains", "interface__name": "icontains"}
+    )
 
     interface_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=InterfaceRedundancyGroup.objects.all(),
@@ -1800,6 +1804,13 @@ class SoftwareVersionFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
 
 class DeviceTypeToSoftwareImageFileFilterSet(BaseFilterSet):
     """Filters for DeviceTypeToSoftwareImageFile model."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "device_type__model": "icontains",
+            "software_image_file__image_file_name": "icontains",
+        }
+    )
 
     device_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),

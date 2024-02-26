@@ -462,6 +462,12 @@ class IPAddressFilterSet(
 
 
 class IPAddressToInterfaceFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "interface__name": "icontains",
+            "vm_interface__name": "icontains",
+        },
+    )
     interface = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Interface.objects.all(),
         label="Interface (name or ID)",

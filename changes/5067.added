@@ -1,0 +1,2 @@
+Added `q` (SearchFilter) filter to all filterset missing it.
+Added two generic test cases for `q` filter: `test_q_filter_exists` and `test_q_filter_valid`. 

@@ -91,6 +91,7 @@ from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.ipam.filters import VLANFilterSet
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.users.factory import UserFactory
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
 
 # Use the proper swappable User model
@@ -582,7 +583,11 @@ class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
         content_types = ContentType.objects.filter(model__in=["location", "rack", "device"])
-
+        repo = GitRepository.objects.create(
+            name="Test Git Repository",
+            slug="test_git_repo",
+            remote_url="http://localhost/git.git",
+        )
         ExportTemplate.objects.create(
             name="Export Template 1",
             content_type=content_types[0],
@@ -597,6 +602,7 @@ class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
             name="Export Template 3",
             content_type=content_types[2],
             template_code="TESTING",
+            owner=repo,
         )
 
     def test_name(self):
@@ -786,6 +792,8 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
 class GraphQLTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = GraphQLQuery.objects.all()
     filterset = GraphQLQueryFilterSet
+    # skip testing "query" attribute for generic q filter test as it's not trivially modifiable
+    exclude_q_filter_predicates = ["query"]
 
     @classmethod
     def setUpTestData(cls):
@@ -948,11 +956,12 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         jobs = Job.objects.all()[:3]
         cls.jobs = jobs
+        user = UserFactory.create()
         for job in jobs:
             JobResult.objects.create(
                 job_model=job,
                 name=job.class_path,
-                user=User.objects.first(),
+                user=user,
                 status=JobResultStatusChoices.STATUS_STARTED,
             )
 
@@ -1316,135 +1325,7 @@ class RelationshipTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
-    queryset = RelationshipAssociation.objects.all()
-    filterset = RelationshipAssociationFilterSet
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.device_type = ContentType.objects.get_for_model(Device)
-        cls.vlan_type = ContentType.objects.get_for_model(VLAN)
-
-        cls.relationships = (
-            Relationship(
-                label="Device VLANs",
-                key="device_vlans",
-                type="many-to-many",
-                source_type=cls.device_type,
-                destination_type=cls.vlan_type,
-            ),
-            Relationship(
-                label="Primary VLAN",
-                key="primary_vlan",
-                type="one-to-many",
-                source_type=cls.vlan_type,
-                destination_type=cls.device_type,
-            ),
-            Relationship(
-                label="Device Device",
-                key="symmetric_device_device",
-                type="symmetric-many-to-many",
-                source_type=cls.device_type,
-                destination_type=cls.device_type,
-            ),
-        )
-        for relationship in cls.relationships:
-            relationship.validated_save()
-
-        manufacturer = Manufacturer.objects.first()
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
-        devicerole = Role.objects.get_for_model(Device).first()
-        devicestatus = Status.objects.get_for_model(Device).first()
-        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        cls.devices = (
-            Device.objects.create(
-                name="Device 1", device_type=devicetype, role=devicerole, status=devicestatus, location=location
-            ),
-            Device.objects.create(
-                name="Device 2", device_type=devicetype, role=devicerole, status=devicestatus, location=location
-            ),
-            Device.objects.create(
-                name="Device 3", device_type=devicetype, role=devicerole, status=devicestatus, location=location
-            ),
-        )
-        vlan_status = Status.objects.get_for_model(VLAN).first()
-        vlan_group = VLANGroup.objects.create(name="Test VLANGroup 1")
-        cls.vlans = (
-            VLAN.objects.create(vid=1, name="VLAN 1", status=vlan_status, vlan_group=vlan_group),
-            VLAN.objects.create(vid=2, name="VLAN 2", status=vlan_status, vlan_group=vlan_group),
-        )
-
-        RelationshipAssociation(
-            relationship=cls.relationships[0],
-            source_type=cls.device_type,
-            source_id=cls.devices[0].pk,
-            destination_type=cls.vlan_type,
-            destination_id=cls.vlans[0].pk,
-        ).validated_save()
-        RelationshipAssociation(
-            relationship=cls.relationships[0],
-            source_type=cls.device_type,
-            source_id=cls.devices[1].pk,
-            destination_type=cls.vlan_type,
-            destination_id=cls.vlans[1].pk,
-        ).validated_save()
-        RelationshipAssociation(
-            relationship=cls.relationships[1],
-            source_type=cls.vlan_type,
-            source_id=cls.vlans[0].pk,
-            destination_type=cls.device_type,
-            destination_id=cls.devices[0].pk,
-        ).validated_save()
-        RelationshipAssociation(
-            relationship=cls.relationships[1],
-            source_type=cls.vlan_type,
-            source_id=cls.vlans[1].pk,
-            destination_type=cls.device_type,
-            destination_id=cls.devices[1].pk,
-        ).validated_save()
-        RelationshipAssociation(
-            relationship=cls.relationships[2],
-            source_type=cls.device_type,
-            source_id=cls.devices[0].pk,
-            destination_type=cls.device_type,
-            destination_id=cls.devices[1].pk,
-        ).validated_save()
-        RelationshipAssociation(
-            relationship=cls.relationships[2],
-            source_type=cls.device_type,
-            source_id=cls.devices[1].pk,
-            destination_type=cls.device_type,
-            destination_id=cls.devices[2].pk,
-        ).validated_save()
-
-    def test_relationship(self):
-        params = {"relationship": [self.relationships[0].key]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_source_type(self):
-        params = {"source_type": ["dcim.device", "dcim.interface"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-
-    def test_source_id(self):
-        params = {"source_id": [self.devices[0].pk, self.devices[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-
-    def test_destination_type(self):
-        params = {"destination_type": ["dcim.device", "dcim.interface"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-
-    def test_destination_id(self):
-        params = {"destination_id": [self.devices[0].pk, self.devices[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
-    def test_peer_id(self):
-        params = {"peer_id": [self.devices[0].pk, self.devices[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"peer_id": [self.devices[2].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-
-class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
+class RelationshipAssociationFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = RelationshipAssociation.objects.all()
     filterset = RelationshipAssociationFilterSet
 
@@ -1561,6 +1442,32 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         )
         for relationship_association in cls.relationship_associations:
             relationship_association.validated_save()
+
+    def test_relationship(self):
+        params = {"relationship": [self.relationships[0].key]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_source_type(self):
+        params = {"source_type": ["dcim.device", "dcim.interface"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
+
+    def test_source_id(self):
+        params = {"source_id": [self.devices[0].pk, self.devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
+
+    def test_destination_type(self):
+        params = {"destination_type": ["dcim.device", "dcim.interface"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
+
+    def test_destination_id(self):
+        params = {"destination_id": [self.devices[0].pk, self.devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_peer_id(self):
+        params = {"peer_id": [self.devices[0].pk, self.devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"peer_id": [self.devices[2].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_one_to_many_source(self):
         self.queryset = Device.objects.all()

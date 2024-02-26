@@ -15,7 +15,7 @@ from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Location
 from nautobot.extras.models import Role, Status, Tag
 
 
-class ProviderTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class ProviderTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTestCases.FilterTestCase):
     queryset = Provider.objects.all()
     filterset = ProviderFilterSet
 

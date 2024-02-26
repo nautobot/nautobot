@@ -59,6 +59,8 @@ class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterT
     queryset = VRF.objects.all()
     filterset = VRFFilterSet
     tenancy_related_name = "vrfs"
+    # skip testing "rd" attribute for generic q filter test as it's not trivially modifiable
+    exclude_q_filter_predicates = ["rd"]
 
     @classmethod
     def setUpTestData(cls):
@@ -103,6 +105,8 @@ class RouteTargetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Tenanc
     queryset = RouteTarget.objects.all()
     filterset = RouteTargetFilterSet
     tenancy_related_name = "route_targets"
+    # skip testing "name" attribute for generic q filter test as it's not trivially modifiable
+    exclude_q_filter_predicates = ["name"]
 
     @classmethod
     def setUpTestData(cls):
