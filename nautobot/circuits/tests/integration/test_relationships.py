@@ -37,7 +37,7 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         )
         circuit = Circuit.objects.create(
             provider=provider1,
-            cid="1234",
+            cid="123456789",
             circuit_type=circuit_type,
             status=circuit_status,
         )
@@ -128,7 +128,7 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         self.browser.links.find_by_partial_text("Circuits")[1].click()
 
         # Click on the circuit link (circuit created in setUp)
-        self.browser.links.find_by_partial_text("1234").click()
+        self.browser.links.find_by_partial_text("123456789").click()
 
         # Verify custom relationships are visible
         self.assertTrue(self.browser.is_text_present("Test Power Panel"))
