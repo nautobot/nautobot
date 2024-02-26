@@ -34,6 +34,7 @@ from nautobot.core.utils.lookup import (
     get_table_for_model,
     get_view_for_model,
 )
+from nautobot.core.utils.migrations import migrate_content_type_references_to_new_model
 from nautobot.core.utils.navigation import (
     get_all_new_ui_ready_routes,
     get_only_new_ui_ready_routes,
@@ -122,6 +123,7 @@ __all__ = (
     "is_uuid",
     "lighten_color",
     "merge_dicts_without_collision",
+    "migrate_content_type_references_to_new_model",
     "migrate_role_data",
     "normalize_querydict",
     "permission_is_exempt",
