@@ -132,7 +132,8 @@ def check_interface_ipaddress_vrf_uniqueness(command):
     command.stdout.write(command.style.WARNING(">>> Running interface/vminterface vrf uniqueness checks..."))
 
     for ip_address_assignment in (
-        IPAddress.objects.values("assigned_object_type", "assigned_object_id")
+        IPAddress.objects.filter(assigned_object_id__isnull=False, assigned_object_type_id__isnull=False)
+        .values("assigned_object_type", "assigned_object_id")
         .annotate(
             vrf_count=models.Count("vrf_id", distinct=True),
             vrf_null_count=models.Count("pk", filter=models.Q(vrf_id__isnull=True)),
@@ -140,18 +141,23 @@ def check_interface_ipaddress_vrf_uniqueness(command):
         .order_by()
     ):
         has_null_vrf = 1 if ip_address_assignment["vrf_null_count"] > 0 else 0
-        if (
-            ip_address_assignment["vrf_count"] + has_null_vrf > 1
-            and ip_address_assignment["assigned_object_id"] is not None
-        ):
+        if ip_address_assignment["vrf_count"] + has_null_vrf > 1:
+            try:
+                assigned_object_type = ContentType.objects.get_for_id(
+                    ip_address_assignment["assigned_object_type"]
+                ).model_class()
+            except ContentType.DoesNotExist:
+                continue
+            try:
+                assigned_object = assigned_object_type.objects.get(pk=ip_address_assignment["assigned_object_id"])
+            except assigned_object_type.DoesNotExist:
+                continue
+
             failed = True
-            assigned_object_type = ContentType.objects.get_for_id(
-                ip_address_assignment["assigned_object_type"]
-            ).model_class()
-            assigned_object = assigned_object_type.objects.get(pk=ip_address_assignment["assigned_object_id"])
+            assigned_object_label = f"{assigned_object} ({getattr(assigned_object, 'parent', assigned_object.id)})"
             command.stdout.write(
                 command.style.WARNING(
-                    f"{assigned_object_type._meta.label} {assigned_object} ({ip_address_assignment['assigned_object_id']}) "
+                    f"{assigned_object_type._meta.label} {assigned_object_label} "
                     "is associated to IP Addresses with different VRFs."
                 )
             )
