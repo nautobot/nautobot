@@ -10,8 +10,8 @@
                 <img src="{% custom_branding_or_static 'logo' 'img/nautobot_logo.svg' %}" height="30" />
             </a>
             <!-- Collapsible button -->
-            <button type="button" class="navbar-toggler" aria-label="Collapse navbar">
-                <img src="{% static 'img/navbar_toggler_arrow.svg' %}" class="navbar-toggler-arrow">
+            <button type="button" class="btn btn-xs btn-warning navbar-toggler" aria-label="Collapse navbar">
+                <span class="mdi mdi-chevron-up mdi-rotate-270 navbar-toggler-arrow"></span>
             </button>
         </div>
 
@@ -152,7 +152,13 @@
             sessionStorage.setItem('navbarManuallyToggled', 'true');
             // Track if the action was an expansion or a collapse
             sessionStorage.setItem('navbarExpanded', !isNowCollapsed ? 'true' : 'false');
-            togglerIcon.style.transform = isNowCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
+            if (isNowCollapsed) {
+                togglerIcon.classList.add("mdi-rotate-90");
+                togglerIcon.classList.remove("mdi-rotate-270");
+            } else {
+                togglerIcon.classList.remove("mdi-rotate-90");
+                togglerIcon.classList.add("mdi-rotate-270");
+            }
             adjustElementsForNavbarState(isNowCollapsed);
         });
 
@@ -160,7 +166,8 @@
         const navbarCollapsed = sessionStorage.getItem('navbarCollapsed') === 'true';
         if (navbarCollapsed) {
             navbar.classList.add('collapsed');
-            togglerIcon.style.transform = 'rotate(180deg)';
+            togglerIcon.classList.remove("mdi-rotate-270");
+            togglerIcon.classList.add("mdi-rotate-90");
             adjustElementsForNavbarState(true);
         }
 
@@ -178,7 +185,8 @@
         document.addEventListener('mousemove', function(e) {
             if (e.clientX < 20 && navbar.classList.contains('collapsed')) { // 20px from the left edge
                 navbar.classList.remove('collapsed');
-                togglerIcon.style.transform = 'rotate(0deg)';
+                togglerIcon.classList.add("mdi-rotate-270");
+                togglerIcon.classList.remove("mdi-rotate-90");
                 expandedByHover = true; // Set flag when expanded by hover
             }
         });
@@ -187,7 +195,8 @@
         navbar.addEventListener('mouseleave', function() {
             if (expandedByHover) {
                 navbar.classList.add('collapsed');
-                togglerIcon.style.transform = 'rotate(180deg)';
+                togglerIcon.classList.remove("mdi-rotate-270");
+                togglerIcon.classList.add("mdi-rotate-90");
                 expandedByHover = false; // Reset flag after auto-collapse
             }
         });
@@ -201,7 +210,8 @@
             if (windowWidth < 1007) {
                 if (!isCollapsed) {
                     navbar.classList.add('collapsed');
-                    togglerIcon.style.transform = 'rotate(180deg)';
+                    togglerIcon.classList.remove("mdi-rotate-270");
+                    togglerIcon.classList.add("mdi-rotate-90");
                     adjustElementsForNavbarState(true);
                     sessionStorage.setItem('navbarCollapsed', 'true');
                 }
@@ -209,7 +219,8 @@
                 // Only expand automatically if it was not manually collapsed
                 if (isCollapsed && (navbarManuallyToggled && navbarExpanded)) {
                     navbar.classList.remove('collapsed');
-                    togglerIcon.style.transform = 'rotate(0deg)';
+                    togglerIcon.classList.add("mdi-rotate-270");
+                    togglerIcon.classList.remove("mdi-rotate-90");
                     adjustElementsForNavbarState(false);
                     sessionStorage.setItem('navbarCollapsed', 'false');
                 }

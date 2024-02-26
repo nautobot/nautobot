@@ -837,60 +837,13 @@ td span.hover_copy:hover .hover_copy_button {
 .navbar-inverse .navbar-collapse, .navbar-inverse .navbar-form {
     border-color: transparent;
 }
-.navbar-toggler:hover {
-    cursor: pointer;
-    background: #007dff;
-}
+
 .navbar-toggler {
-    -moz-appearance: none;
-    -ms-appearance: none;
-    appearance: none;
-    -webkit-box-align: center;
-    -ms-flex-align: center;
-    align-items: center;
-    -webkit-box-pack: center;
-    -ms-flex-pack: center;
-    justify-content: center;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    white-space: nowrap;
-    vertical-align: middle;
-    outline: 2px solid transparent;
-    outline-offset: 2px;
-    line-height: 1.0;
-    border-radius: 6px;
-    font-weight: 400;
-    transition-property: background-color,border-color,color,fill,stroke,opacity,box-shadow,transform;
-    transition-duration: var(--navbar-transition-duration);
-    min-width: 1.5rem;
-    transition-timing-function: ease-out;
-    height: auto;
-    font-size: 14px;
-    padding-inline-start: 2px;
-    padding-inline-end: 2px;
-    padding: 5px;
-    background: #E07807;
-    color: #ffffff;
     position: absolute;
     right: 20px;
     top: 25px;
     z-index: 1031;
-    transform: translateX(50%);
-    border-color: transparent;
     justify-content: flex-start;
-}
-.navbar-toggler .navbar-toggler-arrow {
-    flex: 0 0 auto;
-    text-align: center;
-    transition-duration: var(--navbar-transition-duration);
-    transition-property: color, transform;
-    transition-timing-function: ease-out;
-    transform: rotate(0);
-    width: 16px;
-    height: 16px;
-    fill: none;
-    border-color: transparent;
 }
 
 .navbar-header {
@@ -903,7 +856,6 @@ td span.hover_copy:hover .hover_copy_button {
 
 .navbar-fixed-left,
 #main-content,
-.navbar-toggler .navbar-toggler-arrow,
 .breadcrumb,
 #footer {
     transition-duration: var(--navbar-transition-duration);
@@ -918,11 +870,6 @@ td span.hover_copy:hover .hover_copy_button {
 }
 .breadcrumb.collapsed {
     margin-left: 240px;
-}
-
-/* For the navbar-toggler arrow rotation */
-.navbar-toggler .navbar-toggler-arrow {
-    transition-property: transform;
 }
 
 /* Collapse icon on homepage panels */
