@@ -27,13 +27,13 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         circuit_status = Status.objects.get_for_model(Circuit).first()
         location_status = Status.objects.get_for_model(Location).first()
         provider1 = Provider.objects.create(
-            name="Test Provider 1",
+            name="A Test Provider 1",
         )
         provider2 = Provider.objects.create(
-            name="Test Provider 2",
+            name="A Test Provider 2",
         )
         circuit_type = CircuitType.objects.create(
-            name="Test Circuit Type",
+            name="A Test Circuit Type",
         )
         circuit = Circuit.objects.create(
             provider=provider1,
@@ -42,7 +42,7 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
             status=circuit_status,
         )
         location = Location.objects.create(
-            name="Test Location",
+            name="A Test Location",
             status=location_status,
             location_type=location_type,
         )
