@@ -148,6 +148,10 @@ def check_interface_ipaddress_vrf_uniqueness(command):
                 ).model_class()
             except ContentType.DoesNotExist:
                 continue
+
+            if assigned_object_type is None:
+                continue  # ContentType.model_class() can return None if an App was removed from the installed_plugins list
+
             try:
                 assigned_object = assigned_object_type.objects.get(pk=ip_address_assignment["assigned_object_id"])
             except assigned_object_type.DoesNotExist:
