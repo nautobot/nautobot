@@ -143,6 +143,10 @@ Some fields were only renamed without making any changes to the data so the cons
 - Nautobot no longer uses or supports the use of `django-mptt`.
 - Nautobot no longer uses or supports the use of `django-rq`.
 
+## App Developer Interface
+
+All imports for app developers should now be sourced from `nautobot.apps.*` or provided models, as this is the supported public interface. This will help ensure proper SemVer is kept intact and provide a place to add new features without breaking existing integrations.
+
 ## Database (ORM) Changes
 
 !!! warning
@@ -401,7 +405,6 @@ The below is mostly relevant only to authors of Jobs and Nautobot Apps. End user
 ## Removed Python Code
 
 - Because of the replacement of the `?brief` REST API query parameter with `?depth` and the removal of all `Nested*Serializers`, some of the classes and mixins are removed because they are no longer needed.
-- In the redesigned UI of Nautobot 2.0, menu items may no longer contain buttons, and so the `NavMenuButton` class and its subclasses have been removed as they are no longer needed/supported.
 - With the reimplementation of CSV import and export, `CSVForm` classes are generally no longer needed, and so a number of related mixin classes have been removed.
 
 ??? info "Full table of code removals"

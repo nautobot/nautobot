@@ -515,7 +515,13 @@ Messages logged from a job's logger will be stored in [`JobLogEntry`](../../user
 
 The logger can be accessed either by using the `logger` property on the job class or `nautobot.extras.jobs.get_task_logger(__name__)`. Both will return the same logger instance. For more information on the standard Python logging module, see the [Python documentation](https://docs.python.org/3/library/logging.html).
 
-An optional `grouping` and/or `object` may be provided in log messages by passing them in the log function call's `extra` kwarg. If a `grouping` is not provided it will default to the function name that logged the message. The `object` will default to `None`.
+The logger accepts an `extra` kwarg that you can optionally set for the following features:
+
+* `grouping`- Replaces the `active_test` Job property in Nautobot v1.X
+* `object` - Replaces the `obj` kwarg in Nautobot v1.X Job logging methods
+* `skip_db_logging` - Log the message to the console but not to the database
+
+If a `grouping` is not provided it will default to the function name that logged the message. The `object` will default to `None`.
 
 !!! example
     ```py
