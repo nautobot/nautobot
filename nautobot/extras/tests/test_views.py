@@ -26,7 +26,7 @@ from nautobot.extras.choices import (
     SecretsGroupSecretTypeChoices,
     WebhookHttpMethodChoices,
 )
-from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
+from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON, JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -1639,6 +1639,8 @@ class JobResultTestCase(
 
 class JobTestCase(
     # note no CreateObjectViewTestCase - we do not support user creation of Job records
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.GetObjectViewTestCase,
@@ -1722,6 +1724,72 @@ class JobTestCase(
             "task_queues": "overridden,priority",
             "task_queues_override": True,
         }
+        # This form is emulating the non-conventional JobBulkEditForm
+        cls.bulk_edit_data = {
+            "enabled": True,
+            "clear_grouping_override": True,
+            "grouping": "",
+            "clear_description_override": False,
+            "description": "Overridden Description",
+            "clear_dryrun_default_override": False,
+            "dryrun_default": "",
+            "clear_hidden_override": True,
+            "hidden": False,
+            "clear_approval_required_override": True,
+            "approval_required": True,
+            "clear_soft_time_limit_override": False,
+            "soft_time_limit": 350,
+            "clear_time_limit_override": True,
+            "time_limit": "",
+            "has_sensitive_variables": False,
+            "clear_has_sensitive_variables_override": False,
+            "task_queues": "overridden,priority",
+            "clear_task_queues_override": False,
+        }
+
+    def validate_job_data_after_bulk_edit(self, pk_list, old_data):
+        # Name is bulk-editable
+        overridable_fields = [field for field in JOB_OVERRIDABLE_FIELDS if field != "name"]
+        for instance in self._get_queryset().filter(pk__in=pk_list):
+            self.assertEqual(instance.enabled, True)
+            job_class = instance.job_class
+            if job_class is not None:
+                for overridable_field in overridable_fields:
+                    # clear_override_field is obtained from adding "clear_" to the front and "_override" to the back of overridable_field
+                    # e.g grouping -> clear_grouping_override
+                    clear_override_field = "clear_" + overridable_field + "_override"
+                    # override_field is obtained from adding "_override" to the back of overridable_field
+                    # e.g grouping -> grouping_override
+                    override_field = overridable_field + "_override"
+                    reset_override = self.bulk_edit_data.get(clear_override_field, False)
+                    if overridable_field == "task_queues":
+                        override_value = self.bulk_edit_data.get(overridable_field).split(",")
+                    else:
+                        override_value = self.bulk_edit_data.get(overridable_field)
+                    # if clear_override is true, assert that values are reverted back to default values
+                    if reset_override is True:
+                        self.assertEqual(getattr(instance, overridable_field), getattr(job_class, overridable_field))
+                        self.assertEqual(getattr(instance, override_field), False)
+                    # if clear_override is false, assert that job attribute is set to the new value from the form
+                    elif reset_override is False and (override_value is False or override_value):
+                        self.assertEqual(getattr(instance, overridable_field), override_value)
+                        self.assertEqual(getattr(instance, override_field), True)
+                    # if clear_override is false and no new value is entered, assert that value of the job is unchanged
+                    else:
+                        self.assertEqual(getattr(instance, overridable_field), old_data[instance.pk][overridable_field])
+                        self.assertEqual(getattr(instance, override_field), old_data[instance.pk][overridable_field])
+
+    def validate_object_data_after_bulk_edit(self, pk_list):
+        instances = self._get_queryset().filter(pk__in=pk_list)
+        overridable_fields = [field for field in JOB_OVERRIDABLE_FIELDS if field != "name"]
+        old_data = {}
+        for instance in instances:
+            old_data[instance.pk] = {}
+            job_class = instance.job_class
+            if job_class is not None:
+                for field in overridable_fields:
+                    old_data[instance.pk][field] = getattr(job_class, field)
+        self.validate_job_data_after_bulk_edit(pk_list, old_data)
 
     #
     # Additional test cases for the "job" (legacy run) and "job_run" (updated run) views follow
