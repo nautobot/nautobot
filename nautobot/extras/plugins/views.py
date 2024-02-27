@@ -71,7 +71,9 @@ class InstalledAppDetailView(LoginRequiredMixin, View):
     View for showing details of an installed App.
     """
 
-    def get(self, request, app):
+    def get(self, request, app=None, plugin=None):
+        if plugin and not app:
+            app = plugin
         app_config = apps.get_app_config(app)
         if app_config.name not in settings.PLUGINS:
             raise Http404

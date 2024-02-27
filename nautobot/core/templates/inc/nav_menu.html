@@ -49,7 +49,7 @@
                                                         {% if item_details.buttons.items|length > 0 %}
                                                             <div class="buttons">
                                                                 {% for button_title, button_details in item_details.buttons.items %}
-                                                                    {% if request.user|has_perms:button_details.permissions or not button_details.permissions %}
+                                                                    {% if not button_details.permissions or request.user|has_perms:button_details.permissions %}
                                                                         {% comment %}
                                                                             Use 'url xxx as variable' so that an invalid
                                                                             link doesn't throw a NoReverseMatch exception.

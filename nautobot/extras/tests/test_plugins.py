@@ -307,20 +307,12 @@ class AppListViewTest(TestCase):
         # Redirects to the login page
         self.assertHttpStatus(response, 302)
 
-    def test_list_plugins_authenticated_superuser(self):
-        self.user.is_superuser = True
-        self.user.save()
-
+    def test_list_plugins_authenticated(self):
         response = self.client.get(reverse("plugins:plugins_list"))
         self.assertHttpStatus(response, 200)
 
         response_body = extract_page_body(response.content.decode(response.charset)).lower()
         self.assertIn("example app", response_body, msg=response_body)
-
-    def test_list_plugins_authenticated_not_admin(self):
-        response = self.client.get(reverse("plugins:plugins_list"))
-        # Access Denied
-        self.assertHttpStatus(response, 403)
 
 
 class PluginDetailViewTest(TestCase):
