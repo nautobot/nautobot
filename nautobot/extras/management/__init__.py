@@ -14,7 +14,7 @@ from nautobot.virtualization import choices as vm_choices
 
 # List of 2-tuples of (model_path, choiceset)
 # Add new mappings here as other models are supported.
-CHOICESET_MAP = {
+STATUS_CHOICESET_MAP = {
     "circuits.Circuit": circuit_choices.CircuitStatusChoices,
     "dcim.Cable": dcim_choices.CableStatusChoices,
     "dcim.Device": dcim_choices.DeviceStatusChoices,
@@ -37,7 +37,7 @@ CHOICESET_MAP = {
 
 # Map of status name -> default hex_color used when importing color choices in `export_statuses_from_choiceset()`.
 # Only a small subset of colors are used by default as these originally were derived from Bootstrap CSS classes.
-COLOR_MAP = {
+STATUS_COLOR_MAP = {
     "Active": ColorChoices.COLOR_GREEN,  # was COLOR_BLUE for Prefix/IPAddress/VLAN in NetBox
     "Available": ColorChoices.COLOR_GREEN,
     "Connected": ColorChoices.COLOR_GREEN,
@@ -65,7 +65,7 @@ COLOR_MAP = {
 
 
 # Map of status name -> description used when importing status choices in `export_statuses_from_choiceset()`.
-DESCRIPTION_MAP = {
+STATUS_DESCRIPTION_MAP = {
     "Active": "Unit is active",
     "Available": "Unit is available",
     "Connected": "Cable is connected",
@@ -90,6 +90,203 @@ DESCRIPTION_MAP = {
     "Staged": "Unit has been staged",
     "Staging": "Location is in the process of being staged",
 }
+
+# List of 2-tuples of (model_path, choiceset)
+# Add new mappings here as other models are supported.
+ROLE_CHOICESET_MAP = {
+    "extras.ContactAssociation": extras_choices.ContactAssociationRoleChoices,
+}
+
+# Map of role name -> default hex_color used when importing color choices in `export_roles_from_choiceset()`.
+# Only a small subset of colors are used by default as these originally were derived from Bootstrap CSS classes.
+ROLE_COLOR_MAP = {
+    "Administrative": ColorChoices.COLOR_BLUE,
+    "Billing": ColorChoices.COLOR_GREEN,
+    "Support": ColorChoices.COLOR_YELLOW,
+    "On Site": ColorChoices.COLOR_BLACK,
+}
+
+# Map of role name -> description used when importing role choices in `export_roles_from_choiceset()`.
+ROLE_DESCRIPTION_MAP = {
+    "Administrative": "Unit plays an administrative role",
+    "Billing": "Unit plays a billing role",
+    "Support": "Unit plays a support role",
+    "On Site": "Unit plays an on site role",
+}
+
+
+#
+# Roles
+#
+
+
+def populate_role_choices(apps=global_apps, schema_editor=None, **kwargs):
+    """
+    Populate `Role` model choices.
+
+    This will run the `create_custom_roles` function during data migrations.
+
+    When it is ran again post-migrate will be a noop.
+    """
+    create_custom_roles(apps=apps, **kwargs)
+
+
+def export_roles_from_choiceset(choiceset, color_map=None, description_map=None):
+    """
+    e.g. `export_roles_from_choiceset(ContactAssociationRoleChoices, content_type)`
+
+    This is called by `extras.management.create_custom_roles` for use in
+    performing data migrations to populate `Role` objects.
+    """
+
+    if color_map is None:
+        color_map = ROLE_COLOR_MAP
+    if description_map is None:
+        description_map = ROLE_DESCRIPTION_MAP
+
+    choices = []
+
+    for _, value in choiceset.CHOICES:
+        choice_kwargs = {
+            "name": value,
+            "description": description_map[value],
+            "color": color_map[value],
+        }
+        choices.append(choice_kwargs)
+
+    return choices
+
+
+def create_custom_roles(
+    verbosity=2,
+    apps=global_apps,
+    models=None,
+    **kwargs,
+):
+    """
+    Create database Role choices from choiceset enums.
+
+    This is called during data migrations for importing `Role` objects from
+    `ChoiceSet` enums in flat files.
+    """
+
+    # Only print a newline if we have verbosity!
+    if verbosity > 0:
+        print("\n", end="")
+
+    if "test" in sys.argv:
+        # Do not print output during unit testing migrations
+        verbosity = 1
+
+    if not models:
+        models = ROLE_CHOICESET_MAP.keys()
+
+    # Prep the app and get the Role model dynamically
+    try:
+        Role = apps.get_model("extras.Role")
+        ContentType = apps.get_model("contenttypes.ContentType")
+    except LookupError:
+        return
+
+    added_total = 0
+    linked_total = 0
+
+    # Iterate choiceset kwargs to create role objects if they don't exist
+    for model_path in models:
+        choiceset = ROLE_CHOICESET_MAP[model_path]
+        content_type = ContentType.objects.get_for_model(apps.get_model(model_path))
+        choices = export_roles_from_choiceset(choiceset)
+
+        if verbosity >= 2:
+            print(f"    Model {model_path}", flush=True)
+
+        for choice_kwargs in choices:
+            defaults = choice_kwargs.copy()
+            name = defaults.pop("name")
+            try:
+                obj, created = Role.objects.get_or_create(name=name, defaults=defaults)
+            except IntegrityError as err:
+                raise SystemExit(
+                    f"Unexpected error while running data migration to populate role for {model_path}: {err}"
+                ) from err
+
+            # Make sure the content-type is associated.
+            if content_type not in obj.content_types.all():
+                obj.content_types.add(content_type)
+
+            if created and verbosity >= 2:
+                print(f"      Adding and linking role {obj.name}", flush=True)
+                added_total += 1
+            elif not created and verbosity >= 2:
+                print(f"      Linking to existing role {obj.name}", flush=True)
+                linked_total += 1
+
+    if verbosity >= 2:
+        print(f"    Added {added_total}, linked {linked_total} role records")
+
+
+def clear_role_choices(
+    apps=global_apps,
+    verbosity=2,
+    models=None,
+    clear_all_model_roles=True,
+    **kwargs,
+):
+    """
+    Remove content types from roles, and if no content types remain, delete the roles as well.
+    """
+    if "test" in sys.argv:
+        # Do not print output during unit testing migrations
+        verbosity = 1
+
+    if verbosity >= 0:
+        print("\n", end="")
+
+    if not models:
+        models = ROLE_CHOICESET_MAP.keys()
+
+    Role = apps.get_model("extras.Role")
+    ContentType = apps.get_model("contenttypes.ContentType")
+
+    deleted_total = 0
+    unlinked_total = 0
+
+    for model_path in models:
+        choiceset = ROLE_CHOICESET_MAP[model_path]
+        model = apps.get_model(model_path)
+        content_type = ContentType.objects.get_for_model(model)
+        choices = export_statuses_from_choiceset(choiceset)
+
+        if verbosity >= 2:
+            print(f"    Model {model_path}", flush=True)
+
+        if not clear_all_model_roles:
+            # Only clear default roles for this model
+            names = [choice_kwargs["name"] for choice_kwargs in choices]
+        else:
+            # Clear all roles for this model
+            names = Role.objects.filter(content_types=content_type).values_list("name", flat=True)
+
+        for name in names:
+            try:
+                obj = Role.objects.get(name=name)
+                obj.content_types.remove(content_type)
+                if not obj.content_types.all().exists():
+                    obj.delete()
+                    if verbosity >= 2:
+                        print(f"      Deleting role {obj.name}", flush=True)
+                    deleted_total += 1
+                else:
+                    if verbosity >= 2:
+                        print(f"      Unlinking role {obj.name}", flush=True)
+                    unlinked_total += 1
+            except Exception as err:
+                raise SystemExit(
+                    f"Unexpected error while running data migration to remove role for {model_path}: {err}"
+                )
+
+    if verbosity >= 2:
+        print(f"    Deleted {deleted_total}, unlinked {unlinked_total} role records")
 
 
 #
@@ -117,9 +314,9 @@ def export_statuses_from_choiceset(choiceset, color_map=None, description_map=No
     """
 
     if color_map is None:
-        color_map = COLOR_MAP
+        color_map = STATUS_COLOR_MAP
     if description_map is None:
-        description_map = DESCRIPTION_MAP
+        description_map = STATUS_COLOR_MAP
 
     choices = []
 
@@ -160,7 +357,7 @@ def create_custom_statuses(
         verbosity = 1
 
     if not models:
-        models = CHOICESET_MAP.keys()
+        models = STATUS_CHOICESET_MAP.keys()
 
     # Prep the app and get the Status model dynamically
     try:
@@ -174,7 +371,7 @@ def create_custom_statuses(
 
     # Iterate choiceset kwargs to create status objects if they don't exist
     for model_path in models:
-        choiceset = CHOICESET_MAP[model_path]
+        choiceset = STATUS_CHOICESET_MAP[model_path]
         content_type = ContentType.objects.get_for_model(apps.get_model(model_path))
         choices = export_statuses_from_choiceset(choiceset)
 
@@ -241,7 +438,7 @@ def clear_status_choices(
         print("\n", end="")
 
     if not models:
-        models = CHOICESET_MAP.keys()
+        models = STATUS_CHOICESET_MAP.keys()
 
     Status = apps.get_model("extras.Status")
     ContentType = apps.get_model("contenttypes.ContentType")
@@ -250,7 +447,7 @@ def clear_status_choices(
     unlinked_total = 0
 
     for model_path in models:
-        choiceset = CHOICESET_MAP[model_path]
+        choiceset = STATUS_CHOICESET_MAP[model_path]
         model = apps.get_model(model_path)
         content_type = ContentType.objects.get_for_model(model)
         choices = export_statuses_from_choiceset(choiceset)

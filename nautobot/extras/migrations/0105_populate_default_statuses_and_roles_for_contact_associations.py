@@ -12,6 +12,19 @@ def populate_default_status_and_role_choices(apps, schema_editor):
         schema_editor,
         models=["extras.ContactAssociation"],
     )
+    nautobot.extras.management.populate_role_choices(
+        apps,
+        schema_editor,
+        models=["extras.ContactAssociation"],
+    )
+    # Status = apps.get_model("extras.Status")
+    # ContactAssociation = apps.get_model("extras.ContactAssociation")
+
+    # # populate existing interfaces status
+    # active_status = Status.objects.get(slug=ContactAssociationStatusChoices.STATUS_ACTIVE)
+    # for association in ContactAssociation.objects.all():
+    #     association.status = active_status
+    #     association.save()
 
 
 class Migration(migrations.Migration):
