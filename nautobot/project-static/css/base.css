@@ -1,4 +1,9 @@
 /* Layout */
+
+:root {
+    --navbar-transition-duration: 350ms;
+}
+
 * {
     margin: 0;
 }
@@ -18,6 +23,14 @@ body {
     margin: 0 auto -48px; /* the bottom margin is the negative value of the footer's height */
     padding-bottom: 30px;
 }
+#main-content {
+    transition-duration: var(--navbar-transition-duration);
+    transition-timing-function: ease-in-out;
+    transition-property: margin-left, width;
+}
+#main-content > .form {
+    margin-top: 20px;
+}
 .footer, .push {
     height: 48px; /* .push must be the same height as .footer */
 }
@@ -25,10 +38,12 @@ body {
     background-color: #f5f5f5;
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
-    margin-left: 20px;
-    margin-right: 20px;
-    overflow: auto;
     white-space: nowrap;
+    transition-duration: var(--navbar-transition-duration);
+    transition-timing-function: ease-in-out;
+    transition-property: margin-left, width;
+    overflow: visible;
+    margin: 0;
 }
 .footer .row {
     background-color: #f5f5f5;
@@ -484,6 +499,14 @@ h1 .btn-inline {
     position: relative;
     top: 2px;
 }
+.breadcrumb {
+    transition-duration: var(--navbar-transition-duration);
+    transition-timing-function: ease-in-out;
+    transition-property: margin-left, width;
+}
+.breadcrumb.collapsed {
+    margin-left: 240px;
+}
 .breadcrumb .mdi::before {
     position: relative;
     top: 4px;
@@ -596,6 +619,17 @@ td span.hover_copy:hover .hover_copy_button {
     z-index: 1030; /* `1030` is taken from Bootstrap's `navbar-fixed-top` */
     -ms-overflow-style: none;  /* Hide scrollbar IE and Edge */
     scrollbar-width: none;  /* Hide scrollbar Firefox */
+    transition-duration: var(--navbar-transition-duration);
+    transition-timing-function: ease-in-out;
+    transition-property: margin-left, width;
+}
+
+.navbar-fixed-left.collapsed {
+    width: 0px;
+}
+
+.navbar-fixed-left.collapsed:hover {
+    cursor: pointer;
 }
 
 .navbar-fixed-left > .container-fluid {
@@ -611,7 +645,12 @@ td span.hover_copy:hover .hover_copy_button {
 .navbar-fixed-left .navbar-header > .navbar-brand {
     height: auto;
     margin: 0;
-    padding: 29px 60px 10px 20px;
+    padding: 25px 60px 10px 20px;
+    background-color: transparent;
+}
+
+.navbar-fixed-left .navbar-header > .navbar-brand img {
+    transition: opacity 0.5s ease;
 }
 
 .navbar-fixed-left .navbar-form {
@@ -629,6 +668,12 @@ td span.hover_copy:hover .hover_copy_button {
 .navbar-fixed-left .navbar-nav {
     margin: 0;
     width: 100%;
+    display: none; /* Hide menu items by default */
+}
+
+/* When navbar is expanded, show menu items */
+.navbar-fixed-left:not(.collapsed) .navbar-nav {
+    display: block;
 }
 
 .navbar-fixed-left .navbar-nav > .dropdown > a {
@@ -753,6 +798,7 @@ td span.hover_copy:hover .hover_copy_button {
     margin-left: 5px;
     margin-right: 5px;
     gap: 5px;
+    text-wrap: nowrap;
 }
 
 .navbar-fixed-left .navbar-nav > li {
@@ -778,6 +824,10 @@ td span.hover_copy:hover .hover_copy_button {
     display: none;
 }
 
+.navbar-inverse .navbar-collapse, .navbar-inverse .navbar-form {
+    border-color: transparent;
+}
+
 .navbar-inverse .navbar-nav > li > a {
     color: #999999;
     transition: background-color 200ms ease, color 200ms ease;
@@ -789,6 +839,16 @@ td span.hover_copy:hover .hover_copy_button {
 
 .nav-dropdown-menu .mdi {
     margin-left: 2px;
+}
+
+.navbar-toggler {
+    position: fixed;
+    left: 225px;
+    top: 25px;
+    z-index: 1035;
+    justify-content: flex-start;
+    transition-duration: var(--navbar-transition-duration);
+    transition-timing-function: ease-in-out;
 }
 
 /* Collapse icon on homepage panels */
