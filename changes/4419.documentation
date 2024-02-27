@@ -1,0 +1,3 @@
+Added documentation on `nautobot.apps` import locations.
+Added documentation about the supported public interfaces.
+Removed some incorrect content from the documentation about nav menu changes that were reverted during 2.0 development.
