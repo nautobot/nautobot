@@ -16,7 +16,7 @@ class NavMenuTestCase(TestCase):
             expected_perms[tab_name] = set()
             for group_name, group_details in tab_details["groups"].items():
                 expected_perms[f"{tab_name}:{group_name}"] = set()
-                for item_name, item_details in group_details["items"].items():
+                for item_details in group_details["items"].values():
                     item_perms = item_details["permissions"]
                     # If any item has no permissions restriction, then the group has no permissions restriction
                     if expected_perms[f"{tab_name}:{group_name}"] is None or not item_perms:
