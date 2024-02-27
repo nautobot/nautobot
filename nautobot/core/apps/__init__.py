@@ -101,12 +101,12 @@ def register_menu_items(tab_list):
                 nav_tab.name = "Apps"
             create_or_check_entry(registry["nav_menu"]["tabs"], nav_tab, nav_tab.name, nav_tab.name)
 
-            tab_perms = set()
+            tab_perms = registry["nav_menu"]["tabs"][nav_tab.name]["permissions"]
             registry_groups = registry["nav_menu"]["tabs"][nav_tab.name]["groups"]
             for group in nav_tab.groups:
                 create_or_check_entry(registry_groups, group, group.name, f"{nav_tab.name} -> {group.name}")
 
-                group_perms = set()
+                group_perms = registry["nav_menu"]["tabs"][nav_tab.name]["groups"][group.name]["permissions"]
                 for item in group.items:
                     # Instead of passing the reverse url strings, we pass in the url itself initialized with args and kwargs.
                     try:
@@ -137,7 +137,11 @@ def register_menu_items(tab_list):
                         sorted(registry_buttons.items(), key=lambda kv_pair: kv_pair[1]["weight"])
                     )
 
-                    group_perms |= set(perms for perms in item.permissions)
+                    # If any item has "no" permissions required, then the group behaves likewise
+                    if group_perms is None or not item.permissions:
+                        group_perms = None
+                    else:
+                        group_perms |= set(perms for perms in item.permissions)
 
                 # Add sorted items to group registry dict
                 registry_groups[group.name]["items"] = OrderedDict(
@@ -145,15 +149,19 @@ def register_menu_items(tab_list):
                 )
                 # Add collected permissions to group
                 registry_groups[group.name]["permissions"] = group_perms
-                # Add collected permissions to tab
-                tab_perms |= group_perms
+
+                # If any group has "no" permissions required, then the tab performs likewise
+                if tab_perms is None or not group_perms:
+                    tab_perms = None
+                else:
+                    tab_perms |= group_perms
 
             # Add sorted groups to tab dict
             registry["nav_menu"]["tabs"][nav_tab.name]["groups"] = OrderedDict(
                 sorted(registry_groups.items(), key=lambda kv_pair: kv_pair[1]["weight"])
             )
             # Add collected permissions to tab dict
-            registry["nav_menu"]["tabs"][nav_tab.name]["permissions"] |= tab_perms
+            registry["nav_menu"]["tabs"][nav_tab.name]["permissions"] = tab_perms
         else:
             raise TypeError(f"Top level objects need to be an instance of NavMenuTab: {nav_tab}")
 
@@ -282,7 +290,7 @@ class PermissionsMixin:
         """Ensure permissions."""
         if permissions is not None and not isinstance(permissions, (list, tuple)):
             raise TypeError("Permissions must be passed as a tuple or list.")
-        self.permissions = set(permissions) if permissions else set()
+        self.permissions = set(permissions) if permissions else None
 
 
 class HomePagePanel(HomePageBase, PermissionsMixin):
@@ -496,6 +504,7 @@ class NavMenuGroup(NavMenuBase, PermissionsMixin):
         return {
             "weight": self.weight,
             "items": {},
+            "permissions": set(),
         }
 
     @property

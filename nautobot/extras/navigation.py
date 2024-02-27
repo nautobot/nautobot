@@ -54,7 +54,7 @@ menu_items = (
                         name="Roles",
                         weight=300,
                         permissions=[
-                            "extras.view_status",
+                            "extras.view_role",
                         ],
                         buttons=(
                             NavMenuAddButton(
@@ -621,8 +621,7 @@ navigation = (
                     NavItem(
                         name="Installed Apps",
                         weight=100,
-                        link="plugins:plugins_list",
-                        permissions=["is_staff"],
+                        link="apps:apps_list",
                     ),
                     NavItem(
                         name="Git Repositories",

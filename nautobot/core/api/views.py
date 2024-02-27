@@ -760,7 +760,9 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
         for name, value in data.items():
             if "permissions" in value:
                 permissions = value["permissions"]
-                user_has_permission = any(request.user.has_perm(permission) for permission in permissions)
+                user_has_permission = (
+                    any(request.user.has_perm(permission) for permission in permissions) or not permissions
+                )
                 if user_has_permission:
                     return_value[name] = value["data"]
             else:

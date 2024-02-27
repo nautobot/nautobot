@@ -16,12 +16,11 @@ from rest_framework.views import APIView
 
 from nautobot.core.api.views import NautobotAPIVersionMixin
 from nautobot.core.forms import TableConfigForm
-from nautobot.core.views.mixins import AdminRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.plugins.tables import InstalledAppsTable
 
 
-class InstalledAppsView(AdminRequiredMixin, View):
+class InstalledAppsView(LoginRequiredMixin, View):
     """
     View for listing all installed Apps.
     """
