@@ -8,6 +8,7 @@ from django.utils.text import slugify
 from nautobot.circuits import choices as circuit_choices
 from nautobot.core.choices import ColorChoices
 from nautobot.dcim import choices as dcim_choices
+from nautobot.extras import choices as extras_choices
 from nautobot.ipam import choices as ipam_choices
 from nautobot.virtualization import choices as vm_choices
 
@@ -25,6 +26,7 @@ CHOICESET_MAP = {
     "dcim.InterfaceRedundancyGroup": dcim_choices.InterfaceRedundancyGroupStatusChoices,
     "dcim.SoftwareImageFile": dcim_choices.SoftwareImageFileStatusChoices,
     "dcim.SoftwareVersion": dcim_choices.SoftwareVersionStatusChoices,
+    "extras.ContactAssociation": extras_choices.ContactAssociationStatusChoices,
     "ipam.IPAddress": ipam_choices.IPAddressStatusChoices,
     "ipam.Prefix": ipam_choices.PrefixStatusChoices,
     "ipam.VLAN": ipam_choices.VLANStatusChoices,
@@ -51,9 +53,11 @@ COLOR_MAP = {
     "Maintenance": ColorChoices.COLOR_GREY,
     "Offline": ColorChoices.COLOR_AMBER,
     "Planned": ColorChoices.COLOR_CYAN,
+    "Primary": ColorChoices.COLOR_BLUE,
     "Provisioning": ColorChoices.COLOR_BLUE,
     "Reserved": ColorChoices.COLOR_CYAN,
     "Retired": ColorChoices.COLOR_RED,
+    "Secondary": ColorChoices.COLOR_YELLOW,
     "SLAAC": ColorChoices.COLOR_GREEN,
     "Staged": ColorChoices.COLOR_BLUE,
     "Staging": ColorChoices.COLOR_BLUE,
@@ -77,9 +81,11 @@ DESCRIPTION_MAP = {
     "Maintenance": "Unit is under maintenance",
     "Offline": "Unit is offline",
     "Planned": "Unit has been planned",
+    "Primary": "Unit is primary",
     "Provisioning": "Circuit is being provisioned",
     "Reserved": "Unit is reserved",
     "Retired": "Location has been retired",
+    "Secondary": "Unit is secondary",
     "SLAAC": "Dynamically assigned IPv6 address",
     "Staged": "Unit has been staged",
     "Staging": "Location is in the process of being staged",
