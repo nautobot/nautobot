@@ -43,7 +43,7 @@ class ExtrasConfig(NautobotConfig):
                 "during the execution of the migration command for the first time."
             )
 
-        # Register the DatabaseBackend health check
+        # Register the DatabaseBackend, MigrationsBackend, and RedisBackend health checks
         from nautobot.extras.health_checks import DatabaseBackend, MigrationsBackend, RedisBackend
 
         plugin_dir.register(DatabaseBackend)
