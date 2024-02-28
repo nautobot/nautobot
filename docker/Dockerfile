@@ -58,7 +58,9 @@ RUN --mount=type=cache,target="/root/.cache/pip",sharing=locked \
     --mount=type=cache,target="/tmp",sharing=locked \
     pip install --upgrade pip wheel
 
-HEALTHCHECK --interval=5s --timeout=5s --start-period=5s --retries=1 CMD curl --fail http://localhost:8080/health/ || exit 1
+# timeout/interval=10s because `nautobot-server` can be slow to start - https://github.com/nautobot/nautobot/issues/4292
+# start-period=5m because initial migrations can take several minutes to run on a fresh DB
+HEALTHCHECK --interval=10s --timeout=10s --start-period=5m --retries=3 CMD nautobot-server health_check
 
 # Generate nautobot user and its required dirs for later consumption
 RUN mkdir /opt/nautobot /opt/nautobot/.cache /prom_cache /source && \
