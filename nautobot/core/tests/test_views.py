@@ -85,8 +85,10 @@ class HomeViewTestCase(TestCase):
 
         # Global search bar in body/container-fluid wrapper
         body_search_bar_pattern = re.compile(
-            '<div class="container-fluid wrapper">.*<form action="/search/" method="get" class="form-inline">.*</form>.*</div>'
+            '<div class="container-fluid wrapper" id="main-content">.*<form action="/search/" method="get" class="form-inline">.*</form>.*</div>',
+            re.DOTALL,
         )
+
         body_search_bar_result = body_search_bar_pattern.search(
             response.content.decode(response.charset).replace("\n", "")
         )
