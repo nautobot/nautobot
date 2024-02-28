@@ -14,7 +14,9 @@ from django.core.management.utils import get_random_secret_key
 from jinja2 import BaseLoader, Environment
 
 from nautobot import __version__
+from nautobot.core.settings import OTEL_PYTHON_DJANGO_INSTRUMENT
 from nautobot.core.settings_funcs import is_truthy
+from nautobot.core.tracing import instrument
 from nautobot.extras.plugins.utils import load_plugins
 
 CONFIG_TEMPLATE = os.path.join(os.path.dirname(__file__), "../templates/nautobot_config.py.j2")
@@ -283,6 +285,11 @@ def main():
 
     # If we get here, it's a regular Django management command - so load in the nautobot_config.py then hand off
     _load_settings(args.config_path)
+
+    if OTEL_PYTHON_DJANGO_INSTRUMENT:
+        # Enable OpenTelemetry Instrumentation
+        instrument()
+
     execute_from_command_line([sys.argv[0], *unparsed_args])
 
 
