@@ -9,7 +9,7 @@ Keep in mind that each piece of functionality is entirely optional. For example,
     The `nautobot.apps` namespace was added in Nautobot 1.5.2. If developing apps to be backwards-compatible with older versions of Nautobot, please refer to the app developer documentation of your required Nautobot version.
 
 !!! tip
-    The app detail view (`/apps/installed-apps/<app_name>/`, accessible to superusers via **Apps -> Installed Apps** in the navigation menu, then selecting a specific app) provides in-depth information about which features any installed app is implementing or making use of.
+    The app detail view (`/apps/installed-apps/<app_name>/`, accessible via **Apps -> Installed Apps** in the navigation menu, then selecting a specific app) provides in-depth information about which features any installed app is implementing or making use of.
 
 ## Installing and Using Apps
 
