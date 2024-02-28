@@ -481,6 +481,7 @@ nav:
         - Jobs: "development/apps/api/platform-features/jobs.md"
         - Populating Extensibility Features: "development/apps/api/platform-features/populating-extensibility-features.md"
         - Prometheus Metrics: "development/apps/api/prometheus.md"
+        - OpenTelemetry: "user-guide/administration/guides/opentelemetry.md"
         - Secrets Providers: "development/apps/api/platform-features/secrets-providers.md"
         - Uniquely Identifying a Nautobot Object: "development/apps/api/platform-features/uniquely-identify-objects.md"
       - UI Extensions:
