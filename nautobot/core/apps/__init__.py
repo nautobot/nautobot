@@ -72,6 +72,21 @@ class NautobotConfig(AppConfig):
 
 
 def create_or_check_entry(grouping, record, key, path):
+    """
+    Helper function for adding and/or validating nested data in a provided dict based on a provided record.
+
+    Used in constructing the nav tab/group/item/buttons hierarchy as well as the homepage panel/group/item hierarchy.
+
+    If `key` does not exist in `grouping`, it will be populated with the `initial_dict` of the provided `record`.
+    Else, if any of the `fixed_fields` of the provided `record` conflict with the existing data in `grouping["key"]`,
+    an error message will be logged.
+
+    Args:
+        grouping (dict): The dictionary to populate or validate (e.g. the contents of `registry["nav_menu"]["tabs"]`).
+        record (HomePageBase, NavMenuBase): An object with `initial_dict` and `fixed_fields` attributes/properties.
+        key (str): The key within `grouping` to populate or validate the contents of.
+        path (str): String included in log messages for diagnosis and debugging.
+    """
     if key not in grouping:
         grouping[key] = record.initial_dict
     else:
@@ -79,6 +94,8 @@ def create_or_check_entry(grouping, record, key, path):
             if grouping[key][attr] != value:
                 logger.error("Unable to redefine %s on %s from %s to %s", attr, path, grouping[key][attr], value)
 
+    # TODO: remove?
+    # React-UI specific: recursive population/validation of `data` for NavContext -> NavGrouping -> NavItem records
     if isinstance(record, (NavContext, NavGrouping)):
         groups = record.groups if isinstance(record, NavContext) else record.items
         for item in groups:
@@ -88,11 +105,55 @@ def create_or_check_entry(grouping, record, key, path):
 
 def register_menu_items(tab_list):
     """
-    Using the imported object a dictionary is either created or updated with objects to create
-    the navbar.
+    Based on the tab_list, the `registry["nav_menu"]` dictionary is created/updated to define the navbar.
 
-    The dictionary is built from four key objects, NavMenuTab, NavMenuGroup, NavMenuItem and
-    NavMenuButton. The Django template then uses this dictionary to generate the navbar HTML.
+    The dictionary is built from four key objects, NavMenuTab, NavMenuGroup, NavMenuItem and NavMenuButton.
+    The Django template then uses this dictionary to generate the navbar HTML.
+
+    The dictionary takes the form:
+
+    ```
+    registry = {
+        ...
+        "nav_menu": {
+            "tabs": {
+                <NavMenuTab.name>: {
+                    "weight": <NavMenuTab.weight>,
+                    "groups": {
+                        <NavMenuGroup.name>: {
+                            "weight": <NavMenuGroup.weight>,
+                            "items": {
+                                reverse(<NavMenuItem.link>): {
+                                    "name": <NavMenuItem.name>,
+                                    "weight": <NavMenuItem.weight>",
+                                    "buttons": {
+                                        <NavMenuButton.name>: {
+                                            "link": <NavMenuButton.link>,
+                                            "icon_class": <NavMenuButton.icon_class>,
+                                            "button_class": <NavMenuButton.button_class>,
+                                            "weight": <NavMenuButton.weight>,
+                                            "permissions": <NavMenuButton.permissions>,
+                                        },
+                                        ...
+                                    },
+                                    "permissions": <NavMenuItem.permissions>,
+                                },
+                                ...
+                            },
+                            "permissions": <set of permissions constructed from all contained NavMenuItems, or None>,
+                        },
+                        ...
+                    },
+                    "permissions": <set of permissions constructed from all contained NavMenuGroups, or None>,
+                },
+                ...
+            },
+        },
+        ...
+    }
+    ```
+
+    This is almost certainly overcomplicated and could do with significant refactoring at some point.
     """
     for nav_tab in tab_list:
         if isinstance(nav_tab, NavMenuTab):
