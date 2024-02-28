@@ -6,6 +6,7 @@
 
 A number of settings can alternatively be configured via the Nautobot Admin UI. To do so, these settings must **not** be defined in your `nautobot_config.py`, as any settings defined there will take precedence over any values defined in the Admin UI. Settings that are currently configurable via the Admin UI include:
 
+* [ALLOW_REQUEST_PROFILING](#allow_request_profiling)
 * [BANNER_BOTTOM](#banner_bottom)
 * [BANNER_LOGIN](#banner_login)
 * [BANNER_TOP](#banner_top)
@@ -44,50 +45,31 @@ EXTRA_INSTALLED_APPS = [
 This will ensure your default setting's `INSTALLED_APPS` do not have to be modified, and the user
 can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can be added using `EXTRA_MIDDLEWARE`.
 
-### ALLOW_REQUEST_PROFILING
-
-Default: `False`
-
-Global setting to allow or deny users from enabling request profiling on their login session.
-
-See the administration guide on [request profiling](../guides/request-profiling.md) for more information.
+[[% for property, attrs in settings_data.properties.items() %]]
+[[% if not attrs.required_setting|default(false) %]]
 
 ---
 
-## ALLOWED_URL_SCHEMES
+## `[[ property ]]`
 
-Default: `('file', 'ftp', 'ftps', 'http', 'https', 'irc', 'mailto', 'sftp', 'ssh', 'tel', 'telnet', 'tftp', 'vnc', 'xmpp')`
+[[% if attrs.version_added|default(None) %]]
++++ [[ attrs.version_added ]]
+[[% endif %]]
+[[% with default = attrs.default|default(None) %]]
+[[% if default is string %]]Default: `"[[ default ]]"`
+[[% elif default is boolean %]]Default: `[[ default|title ]]`
+[[% else %]]Default: `[[ default ]]`
+[[% endif %]]
+[[% endwith %]]
 
-A list of permitted URL schemes referenced when rendering links within Nautobot. Note that only the schemes specified in this list will be accepted: If adding your own, be sure to replicate all of the default values as well (excluding those schemes which are not desirable).
+[[% if attrs.environment_variable|default(None) %]]Environment variable: `[[ attrs.environment_variable ]]`[[% endif %]]
 
----
+[[ attrs.description|default("") ]]
 
-## BANNER_TOP
+[[ attrs.details|default("") ]]
 
-## BANNER_BOTTOM
-
-Default: `""` (Empty string)
-
-Setting these variables will display custom content in a banner at the top and/or bottom of the page, respectively. HTML is allowed. To replicate the content of the top banner in the bottom banner, set:
-
-```python
-BANNER_TOP = 'Your banner text'
-BANNER_BOTTOM = BANNER_TOP
-```
-
-+++ 1.2.0
-    If you do not set a value for these settings in your `nautobot_config.py`, they can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for either setting in `nautobot_config.py`, it will override any dynamically configured value.
-
----
-
-## BANNER_LOGIN
-
-Default: `""` (Empty string)
-
-This defines custom content to be displayed on the login page above the login form. HTML is allowed.
-
-+++ 1.2.0
-    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
+[[% endif %]]
+[[% endfor %]]
 
 ---
 
@@ -133,30 +115,6 @@ If a custom image asset is not provided for any of the above options, the stock 
 
 ---
 
-## BRANDING_PREPENDED_FILENAME
-
-+++ 1.3.4
-
-Default: `"nautobot_"`
-
-Environment Variable: `NAUTOBOT_BRANDING_PREPENDED_FILENAME`
-
-Defines the prefix of the filename when exporting to CSV/YAML or export templates.
-
----
-
-## BRANDING_TITLE
-
-+++ 1.2.0
-
-Default: `"Nautobot"`
-
-Environment Variable: `NAUTOBOT_BRANDING_TITLE`
-
-The defines the custom branding title that should be used in place of "Nautobot" within user facing areas of the application like the HTML title of web pages.
-
----
-
 ## BRANDING_URLS
 
 +++ 1.2.0
@@ -183,86 +141,6 @@ If a custom URL is not provided for any of the links, the default link within th
 
 ---
 
-## CELERY_BROKER_TRANSPORT_OPTIONS
-
-Default: `{}`
-
-A dict of additional options passed to the Celery broker transport. This is only required when [configuring Celery to utilize Redis Sentinel](../../administration/guides/caching.md#celery-sentinel-configuration).
-
----
-
-## CELERY_BROKER_URL
-
-Environment Variable: `NAUTOBOT_CELERY_BROKER_URL`
-
-Default: `'redis://localhost:6379/0'`
-
-Celery broker URL used to tell workers where queues are located.
-
----
-
-## CELERY_TASK_DEFAULT_QUEUE
-
-+++ 1.5.0
-
-Environment Variable: `NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE`
-
-Default: `'default'`
-
-The default celery queue name that will be used by workers if no queue is specified in the `nautobot-server celery worker` command. This queue will also be used by celery tasks if no queue is specified when a task is run.
-
----
-
-## CELERY_TASK_SOFT_TIME_LIMIT
-
-Default: `300` (5 minutes)
-
-Environment Variable: `NAUTOBOT_CELERY_TASK_SOFT_TIME_LIMIT`
-
-The global Celery task soft timeout (in seconds). Any background task that exceeds this duration will receive a `SoftTimeLimitExceeded` exception and is responsible for handling this exception and performing any necessary cleanup or final operations before ending. See also `CELERY_TASK_TIME_LIMIT` below.
-
----
-
-## CELERY_TASK_TIME_LIMIT
-
-Default: `600` (10 minutes)
-
-Environment Variable: `NAUTOBOT_CELERY_TASK_TIME_LIMIT`
-
-The global Celery task hard timeout (in seconds). Any background task that exceeds this duration will be forcibly killed with a `SIGKILL` signal.
-
----
-
-## CELERY_WORKER_PROMETHEUS_PORTS
-
-+++ 1.5.10
-
-Default: `[]` (disabled)
-
-Environment Variable: `NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS`
-
-Ports for Prometheus metric HTTP server running on the celery worker(s).
-
-Normally this should be set to a single port, unless you have multiple workers running on a single machine, i.e.
-sharing the same available ports. In that case you need to specify a range of ports greater than or equal to the
-highest amount of workers you are running on a single machine (comma-separated, like "8080,8081,8082"). You can then use
-the `target_limit` parameter to the Prometheus `scrape_config` to ensure you are not getting duplicate metrics in that
-case. Set this to an empty list to disable it.
-
----
-
-## CELERY_WORKER_REDIRECT_STDOUTS
-
-+++ 2.0.0
-
-Environment Variable: `NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS`
-
-Default: `True`
-
-If enabled stdout and stderr of running jobs will be redirected to the task logger.
-
----
-
 ## CELERY_WORKER_REDIRECT_STDOUTS_LEVEL
 
 +++ 2.0.0
@@ -275,266 +153,11 @@ The log level of log messages generated by redirected job stdout and stderr. Can
 
 ---
 
-## CHANGELOG_RETENTION
-
-Default: `90`
-
-The number of days to retain logged changes (object creations, updates, and deletions). Set this to `0` to retain changes in the database indefinitely.
-
-!!! warning
-    If enabling indefinite changelog retention, it is recommended to periodically delete old entries. Otherwise, the database may eventually exceed capacity.
-
-+++ 1.2.0
-    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
-
----
-
-## CONFIG_CONTEXT_DYNAMIC_GROUPS_ENALBED
-
-Default: `False`
-
-Environment Variable: `NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED`
-
-If `True`, it will be possible to apply Config Context objects to Devices and Virtual Machines via Dynamic Group membership. When set to `False` this behavior will not be available.
-
-!!! warning
-    With a large number of dynamic groups, enabling this could invoke a performance penalty when processing Config Contexts.
-
----
-
-## CONTENT_TYPE_CACHE_TIMEOUT
-
-+++ 1.6.0
-
-Default: `0` (disabled)
-
-Environment Variable: `NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT`
-
-The number of seconds to cache the content type accessible via a object's class property `Object._content_type_cached`. This can save frequent calls to `ContentType.objects.get_for_model(model)`. Set this to `0` to disable caching.
-
----
-
-## CORS_ALLOW_ALL_ORIGINS
-
-Default: `False`
-
-Environment Variable: `NAUTOBOT_CORS_ALLOW_ALL_ORIGINS`
-
-If `True`, all origins will be allowed. Other settings restricting allowed origins will be ignored.
-
-Setting this to `True` can be dangerous, as it allows any website to make cross-origin requests to yours. Generally you'll want to restrict the list of allowed origins with [`CORS_ALLOWED_ORIGINS`](#cors_allowed_origins) or [`CORS_ALLOWED_ORIGIN_REGEXES`](#cors_allowed_origin_regexes).
-
-Previously this setting was called `CORS_ORIGIN_ALLOW_ALL`, which still works as an alias, with the new name taking precedence.
-
----
-
-## CORS_ALLOWED_ORIGINS
-
-Default: `[]` (Empty list)
-
-A list of origins that are authorized to make cross-site HTTP requests.
-
-An Origin is defined by [the CORS RFC Section 3.2](https://tools.ietf.org/html/rfc6454#section-3.2) as a URI `scheme + hostname + port`, or one of the special values `'null'` or `'file://'`. Default ports (HTTPS = 443, HTTP = 80) are optional here.
-
-The special value `null` is sent by the browser in ["privacy-sensitive contexts"](https://tools.ietf.org/html/rfc6454#section-6), such as when the client is running from a `file://` domain. The special value `file://` is sent accidentally by some versions of Chrome on Android as per this bug.
-
-Example:
-
-```python
-CORS_ALLOWED_ORIGINS = [
-    "https://example.com",
-    "https://sub.example.com",
-    "http://localhost:8080",
-    "http://127.0.0.1:9000"
-]
-```
-
-Previously this setting was called `CORS_ORIGIN_WHITELIST`, which still works as an alias, with the new name taking precedence.
-
----
-
-## CORS_ALLOWED_ORIGIN_REGEXES
-
-Default: `[]`
-
-A list of strings representing regexes that match Origins that are authorized to make cross-site HTTP requests. Useful when [`CORS_ALLOWED_ORIGINS`](#cors_allowed_origins) is impractical, such as when you have a large number of subdomains.
-
-Example:
-
-```python
-CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"^https://\w+\.example\.com$",
-]
-```
-
-Previously this setting was called `CORS_ORIGIN_REGEX_WHITELIST`, which still works as an alias, with the new name taking precedence.
-
----
-
-## DEPLOYMENT_ID
-
-+++ 1.6.0
-
-Default: a random UUID generated at install time.
-
-This setting is used to uniquely but anonymously identify Nautobot deployments when sending installation metrics. This setting is not generally intended to be user-serviceable. See the documentation for the [`send_installation_metrics`](../tools/nautobot-server.md#send_installation_metrics) management command for more details.
-
-## DEVICE_NAME_AS_NATURAL_KEY
-
-+++ 2.0.0
-
-Default: `False`
-
-`Device` names are not guaranteed globally-unique by Nautobot but in practice they often are. Set this to `True` to use the device `name` alone as the natural key for `Device` objects. Set this to `False` to use the sequence `(name, tenant, location)` as the natural key instead.
-
----
-
-## DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT
-
-+++ 1.6.0
-
-Default: `0` (disabled)
-
-The number of seconds to cache the member list of dynamic groups. With large datasets (those in scope of a Dynamic Group and number of Dynamic Groups themselves), users will encounter a performance penalty using or accessing the membership lists. This setting allows users to accept a cached list for common use cases (particularly in the UI) that expires after the configured time. Set this to `0` to disable caching.
-
----
-
-## EXEMPT_VIEW_PERMISSIONS
-
-Default: `[]` (Empty list)
-
-A list of Nautobot models to exempt from the enforcement of view permissions. Models listed here will be viewable by all users, both authenticated and anonymous.
-
-List models in the form `<app>.<model>`. For example:
-
-```python
-EXEMPT_VIEW_PERMISSIONS = [
-    'dcim.location',
-    'dcim.location_type',
-    'ipam.prefix',
-]
-```
-
-To exempt _all_ models from view permission enforcement, set the following. (Note that `EXEMPT_VIEW_PERMISSIONS` must be an iterable.)
-
-```python
-EXEMPT_VIEW_PERMISSIONS = ['*']
-```
-
-!!! note
-    Using a wildcard will not affect certain potentially sensitive models, such as user permissions. If there is a need to exempt these models, they must be specified individually.
-
----
-
 ## EXTERNAL_AUTH_DEFAULT_GROUPS
 
 Default: `[]` (Empty list)
 
 The list of group names to assign a new user account when created using 3rd-party authentication.
-
----
-
-## EXTERNAL_AUTH_DEFAULT_PERMISSIONS
-
-Default: `{}` (Empty dictionary)
-
-A mapping of permissions to assign a new user account when created using SSO authentication. Each key in the dictionary will be the permission name specified as `<app_label>.<action>_<model>`, and the value should be set to the permission [constraints](../guides/permissions.md#constraints), or `None` to allow all objects.
-
-### Example Permissions
-
-| Permission | Description |
-|---|---|
-| `{'dcim.view_device': {}}` or `{'dcim.view_device': None}` | Users can view all devices |
-| `{'dcim.add_device': {}}` | Users can add devices, see note below |
-| `{'dcim.view_device': {"location__name__in": ["HQ"], "location__location_type__name__in": ["Building"]}}` | Users can view all devices in the HQ Building |
-
-!!! warning
-    Permissions can be complicated! Be careful when restricting permissions to also add any required prerequisite permissions.
-
-    For example, when adding Devices the Device Role, Device Type, Location, and Status fields are all required fields in order for the UI to function properly. Users will also need view permissions for those fields or the corresponding field selections in the UI will be unavailable and potentially prevent objects from being able to be created or edited.
-
-The following example gives a user a reasonable amount of access to add devices to a single location (Building HQ in this case):
-
-```python
-{
-    'dcim.add_device': {"location__name__in":  ["HQ"], "location__location_type__name__in": ["Building"]},
-    'dcim.view_device': {"location__name__in":  ["HQ"], "location__location_type__name__in": ["Building"]},
-    'dcim.view_devicerole': None,
-    'dcim.view_devicetype': None,
-    'extras.view_status': None,
-    'dcim.view_location': {"name__in":  ["HQ"], "location_type__name__in": ["Building"]},
-    'dcim.view_manufacturer': None,
-    'dcim.view_region': None,
-    'dcim.view_rack': None,
-    'dcim.view_rackgroup': None,
-    'dcim.view_platform': None,
-    'virtualization.view_cluster': None,
-    'virtualization.view_clustergroup': None,
-    'tenancy.view_tenant': None,
-    'tenancy.view_tenantgroup': None,
-}
-```
-
-Please see [the object permissions page](../guides/permissions.md) for more information.
-
----
-
-## GIT_ROOT
-
-Default: `os.path.join(NAUTOBOT_ROOT, "git")`
-
-Environment Variable: `NAUTOBOT_GIT_ROOT`
-
-The file path to a directory where cloned [Git repositories](../../platform-functionality/gitrepository.md) will be located.
-
-The value of this variable can also be customized by setting the environment variable `NAUTOBOT_GIT_ROOT` to a directory path of your choosing.
-
----
-
-## GRAPHQL_COMPUTED_FIELD_PREFIX
-
-Default: `"cpf"`
-
-By default, all computed fields in GraphQL will be prefixed with `cpf`. A computed field named `my_field` will appear in GraphQL as `cpf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_COMPUTED_FIELD_PREFIX`.
-
----
-
-## GRAPHQL_CUSTOM_FIELD_PREFIX
-
-Default: `"cf"`
-
-By default, all custom fields in GraphQL will be prefixed with `cf`. A custom field named `my_field` will appear in GraphQL as `cf_my_field` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_CUSTOM_FIELD_PREFIX`.
-
----
-
-## GRAPHQL_RELATIONSHIP_PREFIX
-
-Default: `"rel"`
-
-By default, all relationship associations in GraphQL will be prefixed with `rel`. A relationship named `my_relationship` will appear in GraphQL as `rel_my_relationship` by default. It's possible to change or remove the prefix by setting the value of `GRAPHQL_RELATIONSHIP_PREFIX`.
-
----
-
-## HTTP_PROXIES
-
-Default: `None` (Disabled)
-
-A dictionary of HTTP proxies to use for outbound requests originating from Nautobot (e.g. when sending webhook requests). Proxies should be specified by schema (HTTP and HTTPS) as per the [Python requests library documentation](https://2.python-requests.org/en/master/user/advanced/). For example:
-
-```python
-HTTP_PROXIES = {
-    'http': 'http://10.10.1.10:3128',
-    'https': 'http://10.10.1.10:1080',
-}
-```
-
-!!! note
-    When using Git repositories within Nautobot the Python library `GitPython` needs extra proxy configuration:
-
-```bash
-git config --global http.proxy http://192.0.2.1:3128
-git config --global https.proxy http://192.0.2.1:3128
-```
 
 ---
 
@@ -550,184 +173,10 @@ When set to `True`, Nautobot will send anonymized installation metrics to the Na
 
 ---
 
-## JOB_FILE_IO_STORAGE
-
-+++ 2.1.0
-
-Default: `"db_file_storage.storage.DatabaseFileStorage"`
-
-Environment Variable: `NAUTOBOT_JOB_FILE_IO_STORAGE`
-
-The backend storage engine for handling files provided as input to Jobs and files generated as output by Jobs.
-
-!!! warning
-    For backwards compatibility with storage of Job inputs in prior versions of Nautobot, this currently defaults to using `DatabaseFileStorage` to store such files directly in Nautobot's database, however this is not typically the best option (see below) and may change in a future major release.
-
-If your Nautobot server instance(s) and your Celery worker instance(s) share a common [`MEDIA_ROOT`](#media_root) filesystem (as would typically be the case in a single-server installation of Nautobot) then we recommend changing this to `"django.core.files.storage.FileSystemStorage"` to store Job files on the filesystem (which will place them into a `files/` subdirectory under [`MEDIA_ROOT`](#media_root)) instead of in the database.
-
-If your Nautobot server instance(s) and Celery worker instance(s) do _not_ share a common filesystem, we recommend using one of the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) options such as S3 to provide a storage backend that can be accessed by the server(s) and worker(s) alike.
-
-!!! tip
-    For an example of using `django-storages` with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md) user-guide.
-
-If you have neither a common `MEDIA_ROOT` filesystem nor an appropriate remote storage option, then it's permissible to leave this at its default, but know that storing files in the database is provided here as a "least-worst" option only.
-
-!!! caution
-    It's typically safe to change this setting when initially updating to Nautobot 2.1.0 or later, as there should be no pre-existing Job output files, although any existing scheduled Jobs that have file _inputs_ may need to be deleted and recreated after doing so. However, once you've run any Jobs that output to a file, changing storage backends will of course break any existing links to Job output files in the previous storage backend. Migrating Job stored files from one backend to another is out of scope for this document.
-
-> See also: [`STORAGE_BACKEND`](#storage_backend) and [`JOB_CREATE_FILE_MAX_SIZE`](#job_create_file_max_size).
-
----
-
-## JOB_CREATE_FILE_MAX_SIZE
-
-+++ 2.1.0
-
-Default: `10485760` (10 MiB)
-
-The maximum file size (in bytes) that a running Job will be allowed to create in a single call to `Job.create_file()`.
-
-If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value in `nautobot_config.py`, it will override any dynamically configured value.
-
-> See also: [`JOB_FILE_IO_STORAGE`](#job_file_io_storage)
-
----
-
-## JOBS_ROOT
-
-Default: `os.path.join(NAUTOBOT_ROOT, "jobs")`
-
-Environment Variable: `NAUTOBOT_JOBS_ROOT`
-
-The file path to a directory where [Jobs](../../platform-functionality/jobs/index.md) can be discovered.
-
-+/- 2.0.0
-    This directory no longer requires an `__init__.py` file.
-
----
-
-## LOCATION_NAME_AS_NATURAL_KEY
-
-+++ 2.0.0
-
-Default: `False`
-
-`Location` names are not guaranteed globally-unique by Nautobot but in practice they often are. Set this to `True` to use the location `name` alone as the natural key for `Location` objects. Set this to `False` to use the sequence `(name, parent__name, parent__parent__name, ...)` as the natural key instead.
-
----
-
 ## LOG_DEPRECATION_WARNINGS
 
 --- 1.5.3
     This setting was moved to [environment variable only](#nautobot_log_deprecation_warnings) as it conflicts with app startup due to import-time order.
-
----
-
-## MAINTENANCE_MODE
-
-Default: `False`
-
-Environment Variable: `NAUTOBOT_MAINTENANCE_MODE`
-
-Setting this to `True` will display a "maintenance mode" banner at the top of every page. Additionally, Nautobot will no longer update a user's "last active" time upon login. This is to allow new logins when the database is in a read-only state. Recording of login times will resume when maintenance mode is disabled.
-
-!!! note
-    The default [`SESSION_ENGINE`](#session_engine) configuration will store sessions in the database, this obviously will not work when `MAINTENANCE_MODE` is `True` and the database is in a read-only state for maintenance.  Consider setting `SESSION_ENGINE` to `django.contrib.sessions.backends.cache` when enabling `MAINTENANCE_MODE`.
-
-!!! note
-    The Docker container normally attempts to run migrations on startup; however, if the database is in a read-only state the Docker container will fail to start.  Setting the environment variable [`NAUTOBOT_DOCKER_SKIP_INIT`](../installation/docker.md#nautobot_docker_skip_init) to `true` will prevent the migrations from occurring.
-
-!!! note
-    If you are using `django-auth-ldap` for LDAP authentication, `django-auth-ldap` by default will try to update a user object on every log in.  If the database is in a read-only state `django-auth-ldap` will fail.  You will also need to set `AUTH_LDAP_ALWAYS_UPDATE_USER=False` and `AUTH_LDAP_NO_NEW_USERS=True` to avoid this, please see the [`django-auth-ldap` documentation](https://django-auth-ldap.readthedocs.io/en/stable/reference.html) for more information.
-
----
-
-## MAX_PAGE_SIZE
-
-Default: `1000`
-
-A web user or API consumer can request an arbitrary number of objects by appending the "limit" parameter to the URL (e.g. `?limit=1000`). This parameter defines the maximum acceptable limit. Setting this to `0` or `None` will allow a client to retrieve _all_ matching objects at once with no limit by specifying `?limit=0`.
-
-+++ 1.2.0
-    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
-
----
-
-## METRICS_ENABLED
-
-Default: `False`
-
-Environment Variable: `NAUTOBOT_METRICS_ENABLED`
-
-Toggle the availability Prometheus-compatible metrics at `/metrics`. See the [Prometheus Metrics](../guides/prometheus-metrics.md) documentation for more details.
-
----
-
-## METRICS_AUTHENTICATED
-
-Default: `False`
-
-Environment Variable: `NAUTOBOT_METRICS_AUTHENTICATED`
-
-Toggle requiring authentication to view `/metrics`. See the [Prometheus Metrics](../guides/prometheus-metrics.md) documentation for more details.
-
----
-
-## NAPALM_USERNAME
-
-## NAPALM_PASSWORD
-
-Default: `""` (Empty string)
-
-Environment Variables: `NAUTOBOT_NAPALM_USERNAME` and `NAUTOBOT_NAPALM_PASSWORD`
-
-Nautobot will use these credentials when authenticating to remote devices via the [NAPALM library](https://napalm.readthedocs.io), if installed. Both parameters are optional.
-
-!!! note
-    If SSH public key authentication has been set up on the remote device(s) for the system account under which Nautobot runs, these parameters are not needed.
-
-!!! note
-    If a given device has an appropriately populated [secrets group](../../platform-functionality/secret.md#secretsgroup) assigned to it, the [secrets]((../../platform-functionality/secrets.md) defined in that group will take precedence over these default values.
-
----
-
-## NAPALM_ARGS
-
-Default: `{}` (Empty dictionary)
-
-A dictionary of optional arguments to pass to NAPALM when instantiating a network driver. See the NAPALM documentation for a [complete list of optional arguments](https://napalm.readthedocs.io/en/latest/support/#optional-arguments). An example:
-
-```python
-NAPALM_ARGS = {
-    'api_key': '472071a93b60a1bd1fafb401d9f8ef41',
-    'port': 2222,
-}
-```
-
-Some platforms (e.g. Cisco IOS) require an enable password to be passed in addition to the normal password. If desired, you can use the configured `NAPALM_PASSWORD` as the value for this argument:
-
-```python
-NAPALM_USERNAME = 'username'
-NAPALM_PASSWORD = 'MySecretPassword'
-NAPALM_ARGS = {
-    'secret': NAPALM_PASSWORD,          # ios and nxos_ssh
-    'enable_password': NAPALM_PASSWORD, # eos
-    # Include any additional args here
-}
-```
-
-!!! note
-    If a given device has an appropriately populated [secrets group](../../platform-functionality/secret.md#secrets-groups) assigned to it, a [secret](../../platform-functionality/secret.md) defined in that group can override the `NAPALM_ARGS["secret"]` or `NAPALM_ARGS["enable_password"]` default value defined here.
-
----
-
-## NAPALM_TIMEOUT
-
-Default: `30`
-
-Environment Variable: `NAUTOBOT_NAPALM_TIMEOUT`
-
-The amount of time (in seconds) to wait for NAPALM to connect to a device.
 
 ---
 
@@ -1126,80 +575,6 @@ Please see the [official Django documentation on `ADMINS`](https://docs.djangopr
 
 ---
 
-### CSRF_TRUSTED_ORIGINS
-
-Default: `[]`
-
-A list of hosts (fully-qualified domain names (FQDNs) or subdomains) that are considered trusted origins for cross-site secure requests such as HTTPS POST.
-
-For more information, please see the [official Django documentation on `CSRF_TRUSTED_ORIGINS`](https://docs.djangoproject.com/en/stable/ref/settings/#csrf-trusted-origins) and more generally the [official Django documentation on CSRF protection](https://docs.djangoproject.com/en/stable/ref/csrf/#how-it-works)
-
----
-
-### Date and Time Formatting
-
-You may define custom formatting for date and times. For detailed instructions on writing format strings, please see [the Django documentation](https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date). Default formats are listed below.
-
-```python
-DATE_FORMAT = 'N j, Y'               # June 26, 2016
-SHORT_DATE_FORMAT = 'Y-m-d'          # 2016-06-26
-TIME_FORMAT = 'g:i a'                # 1:23 p.m.
-DATETIME_FORMAT = 'N j, Y g:i a'     # June 26, 2016 1:23 p.m.
-SHORT_DATETIME_FORMAT = 'Y-m-d H:i'  # 2016-06-26 13:23
-```
-
-Environment Variables:
-
-* `NAUTOBOT_DATE_FORMAT`
-* `NAUTOBOT_SHORT_DATE_FORMAT`
-* `NAUTOBOT_TIME_FORMAT`
-* `NAUTOBOT_SHORT_TIME_FORMAT`
-* `NAUTOBOT_DATETIME_FORMAT`
-* `NAUTOBOT_SHORT_DATETIME_FORMAT`
-
----
-
-### DEBUG
-
-Default: `False`
-
-Environment Variable: `NAUTOBOT_DEBUG`
-
-This setting enables debugging. Debugging should be enabled only during development or troubleshooting. Note that only
-clients which access Nautobot from a recognized [internal IP address](#internal_ips) will see debugging tools in the user interface.
-
-!!! warning
-    Never enable debugging on a production system, as it can expose sensitive data to unauthenticated users and impose a
-    substantial performance penalty.
-
-Please see the [official Django documentation on `DEBUG`](https://docs.djangoproject.com/en/stable/ref/settings/#debug) for more information.
-
----
-
-### FORCE_SCRIPT_NAME
-
-Default: `None`
-
-If not `None`, this will be used as the value of the `SCRIPT_NAME` environment variable in any HTTP request. This setting can be used to override the server-provided value of `SCRIPT_NAME`, which is most commonly used for hosting Nautobot in a subdirectory (e.g. _example.com/nautobot/_).
-
-!!! important
-    To host Nautobot under a subdirectory you must set this value to match the same prefix configured on your HTTP server. For example, if you configure NGINX to serve Nautobot at `/nautobot/`, you must set `FORCE_SCRIPT_NAME = "/nautobot/"`.
-
-Please see the [official Django documentation on `FORCE_SCRIPT_NAME`](https://docs.djangoproject.com/en/stable/ref/settings/#force-script-name) for more information.
-
----
-
-### INTERNAL_IPS
-
-Default: `('127.0.0.1', '::1')`
-
-A list of IP addresses recognized as internal to the system, used to control the display of debugging output. For
-example, the [Django debugging toolbar](https://django-debug-toolbar.readthedocs.io/), if installed,
-will be viewable only when a client is accessing Nautobot from one of the listed IP
-addresses (and [`DEBUG`](#debug) is true).
-
----
-
 ### LOGGING
 
 Default:
@@ -1277,16 +652,6 @@ Additional examples are available in the [`/examples/logging`](https://github.co
 * `nautobot.core.graphql.*` - [GraphQL](../../platform-functionality/graphql.md) initialization and operation.
 * `nautobot.extras.plugins.*` - Plugin loading and activity
 * `nautobot.core.views.generic.*` - Generic views which handle business logic for the web UI
-
----
-
-### MEDIA_ROOT
-
-Default: `os.path.join(NAUTOBOT_ROOT, "media")`
-
-The file path to the location where media files (such as [image attachments](../../platform-functionality/imageattachment.md)) are stored.
-
-Please see the [official Django documentation on `MEDIA_ROOT`](https://docs.djangoproject.com/en/stable/ref/settings/#media-root) for more information.
 
 ---
 

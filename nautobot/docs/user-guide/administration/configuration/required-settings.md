@@ -1,33 +1,30 @@
 # Required Configuration Settings
 
-## ALLOWED_HOSTS
+[[% for property, attrs in settings_data.properties.items() %]]
+[[% if attrs.required_setting|default(false) %]]
 
-Environment Variable: `NAUTOBOT_ALLOWED_HOSTS` specified as a space-separated quoted string (e.g. `NAUTOBOT_ALLOWED_HOSTS="localhost 127.0.0.1 example.com"`).
+---
 
-This is a list of valid fully-qualified domain names (FQDNs) and/or IP addresses that can be used to reach the Nautobot service. Usually this is the same as the hostname for the Nautobot server, but can also be different; for example, when using a reverse proxy serving the Nautobot website under a different FQDN than the hostname of the Nautobot server. To help guard against [HTTP Host header attacks](https://docs.djangoproject.com/en/stable/topics/security/#host-headers-virtual-hosting), Nautobot will not permit access to the server via any other hostnames (or IPs).
+## `[[ property ]]`
 
-Keep in mind that by default Nautobot sets [`USE_X_FORWARDED_HOST`](https://docs.djangoproject.com/en/stable/ref/settings/#use-x-forwarded-host) to `True`, which means that if you're using a reverse proxy, the FQDN used to reach that reverse proxy needs to be in this list.
+[[% if attrs.version_added|default(None) %]]
++++ [[ attrs.version_added ]]
+[[% endif %]]
+[[% with default = attrs.default|default(None) %]]
+[[% if default is string %]]Default: `"[[ default ]]"`
+[[% elif default is boolean %]]Default: `[[ default|title ]]`
+[[% else %]]Default: `[[ default ]]`
+[[% endif %]]
+[[% endwith %]]
 
-!!! note
-    This parameter must always be defined as a list or tuple, even if only a single value is provided.
+[[% if attrs.environment_variable|default(None) %]]Environment variable: `[[ attrs.environment_variable ]]`[[% endif %]]
 
-Example:
+[[ attrs.description|default("") ]]
 
-```python
-ALLOWED_HOSTS = ['nautobot.example.com', '192.0.2.123']
-```
+[[ attrs.details|default("") ]]
 
-!!! tip
-    If there is more than one hostname in this list, you *may* also need to set [`CSRF_TRUSTED_ORIGINS`](optional-settings.md#csrf_trusted_origins) as well.
-
-If you are not yet sure what the domain name and/or IP address of the Nautobot installation will be, and are comfortable accepting the risks in doing so, you can set this to a wildcard (asterisk) to allow all host values:
-
-```python
-ALLOWED_HOSTS = ['*']
-```
-
-!!! warning
-    It is not recommended to leave this value as `['*']` for production deployments. Please see the [official Django documentation on `ALLOWED_HOSTS`](https://docs.djangoproject.com/en/stable/ref/settings/#allowed-hosts) for help.
+[[% endif %]]
+[[% endfor %]]
 
 ---
 
