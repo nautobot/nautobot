@@ -34,6 +34,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
 from nautobot.extras.jobs import get_job
+from nautobot.extras.utils import change_logged_models_queryset
 
 
 class JobTest(TestCase):
@@ -922,6 +923,12 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
 
     def setUp(self):
         super().setUp()
+        # Because of TransactionTestCase, and its clearing and repopulation of the database between tests,
+        # the `change_logged_models_queryset` cache of ContentTypes becomes invalid.
+        # We need to explicitly clear it here to have tests pass.
+        # This is not a problem during normal operation of Nautobot because content-types don't normally get deleted
+        # and recreated while Nautobot is running.
+        change_logged_models_queryset.cache_clear()
 
         module = "job_hook_receiver"
         name = "TestJobHookReceiverLog"
