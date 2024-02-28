@@ -17,38 +17,22 @@ This module supports several [authentication backends](https://python-social-aut
 
     Hint: Use `sudo -iu nautobot`
 
-### Install Dependencies
+### Install Dependencies for OIDC or SAML
 
-If you are using OpenID Connect or SAML you will also need to install the extra dependencies for those.
+If you are using OpenID Connect or SAML you will also need to install the extra dependencies for those. These are grouped together under the `sso` Python extra for Nautobot and so can be easily installed with a single `pip3` command.
 
-#### OpenID Connect Dependencies
+!!! tip
+    You may find that additional system-level dependencies must be installed first so that the specialized Python libraries for XML can be built and compiled for your system. Specifics will vary by your OS, but for example, on Ubuntu, you may need to run:
 
-For OpenID connect, you'll need to install the `sso` Python extra.
+    ```no-highlight
+    sudo apt install -y libxmlsec1-dev libxmlsec1-openssl pkg-config
+    ```
 
-```no-highlight
-pip3 install "nautobot[sso]"
-```
-
-#### SAML Dependencies
-
-For SAML, additional system-level dependencies are required so that the specialized XML libraries can be built and compiled for your system.
-
-!!! note
-    These instructions have only been certified on Ubuntu 20.04 at this time.
-
-Install the system dependencies as `root`:
+Furthermore, due to potential incompatibilities between the precompiled binaries for the `lxml` and `xmlsec` Python packages that this installation will bring in, you need to tell Pip to not install the precompiled binary for `lxml`. Run the following command as the `nautobot` user:
 
 ```no-highlight
-sudo apt install -y libxmlsec1-dev libxmlsec1-openssl pkg-config
+pip3 install --no-binary=lxml "nautobot[sso]"
 ```
-
-Install the `sso` Python extra as the `nautobot` user.
-
-```no-highlight
-pip3 install "nautobot[sso]"
-```
-
-Please see the SAML configuration guide below for an example of how to configure Nautobot to authenticate using SAML with Google as the identity provider.
 
 ## Configuration
 
