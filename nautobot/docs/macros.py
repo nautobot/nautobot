@@ -1,7 +1,8 @@
 """mkdocs-macros-plugin data loading etc."""
 
-import yaml
 import os.path
+
+import yaml
 
 
 def define_env(env):
