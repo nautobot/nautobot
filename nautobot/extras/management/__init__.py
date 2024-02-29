@@ -120,23 +120,28 @@ ROLE_DESCRIPTION_MAP = {
 
 def populate_metadata_choices(apps=global_apps, schema_editor=None, **kwargs):
     """
-    Populate `Status` model choices.
+    Populate `Status` or `Role` model choices.
 
-    This will run the `create_custom_statuses` function during data migrations.
+    This will run the `_create_custom_role_or_status_instances` function during data migrations.
 
     When it is ran again post-migrate will be a noop.
     """
-    # default to "status" if it is not specified
+    # metadata_model will be default to "status" if it is not specified
     metadata_model = kwargs.pop("metadata_model", "status")
-    create_custom_metadata_instances(apps=apps, metadata_model=metadata_model, **kwargs)
+    _create_custom_role_or_status_instances(apps=apps, metadata_model=metadata_model, **kwargs)
 
 
 def export_metadata_from_choiceset(choiceset, color_map=None, description_map=None, metadata_model=None):
     """
-    e.g. `export_choices_from_choiceset(DeviceStatusChoices, content_type)`
+    e.g. `export_metadata_from_choiceset(DeviceStatusChoices, content_type)`
 
-    This is called by `extras.management.create_custom_statuses` for use in
-    performing data migrations to populate `Status` objects.
+    This is called by `extras.management._create_custom_role_or_status_instances` for use in
+    performing data migrations to populate `Status` or `Role` objects.
+    Args:
+        choiceset (dict): A dictionary containing list of 2-tuples of (model_path, choiceset)
+        color_map (dict): A dictionary of status/role name -> default hex_color
+        description_map (dict): A dictionary of status/role name -> default description
+        metadata_model (str): "role" or "status"
     """
     if metadata_model == "role":
         if color_map is None:
@@ -163,7 +168,7 @@ def export_metadata_from_choiceset(choiceset, color_map=None, description_map=No
     return choices
 
 
-def create_custom_metadata_instances(
+def _create_custom_role_or_status_instances(
     app_config=None,  # unused
     verbosity=2,
     interactive=True,
@@ -178,6 +183,9 @@ def create_custom_metadata_instances(
 
     This is called during data migrations for importing `Status` objects from
     `ChoiceSet` enums in flat files.
+    Args:
+        models (dict): A list of model contenttype strings e.g. models=["circuits.Circuit", "dcim.Cable", "dcim.Device","dcim.PowerFeed"]
+        metadata_model (str): "role" or "status"
     """
 
     # Only print a newline if we have verbosity!
@@ -270,6 +278,10 @@ def clear_metadata_choices(
 ):
     """
     Remove content types from statuses/roles, and if no content types remain, delete the statuses/roles as well.
+    Args:
+        models (dict): A list of model contenttype strings e.g. models=["circuits.Circuit", "dcim.Cable", "dcim.Device","dcim.PowerFeed"]
+        metadata_model (str): "role" or "status"
+        clear_all_model_statuses (bool): Set it to True will clear all statuses for this model. Set it to False will only clear default statuses for this model.
     """
     if "test" in sys.argv:
         # Do not print output during unit testing migrations
