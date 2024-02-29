@@ -6,26 +6,9 @@
 
 A number of settings can alternatively be configured via the Nautobot Admin UI. To do so, these settings must **not** be defined in your `nautobot_config.py`, as any settings defined there will take precedence over any values defined in the Admin UI. Settings that are currently configurable via the Admin UI include:
 
-* [ALLOW_REQUEST_PROFILING](#allow_request_profiling)
-* [BANNER_BOTTOM](#banner_bottom)
-* [BANNER_LOGIN](#banner_login)
-* [BANNER_TOP](#banner_top)
-* [CHANGELOG_RETENTION](#changelog_retention)
-* [DEPLOYMENT_ID](#deployment_id)
-* [DEVICE_NAME_AS_NATURAL_KEY](#device_name_as_natural_key)
-* [DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT](#dynamic_groups_member_cache_timeout)
-* [JOB_CREATE_FILE_MAX_SIZE](#job_create_file_max_size)
-* [LOCATION_NAME_AS_NATURAL_KEY](#location_name_as_natural_key)
-* [MAX_PAGE_SIZE](#max_page_size)
-* [NETWORK_DRIVERS](#network_drivers)
-* [PAGINATE_COUNT](#paginate_count)
-* [PER_PAGE_DEFAULTS](#per_page_defaults)
-* [PREFER_IPV4](#prefer_ipv4)
-* [RACK_ELEVATION_DEFAULT_UNIT_HEIGHT](#rack_elevation_default_unit_height)
-* [RACK_ELEVATION_DEFAULT_UNIT_WIDTH](#rack_elevation_default_unit_width)
-* [RELEASE_CHECK_TIMEOUT](#release_check_timeout)
-* [RELEASE_CHECK_URL](#release_check_url)
-* [SUPPORT_MESSAGE](#support_message)
+[[% for property, attrs in settings_data.properties.items() %]]
+[[% if attrs.is_constance_config|default(false) %]]* [`[[ property ]]`](#[[ property|lower ]])[[% endif %]]
+[[% endfor %]]
 
 ## Extra Applications
 
@@ -45,8 +28,7 @@ EXTRA_INSTALLED_APPS = [
 This will ensure your default setting's `INSTALLED_APPS` do not have to be modified, and the user
 can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can be added using `EXTRA_MIDDLEWARE`.
 
-[[% for property, attrs in settings_data.properties.items() %]]
-[[% if not attrs.required_setting|default(false) %]]
+[[% for property, attrs in settings_data.properties.items() if not attrs.is_required_setting|default(false) %]]
 
 ---
 
@@ -58,6 +40,12 @@ can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can b
 [[% with default = attrs.default|default(None) %]]
 [[% if default is string %]]Default: `"[[ default ]]"`
 [[% elif default is boolean %]]Default: `[[ default|title ]]`
+[[% elif default is mapping and default != {} %]]Default:
+
+```json
+[[ default|tojson(4) ]]
+```
+
 [[% else %]]Default: `[[ default ]]`
 [[% endif %]]
 [[% endwith %]]
@@ -68,7 +56,11 @@ can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can b
 
 [[ attrs.details|default("") ]]
 
+[[% if attrs.is_constance_config|default(false) %]]
+!!! tip
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
 [[% endif %]]
+
 [[% endfor %]]
 
 ---
@@ -180,151 +172,6 @@ When set to `True`, Nautobot will send anonymized installation metrics to the Na
 
 ---
 
-## NETWORK_DRIVERS
-
-+++ 1.6.0
-
-Default: `{}` (Empty dictionary)
-
-An optional dictionary to extend or override the default `Platform.network_driver` translations provided by [netutils](https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/). For example, to add support for a custom `Platform.network_driver` value of `"my_network_driver"` for Netmiko and PyATS drivers:
-
-```python
-NETWORK_DRIVERS = {
-    "netmiko": {"my_network_driver": "cisco_ios"},
-    "pyats": {"my_network_driver": "iosxe"},
-}
-```
-
-The default top-level keys are `ansible`, `hier_config`, `napalm`, `netmiko`, `netutils_parser`, `ntc_templates`, `pyats`, `pyntc`, and `scrapli`, but you can also add additional keys if you have an alternative network driver that you want your Nautobot instance to include.
-
-!!! tip
-    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
-
----
-
-## PAGINATE_COUNT
-
-Default: `50`
-
-The default maximum number of objects to display per page within each list of objects. Applies to both the UI and the REST API.
-
-+++ 1.2.0
-    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
-
----
-
-## PER_PAGE_DEFAULTS
-
-Default: `[25, 50, 100, 250, 500, 1000]`
-
-The options displayed in the web interface dropdown to limit the number of objects per page. For proper user experience, this list should include the [`PAGINATE_COUNT`](#paginate_count) and [`MAX_PAGE_SIZE`](#max_page_size) values as options.
-
----
-
-## PLUGINS
-
-Default: `[]` (Empty list)
-
-A list of installed [Nautobot plugins](../../../apps/index.md) to enable. Plugins will not take effect unless they are listed here.
-
-!!! warning
-    Plugins extend Nautobot by allowing external code to run with the same access and privileges as Nautobot itself. Only install plugins from trusted sources. The Nautobot maintainers make absolutely no guarantees about the integrity or security of your installation with plugins enabled.
-
----
-
-## PLUGINS_CONFIG
-
-Default: `{}` (Empty dictionary)
-
-This parameter holds configuration settings for individual Nautobot plugins. It is defined as a dictionary, with each key using the name of an installed plugin. The specific parameters supported are unique to each plugin: Reference the plugin's documentation to determine the supported parameters. An example configuration is shown below:
-
-```python
-PLUGINS_CONFIG = {
-    'plugin1': {
-        'foo': 123,
-        'bar': True
-    },
-    'plugin2': {
-        'foo': 456,
-    },
-}
-```
-
-Note that a plugin must be listed in `PLUGINS` for its configuration to take effect.
-
----
-
-## PREFER_IPV4
-
-Default: `False`
-
-When determining the primary IP address for a device, IPv6 is preferred over IPv4 by default. Set this to True to prefer IPv4 instead.
-
-+++ 1.2.0
-    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
-
----
-
-## RACK_ELEVATION_DEFAULT_UNIT_HEIGHT
-
-Default: `22`
-
-Default height (in pixels) of a unit within a rack elevation. For best results, this should be approximately one tenth of `RACK_ELEVATION_DEFAULT_UNIT_WIDTH`.
-
-+++ 1.2.0
-    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
-
----
-
-## RACK_ELEVATION_DEFAULT_UNIT_WIDTH
-
-Default: `220`
-
-Default width (in pixels) of a unit within a rack elevation.
-
-+++ 1.2.0
-    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
-
----
-
-## REDIS_LOCK_TIMEOUT
-
-Default: `600`
-
-Environment Variable: `NAUTOBOT_REDIS_LOCK_TIMEOUT`
-
-Maximum duration of a Redis lock created when calling `/api/ipam/prefixes/{id}/available-prefixes/` or `/api/ipam/prefixes/{id}/available-ips/` to avoid inadvertently allocating the same prefix or IP to multiple simultaneous callers. Default is set to 600 seconds (10 minutes) to be longer than any theoretical API call time. This is to prevent a deadlock scenario where the server did not gracefully exit the `with` block when acquiring the Redis lock.
-
----
-
-## RELEASE_CHECK_TIMEOUT
-
-Default: `86400` (24 hours)
-
-The number of seconds to retain the latest version that is fetched from the GitHub API before automatically invalidating it and fetching it from the API again.
-
-!!! warning
-    This must be set to at least one hour (`3600` seconds). Setting it to a value lower than this is an error.
-
-+++ 1.2.0
-    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
-
----
-
-## RELEASE_CHECK_URL
-
-Default: `None` (disabled)
-
-This parameter defines the URL of the repository that will be checked periodically for new Nautobot releases. When a new release is detected, a message will be displayed to administrative users on the home page. This can be set to the official repository (`'https://api.github.com/repos/nautobot/nautobot/releases'`) or a custom fork. Set this to `None` to disable automatic update checks.
-
-!!! note
-    The URL provided **must** be compatible with the [GitHub REST API](https://docs.github.com/en/rest).
-
-+++ 1.2.0
-    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
-
----
-
 ## SANITIZER_PATTERNS
 
 +++ 1.3.4
@@ -341,154 +188,6 @@ Default:
 ]
 ```
 
-List of (regular expression, replacement pattern) tuples used by the `nautobot.core.utils.logging.sanitize()` function. As of Nautobot 1.3.4 this function is used primarily for sanitization of Job log entries, but it may be used in other scopes in the future.
-
-This pattern catches patterns such as:
-
-| Pattern Match Examples |
-| --- |
-| Password is1234 |
-| Password: is1234 |
-| Password is: is1234 |
-| Password is is1234 |
-| secret is: is1234 |
-| secret is is1234 |
-| secrets is: is1234 |
-| secrets is is1234 |
-| {"username": "is1234"} |
-| {"password": "is1234"} |
-| {"secret": "is1234"} |
-| {"secrets": "is1234"} |
-
-!!! info
-    is1234 would be replaced in the Job logs with `(redacted)`.
-
----
-
-## STORAGE_BACKEND
-
-Default: `None` (local storage)
-
-The backend storage engine for handling uploaded files (e.g. image attachments). Nautobot supports integration with the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) package, which provides backends for several popular file storage services. If not configured, local filesystem storage will be used.
-
-!!! tip
-    For an example of using `django-storages` with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md) user-guide.
-
-The configuration parameters for the specified storage backend are defined under the [`STORAGE_CONFIG`](#storage_config) setting.
-
-> See also: [`JOB_FILE_IO_STORAGE`](#job_file_io_storage)
-
----
-
-## STORAGE_CONFIG
-
-Default: `{}` (Empty dictionary)
-
-A dictionary of configuration parameters for the storage backend configured as [`STORAGE_BACKEND`](#storage_backend). The specific parameters to be used here are specific to each backend; see the [`django-storages` documentation](https://django-storages.readthedocs.io/en/stable/) for more detail.
-
-If [`STORAGE_BACKEND`](#storage_backend) is not defined, this setting will be ignored.
-
----
-
-## STRICT_FILTERING
-
-+++ 1.4.0
-
-Default: `True`
-
-Environment Variable: `NAUTOBOT_STRICT_FILTERING`
-
-If set to `True` (default), UI and REST API filtering of object lists will fail if an unknown/unrecognized filter parameter is provided as a URL parameter. (For example, `/dcim/devices/?ice_cream_flavor=chocolate` or `/api/dcim/locations/?ice_cream_flavor=chocolate`). UI list (table) views will report an error message in this case and display no filtered objects; REST API list endpoints will return a 400 Bad Request response with an explanatory error message.
-
-If set to `False`, unknown/unrecognized filter parameters will be discarded and ignored, although Nautobot will log a warning message.
-
-!!! warning
-    Setting this to `False` can result in unexpected filtering results in the case of user error, for example `/dcim/devices/?has_primry_ip=false` (note the typo `primry`) will result in a list of all devices, rather than the intended list of only devices that lack a primary IP address. In the case of Jobs or external automation making use of such a filter, this could have wide-ranging consequences.
-
----
-
-## SUPPORT_MESSAGE
-
-+++ 1.6.4
-
-+++ 2.0.2
-
-Default: `""`
-
-A message to include on error pages (status code 403, 404, 500, etc.) when an error occurs. You can configure this to direct users to the appropriate contact(s) within your organization that provide support for Nautobot. Markdown formatting is supported within this message, as well as [a limited subset of HTML](../../platform-functionality/template-filters.md#render_markdown).
-
-If unset, the default message that will appear is `If further assistance is required, please join the #nautobot channel on [Network to Code's Slack community](https://slack.networktocode.com) and post your question.`
-
-!!! tip
-    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
-
----
-
-## TEST_FACTORY_SEED
-
-+++ 1.5.0
-
-Default: `None`
-
-Environment Variable: `NAUTOBOT_TEST_FACTORY_SEED`
-
-When [`TEST_USE_FACTORIES`](#test_use_factories) is set to `True`, this configuration provides a fixed seed string for the pseudo-random generator used to populate test data into the database, providing for reproducible randomness across consecutive test runs. If unset, a random seed will be used each time.
-
----
-
-## TEST_USE_FACTORIES
-
-+++ 1.5.0
-
-Default: `False`
-
-Environment Variable: `NAUTOBOT_TEST_USE_FACTORIES`
-
-If set to `True`, the Nautobot test runner will call `nautobot-server generate_test_data ...` before executing any test cases, pre-populating the test database with various pseudo-random instances of many of Nautobot's data models.
-
-!!! warning
-    This functionality requires the installation of the [`factory-boy`](https://pypi.org/project/factory-boy/) Python package, which is present in Nautobot's own development environment, but is _not_ an inherent dependency of the Nautobot package when installed otherwise, such as into a plugin's development environment.
-
-!!! info
-    Setting this to `True` is a requirement for all Nautobot core tests as of 1.5.0, and it is set accordingly in `nautobot/core/tests/nautobot_config.py`, but defaults to `False` otherwise so as to remain backwards-compatible with plugins that also may use the Nautobot test runner in their own test environments, but have not yet updated their tests to account for the presence of this test data.
-
-    Because this test data can obviate the need to manually construct complex test data, and the random factor can improve test robustness, plugin developers are encouraged to set this to `True` in their configuration, ensure that their development environments include the `factory-boy` Python package as a test dependency, and update their tests as needed.
-
----
-
-## TEST_PERFORMANCE_BASELINE_FILE
-
-+++ 1.5.0
-
-Default: `nautobot/core/tests/performance_baselines.yml`
-
-Environment Variable: `TEST_PERFORMANCE_BASELINE_FILE`
-
-[`TEST_PERFORMANCE_BASELINE_FILE`](#test_performance_baseline_file) is set to a certain file path, this file path should point to a .yml file that conforms to the following format:
-
-```yaml
-tests:
-  - name: >-
-      test_run_job_with_sensitive_variables_and_requires_approval
-      (nautobot.extras.tests.test_views.JobTestCase)
-    execution_time: 4.799533
-  - name: test_run_missing_schedule (nautobot.extras.tests.test_views.JobTestCase)
-    execution_time: 4.367563
-  - name: test_run_now_missing_args (nautobot.extras.tests.test_views.JobTestCase)
-    execution_time: 4.363194
-  - name: >-
-      test_create_object_with_constrained_permission
-      (nautobot.extras.tests.test_views.GraphQLQueriesTestCase)
-    execution_time: 3.474244
-  - name: >-
-      test_run_now_constrained_permissions
-      (nautobot.extras.tests.test_views.JobTestCase)
-    execution_time: 2.727531
-...
-```
-
-and store the performance baselines with the `name` of the test and the baseline `execution_time`. This file should provide the baseline times that all performance-related tests are running against.
-
 ---
 
 ## UI_RACK_VIEW_TRUNCATE_FUNCTION
@@ -501,12 +200,6 @@ Default:
 def UI_RACK_VIEW_TRUNCATE_FUNCTION(device_display_name):
     return str(device_display_name).split(".")[0]
 ```
-
-This setting function is used to perform the rack elevation truncation feature. This provides a way to tailor the truncation behavior to best suit the needs of the installation.
-
-The function must take only one argument: the device display name, as a string, attempting to be rendered on the rack elevation.
-
-The function must return only one argument: a string of the truncated device display name.
 
 ## Environment-Variable-Only Settings
 

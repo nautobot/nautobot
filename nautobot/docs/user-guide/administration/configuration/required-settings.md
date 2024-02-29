@@ -1,7 +1,6 @@
 # Required Configuration Settings
 
-[[% for property, attrs in settings_data.properties.items() %]]
-[[% if attrs.required_setting|default(false) %]]
+[[% for property, attrs in settings_data.properties.items() if attrs.is_required_setting|default(false) %]]
 
 ---
 
@@ -13,17 +12,29 @@
 [[% with default = attrs.default|default(None) %]]
 [[% if default is string %]]Default: `"[[ default ]]"`
 [[% elif default is boolean %]]Default: `[[ default|title ]]`
+[[% elif default is mapping and default != {} %]]Default:
+
+```json
+[[ default|tojson(4) ]]
+```
+
 [[% else %]]Default: `[[ default ]]`
 [[% endif %]]
 [[% endwith %]]
 
-[[% if attrs.environment_variable|default(None) %]]Environment variable: `[[ attrs.environment_variable ]]`[[% endif %]]
+[[% if attrs.environment_variable|default(None) %]]
+Environment variable: `[[ attrs.environment_variable ]]`
+[[% elif attrs.type == "object" %]]
+[[% for property_attrs in attrs.properties.values() if property_attrs.environment_variable|default(None) %]]
+[[% if loop.first %]]Environment variables:[[% endif %]]
+* `[[ property_attrs.environment_variable ]]`
+[[% endfor %]]
+[[% endif %]]
 
 [[ attrs.description|default("") ]]
 
 [[ attrs.details|default("") ]]
 
-[[% endif %]]
 [[% endfor %]]
 
 ---
@@ -53,58 +64,6 @@ The following environment variables may also be set for each of the above values
 +++ 1.1.0
     The `NAUTOBOT_DB_ENGINE` setting was added along with support for MySQL.
 
-!!! warning
-    Nautobot supports either MySQL or PostgreSQL as a database backend. You must make sure that the `ENGINE` setting matches your selected database backend or **you will be unable to connect to the database**.
-
-Example:
-
-```python
-DATABASES = {
-    'default': {
-        'NAME': 'nautobot',                         # Database name
-        'USER': 'nautobot',                         # Database username
-        'PASSWORD': 'awesome_password',             # Database password
-        'HOST': 'localhost',                        # Database server
-        'PORT': '',                                 # Database port (leave blank for default)
-        'CONN_MAX_AGE': 300,                        # Max database connection age
-        'ENGINE': 'django.db.backends.postgresql',  # Database driver ("mysql" or "postgresql")
-    }
-}
-```
-
-!!! note
-    Nautobot supports all database options supported by the underlying Django framework. For a complete list of available parameters, please see [the official Django documentation on `DATABASES`](https://docs.djangoproject.com/en/stable/ref/settings/#databases).
-
-### MySQL Unicode Settings
-
-+++ 1.1.0
-
-!!! tip
-    By default, MySQL is case-insensitive in its handling of text strings. This is different from PostgreSQL which is case-sensitive by default. We strongly recommend that you configure MySQL to be case-sensitive for use with Nautobot, either when you enable the MySQL server, or when you create the Nautobot database in MySQL. If you follow the provided installation instructions for CentOS or Ubuntu, the recommended steps there will include the appropriate database configuration.
-
-When using MySQL as a database backend, and you want to enable support for Unicode characters like the beloved poop emoji, you'll need to update your settings.
-
-If you try to use emojis without this setting, you will encounter a server error along the lines of `Incorrect string value`, because you are running afoul of the legacy implementation of Unicode (aka `utf8`) encoding in MySQL. The `utf8` encoding in MySQL is limited to 3-bytes per character. Newer Unicode emoji require 4-bytes.
-
-To properly support using such characters, you will need to create an entry in `DATABASES` -> `default` -> `OPTIONS` with the value `{"charset": "utf8mb4"}` in your `nautobot_config.py` and restart all Nautobot services. This will tell MySQL to always use `utf8mb4` character set for database client connections.
-
-For example:
-
-```python
-DATABASES = {
-    "default": {
-        # Other settings...
-        "OPTIONS": {"charset": "utf8mb4"},  # Add this line
-    }
-}
-```
-
-+++ 1.1.0
-    If you have generated a new `nautobot_config.py` using `nautobot-server init`, this line is already there for you in your config. You'll just need to uncomment it!
-
-+/- 1.1.5
-    If you have generated a new `nautobot_config.py` using `nautobot-server init`, this line is already present in your config and no action is required.
-
 ---
 
 ## Redis Settings
@@ -126,11 +85,6 @@ For more details on Nautobot's caching, including TLS and HA configuration, see 
 ### Task Queuing
 
 #### CACHES
-
-The [`django-redis`](https://github.com/jazzband/django-redis) Django plugin is used to enable Redis as a concurrent write lock for preventing race conditions when allocating IP address objects. The `CACHES` setting is required to simplify the configuration for `django-redis`.
-
-!!! important
-    Nautobot also utilizes the built-in [Django cache framework](https://docs.djangoproject.com/en/stable/topics/cache/) (which also relies on the `CACHES` setting) to perform caching.
 
 Default:
 
@@ -172,70 +126,6 @@ Out of the box you do not need to make any changes to utilize task queueing with
 
 In the event you do need to make customizations to how Celery interacts with the message broker such as for more advanced clustered deployments, the following setting may be changed.
 
-#### CELERY_BROKER_URL
-
-This setting tells Celery and its workers how and where to communicate with the message broker. The default value for this points to `redis://localhost:6379/0`. Please see the [optional settings documentation for `CELERY_BROKER_URL`](optional-settings.md#celery_broker_url) for more information on customizing this setting.
-
-#### Configuring Celery with TLS
-
-Optionally, you can configure Celery to use custom SSL certificates to connect to redis by setting the following variables:
-
-```python
-import ssl
-
-CELERY_REDIS_BACKEND_USE_SSL = {
-    "ssl_cert_reqs": ssl.CERT_REQUIRED,
-    "ssl_ca_certs": "/opt/nautobot/redis/ca.crt",
-    "ssl_certfile": "/opt/nautobot/redis/tls.crt",
-    "ssl_keyfile": "/opt/nautobot/redis/tls.key",
-}
-CELERY_BROKER_USE_SSL = CELERY_REDIS_BACKEND_USE_SSL
-```
-
-Please see the celery [documentation](https://docs.celeryq.dev/en/stable/userguide/configuration.html#std-setting-broker_use_ssl) for additional details.
-
 #### Configuring Celery for High Availability
 
 High availability clustering of Redis for use with Celery can be performed using Redis Sentinel. Please see documentation section on configuring [Celery for Redis Sentinel](../../administration/guides/caching.md#celery-sentinel-configuration) for more information.
-
----
-
-## SECRET_KEY
-
-Environment Variable: `NAUTOBOT_SECRET_KEY`
-
-This is a secret, random string used to assist in the creation new cryptographic hashes for passwords and HTTP cookies. The key defined here should not be shared outside of the configuration file. `SECRET_KEY` can be changed at any time, however be aware that doing so will invalidate all existing sessions.
-
-`SECRET_KEY` should be at least 50 characters in length and contain a random mix of letters, digits, and symbols.
-
-!!! note
-    A unique `SECRET_KEY` is generated for you automatically when you use `nautobot-server init` to create a new `nautobot_config.py`.
-
-You may run `nautobot-server generate_secret_key` to generate a new key at any time.
-
-```no-highlight
-nautobot-server generate_secret_key
-```
-
-Sample output:
-
-```no-highlight
-+$_kw69oq&fbkfk6&q-+ksbgzw1&061ghw%420u3(wen54w(m
-```
-
-Alternatively use the following command to generate a secret even before `nautobot-server` is runnable:
-
-```no-highlight
-LC_ALL=C tr -cd '[:lower:][:digit:]!@#$%^&*(\-_=+)' < /dev/urandom | fold -w50 | head -n1
-```
-
-Example output:
-
-```no-highlight
-9.V$@Kxkc@@Kd@z<a/=.J-Y;rYc79<y@](9o9(L(*sS)Q+ud5P
-```
-
-!!! warning
-    In the case of a highly available installation with multiple web servers, `SECRET_KEY` must be identical among all servers in order to maintain a persistent user session state.
-
-For more details see [Nautobot Configuration](index.md).
