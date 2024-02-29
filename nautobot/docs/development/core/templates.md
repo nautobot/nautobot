@@ -23,7 +23,7 @@ The most customizable template is `generic/object_detail.html`, as object detail
       section on the right of the page.
         * `extra_buttons`: this block enables extending the buttons block
           without losing the predefined buttons. Custom buttons will appear
-          between the plugin buttons and clone/edit/delete actions.
+          between any App-defined buttons and the clone/edit/delete actions.
     * `masthead`: is the block that contains the title. Overloading it enables
       to change anything about the title block.
     * `title`: is the block contained by `masthead` and wrapped in a heading

@@ -983,7 +983,7 @@
       * `nautobot.auth.*` - Authentication events
       * `nautobot.extras.jobs.*` - Job execution (`* = JobClassName`)
       * `nautobot.core.graphql.*` - [GraphQL](../../platform-functionality/graphql.md) initialization and operation.
-      * `nautobot.extras.plugins.*` - Plugin loading and activity
+      * `nautobot.extras.plugins.*` - App loading and activity
       * `nautobot.core.views.generic.*` - Generic views which handle business logic for the web UI
     "properties":
       "additionalProperties": true
@@ -1224,7 +1224,9 @@
     "type": "array"
   "PLUGINS":
     "default": []
-    "description": "A list of installed Nautobot Apps to enable. Apps will not take effect unless they are listed here."
+    "description": >-
+      A list of installed [Nautobot Apps](../../../apps/index.md) to enable.
+      Apps will not take effect unless they are listed here.
     "details": |-
       !!! warning
           Apps extend Nautobot by allowing external code to run with the same access and privileges as
@@ -1243,11 +1245,11 @@
 
       ```python
       PLUGINS_CONFIG = {
-          'plugin1': {
+          'app1': {
               'foo': 123,
               'bar': True
           },
-          'plugin2': {
+          'app2': {
               'foo': 456,
           },
       }

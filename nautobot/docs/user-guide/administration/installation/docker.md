@@ -211,9 +211,9 @@ services:
       - /local/path/to/custom/nautobot.key:/opt/nautobot/nautobot.key:ro
 ```
 
-### Nautobot Plugins
+### Nautobot Apps
 
-At this time adding Nautobot plugins to the existing Docker image is not supported, however, you can use the Nautobot image as the base within your `Dockerfile` to install your own plugins, here is an example dockerfile:
+At this time adding Nautobot Apps to the existing Docker image is not supported, however, you can use the Nautobot image as the base within your `Dockerfile` to install your own Apps, here is an example dockerfile:
 
 ```dockerfile
 FROM networktocode/nautobot
@@ -283,4 +283,4 @@ Similarly, you can use `docker-compose.final-dev.yml` if you wish to build and t
 
 ## Docker Compose
 
-An [example library for using Docker Compose](https://github.com/nautobot/nautobot-docker-compose/) to build out all of the components for Nautobot can be found within the Nautobot community. Please see [https://github.com/nautobot/nautobot-docker-compose/](https://github.com/nautobot/nautobot-docker-compose/) for examples on the base application, LDAP integration, and using plugins.
+An [example library for using Docker Compose](https://github.com/nautobot/nautobot-docker-compose/) to build out all of the components for Nautobot can be found within the Nautobot community. Please see [https://github.com/nautobot/nautobot-docker-compose/](https://github.com/nautobot/nautobot-docker-compose/) for examples on the base application, LDAP integration, and using Apps.

@@ -54,7 +54,7 @@ menu_items = (
                         name="Roles",
                         weight=300,
                         permissions=[
-                            "extras.view_status",
+                            "extras.view_role",
                         ],
                         buttons=(
                             NavMenuAddButton(
@@ -444,7 +444,7 @@ menu_items = (
         ),
     ),
     NavMenuTab(
-        name="Plugins",
+        name="Apps",
         weight=5000,
         groups=(
             NavMenuGroup(
@@ -452,11 +452,9 @@ menu_items = (
                 weight=100,
                 items=(
                     NavMenuItem(
-                        link="plugins:plugins_list",
-                        name="Installed Plugins",
+                        link="apps:apps_list",
+                        name="Installed Apps",
                         weight=100,
-                        permissions=["is_staff"],
-                        buttons=(),
                     ),
                 ),
             ),
@@ -623,8 +621,7 @@ navigation = (
                     NavItem(
                         name="Installed Apps",
                         weight=100,
-                        link="plugins:plugins_list",
-                        permissions=["is_staff"],
+                        link="apps:apps_list",
                     ),
                     NavItem(
                         name="Git Repositories",
