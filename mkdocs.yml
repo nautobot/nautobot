@@ -302,6 +302,7 @@ nav:
         - "user-guide/administration/configuration/index.md"
         - Required Settings: "user-guide/administration/configuration/required-settings.md"
         - Optional Settings: "user-guide/administration/configuration/optional-settings.md"
+        - OpenTelemetry: "user-guide/administration/configuration/opentelemetry.md"
         - Time Zones: "user-guide/administration/configuration/time-zones.md"
         - External Authentication:
           - LDAP: "user-guide/administration/configuration/authentication/ldap.md"
@@ -314,6 +315,7 @@ nav:
         - Caching: "user-guide/administration/guides/caching.md"
         - Health Check: "user-guide/administration/guides/healthcheck.md"
         - Permissions: "user-guide/administration/guides/permissions.md"
+        - OpenTelemetry: "user-guide/administration/guides/opentelemetry.md"
         - Prometheus Metrics: "user-guide/administration/guides/prometheus-metrics.md"
         - Replicating Nautobot: "user-guide/administration/guides/replicating-nautobot.md"
         - Request Profiling: "user-guide/administration/guides/request-profiling.md"
@@ -480,7 +482,6 @@ nav:
         - Jobs: "development/apps/api/platform-features/jobs.md"
         - Populating Extensibility Features: "development/apps/api/platform-features/populating-extensibility-features.md"
         - Prometheus Metrics: "development/apps/api/prometheus.md"
-        - OpenTelemetry: "user-guide/administration/guides/opentelemetry.md"
         - Secrets Providers: "development/apps/api/platform-features/secrets-providers.md"
         - Uniquely Identifying a Nautobot Object: "development/apps/api/platform-features/uniquely-identify-objects.md"
       - UI Extensions:

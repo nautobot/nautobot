@@ -4,12 +4,33 @@
 
 Nautobot supports optionally exposing logs, traces, and metrics via [OpenTelemetry](https://opentelemetry.io/).
 
+## Install
+
+See the [Install Guide](../configuration/opentelemetry.md) for installation instructions.
+
 ## Configuration
 
 OpenTelemetry logs, traces, and metrics are not exposed by default. To enable this, the `OTEL_PYTHON_DJANGO_INSTRUMENT` setting should be set to `True`. This will do two things:
 
 - Logs will be exposed in the OpenTelemetry format and include the Trace ID, Span ID, and Resource attributes.
 - Metrics and Traces will be logged to console.
+
+### Logs
+
+When enabling OpenTelemetry, the logs sent to stdout will have additional information added.
+
+Without OpenTelemetry enabled, logs look like:
+
+```bash
+nautobot-nautobot-1       | 04:11:42.768 INFO    django.server :
+nautobot-nautobot-1       |   "GET /health/ HTTP/1.1" 200 11469
+```
+
+**With** OpenTelemetry enabled, logs look like:
+
+```bash
+
+```
 
 ### Exporting traces and metrics via OTLP
 

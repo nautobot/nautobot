@@ -136,6 +136,17 @@ social-auth-core = {version = "~4.4.2", optional = true, extras = ["openidconnec
 social-auth-app-django = "~5.2.0"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.2"
+opentelemetry-api = "^1.22.0"
+opentelemetry-sdk = "^1.22.0"
+opentelemetry-exporter-otlp = "^1.22.0"
+opentelemetry-instrumentation-django = "^0.43b0"
+opentelemetry-instrumentation-celery = "^0.43b0"
+opentelemetry-instrumentation-psycopg2 = "^0.43b0"
+opentelemetry-instrumentation-dbapi = "^0.43b0"
+opentelemetry-instrumentation-redis = "^0.43b0"
+opentelemetry-instrumentation-logging = "^0.43b0"
+opentelemetry-instrumentation-mysqlclient = "^0.43b0"
+opentelemetry-instrumentation-wsgi = "^0.43b0"
 
 [tool.poetry.extras]
 all = ["django-auth-ldap", "django-storages", "mysqlclient", "napalm", "social-auth-core"]
@@ -215,20 +226,6 @@ selenium = "~4.17.2"
 splinter = "~0.21.0"
 # Serialization of tracebacks - used when running unittest with --parallel flag
 tblib = "~3.0.0"
-
-
-[tool.poetry.group.observability.dependencies]
-opentelemetry-api = "^1.22.0"
-opentelemetry-sdk = "^1.22.0"
-opentelemetry-exporter-otlp = "^1.22.0"
-opentelemetry-instrumentation-django = "^0.43b0"
-opentelemetry-instrumentation-celery = "^0.43b0"
-opentelemetry-instrumentation-psycopg2 = "^0.43b0"
-opentelemetry-instrumentation-dbapi = "^0.43b0"
-opentelemetry-instrumentation-redis = "^0.43b0"
-opentelemetry-instrumentation-logging = "^0.43b0"
-opentelemetry-instrumentation-mysqlclient = "^0.43b0"
-opentelemetry-instrumentation-wsgi = "^0.43b0"
 
 [tool.poetry.scripts]
 nautobot-server = "nautobot.core.cli:main"

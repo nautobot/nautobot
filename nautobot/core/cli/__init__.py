@@ -16,7 +16,7 @@ from jinja2 import BaseLoader, Environment
 from nautobot import __version__
 from nautobot.core.settings import OTEL_PYTHON_DJANGO_INSTRUMENT
 from nautobot.core.settings_funcs import is_truthy
-from nautobot.core.tracing import instrument
+from nautobot.core.cli.opentelemetry import instrument
 from nautobot.extras.plugins.utils import load_plugins
 
 CONFIG_TEMPLATE = os.path.join(os.path.dirname(__file__), "../templates/nautobot_config.py.j2")

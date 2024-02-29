@@ -1312,7 +1312,6 @@ Environment Variable: `OTEL_EXPORTER_OTLP_INSECURE`
 
 When exporting to `otlp` with `grpc`, send as insecure.
 
-
 ---
 
 ### OTEL_EXPORTER_OTLP_PROTOCOL
@@ -1450,4 +1449,3 @@ Environment Variable: `NAUTOBOT_TIME_ZONE`
 The time zone Nautobot will use when dealing with dates and times. It is recommended to use UTC time unless you have a specific need to use a local time zone. Please see the [list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
 
 Please see the [official Django documentation on `TIME_ZONE`](https://docs.djangoproject.com/en/stable/ref/settings/#time-zone) for more information.
-
