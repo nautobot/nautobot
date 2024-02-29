@@ -35,7 +35,7 @@ Metrics by default do not require authentication to view. Authentication can be 
 
 ### Sample Telegraf configuration
 
-[[% raw %]]
+[% raw %]
 
 ```toml
 [[inputs.prometheus]]
@@ -44,7 +44,7 @@ metric_version=2
 http_headers = {"Authorization" = "Token 0123456789abcdef0123456789abcdef01234567"}
 ```
 
-[[% endraw %]]
+[% endraw %]
 
 ## Metric Types
 

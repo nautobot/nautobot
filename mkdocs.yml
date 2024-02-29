@@ -106,8 +106,8 @@ plugins:
       on_error_fail: true
       on_undefined: "strict"
       # Override default jinja2 syntax to avoid confusion with Django template code in the docs
-      j2_block_start_string: "[[%"
-      j2_block_end_string: "%]]"
+      j2_block_start_string: "[%"
+      j2_block_end_string: "%]"
       j2_variable_start_string: "[["
       j2_variable_end_string: "]]"
   - "mkdocs-version-annotations"
