@@ -563,7 +563,7 @@ nav:
       - Nautobot Data Validation Engine: "https://docs.nautobot.com/projects/data-validation/en/latest/"
       - Nautobot Device LifeCycle Management: "https://docs.nautobot.com/projects/device-lifecycle/en/latest/"
       - Nautobot Device Onboarding: "https://docs.nautobot.com/projects/device-onboarding/en/latest/"
-      - Nautobot Firewall Models: "https://nautobot-plugin-firewall-models.readthedocs.io/en/latest/"
+      - Nautobot Firewall Models: "https://docs.nautobot.com/projects/firewall-models/en/latest/"
       - Nautobot Golden Configuration: "https://docs.nautobot.com/projects/golden-config/"
       - Nautobot Plugin Nornir: "https://docs.nautobot.com/projects/plugin-nornir/en/latest/"
       - Nautobot Single Source of Truth: "https://docs.nautobot.com/projects/ssot/en/latest/"

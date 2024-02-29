@@ -1,0 +1,3 @@
+Fixed rendering of `NavMenuItems` that do not define any specific required `permissions`.
+Fixed incorrect construction of `NavMenuTab` and `NavMenuGroup` permissions.
+Fixed incorrect permissions required for `Roles` navigation menu item.
