@@ -88,7 +88,6 @@ from .mixins import (
     CustomFieldModelFormMixin,
     NoteModelBulkEditFormMixin,
     NoteModelFormMixin,
-    RelationshipModelFormMixin,
 )
 
 __all__ = (
