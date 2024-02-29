@@ -1,16 +1,16 @@
 from django.db import migrations
 
-from nautobot.extras.management import clear_status_choices, populate_status_choices
+from nautobot.extras.management import clear_metadata_choices, populate_metadata_choices
 
 
 def populate_software_status_choices(apps, schema_editor):
     """Create default Status records for the SoftwareImageFile and SoftwareVersion models."""
-    populate_status_choices(apps, schema_editor, models=["dcim.SoftwareImageFile", "dcim.SoftwareVersion"])
+    populate_metadata_choices(apps, schema_editor, models=["dcim.SoftwareImageFile", "dcim.SoftwareVersion"])
 
 
 def clear_software_status_choices(apps, schema_editor):
     """Remove default Status records for the SoftwareImageFile and SoftwareVersion models."""
-    clear_status_choices(apps, schema_editor, models=["dcim.SoftwareImageFile", "dcim.SoftwareVersion"])
+    clear_metadata_choices(apps, schema_editor, models=["dcim.SoftwareImageFile", "dcim.SoftwareVersion"])
 
 
 class Migration(migrations.Migration):

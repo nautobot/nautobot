@@ -7,7 +7,7 @@ import nautobot.extras.management
 
 def populate_status_choices(apps, schema_editor):
     """Create/link default Status records for all of the Nautobot 1.0 models that support Statuses."""
-    nautobot.extras.management.populate_status_choices(
+    nautobot.extras.management.populate_metadata_choices(
         apps,
         schema_editor,
         models=[

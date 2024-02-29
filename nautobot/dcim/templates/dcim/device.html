@@ -362,7 +362,7 @@
                         <div class="table-responsive">
                             {% render_table associated_contacts_table 'inc/table.html' %}
                         </div>
-                        {% with request.path|add:"?tab=contacts" as return_url %}
+                        {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
                             <div class="panel-footer noprint">
                                 {% if perms.extras.change_contactassociation %}
                                     <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{return_url}}" class="btn btn-warning btn-xs">

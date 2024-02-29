@@ -48,7 +48,7 @@ class NautobotTestCaseMixin:
         """Setup shared testuser, statuses and client."""
         # Re-populate status choices after database truncation by TransactionTestCase
         if populate_status:
-            management.populate_status_choices(apps, None)
+            management.populate_metadata_choices(apps, None)
 
         # Create the test user and assign permissions
         self.user = User.objects.create_user(username="nautobotuser")

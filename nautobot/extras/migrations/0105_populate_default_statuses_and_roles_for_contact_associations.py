@@ -5,25 +5,31 @@ from django.db import migrations
 import nautobot.extras.management
 
 
-def populate_default_status_and_role_choices(apps, schema_editor):
-    """Create/link default Status and Role records for ContactAssociation"""
-    nautobot.extras.management.populate_status_choices(
-        apps,
-        schema_editor,
-        models=["extras.ContactAssociation"],
+def populate_default_status_and_role_choices_for_contact_associations(apps, schema_editor):
+    """Create/link default Status and Role records for ContactAssociation content-type"""
+    nautobot.extras.management.populate_metadata_choices(apps, schema_editor, models=["extras.ContactAssociation"])
+    nautobot.extras.management.populate_metadata_choices(
+        apps, schema_editor, models=["extras.ContactAssociation"], metadata_model="role"
     )
-    nautobot.extras.management.populate_role_choices(
-        apps,
-        schema_editor,
-        models=["extras.ContactAssociation"],
+
+
+def clear_default_status_and_role_choices_for_contact_associations(apps, schema_editor):
+    """De-link/delete all Status records from the ContactAssociation content-type."""
+    nautobot.extras.management.clear_metadata_choices(apps, schema_editor, models=["extras.ContactAssociation"])
+    nautobot.extras.management.clear_metadata_choices(
+        apps, schema_editor, models=["extras.ContactAssociation"], metadata_model="role"
     )
 
 
 class Migration(migrations.Migration):
     dependencies = [
+        ("contenttypes", "0001_initial"),
         ("extras", "0104_contact_contactassociation_team"),
     ]
 
     operations = [
-        migrations.RunPython(populate_default_status_and_role_choices, migrations.RunPython.noop),
+        migrations.RunPython(
+            populate_default_status_and_role_choices_for_contact_associations,
+            clear_default_status_and_role_choices_for_contact_associations,
+        ),
     ]

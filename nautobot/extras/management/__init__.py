@@ -115,186 +115,10 @@ ROLE_DESCRIPTION_MAP = {
 }
 
 
-#
-# Roles
-#
+### Migration helper methods to populate/clear statuses and roles
 
 
-def populate_role_choices(apps=global_apps, schema_editor=None, **kwargs):
-    """
-    Populate `Role` model choices.
-
-    This will run the `create_custom_roles` function during data migrations.
-
-    When it is ran again post-migrate will be a noop.
-    """
-    create_custom_roles(apps=apps, **kwargs)
-
-
-def export_roles_from_choiceset(choiceset, color_map=None, description_map=None):
-    """
-    e.g. `export_roles_from_choiceset(ContactAssociationRoleChoices, content_type)`
-
-    This is called by `extras.management.create_custom_roles` for use in
-    performing data migrations to populate `Role` objects.
-    """
-
-    if color_map is None:
-        color_map = ROLE_COLOR_MAP
-    if description_map is None:
-        description_map = ROLE_DESCRIPTION_MAP
-
-    choices = []
-
-    for _, value in choiceset.CHOICES:
-        choice_kwargs = {
-            "name": value,
-            "description": description_map[value],
-            "color": color_map[value],
-        }
-        choices.append(choice_kwargs)
-
-    return choices
-
-
-def create_custom_roles(
-    verbosity=2,
-    apps=global_apps,
-    models=None,
-    **kwargs,
-):
-    """
-    Create database Role choices from choiceset enums.
-
-    This is called during data migrations for importing `Role` objects from
-    `ChoiceSet` enums in flat files.
-    """
-
-    # Only print a newline if we have verbosity!
-    if verbosity > 0:
-        print("\n", end="")
-
-    if "test" in sys.argv:
-        # Do not print output during unit testing migrations
-        verbosity = 1
-
-    if not models:
-        models = ROLE_CHOICESET_MAP.keys()
-
-    # Prep the app and get the Role model dynamically
-    try:
-        Role = apps.get_model("extras.Role")
-        ContentType = apps.get_model("contenttypes.ContentType")
-    except LookupError:
-        return
-
-    added_total = 0
-    linked_total = 0
-
-    # Iterate choiceset kwargs to create role objects if they don't exist
-    for model_path in models:
-        choiceset = ROLE_CHOICESET_MAP[model_path]
-        content_type = ContentType.objects.get_for_model(apps.get_model(model_path))
-        choices = export_roles_from_choiceset(choiceset)
-
-        if verbosity >= 2:
-            print(f"    Model {model_path}", flush=True)
-
-        for choice_kwargs in choices:
-            defaults = choice_kwargs.copy()
-            name = defaults.pop("name")
-            try:
-                obj, created = Role.objects.get_or_create(name=name, defaults=defaults)
-            except IntegrityError as err:
-                raise SystemExit(
-                    f"Unexpected error while running data migration to populate role for {model_path}: {err}"
-                ) from err
-
-            # Make sure the content-type is associated.
-            if content_type not in obj.content_types.all():
-                obj.content_types.add(content_type)
-
-            if created and verbosity >= 2:
-                print(f"      Adding and linking role {obj.name}", flush=True)
-                added_total += 1
-            elif not created and verbosity >= 2:
-                print(f"      Linking to existing role {obj.name}", flush=True)
-                linked_total += 1
-
-    if verbosity >= 2:
-        print(f"    Added {added_total}, linked {linked_total} role records")
-
-
-def clear_role_choices(
-    apps=global_apps,
-    verbosity=2,
-    models=None,
-    clear_all_model_roles=True,
-    **kwargs,
-):
-    """
-    Remove content types from roles, and if no content types remain, delete the roles as well.
-    """
-    if "test" in sys.argv:
-        # Do not print output during unit testing migrations
-        verbosity = 1
-
-    if verbosity >= 0:
-        print("\n", end="")
-
-    if not models:
-        models = ROLE_CHOICESET_MAP.keys()
-
-    Role = apps.get_model("extras.Role")
-    ContentType = apps.get_model("contenttypes.ContentType")
-
-    deleted_total = 0
-    unlinked_total = 0
-
-    for model_path in models:
-        choiceset = ROLE_CHOICESET_MAP[model_path]
-        model = apps.get_model(model_path)
-        content_type = ContentType.objects.get_for_model(model)
-        choices = export_statuses_from_choiceset(choiceset)
-
-        if verbosity >= 2:
-            print(f"    Model {model_path}", flush=True)
-
-        if not clear_all_model_roles:
-            # Only clear default roles for this model
-            names = [choice_kwargs["name"] for choice_kwargs in choices]
-        else:
-            # Clear all roles for this model
-            names = Role.objects.filter(content_types=content_type).values_list("name", flat=True)
-
-        for name in names:
-            try:
-                obj = Role.objects.get(name=name)
-                obj.content_types.remove(content_type)
-                if not obj.content_types.all().exists():
-                    obj.delete()
-                    if verbosity >= 2:
-                        print(f"      Deleting role {obj.name}", flush=True)
-                    deleted_total += 1
-                else:
-                    if verbosity >= 2:
-                        print(f"      Unlinking role {obj.name}", flush=True)
-                    unlinked_total += 1
-            except Exception as err:
-                raise SystemExit(
-                    f"Unexpected error while running data migration to remove role for {model_path}: {err}"
-                )
-
-    if verbosity >= 2:
-        print(f"    Deleted {deleted_total}, unlinked {unlinked_total} role records")
-
-
-#
-# Statuses
-#
-
-
-def populate_status_choices(apps=global_apps, schema_editor=None, **kwargs):
+def populate_metadata_choices(apps=global_apps, schema_editor=None, **kwargs):
     """
     Populate `Status` model choices.
 
@@ -302,21 +126,28 @@ def populate_status_choices(apps=global_apps, schema_editor=None, **kwargs):
 
     When it is ran again post-migrate will be a noop.
     """
-    create_custom_statuses(apps=apps, **kwargs)
+    # default to "status" if it is not specified
+    metadata_model = kwargs.pop("metadata_model", "status")
+    create_custom_metadata_instances(apps=apps, metadata_model=metadata_model, **kwargs)
 
 
-def export_statuses_from_choiceset(choiceset, color_map=None, description_map=None):
+def export_metadata_from_choiceset(choiceset, color_map=None, description_map=None, metadata_model=None):
     """
     e.g. `export_choices_from_choiceset(DeviceStatusChoices, content_type)`
 
     This is called by `extras.management.create_custom_statuses` for use in
     performing data migrations to populate `Status` objects.
     """
-
-    if color_map is None:
-        color_map = STATUS_COLOR_MAP
-    if description_map is None:
-        description_map = STATUS_COLOR_MAP
+    if metadata_model == "role":
+        if color_map is None:
+            color_map = ROLE_COLOR_MAP
+        if description_map is None:
+            description_map = ROLE_DESCRIPTION_MAP
+    else:
+        if color_map is None:
+            color_map = STATUS_COLOR_MAP
+        if description_map is None:
+            description_map = STATUS_DESCRIPTION_MAP
 
     choices = []
 
@@ -332,13 +163,14 @@ def export_statuses_from_choiceset(choiceset, color_map=None, description_map=No
     return choices
 
 
-def create_custom_statuses(
+def create_custom_metadata_instances(
     app_config=None,  # unused
     verbosity=2,
     interactive=True,
     using=DEFAULT_DB_ALIAS,  # unused
     apps=global_apps,
     models=None,
+    metadata_model=None,
     **kwargs,
 ):
     """
@@ -356,12 +188,20 @@ def create_custom_statuses(
         # Do not print output during unit testing migrations
         verbosity = 1
 
-    if not models:
-        models = STATUS_CHOICESET_MAP.keys()
+    choiceset_map = {}
+    if metadata_model == "role":
+        choiceset_map = ROLE_CHOICESET_MAP
+        if not models:
+            models = choiceset_map.keys()
+    else:
+        choiceset_map = STATUS_CHOICESET_MAP
+        if not models:
+            models = choiceset_map.keys()
 
-    # Prep the app and get the Status model dynamically
+    # Prep the app and get the model dynamically
+    capitalized_metadata_model_name = metadata_model.capitalize()
     try:
-        Status = apps.get_model("extras.Status")
+        Metadata_Model = apps.get_model(f"extras.{capitalized_metadata_model_name}")
         ContentType = apps.get_model("contenttypes.ContentType")
     except LookupError:
         return
@@ -371,9 +211,9 @@ def create_custom_statuses(
 
     # Iterate choiceset kwargs to create status objects if they don't exist
     for model_path in models:
-        choiceset = STATUS_CHOICESET_MAP[model_path]
+        choiceset = choiceset_map[model_path]
         content_type = ContentType.objects.get_for_model(apps.get_model(model_path))
-        choices = export_statuses_from_choiceset(choiceset)
+        choices = export_metadata_from_choiceset(choiceset, metadata_model=metadata_model)
 
         if verbosity >= 2:
             print(f"    Model {model_path}", flush=True)
@@ -387,21 +227,21 @@ def create_custom_statuses(
             try:
                 # May fail with an IntegrityError if a status with a different slug has a name matching this one
                 # May fail with a FieldError if the Status model no longer has a slug field
-                obj, created = Status.objects.get_or_create(slug=slug, defaults=defaults)
+                obj, created = Metadata_Model.objects.get_or_create(slug=slug, defaults=defaults)
             except (IntegrityError, FieldError) as error:
                 # OK, what if we look up by name instead?
                 defaults = choice_kwargs.copy()
                 name = defaults.pop("name")
                 # FieldError would occur when calling create_custom_statuses after status slug removal
                 # migration has been migrated
-                # e.g nautobot.extras.tests.test_management.StatusManagementTestCase.test_populate_status_choices_idempotent
+                # e.g nautobot.extras.tests.test_management.StatusManagementTestCase.test_populate_metadata_choices_idempotent
                 if isinstance(error, FieldError):
                     defaults.pop("slug")
                 try:
-                    obj, created = Status.objects.get_or_create(name=name, defaults=defaults)
+                    obj, created = Metadata_Model.objects.get_or_create(name=name, defaults=defaults)
                 except IntegrityError as err:
                     raise SystemExit(
-                        f"Unexpected error while running data migration to populate status for {model_path}: {err}"
+                        f"Unexpected error while running data migration to populate {metadata_model} for {model_path}: {err}"
                     ) from err
 
             # Make sure the content-type is associated.
@@ -409,48 +249,58 @@ def create_custom_statuses(
                 obj.content_types.add(content_type)
 
             if created and verbosity >= 2:
-                print(f"      Adding and linking status {obj.name}", flush=True)
+                print(f"      Adding and linking {metadata_model} {obj.name}", flush=True)
                 added_total += 1
             elif not created and verbosity >= 2:
-                print(f"      Linking to existing status {obj.name}", flush=True)
+                print(f"      Linking to existing {metadata_model} {obj.name}", flush=True)
                 linked_total += 1
 
     if verbosity >= 2:
-        print(f"    Added {added_total}, linked {linked_total} status records")
+        print(f"    Added {added_total}, linked {linked_total} {metadata_model} records")
 
 
-def clear_status_choices(
+def clear_metadata_choices(
     apps=global_apps,
     schema_editor=None,
     verbosity=2,
     models=None,
+    metadata_model=None,
     clear_all_model_statuses=True,
     **kwargs,
 ):
     """
-    Remove content types from statuses, and if no content types remain, delete the statuses as well.
+    Remove content types from statuses/roles, and if no content types remain, delete the statuses/roles as well.
     """
     if "test" in sys.argv:
         # Do not print output during unit testing migrations
         verbosity = 1
 
-    if verbosity >= 0:
-        print("\n", end="")
+    choiceset_map = {}
+    if metadata_model == "role":
+        if not models:
+            choiceset_map = ROLE_CHOICESET_MAP
+    else:
+        if not models:
+            choiceset_map = STATUS_CHOICESET_MAP
 
-    if not models:
-        models = STATUS_CHOICESET_MAP.keys()
+    models = choiceset_map.keys()
 
-    Status = apps.get_model("extras.Status")
-    ContentType = apps.get_model("contenttypes.ContentType")
+    # Prep the app and get the model dynamically
+    capitalized_model_name = metadata_model.capitalize()
+    try:
+        Metadata_Model = apps.get_model(f"extras.{capitalized_model_name}")
+        ContentType = apps.get_model("contenttypes.ContentType")
+    except LookupError:
+        return
 
     deleted_total = 0
     unlinked_total = 0
 
     for model_path in models:
-        choiceset = STATUS_CHOICESET_MAP[model_path]
+        choiceset = choiceset_map[model_path]
         model = apps.get_model(model_path)
         content_type = ContentType.objects.get_for_model(model)
-        choices = export_statuses_from_choiceset(choiceset)
+        choices = export_metadata_from_choiceset(choiceset, metadata_model=metadata_model)
 
         if verbosity >= 2:
             print(f"    Model {model_path}", flush=True)
@@ -460,25 +310,25 @@ def clear_status_choices(
             names = [choice_kwargs["name"] for choice_kwargs in choices]
         else:
             # Clear all statuses for this model
-            names = Status.objects.filter(content_types=content_type).values_list("name", flat=True)
+            names = Metadata_Model.objects.filter(content_types=content_type).values_list("name", flat=True)
 
         for name in names:
             try:
-                obj = Status.objects.get(name=name)
+                obj = Metadata_Model.objects.get(name=name)
                 obj.content_types.remove(content_type)
                 if not obj.content_types.all().exists():
                     obj.delete()
                     if verbosity >= 2:
-                        print(f"      Deleting status {obj.name}", flush=True)
+                        print(f"      Deleting {metadata_model} {obj.name}", flush=True)
                     deleted_total += 1
                 else:
                     if verbosity >= 2:
-                        print(f"      Unlinking status {obj.name}", flush=True)
+                        print(f"      Unlinking {metadata_model} {obj.name}", flush=True)
                     unlinked_total += 1
             except Exception as err:
                 raise SystemExit(
-                    f"Unexpected error while running data migration to remove status for {model_path}: {err}"
+                    f"Unexpected error while running data migration to remove {metadata_model} for {model_path}: {err}"
                 )
 
     if verbosity >= 2:
-        print(f"    Deleted {deleted_total}, unlinked {unlinked_total} status records")
+        print(f"    Deleted {deleted_total}, unlinked {unlinked_total} {metadata_model} records")

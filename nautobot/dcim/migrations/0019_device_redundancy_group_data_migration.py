@@ -2,17 +2,17 @@
 
 from django.db import migrations
 
-from nautobot.extras.management import clear_status_choices, populate_status_choices
+from nautobot.extras.management import clear_metadata_choices, populate_metadata_choices
 
 
 def populate_device_redundancy_group_status(apps, schema_editor):
     """Create/link default Status records for the DeviceRedundancyGroup content-type."""
-    populate_status_choices(apps, schema_editor, models=["dcim.DeviceRedundancyGroup"])
+    populate_metadata_choices(apps, schema_editor, models=["dcim.DeviceRedundancyGroup"])
 
 
 def clear_device_redundancy_group_status(apps, schema_editor):
     """De-link/delete all Status records from the DeviceRedundancyGroup content-type."""
-    clear_status_choices(apps, schema_editor, models=["dcim.DeviceRedundancyGroup"])
+    clear_metadata_choices(apps, schema_editor, models=["dcim.DeviceRedundancyGroup"])
 
 
 class Migration(migrations.Migration):
