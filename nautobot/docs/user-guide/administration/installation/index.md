@@ -45,8 +45,6 @@ Nautobot will not work without these dependencies.
 Nautobot is written in the [Python programming language](https://www.python.org/). The official Python package installer is called [Pip](https://pip.pypa.io/en/stable/), and you will see the `pip` command referenced often to install or
 update Python packages.
 
-All Nautobot plugins and library dependencies will be written using Python.
-
 #### Database
 
 Nautobot uses a relational database to store its data. Both MySQL and PostgreSQL are officially supported.
