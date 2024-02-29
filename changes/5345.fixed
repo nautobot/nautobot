@@ -1,0 +1,1 @@
+Fixed intermittent 405 errors when using the Docker image with SAML authentication.
