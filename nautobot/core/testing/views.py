@@ -22,6 +22,7 @@ from nautobot.core.templatetags import helpers
 from nautobot.core.testing import mixins
 from nautobot.core.utils import lookup
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
+from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
 from nautobot.extras.models import CustomFieldModel, RelationshipModel
 from nautobot.extras.models.mixins import NotesMixin
 from nautobot.users import models as users_models
@@ -408,12 +409,10 @@ class ViewTestCases:
             model_class = self.model
             model_form = lookup.get_form_for_model(model_class)
             fields = model_form.base_fields
-            # Need to have actual custom field and relationship instances associated with all content-types
-            # in order for this generic test to check these fields.
-            # if isinstance(model_class, CustomFieldModel):
-            #     self.assertNotEqual(model_form.custom_fields, None)
-            # if isinstance(model_class, RelationshipModel):
-            #     self.assertNotEqual(model_form.custom_fields, None)
+            if isinstance(model_class, CustomFieldModel):
+                self.assertTrue(issubclass(CustomFieldModelFormMixin, model_form))
+            if isinstance(model_class, RelationshipModel):
+                self.assertTrue(issubclass(RelationshipModelFormMixin, model_form))
             if isinstance(model_class, NotesMixin):
                 self.assertNotEqual(fields.get("object_note"), None)
             if isinstance(model_class, PrimaryModel):
