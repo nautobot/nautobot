@@ -247,42 +247,32 @@ class ForceScriptNameTestcase(TestCase):
             self.assertTrue(url.startswith(prefix))
 
 
-class NavRestrictedUI(TestCase):
+class NavAppsUITestCase(TestCase):
     def setUp(self):
         super().setUp()
 
-        self.url = reverse("plugins:plugins_list")
+        self.url = reverse("apps:apps_list")
         self.item_weight = 100  # TODO: not easy to introspect from the nav menu struct, so hard-code it here for now
 
     def make_request(self):
         response = self.client.get(reverse("home"))
         return response.content.decode(response.charset)
 
-    def test_installed_apps_visible_to_staff(self):
-        """The "Installed Apps" menu item should be available to is_staff user."""
-        # Make user admin
-        self.user.is_staff = True
-        self.user.save()
-
+    def test_installed_apps_visible(self):
+        """The "Installed Apps" menu item should be available to an authenticated user regardless of permissions."""
         response_content = self.make_request()
         self.assertInHTML(
             f"""
             <a href="{self.url}"
                 data-item-weight="{self.item_weight}">
-                Installed Plugins
+                Installed Apps
             </a>
             """,
             response_content,
         )
 
-    def test_installed_apps_not_visible_to_non_staff_user_without_permission(self):
-        """The "Installed Apps" menu item should be hidden from a non-staff user without permission."""
-        response_content = self.make_request()
 
-        self.assertNotRegex(response_content, r"Installed\s+Plugins")
-
-
-class LoginUI(TestCase):
+class LoginUITestCase(TestCase):
     def setUp(self):
         super().setUp()
 

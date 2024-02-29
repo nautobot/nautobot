@@ -135,9 +135,9 @@ Similarly, only the `jobs` module is loaded from Git repositories. If you're usi
 
 If not using submodules, you should register your job in the file where your job is defined.
 
-#### Registering Jobs in a Plugin
+#### Registering Jobs in an App
 
-Plugins should register jobs in the module defined in their [`NautobotAppConfig.jobs`](../../apps/api/nautobot-app-config.md#nautobotappconfig-code-location-attributes) property. This defaults to the `jobs` module of the plugin.
+Apps should register jobs in the module defined in their [`NautobotAppConfig.jobs`](../../apps/api/nautobot-app-config.md#nautobotappconfig-code-location-attributes) property. This defaults to the `jobs` module of the App.
 
 ### Job Logging
 

@@ -363,6 +363,10 @@ class APIRootView(NautobotAPIVersionMixin, APIView):
             OrderedDict(
                 (
                     (
+                        "apps",
+                        reverse("apps-api:api-root", request=request, format=format),
+                    ),
+                    (
                         "circuits",
                         reverse("circuits-api:api-root", request=request, format=format),
                     ),
@@ -420,7 +424,8 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                     "django-version": {"type": "string"},
                     "installed-apps": {"type": "object"},
                     "nautobot-version": {"type": "string"},
-                    "plugins": {"type": "object"},
+                    "nautobot-apps": {"type": "object"},
+                    "plugins": {"type": "object"},  # 3.0 TODO: remove this
                     "python-version": {"type": "string"},
                     "celery-workers-running": {"type": "integer"},
                 },
@@ -439,13 +444,13 @@ class StatusView(NautobotAPIVersionMixin, APIView):
             installed_apps[app_config.name] = version
         installed_apps = dict(sorted(installed_apps.items()))
 
-        # Gather installed plugins
-        plugins = {}
-        for plugin_name in settings.PLUGINS:
-            plugin_name = plugin_name.rsplit(".", 1)[-1]
-            plugin_config = apps.get_app_config(plugin_name)
-            plugins[plugin_name] = getattr(plugin_config, "version", None)
-        plugins = dict(sorted(plugins.items()))
+        # Gather installed Apps
+        nautobot_apps = {}
+        for app_name in settings.PLUGINS:
+            app_name = app_name.rsplit(".", 1)[-1]
+            app_config = apps.get_app_config(app_name)
+            nautobot_apps[app_name] = getattr(app_config, "version", None)
+        nautobot_apps = dict(sorted(nautobot_apps.items()))
 
         # Gather Celery workers
         workers = celery_app.control.inspect().active()  # list or None
@@ -456,7 +461,8 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                 "django-version": DJANGO_VERSION,
                 "installed-apps": installed_apps,
                 "nautobot-version": settings.VERSION,
-                "plugins": plugins,
+                "nautobot-apps": nautobot_apps,
+                "plugins": nautobot_apps,  # 3.0 TODO: remove this
                 "python-version": platform.python_version(),
                 "celery-workers-running": worker_count,
             }
@@ -754,7 +760,9 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
         for name, value in data.items():
             if "permissions" in value:
                 permissions = value["permissions"]
-                user_has_permission = any(request.user.has_perm(permission) for permission in permissions)
+                user_has_permission = (
+                    any(request.user.has_perm(permission) for permission in permissions) or not permissions
+                )
                 if user_has_permission:
                     return_value[name] = value["data"]
             else:
