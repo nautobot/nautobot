@@ -21,11 +21,13 @@ from nautobot.ipam.models import (
     IPAddressToInterface,
     Namespace,
     Prefix,
+    PrefixLocationAssignment,
     RIR,
     RouteTarget,
     Service,
     VLAN,
     VLANGroup,
+    VLANLocationAssignment,
     VRF,
     VRFDeviceAssignment,
     VRFPrefixAssignment,
@@ -202,6 +204,12 @@ class VLANLegacySerializer(VLANSerializer):
         validators = []
 
 
+class VLANLocationAssignmentSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = VLANLocationAssignment
+        fields = "__all__"
+
+
 #
 # Prefixes
 #
@@ -303,6 +311,12 @@ class PrefixLegacySerializer(PrefixSerializer):
             "notes_url",
             "custom_fields",
         ]
+
+
+class PrefixLocationAssignmentSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = PrefixLocationAssignment
+        fields = "__all__"
 
 
 class PrefixLengthSerializer(serializers.Serializer):

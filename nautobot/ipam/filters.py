@@ -28,11 +28,13 @@ from .models import (
     IPAddressToInterface,
     Namespace,
     Prefix,
+    PrefixLocationAssignment,
     RIR,
     RouteTarget,
     Service,
     VLAN,
     VLANGroup,
+    VLANLocationAssignment,
     VRF,
     VRFDeviceAssignment,
     VRFPrefixAssignment,
@@ -321,6 +323,26 @@ class PrefixFilterSet(
         return queryset.filter(params).distinct()
 
 
+class PrefixLocationAssignmentFilterSet(NautobotFilterSet):
+    prefix = MultiValueCharFilter(
+        method="search_by_prefix",
+        label="Contained in prefix",
+    )
+    location = TreeNodeMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        label="Locations (name or ID)",
+    )
+
+    def search_by_prefix(self, queryset, name, value):
+        prefixes = [prefix.strip() for prefix in value if prefix.strip()]
+        return queryset.net_host_contained(*prefixes)
+
+    class Meta:
+        model = PrefixLocationAssignment
+        fields = ["id", "prefix", "location"]
+
+
 class IPAddressFilterSet(
     NautobotFilterSet,
     IPAMFilterSetMixin,
@@ -542,6 +564,27 @@ class VLANFilterSet(
             return queryset.none()
         location_ids = list(devices.values_list("location__id", flat=True))
         return queryset.filter(Q(locations__isnull=True) | Q(locations__in=location_ids))
+
+
+class VLANLocationAssignmentFilterSet(NautobotFilterSet):
+    vlan = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="vid",
+        queryset=VLAN.objects.all(),
+        label="VLAN (VID or ID)",
+    )
+    location = TreeNodeMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        label="Locations (name or ID)",
+    )
+
+    def search_by_prefix(self, queryset, name, value):
+        prefixes = [prefix.strip() for prefix in value if prefix.strip()]
+        return queryset.net_host_contained(*prefixes)
+
+    class Meta:
+        model = VLANLocationAssignment
+        fields = ["id", "vlan", "location"]
 
 
 class ServiceFilterSet(NautobotFilterSet):
