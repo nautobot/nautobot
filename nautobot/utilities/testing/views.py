@@ -16,12 +16,15 @@ from django.utils.text import slugify
 from django.utils.html import escape
 from django.utils.http import urlencode
 
+from nautobot.core.models.generics import PrimaryModel
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices, ObjectChangeActionChoices
-from nautobot.extras.models import ChangeLoggedModel, CustomField, Relationship
+from nautobot.extras.forms.mixins import CustomFieldModelFormMixin, RelationshipModelFormMixin
+from nautobot.extras.models import ChangeLoggedModel, CustomField, CustomFieldModel, Relationship, RelationshipModel
+from nautobot.extras.models.mixins import NotesMixin
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.utilities.testing.mixins import NautobotTestCaseMixin
-from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model, csv_format
+from nautobot.utilities.utils import get_changes_for_model, get_filterset_for_model, get_form_for_model, csv_format
 from .utils import disable_warnings, extract_page_body, get_deletable_objects, post_data
 
 
@@ -379,6 +382,20 @@ class ViewTestCases:
                     self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), self.form_data)
                 else:
                     self.assertInstanceEqual(self._get_queryset().last(), self.form_data)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_extra_feature_form_fields_present(self):
+            model_class = self.model
+            model_form = get_form_for_model(model_class)
+            fields = model_form.base_fields
+            if isinstance(model_class, CustomFieldModel):
+                self.assertTrue(issubclass(CustomFieldModelFormMixin, model_form))
+            if isinstance(model_class, RelationshipModel):
+                self.assertTrue(issubclass(RelationshipModelFormMixin, model_form))
+            if isinstance(model_class, NotesMixin):
+                self.assertNotEqual(fields.get("object_note"), None)
+            if isinstance(model_class, PrimaryModel):
+                self.assertNotEqual(fields.get("tags"), None)
 
         def test_slug_autocreation(self):
             """Test that slug is autocreated through ORM."""
