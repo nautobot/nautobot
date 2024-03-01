@@ -1,3 +1,7 @@
+---
+render_macros: true
+---
+
 # Required Configuration Settings
 
 ## Redis Settings
@@ -27,74 +31,74 @@ In the event you do need to make customizations to how Celery interacts with the
 #### Configuring Celery for High Availability
 
 High availability clustering of Redis for use with Celery can be performed using Redis Sentinel. Please see documentation section on configuring [Celery for Redis Sentinel](../../administration/guides/caching.md#celery-sentinel-configuration) for more information.
-[% for property, attrs in settings_data.properties.items() if attrs.is_required_setting|default(false) %]
+{% for property, attrs in settings_data.properties.items() if attrs.is_required_setting|default(false) %}
 
 ---
 
-## `[[ property ]]`
+## `{{ property }}`
 
-[% if attrs.version_added|default(None) %]
-+++ [[ attrs.version_added ]]
-[% endif %]
+{% if attrs.version_added|default(None) %}
++++ {{ attrs.version_added }}
+{% endif %}
 
-[% if attrs.default_literal|default(None) %]
+{% if attrs.default_literal|default(None) %}
 **Default:**
 
-[[ attrs.default_literal ]]
-[% else %]
-[% with default = attrs.default|default(None) %]
+{{ attrs.default_literal }}
+{% else %}
+{% with default = attrs.default|default(None) %}
 **Default:**
-[% if default is string %]`"[[ default ]]"`
-[% elif default is boolean %]`[[ default|title ]]`
-[% elif default is mapping and default != {} %]
+{% if default is string %}`"{{ default }}"`
+{% elif default is boolean %}`{{ default|title }}`
+{% elif default is mapping and default != {} %}
 
 ```python
-[[ default|pprint ]]
+{{ default|pprint }}
 ```
 
-[% else %]`[[ default ]]`
-[% endif %]
-[% endwith %]
-[% endif %]
+{% else %}`{{ default }}`
+{% endif %}
+{% endwith %}
+{% endif %}
 
-[% if attrs.enum|default(None) %]
+{% if attrs.enum|default(None) %}
 **Permitted Values:**
 
-[% for enum in attrs.enum %]
-* `[[ enum|pprint ]]`
-[% endfor %]
-[% endif %]
+{% for enum in attrs.enum %}
+* `{{ enum|pprint }}`
+{% endfor %}
+{% endif %}
 
-[% if attrs.environment_variable|default(None) %]
-**Environment Variable:** `[[ attrs.environment_variable ]]`
-[% elif attrs.properties|default(None) != None and attrs.properties.default|default(None) != None %]
-[% for property_attrs in attrs.properties.default.properties.values() if property_attrs.environment_variable|default(None) %]
-[% if loop.first %]
+{% if attrs.environment_variable|default(None) %}
+**Environment Variable:** `{{ attrs.environment_variable }}`
+{% elif attrs.properties|default(None) != None and attrs.properties.default|default(None) != None %}
+{% for property_attrs in attrs.properties.default.properties.values() if property_attrs.environment_variable|default(None) %}
+{% if loop.first %}
 **Environment Variables:**
 
-[% endif %]
-* `[[ property_attrs.environment_variable ]]`
-[% endfor %]
-[% elif attrs.properties|default(None) != None %]
-[% for property_attrs in attrs.properties.values() if property_attrs.environment_variable|default(None) %]
-[% if loop.first %]
+{% endif %}
+* `{{ property_attrs.environment_variable }}`
+{% endfor %}
+{% elif attrs.properties|default(None) != None %}
+{% for property_attrs in attrs.properties.values() if property_attrs.environment_variable|default(None) %}
+{% if loop.first %}
 **Environment Variables:**
 
-[% endif %]
-* `[[ property_attrs.environment_variable ]]`
-[% endfor %]
-[% endif %]
+{% endif %}
+* `{{ property_attrs.environment_variable }}`
+{% endfor %}
+{% endif %}
 
-[[ attrs.description|default("") ]]
+{{ attrs.description|default("") }}
 
-[[ attrs.details|default("") ]]
+{{ attrs.details|default("") }}
 
-[% if attrs.see_also|default({}) %]
+{% if attrs.see_also|default({}) %}
 **See Also:**
 
-[% for text, url in attrs.see_also.items() %]
-* [ [[ text ]] ]([[ url ]])
-[% endfor %]
-[% endif %]
+{% for text, url in attrs.see_also.items() %}
+* [{{ text }}]({{ url }})
+{% endfor %}
+{% endif %}
 
-[% endfor %]
+{% endfor %}

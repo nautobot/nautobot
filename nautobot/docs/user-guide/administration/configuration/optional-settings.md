@@ -1,3 +1,7 @@
+---
+render_macros: true
+---
+
 # Optional Configuration Settings
 
 This document describes Nautobot-specific configuration settings that may be customized in your `nautobot_config.py`, or, in many cases, by configuration of appropriate environment variables. It also describes a number of common Django configuration settings that may also be customized similarly.
@@ -10,11 +14,11 @@ The [official Django documentation](https://docs.djangoproject.com/en/stable/ref
 
 A number of settings can alternatively be configured via the Nautobot Admin UI. To do so, these settings must **not** be defined in your `nautobot_config.py`, as any settings defined there will take precedence over any values defined in the Admin UI. Settings that are currently configurable via the Admin UI include:
 
-[% for property, attrs in settings_data.properties.items() %]
-[% if attrs.is_constance_config|default(false) %]
-* [`[[ property ]]`](#[[ property|lower ]])
-[% endif %]
-[% endfor %]
+{% for property, attrs in settings_data.properties.items() %}
+{% if attrs.is_constance_config|default(false) %}
+* [`{{ property }}`](#{{ property|lower }})
+{% endif %}
+{% endfor %}
 
 ## Settings configurable in `nautobot_config.py`
 
@@ -36,82 +40,82 @@ EXTRA_INSTALLED_APPS = [
 This will ensure your default setting's `INSTALLED_APPS` do not have to be modified, and the user
 can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can be added using `EXTRA_MIDDLEWARE`.
 
-[% for property, attrs in settings_data.properties.items() if not attrs.is_required_setting|default(false) %]
+{% for property, attrs in settings_data.properties.items() if not attrs.is_required_setting|default(false) %}
 
 ---
 
-### `[[ property ]]`
+### `{{ property }}`
 
-[% if attrs.version_added|default(None) %]
-+++ [[ attrs.version_added ]]
-[% endif %]
+{% if attrs.version_added|default(None) %}
++++ {{ attrs.version_added }}
+{% endif %}
 
-[% if attrs.default_literal|default(None) %]
+{% if attrs.default_literal|default(None) %}
 **Default:**
 
-[[ attrs.default_literal ]]
-[% else %]
-[% with default = attrs.default|default(None) %]
+{{ attrs.default_literal }}
+{% else %}
+{% with default = attrs.default|default(None) %}
 **Default:**
-[% if default is string %]`"[[ default ]]"`
-[% elif default is boolean %]`[[ default|title ]]`
-[% elif default is mapping and default != {} %]
+{% if default is string %}`"{{ default }}"`
+{% elif default is boolean %}`{{ default|title }}`
+{% elif default is mapping and default != {} %}
 
 ```python
-[[ default|pprint ]]
+{{ default|pprint }}
 ```
 
-[% else %]`[[ default ]]`
-[% endif %]
-[% endwith %]
-[% endif %]
+{% else %}`{{ default }}`
+{% endif %}
+{% endwith %}
+{% endif %}
 
-[% if attrs.enum|default(None) %]
+{% if attrs.enum|default(None) %}
 **Permitted Values:**
 
-[% for enum in attrs.enum %]
-* `[[ enum|pprint ]]`
-[% endfor %]
-[% endif %]
+{% for enum in attrs.enum %}
+* `{{ enum|pprint }}`
+{% endfor %}
+{% endif %}
 
-[% if attrs.environment_variable|default(None) %]
-**Environment Variable:** `[[ attrs.environment_variable ]]`
-[% elif attrs.properties|default(None) != None and attrs.properties.default|default(None) != None %]
-[% for property_attrs in attrs.properties.default.properties.values() if property_attrs.environment_variable|default(None) %]
-[% if loop.first %]
+{% if attrs.environment_variable|default(None) %}
+**Environment Variable:** `{{ attrs.environment_variable }}`
+{% elif attrs.properties|default(None) != None and attrs.properties.default|default(None) != None %}
+{% for property_attrs in attrs.properties.default.properties.values() if property_attrs.environment_variable|default(None) %}
+{% if loop.first %}
 **Environment Variables:**
 
-[% endif %]
-* `[[ property_attrs.environment_variable ]]`
-[% endfor %]
-[% elif attrs.properties|default(None) != None %]
-[% for property_attrs in attrs.properties.values() if property_attrs.environment_variable|default(None) %]
-[% if loop.first %]
+{% endif %}
+* `{{ property_attrs.environment_variable }}`
+{% endfor %}
+{% elif attrs.properties|default(None) != None %}
+{% for property_attrs in attrs.properties.values() if property_attrs.environment_variable|default(None) %}
+{% if loop.first %}
 **Environment Variables:**
 
-[% endif %]
-* `[[ property_attrs.environment_variable ]]`
-[% endfor %]
-[% endif %]
+{% endif %}
+* `{{ property_attrs.environment_variable }}`
+{% endfor %}
+{% endif %}
 
-[[ attrs.description|default("") ]]
+{{ attrs.description|default("") }}
 
-[[ attrs.details|default("") ]]
+{{ attrs.details|default("") }}
 
-[% if attrs.is_constance_config|default(false) %]
+{% if attrs.is_constance_config|default(false) %}
 !!! tip
     If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
-[% endif %]
+{% endif %}
 
-[% if attrs.see_also|default({}) %]
+{% if attrs.see_also|default({}) %}
 **See Also:**
 
-[% for text, url in attrs.see_also.items() %]
-* [ [[ text ]] ]([[ url ]])
-[% endfor %]
-[% endif %]
+{% for text, url in attrs.see_also.items() %}
+* [ {{ text }} ]({{ url }})
+{% endfor %}
+{% endif %}
 
-[% endfor %]
+{% endfor %}
 
 ## Environment-Variable-Only Settings
 
