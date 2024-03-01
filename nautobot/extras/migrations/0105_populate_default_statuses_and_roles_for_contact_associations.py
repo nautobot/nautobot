@@ -7,18 +7,14 @@ import nautobot.extras.management
 
 def populate_default_status_and_role_choices_for_contact_associations(apps, schema_editor):
     """Create/link default Status and Role records for ContactAssociation content-type"""
-    nautobot.extras.management.populate_metadata_choices(apps, schema_editor, models=["extras.ContactAssociation"])
-    nautobot.extras.management.populate_metadata_choices(
-        apps, schema_editor, models=["extras.ContactAssociation"], metadata_model="role"
-    )
+    nautobot.extras.management.populate_status_choices(apps, schema_editor, models=["extras.ContactAssociation"])
+    nautobot.extras.management.populate_role_choices(apps, schema_editor, models=["extras.ContactAssociation"])
 
 
 def clear_default_status_and_role_choices_for_contact_associations(apps, schema_editor):
-    """De-link/delete all Status records from the ContactAssociation content-type."""
-    nautobot.extras.management.clear_metadata_choices(apps, schema_editor, models=["extras.ContactAssociation"])
-    nautobot.extras.management.clear_metadata_choices(
-        apps, schema_editor, models=["extras.ContactAssociation"], metadata_model="role"
-    )
+    """De-link/delete all Status and Role records from the ContactAssociation content-type."""
+    nautobot.extras.management.clear_status_choices(apps, schema_editor, models=["extras.ContactAssociation"])
+    nautobot.extras.management.clear_role_choices(apps, schema_editor, models=["extras.ContactAssociation"])
 
 
 class Migration(migrations.Migration):

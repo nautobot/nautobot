@@ -3,7 +3,7 @@
 from django.db import migrations
 
 from nautobot.dcim.choices import InterfaceStatusChoices
-from nautobot.extras.management import clear_metadata_choices, populate_metadata_choices
+from nautobot.extras.management import clear_status_choices, populate_status_choices
 
 
 def populate_interface_status(apps, schema_editor):
@@ -11,7 +11,7 @@ def populate_interface_status(apps, schema_editor):
     Create/link default Status records for the Interface content-type, and default all Interfaces to "active" status.
     """
     # Create Interface Statuses and add dcim.Interface to its content_types
-    populate_metadata_choices(apps, schema_editor, models=["dcim.Interface"])
+    populate_status_choices(apps, schema_editor, models=["dcim.Interface"])
 
     Status = apps.get_model("extras.Status")
     Interface = apps.get_model("dcim.Interface")
@@ -33,7 +33,7 @@ def clear_interface_status(apps, schema_editor):
         interface.status = None
         interface.save()
 
-    clear_metadata_choices(apps, schema_editor, models=["dcim.Interface"], metadata_model="status")
+    clear_status_choices(apps, schema_editor, models=["dcim.Interface"], metadata_model="status")
 
 
 class Migration(migrations.Migration):

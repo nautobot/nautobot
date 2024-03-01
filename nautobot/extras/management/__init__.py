@@ -118,17 +118,48 @@ ROLE_DESCRIPTION_MAP = {
 ### Migration helper methods to populate/clear statuses and roles
 
 
-def populate_metadata_choices(apps=global_apps, schema_editor=None, **kwargs):
+def populate_status_choices(apps=global_apps, schema_editor=None, **kwargs):
     """
-    Populate `Status` or `Role` model choices.
+    Populate `Status` model choices.
 
-    This will run the `_create_custom_role_or_status_instances` function during data migrations.
+    This will pass **kwargs to `_create_custom_role_or_status_instances` function and run it during data migrations.
 
     When it is ran again post-migrate will be a noop.
     """
-    # metadata_model will be default to "status" if it is not specified
-    metadata_model = kwargs.pop("metadata_model", "status")
-    _create_custom_role_or_status_instances(apps=apps, metadata_model=metadata_model, **kwargs)
+    _create_custom_role_or_status_instances(apps=apps, metadata_model="status", **kwargs)
+
+
+def populate_role_choices(apps=global_apps, schema_editor=None, **kwargs):
+    """
+    Populate `Role` model choices.
+
+     This will pass **kwargs to `_create_custom_role_or_status_instances` function and run it during data migrations.
+
+    When it is ran again post-migrate will be a noop.
+    """
+    _create_custom_role_or_status_instances(apps=apps, metadata_model="role", **kwargs)
+
+
+def clear_status_choices(apps=global_apps, schema_editor=None, **kwargs):
+    """
+    Remove `Status` model choices.
+
+    This will pass **kwargs to `_clear_custom_role_or_status_instances` function and run it during data migrations.
+
+    When it is ran again post-migrate will be a noop.
+    """
+    _clear_custom_role_or_status_instances(apps=apps, metadata_model="status", **kwargs)
+
+
+def clear_role_choices(apps=global_apps, schema_editor=None, **kwargs):
+    """
+    Remove `Role` model choices.
+
+    This will pass **kwargs to `_clear_custom_role_or_status_instances` function and run it during data migrations.
+
+    When it is ran again post-migrate will be a noop.
+    """
+    _clear_custom_role_or_status_instances(apps=apps, metadata_model="role", **kwargs)
 
 
 def export_metadata_from_choiceset(choiceset, color_map=None, description_map=None, metadata_model=None):
@@ -181,7 +212,7 @@ def _create_custom_role_or_status_instances(
     """
     Create database Status choices from choiceset enums.
 
-    This is called during data migrations for importing `Status` objects from
+    This is called during data migrations for importing `Status` and `Role` objects from
     `ChoiceSet` enums in flat files.
     Args:
         models (dict): A list of model contenttype strings e.g. models=["circuits.Circuit", "dcim.Cable", "dcim.Device","dcim.PowerFeed"]
@@ -207,9 +238,8 @@ def _create_custom_role_or_status_instances(
             models = choiceset_map.keys()
 
     # Prep the app and get the model dynamically
-    capitalized_metadata_model_name = metadata_model.capitalize()
     try:
-        Metadata_Model = apps.get_model(f"extras.{capitalized_metadata_model_name}")
+        Metadata_Model = apps.get_model(f"extras.{metadata_model}")
         ContentType = apps.get_model("contenttypes.ContentType")
     except LookupError:
         return
@@ -242,7 +272,7 @@ def _create_custom_role_or_status_instances(
                 name = defaults.pop("name")
                 # FieldError would occur when calling create_custom_statuses after status slug removal
                 # migration has been migrated
-                # e.g nautobot.extras.tests.test_management.StatusManagementTestCase.test_populate_metadata_choices_idempotent
+                # e.g nautobot.extras.tests.test_management.MetadataManagementTestCase.test_populate_status_choices_idempotent
                 if isinstance(error, FieldError):
                     defaults.pop("slug")
                 try:
@@ -267,7 +297,7 @@ def _create_custom_role_or_status_instances(
         print(f"    Added {added_total}, linked {linked_total} {metadata_model} records")
 
 
-def clear_metadata_choices(
+def _clear_custom_role_or_status_instances(
     apps=global_apps,
     schema_editor=None,
     verbosity=2,
@@ -277,7 +307,7 @@ def clear_metadata_choices(
     **kwargs,
 ):
     """
-    Remove content types from statuses/roles, and if no content types remain, delete the statuses/roles as well.
+    Remove content types from statuses/roles, and if no content types remain, delete the status/role instance as well.
     Args:
         models (dict): A list of model contenttype strings e.g. models=["circuits.Circuit", "dcim.Cable", "dcim.Device","dcim.PowerFeed"]
         metadata_model (str): "role" or "status"
@@ -289,18 +319,17 @@ def clear_metadata_choices(
 
     choiceset_map = {}
     if metadata_model == "role":
+        choiceset_map = ROLE_CHOICESET_MAP
         if not models:
-            choiceset_map = ROLE_CHOICESET_MAP
+            models = choiceset_map.keys()
     else:
+        choiceset_map = STATUS_CHOICESET_MAP
         if not models:
-            choiceset_map = STATUS_CHOICESET_MAP
-
-    models = choiceset_map.keys()
+            models = choiceset_map.keys()
 
     # Prep the app and get the model dynamically
-    capitalized_model_name = metadata_model.capitalize()
     try:
-        Metadata_Model = apps.get_model(f"extras.{capitalized_model_name}")
+        Metadata_Model = apps.get_model(f"extras.{metadata_model}")
         ContentType = apps.get_model("contenttypes.ContentType")
     except LookupError:
         return
@@ -318,10 +347,10 @@ def clear_metadata_choices(
             print(f"    Model {model_path}", flush=True)
 
         if not clear_all_model_statuses:
-            # Only clear default statuses for this model
+            # Only clear default statuses/roles for this model
             names = [choice_kwargs["name"] for choice_kwargs in choices]
         else:
-            # Clear all statuses for this model
+            # Clear all statuses/roles for this model
             names = Metadata_Model.objects.filter(content_types=content_type).values_list("name", flat=True)
 
         for name in names:
@@ -339,7 +368,7 @@ def clear_metadata_choices(
                     unlinked_total += 1
             except Exception as err:
                 raise SystemExit(
-                    f"Unexpected error while running data migration to remove {metadata_model} for {model_path}: {err}"
+                    f"Unexpected error while running data migration to remove {metadata_model} {name} for {model_path}: {err}"
                 )
 
     if verbosity >= 2:

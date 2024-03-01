@@ -2,7 +2,7 @@
 
 from django.db import migrations
 
-from nautobot.extras.management import clear_metadata_choices, populate_metadata_choices
+from nautobot.extras.management import clear_status_choices, populate_status_choices
 from nautobot.virtualization.choices import VMInterfaceStatusChoices
 
 
@@ -11,7 +11,7 @@ def populate_vminterface_status(apps, schema_editor):
     Create/link default Status records for the VMInterface content-type; default all VMInterfaces to "active" status.
     """
     # Create VMInterface Statuses and add dcim.VMInterface to its content_types
-    populate_metadata_choices(apps, schema_editor, models=["virtualization.VMInterface"])
+    populate_status_choices(apps, schema_editor, models=["virtualization.VMInterface"])
 
     Status = apps.get_model("extras.Status")
     VMInterface = apps.get_model("virtualization.VMInterface")
@@ -33,7 +33,7 @@ def clear_vminterface_status(apps, schema_editor):
         interface.status = None
         interface.save()
 
-    clear_metadata_choices(apps, schema_editor, models=["virtualization.VMInterface"])
+    clear_status_choices(apps, schema_editor, models=["virtualization.VMInterface"])
 
 
 class Migration(migrations.Migration):
