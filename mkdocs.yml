@@ -536,6 +536,7 @@ nav:
     - Core Developer Guide:
       - "development/core/index.md"
       - Getting Started: "development/core/getting-started.md"
+      - Adding and Updating Nautobot Settings: "development/core/settings.md"
       - Advanced Docker Compose Usage: "development/core/docker-compose-advanced-use-cases.md"
       - Application Registry: "development/core/application-registry.md"
       - Bootstrap UI: "development/core/bootstrap-ui.md"
