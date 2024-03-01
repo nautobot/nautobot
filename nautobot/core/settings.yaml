@@ -655,6 +655,7 @@
       "Django documentation for `DEBUG`": "https://docs.djangoproject.com/en/stable/ref/settings/#debug"
     "type": "boolean"
   "DEPLOYMENT_ID":
+    "default": ""
     "description": >-
       Setting to uniquely but anonymously identify Nautobot deployments when sending installation metrics.
     "details": |-
@@ -1332,7 +1333,7 @@
     "is_constance_config": true
     "type": "integer"
   "RACK_ELEVATION_DEFAULT_UNIT_WIDTH":
-    "default": 220
+    "default": 230
     "description": "Default width (in pixels) of a unit within a rendered rack elevation."
     "environment_variable": "NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH"
     "is_constance_config": true
@@ -1361,7 +1362,7 @@
     "is_constance_config": true
     "type": "integer"
   "RELEASE_CHECK_URL":
-    "default": false
+    "default": ""
     "description": >-
       This parameter defines the URL of the repository that will be checked periodically for new Nautobot releases.
       When a new release is detected, a message will be displayed to administrative users on the home page.

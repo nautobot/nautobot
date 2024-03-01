@@ -169,13 +169,7 @@ class SettingsJSONSchemaTestCase(TestCase):
                 continue
 
             with self.subTest(f"Checking default value for settings attribute {key} against the schema"):
-                if key in getattr(nautobot_settings, "CONSTANCE_CONFIG"):
-                    # Constance settings don't have a default set in nautobot.core.settings,
-                    # but they have a default in CONSTANCE_CONFIG
-                    self.assertEqual(
-                        nautobot_settings.CONSTANCE_CONFIG[key].default, self.schema_data["properties"][key]["default"]
-                    )
-                elif self.schema_data["properties"][key].get("$ref", None) in [
+                if self.schema_data["properties"][key].get("$ref", None) in [
                     "#/definitions/absolute_path",
                     "#/definitions/callable",
                     "#/definitions/relative_path",
@@ -192,7 +186,12 @@ class SettingsJSONSchemaTestCase(TestCase):
 
         for key in self.schema_data["properties"]:
             if key in getattr(nautobot_settings, "CONSTANCE_CONFIG"):
-                # Constance settings don't have a value set by default in nautobot.core.settings
+                # Constance settings don't have a value set by default in nautobot.core.settings,
+                # but they have a default in CONSTANCE_CONFIG
+                with self.subTest(f"Checking default value for Constance attribute {key} against the schema"):
+                    self.assertEqual(
+                        nautobot_settings.CONSTANCE_CONFIG[key].default, self.schema_data["properties"][key]["default"]
+                    )
                 continue
             with self.subTest(f"Checking for settings schema property {key} in nautobot.core.settings"):
                 try:
