@@ -245,7 +245,7 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         required=False,
         label="VLAN group",
         null_option="None",
-        query_params={"location_id": "$location"},
+        query_params={"location": "$location"},
         initial_params={"vlans": "$vlan"},
     )
     vlan = DynamicModelChoiceField(
@@ -254,7 +254,7 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         label="VLAN",
         query_params={
             "location": "$location",
-            "group_id": "$vlan_group",
+            "vlan_group": "$vlan_group",
         },
     )
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
@@ -750,14 +750,14 @@ class VLANFilterForm(
     field_order = [
         "q",
         "location",
-        "group_id",
+        "vlan_group",
         "status",
         "role",
         "tenant_group",
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
-    group_id = DynamicModelMultipleChoiceField(
+    vlan_group = DynamicModelMultipleChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
         label="VLAN group",

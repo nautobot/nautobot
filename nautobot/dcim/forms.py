@@ -1504,7 +1504,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
     cluster = DynamicModelChoiceField(
         queryset=Cluster.objects.all(),
         required=False,
-        query_params={"group_id": "$cluster_group"},
+        query_params={"cluster_group": "$cluster_group"},
     )
     vrfs = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),
