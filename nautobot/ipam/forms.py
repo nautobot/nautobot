@@ -327,6 +327,7 @@ class PrefixForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
     def save(self, *args, **kwargs):
         instance = super().save(*args, **kwargs)
         instance.vrfs.set(self.cleaned_data["vrfs"])
+        instance.locations.set(self.cleaned_data["locations"])
         return instance
 
 
