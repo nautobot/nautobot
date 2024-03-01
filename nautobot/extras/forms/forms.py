@@ -86,7 +86,6 @@ from .mixins import (
     CustomFieldModelFormMixin,
     NoteModelBulkEditFormMixin,
     NoteModelFormMixin,
-    RelationshipModelFormMixin,
 )
 
 
