@@ -776,10 +776,10 @@ The options displayed in the web interface dropdown to limit the number of objec
 
 Default: `[]` (Empty list)
 
-A list of installed [Nautobot plugins](../../../apps/index.md) to enable. Plugins will not take effect unless they are listed here.
+A list of installed [Nautobot Apps](../../../apps/index.md) to enable. Apps will not take effect unless they are listed here.
 
 !!! warning
-    Plugins extend Nautobot by allowing external code to run with the same access and privileges as Nautobot itself. Only install plugins from trusted sources. The Nautobot maintainers make absolutely no guarantees about the integrity or security of your installation with plugins enabled.
+    Apps extend Nautobot by allowing external code to run with the same access and privileges as Nautobot itself. Only install Apps from trusted sources. The Nautobot maintainers make absolutely no guarantees about the integrity or security of your installation with Apps enabled.
 
 ---
 
@@ -787,21 +787,21 @@ A list of installed [Nautobot plugins](../../../apps/index.md) to enable. Plugin
 
 Default: `{}` (Empty dictionary)
 
-This parameter holds configuration settings for individual Nautobot plugins. It is defined as a dictionary, with each key using the name of an installed plugin. The specific parameters supported are unique to each plugin: Reference the plugin's documentation to determine the supported parameters. An example configuration is shown below:
+This parameter holds configuration settings for individual Nautobot Apps. It is defined as a dictionary, with each key using the name of an installed App. The specific parameters supported are unique to each App; reference the App's documentation to determine the supported parameters. An example configuration is shown below:
 
 ```python
 PLUGINS_CONFIG = {
-    'plugin1': {
+    'app1': {
         'foo': 123,
         'bar': True
     },
-    'plugin2': {
+    'app2': {
         'foo': 456,
     },
 }
 ```
 
-Note that a plugin must be listed in `PLUGINS` for its configuration to take effect.
+Note that an App must also be listed in `PLUGINS` for its configuration to take effect.
 
 ---
 
@@ -998,12 +998,12 @@ Environment Variable: `NAUTOBOT_TEST_USE_FACTORIES`
 If set to `True`, the Nautobot test runner will call `nautobot-server generate_test_data ...` before executing any test cases, pre-populating the test database with various pseudo-random instances of many of Nautobot's data models.
 
 !!! warning
-    This functionality requires the installation of the [`factory-boy`](https://pypi.org/project/factory-boy/) Python package, which is present in Nautobot's own development environment, but is _not_ an inherent dependency of the Nautobot package when installed otherwise, such as into a plugin's development environment.
+    This functionality requires the installation of the [`factory-boy`](https://pypi.org/project/factory-boy/) Python package, which is present in Nautobot's own development environment, but is _not_ an inherent dependency of the Nautobot package when installed otherwise, such as into an App's development environment.
 
 !!! info
-    Setting this to `True` is a requirement for all Nautobot core tests as of 1.5.0, and it is set accordingly in `nautobot/core/tests/nautobot_config.py`, but defaults to `False` otherwise so as to remain backwards-compatible with plugins that also may use the Nautobot test runner in their own test environments, but have not yet updated their tests to account for the presence of this test data.
+    Setting this to `True` is a requirement for all Nautobot core tests as of 1.5.0, and it is set accordingly in `nautobot/core/tests/nautobot_config.py`, but defaults to `False` otherwise so as to remain backwards-compatible with Apps that also may use the Nautobot test runner in their own test environments, but have not yet updated their tests to account for the presence of this test data.
 
-    Because this test data can obviate the need to manually construct complex test data, and the random factor can improve test robustness, plugin developers are encouraged to set this to `True` in their configuration, ensure that their development environments include the `factory-boy` Python package as a test dependency, and update their tests as needed.
+    Because this test data can obviate the need to manually construct complex test data, and the random factor can improve test robustness, App developers are encouraged to set this to `True` in their configuration, ensure that their development environments include the `factory-boy` Python package as a test dependency, and update their tests as needed.
 
 ---
 
@@ -1087,7 +1087,7 @@ in order for the repository to sync.
 
 Default: `False`
 
-This can be set to `True` to allow deprecation warnings raised by Nautobot to (additionally) be logged as `WARNING` level log messages. (Deprecation warnings are normally silent in Python, but can be enabled globally by [various means](https://docs.python.org/3/library/warnings.html) such as setting the `PYTHONWARNINGS` environment variable. However, doing so can be rather noisy, as it will also include warnings from within Django about various code in various package dependencies of Nautobot's, etc. This configuration setting allows a more targeted enablement of only warnings from within Nautobot itself, which can be useful when vetting various Nautobot apps (plugins) for future-proofness against upcoming changes to Nautobot.)
+This can be set to `True` to allow deprecation warnings raised by Nautobot to (additionally) be logged as `WARNING` level log messages. (Deprecation warnings are normally silent in Python, but can be enabled globally by [various means](https://docs.python.org/3/library/warnings.html) such as setting the `PYTHONWARNINGS` environment variable. However, doing so can be rather noisy, as it will also include warnings from within Django about various code in various package dependencies of Nautobot's, etc. This configuration setting allows a more targeted enablement of only warnings from within Nautobot itself, which can be useful when vetting various Nautobot Apps for future-proofness against upcoming changes to Nautobot.)
 
 !!! caution
     In Nautobot 2.0, deprecation warnings will be logged by default; a future release of Nautobot 1.5.x will also enable default logging of deprecation warnings.
@@ -1275,7 +1275,7 @@ Additional examples are available in the [`/examples/logging`](https://github.co
 * `nautobot.auth.*` - Authentication events
 * `nautobot.extras.jobs.*` - Job execution (`* = JobClassName`)
 * `nautobot.core.graphql.*` - [GraphQL](../../platform-functionality/graphql.md) initialization and operation.
-* `nautobot.extras.plugins.*` - Plugin loading and activity
+* `nautobot.extras.plugins.*` - App loading and activity
 * `nautobot.core.views.generic.*` - Generic views which handle business logic for the web UI
 
 ---

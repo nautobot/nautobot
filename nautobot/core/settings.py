@@ -425,6 +425,10 @@ INSTALLED_APPS = [
     "graphene_django",
     "health_check",
     "health_check.storage",
+    # We have custom implementations of these in nautobot.extras.health_checks:
+    # "health_check.db",
+    # "health_check.contrib.migrations",
+    # "health_check.contrib.redis",
     "django_extensions",
     "constance.backends.database",
     "django_ajax_tables",

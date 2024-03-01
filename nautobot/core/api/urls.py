@@ -19,7 +19,7 @@ from nautobot.core.api.views import (
     SettingsJSONSchemaView,
     StatusView,
 )
-from nautobot.extras.plugins.urls import plugin_api_patterns
+from nautobot.extras.plugins.urls import apps_api_patterns, plugin_api_patterns
 
 core_api_patterns = [
     path("csv-import-fields/", CSVImportFieldsForContentTypeAPIView.as_view(), name="csv-import-fields"),
@@ -60,7 +60,8 @@ urlpatterns = [
     path("swagger.yaml", SpectacularYAMLAPIView.as_view(), name="schema_yaml"),
     # GraphQL
     path("graphql/", GraphQLDRFAPIView.as_view(), name="graphql-api"),
-    # Plugins
+    # Apps
+    path("apps/", include((apps_api_patterns, "apps-api"))),
     path("plugins/", include((plugin_api_patterns, "plugins-api"))),
     # Core, keeping for backwards compatibility of the legacy UI (Dynamic Filter Form)
     path("core/", include((core_api_patterns, "core-api"))),

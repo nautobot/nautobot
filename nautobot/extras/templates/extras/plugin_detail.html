@@ -6,8 +6,8 @@
         <div class="col-md-12">
             <ol class="breadcrumb">
                 {% block breadcrumbs %}
-                    <li><a href="{% url 'plugins:plugins_list' %}">Installed Plugins</a></li>
-                    <li><a href="{% url 'plugins:plugin_detail' plugin=object.name %}">{{ object.verbose_name | bettertitle }}</a></li>
+                    <li><a href="{% url 'apps:apps_list' %}">Installed Apps</a></li>
+                    <li><a href="{% url 'apps:app_detail' app=object.name %}">{{ object.verbose_name | bettertitle }}</a></li>
                 {% endblock breadcrumbs %}
             </ol>
         </div>
@@ -16,12 +16,12 @@
         {% block buttons %}
             {% if object.home_view_name %}
                 <a href="{% url object.home_view_name %}" class="btn btn-success">
-                    <i class="mdi mdi-home"></i> Plugin Home
+                    <i class="mdi mdi-home"></i> App Home
                 </a>
             {% endif %}
             {% if object.config_view_name %}
                 <a href="{% url object.config_view_name %}" class="btn btn-warning">
-                    <i class="mdi mdi-cog"></i> Plugin Configuration
+                    <i class="mdi mdi-cog"></i> App Configuration
                 </a>
             {% endif %}
         {% endblock buttons %}
@@ -37,7 +37,7 @@
             {% block content_left_page %}
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <strong>Plugin</strong>
+                        <strong>App</strong>
                     </div>
                     <table class="table table-hover panel-body attr-table">
                         <tr>

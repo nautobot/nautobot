@@ -7,7 +7,7 @@ from nautobot.apps.ui import (
 
 menu_items = (
     NavMenuTab(
-        name="Plugins",
+        name="Apps",
         groups=(
             NavMenuGroup(
                 name="Example Nautobot App",
