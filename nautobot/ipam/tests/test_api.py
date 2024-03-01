@@ -21,11 +21,13 @@ from nautobot.ipam.models import (
     IPAddressToInterface,
     Namespace,
     Prefix,
+    PrefixLocationAssignment,
     RIR,
     RouteTarget,
     Service,
     VLAN,
     VLANGroup,
+    VLANLocationAssignment,
     VRF,
     VRFDeviceAssignment,
     VRFPrefixAssignment,
@@ -622,6 +624,35 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(len(response.data), 6)
 
 
+class PrefixLocationAssignmentTest(APIViewTestCases.APIViewTestCase):
+    model = PrefixLocationAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.prefixes = Prefix.objects.filter(locations__isnull=False)
+        cls.locations = Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(Prefix))
+        locations_without_prefix = cls.locations.exclude(prefixes__in=[cls.prefixes[0], cls.prefixes[1]])
+
+        cls.create_data = [
+            {
+                "prefix": cls.prefixes[0].pk,
+                "location": locations_without_prefix[1].pk,
+            },
+            {
+                "prefix": cls.prefixes[0].pk,
+                "location": locations_without_prefix[2].pk,
+            },
+            {
+                "prefix": cls.prefixes[1].pk,
+                "location": locations_without_prefix[3].pk,
+            },
+            {
+                "prefix": cls.prefixes[1].pk,
+                "location": locations_without_prefix[4].pk,
+            },
+        ]
+
+
 class ParallelPrefixTest(APITransactionTestCase):
     """
     Adapted from https://github.com/netbox-community/netbox/pull/3726
@@ -1032,6 +1063,35 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
             response = self.client.patch(f"{url}?api_version=2.1", data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertEqual(response.data["location"]["id"], data["location"])
+
+
+class VLANLocationAssignmentTest(APIViewTestCases.APIViewTestCase):
+    model = VLANLocationAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.vlans = VLAN.objects.filter(locations__isnull=False)
+        cls.locations = Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(VLAN))
+        locations_without_vlans = cls.locations.exclude(vlans__in=[cls.vlans[0], cls.vlans[1]])
+
+        cls.create_data = [
+            {
+                "vlan": cls.vlans[0].pk,
+                "location": locations_without_vlans[1].pk,
+            },
+            {
+                "vlan": cls.vlans[0].pk,
+                "location": locations_without_vlans[2].pk,
+            },
+            {
+                "vlan": cls.vlans[1].pk,
+                "location": locations_without_vlans[3].pk,
+            },
+            {
+                "vlan": cls.vlans[1].pk,
+                "location": locations_without_vlans[4].pk,
+            },
+        ]
 
 
 class ServiceTest(APIViewTestCases.APIViewTestCase):

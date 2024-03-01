@@ -218,8 +218,12 @@ class FilterTestCases:
             # Create random 5 char string to append to attribute, used for icontains partial lookup
             lookup = "".join(random.choices(string.ascii_lowercase, k=5))  # noqa: S311 # pseudo-random generator
             obj_field_value = getattr(obj, obj_field_name)
-            updated_attr = obj_field_value + lookup
-            setattr(obj, obj_field_name, updated_attr)
+            if isinstance(obj_field_value, str):
+                updated_attr = obj_field_value + lookup
+                setattr(obj, obj_field_name, updated_attr)
+            else:
+                # Obj value can be a bool or an integer
+                updated_attr = obj_field_value
             obj.save()
             # if lookup_method is iexact use the full updated attr
             if lookup_method == "iexact":

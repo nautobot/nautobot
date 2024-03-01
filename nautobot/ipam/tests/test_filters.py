@@ -17,11 +17,13 @@ from nautobot.ipam.filters import (
     IPAddressFilterSet,
     IPAddressToInterfaceFilterSet,
     PrefixFilterSet,
+    PrefixLocationAssignmentFilterSet,
     RIRFilterSet,
     RouteTargetFilterSet,
     ServiceFilterSet,
     VLANFilterSet,
     VLANGroupFilterSet,
+    VLANLocationAssignmentFilterSet,
     VRFFilterSet,
 )
 from nautobot.ipam.models import (
@@ -29,11 +31,13 @@ from nautobot.ipam.models import (
     IPAddressToInterface,
     Namespace,
     Prefix,
+    PrefixLocationAssignment,
     RIR,
     RouteTarget,
     Service,
     VLAN,
     VLANGroup,
+    VLANLocationAssignment,
     VRF,
 )
 from nautobot.tenancy.models import Tenant
@@ -196,6 +200,17 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         params = {"ip_version": ""}
         all_prefixes = self.queryset.all()
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, all_prefixes)
+
+
+class PrefixLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = PrefixLocationAssignment.objects.all()
+    filterset = PrefixLocationAssignmentFilterSet
+
+    generic_filter_tests = (
+        ["location", "location__name"],
+        ["location", "location__id"],
+        ["prefix", "prefix__id"],
+    )
 
 
 class PrefixFilterCustomDataTestCase(TestCase):
@@ -1153,6 +1168,17 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(Q(locations__in=[device.location]) | Q(locations__isnull=True)),
         )
+
+
+class VLANLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = VLANLocationAssignment.objects.all()
+    filterset = VLANLocationAssignmentFilterSet
+
+    generic_filter_tests = (
+        ["vlan", "vlan__vid"],
+        ["location", "location__name"],
+        ["location", "location__id"],
+    )
 
 
 class ServiceTestCase(FilterTestCases.FilterTestCase):
