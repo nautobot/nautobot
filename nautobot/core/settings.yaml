@@ -132,15 +132,15 @@
     "type": "string"
   "BRANDING_FILEPATHS":
     "default":
-      "favicon": ~
-      "header_bullet": ~
-      "icon_16": ~
-      "icon_32": ~
-      "icon_180": ~
-      "icon_192": ~
-      "icon_mask": ~
-      "logo": ~
-      "nav_bullet": ~
+      "favicon": null
+      "header_bullet": null
+      "icon_16": null
+      "icon_32": null
+      "icon_180": null
+      "icon_192": null
+      "icon_mask": null
+      "logo": null
+      "nav_bullet": null
     "description": >-
       A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate image assets used for
       custom branding. Each of these assets takes the place of the corresponding stock Nautobot asset.
@@ -436,6 +436,16 @@
     "environment_variable": "NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT"
     "type": "integer"
     "version_added": "1.6.0"
+  "CORS_ALLOW_ALL_ORIGINS":
+    "default": false
+    "description": "If `True`, all origins will be allowed. Other settings restricting allowed origins will be ignored."
+    "details": >-
+      Setting this to `True` can be dangerous, as it allows any website to make cross-origin requests to yours.
+      Generally you'll want to restrict the list of allowed origins with
+      [`CORS_ALLOWED_ORIGINS`](#cors_allowed_origins) or
+      [`CORS_ALLOWED_ORIGIN_REGEXES`](#cors_allowed_origin_regexes).
+    "environment_variable": "NAUTOBOT_CORS_ALLOW_ALL_ORIGINS"
+    "type": "boolean"
   "CORS_ALLOWED_ORIGINS":
     "default": []
     "description": "A list of origins that are authorized to make cross-site HTTP requests."
@@ -479,16 +489,6 @@
     "items":
       "$ref": "#/definitions/regex"
     "type": "array"
-  "CORS_ALLOW_ALL_ORIGINS":
-    "default": false
-    "description": "If `True`, all origins will be allowed. Other settings restricting allowed origins will be ignored."
-    "details": >-
-      Setting this to `True` can be dangerous, as it allows any website to make cross-origin requests to yours.
-      Generally you'll want to restrict the list of allowed origins with
-      [`CORS_ALLOWED_ORIGINS`](#cors_allowed_origins) or
-      [`CORS_ALLOWED_ORIGIN_REGEXES`](#cors_allowed_origin_regexes).
-    "environment_variable": "NAUTOBOT_CORS_ALLOW_ALL_ORIGINS"
-    "type": "boolean"
   "CSRF_TRUSTED_ORIGINS":
     "default": []
     "description": >-
@@ -765,7 +765,7 @@
       "Guide to object permissions": "../guides/permissions.md"
     "type": "object"
   "FORCE_SCRIPT_NAME":
-    "default": ~
+    "default": null
     "description": >-
       If not None, this will be used as the value of the SCRIPT_NAME environment variable in any HTTP request.
     "details": |-
@@ -800,7 +800,7 @@
       The prefix used for all relationship associations in GraphQL. e.g. `my_relationship` => `rel_my_relationship`.
     "type": "string"
   "HTTP_PROXIES":
-    "default": false
+    "default": null
     "description": >-
       A dictionary of HTTP proxies to use for outbound requests originating from Nautobot
       (such as when sending webhook requests).
@@ -1455,7 +1455,7 @@
     "type": "boolean"
   "SESSION_FILE_PATH":
     "$ref": "#/definitions/relative_path"
-    "default": ~
+    "default": null
     "description": >-
       HTTP session data is used to track authenticated users when they access Nautobot.
       By default, Nautobot stores session data in its database. However, this inhibits authentication to a
