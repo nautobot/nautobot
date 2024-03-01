@@ -416,7 +416,7 @@ class ViewTestCases:
             if isinstance(model_class, NotesMixin):
                 self.assertIsNotNone(fields.get("object_note"))
             if isinstance(model_class, PrimaryModel):
-                self.assertIsNotNone(fields.get("tags"), None)
+                self.assertIsNotNone(fields.get("tags"))
 
         def test_slug_autocreation(self):
             """Test that slug is autocreated through ORM."""
