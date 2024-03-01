@@ -193,6 +193,7 @@
         "description": "Bullet image used for nav menu headers"
         "environment_variable": "NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET"
     "type": "object"
+    "version_added": "1.2.0"
   "BRANDING_PREPENDED_FILENAME":
     "default": "nautobot_"
     "description": "Defines the prefix of the filename when exporting to CSV/YAML or export templates."
@@ -204,6 +205,7 @@
     "description": >-
       Defines the custom branding title that should be used in place of 'Nautobot' within user facing areas
       of the application, such as the HTML title of web pages.
+    "environment_variable": "NAUTOBOT_BRANDING_TITLE"
     "type": "string"
     "version_added": "1.2.0"
   "BRANDING_URLS":
