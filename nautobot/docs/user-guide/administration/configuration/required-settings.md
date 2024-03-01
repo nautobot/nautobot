@@ -31,6 +31,9 @@ In the event you do need to make customizations to how Celery interacts with the
 #### Configuring Celery for High Availability
 
 High availability clustering of Redis for use with Celery can be performed using Redis Sentinel. Please see documentation section on configuring [Celery for Redis Sentinel](../../administration/guides/caching.md#celery-sentinel-configuration) for more information.
+
+<!-- markdownlint-disable blanks-around-lists -->
+
 {% for property, attrs in settings_data.properties.items() if attrs.is_required_setting|default(false) %}
 
 ---
@@ -102,3 +105,4 @@ High availability clustering of Redis for use with Celery can be performed using
 {% endif %}
 
 {% endfor %}
+<!-- markdownlint-enable blanks-around-lists -->

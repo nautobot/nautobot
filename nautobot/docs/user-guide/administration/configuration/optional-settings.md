@@ -10,6 +10,8 @@ The [official Django documentation](https://docs.djangoproject.com/en/stable/ref
 
 ## Administratively Configurable Settings
 
+<!-- markdownlint-disable blanks-around-lists -->
+
 +++ 1.2.0
 
 A number of settings can alternatively be configured via the Nautobot Admin UI. To do so, these settings must **not** be defined in your `nautobot_config.py`, as any settings defined there will take precedence over any values defined in the Admin UI. Settings that are currently configurable via the Admin UI include:
@@ -116,6 +118,8 @@ can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can b
 {% endif %}
 
 {% endfor %}
+
+<!-- markdownlint-enable blanks-around-lists -->
 
 ## Environment-Variable-Only Settings
 
