@@ -1305,4 +1305,3 @@ class ControllerDeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
         blank=False,
         null=False,
     )
-
