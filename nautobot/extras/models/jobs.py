@@ -38,7 +38,6 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
     JOB_LOG_MAX_GROUPING_LENGTH,
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
-    JOB_MAX_GROUPING_LENGTH,
     JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
@@ -100,7 +99,7 @@ class Job(PrimaryModel):
     # Human-readable information, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
     grouping = models.CharField(
-        max_length=JOB_MAX_GROUPING_LENGTH,
+        max_length=CHARFIELD_MAX_LENGTH,
         help_text="Human-readable grouping that this job belongs to",
         db_index=True,
     )
@@ -299,8 +298,8 @@ class Job(PrimaryModel):
             raise ValidationError(f"Module name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
         if len(self.job_class_name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Job class name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
-        if len(self.grouping) > JOB_MAX_GROUPING_LENGTH:
-            raise ValidationError(f"Grouping may not exceed {JOB_MAX_GROUPING_LENGTH} characters in length")
+        if len(self.grouping) > CHARFIELD_MAX_LENGTH:
+            raise ValidationError(f"Grouping may not exceed {CHARFIELD_MAX_LENGTH} characters in length")
         if len(self.name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
 
