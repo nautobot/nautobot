@@ -7,18 +7,11 @@ class TestInvalidateMaxTreeDepthSignal(TestCase):
 
     def test_invalidate_max_tree_depth_without_tree_fields(self):
         """Test that max tree depth is not calculated by the invalidate_max_tree_depth signal."""
+        # Ensure that the max_depth hasn't already been cached
+        Location.objects.__dict__.pop("max_depth", None)
         location = Location.objects.first()
-        # Two SAVEPOINT, One SELECT, one UPDATE
-        with self.assertNumQueries(4):
-            Location.objects.without_tree_fields().update_or_create(
-                name=location.name, defaults={"description": "My updated signal description"}
-            )
-
-        try:
-            del Location.objects.max_depth
-            self.fail("`max_depth` should not have been calculated.")
-        except AttributeError:
-            pass
+        with self.assertNumQueries(1):
+            location.save()
 
 
 class QuerySetAncestorTests(TestCase):
