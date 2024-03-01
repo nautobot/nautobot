@@ -1188,6 +1188,7 @@
     "default": "~/.nautobot/"
     "description": >-
       The filesystem path to use to store Nautobot files (Jobs, uploaded images, Git repositories, etc.).
+    "environment_variable": "NAUTOBOT_ROOT"
   "NETWORK_DRIVERS":
     "default": {}
     "description": >-
@@ -1430,6 +1431,7 @@
   "SESSION_COOKIE_AGE":
     "default": 1209600
     "description": "The maximum age of session cookies, in seconds. The default value is 2 weeks."
+    "environment_variable": "NAUTOBOT_SESSION_COOKIE_AGE"
     "see_also":
       "Django documentation for `SESSION_COOKIE_AGE`": "https://docs.djangoproject.com/en/stable/ref/settings/#session-cookie-age"
       "SESSION_EXPIRE_AT_BROWSER_CLOSE": "#session_expire_at_browser_close"
