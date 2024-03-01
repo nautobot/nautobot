@@ -17,10 +17,14 @@ from django.utils.text import slugify
 from tree_queries.models import TreeNode
 
 from nautobot.core import testing
+from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.templatetags import helpers
 from nautobot.core.testing import mixins
 from nautobot.core.utils import lookup
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
+from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
+from nautobot.extras.models import CustomFieldModel, RelationshipModel
+from nautobot.extras.models.mixins import NotesMixin
 from nautobot.users import models as users_models
 
 __all__ = (
@@ -399,6 +403,20 @@ class ViewTestCases:
                     self.assertInstanceEqual(self._get_queryset().order_by("last_updated").last(), self.form_data)
                 else:
                     self.assertInstanceEqual(self._get_queryset().last(), self.form_data)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_extra_feature_form_fields_present(self):
+            model_class = self.model
+            model_form = lookup.get_form_for_model(model_class)
+            fields = model_form.base_fields
+            if isinstance(model_class, CustomFieldModel):
+                self.assertTrue(issubclass(CustomFieldModelFormMixin, model_form))
+            if isinstance(model_class, RelationshipModel):
+                self.assertTrue(issubclass(RelationshipModelFormMixin, model_form))
+            if isinstance(model_class, NotesMixin):
+                self.assertNotEqual(fields.get("object_note"), None)
+            if isinstance(model_class, PrimaryModel):
+                self.assertNotEqual(fields.get("tags"), None)
 
         def test_slug_autocreation(self):
             """Test that slug is autocreated through ORM."""
