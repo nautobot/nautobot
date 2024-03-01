@@ -597,6 +597,13 @@ class Device(PrimaryModel, ConfigContextModel):
         verbose_name="Software Image Files",
         help_text="Override the software image files associated with the software version for this device",
     )
+    controller_device_group = models.ForeignKey(
+        to="dcim.ControllerDeviceGroup",
+        on_delete=models.SET_NULL,
+        related_name="devices",
+        blank=True,
+        null=True,
+    )
 
     objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
 
@@ -1230,7 +1237,7 @@ class SoftwareVersion(PrimaryModel):
 class Controller(PrimaryModel, ConfigContextModel):
     """Controller model."""  # TODO: (whitej6) finialize description
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=255, unique=True)
     status = StatusField(blank=False, null=False)
     description = models.CharField(max_length=200, blank=True)
     location = models.ForeignKey(
@@ -1255,22 +1262,24 @@ class Controller(PrimaryModel, ConfigContextModel):
     )
     external_integration = models.ForeignKey(
         to="extras.ExternalIntegration",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name="controllers",
         blank=True,
         null=True,
     )
-    deployed_controller_type = models.ForeignKey(
-        to=ContentType,
+    deployed_controller_device = models.ForeignKey(
+        to="dcim.Device",
         on_delete=models.SET_NULL,
-        related_name="+",
+        related_name="controllers",
         blank=True,
         null=True,
     )
-    deployed_controller_id = models.UUIDField(blank=True, null=True)
-    deployed_controller = GenericForeignKey(ct_field="deployed_controller_type", fk_field="deployed_controller_id")
-    device_groups = models.ManyToManyField(
-        to="dcim.DeviceGroup", related_name="controllers", through="ControllerDeviceGroupAssociation"
+    deployed_controller_group = models.ForeignKey(
+        to="dcim.DeviceRedundancyGroup",
+        on_delete=models.SET_NULL,
+        related_name="controllers",
+        blank=True,
+        null=True,
     )
 
 
@@ -1284,19 +1293,10 @@ class Controller(PrimaryModel, ConfigContextModel):
     "statuses",
     "webhooks",
 )
-class DeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
+class ControllerDeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
     """Controller model."""  # TODO: (whitej6) finialize description
 
-    name = models.CharField(max_length=48)
-    devices = models.ManyToManyField(
-        to="dcim.Device",
-        related_name="device_groups",
-    )
-
-
-class ControllerDeviceGroupAssociation(BaseModel):
-    """Controller model."""  # TODO: (whitej6) finialize description
-
+    name = models.CharField(max_length=255, unique=True)
     weight = models.PositiveIntegerField(default=1000)
     controller = models.ForeignKey(
         to="dcim.Controller",
@@ -1305,10 +1305,4 @@ class ControllerDeviceGroupAssociation(BaseModel):
         blank=False,
         null=False,
     )
-    device = models.ForeignKey(
-        to="dcim.DeviceGroup",
-        on_delete=models.CASCADE,
-        related_name="+",
-        blank=False,
-        null=False,
-    )
+

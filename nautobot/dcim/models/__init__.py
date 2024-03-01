@@ -26,6 +26,8 @@ from .device_components import (
     RearPort,
 )
 from .devices import (
+    Controller,
+    ControllerDeviceGroup,
     Device,
     DeviceRedundancyGroup,
     DeviceType,
@@ -50,6 +52,8 @@ __all__ = (
     "ConsolePortTemplate",
     "ConsoleServerPort",
     "ConsoleServerPortTemplate",
+    "Controller",
+    "ControllerDeviceGroup",
     "Device",
     "DeviceBay",
     "DeviceBayTemplate",

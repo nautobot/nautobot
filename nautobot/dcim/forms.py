@@ -92,6 +92,8 @@ from .models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -1572,6 +1574,11 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
     )
     software_version = DynamicModelChoiceField(
         queryset=SoftwareVersion.objects.all(),
+        required=False,
+        query_params={"device_types": "$device_type"},
+    )
+    controller_device_group = DynamicModelChoiceField(
+        queryset=ControllerDeviceGroup.objects.all(),
         required=False,
         query_params={"device_types": "$device_type"},
     )
