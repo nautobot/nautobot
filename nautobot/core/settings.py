@@ -49,7 +49,7 @@ if "NAUTOBOT_ALLOW_REQUEST_PROFILING" in os.environ and os.environ["NAUTOBOT_ALL
     ALLOW_REQUEST_PROFILING = is_truthy(os.environ["NAUTOBOT_ALLOW_REQUEST_PROFILING"])
 
 # URL schemes that are allowed within links in Nautobot
-ALLOWED_URL_SCHEMES = (
+ALLOWED_URL_SCHEMES = [
     "file",
     "ftp",
     "ftps",
@@ -64,7 +64,7 @@ ALLOWED_URL_SCHEMES = (
     "tftp",
     "vnc",
     "xmpp",
-)
+]
 
 # Banners to display to users. HTML is allowed.
 if "NAUTOBOT_BANNER_BOTTOM" in os.environ and os.environ["NAUTOBOT_BANNER_BOTTOM"] != "":
@@ -384,9 +384,6 @@ SPECTACULAR_SETTINGS = {
 # Databases
 #
 
-# Only PostgresSQL is supported, so database driver is hard-coded. This can
-# still be overloaded in custom settings.
-# https://docs.djangoproject.com/en/stable/ref/settings/#databases
 DATABASES = {
     "default": {
         "NAME": os.getenv("NAUTOBOT_DB_NAME", "nautobot"),
@@ -407,16 +404,19 @@ if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
     DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
 
 # The secret key is used to encrypt session keys and salt passwords.
-SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY")
+SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
 
 # Default overrides
-ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
+if "NAUTOBOT_ALLOWED_HOSTS" in os.environ and os.environ["NAUTOBOT_ALLOWED_HOSTS"] != "":
+    ALLOWED_HOSTS = os.environ["NAUTOBOT_ALLOWED_HOSTS"].split(" ")
+else:
+    ALLOWED_HOSTS = []
 CSRF_TRUSTED_ORIGINS = []
 CSRF_FAILURE_VIEW = "nautobot.core.views.csrf_failure"
 DATE_FORMAT = os.getenv("NAUTOBOT_DATE_FORMAT", "N j, Y")
 DATETIME_FORMAT = os.getenv("NAUTOBOT_DATETIME_FORMAT", "N j, Y g:i a")
 DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "False"))
-INTERNAL_IPS = ("127.0.0.1", "::1")
+INTERNAL_IPS = ["127.0.0.1", "::1"]
 FORCE_SCRIPT_NAME = None
 
 TESTING = "test" in sys.argv
@@ -863,7 +863,7 @@ CONTENT_TYPE_CACHE_TIMEOUT = int(os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT"
 # Celery broker URL used to tell workers where queues are located
 CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
 
-# Celery results backend URL to tell workers where to publish task results
+# Celery results backend URL to tell workers where to publish task results - DO NOT CHANGE THIS
 CELERY_RESULT_BACKEND = "nautobot.core.celery.backends.NautobotDatabaseBackend"
 
 # Enables extended task result attributes (name, args, kwargs, worker, retries, queue, delivery_info) to be written to backend.

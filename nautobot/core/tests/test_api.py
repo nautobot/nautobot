@@ -1,6 +1,7 @@
 import csv
 from io import BytesIO, StringIO
 import json
+import os
 from unittest import skip
 
 from constance import config
@@ -13,6 +14,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.exceptions import ParseError
 from rest_framework.settings import api_settings
+import yaml
 
 from nautobot.circuits.models import Provider
 from nautobot.core import testing
@@ -875,6 +877,20 @@ class APIOrderingTestCase(testing.APITestCase):
                         field_name=field_name,
                         is_fk_field=field_name in fk_fields,
                     )
+
+
+class SettingsJSONSchemaViewTestCase(testing.APITestCase):
+    """Tests for the /api/settings-schema/ REST API endpoint."""
+
+    def test_correct_response(self):
+        file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/settings.yaml"
+        with open(file_path, "r") as schemafile:
+            expected_schema_data = yaml.safe_load(schemafile)
+
+        url = reverse("setting_schema_json")
+        response = self.client.get(url, **self.header)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, expected_schema_data)
 
 
 class NewUIGetMenuAPIViewTestCase(testing.APITestCase):

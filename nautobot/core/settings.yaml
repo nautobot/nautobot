@@ -112,6 +112,20 @@
       "Administration guide to request profiling": "../guides/request-profiling.md"
     "type": "boolean"
     "version_added": "2.2.0"
+  "AUTHENTICATION_BACKENDS":
+    "default":
+      - "nautobot.core.authentication.ObjectPermissionBackend"
+    "description": >-
+      A list of authentication backend classes (as strings) to use when attempting to authenticate a user.
+      The entry `"nautobot.core.authentication.ObjectPermissionBackend"` **must** always be the last in this list.
+    "items":
+      "type": "string"
+    "see_also":
+      "Django documentation for `AUTHENTICATION_BACKENDS`": "https://docs.djangoproject.com/en/stable/ref/settings/#std-setting-AUTHENTICATION_BACKENDS"
+      "LDAP Authentication": "./authentication/ldap.md"
+      "Remote User Authentication": "./authentication/remote.md"
+      "Single Sign On (SSO)": "./authentication/sso.md"
+    "type": "array"
   "BANNER_BOTTOM":
     "default": ""
     "description": "Custom content to be displayed in a banner at the bottom of the page. HTML is allowed."
@@ -211,7 +225,7 @@
   "BRANDING_URLS":
     "default":
       "code": "https://github.com/nautobot/nautobot"
-      "docs": "static/docs/index.html"
+      "docs": null
       "help": "https://github.com/nautobot/nautobot/wiki"
     "description": >-
       A set of URLs that correspond to helpful links in the right of the footer on every web page.
@@ -237,6 +251,7 @@
     "type": "object"
     "version_added": "1.2.0"
   "CACHES":
+    "additionalProperties": true
     "default":
       "default":
         "BACKEND": "django_redis.cache.RedisCache"
@@ -261,7 +276,6 @@
           `django-cacheops`.
     "is_required_setting": true
     "properties":
-      "additionalProperties": true
       "default":
         "properties":
           "BACKEND":
@@ -293,21 +307,21 @@
       "Guide to Nautobot Caching, including TLS and HA configuration": "../../administration/guides/caching.md"
     "type": "object"
   "CELERY_BROKER_TRANSPORT_OPTIONS":
+    "additionalProperties": true
     "default": {}
     "description": "A dict of additional options passed to the Celery broker transport."
     "details": >-
       This is only required when
       [configuring Celery to utilize Redis Sentinel](../../administration/guides/caching.md#celery-sentinel-configuration).
     "properties":
-      "additionalProperties": true
       "master_name":
         "type": "string"
       "sentinel_kwargs":
-        "type": "object"
+        "additionalProperties": true
         "properties":
-          "additionalProperties": true
           "password":
             "type": "string"
+        "type": "object"
     "type": "object"
   "CELERY_BROKER_URL":
     "default": "redis://localhost:6379/0"
@@ -316,8 +330,9 @@
     "format": "uri"
     "type": "string"
   "CELERY_BROKER_USE_SSL":
-    "default": false
+    "default": null
     "description": "Optional configuration for Celery to use custom SSL certificates to connect to Redis."
+    "environment_variable": "NAUTOBOT_CELERY_BROKER_USE_SSL"
     "properties":
       "ssl_ca_certs":
         "$ref": "#/definitions/absolute_path"
@@ -501,6 +516,7 @@
       "Django documentation for CSRF protection": "https://docs.djangoproject.com/en/stable/ref/csrf/#how-it-works"
     "type": "array"
   "DATABASES":
+    "additionalProperties": true
     "default":
       "default":
         "CONN_MAX_AGE": 300
@@ -547,7 +563,6 @@
           `nautobot-server init`, this line is already present in your config and no action is required.
     "is_required_setting": true
     "properties":
-      "additionalProperties": true
       "default":
         "additionalProperties": true
         "properties":
@@ -713,6 +728,7 @@
       "type": "string"
     "type": "array"
   "EXTERNAL_AUTH_DEFAULT_PERMISSIONS":
+    "additionalProperties": true
     "default": {}
     "description": "A mapping of permissions to assign a new user account when created using SSO authentication."
     "details": |-
@@ -759,8 +775,6 @@
           'tenancy.view_tenantgroup': None,
       }
       ```
-    "properties":
-      "additionalProperties": true
     "see_also":
       "Guide to object permissions": "../guides/permissions.md"
     "type": "object"
@@ -872,7 +886,7 @@
       The maximum file size (in bytes) that a running Job will be allowed to create in a single call
       to `Job.create_file()`.
     "environment_variable": "NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"
-    "is_constance_config": "true"
+    "is_constance_config": true
     "see_also":
       "`JOB_FILE_IO_STORAGE`": "#job_file_io_storage"
     "type": "integer"
@@ -929,6 +943,28 @@
     "is_constance_config": true
     "type": "boolean"
     "version_added": "2.0.0"
+  "LOG_DEPRECATION_WARNINGS":
+    "default": false
+    "description": >-
+      Set the environment variable `NAUTOBOT_LOG_DEPRECATION_WARNINGS` to change this setting.
+      This can be set to `True` to allow deprecation warnings raised by Nautobot to (additionally)
+      be logged as `WARNING` level log messages.
+    "details": |-
+      !!! warning
+          This setting cannot be effectively configured in `nautobot_config.py` due to the order of code evaluation
+          at startup time. To enable this setting, always use the `NAUTOBOT_LOG_DEPRECATION_WARNINGS`
+          environment variable.
+
+      Deprecation warnings are normally silent in Python, but can be enabled globally by
+      [various means](https://docs.python.org/3/library/warnings.html) such as setting the `PYTHONWARNINGS`
+      environment variable. However, doing so can be rather noisy, as it will also include warnings from within
+      Django about various code in various package dependencies of Nautobot's, etc.
+
+      This configuration setting allows a more targeted enablement of only warnings from within Nautobot itself,
+      which can be useful when vetting various Nautobot Apps for future-proofness against upcoming changes to Nautobot.
+    "environment_variable": "NAUTOBOT_LOG_DEPRECATION_WARNINGS"
+    "type": "boolean"
+    "version_added": "1.5.2"
   "LOGGING":
     "additionalProperties": true
     "default":
@@ -936,12 +972,11 @@
       "disable_existing_loggers": false
       "formatters":
         "normal":
-          "format":
-            "datefmt": "%H:%M:%S"
-            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s"
-          "verbose":
-            "datefmt": "%H:%M:%S"
-            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s"
+          "datefmt": "%H:%M:%S"
+          "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s"
+        "verbose":
+          "datefmt": "%H:%M:%S"
+          "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s"
       "handlers":
         "normal_console":
           "class": "logging.StreamHandler"
@@ -954,11 +989,11 @@
       "loggers":
         "django":
           "handlers":
-          - "normal_console"
+            - "normal_console"
           "level": "INFO"
         "nautobot":
           "handlers":
-          - "normal_console"
+            - "normal_console"
           "level": "INFO"
     "description": "A dictionary containing the configuration settings for logging in Nautobot."
     "details": |-
@@ -1105,6 +1140,7 @@
       "Guide to Nautobot Prometheus metrics": "../guides/prometheus-metrics.md"
     "type": "boolean"
   "NAPALM_ARGS":
+    "additionalProperties": true
     "default": {}
     "description": "A dictionary of optional arguments to pass to NAPALM when instantiating a network driver."
     "details": |-
@@ -1136,7 +1172,6 @@
           a [secret](../../platform-functionality/secret.md) defined in that group can override the
           `NAPALM_ARGS['secret']` or `NAPALM_ARGS['enable_password']` default value defined here.
     "properties":
-      "additionalProperties": true
       "secret":
         "type": "string"
       "enable_password":
@@ -1188,8 +1223,17 @@
     "default": "~/.nautobot/"
     "description": >-
       The filesystem path to use to store Nautobot files (Jobs, uploaded images, Git repositories, etc.).
+    "details": |-
+      This setting is used internally in the core settings to provide default locations for
+      [features that require file storage](index.md#file-storage), and the
+      [default location of the `nautobot_config.py`](index.md#specifying-your-configuration).
+
+      !!! warning
+          Do not override `NAUTOBOT_ROOT` in your `nautobot_config.py`. It will not work as expected.
+          If you need to customize this setting, please always set the `NAUTOBOT_ROOT` environment variable.
     "environment_variable": "NAUTOBOT_ROOT"
   "NETWORK_DRIVERS":
+    "additionalProperties": true
     "default": {}
     "description": >-
       An optional dictionary to extend or override the default `Platform.network_driver` translations provided
@@ -1209,8 +1253,6 @@
       `ntc_templates`, `pyats`, `pyntc`, and `scrapli`, but you can also add additional keys if you have
       an alternative network driver that you want your Nautobot instance to include.
     "is_constance_config": true
-    "properties":
-      "additionalProperties": true
     "type": "object"
     "version_added": "1.6.0"
   "PAGINATE_COUNT":
@@ -1333,6 +1375,22 @@
     "format": "uri"
     "is_constance_config": true
     "type": "string"
+  "REMOTE_AUTH_AUTO_CREATE_USER":
+    "default": false
+    "description": >-
+      If set to `True`, local accounts will be automatically created for users authenticated via a remote service.
+    "see_also":
+      "Remote User Authentication": "./authentication/remote.md"
+    "type": "boolean"
+  "REMOTE_AUTH_HEADER":
+    "default": "HTTP_REMOTE_USER"
+    "description": >-
+      When remote user authentication is in use, this is the name of the HTTP header which informs Nautobot
+      of the currently authenticated user. For example, to use the request header `X-Remote-User`, it needs to
+      be set to `"HTTP_X_REMOTE_USER"`.
+    "see_also":
+      "Remote User Authentication": "./authentication/remote.md"
+    "type": "string"
   "SANITIZER_PATTERNS":
     "default": []
     "default_literal": |-
@@ -1425,7 +1483,7 @@
     "is_required_setting": true
     "type": "string"
   "SESSION_CACHE_ALIAS":
-    "default": ""
+    "default": "default"
     "description": "The Alias for the sessions cache defined in CACHES, used in Nautobot Version Control App."
     "type": "string"
   "SESSION_COOKIE_AGE":
@@ -1484,6 +1542,13 @@
     "see_also":
       "Django documentation on date/time format strings": "https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date"
     "type": "string"
+  "SOCIAL_AUTH_BACKEND_PREFIX":
+    "default": "social_core.backends"
+    "description": "Configuration of a custom external authentication backend with python-social-auth."
+    "see_also":
+      "Single Sign On": "./authentication/sso.md"
+      "`social-auth-app-django`": "https://python-social-auth.readthedocs.io/en/latest/configuration/django.html"
+    "type": "string"
   "STATIC_ROOT":
     "$ref": "#/definitions/absolute_path"
     "default": "~/.nautobot/static"
@@ -1493,7 +1558,7 @@
     "see_also":
       "Django documentation for `STATIC_ROOT`": "https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-STATIC_ROOT"
   "STORAGE_BACKEND":
-    "default": false
+    "default": null
     "description": "The backend storage engine for handling uploaded files (e.g. image attachments)."
     "details": |-
       Nautobot supports integration with the [`django-storages`](https://django-storages.readthedocs.io/en/stable/)
@@ -1557,7 +1622,7 @@
     "type": "string"
     "version_added": "2.0.2"
   "TEST_FACTORY_SEED":
-    "default": false
+    "default": null
     "description": >-
       This configuration provides a fixed seed string for the pseudo-random generator used to populate test data
       into the database, providing for reproducible randomness across consecutive test runs.

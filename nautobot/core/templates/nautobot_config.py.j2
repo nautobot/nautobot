@@ -41,6 +41,10 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #
 # CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
 
+# Optional configuration dict for Celery to use custom SSL certificates to connect to Redis.
+#
+# CELERY_BROKER_USE_SSL = None
+
 # Database configuration. See the Django documentation for a complete list of available parameters:
 #   https://docs.djangoproject.com/en/stable/ref/settings/#databases
 #
@@ -76,12 +80,10 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #                                   #
 #####################################
 
-# Specify one or more name and email address tuples representing Nautobot administrators.
+# Specify one or more (name, email address) tuples representing Nautobot administrators.
 # These people will be notified of application errors (assuming correct email settings are provided).
 #
-# ADMINS = [
-#     ['John Doe', 'jdoe@example.com'],
-# ]
+# ADMINS = []
 
 # FQDNs that are considered trusted origins for secure, cross-domain, requests such as HTTPS POST.
 # If running Nautobot under a single domain, you may not need to set this variable;
