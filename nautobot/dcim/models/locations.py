@@ -5,6 +5,7 @@ from django.db import models
 from django.utils.functional import classproperty
 from timezone_field import TimeZoneField
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeManager, TreeModel, TreeQuerySet
@@ -30,8 +31,8 @@ class LocationType(TreeModel, OrganizationalModel):
     while a "Room" LocationType might allow Racks and Devices.
     """
 
-    name = models.CharField(max_length=100, unique=True)
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="location_types",
@@ -144,8 +145,8 @@ class Location(TreeModel, PrimaryModel):
     """
 
     # A Location's name is unique within context of its parent, not globally unique.
-    name = models.CharField(max_length=100, db_index=True)
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
+    _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True)
     location_type = models.ForeignKey(
         to="dcim.LocationType",
         on_delete=models.PROTECT,
@@ -159,8 +160,10 @@ class Location(TreeModel, PrimaryModel):
         blank=True,
         null=True,
     )
-    description = models.CharField(max_length=200, blank=True)
-    facility = models.CharField(max_length=50, blank=True, help_text="Local facility ID or description")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    facility = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Local facility ID or description"
+    )
     asn = ASNField(
         blank=True,
         null=True,
@@ -184,8 +187,8 @@ class Location(TreeModel, PrimaryModel):
         null=True,
         help_text="GPS coordinate (longitude)",
     )
-    contact_name = models.CharField(max_length=100, blank=True)
-    contact_phone = models.CharField(max_length=50, blank=True)
+    contact_name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    contact_phone = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     contact_email = models.EmailField(blank=True, verbose_name="Contact E-mail")
     comments = models.TextField(blank=True)
     images = GenericRelation(to="extras.ImageAttachment")
