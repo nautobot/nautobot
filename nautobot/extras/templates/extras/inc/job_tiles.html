@@ -34,17 +34,19 @@
                     <button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Actions">
                         <i class="mdi mdi-dots-horizontal"></i>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-right context-menu">
-                        <li><a href="{% url 'extras:job' pk=row.record.pk %}"><i class="mdi mdi-information-outline text-muted"></i>Details</a></li>
-                        <li><a href="{% url 'extras:job_changelog' pk=row.record.pk %}"><i class="mdi mdi-history text-muted"></i>Change log</a></li>
-                        {% if perms.extras.change_job %}
-                            <li><a href="{% url 'extras:job_edit' pk=row.record.pk %}"><i class="mdi mdi-pencil text-muted"></i>Edit</a></li>
-                        {% endif %}
-                        {% if perms.extras.delete_job %}
-                            <li role="separator" class="divider"></li>
-                            <li><a href="{% url 'extras:job_delete' pk=row.record.pk %}"><i class="mdi mdi-trash-can-outline text-danger"></i><span class="text-danger">Delete</span></a></li>
-                        {% endif %}
-                    </ul>
+                    {% with request.path|add:"?display=tiles"|urlencode as return_url %}
+                        <ul class="dropdown-menu dropdown-menu-right context-menu">
+                            <li><a href="{% url 'extras:job' pk=row.record.pk %}"><i class="mdi mdi-information-outline text-muted"></i>Details</a></li>
+                            <li><a href="{% url 'extras:job_changelog' pk=row.record.pk %}"><i class="mdi mdi-history text-muted"></i>Change log</a></li>
+                            {% if perms.extras.change_job %}
+                                <li><a href="{% url 'extras:job_edit' pk=row.record.pk %}?return_url={{return_url}}"><i class="mdi mdi-pencil text-muted"></i>Edit</a></li>
+                            {% endif %}
+                            {% if perms.extras.delete_job %}
+                                <li role="separator" class="divider"></li>
+                                <li><a href="{% url 'extras:job_delete' pk=row.record.pk %}?return_url={{return_url}}"><i class="mdi mdi-trash-can-outline text-danger"></i><span class="text-danger">Delete</span></a></li>
+                            {% endif %}
+                        </ul>
+                    {% endwith %}
                 </div>
             </header>
 
