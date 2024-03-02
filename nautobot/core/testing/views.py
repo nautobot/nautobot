@@ -414,9 +414,9 @@ class ViewTestCases:
             if isinstance(model_class, RelationshipModel):
                 self.assertTrue(issubclass(RelationshipModelFormMixin, model_form))
             if isinstance(model_class, NotesMixin):
-                self.assertNotEqual(fields.get("object_note"), None)
+                self.assertIsNotNone(fields.get("object_note"))
             if isinstance(model_class, PrimaryModel):
-                self.assertNotEqual(fields.get("tags"), None)
+                self.assertIsNotNone(fields.get("tags"))
 
         def test_slug_autocreation(self):
             """Test that slug is autocreated through ORM."""
