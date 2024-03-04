@@ -82,6 +82,8 @@ def _preprocess_settings(settings, config_path):
             settings.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.postgresql"
         elif "mysql" in settings.DATABASES["default"]["ENGINE"]:
             settings.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.mysql"
+        elif "sqlite" in settings.DATABASES["default"]["ENGINE"]:
+            settings.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.sqlite3"
 
     # Create secondary db connection for job logging. This still writes to the default db, but because it's a separate
     # connection, it allows allows us to "escape" from transaction.atomic() and ensure that job log entries are saved

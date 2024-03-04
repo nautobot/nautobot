@@ -144,7 +144,7 @@ class WebRequestContextTestCase(TestCase):
         self.assertIsNotNone(snapshots["prechange"])
         self.assertIsNotNone(snapshots["postchange"])
         self.assertSequenceEqual(
-            list(snapshots["differences"]["added"].keys()),
+            sorted(snapshots["differences"]["added"].keys()),
             ("created", "description"),
         )
         self.assertEqual(snapshots["differences"]["added"]["description"], "changed")

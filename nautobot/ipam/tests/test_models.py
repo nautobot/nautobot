@@ -184,10 +184,11 @@ class TestVarbinaryIPField(TestCase):
         # Mapping of vendor -> db_type
         db_types = {
             "postgresql": "bytea",
+            "sqlite": "blob",
             "mysql": "varbinary(16)",
         }
 
-        expected = db_types[connection.vendor]
+        expected = db_types.get(connection.vendor, "varbinary(16)")
         self.assertEqual(self.field.db_type(connection), expected)
 
     def test_value_to_string(self):

@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import URLValidator
-from django.db import models
+from django.db import connection, models
 
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.generics import PrimaryModel
@@ -104,8 +104,10 @@ class GitRepository(PrimaryModel):
 
         if self.provided_contents:
             q = models.Q()
-            for item in self.provided_contents:
-                q |= models.Q(provided_contents__contains=item)
+            # TODO: Django's sqlite backend doesn't support JSONField __contains lookup
+            if connection.vendor != "sqlite":
+                for item in self.provided_contents:
+                    q |= models.Q(provided_contents__contains=item)
             duplicate_repos = GitRepository.objects.filter(remote_url=self.remote_url).exclude(id=self.id).filter(q)
             if duplicate_repos.exists():
                 raise ValidationError(

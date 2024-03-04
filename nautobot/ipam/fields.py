@@ -21,6 +21,10 @@ class VarbinaryIPField(models.BinaryField):
         if connection.vendor == "postgresql":
             return "bytea"
 
+        # Use 'blob' type for sqlite3
+        if connection.vendor == "sqlite":
+            return "blob"
+
         # Or 'varbinary' for everyone else.
         return "varbinary(16)"
 
@@ -63,6 +67,9 @@ class VarbinaryIPField(models.BinaryField):
             return str(value)
 
         if value is None:
+            return value
+
+        if value == "NoObject":  # CSV export - this feels like a significant hack
             return value
 
         return str(self._parse_address(value))

@@ -267,8 +267,8 @@ class IPAddressQuerySet(TestCase):
         )
 
     @skipIf(
-        connection.vendor == "postgresql",
-        "Not currently supported on postgresql",
+        connection.vendor in ["postgresql", "sqlite"],
+        "Not currently supported on postgresql or sqlite",
     )
     def test_host_exact(self):
         self.assertQuerysetEqualAndNotEmpty(
@@ -312,8 +312,8 @@ class IPAddressQuerySet(TestCase):
         )
 
     @skipIf(
-        connection.vendor == "postgresql",
-        "Not currently supported on postgresql",
+        connection.vendor in ["postgresql", "sqlite"],
+        "Not currently supported on postgresql or sqlite",
     )
     def test_host_endswith(self):
         self.assertQuerysetEqualAndNotEmpty(
@@ -353,8 +353,8 @@ class IPAddressQuerySet(TestCase):
         self.assertEqual(IPAddress.objects.select_related("nat_inside").filter(host__iendswith="8::1").count(), 1)
 
     @skipIf(
-        connection.vendor == "postgresql",
-        "Not currently supported on postgresql",
+        connection.vendor in ["postgresql", "sqlite"],
+        "Not currently supported on postgresql or sqlite",
     )
     def test_host_startswith(self):
         self.assertQuerysetEqualAndNotEmpty(
@@ -408,8 +408,8 @@ class IPAddressQuerySet(TestCase):
         )
 
     @skipIf(
-        connection.vendor == "postgresql",
-        "Not currently supported on postgresql",
+        connection.vendor in ["postgresql", "sqlite"],
+        "Not currently supported on postgresql or sqlite",
     )
     def test_host_regex(self):
         self.assertQuerysetEqualAndNotEmpty(
@@ -649,8 +649,8 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(Prefix.objects.filter(prefix="192.168.0.0/16")[0], prefix)
 
     @skipIf(
-        connection.vendor == "postgresql",
-        "Not currently supported on postgresql",
+        connection.vendor in ["postgresql", "sqlite"],
+        "Not currently supported on postgresql or sqlite",
     )
     def test_network_exact(self):
         self.assertEqual(Prefix.objects.filter(network__exact="192.168.0.0").count(), 1)
@@ -666,8 +666,8 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(Prefix.objects.filter(network__iexact="fd78:da4f:e596:c218::").count(), 0)
 
     @skipIf(
-        connection.vendor == "postgresql",
-        "Not currently supported on postgresql",
+        connection.vendor in ["postgresql", "sqlite"],
+        "Not currently supported on postgresql or sqlite",
     )
     def test_network_endswith(self):
         self.assertEqual(Prefix.objects.filter(network__endswith=".224").count(), 1)
@@ -683,8 +683,8 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(Prefix.objects.filter(network__iendswith="c218::").count(), 0)
 
     @skipIf(
-        connection.vendor == "postgresql",
-        "Not currently supported on postgresql",
+        connection.vendor in ["postgresql", "sqlite"],
+        "Not currently supported on postgresql or sqlite",
     )
     def test_network_startswith(self):
         self.assertEqual(Prefix.objects.filter(network__startswith="192.").count(), 7)
@@ -702,8 +702,8 @@ class PrefixQuerysetTestCase(TestCase):
         self.assertEqual(Prefix.objects.filter(network__istartswith="fd79:").count(), 0)
 
     @skipIf(
-        connection.vendor == "postgresql",
-        "Not currently supported on postgresql",
+        connection.vendor in ["postgresql", "sqlite"],
+        "Not currently supported on postgresql or sqlite",
     )
     def test_network_regex(self):
         self.assertEqual(Prefix.objects.filter(network__regex=r"192\.(.*)\.0").count(), 4)

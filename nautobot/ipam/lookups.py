@@ -65,6 +65,9 @@ def get_ip_info(field_name, ip_str, alias=None):
         ip_details.q_bcast = _postgresql_varbin_to_broadcast(ip_details.length)
         ip_details.q_ip = _postgresql_varbin_to_integer(field_name, ip_details.length, alias=alias)
 
+    else:
+        raise NotSupportedError(f"{_connection.vendor} is not yet supported")
+
     return ip_details
 
 
@@ -90,8 +93,8 @@ class StringMatchMixin:
     def process_lhs(self, qn, connection, lhs=None):
         lhs = lhs or self.lhs
         lhs_string, lhs_params = qn.compile(lhs)
-        if connection.vendor == "postgresql":
-            raise NotSupportedError("Lookup not supported on postgresql.")
+        if connection.vendor in ["postgresql", "sqlite"]:
+            raise NotSupportedError(f"Lookup not supported on {connection.vendor}.")
         return f"INET6_NTOA({lhs_string})", lhs_params
 
 
@@ -236,10 +239,12 @@ class NetIn(Lookup):
         # https://github.com/Suor/django-cacheops/blob/a5ed1ac28c7259f5ad005e596cc045d1d61e2c51/cacheops/query.py#L175
         # Without 1, and one 1 value as %s, will result in stacktrace. A non-impacting condition is added to the query
         # TODO: Although we don't use cacheops now, removing this code causes a traceback in MySQL? Leaving for now
-        if _connection.vendor == "mysql":
+        if _connection.vendor in ["mysql", "sqlite"]:
             self.query_starter = "'1' NOT IN %s AND "
         elif _connection.vendor == "postgresql":
             self.query_starter = "'1' != ANY(%s) AND "
+        else:
+            raise NotSupportedError(f"Don't know the correct query_starter for {_connection.vendor}")
         return self.rhs
 
     def as_sql(self, qn, connection):
