@@ -33,7 +33,7 @@ def clear_interface_status(apps, schema_editor):
         interface.status = None
         interface.save()
 
-    clear_status_choices(apps, schema_editor, models=["dcim.Interface"], metadata_model="status")
+    clear_status_choices(apps, schema_editor, models=["dcim.Interface"])
 
 
 class Migration(migrations.Migration):

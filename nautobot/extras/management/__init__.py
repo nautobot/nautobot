@@ -174,16 +174,18 @@ def export_metadata_from_choiceset(choiceset, color_map=None, description_map=No
         description_map (dict): A dictionary of status/role name -> default description
         metadata_model (str): "role" or "status"
     """
-    if metadata_model == "role":
+    if metadata_model.lower() == "role":
         if color_map is None:
             color_map = ROLE_COLOR_MAP
         if description_map is None:
             description_map = ROLE_DESCRIPTION_MAP
-    else:
+    elif metadata_model.lower() == "status":
         if color_map is None:
             color_map = STATUS_COLOR_MAP
         if description_map is None:
             description_map = STATUS_DESCRIPTION_MAP
+    else:
+        raise ValueError("only status and role are supported for export_metadata_from_choiceset")
 
     choices = []
 
@@ -228,14 +230,16 @@ def _create_custom_role_or_status_instances(
         verbosity = 1
 
     choiceset_map = {}
-    if metadata_model == "role":
+    if metadata_model.lower() == "role":
         choiceset_map = ROLE_CHOICESET_MAP
         if not models:
             models = choiceset_map.keys()
-    else:
+    elif metadata_model.lower() == "status":
         choiceset_map = STATUS_CHOICESET_MAP
         if not models:
             models = choiceset_map.keys()
+    else:
+        raise ValueError("only status and role are supported for _create_custom_role_or_status_instances")
 
     # Prep the app and get the model dynamically
     try:
@@ -318,14 +322,16 @@ def _clear_custom_role_or_status_instances(
         verbosity = 1
 
     choiceset_map = {}
-    if metadata_model == "role":
+    if metadata_model.lower() == "role":
         choiceset_map = ROLE_CHOICESET_MAP
         if not models:
             models = choiceset_map.keys()
-    else:
+    elif metadata_model.lower() == "status":
         choiceset_map = STATUS_CHOICESET_MAP
         if not models:
             models = choiceset_map.keys()
+    else:
+        raise ValueError("only status and role are supported for _clear_custom_role_or_status_instances")
 
     # Prep the app and get the model dynamically
     try:
