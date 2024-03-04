@@ -38,7 +38,7 @@ In a case like this, Nautobot is able to support _variadic_ natural keys, where 
 class Location(TreeModel):
 
     class Meta:
-        unique_together = [("parent", "name")]
+        unique_together = [["parent", "name"]]
 
     @classproperty
     def natural_key_field_lookups(cls):
@@ -78,7 +78,7 @@ Instead of this:
 ```python
 class VLANGroup(BaseModel):
     class Meta:
-        unique_together = [("location", "name")]   # wrong, nested location natural key cannot be variadic
+        unique_together = [["location", "name"]]   # wrong, nested location natural key cannot be variadic
 ```
 
 Do this:
@@ -86,7 +86,7 @@ Do this:
 ```python
 class VLANGroup(BaseModel):
     class Meta:
-        unique_together = [("name", "location")]   # correct, nested location natural key can be variadic
+        unique_together = [["name", "location"]]   # correct, nested location natural key can be variadic
 ```
 
 ### No Uniqueness Constraints

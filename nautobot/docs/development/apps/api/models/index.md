@@ -37,7 +37,7 @@ class Animal(BaseModel):
         return self.name
 
     class Meta:
-        unique_together = [("name", "sound")]
+        unique_together = [["name", "sound"]]
 ```
 
 Once you have defined the model(s) for your app, you'll need to create the database schema migrations. A migration file is essentially a set of instructions for manipulating the database to support your new model, or to alter existing models.
