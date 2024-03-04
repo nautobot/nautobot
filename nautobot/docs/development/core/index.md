@@ -93,7 +93,7 @@ While anything not explicitly stated above should be not be considered scoped to
 
 * Functions or methods that start with an underscore (e.g., `_private_func`)
 * Any functions, classes, and modules **not** in `nautobot.apps.*`.
-* Any modules, classes, functions, or feature that are explicitly marked as "internal" or "experimental" in the documentation
+* Any modules, classes, functions, or features that are explicitly marked as "internal" or "experimental" in the documentation
 * Any features or functionalities that are not part of the official documentation should not be relied upon
 
 ### Release Schedule
