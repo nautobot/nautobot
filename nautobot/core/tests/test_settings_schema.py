@@ -4,9 +4,12 @@ from unittest import mock, TestCase
 
 from django.conf import global_settings as django_defaults
 from django.test import tag
+import faker
 from jsonschema.exceptions import SchemaError, ValidationError
 from jsonschema.validators import Draft202012Validator
 import yaml
+
+from nautobot.core.settings_funcs import is_truthy
 
 SETTINGS_DOCUMENTATION_SCHEMA = {
     "$id": "https://nautobot.com/2.2/settings-schema/strict",
@@ -56,7 +59,7 @@ class SettingsJSONSchemaTestCase(TestCase):
     def setUp(self):
         file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/settings.yaml"
         with open(file_path, "r") as schemafile:
-            self.schema_data = yaml.safe_load(schemafile)
+            self.settings_schema = yaml.safe_load(schemafile)
         self.maxDiff = None
 
     def tearDown(self):
@@ -71,14 +74,14 @@ class SettingsJSONSchemaTestCase(TestCase):
         """
 
         self.assertEqual(
-            sorted(self.schema_data["properties"], key=lambda s: s.replace("_", " ")),
-            list(self.schema_data["properties"]),
+            sorted(self.settings_schema["properties"], key=lambda s: s.replace("_", " ")),
+            list(self.settings_schema["properties"]),
         )
 
     def test_schema_valid(self):
         """Test the validity of the JSON Schema in settings.yaml as a JSON schema."""
         try:
-            Draft202012Validator.check_schema(self.schema_data)
+            Draft202012Validator.check_schema(self.settings_schema)
         except SchemaError as e:
             raise ValidationError({"data_schema": e.message}) from e
 
@@ -86,7 +89,7 @@ class SettingsJSONSchemaTestCase(TestCase):
         """
         Check for unrecognized keys in the schema that might indicate an incorrect attempt at defining documentation.
         """
-        Draft202012Validator(schema=SETTINGS_DOCUMENTATION_SCHEMA).validate(self.schema_data)
+        Draft202012Validator(schema=SETTINGS_DOCUMENTATION_SCHEMA).validate(self.settings_schema)
 
     @mock.patch.dict(os.environ, {}, clear=True)
     @mock.patch.object(sys, "argv", [])  # to trick settings.TESTING to evaluate to False
@@ -181,12 +184,12 @@ class SettingsJSONSchemaTestCase(TestCase):
         # Test that settings variables are accurately described in the schema
         for key in keys:
             with self.subTest(f"Checking for settings attribute {key} in the settings schema"):
-                self.assertIn(key, self.schema_data["properties"])
-            if key not in self.schema_data["properties"]:
+                self.assertIn(key, self.settings_schema["properties"])
+            if key not in self.settings_schema["properties"]:
                 continue
 
             with self.subTest(f"Checking default value for settings attribute {key} against the schema"):
-                if self.schema_data["properties"][key].get("$ref", None) in [
+                if self.settings_schema["properties"][key].get("$ref", None) in [
                     "#/definitions/absolute_path",
                     "#/definitions/callable",
                     "#/definitions/relative_path",
@@ -195,21 +198,22 @@ class SettingsJSONSchemaTestCase(TestCase):
                     # and path-like defaults probably depend on the user context
                     continue
 
-                if self.schema_data["properties"][key].get("default_literal", None):
+                if self.settings_schema["properties"][key].get("default_literal", None):
                     # Probably a complicated setting that isn't easily documentable in JSON schema
                     continue
 
                 # Is the default in the settings correctly documented?
-                self.assertEqual(getattr(nautobot_settings, key), self.schema_data["properties"][key]["default"])
+                self.assertEqual(getattr(nautobot_settings, key), self.settings_schema["properties"][key]["default"])
 
         # Test that schema properties actually exist in the settings
-        for key in self.schema_data["properties"]:
+        for key in self.settings_schema["properties"]:
             if key in getattr(nautobot_settings, "CONSTANCE_CONFIG"):
                 # Constance settings don't have a value set by default in nautobot.core.settings,
                 # but they have a default in CONSTANCE_CONFIG
                 with self.subTest(f"Checking default value for Constance attribute {key} against the schema"):
                     self.assertEqual(
-                        nautobot_settings.CONSTANCE_CONFIG[key].default, self.schema_data["properties"][key]["default"]
+                        nautobot_settings.CONSTANCE_CONFIG[key].default,
+                        self.settings_schema["properties"][key]["default"],
                     )
                 continue
             with self.subTest(f"Checking for settings schema property {key} in nautobot.core.settings"):
@@ -224,4 +228,63 @@ class SettingsJSONSchemaTestCase(TestCase):
                         self.assertIn(key, django_defaults.__dict__.keys())
                     except AssertionError as err2:
                         raise err from err2
-                    self.assertEqual(getattr(django_defaults, key), self.schema_data["properties"][key]["default"])
+                    self.assertEqual(getattr(django_defaults, key), self.settings_schema["properties"][key]["default"])
+
+    def test_environment_variable_settings(self):
+        """Check that settings with an environment_variable key are set from the environment."""
+
+        fake = faker.Faker()
+
+        def _get_fake_value(value_type):
+            if value_type == "boolean":
+                return str(fake.boolean())
+            elif value_type == "integer":
+                return str(fake.random_int())
+            return f"FAKE_ENV_{fake.word()}"
+
+        with mock.patch.dict(os.environ, {}):
+            # Set fake environment vars based on defined schema types
+            for key, value in self.settings_schema["properties"].items():
+                if "environment_variable" not in value:
+                    continue
+                setting_type = value.get("type", "string")
+                env_var = value["environment_variable"]
+
+                # ALLOWED_HOSTS is a special case (space separated instead of commas)
+                if key == "ALLOWED_HOSTS":
+                    os.environ[env_var] = " ".join(_get_fake_value("string") for _ in range(3))
+                elif setting_type == "array":
+                    children_type = value.get("items", {}).get("type", "string")
+                    os.environ[env_var] = ",".join(_get_fake_value(children_type) for _ in range(3))
+                else:
+                    os.environ[env_var] = _get_fake_value(setting_type)
+
+            # Force reimport of settings module after mocking out os.environ above
+            sys.modules.pop("nautobot.core.settings", None)
+            import nautobot.core.settings as nautobot_settings
+
+            # Test that settings are loaded from the mocked environment
+            for key, value in self.settings_schema["properties"].items():
+                if key not in nautobot_settings.__dict__.keys():
+                    continue
+                if "environment_variable" not in self.settings_schema["properties"][key]:
+                    continue
+                with self.subTest(f"Checking environment variable for settings attribute {key}"):
+                    setting_type = value.get("type", "string")
+                    env_var = self.settings_schema["properties"][key]["environment_variable"]
+                    # ALLOWED_HOSTS is a special case (space separated instead of commas)
+                    if key == "ALLOWED_HOSTS":
+                        expected_value = os.environ[env_var].split(" ")
+                    elif setting_type == "array":
+                        children_type = value.get("items", {}).get("type", "string")
+                        if children_type == "integer":
+                            expected_value = [int(v) for v in os.environ[env_var].split(",")]
+                        else:
+                            expected_value = os.environ[env_var].split(",")
+                    elif setting_type == "boolean":
+                        expected_value = is_truthy(os.environ[env_var])
+                    elif setting_type == "integer":
+                        expected_value = int(os.environ[env_var])
+                    else:
+                        expected_value = os.environ[env_var]
+                    self.assertEqual(getattr(nautobot_settings, key), expected_value)
