@@ -93,7 +93,6 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 ### Fixed
 
 - [#4106](https://github.com/nautobot/nautobot/issues/4106) - Fixed inefficient query in VirtualMachine create form.
-- [#4419](https://github.com/nautobot/nautobot/issues/4419) - Re-added `NavMenuButton` back into `nautobot.apps.ui` module.
 - [#5172](https://github.com/nautobot/nautobot/issues/5172) - Fixed Brand Icon mouseover Background: Fix for mouseover effect on the Brand / Icon (was flashing white background vs being transparent) when in dark mode.
 - [#5307](https://github.com/nautobot/nautobot/issues/5307) - Fixed Custom Field form field(s) missing from git repository edit form.
 - [#5309](https://github.com/nautobot/nautobot/issues/5309) - Fixed `Tenant` UI detail view breadcrumb with invalid `TenantGroup` filter link.
