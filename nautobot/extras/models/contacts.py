@@ -3,6 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel  # isort: off
 
 from nautobot.extras.utils import extras_features
@@ -12,8 +13,8 @@ from .statuses import StatusField
 
 
 class ContactTeamSharedBase(PrimaryModel):
-    name = models.CharField(max_length=100, db_index=True)
-    phone = models.CharField(max_length=100, blank=True, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
+    phone = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True)
     email = models.EmailField(blank=True, db_index=True, verbose_name="E-mail")
     address = models.TextField(blank=True)
 

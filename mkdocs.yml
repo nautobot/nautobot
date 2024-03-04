@@ -497,6 +497,7 @@ nav:
         - nautobot.apps.change_logging: "code-reference/nautobot/apps/change_logging.md"
         - nautobot.apps.choices: "code-reference/nautobot/apps/choices.md"
         - nautobot.apps.config: "code-reference/nautobot/apps/config.md"
+        - nautobot.apps.constants: "code-reference/nautobot/apps/constants.md"
         - nautobot.apps.datasources: "code-reference/nautobot/apps/datasources.md"
         - nautobot.apps.exceptions: "code-reference/nautobot/apps/exceptions.md"
         - nautobot.apps.factory: "code-reference/nautobot/apps/factory.md"

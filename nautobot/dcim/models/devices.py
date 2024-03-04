@@ -12,6 +12,7 @@ from django.utils.functional import cached_property, classproperty
 from django.utils.html import format_html
 import yaml
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, RestrictedQuerySet
 from nautobot.core.models.fields import NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
@@ -65,8 +66,8 @@ class Manufacturer(OrganizationalModel):
     A Manufacturer represents a company which produces hardware devices; for example, Juniper or Dell.
     """
 
-    name = models.CharField(max_length=100, unique=True)
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
         ordering = ["name"]
@@ -87,8 +88,8 @@ class HardwareFamily(PrimaryModel):
     A Hardware Family is a model that represents a grouping of DeviceTypes.
     """
 
-    name = models.CharField(max_length=100, unique=True)
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
         ordering = ["name"]
@@ -149,8 +150,10 @@ class DeviceType(PrimaryModel):
         blank=True,
         null=True,
     )
-    model = models.CharField(max_length=100)
-    part_number = models.CharField(max_length=50, blank=True, help_text="Discrete part number (optional)")
+    model = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    part_number = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Discrete part number (optional)"
+    )
     # 2.0 TODO: Profile filtering on this field if it could benefit from an index
     u_height = models.PositiveSmallIntegerField(default=1, verbose_name="Height (U)")
     # todoindex:
@@ -384,7 +387,7 @@ class Platform(OrganizationalModel):
     by specifying a network driver; `netutils` is then used to derive library-specific driver information from this.
     """
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     manufacturer = models.ForeignKey(
         to="dcim.Manufacturer",
         on_delete=models.PROTECT,
@@ -394,7 +397,7 @@ class Platform(OrganizationalModel):
         help_text="Optionally limit this platform to devices of a certain manufacturer",
     )
     network_driver = models.CharField(
-        max_length=100,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         help_text=(
             "The normalized network driver to use when interacting with devices, e.g. cisco_ios, arista_eos, etc."
@@ -402,7 +405,7 @@ class Platform(OrganizationalModel):
         ),
     )
     napalm_driver = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         verbose_name="NAPALM driver",
         help_text="The name of the NAPALM driver to use when Nautobot internals interact with devices",
@@ -414,7 +417,7 @@ class Platform(OrganizationalModel):
         verbose_name="NAPALM arguments",
         help_text="Additional arguments to pass when initiating the NAPALM driver (JSON format)",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     @cached_property
     def network_driver_mappings(self):
@@ -472,15 +475,17 @@ class Device(PrimaryModel, ConfigContextModel):
         null=True,
     )
     name = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- intentional, see below
-        max_length=64,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         null=True,  # because name is part of uniqueness constraint but is optional
         db_index=True,
     )
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, null=True, db_index=True)
-    serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number", db_index=True)
+    _name = NaturalOrderingField(
+        target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True, null=True, db_index=True
+    )
+    serial = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, verbose_name="Serial number", db_index=True)
     asset_tag = models.CharField(
-        max_length=100,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         null=True,
         unique=True,
@@ -953,8 +958,8 @@ class VirtualChassis(PrimaryModel):
         blank=True,
         null=True,
     )
-    name = models.CharField(max_length=64, unique=True)
-    domain = models.CharField(max_length=30, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    domain = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     natural_key_field_names = ["name"]
 
@@ -1008,9 +1013,9 @@ class DeviceRedundancyGroup(PrimaryModel):
     A DeviceRedundancyGroup represents a logical grouping of physical hardware for the purposes of high-availability.
     """
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     status = StatusField(blank=False, null=False)
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     failover_strategy = models.CharField(
         max_length=50,
@@ -1102,7 +1107,7 @@ class SoftwareImageFile(PrimaryModel):
         related_name="software_image_files",
         verbose_name="Software Version",
     )
-    image_file_name = models.CharField(blank=False, max_length=255, verbose_name="Image File Name")
+    image_file_name = models.CharField(blank=False, max_length=CHARFIELD_MAX_LENGTH, verbose_name="Image File Name")
     image_file_checksum = models.CharField(blank=True, max_length=256, verbose_name="Image File Checksum")
     hashing_algorithm = models.CharField(
         choices=SoftwareImageFileHashingAlgorithmChoices,
@@ -1189,8 +1194,10 @@ class SoftwareVersion(PrimaryModel):
     """A software version for a Device, Virtual Machine or Inventory Item."""
 
     platform = models.ForeignKey(to="dcim.Platform", on_delete=models.CASCADE)
-    version = models.CharField(max_length=255)
-    alias = models.CharField(max_length=255, blank=True, help_text="Optional alternative label for this version")
+    version = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    alias = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Optional alternative label for this version"
+    )
     release_date = models.DateField(null=True, blank=True, verbose_name="Release Date")
     end_of_support_date = models.DateField(null=True, blank=True, verbose_name="End of Support Date")
     documentation_url = models.URLField(blank=True, verbose_name="Documentation URL")
