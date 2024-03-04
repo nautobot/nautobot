@@ -1,1 +1,0 @@
-Fixed 'docker-compose: command not found' error when running invoke commands.
