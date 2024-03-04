@@ -123,10 +123,9 @@ class ExampleModel(PrimaryModel):
     slug = AutoSlugField(populate_from='name')
 ```
 
-### CharField and SlugField
+### CharField and SlugField Max Length
 
-When constructing a CharField or SlugField, always utilise the 'CHARFIELD_MAX_LENGTH' constant unless it is greater than the 'CHARFIELD_MAX_LENGTH' value, which is '255'.
-
+When constructing a CharField or SlugField, always utilize the 'CHARFIELD_MAX_LENGTH' constant unless your field requires a value greater than 'CHARFIELD_MAX_LENGTH', which is '255'.
 ## Getting URL Routes
 
 When developing new models a need often arises to retrieve a reversible route for a model to access it in either the web UI or the REST API. When this time comes, you **must** use `nautobot.core.utils.lookup.get_route_for_model`. You **must not** write your own logic to construct route names.
