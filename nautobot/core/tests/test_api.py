@@ -959,7 +959,7 @@ class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
             },
             "Platform": {
                 "Platform": {
-                    "Installed Apps": "/plugins/installed-plugins/",
+                    "Installed Apps": "/apps/installed-apps/",
                     "Git Repositories": "/extras/git-repositories/",
                 },
                 "Governance": {"Change Log": "/extras/object-changes/"},
