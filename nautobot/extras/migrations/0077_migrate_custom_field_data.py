@@ -35,9 +35,10 @@ def generate_unique_custom_field_slug_and_migrate_custom_field_data(apps, schema
 
     # Move name to labels
     # Filtering on null or empty labels
-    custom_fields = CustomField.objects.filter(label__isnull=True).union(CustomField.objects.filter(label__exact=""))
-
-    for cf in custom_fields:
+    for cf in CustomField.objects.filter(label__isnull=True):
+        cf.label = cf.name
+        cf.save()
+    for cf in CustomField.objects.filter(label__exact=""):
         cf.label = cf.name
         cf.save()
 
