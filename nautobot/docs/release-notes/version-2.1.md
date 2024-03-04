@@ -85,6 +85,7 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#5172](https://github.com/nautobot/nautobot/issues/5172) - Added Better mobile friendly bottom navbar: This update will switch to vertically aligned bottom nav menu items once a certain media query is hit, making for a better mobile experience.
 - [#5172](https://github.com/nautobot/nautobot/issues/5172) - Added automatic Side Navbar collapse for mobile devices.  This is based on media query and will trigger at specific width.
 - [#5329](https://github.com/nautobot/nautobot/issues/5329) - Added caching of `ChangeLoggedModelsQuery().as_queryset()` to improve performance when saving many objects in a change-logged context.
+- [#5361](https://github.com/nautobot/nautobot/issues/5361) - Added `nautobot.core.testing.forms.FormTestCases` base class and added it to `nautobot.apps.testing` as well.
 
 ### Changed
 
@@ -96,9 +97,9 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 - [#5172](https://github.com/nautobot/nautobot/issues/5172) - Fixed Brand Icon mouseover Background: Fix for mouseover effect on the Brand / Icon (was flashing white background vs being transparent) when in dark mode.
 - [#5307](https://github.com/nautobot/nautobot/issues/5307) - Fixed Custom Field form field(s) missing from git repository edit form.
 - [#5309](https://github.com/nautobot/nautobot/issues/5309) - Fixed `Tenant` UI detail view breadcrumb with invalid `TenantGroup` filter link.
-- [#5309](https://github.com/nautobot/nautobot/issues/5309) - Fixed `TenantGroup` UI detail view with invalid "add tenant" button invalid query_params link.
-- [#5309](https://github.com/nautobot/nautobot/issues/5309) - Fixed `DeviceForm` invalid `cluster` field query_params.
-- [#5309](https://github.com/nautobot/nautobot/issues/5309) - Fixed `PrefixForm` invalid `vlan` and `vlan_group` fields query_params.
+- [#5309](https://github.com/nautobot/nautobot/issues/5309) - Fixed `TenantGroup` UI detail view with invalid "add tenant" button invalid `query_params` link.
+- [#5309](https://github.com/nautobot/nautobot/issues/5309) - Fixed `DeviceForm` invalid `cluster` field `query_params`.
+- [#5309](https://github.com/nautobot/nautobot/issues/5309) - Fixed `PrefixForm` invalid `vlan` and `vlan_group` fields `query_params`.
 - [#5311](https://github.com/nautobot/nautobot/issues/5311) - Fixed dependencies in various migration files.
 - [#5332](https://github.com/nautobot/nautobot/issues/5332) - Fixed Docker image missing OS-level dependencies for SSO (SAML) support.
 - [#5334](https://github.com/nautobot/nautobot/issues/5334) - Fixed migration from 1.x failing when specific duplicate prefixes are present.
