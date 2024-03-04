@@ -1,0 +1,1 @@
+Fixed `invalidate_max_depth_cache` itself calculating `max_depth` on querysets without tree fields.
