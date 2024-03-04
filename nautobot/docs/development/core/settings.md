@@ -26,14 +26,14 @@ The environment variable should typically be named `NAUTOBOT_<setting_name>` unl
 
 For Constance-enabled settings, the general pattern would be:
 
-```python
+```python title="nautobot/core/settings.py"
 if "NAUTOBOT_MY_SETTING" in os.environ and os.environ["NAUTOBOT_MY_SETTING"] != "":
     MY_SETTING = os.environ["NAUTOBOT_MY_SETTING"]
 ```
 
 and in `CONSTANCE_CONFIG`:
 
-```python
+```python title="nautobot/core/settings.py"
 CONSTANCE_CONFIG = {
     "MY_SETTING": ConstanceConfigItem(
         default="<default_value>",
@@ -44,7 +44,7 @@ CONSTANCE_CONFIG = {
 
 For non-Constance-enabled settings, the pattern is simpler:
 
-```python
+```python title="nautobot/core/settings.py"
 MY_SETTING = os.getenv("NAUTOBOT_MY_SETTING", "<default_value>")
 ```
 
@@ -52,7 +52,7 @@ MY_SETTING = os.getenv("NAUTOBOT_MY_SETTING", "<default_value>")
 
 As of Nautobot 2.2.0, settings documentation is automatically generated from the contents of `nautobot/core/settings.yaml`. This document describes a JSON Schema for Nautobot settings, with a number of custom extensions to support richer documentation. In general, documentation for a typical string-based setting will take the following form:
 
-```yaml
+```yaml title="nautobot/core/settings.yaml"
 "properties":
   "MY_SETTING":
     "default": "some_default"
