@@ -13,6 +13,7 @@ from django.db import models, transaction
 from django.forms.widgets import TextInput
 from django.utils.html import format_html
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     add_blank_choice,
     CommentField,
@@ -72,8 +73,8 @@ class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="Internal field name. Please use underscores rather than dashes in this key.",
         slugify_function=slugify_dashes_to_underscores,
     )
-    label = models.CharField(max_length=100, help_text="Name of the field as displayed to users")
-    description = models.CharField(max_length=200, blank=True)
+    label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, help_text="Name of the field as displayed to users")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     template = models.TextField(max_length=500, help_text="Jinja2 template code for field value")
     fallback_value = models.CharField(
         max_length=500,
@@ -324,7 +325,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="The object(s) to which this field applies.",
     )
     grouping = models.CharField(
-        max_length=255,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         help_text="Human-readable grouping that this custom field belongs to.",
     )
@@ -335,19 +336,21 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="The type of value(s) allowed for this field.",
     )
     label = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         help_text="Name of the field as displayed to users.",
         blank=False,
     )
     key = AutoSlugField(
         blank=True,
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         separator="_",
         populate_from="label",
         help_text="Internal field name. Please use underscores rather than dashes in this key.",
         slugify_function=slugify_dashes_to_underscores,
     )
-    description = models.CharField(max_length=200, blank=True, help_text="A helpful description for this field.")
+    description = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="A helpful description for this field."
+    )
     required = models.BooleanField(
         default=False,
         help_text="If true, this field is required when creating new objects or editing an existing object.",
@@ -530,7 +533,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             if self.type == CustomFieldTypeChoices.TYPE_URL:
                 field = LaxURLField(required=required, initial=initial)
             elif self.type == CustomFieldTypeChoices.TYPE_TEXT:
-                field = forms.CharField(max_length=255, required=required, initial=initial)
+                field = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=required, initial=initial)
 
             if self.validation_regex:
                 field.validators = [
@@ -690,7 +693,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
             type__in=[CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT]
         ),
     )
-    value = models.CharField(max_length=100)
+    value = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
 
     documentation_static_path = "docs/user-guide/platform-functionality/customfield.html"

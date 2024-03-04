@@ -6,6 +6,7 @@ from django.db import models, transaction
 from django.db.models import Sum
 from django.utils.functional import classproperty
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, MACAddressCharField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
@@ -63,10 +64,10 @@ class ComponentModel(PrimaryModel):
     """
 
     device = ForeignKeyWithAutoRelatedName(to="dcim.Device", on_delete=models.CASCADE)
-    name = models.CharField(max_length=64, db_index=True)
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
-    label = models.CharField(max_length=64, blank=True, help_text="Physical label")
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
+    _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True)
+    label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     natural_key_field_names = ["name", "device"]
 
@@ -502,7 +503,11 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 
     # Override ComponentModel._name to specify naturalize_interface function
     _name = NaturalOrderingField(
-        target_field="name", naturalize_function=naturalize_interface, max_length=100, blank=True, db_index=True
+        target_field="name",
+        naturalize_function=naturalize_interface,
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True,
+        db_index=True,
     )
     lag = models.ForeignKey(
         to="self",
@@ -777,12 +782,12 @@ class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancest
     A collection of Interfaces that supply a redundancy group for protocols like HSRP/VRRP.
     """
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     status = StatusField(blank=False, null=False)
     # Preemptively model 2.0 behavior by making `created` a DateTimeField rather than a DateField.
     created = models.DateTimeField(auto_now_add=True)
     description = models.CharField(
-        max_length=200,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
     )
     interfaces = models.ManyToManyField(
@@ -798,7 +803,7 @@ class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancest
         verbose_name="Redundancy Protocol",
     )
     protocol_group_id = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
     )
     secrets_group = models.ForeignKey(
@@ -1042,14 +1047,14 @@ class InventoryItem(TreeModel, ComponentModel):
         null=True,
     )
     part_id = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         verbose_name="Part ID",
         blank=True,
         help_text="Manufacturer-assigned part identifier",
     )
-    serial = models.CharField(max_length=255, verbose_name="Serial number", blank=True, db_index=True)
+    serial = models.CharField(max_length=CHARFIELD_MAX_LENGTH, verbose_name="Serial number", blank=True, db_index=True)
     asset_tag = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         unique=True,
         blank=True,
         null=True,

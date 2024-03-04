@@ -10,6 +10,7 @@ from django.db.models.fields import TextField
 from django.forms import inlineformset_factory, ModelMultipleChoiceField
 from django.urls.base import reverse
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     add_blank_choice,
     APISelect,
@@ -175,7 +176,7 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
     )
     key = SlugField(
         label="Key",
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         slug_source="label",
         help_text="Internal name of this field. Please use underscores rather than dashes.",
     )
@@ -279,7 +280,7 @@ class ConfigContextBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, Bulk
     config_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
     weight = forms.IntegerField(required=False, min_value=0)
     is_active = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect())
-    description = forms.CharField(required=False, max_length=100)
+    description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
 
     class Meta:
         nullable_fields = [
@@ -339,7 +340,7 @@ class ConfigContextSchemaForm(NautobotModelForm):
 
 class ConfigContextSchemaBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ConfigContextSchema.objects.all(), widget=forms.MultipleHiddenInput)
-    description = forms.CharField(required=False, max_length=100)
+    description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
 
     class Meta:
         nullable_fields = [
@@ -378,10 +379,12 @@ class CustomFieldDescriptionField(CommentField):
 
 
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
-    label = forms.CharField(required=True, max_length=50, help_text="Name of the field as displayed to users.")
+    label = forms.CharField(
+        required=True, max_length=CHARFIELD_MAX_LENGTH, help_text="Name of the field as displayed to users."
+    )
     key = SlugField(
         label="Key",
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         slug_source="label",
         help_text="Internal name of this field. Please use underscores rather than dashes.",
     )
@@ -863,7 +866,7 @@ class JobBulkEditForm(NautobotBulkEditForm):
         help_text="Human-readable grouping that this job belongs to",
     )
     description = forms.CharField(
-        max_length=200,
+        max_length=CHARFIELD_MAX_LENGTH,
         required=False,
         help_text="Markdown formatting and a limited subset of HTML are supported",
     )
@@ -901,7 +904,7 @@ class JobBulkEditForm(NautobotBulkEditForm):
         "<br>Set to 0 to use Nautobot system default",
     )
     task_queues = JSONArrayFormField(
-        base_field=forms.CharField(max_length=100),
+        base_field=forms.CharField(max_length=CHARFIELD_MAX_LENGTH),
         help_text="Comma separated list of task queues that this job can run on. A blank list will use the default queue",
         required=False,
     )
@@ -1306,7 +1309,7 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
     key = SlugField(
         help_text="Internal name of this relationship. Please use underscores rather than dashes.",
         label="Key",
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         slug_source="label",
     )
     source_type = forms.ModelChoiceField(
@@ -1576,7 +1579,7 @@ class TagFilterForm(NautobotFilterForm):
 class TagBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), widget=forms.MultipleHiddenInput)
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
-    description = forms.CharField(max_length=200, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         nullable_fields = ["description"]
