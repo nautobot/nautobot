@@ -16,7 +16,7 @@ The [official Django documentation](https://docs.djangoproject.com/en/stable/ref
 
 A number of settings can alternatively be configured via the Nautobot Admin UI. To do so, these settings must **not** be defined in your `nautobot_config.py`, as any settings defined there will take precedence over any values defined in the Admin UI. Settings that are currently configurable via the Admin UI include:
 
-{% for property, attrs in settings_data.properties.items() %}
+{% for property, attrs in settings_schema.properties.items() %}
 {% if attrs.is_constance_config|default(false) %}
 * [`{{ property }}`](#{{ property|lower }})
 {% endif %}
@@ -42,7 +42,7 @@ EXTRA_INSTALLED_APPS = [
 This will ensure your default setting's `INSTALLED_APPS` do not have to be modified, and the user
 can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can be added using `EXTRA_MIDDLEWARE`.
 
-{% for property, attrs in settings_data.properties.items() if not attrs.is_required_setting|default(false) %}
+{% for property, attrs in settings_schema.properties.items() if not attrs.is_required_setting|default(false) %}
 
 ---
 

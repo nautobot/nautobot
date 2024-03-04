@@ -10,4 +10,4 @@ def define_env(env):
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "nautobot", "core", "settings.yaml"
     )
     with open(settings_file, "rt") as fh:
-        env.variables["settings_data"] = yaml.safe_load(fh)
+        env.variables["settings_schema"] = yaml.safe_load(fh)

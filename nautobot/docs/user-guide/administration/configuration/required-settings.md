@@ -34,7 +34,7 @@ High availability clustering of Redis for use with Celery can be performed using
 
 <!-- markdownlint-disable blanks-around-lists -->
 
-{% for property, attrs in settings_data.properties.items() if attrs.is_required_setting|default(false) %}
+{% for property, attrs in settings_schema.properties.items() if attrs.is_required_setting|default(false) %}
 
 ---
 
