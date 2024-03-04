@@ -258,7 +258,7 @@ class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
                 # Collect interface IPs
                 interface_ip_assignments = IPAddressToInterface.objects.filter(
                     vm_interface__in=interface_ids
-                ).prefetch_related("ip_address")
+                ).select_related("ip_address")
                 if interface_ip_assignments.exists():
                     ip_list = [
                         (
