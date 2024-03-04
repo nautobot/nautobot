@@ -996,6 +996,40 @@
           "handlers":
             - "normal_console"
           "level": "INFO"
+    "default_literal": |-
+      ```python
+      {
+          'version': 1,
+          'disable_existing_loggers': False,
+          'formatters': {
+              'normal': {
+                  'datefmt': '%H:%M:%S',
+                  'format': '%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s',
+              },
+              'verbose': {
+                  'datefmt': '%H:%M:%S',
+                  'format': '%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s '
+                            '%(funcName)30s() :\n  %(message)s',
+              },
+          },
+          'handlers': {
+              'normal_console': {
+                  'class': 'logging.StreamHandler',
+                  'formatter': 'normal',
+                  'level': 'INFO',
+              },
+              'verbose_console': {
+                  'class': 'logging.StreamHandler',
+                  'formatter': 'verbose',
+                  'level': 'DEBUG',
+              },
+          },
+          'loggers': {
+              'django': {'handlers': ['normal_console'], 'level': 'INFO'},
+              'nautobot': {'handlers': ['normal_console'], 'level': 'INFO'},
+          },
+      }
+      ```
     "description": "A dictionary containing the configuration settings for logging in Nautobot."
     "details": |-
       The default translates to:

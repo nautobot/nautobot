@@ -192,12 +192,13 @@ class SettingsJSONSchemaTestCase(TestCase):
                     # Functions like UI_RACK_VIEW_TRUNCATE_FUNCTION don't have a default expressable in JSON Schema,
                     # and path-like defaults probably depend on the user context
                     continue
-                elif self.schema_data["properties"][key].get("default_literal", None):
+
+                if self.schema_data["properties"][key].get("default_literal", None):
                     # Probably a complicated setting that isn't easily documentable in JSON schema
                     continue
-                else:
-                    # Is the default in the settings correctly documented?
-                    self.assertEqual(getattr(nautobot_settings, key), self.schema_data["properties"][key]["default"])
+
+                # Is the default in the settings correctly documented?
+                self.assertEqual(getattr(nautobot_settings, key), self.schema_data["properties"][key]["default"])
 
         for key in self.schema_data["properties"]:
             if key in getattr(nautobot_settings, "CONSTANCE_CONFIG"):
