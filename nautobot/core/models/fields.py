@@ -9,6 +9,7 @@ from django_extensions.db.fields import AutoSlugField as _AutoSlugField
 from netaddr import AddrFormatError, EUI, mac_unix_expanded
 from taggit.managers import TaggableManager
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import fields, widgets
 from nautobot.core.models import ordering
 from nautobot.core.models.managers import TagsManager
@@ -133,7 +134,7 @@ class AutoSlugField(_AutoSlugField):
     """
 
     def __init__(self, *args, **kwargs):
-        kwargs.setdefault("max_length", 100)
+        kwargs.setdefault("max_length", CHARFIELD_MAX_LENGTH)
         kwargs.setdefault("editable", True)
         kwargs.setdefault("overwrite_on_add", False)
         kwargs.setdefault("unique", True)
