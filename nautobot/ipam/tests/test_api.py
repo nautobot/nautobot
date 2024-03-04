@@ -338,7 +338,6 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
                 "rir": rir.pk,
                 "type": choices.PrefixTypeChoices.TYPE_POOL,
                 "namespace": cls.namespace.pk,
-                "locations": [cls.locations[0].pk, cls.locations[1].pk],
             },
             {
                 "prefix": "2001:db8:abcd:12::/80",
@@ -346,7 +345,6 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
                 "rir": rir.pk,
                 "type": choices.PrefixTypeChoices.TYPE_NETWORK,
                 "namespace": cls.namespace.pk,
-                "locations": [cls.locations[0].pk],
             },
             {
                 "prefix": "192.168.6.0/24",
@@ -388,7 +386,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         with self.subTest("valid POST"):
             url = reverse("ipam-api:prefix-list")
             data = {**self.create_data[0]}
-            data["location"] = data.pop("locations")[0]
+            data["location"] = self.locations[0].pk
             response = self.client.post(f"{url}?api_version=2.1", data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
             self.assertTrue(Prefix.objects.filter(pk=response.data["id"]).exists())
@@ -397,7 +395,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             prefix = Prefix.objects.annotate(locations_count=Count("locations")).filter(locations_count=1).first()
             self.assertIsNotNone(prefix)
             url = reverse("ipam-api:prefix-detail", kwargs={"pk": prefix.pk})
-            data = {"location": self.create_data[0]["locations"][0]}
+            data = {"location": self.locations[0].pk}
             response = self.client.patch(f"{url}?api_version=2.1", data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertEqual(response.data["location"]["id"], data["location"])
@@ -406,7 +404,7 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
             prefix = Prefix.objects.annotate(locations_count=Count("locations")).filter(locations_count__gt=1).first()
             url = reverse("ipam-api:prefix-detail", kwargs={"pk": prefix.pk})
             data = {**self.create_data[0]}
-            data["location"] = data.pop("locations")[0]
+            data["location"] = self.locations[0].pk
             response = self.client.patch(f"{url}?api_version=2.1", data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
             self.assertEqual(
@@ -962,7 +960,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         statuses = Status.objects.get_for_model(VLAN)
         vlan_groups = VLANGroup.objects.filter(location__isnull=False)[:2]
-        locations = Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(VLAN))
+        cls.locations = Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(VLAN))
 
         cls.create_data = [
             {
@@ -970,21 +968,19 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
                 "name": "VLAN 4 with a name much longer than 64 characters to verify that we increased the limit",
                 "vlan_group": vlan_groups[0].pk,
                 "status": statuses[0].pk,
-                "locations": [locations[0].pk, locations[1].pk],
             },
             {
                 "vid": 5,
                 "name": "VLAN 5",
                 "vlan_group": vlan_groups[0].pk,
                 "status": statuses[0].pk,
-                "locations": [locations[2].pk, locations[3].pk],
             },
             {
                 "vid": 6,
                 "name": "VLAN 6",
                 "vlan_group": vlan_groups[0].pk,
                 "status": statuses[0].pk,
-                "location": locations[3].pk,
+                "location": cls.locations[3].pk,
             },
         ]
         cls.bulk_update_data = {
@@ -1036,7 +1032,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
         with self.subTest("Assert CREATE"):
             url = reverse("ipam-api:vlan-list")
             data = {**self.create_data[0]}
-            data["location"] = data.pop("locations")[0]
+            data["location"] = self.locations[0].pk
             response = self.client.post(f"{url}?api_version=2.1", data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_201_CREATED)
             self.assertTrue(VLAN.objects.filter(pk=response.data["id"]).exists())
@@ -1046,7 +1042,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
             url = reverse("ipam-api:vlan-detail", kwargs={"pk": vlan.pk})
             data = {**self.create_data[0]}
             data["vid"] = 19
-            data["location"] = data.pop("locations")[0]
+            data["location"] = self.locations[0].pk
             data.pop("vlan_group")
             response = self.client.patch(f"{url}?api_version=2.1", data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_412_PRECONDITION_FAILED)
@@ -1059,7 +1055,7 @@ class VLANTest(APIViewTestCases.APIViewTestCase):
         with self.subTest("Assert UPDATE on single location"):
             vlan = VLAN.objects.annotate(locations_count=Count("locations")).filter(locations_count=1).first()
             url = reverse("ipam-api:vlan-detail", kwargs={"pk": vlan.pk})
-            data = {"location": self.create_data[0]["locations"][0]}
+            data = {"location": self.locations[0].pk}
             response = self.client.patch(f"{url}?api_version=2.1", data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertEqual(response.data["location"]["id"], data["location"])

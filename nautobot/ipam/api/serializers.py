@@ -154,6 +154,7 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "description",
         ]
         validators = []
+        extra_kwargs = {"locations": {"read_only": True}}
 
     def validate(self, data):
         # Validate uniqueness of vid and name if a group has been assigned.
@@ -246,6 +247,7 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "ip_version": {"read_only": True},
             "namespace": {"default": get_default_namespace},
             "prefix_length": {"read_only": True},
+            "locations": {"read_only": True},
         }
 
         detail_view_config = {
