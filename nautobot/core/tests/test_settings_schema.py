@@ -3,6 +3,7 @@ import sys
 from unittest import mock, TestCase
 
 from django.conf import global_settings as django_defaults
+from django.test import tag
 from jsonschema.exceptions import SchemaError, ValidationError
 from jsonschema.validators import Draft202012Validator
 import yaml
@@ -48,6 +49,7 @@ SETTINGS_DOCUMENTATION_SCHEMA = {
 }
 
 
+@tag("unit")
 class SettingsJSONSchemaTestCase(TestCase):
     """Test for the JSON Schema in nautobot/core/settings.yaml and the actual Nautobot configuration."""
 
@@ -59,6 +61,19 @@ class SettingsJSONSchemaTestCase(TestCase):
 
     def tearDown(self):
         sys.modules.pop("nautobot.core.settings", None)
+
+    def test_schema_keys_sort_alpha(self):
+        """
+        Assert that the keys in the JSON Schema "properties" are sorted alphabetically.
+
+        Uses a modified version of Python's default string sorting behavior to sort underscores before uppercase letters.
+        E.g. "DATE_FORMAT" should come before "DATETIME_FORMAT".
+        """
+
+        self.assertEqual(
+            sorted(self.schema_data["properties"], key=lambda s: s.replace("_", " ")),
+            list(self.schema_data["properties"]),
+        )
 
     def test_schema_valid(self):
         """Test the validity of the JSON Schema in settings.yaml as a JSON schema."""

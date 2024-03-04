@@ -33,6 +33,15 @@
     "see_also":
       "Django documentation for `ADMINS`": "https://docs.djangoproject.com/en/stable/ref/settings/#admins"
     "type": "array"
+  "ALLOW_REQUEST_PROFILING":
+    "default": false
+    "description": "Global setting to allow or deny users from enabling request profiling on their login session."
+    "environment_variable": "NAUTOBOT_ALLOW_REQUEST_PROFILING"
+    "is_constance_config": true
+    "see_also":
+      "Administration guide to request profiling": "../guides/request-profiling.md"
+    "type": "boolean"
+    "version_added": "2.2.0"
   "ALLOWED_HOSTS":
     "default": []
     "description": >-
@@ -103,15 +112,6 @@
     "items":
       "type": "string"
     "type": "array"
-  "ALLOW_REQUEST_PROFILING":
-    "default": false
-    "description": "Global setting to allow or deny users from enabling request profiling on their login session."
-    "environment_variable": "NAUTOBOT_ALLOW_REQUEST_PROFILING"
-    "is_constance_config": true
-    "see_also":
-      "Administration guide to request profiling": "../guides/request-profiling.md"
-    "type": "boolean"
-    "version_added": "2.2.0"
   "AUTHENTICATION_BACKENDS":
     "default":
       - "nautobot.core.authentication.ObjectPermissionBackend"
@@ -461,6 +461,22 @@
       [`CORS_ALLOWED_ORIGIN_REGEXES`](#cors_allowed_origin_regexes).
     "environment_variable": "NAUTOBOT_CORS_ALLOW_ALL_ORIGINS"
     "type": "boolean"
+  "CORS_ALLOWED_ORIGIN_REGEXES":
+    "default": []
+    "description": >-
+      A list of strings representing regexes that match Origins that are authorized to make cross-site HTTP requests.
+    "details": |-
+      Useful when [`CORS_ALLOWED_ORIGINS`](#cors_allowed_origins) is impractical, such as when you have a
+      large number of subdomains.
+
+      Example:
+
+      ```python
+      CORS_ALLOWED_ORIGIN_REGEXES = [r"^https://\w+\.example\.com$"]
+      ```
+    "items":
+      "$ref": "#/definitions/regex"
+    "type": "array"
   "CORS_ALLOWED_ORIGINS":
     "default": []
     "description": "A list of origins that are authorized to make cross-site HTTP requests."
@@ -488,22 +504,6 @@
       "format": "uri"
       "type": "string"
     "type": "array"
-  "CORS_ALLOWED_ORIGIN_REGEXES":
-    "default": []
-    "description": >-
-      A list of strings representing regexes that match Origins that are authorized to make cross-site HTTP requests.
-    "details": |-
-      Useful when [`CORS_ALLOWED_ORIGINS`](#cors_allowed_origins) is impractical, such as when you have a
-      large number of subdomains.
-
-      Example:
-
-      ```python
-      CORS_ALLOWED_ORIGIN_REGEXES = [r"^https://\w+\.example\.com$"]
-      ```
-    "items":
-      "$ref": "#/definitions/regex"
-    "type": "array"
   "CSRF_TRUSTED_ORIGINS":
     "default": []
     "description": >-
@@ -514,6 +514,14 @@
     "see_also":
       "Django documentation for `CSRF_TRUSTED_ORIGINS`": "https://docs.djangoproject.com/en/stable/ref/settings/#csrf-trusted-origins"
       "Django documentation for CSRF protection": "https://docs.djangoproject.com/en/stable/ref/csrf/#how-it-works"
+    "type": "array"
+  "DATABASE_ROUTERS":
+    "default": []
+    "description": >-
+      Custom database router to generate the before & after queries for generating diffs.
+      Used for Nautobot Version Control App.
+    "items":
+      "type": "string"
     "type": "array"
   "DATABASES":
     "additionalProperties": true
@@ -617,25 +625,17 @@
     "see_also":
       "Django documentation for `DATABASES`": "https://docs.djangoproject.com/en/stable/ref/settings/#databases"
     "type": "object"
-  "DATABASE_ROUTERS":
-    "default": []
-    "description": >-
-      Custom database router to generate the before & after queries for generating diffs.
-      Used for Nautobot Version Control App.
-    "items":
-      "type": "string"
-    "type": "array"
-  "DATETIME_FORMAT":
-    "default": "N j, Y g:i a"
-    "description": "Custom format for date-times. The default results in strings like \"January 22, 2024 1:22 p.m.\"."
-    "environment_variable": "NAUTOBOT_DATETIME_FORMAT"
-    "see_also":
-      "Django documentation on date/time format strings": "https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date"
-    "type": "string"
   "DATE_FORMAT":
     "default": "N j, Y"
     "description": "Custom format for dates. The default results in strings like \"January 22, 2024\"."
     "environment_variable": "NAUTOBOT_DATE_FORMAT"
+    "see_also":
+      "Django documentation on date/time format strings": "https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date"
+    "type": "string"
+  "DATETIME_FORMAT":
+    "default": "N j, Y g:i a"
+    "description": "Custom format for date-times. The default results in strings like \"January 22, 2024 1:22 p.m.\"."
+    "environment_variable": "NAUTOBOT_DATETIME_FORMAT"
     "see_also":
       "Django documentation on date/time format strings": "https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date"
     "type": "string"
@@ -873,14 +873,6 @@
     "items":
       "type": "string"
     "type": "array"
-  "JOBS_ROOT":
-    "$ref": "#/definitions/absolute_path"
-    "default": "~/.nautobot/jobs"
-    "description": "The file path to a directory where Jobs can be discovered."
-    "details": |-
-      +/- 2.0.0
-          This directory no longer requires an `__init__.py` file.
-    "environment_variable": "NAUTOBOT_JOBS_ROOT"
   "JOB_CREATE_FILE_MAX_SIZE":
     "default": 10485760
     "description": >-
@@ -933,6 +925,14 @@
       "`JOB_CREATE_FILE_MAX_SIZE`": "#job_create_file_max_size"
     "type": "string"
     "version_added": "2.1.0"
+  "JOBS_ROOT":
+    "$ref": "#/definitions/absolute_path"
+    "default": "~/.nautobot/jobs"
+    "description": "The file path to a directory where Jobs can be discovered."
+    "details": |-
+      +/- 2.0.0
+          This directory no longer requires an `__init__.py` file.
+    "environment_variable": "NAUTOBOT_JOBS_ROOT"
   "LOCATION_NAME_AS_NATURAL_KEY":
     "default": false
     "description": >-
@@ -1529,17 +1529,17 @@
       If you set this value, you must also enable file-based sessions as explained under
       [`SESSION_ENGINE`](#session_engine).
     "environment_variable": "NAUTOBOT_SESSION_FILE_PATH"
-  "SHORT_DATETIME_FORMAT":
-    "default": "Y-m-d H:i"
-    "description": "Custom short format for date-times. The default results in strings like \"2024-01-22 13:23\"."
-    "environment_variable": "NAUTOBOT_SHORT_DATETIME_FORMAT"
-    "see_also":
-      "Django documentation on date/time format strings": "https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date"
-    "type": "string"
   "SHORT_DATE_FORMAT":
     "default": "Y-m-d"
     "description": "Custom short format for dates. The default results in strings like \"2024-01-22\"."
     "environment_variable": "NAUTOBOT_SHORT_DATE_FORMAT"
+    "see_also":
+      "Django documentation on date/time format strings": "https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date"
+    "type": "string"
+  "SHORT_DATETIME_FORMAT":
+    "default": "Y-m-d H:i"
+    "description": "Custom short format for date-times. The default results in strings like \"2024-01-22 13:23\"."
+    "environment_variable": "NAUTOBOT_SHORT_DATETIME_FORMAT"
     "see_also":
       "Django documentation on date/time format strings": "https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date"
     "type": "string"
