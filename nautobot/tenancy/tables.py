@@ -7,13 +7,12 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
+
 from .models import Tenant, TenantGroup
 
 TREE_LINK = """
 {% load helpers %}
-{% for i in record.tree_depth|as_range %}
-    <i class="mdi mdi-circle-small"></i>
-{% endfor %}
+{% tree_hierarchy_ui_representation record.tree_depth|as_range table.order_by %}
 <a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
 """
 
@@ -52,17 +51,17 @@ class TenantColumn(tables.TemplateColumn):
 
 class TenantGroupTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
     tenant_count = LinkedCountColumn(
         viewname="tenancy:tenant_list",
-        url_params={"tenant_group": "slug"},
+        url_params={"tenant_group": "name"},
         verbose_name="Tenants",
     )
-    actions = ButtonsColumn(TenantGroup, pk_field="slug")
+    actions = ButtonsColumn(TenantGroup)
 
     class Meta(BaseTable.Meta):
         model = TenantGroup
-        fields = ("pk", "name", "tenant_count", "description", "slug", "actions")
+        fields = ("pk", "name", "tenant_count", "description", "actions")
         default_columns = ("pk", "name", "tenant_count", "description", "actions")
 
 
@@ -79,5 +78,5 @@ class TenantTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Tenant
-        fields = ("pk", "name", "slug", "tenant_group", "description", "tags")
+        fields = ("pk", "name", "tenant_group", "description", "tags")
         default_columns = ("pk", "name", "tenant_group", "description")

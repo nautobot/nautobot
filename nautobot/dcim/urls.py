@@ -1,8 +1,9 @@
 from django.urls import path
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
-from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView, ImageAttachmentEditView
+from nautobot.extras.views import ImageAttachmentEditView, ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
 from nautobot.ipam.views import ServiceEditView
+
 from . import views
 from .models import (
     Cable,
@@ -19,15 +20,13 @@ from .models import (
     Manufacturer,
     Platform,
     PowerFeed,
+    PowerOutlet,
     PowerPanel,
     PowerPort,
-    PowerOutlet,
     Rack,
     RackGroup,
     RackReservation,
     RearPort,
-    Region,
-    Site,
     VirtualChassis,
 )
 
@@ -35,79 +34,29 @@ app_name = "dcim"
 
 router = NautobotUIViewSetRouter()
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
+router.register("hardware-families", views.HardwareFamilyUIViewSet)
+router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
+router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
+router.register("software-image-files", views.SoftwareImageFileUIViewSet)
+router.register("software-versions", views.SoftwareVersionUIViewSet)
 
 urlpatterns = [
-    # Regions
-    path("regions/", views.RegionListView.as_view(), name="region_list"),
-    path("regions/add/", views.RegionEditView.as_view(), name="region_add"),
-    path("regions/import/", views.RegionBulkImportView.as_view(), name="region_import"),
-    path(
-        "regions/delete/",
-        views.RegionBulkDeleteView.as_view(),
-        name="region_bulk_delete",
-    ),
-    path("regions/<uuid:pk>/", views.RegionView.as_view(), name="region"),
-    path("regions/<uuid:pk>/edit/", views.RegionEditView.as_view(), name="region_edit"),
-    path(
-        "regions/<uuid:pk>/delete/",
-        views.RegionDeleteView.as_view(),
-        name="region_delete",
-    ),
-    path(
-        "regions/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="region_changelog",
-        kwargs={"model": Region},
-    ),
-    path(
-        "regions/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="region_notes",
-        kwargs={"model": Region},
-    ),
-    # Sites
-    path("sites/", views.SiteListView.as_view(), name="site_list"),
-    path("sites/add/", views.SiteEditView.as_view(), name="site_add"),
-    path("sites/import/", views.SiteBulkImportView.as_view(), name="site_import"),
-    path("sites/edit/", views.SiteBulkEditView.as_view(), name="site_bulk_edit"),
-    path("sites/delete/", views.SiteBulkDeleteView.as_view(), name="site_bulk_delete"),
-    path("sites/<slug:slug>/", views.SiteView.as_view(), name="site"),
-    path("sites/<slug:slug>/edit/", views.SiteEditView.as_view(), name="site_edit"),
-    path("sites/<slug:slug>/delete/", views.SiteDeleteView.as_view(), name="site_delete"),
-    path(
-        "sites/<slug:slug>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="site_changelog",
-        kwargs={"model": Site},
-    ),
-    path(
-        "sites/<slug:slug>/notes/",
-        ObjectNotesView.as_view(),
-        name="site_notes",
-        kwargs={"model": Site},
-    ),
-    path(
-        "sites/<uuid:object_id>/images/add/",
-        ImageAttachmentEditView.as_view(),
-        name="site_add_image",
-        kwargs={"model": Site},
-    ),
     # Location types
     path("location-types/", views.LocationTypeListView.as_view(), name="locationtype_list"),
     path("location-types/add/", views.LocationTypeEditView.as_view(), name="locationtype_add"),
-    path("location-types/import/", views.LocationTypeBulkImportView.as_view(), name="locationtype_import"),
+    path("location-types/import/", views.LocationTypeBulkImportView.as_view(), name="locationtype_import"),  # 3.0 TODO
     path("location-types/delete/", views.LocationTypeBulkDeleteView.as_view(), name="locationtype_bulk_delete"),
-    path("location-types/<slug:slug>/", views.LocationTypeView.as_view(), name="locationtype"),
-    path("location-types/<slug:slug>/edit/", views.LocationTypeEditView.as_view(), name="locationtype_edit"),
-    path("location-types/<slug:slug>/delete/", views.LocationTypeDeleteView.as_view(), name="locationtype_delete"),
+    path("location-types/<uuid:pk>/", views.LocationTypeView.as_view(), name="locationtype"),
+    path("location-types/<uuid:pk>/edit/", views.LocationTypeEditView.as_view(), name="locationtype_edit"),
+    path("location-types/<uuid:pk>/delete/", views.LocationTypeDeleteView.as_view(), name="locationtype_delete"),
     path(
-        "location-types/<slug:slug>/changelog/",
+        "location-types/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="locationtype_changelog",
         kwargs={"model": LocationType},
     ),
     path(
-        "location-types/<slug:slug>/notes/",
+        "location-types/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="locationtype_notes",
         kwargs={"model": LocationType},
@@ -116,25 +65,25 @@ urlpatterns = [
     path("locations/", views.LocationListView.as_view(), name="location_list"),
     path("locations/add/", views.LocationEditView.as_view(), name="location_add"),
     path("locations/edit/", views.LocationBulkEditView.as_view(), name="location_bulk_edit"),
-    path("locations/import/", views.LocationBulkImportView.as_view(), name="location_import"),
+    path("locations/import/", views.LocationBulkImportView.as_view(), name="location_import"),  # 3.0 TODO: remove
     path("locations/delete/", views.LocationBulkDeleteView.as_view(), name="location_bulk_delete"),
-    path("locations/<slug:slug>/", views.LocationView.as_view(), name="location"),
-    path("locations/<slug:slug>/edit/", views.LocationEditView.as_view(), name="location_edit"),
-    path("locations/<slug:slug>/delete/", views.LocationDeleteView.as_view(), name="location_delete"),
+    path("locations/<uuid:pk>/", views.LocationView.as_view(), name="location"),
+    path("locations/<uuid:pk>/edit/", views.LocationEditView.as_view(), name="location_edit"),
+    path("locations/<uuid:pk>/delete/", views.LocationDeleteView.as_view(), name="location_delete"),
     path(
-        "locations/<slug:slug>/changelog/",
+        "locations/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="location_changelog",
         kwargs={"model": Location},
     ),
     path(
-        "locations/<slug:slug>/notes/",
+        "locations/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="location_notes",
         kwargs={"model": Location},
     ),
     path(
-        "locations/<slug:slug>/images/add/",
+        "locations/<uuid:object_id>/images/add/",
         ImageAttachmentEditView.as_view(),
         name="location_add_image",
         kwargs={"model": Location},
@@ -144,7 +93,7 @@ urlpatterns = [
     path("rack-groups/add/", views.RackGroupEditView.as_view(), name="rackgroup_add"),
     path(
         "rack-groups/import/",
-        views.RackGroupBulkImportView.as_view(),
+        views.RackGroupBulkImportView.as_view(),  # 3.0 TODO: remove
         name="rackgroup_import",
     ),
     path(
@@ -236,7 +185,7 @@ urlpatterns = [
         name="rack_elevation_list",
     ),
     path("racks/add/", views.RackEditView.as_view(), name="rack_add"),
-    path("racks/import/", views.RackBulkImportView.as_view(), name="rack_import"),
+    path("racks/import/", views.RackBulkImportView.as_view(), name="rack_import"),  # 3.0 TODO: remove, unused
     path("racks/edit/", views.RackBulkEditView.as_view(), name="rack_bulk_edit"),
     path("racks/delete/", views.RackBulkDeleteView.as_view(), name="rack_bulk_delete"),
     path("racks/<uuid:pk>/", views.RackView.as_view(), name="rack"),
@@ -275,7 +224,7 @@ urlpatterns = [
     ),
     path(
         "manufacturers/import/",
-        views.ManufacturerBulkImportView.as_view(),
+        views.ManufacturerBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="manufacturer_import",
     ),
     path(
@@ -284,28 +233,28 @@ urlpatterns = [
         name="manufacturer_bulk_delete",
     ),
     path(
-        "manufacturers/<slug:slug>/",
+        "manufacturers/<uuid:pk>/",
         views.ManufacturerView.as_view(),
         name="manufacturer",
     ),
     path(
-        "manufacturers/<slug:slug>/edit/",
+        "manufacturers/<uuid:pk>/edit/",
         views.ManufacturerEditView.as_view(),
         name="manufacturer_edit",
     ),
     path(
-        "manufacturers/<slug:slug>/delete/",
+        "manufacturers/<uuid:pk>/delete/",
         views.ManufacturerDeleteView.as_view(),
         name="manufacturer_delete",
     ),
     path(
-        "manufacturers/<slug:slug>/changelog/",
+        "manufacturers/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="manufacturer_changelog",
         kwargs={"model": Manufacturer},
     ),
     path(
-        "manufacturers/<slug:slug>/notes/",
+        "manufacturers/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="manufacturer_notes",
         kwargs={"model": Manufacturer},
@@ -604,7 +553,7 @@ urlpatterns = [
     path("platforms/add/", views.PlatformEditView.as_view(), name="platform_add"),
     path(
         "platforms/import/",
-        views.PlatformBulkImportView.as_view(),
+        views.PlatformBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="platform_import",
     ),
     path(
@@ -612,25 +561,25 @@ urlpatterns = [
         views.PlatformBulkDeleteView.as_view(),
         name="platform_bulk_delete",
     ),
-    path("platforms/<slug:slug>/", views.PlatformView.as_view(), name="platform"),
+    path("platforms/<uuid:pk>/", views.PlatformView.as_view(), name="platform"),
     path(
-        "platforms/<slug:slug>/edit/",
+        "platforms/<uuid:pk>/edit/",
         views.PlatformEditView.as_view(),
         name="platform_edit",
     ),
     path(
-        "platforms/<slug:slug>/delete/",
+        "platforms/<uuid:pk>/delete/",
         views.PlatformDeleteView.as_view(),
         name="platform_delete",
     ),
     path(
-        "platforms/<slug:slug>/changelog/",
+        "platforms/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="platform_changelog",
         kwargs={"model": Platform},
     ),
     path(
-        "platforms/<slug:slug>/notes/",
+        "platforms/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="platform_notes",
         kwargs={"model": Platform},
@@ -638,12 +587,7 @@ urlpatterns = [
     # Devices
     path("devices/", views.DeviceListView.as_view(), name="device_list"),
     path("devices/add/", views.DeviceEditView.as_view(), name="device_add"),
-    path("devices/import/", views.DeviceBulkImportView.as_view(), name="device_import"),
-    path(
-        "devices/import/child-devices/",
-        views.ChildDeviceBulkImportView.as_view(),
-        name="device_import_child",
-    ),
+    path("devices/import/", views.DeviceBulkImportView.as_view(), name="device_import"),  # 3.0 TODO: remove, unused
     path("devices/edit/", views.DeviceBulkEditView.as_view(), name="device_bulk_edit"),
     path(
         "devices/delete/",
@@ -760,7 +704,7 @@ urlpatterns = [
     ),
     path(
         "console-ports/import/",
-        views.ConsolePortBulkImportView.as_view(),
+        views.ConsolePortBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="consoleport_import",
     ),
     path(
@@ -836,7 +780,7 @@ urlpatterns = [
     ),
     path(
         "console-server-ports/import/",
-        views.ConsoleServerPortBulkImportView.as_view(),
+        views.ConsoleServerPortBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="consoleserverport_import",
     ),
     path(
@@ -908,7 +852,7 @@ urlpatterns = [
     path("power-ports/add/", views.PowerPortCreateView.as_view(), name="powerport_add"),
     path(
         "power-ports/import/",
-        views.PowerPortBulkImportView.as_view(),
+        views.PowerPortBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="powerport_import",
     ),
     path(
@@ -980,7 +924,7 @@ urlpatterns = [
     ),
     path(
         "power-outlets/import/",
-        views.PowerOutletBulkImportView.as_view(),
+        views.PowerOutletBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="poweroutlet_import",
     ),
     path(
@@ -1048,7 +992,7 @@ urlpatterns = [
     path("interfaces/add/", views.InterfaceCreateView.as_view(), name="interface_add"),
     path(
         "interfaces/import/",
-        views.InterfaceBulkImportView.as_view(),
+        views.InterfaceBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="interface_import",
     ),
     path(
@@ -1116,7 +1060,7 @@ urlpatterns = [
     path("front-ports/add/", views.FrontPortCreateView.as_view(), name="frontport_add"),
     path(
         "front-ports/import/",
-        views.FrontPortBulkImportView.as_view(),
+        views.FrontPortBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="frontport_import",
     ),
     path(
@@ -1180,7 +1124,7 @@ urlpatterns = [
     path("rear-ports/add/", views.RearPortCreateView.as_view(), name="rearport_add"),
     path(
         "rear-ports/import/",
-        views.RearPortBulkImportView.as_view(),
+        views.RearPortBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="rearport_import",
     ),
     path(
@@ -1248,7 +1192,7 @@ urlpatterns = [
     path("device-bays/add/", views.DeviceBayCreateView.as_view(), name="devicebay_add"),
     path(
         "device-bays/import/",
-        views.DeviceBayBulkImportView.as_view(),
+        views.DeviceBayBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="devicebay_import",
     ),
     path(
@@ -1317,7 +1261,7 @@ urlpatterns = [
     ),
     path(
         "inventory-items/import/",
-        views.InventoryItemBulkImportView.as_view(),
+        views.InventoryItemBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="inventoryitem_import",
     ),
     path(
@@ -1369,7 +1313,7 @@ urlpatterns = [
     ),
     # Cables
     path("cables/", views.CableListView.as_view(), name="cable_list"),
-    path("cables/import/", views.CableBulkImportView.as_view(), name="cable_import"),
+    path("cables/import/", views.CableBulkImportView.as_view(), name="cable_import"),  # 3.0 TODO: remove, unused
     path("cables/edit/", views.CableBulkEditView.as_view(), name="cable_bulk_edit"),
     path("cables/delete/", views.CableBulkDeleteView.as_view(), name="cable_bulk_delete"),
     path("cables/<uuid:pk>/", views.CableView.as_view(), name="cable"),
@@ -1416,7 +1360,7 @@ urlpatterns = [
     ),
     path(
         "virtual-chassis/import/",
-        views.VirtualChassisBulkImportView.as_view(),
+        views.VirtualChassisBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="virtualchassis_import",
     ),
     path(
@@ -1471,7 +1415,7 @@ urlpatterns = [
     path("power-panels/add/", views.PowerPanelEditView.as_view(), name="powerpanel_add"),
     path(
         "power-panels/import/",
-        views.PowerPanelBulkImportView.as_view(),
+        views.PowerPanelBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="powerpanel_import",
     ),
     path(
@@ -1512,7 +1456,7 @@ urlpatterns = [
     path("power-feeds/add/", views.PowerFeedEditView.as_view(), name="powerfeed_add"),
     path(
         "power-feeds/import/",
-        views.PowerFeedBulkImportView.as_view(),
+        views.PowerFeedBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="powerfeed_import",
     ),
     path(

@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
+from unittest import mock
 import urllib.parse
 import uuid
 
@@ -8,33 +9,39 @@ from django.core.exceptions import ValidationError
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
-from unittest import mock
+from django.utils.html import format_html
 
+from nautobot.circuits.models import Circuit
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
-from nautobot.core.testing import ViewTestCases, TestCase, extract_page_body, extract_form_failures
+from nautobot.core.testing import extract_form_failures, extract_page_body, TestCase, ViewTestCases
 from nautobot.core.testing.utils import disable_warnings, post_data
-from nautobot.dcim.models import ConsolePort, Device, DeviceType, Interface, Manufacturer, Site
+from nautobot.dcim.models import ConsolePort, Device, DeviceType, Interface, Location, LocationType, Manufacturer
 from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     JobExecutionType,
-    JobSourceChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
+    WebhookHttpMethodChoices,
 )
-from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
+from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON, JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.models import (
+    ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
+    ContactAssociation,
     CustomField,
     CustomLink,
     DynamicGroup,
     ExportTemplate,
+    ExternalIntegration,
     GitRepository,
     GraphQLQuery,
     Job,
+    JobButton,
     JobResult,
     Note,
     ObjectChange,
@@ -47,15 +54,15 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
-    ComputedField,
 )
+from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
+from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
-from nautobot.extras.utils import get_job_content_type, TaggableClassesQuery
-from nautobot.ipam.factory import VLANFactory
-from nautobot.ipam.models import VLAN, VLANGroup
+from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
+from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
-
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -76,57 +83,115 @@ class ComputedFieldTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        obj_type = ContentType.objects.get_for_model(Site)
+        obj_type = ContentType.objects.get_for_model(Location)
 
         computed_fields = (
             ComputedField(
                 content_type=obj_type,
                 label="Computed Field One",
-                slug="computed_field_one",
-                template="Site name is {{ obj.name }}",
+                key="computed_field_one",
+                template="Location name is {{ obj.name }}",
                 fallback_value="Template error",
                 weight=100,
             ),
             ComputedField(
                 content_type=obj_type,
-                slug="computed_field_two",
+                key="computed_field_two",
                 label="Computed Field Two",
-                template="Site name is {{ obj.name }}",
+                template="Location name is {{ obj.name }}",
                 fallback_value="Template error",
                 weight=100,
             ),
             ComputedField(
                 content_type=obj_type,
-                slug="computed_field_three",
+                key="computed_field_three",
                 label="Computed Field Three",
-                template="Site name is {{ obj.name }}",
+                template="Location name is {{ obj.name }}",
                 weight=100,
             ),
             ComputedField(
                 content_type=obj_type,
                 label="Computed Field Five",
-                template="Site name is {{ obj.name }}",
+                template="Location name is {{ obj.name }}",
                 fallback_value="Template error",
                 weight=100,
             ),
         )
-
-        cls.site1 = Site(name="NYC")
-        cls.site1.save()
+        cls.location_type = LocationType.objects.get(name="Campus")
+        status = Status.objects.get_for_model(Location).first()
+        cls.location1 = Location(name="NYC", location_type=cls.location_type, status=status)
+        cls.location1.save()
 
         for cf in computed_fields:
             cf.save()
 
         cls.form_data = {
             "content_type": obj_type.pk,
-            "slug": "computed_field_four",
+            "key": "computed_field_four",
             "label": "Computed Field Four",
-            "template": "{{ obj.name }} is the best Site!",
+            "template": "{{ obj.name }} is the best Location!",
             "fallback_value": ":skull_emoji:",
             "weight": 100,
         }
 
         cls.slug_test_object = "Computed Field Five"
+
+
+class ComputedFieldRenderingTestCase(TestCase):
+    """Tests for the inclusion of ComputedFields, distinct from tests of the ComputedField views themselves."""
+
+    user_permissions = ["dcim.view_locationtype"]
+
+    def setUp(self):
+        super().setUp()
+        self.computedfield = ComputedField(
+            content_type=ContentType.objects.get_for_model(LocationType),
+            key="test",
+            label="Computed Field",
+            template="FOO {{ obj.name }} BAR",
+            fallback_value="Fallback Value",
+            weight=100,
+        )
+        self.computedfield.validated_save()
+        self.location_type = LocationType.objects.get(name="Campus")
+
+    def test_view_object_with_computed_field(self):
+        """Ensure that the computed field template is rendered."""
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(f"FOO {self.location_type.name} BAR", content, content)
+
+    def test_view_object_with_computed_field_fallback_value(self):
+        """Ensure that the fallback_value is rendered if the template fails to render."""
+        # Make the template invalid to demonstrate the fallback value
+        self.computedfield.template = "FOO {{ obj."
+        self.computedfield.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Fallback Value", content, content)
+
+    def test_view_object_with_computed_field_unsafe_template(self):
+        """Ensure that computed field templates can't be used as an XSS vector."""
+        self.computedfield.template = '<script>alert("Hello world!"</script>'
+        self.computedfield.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
+
+    def test_view_object_with_computed_field_unsafe_fallback_value(self):
+        """Ensure that computed field fallback values can't be used as an XSS vector."""
+        self.computedfield.template = "FOO {{ obj."
+        self.computedfield.fallback_value = '<script>alert("Hello world!"</script>'
+        self.computedfield.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
 
 
 # TODO: Change base class to PrimaryObjectViewTestCase
@@ -145,14 +210,13 @@ class ConfigContextTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
         # Create three ConfigContexts
         for i in range(1, 4):
             configcontext = ConfigContext(name=f"Config Context {i}", data={"foo": i})
             configcontext.save()
-            configcontext.sites.add(site)
+            configcontext.locations.add(location)
 
         cls.form_data = {
             "name": "Config Context X",
@@ -160,7 +224,7 @@ class ConfigContextTestCase(
             "description": "A new config context",
             "is_active": True,
             "regions": [],
-            "sites": [site.pk],
+            "locations": [location.pk],
             "roles": [],
             "device_types": [],
             "platforms": [],
@@ -183,7 +247,7 @@ class ConfigContextTestCase(
         Assert that the config context passes schema validation via full_clean()
         """
         schema = ConfigContextSchema.objects.create(
-            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
+            name="Schema 1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
         )
         self.add_permissions("extras.add_configcontext")
         self.add_permissions("extras.view_configcontextschema")
@@ -194,7 +258,7 @@ class ConfigContextTestCase(
             "description": "A new config context",
             "is_active": True,
             "regions": [],
-            "sites": [],
+            "locations": [],
             "roles": [],
             "device_types": [],
             "platforms": [],
@@ -202,7 +266,7 @@ class ConfigContextTestCase(
             "tenants": [],
             "tags": [],
             "data": '{"foo": "bar"}',
-            "schema": schema.pk,
+            "config_context_schema": schema.pk,
         }
 
         # Try POST with model-level permission
@@ -211,7 +275,9 @@ class ConfigContextTestCase(
             "data": post_data(form_data),
         }
         self.assertHttpStatus(self.client.post(**request), 302)
-        self.assertEqual(self._get_queryset().get(name="Config Context with schema").schema.pk, schema.pk)
+        self.assertEqual(
+            self._get_queryset().get(name="Config Context with schema").config_context_schema.pk, schema.pk
+        )
 
     def test_schema_validation_fails(self):
         """
@@ -220,7 +286,7 @@ class ConfigContextTestCase(
         Assert that the config context fails schema validation via full_clean()
         """
         schema = ConfigContextSchema.objects.create(
-            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "integer"}}}
+            name="Schema 1", data_schema={"type": "object", "properties": {"foo": {"type": "integer"}}}
         )
         self.add_permissions("extras.add_configcontext")
         self.add_permissions("extras.view_configcontextschema")
@@ -231,7 +297,7 @@ class ConfigContextTestCase(
             "description": "A new config context",
             "is_active": True,
             "regions": [],
-            "sites": [],
+            "locations": [],
             "roles": [],
             "device_types": [],
             "platforms": [],
@@ -239,7 +305,7 @@ class ConfigContextTestCase(
             "tenants": [],
             "tags": [],
             "data": '{"foo": "bar"}',
-            "schema": schema.pk,
+            "config_context_schema": schema.pk,
         }
 
         # Try POST with model-level permission
@@ -251,32 +317,20 @@ class ConfigContextTestCase(
         self.assertEqual(self._get_queryset().filter(name="Config Context with schema").count(), 0)
 
 
-# This OrganizationalObjectViewTestCase less BulkImportObjectsViewTestCase
-# because it doesn't make sense to support CSV for schemas.
-class ConfigContextSchemaTestCase(
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-    ViewTestCases.BulkEditObjectsViewTestCase,
-):
+class ConfigContextSchemaTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = ConfigContextSchema
 
     @classmethod
     def setUpTestData(cls):
-
         # Create three ConfigContextSchema records
         ConfigContextSchema.objects.create(
-            name="Schema 1", slug="schema-1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
+            name="Schema 1", data_schema={"type": "object", "properties": {"foo": {"type": "string"}}}
         )
         ConfigContextSchema.objects.create(
-            name="Schema 2", slug="schema-2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
+            name="Schema 2", data_schema={"type": "object", "properties": {"bar": {"type": "string"}}}
         )
         ConfigContextSchema.objects.create(
-            name="Schema 3", slug="schema-3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
+            name="Schema 3", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
         )
         ConfigContextSchema.objects.create(
             name="Schema 4", data_schema={"type": "object", "properties": {"baz": {"type": "string"}}}
@@ -284,16 +338,183 @@ class ConfigContextSchemaTestCase(
 
         cls.form_data = {
             "name": "Schema X",
-            "slug": "schema-x",
-            "data_schema": '{"type": "object", "properties": {"baz": {"type": "string"}}}',
+            "data_schema": '{"type": "object","properties": {"baz": {"type": "string"}}}',  # Intentionally misformatted (missing space) to ensure proper formatting on output
         }
 
         cls.bulk_edit_data = {
             "description": "New description",
         }
 
-        cls.slug_source = "name"
-        cls.slug_test_object = "Schema 4"
+
+class ContactTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = Contact
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.form_data = {
+            "name": "new contact",
+            "phone": "555-0121",
+            "email": "new-contact@example.com",
+            "address": "Rainbow Road, Ramus NJ",
+        }
+        cls.bulk_edit_data = {"address": "Carnegie Hall, New York, NY", "phone": "555-0125"}
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_new_contact_and_assign_contact_to_object(self):
+        initial_contact_count = Contact.objects.count()
+        initial_contact_association_count = ContactAssociation.objects.count()
+        self.add_permissions("extras.add_contact")
+        self.add_permissions("extras.add_contactassociation")
+
+        # Try GET with model-level permission
+        url = reverse("extras:object_contact_add")
+        self.assertHttpStatus(self.client.get(url), 200)
+        contact_associated_circuit = Circuit.objects.first()
+        self.form_data["associated_object_type"] = ContentType.objects.get_for_model(Circuit).pk
+        self.form_data["associated_object_id"] = contact_associated_circuit.pk
+        self.form_data["role"] = Role.objects.get_for_model(ContactAssociation).first().pk
+        self.form_data["status"] = Status.objects.get_for_model(ContactAssociation).first().pk
+
+        # Try POST with model-level permission
+        request = {
+            "path": url,
+            "data": post_data(self.form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_contact_count + 1, Contact.objects.count())
+        self.assertEqual(initial_contact_association_count + 1, ContactAssociation.objects.count())
+        contact = Contact.objects.get(name="new contact", phone="555-0121")
+        self.assertEqual(contact.name, "new contact")
+        self.assertEqual(contact.phone, "555-0121")
+        self.assertEqual(contact.email, "new-contact@example.com")
+        self.assertEqual(contact.address, "Rainbow Road, Ramus NJ")
+        contact_association = ContactAssociation.objects.get(contact=contact)
+        self.assertEqual(contact_association.associated_object_type.pk, self.form_data["associated_object_type"])
+        self.assertEqual(contact_association.associated_object_id, self.form_data["associated_object_id"])
+        self.assertEqual(contact_association.role.pk, self.form_data["role"])
+        self.assertEqual(contact_association.status.pk, self.form_data["status"])
+
+
+class ContactAssociationTestCase(
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+):
+    model = ContactAssociation
+
+    @classmethod
+    def setUpTestData(cls):
+        roles = Role.objects.get_for_model(ContactAssociation)
+        statuses = Status.objects.get_for_model(ContactAssociation)
+        ip_addresses = IPAddress.objects.all()
+        cls.form_data = {
+            "contact": Contact.objects.first().pk,
+            "team": None,
+            "associated_object_type": ContentType.objects.get_for_model(Circuit).pk,
+            "associated_object_id": Circuit.objects.first().pk,
+            "role": roles[0].pk,
+            "status": statuses[0].pk,
+        }
+        cls.bulk_edit_data = {
+            "role": roles[1].pk,
+            "status": statuses[1].pk,
+        }
+        ContactAssociation.objects.create(
+            contact=Contact.objects.first(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=ip_addresses[0].pk,
+            role=roles[2],
+            status=statuses[1],
+        )
+        ContactAssociation.objects.create(
+            contact=Contact.objects.last(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=ip_addresses[1].pk,
+            role=roles[1],
+            status=statuses[2],
+        )
+        ContactAssociation.objects.create(
+            team=Team.objects.first(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=ip_addresses[2].pk,
+            role=roles[0],
+            status=statuses[0],
+        )
+        ContactAssociation.objects.create(
+            team=Team.objects.last(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=ip_addresses[3].pk,
+            role=roles[0],
+            status=statuses[1],
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_assign_existing_contact_to_object(self):
+        contact = Contact.objects.first()
+        initial_contact_association_count = ContactAssociation.objects.count()
+        self.add_permissions("extras.add_contact")
+        self.add_permissions("extras.add_contactassociation")
+
+        # Try GET with model-level permission
+        url = reverse("extras:object_contact_team_assign")
+        self.assertHttpStatus(self.client.get(url), 200)
+        contact_associated_circuit = Circuit.objects.first()
+        self.form_data["associated_object_type"] = ContentType.objects.get_for_model(Circuit).pk
+        self.form_data["associated_object_id"] = contact_associated_circuit.pk
+        self.form_data["role"] = Role.objects.get_for_model(ContactAssociation).first().pk
+        self.form_data["status"] = Status.objects.get_for_model(ContactAssociation).first().pk
+
+        # Try POST with model-level permission
+        request = {
+            "path": url,
+            "data": post_data(self.form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_contact_association_count + 1, ContactAssociation.objects.count())
+        self.assertEqual(contact.pk, self.form_data["contact"])
+        contact_association = ContactAssociation.objects.get(
+            contact=contact, associated_object_id=contact_associated_circuit.pk
+        )
+        self.assertEqual(contact_association.associated_object_type.pk, self.form_data["associated_object_type"])
+        self.assertEqual(contact_association.associated_object_id, self.form_data["associated_object_id"])
+        self.assertEqual(contact_association.role.pk, self.form_data["role"])
+        self.assertEqual(contact_association.status.pk, self.form_data["status"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_assign_existing_team_to_object(self):
+        team = Team.objects.first()
+        initial_contact_association_count = ContactAssociation.objects.count()
+        self.add_permissions("extras.add_team")
+        self.add_permissions("extras.add_contactassociation")
+
+        # Try GET with model-level permission
+        url = reverse("extras:object_contact_team_assign")
+        self.assertHttpStatus(self.client.get(url), 200)
+        contact_associated_circuit = Circuit.objects.first()
+        self.form_data["team"] = team.pk
+        self.form_data["contact"] = None
+        self.form_data["associated_object_type"] = ContentType.objects.get_for_model(Circuit).pk
+        self.form_data["associated_object_id"] = contact_associated_circuit.pk
+        self.form_data["role"] = Role.objects.get_for_model(ContactAssociation).first().pk
+        self.form_data["status"] = Status.objects.get_for_model(ContactAssociation).first().pk
+
+        # Try POST with model-level permission
+        request = {
+            "path": url,
+            "data": post_data(self.form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_contact_association_count + 1, ContactAssociation.objects.count())
+        self.assertEqual(team.pk, self.form_data["team"])
+        contact_association = ContactAssociation.objects.get(
+            team=team, associated_object_id=contact_associated_circuit.pk
+        )
+        self.assertEqual(contact_association.associated_object_type.pk, self.form_data["associated_object_type"])
+        self.assertEqual(contact_association.associated_object_id, self.form_data["associated_object_id"])
+        self.assertEqual(contact_association.role.pk, self.form_data["role"])
+        self.assertEqual(contact_association.status.pk, self.form_data["status"])
 
 
 class CustomLinkTestCase(
@@ -308,7 +529,7 @@ class CustomLinkTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        obj_type = ContentType.objects.get_for_model(Site)
+        obj_type = ContentType.objects.get_for_model(Location)
 
         customlinks = (
             CustomLink(
@@ -355,7 +576,7 @@ class CustomLinkTestCase(
 
 
 class CustomFieldTestCase(
-    # No NotesViewTestCase or BulkImportObjectsViewTestCase, at least for now
+    # No NotesViewTestCase, at least for now
     ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
@@ -365,36 +586,32 @@ class CustomFieldTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = CustomField
-    slug_source = "label"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
-        obj_type = ContentType.objects.get_for_model(Site)
+        obj_type = ContentType.objects.get_for_model(Location)
 
         custom_fields = [
             CustomField(
                 type=CustomFieldTypeChoices.TYPE_BOOLEAN,
-                name="Custom Field Boolean",
-                label="Custom Field Boolean",
+                label="Custom Field Boolean Type",
                 default="",
             ),
             CustomField(
                 type=CustomFieldTypeChoices.TYPE_TEXT,
-                name="Custom Field Text",
                 label="Custom Field Text",
                 default="",
             ),
             CustomField(
                 type=CustomFieldTypeChoices.TYPE_INTEGER,
-                name="Custom Field Integer",
                 label="Custom Field Integer",
                 default="",
             ),
             CustomField(
                 type=CustomFieldTypeChoices.TYPE_TEXT,
                 # https://github.com/nautobot/nautobot/issues/1962
-                name="Custom field? With special / unusual characters!",
+                label="Custom field? With special / unusual characters!",
                 default="",
             ),
         ]
@@ -408,61 +625,125 @@ class CustomFieldTestCase(
         cls.form_data = {
             "content_types": [obj_type.pk],
             "type": CustomFieldTypeChoices.TYPE_BOOLEAN,  # type is mandatory but cannot be changed once set.
-            "slug": "custom_field_boolean",  # slug is mandatory but cannot be changed once set.
+            "key": "custom_field_boolean_type",  # key is mandatory but cannot be changed once set.
             "label": "Custom Field Boolean",
             "default": None,
             "filter_logic": "loose",
             "weight": 100,
             # These are the "management_form" fields required by the dynamic CustomFieldChoice formsets.
-            "choices-TOTAL_FORMS": "0",  # Set to 0 so validation succeeds until we need it
-            "choices-INITIAL_FORMS": "1",
-            "choices-MIN_NUM_FORMS": "0",
-            "choices-MAX_NUM_FORMS": "1000",
+            "custom_field_choices-TOTAL_FORMS": "0",  # Set to 0 so validation succeeds until we need it
+            "custom_field_choices-INITIAL_FORMS": "1",
+            "custom_field_choices-MIN_NUM_FORMS": "0",
+            "custom_field_choices-MAX_NUM_FORMS": "1000",
         }
 
     def test_create_object_without_permission(self):
-        # Can't have two CustomFields with the same "slug"
+        # Can't have two CustomFields with the same "key"
         self.form_data = self.form_data.copy()
-        self.form_data["slug"] = "custom_field_boolean_2"
+        self.form_data["key"] = "custom_field_boolean_2"
         super().test_create_object_without_permission()
 
     def test_create_object_with_permission(self):
-        # Can't have two CustomFields with the same "slug"
+        # Can't have two CustomFields with the same "key"
         self.form_data = self.form_data.copy()
-        self.form_data["slug"] = "custom_field_boolean_2"
+        self.form_data["key"] = "custom_field_boolean_2"
         super().test_create_object_with_permission()
-        instance = self._get_queryset().get(slug="custom_field_boolean_2")
-        # 2.0 TODO: #824 removal of `name` field altogether
-        # Assure that `name` was auto-populated from the given slug
-        self.assertEqual(instance.name, instance.slug)
 
     def test_create_object_with_constrained_permission(self):
-        # Can't have two CustomFields with the same "slug"
+        # Can't have two CustomFields with the same "key"
         self.form_data = self.form_data.copy()
-        self.form_data["slug"] = "custom_field_boolean_2"
+        self.form_data["key"] = "custom_field_boolean_2"
         super().test_create_object_with_constrained_permission()
 
 
-class CustomLinkTest(TestCase):
-    user_permissions = ["dcim.view_site"]
+class CustomLinkRenderingTestCase(TestCase):
+    """Tests for the inclusion of CustomLinks, distinct from tests of the CustomLink views themselves."""
+
+    user_permissions = ["dcim.view_location"]
 
     def test_view_object_with_custom_link(self):
         customlink = CustomLink(
-            content_type=ContentType.objects.get_for_model(Site),
+            content_type=ContentType.objects.get_for_model(Location),
             name="Test",
             text="FOO {{ obj.name }} BAR",
-            target_url="http://example.com/?site={{ obj.slug }}",
+            target_url="http://example.com/?location={{ obj.name }}",
             new_window=False,
         )
         customlink.save()
+        location_type = LocationType.objects.get(name="Campus")
+        status = Status.objects.get_for_model(Location).first()
+        location = Location(name="Test Location", location_type=location_type, status=status)
+        location.save()
 
-        site = Site(name="Test Site", slug="test-site")
-        site.save()
-
-        response = self.client.get(site.get_absolute_url(), follow=True)
+        response = self.client.get(location.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(f"FOO {site.name} BAR", content, content)
+        self.assertIn(f"FOO {location.name} BAR", content, content)
+
+    def test_view_object_with_unsafe_custom_link_text(self):
+        """Ensure that custom links can't be used as a vector for injecting scripts or breaking HTML."""
+        customlink = CustomLink(
+            content_type=ContentType.objects.get_for_model(Location),
+            name="Test",
+            text='<script>alert("Hello world!")</script>',
+            target_url="http://example.com/?location=None",
+            new_window=False,
+        )
+        customlink.validated_save()
+        location_type = LocationType.objects.get(name="Campus")
+        status = Status.objects.get_for_model(Location).first()
+        location = Location(name="Test Location", location_type=location_type, status=status)
+        location.save()
+
+        response = self.client.get(location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
+        self.assertIn(format_html('<a href="{}"', customlink.target_url), content, content)
+
+    def test_view_object_with_unsafe_custom_link_url(self):
+        """Ensure that custom links can't be used as a vector for injecting scripts or breaking HTML."""
+        customlink = CustomLink(
+            content_type=ContentType.objects.get_for_model(Location),
+            name="Test",
+            text="Hello",
+            target_url='"><script>alert("Hello world!")</script><a href="',
+            new_window=False,
+        )
+        customlink.validated_save()
+        location_type = LocationType.objects.get(name="Campus")
+        status = Status.objects.get_for_model(Location).first()
+        location = Location(name="Test Location", location_type=location_type, status=status)
+        location.save()
+
+        response = self.client.get(location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
+        self.assertIn(format_html('<a href="{}"', customlink.target_url), content, content)
+
+    def test_view_object_with_unsafe_custom_link_name(self):
+        """Ensure that custom links can't be used as a vector for injecting scripts or breaking HTML."""
+        customlink = CustomLink(
+            content_type=ContentType.objects.get_for_model(Location),
+            name='<script>alert("Hello World")</script>',
+            text="Hello",
+            target_url="http://example.com/?location={{ obj.name ",  # intentionally bad jinja2 to trigger error case
+            new_window=False,
+        )
+        customlink.validated_save()
+        location_type = LocationType.objects.get(name="Campus")
+        status = Status.objects.get_for_model(Location).first()
+        location = Location(name="Test Location", location_type=location_type, status=status)
+        location.save()
+
+        response = self.client.get(location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
 
 
 class DynamicGroupTestCase(
@@ -481,17 +762,15 @@ class DynamicGroupTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         content_type = ContentType.objects.get_for_model(Device)
 
         # DynamicGroup objects to test.
-        DynamicGroup.objects.create(name="DG 1", slug="dg-1", content_type=content_type)
-        DynamicGroup.objects.create(name="DG 2", slug="dg-2", content_type=content_type)
-        DynamicGroup.objects.create(name="DG 3", slug="dg-3", content_type=content_type)
+        DynamicGroup.objects.create(name="DG 1", content_type=content_type)
+        DynamicGroup.objects.create(name="DG 2", content_type=content_type)
+        DynamicGroup.objects.create(name="DG 3", content_type=content_type)
 
         cls.form_data = {
             "name": "new_dynamic_group",
-            "slug": "new-dynamic-group",
             "description": "I am a new dynamic group object.",
             "content_type": content_type.pk,
             # Management form fields required for the dynamic formset
@@ -500,6 +779,42 @@ class DynamicGroupTestCase(
             "dynamic_group_memberships-MIN_NUM_FORMS": "0",
             "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_saved_filter(self):
+        """Test that editing a filter works using the edit view."""
+        self.add_permissions("extras.add_dynamicgroup", "extras.change_dynamicgroup")
+
+        # Create the object first.
+        data = self.form_data.copy()
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+
+        # Now update it.
+        instance = self._get_queryset().get(name=data["name"])
+        data["filter-serial"] = ["abc123"]
+        request = {
+            "path": self._get_url("edit", instance),
+            "data": post_data(data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+
+        instance.refresh_from_db()
+        self.assertEqual(instance.filter, {"serial": data["filter-serial"]})
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_filter_by_content_type(self):
+        """
+        Test that filtering by `content_type` in the UI succeeds.
+
+        This is a regression test for https://github.com/nautobot/nautobot/issues/3612
+        """
+        path = self._get_url("list")
+        response = self.client.get(path + "?content_type=dcim.device")
+        self.assertHttpStatus(response, 200)
 
 
 class ExportTemplateTestCase(
@@ -514,7 +829,7 @@ class ExportTemplateTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        obj_type = ContentType.objects.get_for_model(Site)
+        obj_type = ContentType.objects.get_for_model(Location)
 
         templates = (
             ExportTemplate(
@@ -544,9 +859,24 @@ class ExportTemplateTestCase(
         }
 
 
+class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = ExternalIntegration
+    bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}", "headers": r"{}"}
+    form_data = {
+        "name": "Test External Integration",
+        "remote_url": "https://example.com/test1/",
+        "verify_ssl": False,
+        "secrets_group": None,
+        "timeout": 10,
+        "extra_config": '{"foo": "bar"}',
+        "http_method": WebhookHttpMethodChoices.METHOD_GET,
+        "headers": '{"header": "fake header"}',
+        "ca_file_path": "this/is/a/file/path",
+    }
+
+
 class GitRepositoryTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
-    ViewTestCases.BulkImportObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
@@ -555,27 +885,28 @@ class GitRepositoryTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = GitRepository
+    slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
     def setUpTestData(cls):
         secrets_groups = (
-            SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1"),
-            SecretsGroup.objects.create(name="Secrets Group 2", slug="secrets-group-2"),
+            SecretsGroup.objects.create(name="Secrets Group 1"),
+            SecretsGroup.objects.create(name="Secrets Group 2"),
         )
 
         # Create four GitRepository records
         repos = (
-            GitRepository(name="Repo 1", slug="repo-1", remote_url="https://example.com/repo1.git"),
-            GitRepository(name="Repo 2", slug="repo-2", remote_url="https://example.com/repo2.git"),
-            GitRepository(name="Repo 3", slug="repo-3", remote_url="https://example.com/repo3.git"),
+            GitRepository(name="Repo 1", slug="repo_1", remote_url="https://example.com/repo1.git"),
+            GitRepository(name="Repo 2", slug="repo_2", remote_url="https://example.com/repo2.git"),
+            GitRepository(name="Repo 3", slug="repo_3", remote_url="https://example.com/repo3.git"),
             GitRepository(name="Repo 4", remote_url="https://example.com/repo4.git", secrets_group=secrets_groups[0]),
         )
         for repo in repos:
-            repo.save(trigger_resync=False)
+            repo.validated_save()
 
         cls.form_data = {
             "name": "A new Git repository",
-            "slug": "a-new-git-repository",
+            "slug": "a_new_git_repository",
             "remote_url": "http://example.com/a_new_git_repository.git",
             "branch": "develop",
             "_token": "1234567890abcdef1234567890abcdef",
@@ -587,15 +918,22 @@ class GitRepositoryTestCase(
             ],
         }
 
-        cls.csv_data = (
-            "name,slug,remote_url,branch,secrets_group,provided_contents",
-            "Git Repository 5,git-repo-5,https://example.com,main,,extras.configcontext",
-            "Git Repository 6,git-repo-6,https://example.com,develop,Secrets Group 2,",
-            'Git Repository 7,git-repo-7,https://example.com,next,Secrets Group 2,"extras.job,extras.configcontext"',
-        )
-
         cls.slug_source = "name"
         cls.slug_test_object = "Repo 4"
+
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        form_data = self.form_data.copy()
+        form_data["slug"] = instance.slug  # Slug is not editable
+        self.form_data = form_data
+        super().test_edit_object_with_permission()
+
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        form_data = self.form_data.copy()
+        form_data["slug"] = instance.slug  # Slug is not editable
+        self.form_data = form_data
+        super().test_edit_object_with_constrained_permission()
 
 
 class NoteTestCase(
@@ -608,56 +946,55 @@ class NoteTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
-        content_type = ContentType.objects.get_for_model(Site)
-        cls.site = Site.objects.first()
+        content_type = ContentType.objects.get_for_model(Location)
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         user = User.objects.first()
 
         # Notes Objects to test
         Note.objects.create(
-            note="Site has been placed on maintenance.",
+            note="Location has been placed on maintenance.",
             user=user,
             assigned_object_type=content_type,
-            assigned_object_id=cls.site.pk,
+            assigned_object_id=cls.location.pk,
         )
         Note.objects.create(
-            note="Site maintenance has ended.",
+            note="Location maintenance has ended.",
             user=user,
             assigned_object_type=content_type,
-            assigned_object_id=cls.site.pk,
+            assigned_object_id=cls.location.pk,
         )
         Note.objects.create(
-            note="Site is under duress.",
+            note="Location is under duress.",
             user=user,
             assigned_object_type=content_type,
-            assigned_object_id=cls.site.pk,
+            assigned_object_id=cls.location.pk,
         )
 
         cls.form_data = {
-            "note": "This is Site note.",
+            "note": "This is Location note.",
             "assigned_object_type": content_type.pk,
-            "assigned_object_id": cls.site.pk,
+            "assigned_object_id": cls.location.pk,
         }
         cls.expected_object_note = '<textarea name="object_note" cols="40" rows="10" class="form-control" placeholder="Note" id="id_object_note"></textarea>'
 
     def test_note_on_bulk_update_perms(self):
-        self.add_permissions("dcim.add_site", "extras.add_note")
-        response = self.client.get(reverse("dcim:site_add"))
+        self.add_permissions("dcim.add_location", "extras.add_note")
+        response = self.client.get(reverse("dcim:location_add"))
         self.assertContains(response, self.expected_object_note, html=True)
 
     def test_note_on_bulk_update_no_perms(self):
-        self.add_permissions("dcim.add_site")
-        response = self.client.get(reverse("dcim:site_add"))
+        self.add_permissions("dcim.add_location")
+        response = self.client.get(reverse("dcim:location_add"))
         self.assertNotContains(response, self.expected_object_note, html=True)
 
     def test_note_on_create_edit_perms(self):
-        self.add_permissions("dcim.change_site", "extras.add_note")
-        response = self.client.post(reverse("dcim:site_bulk_edit"), data={"pk": self.site.pk})
+        self.add_permissions("dcim.change_location", "extras.add_note")
+        response = self.client.post(reverse("dcim:location_bulk_edit"), data={"pk": self.location.pk})
         self.assertContains(response, self.expected_object_note, html=True)
 
     def test_note_on_create_edit_no_perms(self):
-        self.add_permissions("dcim.change_site")
-        response = self.client.post(reverse("dcim:site_bulk_edit"), data={"pk": self.site.pk})
+        self.add_permissions("dcim.change_location")
+        response = self.client.post(reverse("dcim:location_bulk_edit"), data={"pk": self.location.pk})
         self.assertNotContains(response, self.expected_object_note, html=True)
 
 
@@ -669,7 +1006,6 @@ class SecretTestCase(
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkImportObjectsViewTestCase,
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Secret
@@ -700,62 +1036,42 @@ class SecretTestCase(
 
         cls.form_data = {
             "name": "View Test 4",
-            "slug": "view-test-4",
             "provider": "environment-variable",
             "parameters": '{"variable": "VIEW_TEST_4"}',
         }
 
-        cls.csv_data = (
-            "name,slug,provider,parameters",
-            'View Test 5,view-test-5,environment-variable,{"variable": "VIEW_TEST_5"}',
-            'View Test 6,,environment-variable,{"variable": "VIEW_TEST_6"}',
-            'View Test 7,,environment-variable,{"variable": "VIEW_TEST_7"}',
-        )
 
-        cls.slug_source = "name"
-        cls.slug_test_object = "View Test 3"
-
-
-# Not a full-fledged OrganizationalObjectViewTestCase as there's no BulkImportView for SecretsGroups
-class SecretsGroupTestCase(
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-):
+class SecretsGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = SecretsGroup
 
     @classmethod
     def setUpTestData(cls):
         secrets_groups = (
-            SecretsGroup.objects.create(name="Group 1", slug="group-1", description="First Group"),
-            SecretsGroup.objects.create(name="Group 2", slug="group-2"),
-            SecretsGroup.objects.create(name="Group 3", slug="group-3"),
+            SecretsGroup.objects.create(name="Group 1", description="First Group"),
+            SecretsGroup.objects.create(name="Group 2"),
+            SecretsGroup.objects.create(name="Group 3"),
         )
 
         secrets = (
-            Secret.objects.create(name="secret 1", slug="secret-1", provider="text-file", parameters={"path": "/tmp"}),
-            Secret.objects.create(name="secret 2", slug="secret-2", provider="text-file", parameters={"path": "/tmp"}),
-            Secret.objects.create(name="secret 3", slug="secret-3", provider="text-file", parameters={"path": "/tmp"}),
+            Secret.objects.create(name="secret 1", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file -- false positive
+            Secret.objects.create(name="secret 2", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file -- false positive
+            Secret.objects.create(name="secret 3", provider="text-file", parameters={"path": "/tmp"}),  # noqa: S108  # hardcoded-temp-file -- false positive
         )
 
         SecretsGroupAssociation.objects.create(
-            group=secrets_groups[0],
+            secrets_group=secrets_groups[0],
             secret=secrets[0],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_USERNAME,
         )
         SecretsGroupAssociation.objects.create(
-            group=secrets_groups[0],
+            secrets_group=secrets_groups[0],
             secret=secrets[1],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
         )
         SecretsGroupAssociation.objects.create(
-            group=secrets_groups[1],
+            secrets_group=secrets_groups[1],
             secret=secrets[1],
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_PASSWORD,
@@ -763,17 +1079,13 @@ class SecretsGroupTestCase(
 
         cls.form_data = {
             "name": "Group 4",
-            "slug": "group-4",
             "description": "Some description",
             # Management form fields required for the dynamic Secret formset
-            "secretsgroupassociation_set-TOTAL_FORMS": "0",
-            "secretsgroupassociation_set-INITIAL_FORMS": "1",
-            "secretsgroupassociation_set-MIN_NUM_FORMS": "0",
-            "secretsgroupassociation_set-MAX_NUM_FORMS": "1000",
+            "secrets_group_associations-TOTAL_FORMS": "0",
+            "secrets_group_associations-INITIAL_FORMS": "1",
+            "secrets_group_associations-MIN_NUM_FORMS": "0",
+            "secrets_group_associations-MAX_NUM_FORMS": "1000",
         }
-
-        cls.slug_source = "name"
-        cls.slug_test_object = "Group 3"
 
 
 class GraphQLQueriesTestCase(
@@ -791,110 +1103,19 @@ class GraphQLQueriesTestCase(
         graphqlqueries = (
             GraphQLQuery(
                 name="graphql-query-1",
-                slug="graphql-query-1",
-                query="{ query: sites {name} }",
+                query="{ query: locations {name} }",
             ),
             GraphQLQuery(
                 name="graphql-query-2",
-                slug="graphql-query-2",
-                query='{ devices(role: "edge") { id, name, device_role { name slug } } }',
+                query='{ devices(role: "edge") { id, name, device_role { name } } }',
             ),
             GraphQLQuery(
                 name="graphql-query-3",
-                slug="graphql-query-3",
-                query="""
-query ($device: String!) {
-  devices(name: $device) {
-    config_context
-    name
-    position
-    serial
-    primary_ip4 {
-      id
-      primary_ip4_for {
-        id
-        name
-      }
-    }
-    tenant {
-      name
-    }
-    tags {
-      name
-      slug
-    }
-    device_role {
-      name
-    }
-    platform {
-      name
-      slug
-      manufacturer {
-        name
-      }
-      napalm_driver
-    }
-    site {
-      name
-      slug
-      vlans {
-        id
-        name
-        vid
-      }
-      vlan_groups {
-        id
-      }
-    }
-    interfaces {
-      description
-      mac_address
-      enabled
-      name
-      ip_addresses {
-        address
-        tags {
-          id
-        }
-      }
-      connected_circuit_termination {
-        circuit {
-          cid
-          commit_rate
-          provider {
-            name
-          }
-        }
-      }
-      tagged_vlans {
-        id
-      }
-      untagged_vlan {
-        id
-      }
-      cable {
-        termination_a_type
-        status {
-          name
-        }
-        color
-      }
-      tagged_vlans {
-        site {
-          name
-        }
-        id
-      }
-      tags {
-        id
-      }
-    }
-  }
-}""",
+                query=BIG_GRAPHQL_DEVICE_QUERY,
             ),
             GraphQLQuery(
                 name="Graphql Query 5",
-                query='{ devices(role: "edge") { id, name, device_role { name slug } } }',
+                query='{ devices(role: "edge") { id, name, device_role { name } } }',
             ),
         )
 
@@ -904,12 +1125,8 @@ query ($device: String!) {
 
         cls.form_data = {
             "name": "graphql-query-4",
-            "slug": "graphql-query-4",
-            "query": "{query: sites {name}}",
+            "query": "{query: locations {name}}",
         }
-
-        cls.slug_source = "name"
-        cls.slug_test_object = "Graphql Query 5"
 
 
 #
@@ -930,41 +1147,37 @@ class ScheduledJobTestCase(
         user = User.objects.create(username="user1", is_active=True)
         ScheduledJob.objects.create(
             name="test1",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_pass/TestPass",
+            task="pass.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_pass/TestPass",
+            task="pass.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test3",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_pass/TestPass",
+            task="pass.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
 
     def test_only_enabled_is_listed(self):
         self.add_permissions("extras.view_scheduledjob")
 
-        # this should not appear, since it’s not enabled
+        # this should not appear, since it's not enabled
         ScheduledJob.objects.create(
             enabled=False,
             name="test4",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_pass/TestPass",
+            task="pass.TestPass",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
 
         response = self.client.get(self._get_url("list"))
@@ -978,8 +1191,7 @@ class ScheduledJobTestCase(
             ScheduledJob.objects.create(
                 enabled=True,
                 name=name,
-                task="nautobot.extras.jobs.scheduled_job_handler",
-                job_class="local/test_pass/TestPass",
+                task="pass.TestPass",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 user=self.user,
                 start_time=timezone.now(),
@@ -1010,11 +1222,10 @@ class ScheduledJobTestCase(
         ScheduledJob.objects.create(
             enabled=True,
             name="test11",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_class="local/test_pass/TestPass",
+            task="pass.TestPass",
             interval=JobExecutionType.TYPE_CUSTOM,
             user=self.user,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
             crontab="*/15 9,17 3 * 1-5",
         )
 
@@ -1041,39 +1252,26 @@ class ApprovalQueueTestCase(
 
     def setUp(self):
         super().setUp()
-        self.job_model = Job.objects.get_for_class_path("local/test_pass/TestPass")
-        self.job_model_2 = Job.objects.get_for_class_path("local/test_fail/TestFail")
-        self.job_model_3 = Job.objects.get_for_class_path("local/test_read_only_pass/TestReadOnlyPass")
+        self.job_model = Job.objects.get_for_class_path("dry_run.TestDryRun")
+        self.job_model_2 = Job.objects.get_for_class_path("fail.TestFail")
 
         ScheduledJob.objects.create(
             name="test1",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="dry_run.TestDryRun",
             job_model=self.job_model,
-            job_class=self.job_model.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=True,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
         ScheduledJob.objects.create(
             name="test2",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="fail.TestFail",
             job_model=self.job_model_2,
-            job_class=self.job_model_2.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=True,
-            start_time=datetime.now(),
-        )
-        ScheduledJob.objects.create(
-            name="test3",
-            task="nautobot.extras.jobs.scheduled_job_handler",
-            job_model=self.job_model_3,
-            job_class=self.job_model_3.class_path,
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=self.user,
-            approval_required=True,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
 
     def test_only_approvable_is_listed(self):
@@ -1081,13 +1279,12 @@ class ApprovalQueueTestCase(
 
         ScheduledJob.objects.create(
             name="test4",
-            task="nautobot.extras.jobs.scheduled_job_handler",
+            task="pass.TestPass",
             job_model=self.job_model,
-            job_class=self.job_model.class_path,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=self.user,
             approval_required=False,
-            start_time=datetime.now(),
+            start_time=timezone.now(),
         )
 
         response = self.client.get(self._get_url("list"))
@@ -1225,10 +1422,10 @@ class ApprovalQueueTestCase(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_post_dry_run_success(self, _):
-        """Successfully request a dry run based on object-based run_job permissions."""
+    def test_post_dry_run_not_supported(self, _):
+        """Request a dry run on a job that doesn't support dryrun."""
         self.add_permissions("extras.view_scheduledjob")
-        instance = self._get_queryset().first()
+        instance = ScheduledJob.objects.filter(name="test2").first()
         instance.job_model.enabled = True
         instance.job_model.save()
         obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance.job_model.pk}, actions=["run"])
@@ -1238,14 +1435,31 @@ class ApprovalQueueTestCase(
         data = {"_dry_run": True}
 
         response = self.client.post(self._get_url("view", instance), data)
+        # Job was not submitted
+        self.assertFalse(JobResult.objects.filter(name=instance.job_model.class_path).exists())
+        self.assertContains(response, "This job does not support dryrun")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    @mock.patch("nautobot.extras.models.jobs.JobResult.enqueue_job")
+    def test_post_dry_run_success(self, mock_enqueue_job, _):
+        """Successfully request a dry run based on object-based run_job permissions."""
+        self.add_permissions("extras.view_scheduledjob")
+        instance = ScheduledJob.objects.filter(name="test1").first()
+        instance.job_model.enabled = True
+        instance.job_model.save()
+        obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance.job_model.pk}, actions=["run"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+        data = {"_dry_run": True}
+
+        mock_enqueue_job.side_effect = lambda job_model, *args, **kwargs: JobResult.objects.create(name=job_model.name)
+
+        response = self.client.post(self._get_url("view", instance), data)
         # Job was submitted
-        self.assertTrue(
-            JobResult.objects.filter(name=instance.job_model.class_path).exists(),
-            msg=extract_page_body(response.content.decode(response.charset)),
-        )
-        job_result = JobResult.objects.get(name=instance.job_model.class_path)
-        self.assertEqual(job_result.job_model, instance.job_model)
-        self.assertEqual(job_result.user, self.user)
+        mock_enqueue_job.assert_called_once()
+        job_result = JobResult.objects.get(name=instance.job_model.name)
         self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": job_result.pk}))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1419,26 +1633,14 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        obj_type = get_job_content_type()
-        JobResult.objects.create(
-            name="local/test_pass/TestPass",
-            task_id=uuid.uuid4(),
-            obj_type=obj_type,
-        )
-        JobResult.objects.create(
-            name="local/test_fail/TestFail",
-            task_id=uuid.uuid4(),
-            obj_type=obj_type,
-        )
-        JobResult.objects.create(
-            name="local/test_read_only_fail/TestReadOnlyFail",
-            task_id=uuid.uuid4(),
-            obj_type=obj_type,
-        )
+        JobResult.objects.create(name="pass.TestPass")
+        JobResult.objects.create(name="fail.TestFail")
 
 
 class JobTestCase(
     # note no CreateObjectViewTestCase - we do not support user creation of Job records
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.GetObjectViewTestCase,
@@ -1452,8 +1654,10 @@ class JobTestCase(
     model = Job
 
     def _get_queryset(self):
-        """Don't include hidden Jobs, non-installed Jobs or JobHookReceivers as they won't appear in the UI by default."""
-        return self.model.objects.filter(installed=True, hidden=False, is_job_hook_receiver=False)
+        """Don't include hidden Jobs, non-installed Jobs, JobHookReceivers or JobButtonReceivers as they won't appear in the UI by default."""
+        return self.model.objects.filter(
+            installed=True, hidden=False, is_job_hook_receiver=False, is_job_button_receiver=False
+        )
 
     @classmethod
     def setUpTestData(cls):
@@ -1466,9 +1670,9 @@ class JobTestCase(
 
         cls.run_urls = (
             # Legacy URL (job class path based)
-            reverse("extras:job", kwargs={"class_path": cls.test_pass.class_path}),
-            # Current URL (job model slug based)
-            reverse("extras:job_run", kwargs={"slug": cls.test_pass.slug}),
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": cls.test_pass.class_path}),
+            # Current URL (job model pk based)
+            reverse("extras:job_run", kwargs={"pk": cls.test_pass.pk}),
         )
 
         cls.test_required_args = Job.objects.get(job_class_name="TestRequired")
@@ -1477,14 +1681,13 @@ class JobTestCase(
 
         cls.extra_run_urls = (
             # Legacy URL (job class path based)
-            reverse("extras:job", kwargs={"class_path": cls.test_required_args.class_path}),
-            # Current URL (job model slug based)
-            reverse("extras:job_run", kwargs={"slug": cls.test_required_args.slug}),
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": cls.test_required_args.class_path}),
+            # Current URL (job model pk based)
+            reverse("extras:job_run", kwargs={"pk": cls.test_required_args.pk}),
         )
 
         # Create an entry for a non-installed Job as well
         cls.test_not_installed = Job(
-            source=JobSourceChoices.SOURCE_LOCAL,
             module_name="nonexistent",
             job_class_name="NoSuchJob",
             grouping="Nonexistent Jobs",
@@ -1499,7 +1702,6 @@ class JobTestCase(
         }
 
         cls.form_data = {
-            "slug": "custom-job-slug",
             "enabled": True,
             "grouping_override": True,
             "grouping": "Overridden Grouping",
@@ -1507,12 +1709,10 @@ class JobTestCase(
             "name": "Overridden Name",
             "description_override": True,
             "description": "This is an overridden description of a job.",
-            "commit_default_override": True,
-            "commit_default": False,
+            "dryrun_default_override": True,
+            "dryrun_default": True,
             "hidden_override": True,
             "hidden": False,
-            "read_only_override": True,
-            "read_only": False,
             "approval_required_override": True,
             "approval_required": True,
             "soft_time_limit_override": True,
@@ -1524,6 +1724,72 @@ class JobTestCase(
             "task_queues": "overridden,priority",
             "task_queues_override": True,
         }
+        # This form is emulating the non-conventional JobBulkEditForm
+        cls.bulk_edit_data = {
+            "enabled": True,
+            "clear_grouping_override": True,
+            "grouping": "",
+            "clear_description_override": False,
+            "description": "Overridden Description",
+            "clear_dryrun_default_override": False,
+            "dryrun_default": "",
+            "clear_hidden_override": True,
+            "hidden": False,
+            "clear_approval_required_override": True,
+            "approval_required": True,
+            "clear_soft_time_limit_override": False,
+            "soft_time_limit": 350,
+            "clear_time_limit_override": True,
+            "time_limit": "",
+            "has_sensitive_variables": False,
+            "clear_has_sensitive_variables_override": False,
+            "task_queues": "overridden,priority",
+            "clear_task_queues_override": False,
+        }
+
+    def validate_job_data_after_bulk_edit(self, pk_list, old_data):
+        # Name is bulk-editable
+        overridable_fields = [field for field in JOB_OVERRIDABLE_FIELDS if field != "name"]
+        for instance in self._get_queryset().filter(pk__in=pk_list):
+            self.assertEqual(instance.enabled, True)
+            job_class = instance.job_class
+            if job_class is not None:
+                for overridable_field in overridable_fields:
+                    # clear_override_field is obtained from adding "clear_" to the front and "_override" to the back of overridable_field
+                    # e.g grouping -> clear_grouping_override
+                    clear_override_field = "clear_" + overridable_field + "_override"
+                    # override_field is obtained from adding "_override" to the back of overridable_field
+                    # e.g grouping -> grouping_override
+                    override_field = overridable_field + "_override"
+                    reset_override = self.bulk_edit_data.get(clear_override_field, False)
+                    if overridable_field == "task_queues":
+                        override_value = self.bulk_edit_data.get(overridable_field).split(",")
+                    else:
+                        override_value = self.bulk_edit_data.get(overridable_field)
+                    # if clear_override is true, assert that values are reverted back to default values
+                    if reset_override is True:
+                        self.assertEqual(getattr(instance, overridable_field), getattr(job_class, overridable_field))
+                        self.assertEqual(getattr(instance, override_field), False)
+                    # if clear_override is false, assert that job attribute is set to the new value from the form
+                    elif reset_override is False and (override_value is False or override_value):
+                        self.assertEqual(getattr(instance, overridable_field), override_value)
+                        self.assertEqual(getattr(instance, override_field), True)
+                    # if clear_override is false and no new value is entered, assert that value of the job is unchanged
+                    else:
+                        self.assertEqual(getattr(instance, overridable_field), old_data[instance.pk][overridable_field])
+                        self.assertEqual(getattr(instance, override_field), old_data[instance.pk][overridable_field])
+
+    def validate_object_data_after_bulk_edit(self, pk_list):
+        instances = self._get_queryset().filter(pk__in=pk_list)
+        overridable_fields = [field for field in JOB_OVERRIDABLE_FIELDS if field != "name"]
+        old_data = {}
+        for instance in instances:
+            old_data[instance.pk] = {}
+            job_class = instance.job_class
+            if job_class is not None:
+                for field in overridable_fields:
+                    old_data[instance.pk][field] = getattr(job_class, field)
+        self.validate_job_data_after_bulk_edit(pk_list, old_data)
 
     #
     # Additional test cases for the "job" (legacy run) and "job_run" (updated run) views follow
@@ -1637,8 +1903,8 @@ class JobTestCase(
         self.add_permissions("extras.run_job")
 
         for run_url in (
-            reverse("extras:job", kwargs={"class_path": self.test_not_installed.class_path}),
-            reverse("extras:job_run", kwargs={"slug": self.test_not_installed.slug}),
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": self.test_not_installed.class_path}),
+            reverse("extras:job_run", kwargs={"pk": self.test_not_installed.pk}),
         ):
             response = self.client.post(run_url, self.data_run_immediately)
             self.assertEqual(response.status_code, 200, msg=run_url)
@@ -1652,14 +1918,14 @@ class JobTestCase(
         self.add_permissions("extras.run_job")
 
         for run_url in (
-            reverse("extras:job", kwargs={"class_path": "local/test_fail/TestFail"}),
-            reverse("extras:job_run", kwargs={"slug": Job.objects.get(job_class_name="TestFail").slug}),
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": "fail.TestFail"}),
+            reverse("extras:job_run", kwargs={"pk": Job.objects.get(job_class_name="TestFail").pk}),
         ):
             response = self.client.post(run_url, self.data_run_immediately)
             self.assertEqual(response.status_code, 200, msg=run_url)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertIn("Job is not enabled to be run", response_body)
-            self.assertFalse(JobResult.objects.filter(name="local/test_fail/TestFail").exists())
+            self.assertFalse(JobResult.objects.filter(name="fail.TestFail").exists())
 
     def test_run_now_missing_args(self):
         self.add_permissions("extras.run_job")
@@ -1687,6 +1953,37 @@ class JobTestCase(
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
 
+    @mock.patch("nautobot.extras.jobs.task_queues_as_choices")
+    def test_rerun_job(self, mock_task_queues_as_choices):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        mock_task_queues_as_choices.return_value = [("default", ""), ("queue1", ""), ("uniquequeue", "")]
+        job_celery_kwargs = {
+            "nautobot_job_job_model_id": self.test_required_args.id,
+            "nautobot_job_profile": True,
+            "nautobot_job_user_id": self.user.id,
+            "queue": "uniquequeue",
+        }
+
+        previous_result = JobResult.objects.create(
+            job_model=self.test_required_args,
+            user=self.user,
+            task_kwargs={"var": "456"},
+            celery_kwargs=job_celery_kwargs,
+        )
+
+        run_url = reverse("extras:job_run", kwargs={"pk": self.test_required_args.pk})
+        response = self.client.get(f"{run_url}?kwargs_from_job_result={previous_result.pk!s}")
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertInHTML('<option value="uniquequeue" selected>', content)
+        self.assertInHTML(
+            '<input type="text" name="var" value="456" class="form-control form-control" required placeholder="None" id="id_var">',
+            content,
+        )
+        self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
+
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_later_missing_name(self, _):
         self.add_permissions("extras.run_job")
@@ -1711,7 +2008,8 @@ class JobTestCase(
             "_schedule_name": "test",
         }
 
-        for run_url in self.run_urls:
+        for i, run_url in enumerate(self.run_urls):
+            data["_schedule_name"] = f"test {i}"
             response = self.client.post(run_url, data)
             self.assertHttpStatus(response, 200, msg=run_url)
 
@@ -1730,10 +2028,11 @@ class JobTestCase(
         data = {
             "_schedule_type": "future",
             "_schedule_name": "test",
-            "_schedule_start_time": str(datetime.now() - timedelta(minutes=1)),
+            "_schedule_start_time": str(timezone.now() - timedelta(minutes=1)),
         }
 
-        for run_url in self.run_urls:
+        for i, run_url in enumerate(self.run_urls):
+            data["_schedule_name"] = f"test {i}"
             response = self.client.post(run_url, data)
             self.assertHttpStatus(response, 200, msg=run_url)
 
@@ -1757,32 +2056,13 @@ class JobTestCase(
             "_schedule_start_time": str(start_time),
         }
 
-        for run_url in self.run_urls:
+        for i, run_url in enumerate(self.run_urls):
+            data["_schedule_name"] = f"test {i}"
             response = self.client.post(run_url, data)
             self.assertRedirects(response, reverse("extras:scheduledjob_list"))
 
-            scheduled = ScheduledJob.objects.last()
-            self.assertEqual(scheduled.name, "test")
+            scheduled = ScheduledJob.objects.get(name=f"test {i}")
             self.assertEqual(scheduled.start_time, start_time)
-
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_run_later_sets_scheduled_job_kwargs_pk(self, _):
-        self.add_permissions("extras.run_job")
-        self.add_permissions("extras.view_scheduledjob")
-
-        start_time = timezone.now() + timedelta(minutes=1)
-        data = {
-            "_schedule_type": "future",
-            "_schedule_name": "test",
-            "_schedule_start_time": str(start_time),
-        }
-
-        for run_url in self.run_urls:
-            response = self.client.post(run_url, data)
-            self.assertRedirects(response, reverse("extras:scheduledjob_list"))
-
-            scheduled = ScheduledJob.objects.last()
-            self.assertEqual(scheduled.kwargs["scheduled_job_pk"], str(scheduled.pk))
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_job_with_sensitive_variables_for_future(self, _):
@@ -1799,7 +2079,8 @@ class JobTestCase(
             "_schedule_name": "test",
             "_schedule_start_time": str(start_time),
         }
-        for run_url in self.run_urls:
+        for i, run_url in enumerate(self.run_urls):
+            data["_schedule_name"] = f"test {i}"
             response = self.client.post(run_url, data)
             self.assertHttpStatus(response, 200, msg=self.run_urls[1])
 
@@ -1880,7 +2161,187 @@ class JobTestCase(
         content = extract_page_body(response.content.decode(response.charset))
 
         self.assertHttpStatus(response, 200)
-        self.assertIn(f"<h1>{instance.name} - Change Log</h1>", content)
+        self.assertIn(f"{instance.name} - Change Log", content)
+
+
+class JobButtonTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = JobButton
+
+    @classmethod
+    def setUpTestData(cls):
+        job_buttons = (
+            JobButton.objects.create(
+                name="JobButton1",
+                text="JobButton1",
+                job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+                confirmation=True,
+            ),
+            JobButton.objects.create(
+                name="JobButton2",
+                text="JobButton2",
+                job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+                confirmation=False,
+            ),
+            JobButton.objects.create(
+                name="JobButton3",
+                text="JobButton3",
+                job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+                confirmation=True,
+                weight=50,
+            ),
+        )
+
+        location_ct = ContentType.objects.get_for_model(Location)
+        for jb in job_buttons:
+            jb.content_types.set([location_ct])
+
+        cls.form_data = {
+            "content_types": [location_ct.pk],
+            "name": "jobbutton-4",
+            "text": "jobbutton text 4",
+            "job": Job.objects.get(job_class_name="TestJobButtonReceiverComplex").pk,
+            "weight": 100,
+            "button_class": "default",
+            "confirmation": False,
+        }
+
+
+class JobButtonRenderingTestCase(TestCase):
+    """Tests for the rendering of JobButtons, distinct from tests of the JobButton views themselves."""
+
+    user_permissions = ["dcim.view_locationtype"]
+
+    def setUp(self):
+        super().setUp()
+        self.job_button_1 = JobButton(
+            name="JobButton 1",
+            text="JobButton {{ obj.name }}",
+            job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+            confirmation=False,
+        )
+        self.job_button_1.validated_save()
+        self.job_button_1.content_types.add(ContentType.objects.get_for_model(LocationType))
+
+        self.job_button_2 = JobButton(
+            name="JobButton 2",
+            text="Click me!",
+            job=Job.objects.get(job_class_name="TestJobButtonReceiverComplex"),
+            confirmation=False,
+        )
+        self.job_button_2.validated_save()
+        self.job_button_2.content_types.add(ContentType.objects.get_for_model(LocationType))
+
+        self.location_type = LocationType.objects.get(name="Campus")
+
+    def test_view_object_with_job_button(self):
+        """Ensure that the job button is rendered."""
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(f"JobButton {self.location_type.name}", content, content)
+        self.assertIn("Click me!", content, content)
+
+    def test_view_object_with_unsafe_text(self):
+        """Ensure that JobButton text can't be used as a vector for XSS."""
+        self.job_button_1.text = '<script>alert("Hello world!")</script>'
+        self.job_button_1.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
+
+        # Make sure grouped rendering is safe too
+        self.job_button_1.group_name = '<script>alert("Goodbye")</script>'
+        self.job_button_1.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
+
+    def test_view_object_with_unsafe_name(self):
+        """Ensure that JobButton names can't be used as a vector for XSS."""
+        self.job_button_1.text = "JobButton {{ obj"
+        self.job_button_1.name = '<script>alert("Yo")</script>'
+        self.job_button_1.validated_save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("<script>alert", content, content)
+        self.assertIn("&lt;script&gt;alert", content, content)
+
+    def test_render_constrained_run_permissions(self):
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": self.job_button_1.job.pk},
+            actions=["run"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+
+        with self.subTest("Ungrouped buttons"):
+            response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+            self.assertEqual(response.status_code, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertInHTML(
+                NO_CONFIRM_BUTTON.format(
+                    button_id=self.job_button_1.pk,
+                    button_text=f"JobButton {self.location_type.name}",
+                    button_class=self.job_button_1.button_class,
+                    disabled="",
+                ),
+                content,
+            )
+            self.assertInHTML(
+                NO_CONFIRM_BUTTON.format(
+                    button_id=self.job_button_2.pk,
+                    button_text="Click me!",
+                    button_class=self.job_button_2.button_class,
+                    disabled="disabled",
+                ),
+                content,
+            )
+
+        with self.subTest("Grouped buttons"):
+            self.job_button_1.group_name = "Grouping"
+            self.job_button_1.validated_save()
+            self.job_button_2.group_name = "Grouping"
+            self.job_button_2.validated_save()
+
+            response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+            self.assertEqual(response.status_code, 200)
+            content = extract_page_body(response.content.decode(response.charset))
+            self.assertInHTML(
+                "<li>"
+                + NO_CONFIRM_BUTTON.format(
+                    button_id=self.job_button_1.pk,
+                    button_text=f"JobButton {self.location_type.name}",
+                    button_class="link",
+                    disabled="",
+                )
+                + "</li>",
+                content,
+            )
+            self.assertInHTML(
+                "<li>"
+                + NO_CONFIRM_BUTTON.format(
+                    button_id=self.job_button_2.pk,
+                    button_text="Click me!",
+                    button_class="link",
+                    disabled="disabled",
+                )
+                + "</li>",
+                content,
+            )
 
 
 # TODO: Convert to StandardTestCases.Views
@@ -1889,20 +2350,20 @@ class ObjectChangeTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        site = Site(name="Site 1", slug="site-1")
-        site.save()
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
+        location = Location(name="Location 1", location_type=location_type, status=location_status)
+        location.save()
 
         # Create three ObjectChanges
         user = User.objects.create_user(username="testuser2")
         for _ in range(1, 4):
-            oc = site.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
+            oc = location.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
             oc.user = user
             oc.request_id = uuid.uuid4()
             oc.save()
 
     def test_objectchange_list(self):
-
         url = reverse("extras:objectchange_list")
         params = {
             "user": User.objects.first().pk,
@@ -1912,7 +2373,6 @@ class ObjectChangeTestCase(TestCase):
         self.assertHttpStatus(response, 200)
 
     def test_objectchange(self):
-
         objectchange = ObjectChange.objects.first()
         response = self.client.get(objectchange.get_absolute_url())
         self.assertHttpStatus(response, 200)
@@ -1929,7 +2389,7 @@ class RelationshipTestCase(
     RequiredRelationshipTestMixin,
 ):
     model = Relationship
-    slug_source = "name"
+    slug_source = "label"
     slugify_function = staticmethod(slugify_dashes_to_underscores)
 
     @classmethod
@@ -1937,36 +2397,37 @@ class RelationshipTestCase(
         interface_type = ContentType.objects.get_for_model(Interface)
         device_type = ContentType.objects.get_for_model(Device)
         vlan_type = ContentType.objects.get_for_model(VLAN)
+        status = Status.objects.get_for_model(Interface).first()
 
         Relationship(
-            name="Device VLANs",
-            slug="device-vlans",
+            label="Device VLANs",
+            key="device_vlans",
             type="many-to-many",
             source_type=device_type,
             destination_type=vlan_type,
         ).validated_save()
         Relationship(
-            name="Primary VLAN",
-            slug="primary-vlan",
+            label="Primary VLAN",
+            key="primary_vlan",
             type="one-to-many",
             source_type=vlan_type,
             destination_type=device_type,
         ).validated_save()
         Relationship(
-            name="Primary Interface",
+            label="Primary Interface",
             type="one-to-one",
             source_type=device_type,
             destination_type=interface_type,
         ).validated_save()
 
         cls.form_data = {
-            "name": "VLAN-to-Interface",
-            "slug": "vlan-to-interface",
+            "label": "VLAN-to-Interface",
+            "key": "vlan_to_interface",
             "type": "many-to-many",
             "source_type": vlan_type.pk,
             "source_label": "Interfaces",
             "source_hidden": False,
-            "source_filter": '{"status": ["active"]}',
+            "source_filter": '{"status": ["' + status.name + '"]}',
             "destination_type": interface_type.pk,
             "destination_label": "VLANs",
             "destination_hidden": True,
@@ -1983,12 +2444,26 @@ class RelationshipTestCase(
         4. Test bulk edit
         """
 
+        # Delete existing factory generated objects that may interfere with this test
+        IPAddress.objects.all().delete()
+        Prefix.objects.update(parent=None)
+        Prefix.objects.all().delete()
+        VLAN.objects.all().delete()
+
         # Parameterized tests (for creating and updating single objects):
         self.required_relationships_test(interact_with="ui")
 
         # 4. Bulk create/edit tests:
 
-        vlans = VLANFactory.create_batch(6)
+        vlan_status = Status.objects.get_for_model(VLAN).first()
+        vlans = (
+            VLAN.objects.create(name="test_required_relationships1", vid=1, status=vlan_status),
+            VLAN.objects.create(name="test_required_relationships2", vid=2, status=vlan_status),
+            VLAN.objects.create(name="test_required_relationships3", vid=3, status=vlan_status),
+            VLAN.objects.create(name="test_required_relationships4", vid=4, status=vlan_status),
+            VLAN.objects.create(name="test_required_relationships5", vid=5, status=vlan_status),
+            VLAN.objects.create(name="test_required_relationships6", vid=6, status=vlan_status),
+        )
 
         # Try deleting all devices and then editing the 6 VLANs (fails):
         Device.objects.all().delete()
@@ -2019,14 +2494,14 @@ class RelationshipTestCase(
             "relationship &quot;VLANs require at least one Device&quot;",
         )
         for vlan in vlans[:3]:
-            self.assertContains(response, f"{str(vlan)}")
+            self.assertContains(response, str(vlan))
 
         # Try editing 6 VLANs and adding the required device (succeeds):
         response = self.client.post(
             reverse("ipam:vlan_bulk_edit"),
             data={
                 "pk": [str(vlan.id) for vlan in vlans],
-                "add_cr_vlans-devices-m2m__source": [str(device_for_association.id)],
+                "add_cr_vlans_devices_m2m__source": [str(device_for_association.id)],
                 "_apply": [""],
             },
             follow=True,
@@ -2038,7 +2513,7 @@ class RelationshipTestCase(
             reverse("ipam:vlan_bulk_edit"),
             data={
                 "pk": [str(vlan.id) for vlan in vlans],
-                "remove_cr_vlans-devices-m2m__source": [str(device_for_association.id)],
+                "remove_cr_vlans_devices_m2m__source": [str(device_for_association.id)],
                 "_apply": [""],
             },
         )
@@ -2063,50 +2538,100 @@ class RelationshipAssociationTestCase(
         device_type = ContentType.objects.get_for_model(Device)
         vlan_type = ContentType.objects.get_for_model(VLAN)
 
-        relationship = Relationship(
-            name="Device VLANs",
-            slug="device-vlans",
+        # Since RelationshipAssociation.get_absolute_url() is actually the Relationship's URL,
+        # we want to have separate Relationships as well to allow distinguishing between them.
+        relationship_1 = Relationship(
+            label="Device VLANs 1",
+            key="device_vlans_1",
             type="many-to-many",
             source_type=device_type,
             destination_type=vlan_type,
         )
-        relationship.validated_save()
-        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
-        devicerole = Role.objects.get_for_model(Device).first()
-        site = Site.objects.first()
-        devices = (
-            Device.objects.create(name="Device 1", device_type=devicetype, role=devicerole, site=site),
-            Device.objects.create(name="Device 2", device_type=devicetype, role=devicerole, site=site),
-            Device.objects.create(name="Device 3", device_type=devicetype, role=devicerole, site=site),
+        relationship_2 = Relationship(
+            label="Device VLANs 2",
+            key="device_vlans_2",
+            type="many-to-many",
+            source_type=device_type,
+            destination_type=vlan_type,
         )
+        relationship_3 = Relationship(
+            label="Device VLANs 3",
+            key="device_vlans_3",
+            type="many-to-many",
+            source_type=device_type,
+            destination_type=vlan_type,
+        )
+        cls.relationship = relationship_1
+        relationship_1.validated_save()
+        relationship_2.validated_save()
+        relationship_3.validated_save()
+        manufacturer = Manufacturer.objects.first()
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
+        devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
+        location = Location.objects.first()
+        devices = (
+            Device.objects.create(
+                name="Device 1", device_type=devicetype, role=devicerole, location=location, status=devicestatus
+            ),
+            Device.objects.create(
+                name="Device 2", device_type=devicetype, role=devicerole, location=location, status=devicestatus
+            ),
+            Device.objects.create(
+                name="Device 3", device_type=devicetype, role=devicerole, location=location, status=devicestatus
+            ),
+        )
+        vlan_status = Status.objects.get_for_model(VLAN).first()
+        vlan_group = VLANGroup.objects.create(name="Test VLANGroup 1")
         vlans = (
-            VLAN.objects.create(vid=1, name="VLAN 1"),
-            VLAN.objects.create(vid=2, name="VLAN 2"),
-            VLAN.objects.create(vid=3, name="VLAN 3"),
+            VLAN.objects.create(vid=1, name="VLAN 1", status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(vid=2, name="VLAN 2", status=vlan_status, vlan_group=vlan_group),
+            VLAN.objects.create(vid=3, name="VLAN 3", status=vlan_status, vlan_group=vlan_group),
         )
 
         RelationshipAssociation(
-            relationship=relationship,
+            relationship=relationship_1,
             source_type=device_type,
             source_id=devices[0].pk,
             destination_type=vlan_type,
             destination_id=vlans[0].pk,
         ).validated_save()
         RelationshipAssociation(
-            relationship=relationship,
+            relationship=relationship_2,
             source_type=device_type,
             source_id=devices[1].pk,
             destination_type=vlan_type,
             destination_id=vlans[1].pk,
         ).validated_save()
         RelationshipAssociation(
-            relationship=relationship,
+            relationship=relationship_3,
             source_type=device_type,
             source_id=devices[2].pk,
             destination_type=vlan_type,
             destination_id=vlans[2].pk,
         ).validated_save()
+
+    def test_list_objects_with_constrained_permission(self):
+        instance1, instance2 = RelationshipAssociation.objects.all()[:2]
+
+        # Add object-level permission
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance1.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # TODO: it'd make test failures more readable if we strip the page headers/footers from the content
+        self.assertIn(instance1.source.name, content, msg=content)
+        self.assertIn(instance1.destination.name, content, msg=content)
+        self.assertNotIn(instance2.source.name, content, msg=content)
+        self.assertNotIn(instance2.destination.name, content, msg=content)
 
 
 class StatusTestCase(
@@ -2121,32 +2646,68 @@ class StatusTestCase(
 
     @classmethod
     def setUpTestData(cls):
-
         # Status objects to test.
         content_type = ContentType.objects.get_for_model(Device)
 
         cls.form_data = {
             "name": "new_status",
-            "slug": "new-status",
             "description": "I am a new status object.",
             "color": "ffcc00",
             "content_types": [content_type.pk],
         }
 
-        cls.csv_data = (
-            "name,slug,color,content_types"
-            'test_status1,test-status1,ffffff,"dcim.device"'
-            'test_status2,test-status2,ffffff,"dcim.device,dcim.rack"'
-            'test_status3,test-status3,ffffff,"dcim.device,dcim.site"'
-            'test_status4,,ffffff,"dcim.device,dcim.site"'
-        )
-
         cls.bulk_edit_data = {
             "color": "000000",
         }
 
-        cls.slug_source = "name"
-        cls.slug_test_object = Status.objects.first().name
+
+class TeamTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = Team
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.form_data = {
+            "name": "new team",
+            "phone": "555-0122",
+            "email": "new-team@example.com",
+            "address": "Rainbow Road, Ramus NJ",
+        }
+        cls.bulk_edit_data = {"address": "Carnegie Hall, New York, NY"}
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_new_team_and_assign_team_to_object(self):
+        initial_team_count = Team.objects.count()
+        initial_team_association_count = ContactAssociation.objects.count()
+        self.add_permissions("extras.add_team")
+        self.add_permissions("extras.add_contactassociation")
+
+        # Try GET with model-level permission
+        url = reverse("extras:object_team_add")
+        self.assertHttpStatus(self.client.get(url), 200)
+        team_associated_circuit = Circuit.objects.first()
+        self.form_data["associated_object_type"] = ContentType.objects.get_for_model(Circuit).pk
+        self.form_data["associated_object_id"] = team_associated_circuit.pk
+        self.form_data["role"] = Role.objects.get_for_model(ContactAssociation).first().pk
+        self.form_data["status"] = Status.objects.get_for_model(ContactAssociation).first().pk
+
+        # Try POST with model-level permission
+        request = {
+            "path": url,
+            "data": post_data(self.form_data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        self.assertEqual(initial_team_count + 1, Team.objects.count())
+        self.assertEqual(initial_team_association_count + 1, ContactAssociation.objects.count())
+        team = Team.objects.get(name="new team", phone="555-0122")
+        self.assertEqual(team.name, "new team")
+        self.assertEqual(team.phone, "555-0122")
+        self.assertEqual(team.email, "new-team@example.com")
+        self.assertEqual(team.address, "Rainbow Road, Ramus NJ")
+        contact_association = ContactAssociation.objects.get(team=team)
+        self.assertEqual(contact_association.associated_object_type.pk, self.form_data["associated_object_type"])
+        self.assertEqual(contact_association.associated_object_id, self.form_data["associated_object_id"])
+        self.assertEqual(contact_association.role.pk, self.form_data["role"])
+        self.assertEqual(contact_association.status.pk, self.form_data["status"])
 
 
 class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
@@ -2156,18 +2717,10 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     def setUpTestData(cls):
         cls.form_data = {
             "name": "Tag X",
-            "slug": "tag-x",
             "color": "c0c0c0",
             "comments": "Some comments",
             "content_types": [ct.id for ct in TaggableClassesQuery().as_queryset()],
         }
-
-        cls.csv_data = (
-            "name,slug,color,description",
-            "Tag 4,tag-4,ff0000,Fourth tag",
-            "Tag 5,tag-5,00ff00,Fifth tag",
-            "Tag 6,tag-6,0000ff,Sixth tag",
-        )
 
         cls.bulk_edit_data = {
             "color": "00ff00",
@@ -2175,11 +2728,11 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     def test_create_tags_with_content_types(self):
         self.add_permissions("extras.add_tag")
-        site_content_type = ContentType.objects.get_for_model(Site)
+        location_content_type = ContentType.objects.get_for_model(Location)
 
         form_data = {
             **self.form_data,
-            "content_types": [site_content_type.id],
+            "content_types": [location_content_type.id],
         }
 
         request = {
@@ -2188,9 +2741,9 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
         self.assertHttpStatus(self.client.post(**request), 302)
 
-        tag = Tag.objects.filter(slug=self.form_data["slug"])
+        tag = Tag.objects.filter(name=self.form_data["name"])
         self.assertTrue(tag.exists())
-        self.assertEqual(tag[0].content_types.first(), site_content_type)
+        self.assertEqual(tag[0].content_types.first(), location_content_type)
 
     def test_create_tags_with_invalid_content_types(self):
         self.add_permissions("extras.add_tag")
@@ -2207,7 +2760,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         }
 
         response = self.client.post(**request)
-        tag = Tag.objects.filter(slug=self.form_data["slug"])
+        tag = Tag.objects.filter(name=self.form_data["name"])
         self.assertFalse(tag.exists())
         self.assertIn("content_types: Select a valid choice", str(response.content))
 
@@ -2215,13 +2768,12 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         """Test removing a tag content_type that is been tagged to a model"""
         self.add_permissions("extras.change_tag")
 
-        tag_1 = Tag.objects.get_for_model(Site).first()
-        site = Site.objects.first()
-        site.tags.add(tag_1)
+        tag_1 = Tag.objects.get_for_model(Location).first()
+        location = Location.objects.first()
+        location.tags.add(tag_1)
 
         form_data = {
             "name": tag_1.name,
-            "slug": tag_1.slug,
             "color": "c0c0c0",
             "content_types": [ContentType.objects.get_for_model(Device).id],
         }
@@ -2233,7 +2785,7 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
         response = self.client.post(**request)
         self.assertHttpStatus(
-            response, 200, ["content_types: Unable to remove dcim.site. Dependent objects were found."]
+            response, 200, ["content_types: Unable to remove dcim.location. Dependent objects were found."]
         )
 
 
@@ -2295,29 +2847,52 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-
         # Status objects to test.
         content_type = ContentType.objects.get_for_model(Device)
 
         cls.form_data = {
             "name": "New Role",
-            "slug": "new-role",
             "description": "I am a new role object.",
             "color": ColorChoices.COLOR_GREY,
             "content_types": [content_type.pk],
         }
 
-        cls.csv_data = (
-            "name,slug,weight,color,content_types",
-            "test_role1,test-role1,1000,ffffff,dcim.device",
-            'test_role2,test-role2,200,ffffff,"dcim.device,dcim.rack"',
-            'test_role3,test-role3,100,ffffff,"dcim.device,ipam.prefix"',
-            'test_role4,test-role4,50,ffffff,"ipam.ipaddress,ipam.vlan"',
-        )
-
         cls.bulk_edit_data = {
             "color": "000000",
         }
 
-        cls.slug_source = "name"
-        cls.slug_test_object = Role.objects.first().name
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_view_with_content_types(self):
+        """
+        Check that the expected panel headings are rendered and unexpected panel headings are not rendered
+        """
+        eligible_ct_model_classes = RoleModelsQuery().list_subclasses()
+        for instance in self._get_queryset().all():
+            response = self.client.get(instance.get_absolute_url())
+            response_body = extract_page_body(response.content.decode(response.charset))
+            role_content_types = instance.content_types.all()
+            for model_class in eligible_ct_model_classes:
+                verbose_name_plural = model_class._meta.verbose_name_plural
+                content_type = ContentType.objects.get_for_model(model_class)
+                result = " ".join(elem.capitalize() for elem in verbose_name_plural.split())
+                if result == "Ip Addresses":
+                    result = "IP Addresses"
+                elif result == "Vlans":
+                    result = "VLANs"
+                # Assert tables are correctly rendered
+                if content_type not in role_content_types:
+                    if result == "Contact Associations":
+                        # AssociationContact Table in the contact tab should be there.
+                        self.assertIn(
+                            f'<strong>{result}</strong>\n                                    <div class="pull-right noprint">\n',
+                            response_body,
+                        )
+                        # ContactAssociationTable related to this role instances should not be there.
+                        self.assertNotIn(
+                            f'<strong>{result}</strong>\n            </div>\n            \n\n<table class="table table-hover table-headings">\n',
+                            response_body,
+                        )
+                    else:
+                        self.assertNotIn(f"<strong>{result}</strong>", response_body)
+                else:
+                    self.assertIn(f"<strong>{result}</strong>", response_body)

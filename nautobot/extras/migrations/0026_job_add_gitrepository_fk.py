@@ -2,11 +2,11 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
+
 import nautobot.core.models.fields
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0025_add_advanced_ui_boolean_to_customfield_conputedfield_and_relationship"),
     ]

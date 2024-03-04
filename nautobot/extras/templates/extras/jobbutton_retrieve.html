@@ -1,0 +1,51 @@
+{% extends 'generic/object_detail.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Job Button</strong>
+            </div>
+
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Object Types</td>
+                    <td>
+                        <ul>
+                            {% for ct in object.content_types.all %}
+                                <li>{{ ct }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Name</td>
+                    <td><span>{{ object.name }}</span></td>
+                </tr>
+                <tr>
+                    <td>Group Name</td>
+                    <td><span>{{ object.group_name }}</span></td>
+                </tr>
+                <tr>
+                    <td>Weight</td>
+                    <td><span>{{ object.weight }}</span></td>
+                </tr>
+                <tr>
+                    <td>Text</td>
+                    <td><span>{{ object.text }}</span></td>
+                </tr>
+                <tr>
+                    <td>Job</td>
+                    <td><a href="{% url 'extras:job_run_by_class_path' class_path=object.job.class_path %}">{{ object.job }}</a></td>
+                </tr>
+                <tr>
+                    <td>Button Class</td>
+                    <td><button class="btn btn-{{ object.button_class }}">{{ object.button_class | title }}</button></td>
+                </tr>
+                <tr>
+                    <td>Confirmation</td>
+                    <td><span>{{ object.confirmation }}</span></td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_left_page %}

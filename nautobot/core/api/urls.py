@@ -8,18 +8,21 @@ from drf_spectacular.views import (
 
 from nautobot.core.api.views import (
     APIRootView,
+    CSVImportFieldsForContentTypeAPIView,
     GetFilterSetFieldDOMElementAPIView,
     GetFilterSetFieldLookupExpressionChoicesAPIView,
+    GetMenuAPIView,
+    GetObjectCountsView,
     GraphQLDRFAPIView,
-    StatusView,
-    NautobotSpectacularSwaggerView,
     NautobotSpectacularRedocView,
+    NautobotSpectacularSwaggerView,
+    SettingsJSONSchemaView,
+    StatusView,
 )
-from nautobot.extras.plugins.urls import plugin_api_patterns
-
+from nautobot.extras.plugins.urls import apps_api_patterns, plugin_api_patterns
 
 core_api_patterns = [
-    # Lookup Expr
+    path("csv-import-fields/", CSVImportFieldsForContentTypeAPIView.as_view(), name="csv-import-fields"),
     path(
         "filterset-fields/lookup-choices/",
         GetFilterSetFieldLookupExpressionChoicesAPIView.as_view(),
@@ -30,6 +33,12 @@ core_api_patterns = [
         GetFilterSetFieldDOMElementAPIView.as_view(),
         name="filtersetfield-retrieve-lookupvaluedomelement",
     ),
+]
+ui_api_patterns = [
+    # Lookup Expr
+    path("core/", include((core_api_patterns, "core-api"))),
+    path("get-menu/", GetMenuAPIView.as_view(), name="get-menu"),
+    path("get-object-counts/", GetObjectCountsView.as_view(), name="get-object-counts"),
 ]
 
 urlpatterns = [
@@ -45,13 +54,17 @@ urlpatterns = [
     path("status/", StatusView.as_view(), name="api-status"),
     path("docs/", NautobotSpectacularSwaggerView.as_view(url_name="schema"), name="api_docs"),
     path("redoc/", NautobotSpectacularRedocView.as_view(url_name="schema"), name="api_redocs"),
+    path("settings-schema/", SettingsJSONSchemaView.as_view(), name="setting_schema_json"),
     path("swagger/", SpectacularAPIView.as_view(), name="schema"),
     path("swagger.json", SpectacularJSONAPIView.as_view(), name="schema_json"),
     path("swagger.yaml", SpectacularYAMLAPIView.as_view(), name="schema_yaml"),
     # GraphQL
     path("graphql/", GraphQLDRFAPIView.as_view(), name="graphql-api"),
-    # Plugins
+    # Apps
+    path("apps/", include((apps_api_patterns, "apps-api"))),
     path("plugins/", include((plugin_api_patterns, "plugins-api"))),
-    # Core
+    # Core, keeping for backwards compatibility of the legacy UI (Dynamic Filter Form)
     path("core/", include((core_api_patterns, "core-api"))),
+    # UI
+    path("ui/", include((ui_api_patterns, "ui-api"))),
 ]

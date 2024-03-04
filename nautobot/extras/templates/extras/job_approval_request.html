@@ -14,7 +14,7 @@
                     <li>{{ object.job_model.grouping | bettertitle }}</li>
                     <li>{{ object.job_model|hyperlinked_object }}</li>
                 {% else %}
-                    <li>{{ object.job_class }}</li>
+                    <li>{{ object.task }}</li>
                 {% endif %}
                 <li>Approval Requests</li>
                 <li>{{ object.name }}</li>
@@ -31,9 +31,6 @@
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active">
             <a href="#run" role="tab" data-toggle="tab" class="active">Approval Request</a>
-        </li>
-        <li role="presentation">
-            <a href="#source" role="tab" data-toggle="tab">Source</a>
         </li>
     </ul>
     <div class="tab-content">
@@ -66,22 +63,14 @@
                                     </div>
                                 </div>
                             {% endif %}
-                            {% if job_form.requires_input %}
-                                <div class="panel panel-default">
-                                    <div class="panel-heading">
-                                        <strong>Job Data</strong>
-                                    </div>
-                                    <div class="panel-body">
-                                        {% render_form job_form %}
-                                    </div>
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <strong>Job Data</strong>
                                 </div>
-                            {% else %}
-                                 <div class="alert alert-info">
-                                    <i class="mdi mdi-information"></i>
-                                    This job does not require any input to run.
+                                <div class="panel-body">
+                                    {% render_form job_form %}
                                 </div>
-                                {% render_form job_form %}
-                            {% endif %}
+                            </div>
                         {% else %}
                             <div class="panel panel-default">
                                 <div class="panel-heading"><strong>Job Data</strong></div>
@@ -110,13 +99,15 @@
                             </div>
                         </div>
                         <div class="pull-right">
-                            <button type="submit" name="_dry_run" id="id__dry_run" class="btn btn-primary"
-                                {% if not perms.extras.run_job or object.job_model is None or not object.job_model.runnable %}
-                                    disabled="disabled"
-                                {% endif %}
-                            >
-                                <i class="mdi mdi-play"></i> Dry Run
-                            </button>
+                            {% if "dryrun" in job_form.fields and object.job_model.supports_dryrun %}
+                                <button type="submit" name="_dry_run" id="id__dry_run" class="btn btn-primary"
+                                    {% if not perms.extras.run_job or object.job_model is None or not object.job_model.runnable %}
+                                        disabled="disabled"
+                                    {% endif %}
+                                >
+                                    <i class="mdi mdi-play"></i> Dry Run
+                                </button>
+                            {% endif %}
                             <button type="submit" name="_approve" id="id__approve" class="btn btn-success"
                                 {% if not perms.extras.approve_job or not perms.extras.change_scheduledjob or object.job_model is None or not object.job_model.runnable %}
                                     disabled="disabled"
@@ -138,12 +129,6 @@
                     </form>
                 </div>
             </div>
-        </div>
-        <div role="tabpanel" class="tab-pane" id="source">
-            {% if object.job_model.installed and object.job_model.job_class is not None %}
-                <p><code>{{ object.job_model.job_class.filename }}</code></p>
-                <pre>{{ object.job_model.job_class.source }}</pre>
-            {% endif %}
         </div>
     </div>
 {% endblock %}

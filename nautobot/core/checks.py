@@ -1,16 +1,10 @@
 import re
 
 from django.conf import settings
-from django.core.checks import register, Error, Tags, Warning  # pylint: disable=redefined-builtin
+from django.core.checks import Error, register, Tags, Warning  # pylint: disable=redefined-builtin
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
-
-
-E001 = Error(
-    "CACHEOPS_DEFAULTS['timeout'] value cannot be 0. To disable caching set CACHEOPS_ENABLED=False.",
-    id="nautobot.core.E001",
-    obj=settings,
-)
+from django.db import connections
 
 E002 = Error(
     "'nautobot.core.authentication.ObjectPermissionBackend' must be included in AUTHENTICATION_BACKENDS",
@@ -42,19 +36,10 @@ W005 = Warning(
     obj=settings,
 )
 
-W006 = Warning(
-    "CACHEOPS_ENABLED is set to True but cacheops is no longer recommended in v1.5. It can still be used but may lead to "
-    "inaccurate data responses. Cacheops will be removed in a later release.",
-    id="nautobot.core.W006",
-    obj=settings,
-)
+MIN_POSTGRESQL_MAJOR_VERSION = 12
+MIN_POSTGRESQL_MINOR_VERSION = 0
 
-
-@register(Tags.caches)
-def check_cache_timeout(app_configs, **kwargs):
-    if settings.CACHEOPS_DEFAULTS.get("timeout") == 0:
-        return [E001]
-    return []
+MIN_POSTGRESQL_VERSION = MIN_POSTGRESQL_MAJOR_VERSION * 10000 + MIN_POSTGRESQL_MINOR_VERSION
 
 
 @register(Tags.security)
@@ -96,11 +81,28 @@ def check_maintenance_mode(app_configs, **kwargs):
     return []
 
 
-@register(Tags.compatibility)
-def check_cacheops_enabled(app_configs, **kwargs):
-    if settings.CACHEOPS_ENABLED:
-        return [W006]
-    return []
+@register(Tags.database)
+def check_postgresql_version(app_configs, databases=None, **kwargs):
+    if databases is None:
+        return []
+    errors = []
+    for alias in databases:
+        conn = connections[alias]
+        if conn.vendor == "postgresql":
+            server_version = conn.cursor().connection.info.server_version
+            if server_version < MIN_POSTGRESQL_VERSION:
+                errors.append(
+                    Error(
+                        f"PostgreSQL version less than {MIN_POSTGRESQL_VERSION} "
+                        f"(i.e. {MIN_POSTGRESQL_MAJOR_VERSION}.{MIN_POSTGRESQL_MINOR_VERSION}) "
+                        "is not supported by this version of Nautobot",
+                        id="nautobot.core.E006",
+                        obj=f"connections[{alias}]",
+                        hint=f"Detected version is {server_version} (major version {server_version // 10000})",
+                    )
+                )
+
+    return errors
 
 
 @register(Tags.security)

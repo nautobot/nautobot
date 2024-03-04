@@ -18,15 +18,15 @@ def naturalize(value, max_length, integer_places=8):
     Take an alphanumeric string and prepend all integers to `integer_places` places to ensure the strings
     are ordered naturally. For example:
 
-        site9router21
-        site10router4
-        site10router19
+        location9router21
+        location10router4
+        location10router19
 
     becomes:
 
-        site00000009router00000021
-        site00000010router00000004
-        site00000010router00000019
+        location00000009router00000021
+        location00000010router00000004
+        location00000010router00000019
 
     :param value: The value to be naturalized
     :param max_length: The maximum length of the returned string. Characters beyond this length will be stripped.

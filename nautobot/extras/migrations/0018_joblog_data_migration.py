@@ -1,11 +1,12 @@
 from collections import OrderedDict
+
 from django.db import migrations
 
 from nautobot.extras.choices import LogLevelChoices
 from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
-    JOB_LOG_MAX_LOG_OBJECT_LENGTH,
     JOB_LOG_MAX_GROUPING_LENGTH,
+    JOB_LOG_MAX_LOG_OBJECT_LENGTH,
 )
 
 """
@@ -103,7 +104,6 @@ def reverse_migrate_params(apps, schema_editor):
 
     for job_result in JobResult.objects.all():
         for entry in JobLogEntry.objects.filter(job_result=job_result):
-
             if not job_result.data:
                 job_result.data = {}
 
@@ -136,7 +136,6 @@ def reverse_migrate_params(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("extras", "0017_joblogentry"),
     ]

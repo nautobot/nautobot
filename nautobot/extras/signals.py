@@ -1,37 +1,56 @@
-import os
-import random
-import shutil
-import uuid
-import logging
+import contextvars
 from datetime import timedelta
+import logging
+import os
+import secrets
+import shutil
+import traceback
 
-from cacheops.signals import cache_invalidated, cache_read
+from db_file_storage.model_utils import delete_file
+from db_file_storage.storage import DatabaseFileStorage
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.core.files.storage import get_storage_class
 from django.db import transaction
-from django.db.models.signals import m2m_changed, pre_delete, pre_save
+from django.db.models.signals import m2m_changed, post_delete, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
-from prometheus_client import Counter
 
+from nautobot.core.celery import app, import_jobs_as_celery_tasks
+from nautobot.core.models import BaseModel
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.logging import sanitize
+from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices
+from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+from nautobot.extras.models import (
+    ComputedField,
+    ContactAssociation,
+    CustomField,
+    DynamicGroup,
+    DynamicGroupMembership,
+    GitRepository,
+    JobResult,
+    ObjectChange,
+    Relationship,
+)
+from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.extras.utils import refresh_job_model_from_job_class
-from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
-from .choices import JobResultStatusChoices, ObjectChangeActionChoices
-from .models import CustomField, DynamicGroup, DynamicGroupMembership, GitRepository, JobResult, ObjectChange
-from .webhooks import enqueue_webhooks
 
-logger = logging.getLogger("nautobot.extras.signals")
+# thread safe change context state variable
+change_context_state = contextvars.ContextVar("change_context_state", default=None)
+logger = logging.getLogger(__name__)
 
 
 #
-# Change logging/webhooks
+# Change logging
 #
 
 
-def _get_user_if_authenticated(user, objectchange):
+def _get_user_if_authenticated(user, instance):
     """Return the user object associated with the request if the user is defined.
 
     If the user is not defined, log a warning to indicate that the user couldn't be retrived from the request
@@ -41,17 +60,45 @@ def _get_user_if_authenticated(user, objectchange):
     if user.is_authenticated:
         return user
     else:
-        logger.warning(f"Unable to retrieve the user while creating the changelog for {objectchange.changed_object}")
+        logger.warning(f"Unable to retrieve the user while creating the changelog for {instance}")
         return None
 
 
-def _handle_changed_object(change_context, sender, instance, **kwargs):
+@receiver(post_save)
+@receiver(m2m_changed)
+@receiver(post_delete)
+def invalidate_lru_cache(sender, **kwargs):
+    """Invalidate the LRU cache for ComputedFields, CustomFields and Relationships."""
+    if sender is CustomField.content_types.through:
+        manager = CustomField.objects
+    elif sender in (ComputedField, CustomField, Relationship):
+        manager = sender.objects
+    else:
+        return
+
+    cached_methods = (
+        "get_for_model",
+        "get_for_model_source",
+        "get_for_model_destination",
+    )
+
+    for method in cached_methods:
+        if hasattr(manager, method):
+            getattr(manager, method).cache_clear()
+
+
+@receiver(post_save)
+@receiver(m2m_changed)
+def _handle_changed_object(sender, instance, raw=False, **kwargs):
     """
     Fires when an object is created or updated.
     """
-    from .jobs import enqueue_job_hooks  # avoid circular import
 
-    object_m2m_changed = False
+    if raw:
+        return
+
+    if change_context_state.get() is None:
+        return
 
     # Determine the type of change being made
     if kwargs.get("created"):
@@ -60,36 +107,45 @@ def _handle_changed_object(change_context, sender, instance, **kwargs):
         action = ObjectChangeActionChoices.ACTION_UPDATE
     elif kwargs.get("action") in ["post_add", "post_remove"] and kwargs["pk_set"]:
         # m2m_changed with objects added or removed
-        object_m2m_changed = True
         action = ObjectChangeActionChoices.ACTION_UPDATE
     else:
         return
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
-        if object_m2m_changed:
-            related_changes = ObjectChange.objects.filter(
-                changed_object_type=ContentType.objects.get_for_model(instance),
-                changed_object_id=instance.pk,
-                request_id=change_context.change_id,
-            )
-            m2m_changes = instance.to_objectchange(action)
-            related_changes.update(object_data=m2m_changes.object_data, object_data_v2=m2m_changes.object_data_v2)
-            objectchange = related_changes.first() if related_changes.exists() else None
+        user = _get_user_if_authenticated(change_context_state.get().get_user(), instance)
+        # save a copy of this instance's field cache so it can be restored after serialization
+        # to prevent unexpected behavior when chaining multiple signal handlers
+        original_cache = instance._state.fields_cache.copy()
+
+        # If a change already exists for this change_id, user, and object, update it instead of creating a new one.
+        # If the object was deleted then recreated with the same pk (don't do this), change the action to update.
+        related_changes = ObjectChange.objects.filter(
+            changed_object_type=ContentType.objects.get_for_model(instance),
+            changed_object_id=instance.pk,
+            user=user,
+            request_id=change_context_state.get().change_id,
+        )
+        objectchange = instance.to_objectchange(action)
+        if related_changes.exists():
+            most_recent_change = related_changes.order_by("-time").first()
+            if most_recent_change.action == ObjectChangeActionChoices.ACTION_DELETE:
+                most_recent_change.action = ObjectChangeActionChoices.ACTION_UPDATE
+            most_recent_change.object_data = objectchange.object_data
+            most_recent_change.object_data_v2 = objectchange.object_data_v2
+            most_recent_change.save()
+            objectchange = most_recent_change
         else:
-            objectchange = instance.to_objectchange(action)
-            objectchange.user = _get_user_if_authenticated(change_context.get_user(), objectchange)
-            objectchange.request_id = change_context.change_id
-            objectchange.change_context = change_context.context
-            objectchange.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+            objectchange.user = user
+            objectchange.request_id = change_context_state.get().change_id
+            objectchange.change_context = change_context_state.get().context
+            objectchange.change_context_detail = change_context_state.get().context_detail[
+                :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+            ]
             objectchange.save()
 
-        # Enqueue job hooks
-        if objectchange is not None:
-            enqueue_job_hooks(objectchange)
-
-    # Enqueue webhooks
-    enqueue_webhooks(instance, change_context.get_user(), change_context.change_id, action)
+        # restore field cache
+        instance._state.fields_cache = original_cache
 
     # Increment metric counters
     if action == ObjectChangeActionChoices.ACTION_CREATE:
@@ -99,33 +155,69 @@ def _handle_changed_object(change_context, sender, instance, **kwargs):
 
     # Housekeeping: 0.1% chance of clearing out expired ObjectChanges
     changelog_retention = get_settings_or_config("CHANGELOG_RETENTION")
-    if changelog_retention and random.randint(1, 1000) == 1:
+    if changelog_retention and secrets.randbelow(1000) == 0:
         cutoff = timezone.now() - timedelta(days=changelog_retention)
         ObjectChange.objects.filter(time__lt=cutoff).delete()
 
 
-def _handle_deleted_object(change_context, sender, instance, **kwargs):
+@receiver(pre_delete)
+def _handle_deleted_object(sender, instance, **kwargs):
     """
     Fires when an object is deleted.
     """
-    from .jobs import enqueue_job_hooks  # avoid circular import
+    if change_context_state.get() is None:
+        return
+
+    if isinstance(instance, BaseModel):
+        associations = ContactAssociation.objects.filter(
+            associated_object_type=ContentType.objects.get_for_model(type(instance)), associated_object_id=instance.pk
+        )
+        associations.delete()
+
+    if hasattr(instance, "notes") and isinstance(instance.notes, NotesQuerySet):
+        notes = instance.notes
+        notes.delete()
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
+        user = _get_user_if_authenticated(change_context_state.get().get_user(), instance)
+
+        # save a copy of this instance's field cache so it can be restored after serialization
+        # to prevent unexpected behavior when chaining multiple signal handlers
+        original_cache = instance._state.fields_cache.copy()
+
+        # if a change already exists for this change_id, user, and object, update it instead of creating a new one
+        # except in the case that the object was created and deleted in the same change_id
+        # we don't want to create a delete change for an object that never existed
+        related_changes = ObjectChange.objects.filter(
+            changed_object_type=ContentType.objects.get_for_model(instance),
+            changed_object_id=instance.pk,
+            user=user,
+            request_id=change_context_state.get().change_id,
+        )
         objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-        objectchange.user = _get_user_if_authenticated(change_context.get_user(), objectchange)
-        objectchange.request_id = change_context.change_id
-        objectchange.change_context = change_context.context
-        objectchange.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
-        objectchange.save()
+        save_new_objectchange = True
+        if related_changes.exists():
+            most_recent_change = related_changes.order_by("-time").first()
+            if most_recent_change.action != ObjectChangeActionChoices.ACTION_CREATE:
+                most_recent_change.action = ObjectChangeActionChoices.ACTION_DELETE
+                most_recent_change.object_data = objectchange.object_data
+                most_recent_change.object_data_v2 = objectchange.object_data_v2
+                most_recent_change.save()
+                objectchange = most_recent_change
+                save_new_objectchange = False
 
-        # Enqueue job hooks
-        enqueue_job_hooks(objectchange)
+        if save_new_objectchange:
+            objectchange.user = user
+            objectchange.request_id = change_context_state.get().change_id
+            objectchange.change_context = change_context_state.get().context
+            objectchange.change_context_detail = change_context_state.get().context_detail[
+                :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+            ]
+            objectchange.save()
 
-    # Enqueue webhooks
-    enqueue_webhooks(
-        instance, change_context.get_user(), change_context.change_id, ObjectChangeActionChoices.ACTION_DELETE
-    )
+        # restore field cache
+        instance._state.fields_cache = original_cache
 
     # Increment metric counters
     model_deletes.labels(instance._meta.model_name).inc()
@@ -142,8 +234,7 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
     """
     if action == "post_remove":
         # Existing content types have been removed from the custom field, delete their data
-        # 2.0 TODO: #824 instance.slug rather than instance.name
-        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.name, pk_set))
+        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.key, pk_set))
 
     elif action == "post_add":
         # New content types have been added to the custom field, provision them
@@ -151,30 +242,6 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
 
 
 m2m_changed.connect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)
-
-
-#
-# Caching
-#
-
-cacheops_cache_hit = Counter("cacheops_cache_hit", "Number of cache hits")
-cacheops_cache_miss = Counter("cacheops_cache_miss", "Number of cache misses")
-cacheops_cache_invalidated = Counter("cacheops_cache_invalidated", "Number of cache invalidations")
-
-
-def cache_read_collector(sender, func, hit, **kwargs):
-    if hit:
-        cacheops_cache_hit.inc()
-    else:
-        cacheops_cache_miss.inc()
-
-
-def cache_invalidated_collector(sender, obj_dict, **kwargs):
-    cacheops_cache_invalidated.inc()
-
-
-cache_read.connect(cache_read_collector)
-cache_invalidated.connect(cache_invalidated_collector)
 
 
 #
@@ -193,11 +260,12 @@ def git_repository_pre_delete(instance, **kwargs):
     """
     from nautobot.extras.datasources import refresh_datasource_content
 
+    # FIXME(jathan): In light of jobs overhaul and Git syncs as jobs, we need to rethink this. We
+    # might instead make "delete" another Job class and call it here, but also think about how
+    # worker events will be such as firing the worker event here.
     job_result = JobResult.objects.create(
         name=instance.name,
-        obj_type=ContentType.objects.get_for_model(instance),
         user=None,
-        task_id=uuid.uuid4(),
         status=JobResultStatusChoices.STATUS_STARTED,
     )
 
@@ -206,18 +274,31 @@ def git_repository_pre_delete(instance, **kwargs):
     # In fact, attempting to do so would cause database IntegrityErrors!
     job_result.use_job_logs_db = False
 
-    refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
+    try:
+        refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
 
-    if job_result.status not in JobResultStatusChoices.READY_STATES:
-        job_result.set_status(JobResultStatusChoices.STATUS_SUCCESS)
-    job_result.save()
-
-    # TODO(Glenn): In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
-    # of this repository; we need some way to ensure that all such clones are deleted.
-    # For now we just delete the one that we have locally and rely on other methods (notably get_jobs())
-    # to clean up other clones as they're encountered.
-    if os.path.isdir(instance.filesystem_path):
-        shutil.rmtree(instance.filesystem_path)
+        # In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
+        # of this repository; we need some way to ensure that all such clones are deleted.
+        # In the Celery worker case, we can broadcast a control message to all workers to do so:
+        app.control.broadcast("discard_git_repository", repository_slug=instance.slug)
+        # But we don't have an equivalent way to broadcast to any other Django instances.
+        # For now we just delete the one that we have locally and rely on other methods,
+        # such as the import_jobs_as_celery_tasks() signal that runs on server startup,
+        # to clean up other clones as they're encountered.
+        if os.path.isdir(instance.filesystem_path):
+            shutil.rmtree(instance.filesystem_path)
+    except Exception as exc:
+        job_result.result = {
+            "exc_type": type(exc).__name__,
+            "exc_message": sanitize(str(exc)),
+        }
+        job_result.status = JobResultStatusChoices.STATUS_FAILURE
+        job_result.traceback = sanitize("".join(traceback.format_exception(type(exc), exc, exc.__traceback__)))
+    else:
+        job_result.status = JobResultStatusChoices.STATUS_SUCCESS
+    finally:
+        job_result.date_done = timezone.now()
+        job_result.save()
 
 
 #
@@ -237,11 +318,13 @@ def dynamic_group_children_changed(sender, instance, action, reverse, model, pk_
         )
 
 
-def dynamic_group_membership_created(sender, instance, **kwargs):
+def dynamic_group_membership_created(sender, instance, raw=False, **kwargs):
     """
     Forcibly call `full_clean()` when a new `DynamicGroupMembership` object
     is manually created to prevent inadvertantly creating invalid memberships.
     """
+    if raw:
+        return
     instance.full_clean()
 
 
@@ -249,50 +332,111 @@ m2m_changed.connect(dynamic_group_children_changed, sender=DynamicGroup.children
 pre_save.connect(dynamic_group_membership_created, sender=DynamicGroupMembership)
 
 
+def dynamic_group_eligible_groups_changed(sender, instance, **kwargs):
+    """
+    When a DynamicGroup is created or deleted, refresh the cache of eligible groups for the associated ContentType.
+
+    Can't change content_type_id on an existing instance, so no need to check for that.
+    """
+
+    if get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT") == 0:
+        # Caching is disabled, so there's nothing to do
+        return
+
+    if kwargs.get("created", None) is False:
+        # We do not care about updates
+        # "created" is not a kwarg for post_delete signals, so is unset or None
+        # "created" is a kwarg for post_save signals, but you cannot change content types of existing groups
+        #   therefor we can ignore cache updates on DynamicGroups updates
+        return
+
+    content_type = instance.content_type
+    cache_key = f"{content_type.app_label}.{content_type.model}._get_eligible_dynamic_groups"
+    cache.set(
+        cache_key,
+        DynamicGroup.objects.filter(content_type_id=instance.content_type_id),
+        get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"),
+    )
+
+
+post_save.connect(dynamic_group_eligible_groups_changed, sender=DynamicGroup)
+post_delete.connect(dynamic_group_eligible_groups_changed, sender=DynamicGroup)
+
+
+def dynamic_group_update_cached_members(sender, instance, **kwargs):
+    """
+    When a DynamicGroup or DynamicGroupMembership is updated, update the cache of members.
+    """
+
+    if get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT") == 0:
+        # Caching is disabled, so there's nothing to do
+        return
+
+    if isinstance(instance, DynamicGroupMembership):
+        group = instance.group
+    else:
+        group = instance
+
+    def _update_cache_and_parents(this_instance):
+        this_instance.update_cached_members()
+
+        # Since a change a group or group of groups does not affect it's children, we only need to go up the tree
+        # A group of groups does not use the cache of it's children due to the complexity of the set operations
+        for ancestor in list(this_instance.parents.all()):
+            _update_cache_and_parents(ancestor)
+
+    _update_cache_and_parents(group)
+
+
+post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroup)
+post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroupMembership)
+
+
 #
 # Jobs
 #
+
+
+@receiver(pre_delete, sender=JobResult)
+def job_result_delete_associated_files(instance, **kwargs):
+    """For each related FileProxy, make sure its file gets deleted correctly from disk or database."""
+    if get_storage_class(settings.JOB_FILE_IO_STORAGE) == DatabaseFileStorage:
+        for file_proxy in instance.files.all():
+            delete_file(file_proxy, "file")
+    else:
+        for file_proxy in instance.files.all():
+            file_proxy.file.delete()
 
 
 def refresh_job_models(sender, *, apps, **kwargs):
     """
     Callback for the nautobot_database_ready signal; updates Jobs in the database based on Job source file availability.
     """
+    from nautobot.extras.jobs import Job as JobClass  # avoid circular import
+
     Job = apps.get_model("extras", "Job")
-    GitRepository = apps.get_model("extras", "GitRepository")  # pylint: disable=redefined-outer-name
 
     # To make reverse migrations safe
-    if not hasattr(Job, "job_class_name") or not hasattr(Job, "git_repository"):
+    if not hasattr(Job, "job_class_name"):
         logger.info("Skipping refresh_job_models() as it appears Job model has not yet been migrated to latest.")
         return
 
-    from nautobot.extras.jobs import get_jobs
+    import_jobs_as_celery_tasks(app)
 
-    # TODO(Glenn): eventually this should be inverted so that get_jobs() relies on the database models...
-    job_classes = get_jobs()
     job_models = []
-    for source, modules in job_classes.items():
-        git_repository = None
-        if source.startswith("git."):
-            try:
-                git_repository = GitRepository.objects.get(slug=source[4:])
-            except GitRepository.DoesNotExist:
-                logger.warning('GitRepository "%s" not found?', source[4:])
-            source = "git"
+    for task in app.tasks.values():
+        # Skip Celery tasks that aren't Jobs
+        if not isinstance(task, JobClass):
+            continue
 
-        for module_details in modules.values():
-            for job_class in module_details["jobs"].values():
-                # TODO(Glenn): catch DB error in case where multiple Jobs have the same grouping + name
-                job_model, _ = refresh_job_model_from_job_class(Job, source, job_class, git_repository=git_repository)
-                if job_model is not None:
-                    job_models.append(job_model)
+        job_model, _ = refresh_job_model_from_job_class(Job, task.__class__)
+        if job_model is not None:
+            job_models.append(job_model)
 
-    for job_model in Job.objects.all():
-        if job_model.installed and job_model not in job_models:
+    for job_model in Job.objects.filter(installed=True):
+        if job_model not in job_models:
             logger.info(
-                "Job %s%s/%s/%s is no longer installed",
-                job_model.source,
-                f"/{job_model.git_repository.slug}" if job_model.git_repository is not None else "",
+                "Job %s/%s is no longer installed",
                 job_model.module_name,
                 job_model.job_class_name,
             )

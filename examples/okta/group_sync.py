@@ -1,8 +1,9 @@
 """Additional functions to process an Okta user."""
 import logging
+
 from django.contrib.auth.models import Group
 
-logger = logging.getLogger("auth.okta")
+logger = logging.getLogger(__name__)
 CLAIMS_GROUP_NAME = "groups"  # As in `Okta -> Authorization Servers -> Claims`
 SUPERUSER_GROUPS = ["Nautobot Admins"]
 STAFF_GROUPS = ["Nautobot Admins"]

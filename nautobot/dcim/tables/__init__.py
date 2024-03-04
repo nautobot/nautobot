@@ -3,6 +3,7 @@ from django_tables2.utils import Accessor
 
 from nautobot.core.tables import BaseTable, BooleanColumn
 from nautobot.dcim.models import ConsolePort, Interface, PowerPort
+
 from .cables import CableTable
 from .devices import (
     ConsolePortTable,
@@ -15,18 +16,22 @@ from .devices import (
     DeviceImportTable,
     DeviceInterfaceTable,
     DeviceInventoryItemTable,
-    DevicePowerPortTable,
     DevicePowerOutletTable,
+    DevicePowerPortTable,
     DeviceRearPortTable,
     DeviceRedundancyGroupTable,
     DeviceTable,
     FrontPortTable,
+    InterfaceRedundancyGroupAssociationTable,
+    InterfaceRedundancyGroupTable,
     InterfaceTable,
     InventoryItemTable,
     PlatformTable,
     PowerOutletTable,
     PowerPortTable,
     RearPortTable,
+    SoftwareImageFileTable,
+    SoftwareVersionTable,
     VirtualChassisTable,
 )
 from .devicetypes import (
@@ -35,6 +40,7 @@ from .devicetypes import (
     DeviceBayTemplateTable,
     DeviceTypeTable,
     FrontPortTemplateTable,
+    HardwareFamilyTable,
     InterfaceTemplateTable,
     ManufacturerTable,
     PowerOutletTemplateTable,
@@ -44,12 +50,11 @@ from .devicetypes import (
 from .locations import LocationTable, LocationTypeTable
 from .power import PowerFeedTable, PowerPanelTable
 from .racks import (
-    RackTable,
     RackDetailTable,
     RackGroupTable,
     RackReservationTable,
+    RackTable,
 )
-from .sites import RegionTable, SiteTable
 
 __all__ = (
     "CableTable",
@@ -75,8 +80,11 @@ __all__ = (
     "DeviceTypeTable",
     "FrontPortTable",
     "FrontPortTemplateTable",
+    "HardwareFamilyTable",
     "InterfaceConnectionTable",
     "InterfaceTable",
+    "InterfaceRedundancyGroupTable",
+    "InterfaceRedundancyGroupAssociationTable",
     "InterfaceTemplateTable",
     "InventoryItemTable",
     "LocationTable",
@@ -96,8 +104,8 @@ __all__ = (
     "RackTable",
     "RearPortTable",
     "RearPortTemplateTable",
-    "RegionTable",
-    "SiteTable",
+    "SoftwareImageFileTable",
+    "SoftwareVersionTable",
     "VirtualChassisTable",
 )
 

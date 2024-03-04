@@ -9,13 +9,10 @@ from netaddr import IPNetwork
 
 from nautobot.core import filters, forms, testing
 from nautobot.core.utils import requests
-from nautobot.dcim import filters as dcim_filters
-from nautobot.dcim import models as dcim_models
+from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models
 from nautobot.dcim.tests import test_views
-from nautobot.extras import filters as extras_filters
-from nautobot.extras import models as extras_models
-from nautobot.ipam import forms as ipam_forms
-from nautobot.ipam import models as ipam_models
+from nautobot.extras import filters as extras_filters, models as extras_models
+from nautobot.ipam import forms as ipam_forms, models as ipam_models
 
 
 class SearchFormTestCase(TestCase):
@@ -26,7 +23,7 @@ class SearchFormTestCase(TestCase):
 
         # Assert the q field placeholder is overridden
         self.assertEqual(
-            SearchForm(q_placeholder="Search Sites").fields["q"].widget.attrs["placeholder"], "Search Sites"
+            SearchForm(q_placeholder="Search Locations").fields["q"].widget.attrs["placeholder"], "Search Locations"
         )
 
 
@@ -178,8 +175,8 @@ class ExpandIPAddress(TestCase):
 
         self.assertEqual(sorted(forms.expand_ipaddress_pattern(input_, 6)), output)
 
-    def test_invalid_address_family(self):
-        with self.assertRaisesRegex(Exception, "Invalid IP address family: 5"):
+    def test_invalid_address_version(self):
+        with self.assertRaisesRegex(Exception, "Invalid IP address version: 5"):
             sorted(forms.expand_ipaddress_pattern(None, 5))
 
     def test_invalid_non_pattern(self):
@@ -371,90 +368,45 @@ class AddFieldToFormClassTest(TestCase):
         with self.assertRaises(AttributeError):
             forms.add_field_to_filter_form_class(
                 ipam_forms.ServiceFilterForm,
-                "port",
+                "ports",
                 django_forms.CharField(required=False, label="Added Field Description"),
             )
 
 
-class CSVDataFieldTest(TestCase):
+class DynamicModelChoiceFieldTest(TestCase):
+    """Tests for DynamicModelChoiceField."""
+
     def setUp(self):
-        self.field = forms.CSVDataField(from_form=ipam_forms.IPAddressCSVForm)
-
-    def test_clean(self):
-        input_ = """
-        address,status,vrf
-        192.0.2.1/32,Active,Test VRF
-        """
-        output = (
-            {"address": None, "status": None, "vrf": None},
-            [{"address": "192.0.2.1/32", "status": "Active", "vrf": "Test VRF"}],
+        self.field = forms.DynamicModelChoiceField(queryset=ipam_models.IPAddress.objects.all())
+        self.field_with_to_field_name = forms.DynamicModelChoiceField(
+            queryset=ipam_models.IPAddress.objects.all(), to_field_name="address"
         )
-        self.assertEqual(self.field.clean(input_), output)
 
-    def test_clean_invalid_header(self):
-        input_ = """
-        address,status,vrf,xxx
-        192.0.2.1/32,Active,Test VRF,123
-        """
-        with self.assertRaises(django_forms.ValidationError):
-            self.field.clean(input_)
+    def test_prepare_value_invalid_uuid(self):
+        """A nonexistent UUID PK value should be handled gracefully."""
+        value = "c671a001-4c17-4ca1-80fd-fe1609bcadec"
+        self.assertEqual(self.field.prepare_value(value), value)
+        self.assertEqual(self.field_with_to_field_name.prepare_value(value), value)
 
-    def test_clean_missing_required_header(self):
-        input_ = """
-        status,vrf
-        Active,Test VRF
-        """
-        with self.assertRaises(django_forms.ValidationError):
-            self.field.clean(input_)
+    def test_prepare_value_valid_uuid(self):
+        """A UUID PK referring to an actual object should be handled correctly."""
+        ipaddr_status = extras_models.Status.objects.get_for_model(ipam_models.IPAddress).first()
+        prefix_status = extras_models.Status.objects.get_for_model(ipam_models.Prefix).first()
+        namespace = ipam_models.Namespace.objects.first()
+        ipam_models.Prefix.objects.create(prefix="10.1.1.0/24", namespace=namespace, status=prefix_status)
+        address = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", namespace=namespace, status=ipaddr_status)
+        self.assertEqual(self.field.prepare_value(address.pk), address.pk)
+        self.assertEqual(self.field_with_to_field_name.prepare_value(address.pk), address.address)
 
-    def test_clean_default_to_field(self):
-        input_ = """
-        address,status,vrf.name
-        192.0.2.1/32,Active,Test VRF
-        """
-        output = (
-            {"address": None, "status": None, "vrf": "name"},
-            [{"address": "192.0.2.1/32", "status": "Active", "vrf": "Test VRF"}],
-        )
-        self.assertEqual(self.field.clean(input_), output)
-
-    def test_clean_pk_to_field(self):
-        input_ = """
-        address,status,vrf.pk
-        192.0.2.1/32,Active,123
-        """
-        output = (
-            {"address": None, "status": None, "vrf": "pk"},
-            [{"address": "192.0.2.1/32", "status": "Active", "vrf": "123"}],
-        )
-        self.assertEqual(self.field.clean(input_), output)
-
-    def test_clean_custom_to_field(self):
-        input_ = """
-        address,status,vrf.rd
-        192.0.2.1/32,Active,123:456
-        """
-        output = (
-            {"address": None, "status": None, "vrf": "rd"},
-            [{"address": "192.0.2.1/32", "status": "Active", "vrf": "123:456"}],
-        )
-        self.assertEqual(self.field.clean(input_), output)
-
-    def test_clean_invalid_to_field(self):
-        input_ = """
-        address,status,vrf.xxx
-        192.0.2.1/32,Active,123:456
-        """
-        with self.assertRaises(django_forms.ValidationError):
-            self.field.clean(input_)
-
-    def test_clean_to_field_on_non_object(self):
-        input_ = """
-        address,status.foo,vrf
-        192.0.2.1/32,Bar,Test VRF
-        """
-        with self.assertRaises(django_forms.ValidationError):
-            self.field.clean(input_)
+    def test_prepare_value_valid_object(self):
+        """An object reference should be handled correctly."""
+        ipaddr_status = extras_models.Status.objects.get_for_model(ipam_models.IPAddress).first()
+        prefix_status = extras_models.Status.objects.get_for_model(ipam_models.Prefix).first()
+        namespace = ipam_models.Namespace.objects.first()
+        ipam_models.Prefix.objects.create(prefix="10.1.1.0/24", namespace=namespace, status=prefix_status)
+        address = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", namespace=namespace, status=ipaddr_status)
+        self.assertEqual(self.field.prepare_value(address), address.pk)
+        self.assertEqual(self.field_with_to_field_name.prepare_value(address), address.address)
 
 
 class DynamicModelMultipleChoiceFieldTest(TestCase):
@@ -462,36 +414,35 @@ class DynamicModelMultipleChoiceFieldTest(TestCase):
 
     def setUp(self):
         self.field = forms.DynamicModelMultipleChoiceField(queryset=ipam_models.IPAddress.objects.all())
-
-    def test_prepare_value_single_str(self):
-        """A single string (UUID) value should be treated as a single-entry list."""
-        self.assertEqual(
-            self.field.prepare_value("c671a001-4c17-4ca1-80fd-fe1609bcadec"),
-            ["c671a001-4c17-4ca1-80fd-fe1609bcadec"],
+        self.field_with_to_field_name = forms.DynamicModelMultipleChoiceField(
+            queryset=ipam_models.IPAddress.objects.all(), to_field_name="address"
         )
 
     def test_prepare_value_multiple_str(self):
         """A list of string (UUID) values should be handled as-is."""
-        self.assertEqual(
-            self.field.prepare_value(["c671a001-4c17-4ca1-80fd-fe1609bcadec", "097581e8-1fd5-444f-bbf4-46324e924826"]),
-            ["c671a001-4c17-4ca1-80fd-fe1609bcadec", "097581e8-1fd5-444f-bbf4-46324e924826"],
-        )
-
-    def test_prepare_value_single_object(self):
-        """A single object value should be translated to its corresponding PK."""
-        address = ipam_models.IPAddress.objects.create(address="10.1.1.1/24")
-        self.assertEqual(
-            self.field.prepare_value(address),
-            address.pk,
-        )
+        values = ["c671a001-4c17-4ca1-80fd-fe1609bcadec", "097581e8-1fd5-444f-bbf4-46324e924826"]
+        self.assertEqual(self.field.prepare_value(values), values)
+        self.assertEqual(self.field_with_to_field_name.prepare_value(values), values)
 
     def test_prepare_value_multiple_object(self):
         """A list of object values should be translated to a list of PKs."""
-        address_1 = ipam_models.IPAddress.objects.create(address="10.1.1.1/24")
-        address_2 = ipam_models.IPAddress.objects.create(address="10.1.1.2/24")
+        ipaddr_status = extras_models.Status.objects.get_for_model(ipam_models.IPAddress).first()
+        prefix_status = extras_models.Status.objects.get_for_model(ipam_models.Prefix).first()
+        namespace = ipam_models.Namespace.objects.first()
+        ipam_models.Prefix.objects.create(prefix="10.1.1.0/24", namespace=namespace, status=prefix_status)
+        address_1 = ipam_models.IPAddress.objects.create(
+            address="10.1.1.1/24", namespace=namespace, status=ipaddr_status
+        )
+        address_2 = ipam_models.IPAddress.objects.create(
+            address="10.1.1.2/24", namespace=namespace, status=ipaddr_status
+        )
         self.assertEqual(
             self.field.prepare_value([address_1, address_2]),
             [address_1.pk, address_2.pk],
+        )
+        self.assertEqual(
+            self.field_with_to_field_name.prepare_value([address_1, address_2]),
+            [address_1.address, address_2.address],
         )
 
 
@@ -531,11 +482,14 @@ class MultiValueCharFieldTest(TestCase):
 class NumericArrayFieldTest(TestCase):
     def setUp(self):
         super().setUp()
-        self.field = ipam_forms.ServiceForm().fields["ports"]
+        # We need to use a field with required=False so we can test empty/None inputs
+        self.field = dcim_forms.DeviceFilterForm().fields["device_redundancy_group_priority"]
 
     def test_valid_input(self):
         # Mapping of input => expected
         tests = {
+            None: [],
+            "": [],
             "80,443-444": [80, 443, 444],
             "1024-1028,31337": [1024, 1025, 1026, 1027, 1028, 31337],
         }
@@ -557,11 +511,17 @@ class AddressFieldMixinTest(TestCase):
 
     def setUp(self):
         """Setting up shared variables for the AddressFieldMixin."""
-        self.ip = ipam_models.IPAddress.objects.create(address="10.0.0.1/24")
+        ipaddr_status = extras_models.Status.objects.get_for_model(ipam_models.IPAddress).first()
+        prefix_status = extras_models.Status.objects.get_for_model(ipam_models.Prefix).first()
+        self.namespace = ipam_models.Namespace.objects.first()
+        self.prefix, _ = ipam_models.Prefix.objects.get_or_create(
+            prefix="10.0.0.0/24", namespace=self.namespace, defaults={"status": prefix_status}
+        )
+        self.ip, _ = ipam_models.IPAddress.objects.get_or_create(
+            address="10.0.0.1/32", parent=self.prefix, defaults={"status": ipaddr_status}
+        )
         self.initial = {"address": self.ip.address}
 
-    def test_address_initial(self):
-        """Ensure initial kwargs for address is passed in."""
         with mock.patch("nautobot.core.forms.forms.forms.ModelForm.__init__") as mock_init:
             ip_none = ipam_models.IPAddress()
             forms.AddressFieldMixin(initial=self.initial, instance=ip_none)
@@ -581,7 +541,8 @@ class PrefixFieldMixinTest(TestCase):
 
     def setUp(self):
         """Setting up shared variables for the PrefixFieldMixin."""
-        self.prefix = ipam_models.Prefix.objects.create(prefix=IPNetwork("10.0.0.0/24"))
+        status = extras_models.Status.objects.get_for_model(ipam_models.Prefix).first()
+        self.prefix = ipam_models.Prefix.objects.create(prefix=IPNetwork("10.0.0.0/24"), status=status)
         self.initial = {"prefix": self.prefix.prefix}
 
     def test_prefix_initial(self):
@@ -610,7 +571,7 @@ class JSONFieldTest(testing.TestCase):
         test_views.create_test_device("Foo Device")
         custom_field = extras_models.CustomField(
             type="json",
-            name="json-field",
+            label="JSON Field",
             required=False,
         )
         custom_field.save()
@@ -626,13 +587,15 @@ class JSONFieldTest(testing.TestCase):
 
 class MultiMatchModelMultipleChoiceFieldTest(TestCase):
     def test_clean(self):
-        field = forms.MultiMatchModelMultipleChoiceField(queryset=ipam_models.VLANGroup.objects.all())
-        vlan_groups = (
-            ipam_models.VLANGroup.objects.create(name="VLAN Group 1", slug="vlan-group-1"),
-            ipam_models.VLANGroup.objects.create(name="VLAN Group 2", slug="vlan-group-2"),
-            ipam_models.VLANGroup.objects.create(name="VLAN Group 3", slug="vlan-group-3"),
+        field = forms.MultiMatchModelMultipleChoiceField(
+            queryset=ipam_models.VLANGroup.objects.all(), to_field_name="name"
         )
-        input_ = [vlan_groups[0].pk, vlan_groups[1].slug]
+        vlan_groups = (
+            ipam_models.VLANGroup.objects.create(name="VLAN Group 1"),
+            ipam_models.VLANGroup.objects.create(name="VLAN Group 2"),
+            ipam_models.VLANGroup.objects.create(name="VLAN Group 3"),
+        )
+        input_ = [vlan_groups[0].pk, vlan_groups[1].name]
         qs = field.clean(input_)
         expected_output = [vlan_groups[0].pk, vlan_groups[1].pk]
         self.assertQuerysetEqual(qs, values=expected_output, transform=lambda x: x.pk)
@@ -665,15 +628,9 @@ class DynamicFilterFormTest(TestCase):
     #     self.assertEqual("'DynamicFilterForm' object requires `filterset_class` attribute", str(err.exception))
 
     def test_dynamic_filter_form(self):
-        form = forms.DynamicFilterForm(filterset_class=extras_filters.StatusFilterSet)
-        site_form = forms.DynamicFilterForm(filterset_class=dcim_filters.SiteFilterSet)
+        form = forms.DynamicFilterForm(filterset=extras_filters.StatusFilterSet())
+        location_form = forms.DynamicFilterForm(filterset=dcim_filters.LocationFilterSet())
         self.maxDiff = None
-
-        with self.subTest("Assert capitalize"):
-            self.assertEqual(form.capitalize("test"), "Test")
-            self.assertEqual(form.capitalize("test_one"), "Test one")
-            self.assertEqual(form.capitalize("tenant__group"), "Tenant group")
-            self.assertEqual(form.capitalize("_custom_field_data__example_field"), "Example field")
 
         with self.subTest("Assert get_lookup_field_choices"):
             self.assertEqual(
@@ -685,15 +642,15 @@ class DynamicFilterFormTest(TestCase):
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
-                    ("slug", "Slug"),
                 ],
             )
             self.assertEqual(
-                site_form._get_lookup_field_choices(),
+                location_form._get_lookup_field_choices(),
                 [
                     ("asn", "ASN"),
+                    ("child_location_type", "Child location type (name or ID)"),
                     ("circuit_terminations", "Circuit terminations"),
-                    ("clusters", "Clusters"),
+                    ("clusters", "Clusters (name or ID)"),
                     ("comments", "Comments"),
                     ("contact_email", "Contact E-mail"),
                     ("contact_name", "Contact name"),
@@ -701,52 +658,53 @@ class DynamicFilterFormTest(TestCase):
                     ("created", "Created"),
                     ("description", "Description"),
                     ("devices", "Devices (name or ID)"),
-                    ("cf_example_plugin_auto_custom_field", "Example Plugin Automatically Added Custom Field"),
+                    ("cf_example_app_auto_custom_field", "Example App Automatically Added Custom Field"),
                     ("facility", "Facility"),
+                    ("has_vlan_groups", "Has VLAN groups"),
+                    ("has_vlans", "Has VLANs"),
                     ("has_circuit_terminations", "Has circuit terminations"),
                     ("has_clusters", "Has clusters"),
                     ("has_devices", "Has devices"),
-                    ("has_locations", "Has locations"),
                     ("has_power_panels", "Has power panels"),
                     ("has_prefixes", "Has prefixes"),
                     ("has_rack_groups", "Has rack groups"),
                     ("has_racks", "Has racks"),
-                    ("has_vlan_groups", "Has vlan groups"),
-                    ("has_vlans", "Has vlans"),
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("latitude", "Latitude"),
-                    ("locations", "Locations within this Site (slugs or IDs)"),
+                    ("location_type", "Location type (name or ID)"),
+                    ("subtree", "Location(s) and descendants thereof (name or ID)"),
                     ("longitude", "Longitude"),
                     ("name", "Name"),
+                    ("content_type", "Object types allowed to be associated with this Location Type"),
+                    ("parent", "Parent location (name or ID)"),
                     ("physical_address", "Physical address"),
                     ("power_panels", "Power panels (name or ID)"),
                     ("prefixes", "Prefixes"),
-                    ("rack_groups", "Rack groups (slug or ID)"),
-                    ("racks", "Racks"),
-                    ("region", "Region (slug or ID)"),
+                    ("racks", "Rack (name or ID)"),
+                    ("rack_groups", "Rack groups (name or ID)"),
                     ("shipping_address", "Shipping address"),
-                    ("slug", "Slug"),
-                    ("status", "Status"),
+                    ("status", "Status (name or ID)"),
+                    ("vlans", "Tagged VLANs (VID or ID)"),
                     ("tags", "Tags"),
                     ("tenant_id", 'Tenant (ID) (deprecated, use "tenant" filter instead)'),
-                    ("tenant", "Tenant (slug or ID)"),
-                    ("tenant_group", "Tenant Group (slug or ID)"),
+                    ("tenant", "Tenant (name or ID)"),
+                    ("tenant_group", "Tenant Group (name or ID)"),
                     ("time_zone", "Time zone"),
-                    ("vlan_groups", "Vlan groups (slug or ID)"),
-                    ("vlans", "Vlans"),
+                    ("vlan_groups", "VLAN groups (name or ID)"),
                 ],
             )
 
         with self.subTest(
-            "Assert that the `filterset_filters` property of DynamicFilterForm instance gets the accurate `filterset_class` filters"
+            "Assert that the `filterset_filters` property of DynamicFilterForm instance "
+            "gets the accurate `filterset_class` filters"
         ):
 
             def get_dict_of_field_and_value_class_from_filters(filters_dict):
                 """return a dict of the filters' field and field value class.
 
                 This is required because instantiated classes of the same type are not equal.
-                For Example `Site()` != `Site()` but `Site().__class__` == `Site().__class__`
+                For Example `Location()` != `Location()` but `Location().__class__` == `Location().__class__`
                 """
                 return {field: value.__class__ for field, value in filters_dict.items()}
 
@@ -755,8 +713,8 @@ class DynamicFilterFormTest(TestCase):
                 get_dict_of_field_and_value_class_from_filters(extras_filters.StatusFilterSet().filters),
             )
             self.assertEqual(
-                get_dict_of_field_and_value_class_from_filters(site_form.filterset_filters),
-                get_dict_of_field_and_value_class_from_filters(dcim_filters.SiteFilterSet().filters),
+                get_dict_of_field_and_value_class_from_filters(location_form.filterset_filters),
+                get_dict_of_field_and_value_class_from_filters(dcim_filters.LocationFilterSet().filters),
             )
 
         with self.subTest("Assert lookup_field, lookup_value & lookup_type fields has accurate attributes"):
@@ -770,7 +728,6 @@ class DynamicFilterFormTest(TestCase):
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
-                    ("slug", "Slug"),
                 ],
             )
             self.assertEqual(
@@ -798,39 +755,36 @@ class DynamicFilterFormTest(TestCase):
         """Assert that lookup value implements the right field (CharField, ChoiceField etc.) and widget."""
 
         request_querydict = QueryDict(mutable=True)
-        request_querydict.setlistdefault("name__ic", ["Site"])
-        request_querydict.setlistdefault("slug", ["site-1"])
+        request_querydict.setlistdefault("name__ic", ["Location"])
         request_querydict.setlistdefault("status", ["active"])
         request_querydict.setlistdefault("has_vlans", ["True"])
-        request_querydict.setdefault("created", "2022-09-05")
+        request_querydict.setlistdefault("created__gte", ["2022-09-05 11:22:33"])
         request_querydict.setlistdefault("asn", ["4"])
+
+        location_filterset = dcim_filters.LocationFilterSet()
 
         with self.subTest("Test for lookup_value with a CharField"):
             # If `lookup_field` value is a CharField and or `lookup_type` lookup expr is not `exact` or `in` then,
             # `lookup_value` field should be a CharField
             data = requests.convert_querydict_to_factory_formset_acceptable_querydict(
-                request_querydict, dcim_filters.SiteFilterSet
+                request_querydict, location_filterset
             )
-            form = forms.DynamicFilterForm(filterset_class=dcim_filters.SiteFilterSet, data=data, prefix="form-0")
+            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-0")
             self.assertEqual(form.fields["lookup_type"]._choices, [("name__ic", "contains (ic)")])
             # Assert lookup_value is a CharField
-            self.assertIsInstance(form.fields["lookup_value"], django_forms.CharField)
-
-            form = forms.DynamicFilterForm(filterset_class=dcim_filters.SiteFilterSet, data=data, prefix="form-1")
-            self.assertEqual(form.fields["lookup_type"]._choices, [("slug", "exact")])
             self.assertIsInstance(form.fields["lookup_value"], django_forms.CharField)
 
         with self.subTest("Test for lookup_value with a ChoiceField and APISelectMultiple widget"):
             # If `lookup_field` value is a relational field(ManyToMany, ForeignKey etc.) and `lookup_type` lookup expr is `exact` or `in` then,
             # `lookup_value` field should be a ChoiceField with APISelectMultiple widget
-            form = forms.DynamicFilterForm(filterset_class=dcim_filters.SiteFilterSet, data=data, prefix="form-2")
+            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-1")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
                     "class": "nautobot-select2-api lookup_type-select",
                     "placeholder": None,
                     "data-query-param-field_name": '["$lookup_field"]',
-                    "data-contenttype": "dcim.site",
+                    "data-contenttype": "dcim.location",
                     "data-url": reverse("core-api:filtersetfield-list-lookupchoices"),
                 },
             )
@@ -840,22 +794,23 @@ class DynamicFilterFormTest(TestCase):
                 form.fields["lookup_value"].widget.attrs,
                 {
                     "class": "form-control nautobot-select2-api lookup_value-input form-control",
+                    "data-depth": 0,
                     "data-multiple": 1,
-                    "data-query-param-content_types": '["dcim.site"]',
+                    "data-query-param-content_types": '["dcim.location"]',
                     "display-field": "display",
-                    "value-field": "slug",
+                    "value-field": "name",
                 },
             )
 
         with self.subTest("Test for lookup_value with a ChoiceField and StaticSelect2 widget"):
-            # If `lookup_field` value is a ChoiceField and `lookup_type` lookup expr is `exact` or `in` then,
+            # If `lookup_field` value is a boolean filter and `lookup_type` lookup expr is `exact`, then
             # `lookup_value` field should be a ChoiceField with StaticSelect2 widget
-            form = forms.DynamicFilterForm(filterset_class=dcim_filters.SiteFilterSet, data=data, prefix="form-3")
+            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-2")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
                     "class": "nautobot-select2-api lookup_type-select",
-                    "data-contenttype": "dcim.site",
+                    "data-contenttype": "dcim.location",
                     "data-query-param-field_name": '["$lookup_field"]',
                     "data-url": reverse("core-api:filtersetfield-list-lookupchoices"),
                     "placeholder": None,
@@ -867,29 +822,29 @@ class DynamicFilterFormTest(TestCase):
                 {"class": "form-control nautobot-select2-static lookup_value-input form-control"},
             )
             self.assertIsInstance(form.fields["lookup_value"].widget, forms.StaticSelect2)
-            self.assertEqual(form.fields["lookup_value"]._choices, [("True", "Yes"), ("False", "No")])
+            self.assertEqual(form.fields["lookup_value"].widget.choices, [("True", "Yes"), ("False", "No")])
 
-        with self.subTest("Test for lookup_value with a DateField"):
-            form = forms.DynamicFilterForm(filterset_class=dcim_filters.SiteFilterSet, data=data, prefix="form-4")
+        with self.subTest("Test for lookup_value with a DateTimeField"):
+            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-3")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
                     "class": "nautobot-select2-api lookup_type-select",
-                    "data-contenttype": "dcim.site",
+                    "data-contenttype": "dcim.location",
                     "data-query-param-field_name": '["$lookup_field"]',
                     "data-url": reverse("core-api:filtersetfield-list-lookupchoices"),
                     "placeholder": None,
                 },
             )
-            self.assertIsInstance(form.fields["lookup_value"].widget, forms.DatePicker)
+            self.assertIsInstance(form.fields["lookup_value"].widget, forms.DateTimePicker)
 
         with self.subTest("Test for lookup_value with an IntegerField"):
-            form = forms.DynamicFilterForm(filterset_class=dcim_filters.SiteFilterSet, data=data, prefix="form-5")
+            form = forms.DynamicFilterForm(filterset=location_filterset, data=data, prefix="form-4")
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
                     "class": "nautobot-select2-api lookup_type-select",
-                    "data-contenttype": "dcim.site",
+                    "data-contenttype": "dcim.location",
                     "data-query-param-field_name": '["$lookup_field"]',
                     "data-url": reverse("core-api:filtersetfield-list-lookupchoices"),
                     "placeholder": None,

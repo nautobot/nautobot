@@ -1,5 +1,12 @@
-from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
-
+from nautobot.core.apps import (
+    NavContext,
+    NavGrouping,
+    NavItem,
+    NavMenuAddButton,
+    NavMenuGroup,
+    NavMenuItem,
+    NavMenuTab,
+)
 
 menu_items = (
     NavMenuTab(
@@ -24,13 +31,16 @@ menu_items = (
                                     "ipam.add_ipaddress",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="ipam:ipaddress_import",
-                                permissions=[
-                                    "ipam.add_ipaddress",
-                                ],
-                            ),
                         ),
+                    ),
+                    NavMenuItem(
+                        link="ipam:ipaddresstointerface_import",
+                        name="IP Address Assignments",
+                        weight=200,
+                        permissions=[
+                            "ipam.add_ipaddresstointerface",
+                        ],
+                        buttons=(),
                     ),
                 ),
             ),
@@ -52,42 +62,14 @@ menu_items = (
                                     "ipam.add_prefix",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="ipam:prefix_import",
-                                permissions=[
-                                    "ipam.add_prefix",
-                                ],
-                            ),
                         ),
                     ),
                 ),
             ),
             NavMenuGroup(
-                name="Aggregates",
+                name="RIRs",
                 weight=300,
                 items=(
-                    NavMenuItem(
-                        link="ipam:aggregate_list",
-                        name="Aggregates",
-                        weight=100,
-                        permissions=[
-                            "ipam.view_aggregate",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="ipam:aggregate_add",
-                                permissions=[
-                                    "ipam.add_aggregate",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="ipam:aggregate_import",
-                                permissions=[
-                                    "ipam.add_aggregate",
-                                ],
-                            ),
-                        ),
-                    ),
                     NavMenuItem(
                         link="ipam:rir_list",
                         name="RIRs",
@@ -102,12 +84,6 @@ menu_items = (
                                     "ipam.add_rir",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="ipam:rir_import",
-                                permissions=[
-                                    "ipam.add_rir",
-                                ],
-                            ),
                         ),
                     ),
                 ),
@@ -116,6 +92,22 @@ menu_items = (
                 name="VRFs",
                 weight=400,
                 items=(
+                    NavMenuItem(
+                        link="ipam:namespace_list",
+                        name="Namespaces",
+                        weight=100,
+                        permissions=[
+                            "ipam.view_namespace",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="ipam:namespace_add",
+                                permissions=[
+                                    "ipam.add_namespace",
+                                ],
+                            ),
+                        ),
+                    ),
                     NavMenuItem(
                         link="ipam:vrf_list",
                         name="VRFs",
@@ -126,12 +118,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="ipam:vrf_add",
-                                permissions=[
-                                    "ipam.add_vrf",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="ipam:vrf_import",
                                 permissions=[
                                     "ipam.add_vrf",
                                 ],
@@ -148,12 +134,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="ipam:routetarget_add",
-                                permissions=[
-                                    "ipam.add_routetarget",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="ipam:routetarget_import",
                                 permissions=[
                                     "ipam.add_routetarget",
                                 ],
@@ -180,12 +160,6 @@ menu_items = (
                                     "ipam.add_vlan",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="ipam:vlan_import",
-                                permissions=[
-                                    "ipam.add_vlan",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -198,12 +172,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="ipam:vlangroup_add",
-                                permissions=[
-                                    "ipam.add_vlangroup",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="ipam:vlangroup_import",
                                 permissions=[
                                     "ipam.add_vlangroup",
                                 ],
@@ -223,14 +191,94 @@ menu_items = (
                         permissions=[
                             "ipam.view_service",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="ipam:service_import",
-                                permissions=[
-                                    "ipam.add_service",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
+                    ),
+                ),
+            ),
+        ),
+    ),
+)
+
+
+navigation = (
+    NavContext(
+        name="Networks",
+        groups=(
+            NavGrouping(
+                name="IP Management",
+                weight=100,
+                items=(
+                    NavItem(
+                        name="IP Addresses",
+                        weight=100,
+                        link="ipam:ipaddress_list",
+                        permissions=["ipam.view_ipaddress"],
+                    ),
+                    NavItem(
+                        name="Prefixes",
+                        weight=200,
+                        link="ipam:prefix_list",
+                        permissions=["ipam.view_prefix"],
+                    ),
+                    NavItem(
+                        name="RIRs",
+                        weight=300,
+                        link="ipam:rir_list",
+                        permissions=["ipam.view_rir"],
+                    ),
+                ),
+            ),
+            NavGrouping(
+                name="Layer 2 / Switching",
+                weight=200,
+                items=(
+                    NavItem(
+                        name="VLANs",
+                        weight=100,
+                        link="ipam:vlan_list",
+                        permissions=["ipam.view_vlan"],
+                    ),
+                    NavItem(
+                        name="VLAN Groups",
+                        weight=200,
+                        link="ipam:vlangroup_list",
+                        permissions=["ipam.view_vlangroup"],
+                    ),
+                ),
+            ),
+            NavGrouping(
+                name="Layer 3 / Routing",
+                weight=300,
+                items=(
+                    NavItem(
+                        name="Namespaces",
+                        weight=100,
+                        link="ipam:namespace_list",
+                        permissions=["ipam.view_namespace"],
+                    ),
+                    NavItem(
+                        name="VRFs",
+                        weight=200,
+                        link="ipam:vrf_list",
+                        permissions=["ipam.view_vrf"],
+                    ),
+                    NavItem(
+                        name="Route Targets",
+                        weight=300,
+                        link="ipam:routetarget_list",
+                        permissions=["ipam.view_routetarget"],
+                    ),
+                ),
+            ),
+            NavGrouping(
+                name="Services",
+                weight=400,
+                items=(
+                    NavItem(
+                        name="Services",
+                        weight=100,
+                        link="ipam:service_list",
+                        permissions=["ipam.view_service"],
                     ),
                 ),
             ),

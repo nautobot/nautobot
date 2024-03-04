@@ -5,14 +5,14 @@ import logging
 import graphene
 import graphene_django_optimizer as gql_optimizer
 from graphql import GraphQLError
-from graphene_django import DjangoObjectType
 
-from nautobot.core.graphql.utils import str_to_var_name, get_filtering_args_from_filterset
+from nautobot.core.graphql.types import OptimizedNautobotObjectType
+from nautobot.core.graphql.utils import get_filtering_args_from_filterset, str_to_var_name
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import RelationshipAssociation
 
-logger = logging.getLogger("nautobot.graphql.generators")
+logger = logging.getLogger(__name__)
 RESOLVER_PREFIX = "resolve_"
 
 
@@ -92,17 +92,16 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
     return resolve_filter
 
 
-# 2.0 TODO: #824 rename `name` to `slug`
-def generate_custom_field_resolver(name, resolver_name):
+def generate_custom_field_resolver(key, resolver_name):
     """Generate function to resolve each custom field within each DjangoObjectType.
 
     Args:
-        name (str): name of the custom field to resolve
+        key (str): unique key of the custom field to resolve
         resolver_name (str): name of the resolver as declare in DjangoObjectType
     """
 
     def resolve_custom_field(self, info, **kwargs):
-        return self.cf.get(name, None)
+        return self.cf.get(key, None)
 
     resolve_custom_field.__name__ = resolver_name
     return resolve_custom_field
@@ -117,7 +116,7 @@ def generate_computed_field_resolver(name, resolver_name):
     """
 
     def resolve_computed_field(self, info, **kwargs):
-        return self.get_computed_field(slug=name)
+        return self.get_computed_field(key=name)
 
     resolve_computed_field.__name__ = resolver_name
     return resolve_computed_field
@@ -206,7 +205,7 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
     return resolve_relationship
 
 
-def generate_schema_type(app_name: str, model: object) -> DjangoObjectType:
+def generate_schema_type(app_name: str, model: object) -> OptimizedNautobotObjectType:
     """
     Take a Django model and generate a Graphene Type class definition.
 
@@ -217,7 +216,7 @@ def generate_schema_type(app_name: str, model: object) -> DjangoObjectType:
     Example:
         For a model with a name of "Device", the following class definition is generated:
 
-        class DeviceType(DjangoObjectType):
+        class DeviceType(OptimizedNautobotObjectType):
             Meta:
                 model = Device
                 fields = ["__all__"]
@@ -226,7 +225,7 @@ def generate_schema_type(app_name: str, model: object) -> DjangoObjectType:
         '<app_name>.filters.<ModelName>FilterSet' the filterset will be stored in
         filterset_class as follows:
 
-        class DeviceType(DjangoObjectType):
+        class DeviceType(OptimizedNautobotObjectType):
             Meta:
                 model = Device
                 fields = ["__all__"]
@@ -242,7 +241,7 @@ def generate_schema_type(app_name: str, model: object) -> DjangoObjectType:
 
     main_attrs["Meta"] = type("Meta", (object,), meta_attrs)
 
-    schema_type = type(f"{model.__name__}Type", (DjangoObjectType,), main_attrs)
+    schema_type = type(f"{model.__name__}Type", (OptimizedNautobotObjectType,), main_attrs)
     return schema_type
 
 
@@ -271,12 +270,11 @@ def generate_single_item_resolver(schema_type, resolver_name):
         resolver_name (str): name of the resolver
 
     Returns:
-        callable: Resolver function for a single element
+        (func): Resolver function for a single element
     """
     model = schema_type._meta.model
 
     def single_resolver(self, info, **kwargs):
-
         obj_id = kwargs.get("id", None)
         if obj_id:
             return gql_optimizer.query(
@@ -301,7 +299,7 @@ def generate_list_resolver(schema_type, resolver_name):
         resolver_name (str): name of the resolver
 
     Returns:
-        callable: Resolver function for list of element
+        (func): Resolver function for list of element
     """
     model = schema_type._meta.model
 
@@ -345,7 +343,7 @@ def generate_attrs_for_schema_type(schema_type):
         schema_type (DjangoObjectType): DjangoObjectType for a given model
 
     Returns:
-        dict: Dict of attributes ready to merge into the QueryMixin class
+        (dict): Dict of attributes ready to merge into the QueryMixin class
     """
     attrs = {}
     model = schema_type._meta.model

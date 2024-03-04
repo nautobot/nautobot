@@ -10,6 +10,7 @@ from nautobot.core.tables import (
 from nautobot.dcim.tables.devices import BaseInterfaceTable
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
+
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
 __all__ = (
@@ -22,11 +23,14 @@ __all__ = (
     "VMInterfaceTable",
 )
 
+# TODO: re-introduce assign ip address button?
 VMINTERFACE_BUTTONS = """
 {% if perms.ipam.add_ipaddress %}
+    <!--
     <a href="{% url 'ipam:ipaddress_add' %}?vminterface={{ record.pk }}&return_url={{ virtualmachine.get_absolute_url }}" class="btn btn-xs btn-success" title="Add IP address">
         <i class="mdi mdi-plus-thick" aria-hidden="true"></i>
     </a>
+    -->
 {% endif %}
 """
 
@@ -40,11 +44,11 @@ class ClusterTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     cluster_count = tables.Column(verbose_name="Clusters")
-    actions = ButtonsColumn(ClusterType, pk_field="slug")
+    actions = ButtonsColumn(ClusterType)
 
     class Meta(BaseTable.Meta):
         model = ClusterType
-        fields = ("pk", "name", "slug", "cluster_count", "description", "actions")
+        fields = ("pk", "name", "cluster_count", "description", "actions")
         default_columns = ("pk", "name", "cluster_count", "description", "actions")
 
 
@@ -57,11 +61,11 @@ class ClusterGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     cluster_count = tables.Column(verbose_name="Clusters")
-    actions = ButtonsColumn(ClusterGroup, pk_field="slug")
+    actions = ButtonsColumn(ClusterGroup)
 
     class Meta(BaseTable.Meta):
         model = ClusterGroup
-        fields = ("pk", "name", "slug", "cluster_count", "description", "actions")
+        fields = ("pk", "name", "cluster_count", "description", "actions")
         default_columns = ("pk", "name", "cluster_count", "description", "actions")
 
 
@@ -74,7 +78,6 @@ class ClusterTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     tenant = tables.Column(linkify=True)
-    site = tables.Column(linkify=True)
     cluster_type = tables.Column(linkify=True)
     cluster_group = tables.Column(linkify=True)
     device_count = LinkedCountColumn(
@@ -97,7 +100,6 @@ class ClusterTable(BaseTable):
             "cluster_type",
             "cluster_group",
             "tenant",
-            "site",
             "device_count",
             "vm_count",
             "tags",
@@ -108,7 +110,6 @@ class ClusterTable(BaseTable):
             "cluster_type",
             "cluster_group",
             "tenant",
-            "site",
             "device_count",
             "vm_count",
         )
@@ -143,7 +144,7 @@ class VirtualMachineTable(StatusTableMixin, RoleTableMixin, BaseTable):
 class VirtualMachineDetailTable(VirtualMachineTable):
     primary_ip4 = tables.Column(linkify=True, verbose_name="IPv4 Address")
     primary_ip6 = tables.Column(linkify=True, verbose_name="IPv6 Address")
-    primary_ip = tables.Column(linkify=True, verbose_name="IP Address")
+    primary_ip = tables.Column(linkify=True, verbose_name="IP Address", order_by=("primary_ip6", "primary_ip4"))
     tags = TagColumn(url_name="virtualization:virtualmachine_list")
 
     class Meta(BaseTable.Meta):

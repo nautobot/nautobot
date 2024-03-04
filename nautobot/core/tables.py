@@ -1,19 +1,25 @@
+import logging
+
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
-from django.db.models.fields.related import RelatedField
+from django.db import NotSupportedError
+from django.db.models.fields.related import ForeignKey, RelatedField
+from django.db.models.fields.reverse_related import ManyToOneRel
 from django.urls import reverse
-from django.utils.html import escape, format_html
+from django.utils.html import escape, format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
 import django_tables2
 from django_tables2.data import TableQuerysetData
-from django_tables2.utils import Accessor
+from django_tables2.utils import Accessor, OrderBy, OrderByTuple
+from tree_queries.models import TreeNode
 
 from nautobot.core.templatetags import helpers
 from nautobot.core.utils import lookup
 from nautobot.extras import choices, models
+
+logger = logging.getLogger(__name__)
 
 
 class BaseTable(django_tables2.Table):
@@ -30,28 +36,28 @@ class BaseTable(django_tables2.Table):
 
     def __init__(self, *args, user=None, **kwargs):
         # Add custom field columns
-        obj_type = ContentType.objects.get_for_model(self._meta.model)
+        model = self._meta.model
 
-        for cf in models.CustomField.objects.filter(content_types=obj_type):
-            name = f"cf_{cf.slug}"
+        for cf in models.CustomField.objects.get_for_model(model):
+            name = cf.add_prefix_to_cf_key()
             self.base_columns[name] = CustomFieldColumn(cf)
 
-        for cpf in models.ComputedField.objects.filter(content_type=obj_type):
-            self.base_columns[f"cpf_{cpf.slug}"] = ComputedFieldColumn(cpf)
+        for cpf in models.ComputedField.objects.get_for_model(model):
+            self.base_columns[f"cpf_{cpf.key}"] = ComputedFieldColumn(cpf)
 
-        for relationship in models.Relationship.objects.filter(source_type=obj_type):
+        for relationship in models.Relationship.objects.get_for_model_source(model):
             if not relationship.symmetric:
-                self.base_columns[f"cr_{relationship.slug}_src"] = RelationshipColumn(
+                self.base_columns[f"cr_{relationship.key}_src"] = RelationshipColumn(
                     relationship, side=choices.RelationshipSideChoices.SIDE_SOURCE
                 )
             else:
-                self.base_columns[f"cr_{relationship.slug}_peer"] = RelationshipColumn(
+                self.base_columns[f"cr_{relationship.key}_peer"] = RelationshipColumn(
                     relationship, side=choices.RelationshipSideChoices.SIDE_PEER
                 )
 
-        for relationship in models.Relationship.objects.filter(destination_type=obj_type):
+        for relationship in models.Relationship.objects.get_for_model_destination(model):
             if not relationship.symmetric:
-                self.base_columns[f"cr_{relationship.slug}_dst"] = RelationshipColumn(
+                self.base_columns[f"cr_{relationship.key}_dst"] = RelationshipColumn(
                     relationship, side=choices.RelationshipSideChoices.SIDE_DESTINATION
                 )
             # symmetric relationships are already handled above in the source_type case
@@ -96,29 +102,90 @@ class BaseTable(django_tables2.Table):
 
         # Dynamically update the table's QuerySet to ensure related fields are pre-fetched
         if isinstance(self.data, TableQuerysetData):
-            # v2 TODO(jathan): Replace prefetch_related with select_related
+            queryset = self.data.data
+            select_fields = []
             prefetch_fields = []
             for column in self.columns:
                 if column.visible:
-                    model = getattr(self.Meta, "model")
+                    column_model = model
                     accessor = column.accessor
+                    select_path = []
                     prefetch_path = []
                     for field_name in accessor.split(accessor.SEPARATOR):
                         try:
-                            field = model._meta.get_field(field_name)
+                            field = column_model._meta.get_field(field_name)
                         except FieldDoesNotExist:
                             break
-                        if isinstance(field, RelatedField):
-                            # Follow ForeignKeys to the related model
+                        if isinstance(field, ForeignKey) and not prefetch_path:
+                            # Follow ForeignKeys to the related model via select_related
+                            select_path.append(field_name)
+                            column_model = field.remote_field.model
+                        elif isinstance(field, (RelatedField, ManyToOneRel)) and not select_path:
+                            # Follow O2M and M2M relations to the related model via prefetch_related
                             prefetch_path.append(field_name)
-                            model = field.remote_field.model
-                        elif isinstance(field, GenericForeignKey):
+                            column_model = field.remote_field.model
+                        elif isinstance(field, GenericForeignKey) and not select_path:
                             # Can't prefetch beyond a GenericForeignKey
                             prefetch_path.append(field_name)
                             break
-                    if prefetch_path:
+                        else:
+                            # Need to stop processing once field is not a RelatedField or GFK
+                            # Ex: ["_custom_field_data", "tenant_id"] needs to exit
+                            # the loop as "tenant_id" would be misidentified as a RelatedField.
+                            break
+                    if select_path:
+                        select_fields.append("__".join(select_path))
+                    elif prefetch_path:
                         prefetch_fields.append("__".join(prefetch_path))
-            self.data.data = self.data.data.prefetch_related(None).prefetch_related(*prefetch_fields)
+
+            if select_fields:
+                # Django doesn't allow .select_related() on a QuerySet that had .values()/.values_list() applied, or
+                # one that has had union()/intersection()/difference() applied.
+                # We can detect and avoid these cases the same way that Django itself does.
+                if queryset._fields is not None:
+                    logger.debug(
+                        "NOT applying select_related(%s) to %s QuerySet as it includes .values()/.values_list()",
+                        select_fields,
+                        model.__name__,
+                    )
+                elif queryset.query.combinator:
+                    logger.debug(
+                        "NOT applying select_related(%s) to %s QuerySet as it is a combinator query",
+                        select_fields,
+                        model.__name__,
+                    )
+                else:
+                    logger.debug("Applying .select_related(%s) to %s QuerySet", select_fields, model.__name__)
+                    # Belt and suspenders - we should have avoided any error cases above, but be safe anyway:
+                    try:
+                        queryset = queryset.select_related(*select_fields)
+                    except (TypeError, ValueError, NotSupportedError) as exc:
+                        logger.warning(
+                            "Unexpected error when trying to .select_related() on %s QuerySet: %s",
+                            model.__name__,
+                            exc,
+                        )
+
+            if prefetch_fields:
+                if queryset.query.combinator:
+                    logger.debug(
+                        "NOT applying prefetch_related(%s) to %s QuerySet as it is a combinator query",
+                        prefetch_fields,
+                        model.__name__,
+                    )
+                else:
+                    logger.debug("Applying .prefetch_related(%s) to %s QuerySet", prefetch_fields, model.__name__)
+                    # Belt and suspenders - we should have avoided any error cases above, but be safe anyway:
+                    try:
+                        queryset = queryset.prefetch_related(*prefetch_fields)
+                    except (TypeError, ValueError, NotSupportedError) as exc:
+                        logger.warning(
+                            "Unexpected error when trying to .prefetch_related() on %s QuerySet: %s",
+                            model.__name__,
+                            exc,
+                        )
+
+            self.data.data = queryset
 
     @property
     def configurable_columns(self):
@@ -135,6 +202,47 @@ class BaseTable(django_tables2.Table):
     @property
     def visible_columns(self):
         return [name for name in self.sequence if self.columns[name].visible]
+
+    @property
+    def order_by(self):
+        return self._order_by
+
+    @order_by.setter
+    def order_by(self, value):
+        """
+        Order the rows of the table based on columns.
+
+        Arguments:
+            value: iterable or comma separated string of order by aliases.
+        """
+        # collapse empty values to ()
+        order_by = () if not value else value
+        # accept string
+        order_by = order_by.split(",") if isinstance(order_by, str) else order_by
+        valid = []
+
+        for alias in order_by:
+            name = OrderBy(alias).bare
+            if name in self.columns and self.columns[name].orderable:
+                valid.append(alias)
+        self._order_by = OrderByTuple(valid)
+
+        # The above block of code is copied from super().order_by
+        # due to limitations in directly calling parent class methods within a property setter.
+        # See Python bug report: https://bugs.python.org/issue14965
+        model = getattr(self.Meta, "model", None)
+        if model and issubclass(model, TreeNode):
+            # Use the TreeNode model's approach to sorting
+            queryset = self.data.data
+            # If the data passed into the Table is a list (as in cases like BulkImport post),
+            # convert this list to a queryset.
+            # This ensures consistent behavior regardless of the input type.
+            if isinstance(self.data.data, list):
+                queryset = model.objects.filter(pk__in=[instance.pk for instance in self.data.data])
+            self.data.data = queryset.extra(order_by=self._order_by)
+        else:
+            # Otherwise, use the default sorting method
+            self.data.order_by(self._order_by)
 
 
 #
@@ -156,7 +264,7 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
 
     @property
     def header(self):
-        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')
+        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
 
 
 class BooleanColumn(django_tables2.Column):
@@ -253,7 +361,7 @@ class ChoiceFieldColumn(django_tables2.Column):
             name = bound_column.name
             css_class = getattr(record, f"get_{name}_class")()
             label = getattr(record, f"get_{name}_display")()
-            return mark_safe(f'<span class="label label-{css_class}">{label}</span>')
+            return format_html('<span class="label label-{}">{}</span>', css_class, label)
         return self.default
 
 
@@ -263,7 +371,7 @@ class ColorColumn(django_tables2.Column):
     """
 
     def render(self, value):
-        return mark_safe(f'<span class="label color-block" style="background-color: #{value}">&nbsp;</span>')
+        return format_html('<span class="label color-block" style="background-color: #{}">&nbsp;</span>', value)
 
 
 class ColoredLabelColumn(django_tables2.TemplateColumn):
@@ -300,7 +408,7 @@ class LinkedCountColumn(django_tables2.Column):
             url = reverse(self.viewname, kwargs=self.view_kwargs)
             if self.url_params:
                 url += "?" + "&".join([f"{k}={getattr(record, v)}" for k, v in self.url_params.items()])
-            return mark_safe(f'<a href="{url}">{value}</a>')
+            return format_html('<a href="{}">{}</a>', url, value)
         return value
 
 
@@ -381,19 +489,16 @@ class CustomFieldColumn(django_tables2.Column):
 
     def __init__(self, customfield, *args, **kwargs):
         self.customfield = customfield
-        # 2.0 TODO: #824 replace customfield.name with customfield.slug
-        kwargs["accessor"] = Accessor(f"_custom_field_data__{customfield.name}")
-        kwargs["verbose_name"] = customfield.label or customfield.name
+        kwargs["accessor"] = Accessor(f"_custom_field_data__{customfield.key}")
+        kwargs["verbose_name"] = customfield.label
 
         super().__init__(*args, **kwargs)
 
     def render(self, record, bound_column, value):  # pylint: disable=arguments-differ
-        template = ""
         if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_BOOLEAN:
             template = helpers.render_boolean(value)
         elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
-            for v in value:
-                template += format_html('<span class="label label-default">{}</span> ', v)
+            template = format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
         elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_SELECT:
             template = format_html('<span class="label label-default">{}</span>', value)
         elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_URL:
@@ -401,7 +506,7 @@ class CustomFieldColumn(django_tables2.Column):
         else:
             template = escape(value)
 
-        return mark_safe(template)
+        return template
 
 
 class RelationshipColumn(django_tables2.Column):
@@ -430,30 +535,27 @@ class RelationshipColumn(django_tables2.Column):
             else:
                 value = [v for v in value if v.destination_id == record.id]
 
-        template = ""
         # Handle Symmetric Relationships
         # List `value` could be empty here [] after the filtering from above
         if len(value) < 1:
             return "—"
-        else:
-            # Handle Relationships on the many side.
-            if self.relationship.has_many(self.peer_side):
-                v = value[0]
-                meta = type(v.get_peer(record))._meta
-                name = meta.verbose_name_plural if len(value) > 1 else meta.verbose_name
-                template += format_html(
-                    '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
-                    reverse("extras:relationshipassociation_list"),
-                    self.relationship.slug,
-                    self.side,
-                    record.id,
-                    len(value),
-                    name,
-                )
-            # Handle Relationships on the one side.
-            else:
-                v = value[0]
-                peer = v.get_peer(record)
-                template += format_html('<a href="{}">{}</a>', peer.get_absolute_url(), peer)
 
-        return mark_safe(template)
+        # Handle Relationships on the many side.
+        if self.relationship.has_many(self.peer_side):
+            v = value[0]
+            meta = type(v.get_peer(record))._meta
+            name = meta.verbose_name_plural if len(value) > 1 else meta.verbose_name
+            return format_html(
+                '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
+                reverse("extras:relationshipassociation_list"),
+                self.relationship.key,
+                self.side,
+                record.id,
+                len(value),
+                name,
+            )
+        # Handle Relationships on the one side.
+        else:
+            v = value[0]
+            peer = v.get_peer(record)
+            return format_html('<a href="{}">{}</a>', peer.get_absolute_url(), peer)

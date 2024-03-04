@@ -12,7 +12,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from distutils.util import strtobool
 import os
 import re
 
@@ -32,19 +31,32 @@ except ModuleNotFoundError:
     HAS_RICH = False
 
 
+# Base directory path from this file.
+BASE_DIR = os.path.join(os.path.dirname(__file__))
+
+
 def is_truthy(arg):
-    """Convert "truthy" strings into Booleans.
+    """
+    Convert "truthy" strings into Booleans.
 
     Examples:
         >>> is_truthy('yes')
         True
+
     Args:
         arg (str): Truthy string (True values are y, yes, t, true, on and 1; false values are n, no,
         f, false, off and 0. Raises ValueError if val is anything else.
     """
     if isinstance(arg, bool):
         return arg
-    return bool(strtobool(arg))
+
+    val = str(arg).lower()
+    if val in ("y", "yes", "t", "true", "on", "1"):
+        return True
+    elif val in ("n", "no", "f", "false", "off", "0"):
+        return False
+    else:
+        raise ValueError(f"Invalid truthy value: `{arg}`")
 
 
 # Use pyinvoke configuration for default values, see http://docs.pyinvoke.org/en/stable/concepts/configuration.html
@@ -54,9 +66,9 @@ namespace.configure(
     {
         "nautobot": {
             "project_name": "nautobot",
-            "python_ver": "3.7",
+            "python_ver": "3.8",
             "local": False,
-            "compose_dir": os.path.join(os.path.dirname(__file__), "development/"),
+            "compose_dir": os.path.join(BASE_DIR, "development/"),
             "compose_files": [
                 "docker-compose.yml",
                 "docker-compose.postgres.yml",
@@ -131,15 +143,15 @@ def print_command(command, env=None):
 
 
 def docker_compose(context, command, **kwargs):
-    """Helper function for running a specific docker-compose command with all appropriate parameters and environment.
+    """Helper function for running a specific docker compose command with all appropriate parameters and environment.
 
     Args:
         context (obj): Used to run specific commands
-        command (str): Command string to append to the "docker-compose ..." command, such as "build", "up", etc.
+        command (str): Command string to append to the "docker compose ..." command, such as "build", "up", etc.
         **kwargs: Passed through to the context.run() call.
     """
     compose_command_tokens = [
-        "docker-compose",
+        "docker compose",
         f'--project-name "{context.nautobot.project_name}"',
         f'--project-directory "{context.nautobot.compose_dir}"',
     ]
@@ -155,7 +167,7 @@ def docker_compose(context, command, **kwargs):
     if service is not None:
         compose_command_tokens.append(service)
 
-    print(f'Running docker-compose command "{command}"')
+    print(f'Running docker compose command "{command}"')
     compose_command = " ".join(compose_command_tokens)
     env = kwargs.pop("env", {})
     env.update({"PYTHON_VER": context.nautobot.python_ver})
@@ -164,23 +176,25 @@ def docker_compose(context, command, **kwargs):
     return context.run(compose_command, env=env, **kwargs)
 
 
-def run_command(context, command, **kwargs):
-    """Wrapper to run a command locally or inside the nautobot container."""
+def run_command(context, command, service="nautobot", **kwargs):
+    """Wrapper to run a command locally or inside the provided container."""
     if is_truthy(context.nautobot.local):
         env = kwargs.pop("env", {})
         if "hide" not in kwargs:
             print_command(command, env=env)
-        context.run(command, pty=True, env=env, **kwargs)
+        return context.run(command, pty=True, env=env, **kwargs)
     else:
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
         docker_compose_status = "ps --services --filter status=running"
         results = docker_compose(context, docker_compose_status, hide="out")
-        if "nautobot" in results.stdout:
-            compose_command = f"exec nautobot {command}"
-        else:
-            compose_command = f"run --entrypoint '{command}' nautobot"
 
-        docker_compose(context, compose_command, pty=True)
+        root = kwargs.pop("root", False)
+        if service in results.stdout:
+            compose_command = f"exec {'--user=root ' if root else ''}{service} {command}"
+        else:
+            compose_command = f"run {'--user=root ' if root else ''}--rm --entrypoint '{command}' {service}"
+
+        return docker_compose(context, compose_command, pty=True, **kwargs)
 
 
 # ------------------------------------------------------------------------------
@@ -192,10 +206,10 @@ def run_command(context, command, **kwargs):
         "cache": "Whether to use Docker's cache when building the image. (Default: enabled)",
         "poetry_parallel": "Enable/disable poetry to install packages in parallel. (Default: True)",
         "pull": "Whether to pull Docker images when building the image. (Default: disabled)",
-        "skip_docs_build": "Skip (re)build of documentation after building the image.",
+        "service": "If specified, only build this service.",
     }
 )
-def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False, skip_docs_build=False):
+def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False, service=None):
     """Build Nautobot docker image."""
     command = f"build --build-arg PYTHON_VER={context.nautobot.python_ver}"
 
@@ -204,17 +218,13 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False,
     if force_rm:
         command += " --force-rm"
     if poetry_parallel:
-        command += " --build-arg POETRY_PARALLEL=true"
+        command += " --build-arg POETRY_INSTALLER_PARALLEL=true"
     if pull:
         command += " --pull"
 
     print(f"Building Nautobot with Python {context.nautobot.python_ver}...")
 
-    docker_compose(context, command, env={"DOCKER_BUILDKIT": "1", "COMPOSE_DOCKER_CLI_BUILD": "1"})
-
-    if not skip_docs_build:
-        # Build the docs so they are available. Skip if you're using a `final-dev` or `final` image instead of `dev`.
-        build_nautobot_docs(context)
+    docker_compose(context, command, service=service, env={"DOCKER_BUILDKIT": "1", "COMPOSE_DOCKER_CLI_BUILD": "1"})
 
 
 @task(
@@ -223,7 +233,6 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False,
     }
 )
 def build_dependencies(context, poetry_parallel=True):
-
     # Determine preferred/default target architecture
     output = context.run("docker buildx inspect default", env={"PYTHON_VER": context.nautobot.python_ver}, hide=True)
     result = re.search(r"Platforms: ([^,\n]+)", output.stdout)
@@ -292,7 +301,7 @@ def buildx(
             f"--cache-from type=local,src={cache_dir}/{context.nautobot.python_ver}",
         ]
     if poetry_parallel:
-        command_tokens.append("--build-arg POETRY_PARALLEL=true")
+        command_tokens.append("--build-arg POETRY_INSTALLER_PARALLEL=true")
 
     command = " ".join(command_tokens)
     env = {"PYTHON_VER": context.nautobot.python_ver}
@@ -339,7 +348,7 @@ def docker_push(context, branch, commit="", datestamp=""):
         f"{nautobot_version}-py{context.nautobot.python_ver}",
     ]
 
-    if context.nautobot.python_ver == "3.7":
+    if context.nautobot.python_ver == "3.8":
         docker_image_tags_main += ["stable", f"{nautobot_version}"]
     if branch == "main":
         docker_image_names = context.nautobot.docker_image_names_main
@@ -427,13 +436,21 @@ def nbshell(context):
     """Launch an interactive Nautobot shell."""
     command = "nautobot-server nbshell"
 
-    run_command(context, command, pty=True)
+    run_command(context, command)
 
 
-@task(help={"service": "Name of the service to shell into"})
-def cli(context, service="nautobot"):
+@task(
+    help={
+        "service": "Name of the service to shell into",
+        "root": "Launch shell as root",
+    }
+)
+def cli(context, service="nautobot", root=False):
     """Launch a bash shell inside the running Nautobot (or other) Docker container."""
-    docker_compose(context, f"exec {service} bash", pty=True)
+    context.nautobot.local = False
+    command = "bash"
+
+    run_command(context, command, service=service, root=root)
 
 
 @task(
@@ -479,7 +496,6 @@ def post_upgrade(context):
     - collectstatic
     - remove_stale_contenttypes
     - clearsessions
-    - invalidate all
     """
     command = "nautobot-server post_upgrade"
 
@@ -519,7 +535,7 @@ def loaddata(context, filepath="db_output.json"):
 def build_and_check_docs(context):
     """Build docs for use within Nautobot."""
     build_nautobot_docs(context)
-    build_example_plugin_docs(context)
+    build_example_app_docs(context)
 
 
 def build_nautobot_docs(context):
@@ -528,43 +544,21 @@ def build_nautobot_docs(context):
     run_command(context, command)
 
 
-def build_example_plugin_docs(context):
-    """Build Example Plugin docs."""
+def build_example_app_docs(context):
+    """Build Example App docs."""
     command = "mkdocs build --no-directory-urls --strict"
     if is_truthy(context.nautobot.local):
-        local_command = f"cd examples/example_plugin && {command}"
+        local_command = f"cd examples/example_app && {command}"
         print_command(local_command)
         context.run(local_command, pty=True)
     else:
-        docker_command = f"run --workdir='/source/examples/example_plugin' --entrypoint '{command}' nautobot"
+        docker_command = f"run --workdir='/source/examples/example_app' --entrypoint '{command}' nautobot"
         docker_compose(context, docker_command, pty=True)
 
 
 # ------------------------------------------------------------------------------
 # TESTS
 # ------------------------------------------------------------------------------
-@task(
-    help={
-        "autoformat": "Apply formatting recommendations automatically, rather than failing if formatting is incorrect.",
-    }
-)
-def black(context, autoformat=False):
-    """Check Python code style with Black."""
-    if autoformat:
-        black_command = "black"
-    else:
-        black_command = "black --check --diff"
-
-    command = f"{black_command} development/ examples/ nautobot/ tasks.py"
-
-    run_command(context, command)
-
-
-@task
-def flake8(context):
-    """Check for PEP8 compliance and other style issues."""
-    command = "flake8 development/ examples/ nautobot/ tasks.py"
-    run_command(context, command)
 
 
 @task(
@@ -592,6 +586,47 @@ def pylint(context, target=None, recursive=False):
         run_command(context, command)
 
 
+@task(
+    help={
+        "fix": "Automatically apply formatting and linting recommendations. May not be able to fix all linting issues.",
+        "target": "File or directory to inspect, repeatable (default: all files in the project will be inspected)",
+        "output_format": "For CI purposes, can be ignored otherwise.",
+    },
+    iterable=["target"],
+)
+def ruff(context, fix=False, target=None, output_format="concise"):
+    """Run ruff to perform code formatting and linting."""
+    if not target:
+        target = ["development", "examples", "nautobot", "tasks.py"]
+
+    command = "ruff format "
+    if not fix:
+        command += "--check "
+    command += " ".join(target)
+    format_result = run_command(context, command, warn=True)
+
+    command = "ruff check "
+    if fix:
+        command += "--fix "
+    command += f"--output-format {output_format} "
+    command += " ".join(target)
+    lint_result = run_command(context, command, warn=True)
+
+    if not (format_result and lint_result):
+        if not fix:
+            raise Exit("'ruff format' and/or 'ruff check' failed; you may want to run 'invoke ruff --fix'", code=1)
+        raise Exit("'ruff format` and/or 'ruff check' failed; please see above for specifics", code=1)
+    print("ruff successful!")
+
+
+@task
+def yamllint(context):
+    """Run yamllint to validate formatting applies to YAML standards."""
+    # TODO: enable for directories other than nautobot/docs and fix all warnings
+    command = "yamllint nautobot/docs --format standard"
+    run_command(context, command)
+
+
 @task
 def serve_docs(context):
     """Runs local instance of mkdocs serve (ctrl-c to stop)."""
@@ -611,7 +646,15 @@ def hadolint(context):
 @task
 def markdownlint(context):
     """Lint Markdown files."""
-    command = "markdownlint --ignore nautobot/project-static --config .markdownlint.yml --rules scripts/use-relative-md-links.js nautobot examples *.md"
+    if is_truthy(context.nautobot.local) and not context.run("command -v markdownlint", warn=True):
+        command = "npm exec -- markdownlint "
+    else:
+        command = "markdownlint "
+    command += (
+        "--ignore nautobot/project-static "
+        "--config .markdownlint.yml --rules scripts/use-relative-md-links.js "
+        "nautobot examples *.md"
+    )
     run_command(context, command)
 
 
@@ -635,9 +678,10 @@ def check_schema(context, api_version=None):
     else:
         nautobot_version = get_nautobot_version()
         # logic equivalent to nautobot.core.settings REST_FRAMEWORK_ALLOWED_VERSIONS - keep them in sync!
-        current_major, current_minor = nautobot_version.split(".")[:2]
-        assert current_major == "2", f"check_schemas version calc must be updated to handle version {current_major}"
-        api_versions = [f"{current_major}.{minor}" for minor in range(0, int(current_minor) + 1)]
+        current_major, current_minor = [int(v) for v in nautobot_version.split(".")[:2]]
+        if current_major != 2:
+            raise RuntimeError(f"check_schemas version calc must be updated to handle version {current_major}")
+        api_versions = [f"{current_major}.{minor}" for minor in range(0, current_minor + 1)]
 
     for api_vers in api_versions:
         command = f"nautobot-server spectacular --api-version {api_vers} --validate --fail-on-warn --file /dev/null"
@@ -646,6 +690,7 @@ def check_schema(context, api_version=None):
 
 @task(
     help={
+        "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
@@ -654,6 +699,7 @@ def check_schema(context, api_version=None):
         "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
+        "parallel": "Run tests in parallel.",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "performance_report": "Generate Performance Testing report in the terminal. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
         "performance_snapshot": "Generate a new performance testing report to report.yml. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
@@ -662,6 +708,7 @@ def check_schema(context, api_version=None):
 )
 def unittest(
     context,
+    cache_test_fixtures=False,
     keepdb=False,
     label="nautobot",
     failfast=False,
@@ -670,6 +717,7 @@ def unittest(
     tag=None,
     verbose=False,
     append=False,
+    parallel=False,
     skip_docs_build=False,
     performance_report=False,
     performance_snapshot=False,
@@ -679,18 +727,26 @@ def unittest(
         # First build the docs so they are available.
         build_and_check_docs(context)
 
-    append_arg = " --append" if append else ""
-    command = f"coverage run{append_arg} --module nautobot.core.cli test {label}"
+    if not append:
+        run_command(context, "coverage erase")
+
+    append_arg = " --append" if append and not parallel else ""
+    parallel_arg = " --parallel-mode" if parallel else ""
+    command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
     command += " --config=nautobot/core/tests/nautobot_config.py"
     # booleans
+    if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
+        command += " --cache-test-fixtures"
     if keepdb:
         command += " --keepdb"
     if failfast:
         command += " --failfast"
-    if buffer:
+    if buffer and not parallel:  # Django 3.x doesn't support '--parallel --buffer'; can remove this after Django 4.x
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
+    if parallel:
+        command += " --parallel"
     if performance_report or (tag and "performance" in tag):
         command += " --slowreport"
     if performance_snapshot:
@@ -708,17 +764,22 @@ def unittest(
 
     run_command(context, command)
 
+    unittest_coverage(context)
+
 
 @task
 def unittest_coverage(context):
     """Report on code test coverage as measured by 'invoke unittest'."""
-    command = "coverage report --skip-covered --include 'nautobot/*' --omit *migrations*"
+    run_command(context, "coverage combine")
+
+    command = "coverage report --skip-covered --include 'nautobot/*'"
 
     run_command(context, command)
 
 
 @task(
     help={
+        "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
@@ -735,6 +796,7 @@ def unittest_coverage(context):
 )
 def integration_test(
     context,
+    cache_test_fixtures=False,
     keepdb=False,
     label="nautobot",
     failfast=False,
@@ -754,6 +816,7 @@ def integration_test(
 
     unittest(
         context,
+        cache_test_fixtures=cache_test_fixtures,
         keepdb=keepdb,
         label=label,
         failfast=failfast,
@@ -770,6 +833,48 @@ def integration_test(
 
 @task(
     help={
+        "dataset": "File (.sql.tar.gz) to start from that will untar to 'nautobot.sql'",
+        "db_engine": "mysql or postgres",
+        "db_name": "Temporary database to create, test, and destroy",
+    },
+)
+def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_migration_test"):
+    """Test database migration from a given dataset to latest Nautobot schema."""
+    if is_truthy(context.nautobot.local):
+        run_command(context, command=f"tar zxvf {dataset}")
+    else:
+        # DB must be running, else will fail with errors like:
+        # dropdb: error: could not connect to database template1: could not connect to server: No such file or directory
+        start(context, service="db")
+        source_file = os.path.basename(dataset)
+        context.run(f"docker cp '{dataset}' nautobot-db-1:/tmp/{source_file}")
+        run_command(context, command=f"tar zxvf /tmp/{source_file}", service="db")
+
+    if db_engine == "postgres":
+        common_args = "-U $NAUTOBOT_DB_USER --no-password -h localhost"
+        run_command(context, command=f"sh -c 'dropdb --if-exists {common_args} {db_name}'", service="db")
+        run_command(context, command=f"sh -c 'createdb {common_args} {db_name}'", service="db")
+        run_command(context, command=f"sh -c 'psql {common_args} -d {db_name} -f nautobot.sql'", service="db")
+    else:
+        # "weird historical idiosyncrasy in MySQL where 'localhost' means a UNIX socket, and '127.0.0.1' means TCP/IP"
+        base_command = "mysql --user=$NAUTOBOT_DB_USER --password=$NAUTOBOT_DB_PASSWORD --host 127.0.0.1"
+        run_command(context, command=f"sh -c '{base_command} -e \"DROP DATABASE IF EXISTS {db_name};\"'", service="db")
+        run_command(context, command=f"sh -c '{base_command} -e \"CREATE DATABASE {db_name};\"'", service="db")
+        run_command(context, command=f"sh -c '{base_command} {db_name} < nautobot.sql'", service="db")
+
+    if is_truthy(context.nautobot.local):
+        run_command(context, command="nautobot-server migrate", env={"NAUTOBOT_DB_NAME": db_name})
+    else:
+        # We MUST use "docker-compose run ..." here as "docker-compose exec" doesn't support an `--env` flag.
+        docker_compose(
+            context,
+            command=f"run --rm --env NAUTOBOT_DB_NAME={db_name} --entrypoint 'nautobot-server migrate' nautobot",
+        )
+
+
+@task(
+    help={
+        "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
@@ -785,6 +890,7 @@ def integration_test(
 )
 def performance_test(
     context,
+    cache_test_fixtures=False,
     keepdb=False,
     label="nautobot",
     failfast=False,
@@ -806,6 +912,7 @@ def performance_test(
 
     unittest(
         context,
+        cache_test_fixtures=cache_test_fixtures,
         keepdb=keepdb,
         label=label,
         failfast=failfast,
@@ -828,13 +935,26 @@ def performance_test(
 )
 def tests(context, lint_only=False, keepdb=False):
     """Run all linters and unit tests."""
-    black(context)
-    flake8(context)
     hadolint(context)
     markdownlint(context)
+    yamllint(context)
+    ruff(context)
     pylint(context)
     check_migrations(context)
     check_schema(context)
     build_and_check_docs(context)
     if not lint_only:
         unittest(context, keepdb=keepdb)
+
+
+@task(help={"version": "The version number or the rule to update the version."})
+def version(context, version=None):  # pylint: disable=redefined-outer-name
+    """
+    Show the version of Nautobot Python package or bump it when a valid bump rule is provided.
+
+    The version number or rules are those supported by `poetry version`.
+    """
+    if version is None:
+        version = ""
+
+    run_command(context, f"poetry version --short {version}")

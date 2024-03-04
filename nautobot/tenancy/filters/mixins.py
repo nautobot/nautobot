@@ -12,8 +12,8 @@ class TenancyModelFilterSetMixin(django_filters.FilterSet):
     tenant_group = TreeNodeMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
         field_name="tenant__tenant_group",
-        to_field_name="slug",
-        label="Tenant Group (slug or ID)",
+        to_field_name="name",
+        label="Tenant Group (name or ID)",
     )
     tenant_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Tenant.objects.all(),
@@ -21,5 +21,6 @@ class TenancyModelFilterSetMixin(django_filters.FilterSet):
     )
     tenant = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Tenant.objects.all(),
-        label="Tenant (slug or ID)",
+        to_field_name="name",
+        label="Tenant (name or ID)",
     )

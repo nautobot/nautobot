@@ -1,21 +1,17 @@
 from django import forms
-from django.db.models import Q
+from django.core.exceptions import ValidationError
 
 from nautobot.core.forms import (
     add_blank_choice,
     AddressFieldMixin,
     BootstrapMixin,
-    BulkEditNullBooleanSelect,
-    CSVChoiceField,
-    CSVModelChoiceField,
-    DatePicker,
+    DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     ExpandableIPAddressField,
     NumericArrayField,
     PrefixFieldMixin,
     ReturnURLForm,
-    SlugField,
     StaticSelect2,
     StaticSelect2Multiple,
     TagFilterField,
@@ -23,39 +19,37 @@ from nautobot.core.forms import (
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
-    LocatableModelCSVFormMixin,
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
 )
-from nautobot.dcim.models import Device, Interface, Rack, Region, Site
+from nautobot.dcim.models import Device, Location, Rack
 from nautobot.extras.forms import (
-    CustomFieldModelCSVForm,
     NautobotBulkEditForm,
-    NautobotModelForm,
     NautobotFilterForm,
+    NautobotModelForm,
     RoleModelBulkEditFormMixin,
-    RoleModelCSVFormMixin,
     RoleModelFilterFormMixin,
     StatusModelBulkEditFormMixin,
-    StatusModelCSVFormMixin,
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
-from .choices import IPAddressFamilyChoices, ServiceProtocolChoices
+from nautobot.virtualization.models import Cluster, VirtualMachine
+
+from .choices import IPAddressTypeChoices, IPAddressVersionChoices, PrefixTypeChoices, ServiceProtocolChoices
 from .constants import (
-    IPADDRESS_MASK_LENGTH_MIN,
     IPADDRESS_MASK_LENGTH_MAX,
+    IPADDRESS_MASK_LENGTH_MIN,
     PREFIX_LENGTH_MAX,
     PREFIX_LENGTH_MIN,
     SERVICE_PORT_MAX,
     SERVICE_PORT_MIN,
 )
 from .models import (
-    Aggregate,
     IPAddress,
+    IPAddressToInterface,
+    Namespace,
     Prefix,
     RIR,
     RouteTarget,
@@ -73,6 +67,33 @@ IPADDRESS_MASK_LENGTH_CHOICES = add_blank_choice(
 
 
 #
+# Namespaces
+#
+
+
+class NamespaceForm(LocatableModelFormMixin, NautobotModelForm):
+    class Meta:
+        model = Namespace
+        fields = ["name", "description", "location", "tags"]
+
+
+class NamespaceBulkEditForm(
+    TagsBulkEditFormMixin,
+    LocatableModelBulkEditFormMixin,
+    NautobotBulkEditForm,
+):
+    pk = forms.ModelMultipleChoiceField(queryset=Namespace.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=200, required=False)
+
+    class Meta:
+        model = Namespace
+        nullable_fields = [
+            "description",
+            "location",
+        ]
+
+
+#
 # VRFs
 #
 
@@ -80,47 +101,45 @@ IPADDRESS_MASK_LENGTH_CHOICES = add_blank_choice(
 class VRFForm(NautobotModelForm, TenancyForm):
     import_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
     export_targets = DynamicModelMultipleChoiceField(queryset=RouteTarget.objects.all(), required=False)
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all())
+    devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
+    virtual_machines = DynamicModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), required=False)
+    prefixes = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(),
+        required=False,
+        query_params={
+            "namespace": "$namespace",
+        },
+    )
 
     class Meta:
         model = VRF
         fields = [
             "name",
             "rd",
-            "enforce_unique",
+            "namespace",
             "description",
             "import_targets",
             "export_targets",
             "tenant_group",
             "tenant",
             "tags",
+            "devices",
+            "virtual_machines",
+            "prefixes",
         ]
         labels = {
             "rd": "RD",
         }
         help_texts = {
-            "rd": "Route distinguisher in any format",
+            "rd": "Route distinguisher unique to this Namespace (as defined in RFC 4364)",
         }
-
-
-class VRFCSVForm(CustomFieldModelCSVForm):
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned tenant",
-    )
-
-    class Meta:
-        model = VRF
-        fields = VRF.csv_headers
 
 
 class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VRF.objects.all(), widget=forms.MultipleHiddenInput())
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    enforce_unique = forms.NullBooleanField(
-        required=False, widget=BulkEditNullBooleanSelect(), label="Enforce unique space"
-    )
     description = forms.CharField(max_length=100, required=False)
 
     class Meta:
@@ -132,15 +151,15 @@ class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
 
 class VRFFilterForm(NautobotFilterForm, TenancyFilterForm):
     model = VRF
-    field_order = ["q", "import_target", "export_target", "tenant_group", "tenant"]
+    field_order = ["q", "import_targets", "export_targets", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
-    import_target = DynamicModelMultipleChoiceField(
+    import_targets = DynamicModelMultipleChoiceField(
         queryset=RouteTarget.objects.all(), to_field_name="name", required=False
     )
-    export_target = DynamicModelMultipleChoiceField(
+    export_targets = DynamicModelMultipleChoiceField(
         queryset=RouteTarget.objects.all(), to_field_name="name", required=False
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -158,19 +177,6 @@ class RouteTargetForm(NautobotModelForm, TenancyForm):
             "tenant",
             "tags",
         ]
-
-
-class RouteTargetCSVForm(CustomFieldModelCSVForm):
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned tenant",
-    )
-
-    class Meta:
-        model = RouteTarget
-        fields = RouteTarget.csv_headers
 
 
 class RouteTargetBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
@@ -196,13 +202,13 @@ class RouteTargetFilterForm(NautobotFilterForm, TenancyFilterForm):
         "exporting_vrfs",
     ]
     q = forms.CharField(required=False, label="Search")
-    importing_vrf_id = DynamicModelMultipleChoiceField(
-        queryset=VRF.objects.all(), required=False, label="Imported by VRF"
+    importing_vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(), required=False, label="Imported by VRF(s)"
     )
-    exporting_vrf_id = DynamicModelMultipleChoiceField(
-        queryset=VRF.objects.all(), required=False, label="Exported by VRF"
+    exporting_vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(), required=False, label="Exported by VRF(s)"
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -211,25 +217,13 @@ class RouteTargetFilterForm(NautobotFilterForm, TenancyFilterForm):
 
 
 class RIRForm(NautobotModelForm):
-    slug = SlugField()
-
     class Meta:
         model = RIR
         fields = [
             "name",
-            "slug",
             "is_private",
             "description",
         ]
-
-
-class RIRCSVForm(CustomFieldModelCSVForm):
-    class Meta:
-        model = RIR
-        fields = RIR.csv_headers
-        help_texts = {
-            "name": "RIR name",
-        }
 
 
 class RIRFilterForm(NautobotFilterForm):
@@ -242,99 +236,23 @@ class RIRFilterForm(NautobotFilterForm):
 
 
 #
-# Aggregates
-#
-
-
-class AggregateForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
-    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), label="RIR")
-
-    class Meta:
-        model = Aggregate
-        fields = [
-            "prefix",
-            "rir",
-            "date_added",
-            "description",
-            "tenant_group",
-            "tenant",
-            "tags",
-        ]
-        help_texts = {
-            "prefix": "IPv4 or IPv6 network",
-            "rir": "Regional Internet Registry responsible for this prefix",
-        }
-        widgets = {
-            "date_added": DatePicker(),
-        }
-
-
-class AggregateCSVForm(PrefixFieldMixin, CustomFieldModelCSVForm):
-    rir = CSVModelChoiceField(queryset=RIR.objects.all(), to_field_name="name", help_text="Assigned RIR")
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned tenant",
-    )
-
-    class Meta:
-        model = Aggregate
-        fields = Aggregate.csv_headers
-
-
-class AggregateBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
-    pk = forms.ModelMultipleChoiceField(queryset=Aggregate.objects.all(), widget=forms.MultipleHiddenInput())
-    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    date_added = forms.DateField(required=False)
-    description = forms.CharField(max_length=100, required=False)
-
-    class Meta:
-        nullable_fields = [
-            "date_added",
-            "description",
-        ]
-        widgets = {
-            "date_added": DatePicker(),
-        }
-
-
-class AggregateFilterForm(NautobotFilterForm, TenancyFilterForm):
-    model = Aggregate
-    field_order = [
-        "q",
-        "rir",
-    ]
-
-    q = forms.CharField(required=False, label="Search")
-    family = forms.ChoiceField(
-        required=False,
-        choices=add_blank_choice(IPAddressFamilyChoices),
-        label="Address family",
-        widget=StaticSelect2(),
-    )
-    rir = DynamicModelMultipleChoiceField(queryset=RIR.objects.all(), to_field_name="slug", required=False, label="RIR")
-    tag = TagFilterField(model)
-
-
-#
 # Prefixes
 #
 
 
-class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, PrefixFieldMixin):
-    vrf = DynamicModelChoiceField(
-        queryset=VRF.objects.all(),
+class PrefixForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
+    locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
         required=False,
-        label="VRF",
+        label="Locations",
+        null_option="None",
+        query_params={"content_type": Prefix._meta.label_lower},
     )
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
         label="VLAN group",
         null_option="None",
-        query_params={"site_id": "$site"},
         initial_params={"vlans": "$vlan"},
     )
     vlan = DynamicModelChoiceField(
@@ -342,116 +260,120 @@ class PrefixForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Prefix
         required=False,
         label="VLAN",
         query_params={
-            "site_id": "$site",
+            "locations": "$locations",
             "group_id": "$vlan_group",
         },
     )
+    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all())
+    vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(),
+        required=False,
+        label="VRFs",
+        query_params={
+            "namespace": "$namespace",
+        },
+    )
+    # It is required to add prefix_length here and set it to required=False and hidden input so that
+    # form validation doesn't complain and that it doesn't show in forms.
+    # Ref:  https://github.com/nautobot/nautobot/issues/4550
+    prefix_length = forms.IntegerField(required=False, widget=forms.HiddenInput())
 
     class Meta:
         model = Prefix
         fields = [
             "prefix",
-            "vrf",
-            "site",
-            "location",
+            "namespace",
+            "vrfs",
+            "locations",
             "vlan",
             "status",
             "role",
-            "is_pool",
+            "type",
             "description",
             "tenant_group",
             "tenant",
+            "rir",
+            "date_allocated",
             "tags",
         ]
+        widgets = {
+            "date_allocated": DateTimePicker(),
+        }
+
+    def _get_validation_exclusions(self):
+        """
+        By default Django excludes "network"/"prefix_length" from model validation because they are not form fields.
+
+        This is wrong since we need those fields to be included in the validate_unique() calculation!
+        """
+        exclude = super()._get_validation_exclusions()
+        exclude.remove("network")
+        exclude.remove("prefix_length")
+        return exclude
 
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
+        if self.instance is not None:
+            self.initial["vrfs"] = self.instance.vrfs.values_list("id", flat=True)
 
-        self.fields["vrf"].empty_label = "Global"
+    def clean(self):
+        # Translate model ValidationError to forms.ValidationError
+        try:
+            return super().clean()
+        except ValidationError as e:
+            raise forms.ValidationError(e.message_dict) from e
 
-
-class PrefixCSVForm(
-    PrefixFieldMixin,
-    LocatableModelCSVFormMixin,
-    StatusModelCSVFormMixin,
-    RoleModelCSVFormMixin,
-    CustomFieldModelCSVForm,
-):
-    vrf = CSVModelChoiceField(
-        queryset=VRF.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Assigned VRF",
-    )
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned tenant",
-    )
-    vlan_group = CSVModelChoiceField(
-        queryset=VLANGroup.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="VLAN's group (if any)",
-    )
-    vlan = CSVModelChoiceField(
-        queryset=VLAN.objects.all(),
-        required=False,
-        to_field_name="vid",
-        help_text="Assigned VLAN",
-    )
-
-    class Meta:
-        model = Prefix
-        fields = Prefix.csv_headers
-
-    def __init__(self, data=None, *args, **kwargs):
-        super().__init__(data, *args, **kwargs)
-
-        if data:
-
-            # Limit vlan queryset by assigned site and vlan_group
-            params = {
-                f"site__{self.fields['site'].to_field_name}": data.get("site"),
-                f"vlan_group__{self.fields['vlan_group'].to_field_name}": data.get("vlan_group"),
-            }
-            self.fields["vlan"].queryset = self.fields["vlan"].queryset.filter(**params)
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        instance.vrfs.set(self.cleaned_data["vrfs"])
+        return instance
 
 
 class PrefixBulkEditForm(
     TagsBulkEditFormMixin,
-    LocatableModelBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
     RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Prefix.objects.all(), widget=forms.MultipleHiddenInput())
+    type = forms.ChoiceField(
+        choices=add_blank_choice(PrefixTypeChoices),
+        required=False,
+    )
+    """
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
         required=False,
         label="VRF",
     )
+    """
     prefix_length = forms.IntegerField(min_value=PREFIX_LENGTH_MIN, max_value=PREFIX_LENGTH_MAX, required=False)
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
+    add_locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(), required=False, query_params={"content_type": Prefix._meta.label_lower}
+    )
+    remove_locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(), required=False, query_params={"content_type": Prefix._meta.label_lower}
+    )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    is_pool = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect(), label="Is a pool")
+    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
+    date_allocated = forms.DateTimeField(required=False, widget=DateTimePicker)
     description = forms.CharField(max_length=100, required=False)
 
     class Meta:
         model = Prefix
         nullable_fields = [
-            "site",
-            "location",
-            "vrf",
+            # "vrf",
             "tenant",
+            "rir",
+            "date_allocated",
             "description",
         ]
 
 
 class PrefixFilterForm(
     NautobotFilterForm,
-    LocatableModelFilterFormMixin,
     TenancyFilterForm,
     StatusModelFilterFormMixin,
     RoleModelFilterFormMixin,
@@ -460,21 +382,19 @@ class PrefixFilterForm(
     field_order = [
         "q",
         "within_include",
-        "family",
-        "mask_length",
-        "vrf_id",
+        "type",
+        "ip_version",
+        "prefix_length",
+        "vrfs",
         "present_in_vrf_id",
         "status",
-        "region",
-        "site",
-        "location",
+        "locations",
         "role",
         "tenant_group",
         "tenant",
-        "is_pool",
-        "expand",
+        "rir",
     ]
-    mask_length__lte = forms.IntegerField(widget=forms.HiddenInput(), required=False)
+    prefix_length__lte = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     q = forms.CharField(required=False, label="Search")
     within_include = forms.CharField(
         required=False,
@@ -485,31 +405,39 @@ class PrefixFilterForm(
         ),
         label="Search within",
     )
-    family = forms.ChoiceField(
+    ip_version = forms.ChoiceField(
         required=False,
-        choices=add_blank_choice(IPAddressFamilyChoices),
-        label="Address family",
+        choices=add_blank_choice(IPAddressVersionChoices),
+        label="IP version",
         widget=StaticSelect2(),
     )
-    mask_length = forms.ChoiceField(
+    prefix_length = forms.ChoiceField(
         required=False,
         choices=PREFIX_MASK_LENGTH_CHOICES,
-        label="Mask length",
+        label="Prefix length",
         widget=StaticSelect2(),
     )
-    vrf_id = DynamicModelMultipleChoiceField(
+    vrfs = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),
         required=False,
-        label="Assigned VRF",
+        label="Assigned VRF(s)",
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
-    is_pool = forms.NullBooleanField(
+    locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        to_field_name="name",
         required=False,
-        label="Is a pool",
-        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+        null_option="None",
+        query_params={"content_type": VLAN._meta.label_lower},
     )
-    tag = TagFilterField(model)
+    type = forms.MultipleChoiceField(
+        required=False,
+        choices=PrefixTypeChoices,
+        widget=StaticSelect2Multiple(),
+    )
+    rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
+    tags = TagFilterField(model)
 
 
 #
@@ -517,58 +445,44 @@ class PrefixFilterForm(
 #
 
 
-class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldMixin):
-    device = DynamicModelChoiceField(
-        queryset=Device.objects.all(),
+class IPAddressFormMixin(NautobotModelForm, TenancyForm, AddressFieldMixin):
+    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), label="Namespace")
+
+    def clean_namespace(self):
+        """
+        Explicitly set the Namespace on the instance so it will be used on save.
+
+        While the model does this itself on create, the model form is creating a bare instance first
+        and setting attributes individually based on the form field values. Since namespace isn't an
+        actual model field, it gets ignored by default.
+        """
+        namespace = self.cleaned_data.pop("namespace")
+        setattr(self.instance, "_namespace", namespace)
+        # Since 'parent' is always derived from 'namespace', we set the current instance's 'parent' to 'None'.
+        # This prevents the model from revalidating the 'parent', which could raise a validation error when the current
+        # parent differs from the parent derived from the new `namespace`.
+        self.instance.parent = None
+
+
+class IPAddressForm(IPAddressFormMixin, ReturnURLForm):
+    nat_location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
         required=False,
-        initial_params={"interfaces": "$interface"},
-    )
-    interface = DynamicModelChoiceField(
-        queryset=Interface.objects.all(),
-        required=False,
-        query_params={"device_id": "$device"},
-    )
-    virtual_machine = DynamicModelChoiceField(
-        queryset=VirtualMachine.objects.all(),
-        required=False,
-        initial_params={"interfaces": "$vminterface"},
-    )
-    vminterface = DynamicModelChoiceField(
-        queryset=VMInterface.objects.all(),
-        required=False,
-        label="Interface",
-        query_params={"virtual_machine_id": "$virtual_machine"},
-    )
-    vrf = DynamicModelChoiceField(
-        queryset=VRF.objects.all(),
-        required=False,
-        label="VRF",
-    )
-    nat_region = DynamicModelChoiceField(
-        queryset=Region.objects.all(),
-        required=False,
-        label="Region",
-        initial_params={"sites": "$nat_site"},
-    )
-    nat_site = DynamicModelChoiceField(
-        queryset=Site.objects.all(),
-        required=False,
-        label="Site",
-        query_params={"region": "$nat_region"},
+        label="Location",
     )
     nat_rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         label="Rack",
         null_option="None",
-        query_params={"site": "$site"},
+        query_params={"location": "$nat_location"},
     )
     nat_device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
         query_params={
-            "site": "$site",
+            "location": "$nat_location",
             "rack": "$nat_rack",
         },
     )
@@ -596,19 +510,17 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
             "vrf_id": "$nat_vrf",
         },
     )
-    primary_for_parent = forms.BooleanField(required=False, label="Make this the primary IP for the device/VM")
 
     class Meta:
         model = IPAddress
         fields = [
             "address",
-            "vrf",
+            "namespace",
+            "type",
             "status",
             "role",
             "dns_name",
             "description",
-            "primary_for_parent",
-            "nat_site",
             "nat_rack",
             "nat_device",
             "nat_cluster",
@@ -620,116 +532,63 @@ class IPAddressForm(NautobotModelForm, TenancyForm, ReturnURLForm, AddressFieldM
             "tags",
         ]
 
-    def __init__(self, *args, **kwargs):
+    def _get_validation_exclusions(self):
+        """
+        By default Django excludes "host" and "parent" from model validation because they are not form fields.
 
+        This is wrong since we need those fields to be included in the validate_unique() calculation!
+        """
+        exclude = super()._get_validation_exclusions()
+        exclude.remove("host")
+        exclude.remove("parent")
+        return exclude
+
+    def clean(self):
+        # Pass address to the instance, because this is required to be accessible in the IPAddress.clean method
+        self.instance.address = self.cleaned_data.get("address")
+        super().clean()
+
+    def __init__(self, *args, **kwargs):
         # Initialize helper selectors
         instance = kwargs.get("instance")
         initial = kwargs.get("initial", {}).copy()
 
         if instance:
-            if isinstance(instance.assigned_object, Interface):
-                initial["interface"] = instance.assigned_object
-            elif isinstance(instance.assigned_object, VMInterface):
-                initial["vminterface"] = instance.assigned_object
             if instance.nat_inside:
-                nat_inside_parent = instance.nat_inside.assigned_object
-                if isinstance(nat_inside_parent, Interface):
-                    initial["nat_site"] = nat_inside_parent.device.site.pk
-                    if nat_inside_parent.device.rack:
-                        initial["nat_rack"] = nat_inside_parent.device.rack.pk
-                    initial["nat_device"] = nat_inside_parent.device.pk
-                elif isinstance(nat_inside_parent, VMInterface):
-                    initial["nat_cluster"] = nat_inside_parent.virtual_machine.cluster.pk
-                    initial["nat_virtual_machine"] = nat_inside_parent.virtual_machine.pk
+                # TODO: Does this make sense with ip address to interface relationship changing to m2m?
+                nat_inside_parent = IPAddressToInterface.objects.filter(ip_address=instance.nat_inside)
+                if nat_inside_parent.count() == 1:
+                    nat_inside_parent = nat_inside_parent.first()
+                    if nat_inside_parent.interface is not None:
+                        initial["nat_location"] = nat_inside_parent.interface.device.location.pk
+                        if nat_inside_parent.interface.device.rack:
+                            initial["nat_rack"] = nat_inside_parent.interface.device.rack.pk
+                        initial["nat_device"] = nat_inside_parent.interface.device.pk
+                    elif nat_inside_parent.vm_interface is not None:
+                        initial["nat_cluster"] = nat_inside_parent.vm_interface.virtual_machine.cluster.pk
+                        initial["nat_virtual_machine"] = nat_inside_parent.vm_interface.virtual_machine.pk
+
+            # Always populate the namespace from the parent.
+            if instance.present_in_database:
+                initial["namespace"] = instance.parent.namespace
+
         kwargs["initial"] = initial
 
         super().__init__(*args, **kwargs)
-
-        self.fields["vrf"].empty_label = "Global"
-
-        # Initialize primary_for_parent if IP address is already assigned
-        if self.instance.present_in_database and self.instance.assigned_object:
-            parent = self.instance.assigned_object.parent
-            if (
-                self.instance.address.version == 4
-                and parent.primary_ip4_id == self.instance.pk
-                or self.instance.address.version == 6
-                and parent.primary_ip6_id == self.instance.pk
-            ):
-                self.initial["primary_for_parent"] = True
-
-    def clean(self):
-        super().clean()
-
-        # Cannot select both a device interface and a VM interface
-        if self.cleaned_data.get("interface") and self.cleaned_data.get("vminterface"):
-            raise forms.ValidationError("Cannot select both a device interface and a virtual machine interface")
-
-        # Stash a copy of `assigned_object` before we replace it, so we can use it in `save()`.
-        self.instance._original_assigned_object = self.instance.assigned_object
-        self.instance.assigned_object = self.cleaned_data.get("interface") or self.cleaned_data.get("vminterface")
-
-        # Primary IP assignment is only available if an interface has been assigned.
-        interface = self.cleaned_data.get("interface") or self.cleaned_data.get("vminterface")
-        primary_for_parent = self.cleaned_data.get("primary_for_parent")
-        if primary_for_parent and not interface:
-            self.add_error(
-                "primary_for_parent",
-                "Only IP addresses assigned to an interface can be designated as primary IPs.",
-            )
-
-        # If `primary_for_parent` is unset, clear the `primary_ip{version}` for the
-        # Device/VirtualMachine. It will not be saved until after `IPAddress.clean()` succeeds which
-        # also checks for the `_primary_ip_unset_by_form` value.
-        device_primary_ip = Device.objects.filter(Q(primary_ip6=self.instance) | Q(primary_ip4=self.instance)).exists()
-        vm_primary_ip = VirtualMachine.objects.filter(
-            Q(primary_ip6=self.instance) | Q(primary_ip4=self.instance)
-        ).exists()
-
-        currently_primary_ip = device_primary_ip or vm_primary_ip
-
-        if not primary_for_parent and self.instance._original_assigned_object is not None and currently_primary_ip:
-            self.instance._primary_ip_unset_by_form = True
-
-    def save(self, *args, **kwargs):
-        ipaddress = super().save(*args, **kwargs)
-
-        interface = ipaddress.assigned_object
-        primary_ip_attr = f"primary_ip{ipaddress.address.version}"  # e.g. `primary_ip4` or `primary_ip6`
-        primary_ip_unset_by_form = getattr(ipaddress, "_primary_ip_unset_by_form", False)
-
-        # Assign this IPAddress as the primary for the associated Device/VirtualMachine.
-        if interface and self.cleaned_data["primary_for_parent"]:
-            setattr(interface.parent, primary_ip_attr, ipaddress)
-            interface.parent.save()
-
-        # Or clear it as the primary, saving the `original_assigned_object.parent` if
-        # `_primary_ip_unset_by_form` was set in `clean()`
-        elif primary_ip_unset_by_form:
-            parent = ipaddress._original_assigned_object.parent
-            setattr(parent, primary_ip_attr, None)
-            parent.save()
-
-        return ipaddress
 
 
 class IPAddressBulkCreateForm(BootstrapMixin, forms.Form):
     pattern = ExpandableIPAddressField(label="Address pattern")
 
 
-class IPAddressBulkAddForm(NautobotModelForm, TenancyForm, AddressFieldMixin):
-    vrf = DynamicModelChoiceField(
-        queryset=VRF.objects.all(),
-        required=False,
-        label="VRF",
-    )
-
+class IPAddressBulkAddForm(IPAddressFormMixin):
     class Meta:
         model = IPAddress
         fields = [
             "address",
-            "vrf",
+            "namespace",
             "status",
+            "type",
             "role",
             "dns_name",
             "description",
@@ -738,117 +597,11 @@ class IPAddressBulkAddForm(NautobotModelForm, TenancyForm, AddressFieldMixin):
             "tags",
         ]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["vrf"].empty_label = "Global"
-
-
-class IPAddressCSVForm(StatusModelCSVFormMixin, RoleModelCSVFormMixin, AddressFieldMixin, CustomFieldModelCSVForm):
-    vrf = CSVModelChoiceField(
-        queryset=VRF.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Assigned VRF",
-    )
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Assigned tenant",
-    )
-    device = CSVModelChoiceField(
-        queryset=Device.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Parent device of assigned interface (if any)",
-    )
-    virtual_machine = CSVModelChoiceField(
-        queryset=VirtualMachine.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Parent VM of assigned interface (if any)",
-    )
-    interface = CSVModelChoiceField(
-        queryset=Interface.objects.none(),  # Can also refer to VMInterface
-        required=False,
-        to_field_name="name",
-        help_text="Assigned interface",
-    )
-    is_primary = forms.BooleanField(help_text="Make this the primary IP for the assigned device", required=False)
-
-    class Meta:
-        model = IPAddress
-        fields = [
-            "address",
-            "vrf",
-            "tenant",
-            "status",
-            "role",
-            "device",
-            "virtual_machine",
-            "interface",
-            "is_primary",
-            "dns_name",
-            "description",
-        ]
-
-    def __init__(self, data=None, *args, **kwargs):
-        super().__init__(data, *args, **kwargs)
-
-        if data:
-
-            # Limit interface queryset by assigned device
-            if data.get("device"):
-                self.fields["interface"].queryset = Interface.objects.filter(
-                    **{f"device__{self.fields['device'].to_field_name}": data["device"]}
-                )
-
-            # Limit interface queryset by assigned device
-            elif data.get("virtual_machine"):
-                self.fields["interface"].queryset = VMInterface.objects.filter(
-                    **{f"virtual_machine__{self.fields['virtual_machine'].to_field_name}": data["virtual_machine"]}
-                )
-
-    def clean(self):
-        super().clean()
-
-        device = self.cleaned_data.get("device")
-        virtual_machine = self.cleaned_data.get("virtual_machine")
-        is_primary = self.cleaned_data.get("is_primary")
-
-        # Validate is_primary
-        if is_primary and not device and not virtual_machine:
-            raise forms.ValidationError("No device or virtual machine specified; cannot set as primary IP")
-
-    def save(self, *args, **kwargs):
-
-        # Set interface assignment
-        if self.cleaned_data["interface"]:
-            self.instance.assigned_object = self.cleaned_data["interface"]
-
-        ipaddress = super().save(*args, **kwargs)
-
-        # Set as primary for device/VM
-        if self.cleaned_data["is_primary"]:
-            parent = self.cleaned_data["device"] or self.cleaned_data["virtual_machine"]
-            if self.instance.address.version == 4:
-                parent.primary_ip4 = ipaddress
-            elif self.instance.address.version == 6:
-                parent.primary_ip6 = ipaddress
-            parent.save()
-
-        return ipaddress
-
 
 class IPAddressBulkEditForm(
     TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, RoleModelBulkEditFormMixin, NautobotBulkEditForm
 ):
     pk = forms.ModelMultipleChoiceField(queryset=IPAddress.objects.all(), widget=forms.MultipleHiddenInput())
-    vrf = DynamicModelChoiceField(
-        queryset=VRF.objects.all(),
-        required=False,
-        label="VRF",
-    )
     mask_length = forms.IntegerField(
         min_value=IPADDRESS_MASK_LENGTH_MIN,
         max_value=IPADDRESS_MASK_LENGTH_MAX,
@@ -857,10 +610,14 @@ class IPAddressBulkEditForm(
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     dns_name = forms.CharField(max_length=255, required=False)
     description = forms.CharField(max_length=100, required=False)
+    type = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(IPAddressTypeChoices),
+        widget=StaticSelect2(),
+    )
 
     class Meta:
         nullable_fields = [
-            "vrf",
             "tenant",
             "dns_name",
             "description",
@@ -868,7 +625,6 @@ class IPAddressBulkEditForm(
 
 
 class IPAddressAssignForm(BootstrapMixin, forms.Form):
-    vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="VRF", empty_label="Global")
     q = forms.CharField(
         required=False,
         label="Search",
@@ -880,13 +636,12 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
     field_order = [
         "q",
         "parent",
-        "family",
+        "ip_version",
         "mask_length",
-        "vrf_id",
+        "vrfs",
         "present_in_vrf_id",
         "status",
         "role",
-        "assigned_to_interface",
         "tenant_group",
         "tenant",
     ]
@@ -900,31 +655,31 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         ),
         label="Parent Prefix",
     )
-    family = forms.ChoiceField(
+    ip_version = forms.ChoiceField(
         required=False,
-        choices=add_blank_choice(IPAddressFamilyChoices),
-        label="Address family",
+        choices=add_blank_choice(IPAddressVersionChoices),
+        label="IP version",
         widget=StaticSelect2(),
     )
-    mask_length = forms.ChoiceField(
+    mask_length = forms.MultipleChoiceField(
         required=False,
         choices=IPADDRESS_MASK_LENGTH_CHOICES,
         label="Mask length",
-        widget=StaticSelect2(),
+        widget=StaticSelect2Multiple(),
     )
-    vrf_id = DynamicModelMultipleChoiceField(
+    vrfs = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),
         required=False,
-        label="Assigned VRF",
+        label="Assigned VRF(s)",
         null_option="Global",
     )
     present_in_vrf_id = DynamicModelChoiceField(queryset=VRF.objects.all(), required=False, label="Present in VRF")
-    assigned_to_interface = forms.NullBooleanField(
+    type = forms.ChoiceField(
         required=False,
-        label="Assigned to an interface",
-        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+        choices=add_blank_choice(IPAddressTypeChoices),
+        widget=StaticSelect2(),
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -933,24 +688,13 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
 
 
 class VLANGroupForm(LocatableModelFormMixin, NautobotModelForm):
-    slug = SlugField()
-
     class Meta:
         model = VLANGroup
         fields = [
-            "region",
-            "site",
             "location",
             "name",
-            "slug",
             "description",
         ]
-
-
-class VLANGroupCSVForm(LocatableModelCSVFormMixin, CustomFieldModelCSVForm):
-    class Meta:
-        model = VLANGroup
-        fields = VLANGroup.csv_headers
 
 
 class VLANGroupFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
@@ -962,18 +706,23 @@ class VLANGroupFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin):
 #
 
 
-class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
+class VLANForm(NautobotModelForm, TenancyForm):
+    locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        label="Locations",
+        null_option="None",
+        query_params={"content_type": VLAN._meta.label_lower},
+    )
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
     )
 
     class Meta:
         model = VLAN
         fields = [
-            "site",
-            "location",
+            "locations",
             "vlan_group",
             "vid",
             "name",
@@ -985,7 +734,7 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "tags",
         ]
         help_texts = {
-            "site": "Leave blank if this VLAN spans multiple sites",
+            "locations": "Leave blank if this VLAN spans all locations",
             "vlan_group": "VLAN group (optional)",
             "vid": "Configured VLAN ID",
             "name": "Configured VLAN name",
@@ -993,42 +742,17 @@ class VLANForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "role": "The primary function of this VLAN",
         }
 
-
-class VLANCSVForm(LocatableModelCSVFormMixin, StatusModelCSVFormMixin, RoleModelCSVFormMixin, CustomFieldModelCSVForm):
-    vlan_group = CSVModelChoiceField(
-        queryset=VLANGroup.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Assigned VLAN group",
-    )
-    tenant = CSVModelChoiceField(
-        queryset=Tenant.objects.all(),
-        to_field_name="name",
-        required=False,
-        help_text="Assigned tenant",
-    )
-
-    class Meta:
-        model = VLAN
-        fields = VLAN.csv_headers
-        help_texts = {
-            "vid": "Numeric VLAN ID (1-4095)",
-            "name": "VLAN name",
-        }
-
-    def __init__(self, data=None, *args, **kwargs):
-        super().__init__(data, *args, **kwargs)
-
-        if data:
-
-            # Limit vlan queryset by assigned group
-            params = {f"site__{self.fields['site'].to_field_name}": data.get("site")}
-            self.fields["vlan_group"].queryset = self.fields["vlan_group"].queryset.filter(**params)
+    def clean(self):
+        # Validation error raised in signal is not properly handled in form clean
+        # Hence handling any validationError that might occur.
+        try:
+            return super().clean()
+        except ValidationError as e:
+            raise forms.ValidationError(e.message_dict) from e
 
 
 class VLANBulkEditForm(
     TagsBulkEditFormMixin,
-    LocatableModelBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
     RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
@@ -1037,7 +761,13 @@ class VLANBulkEditForm(
     vlan_group = DynamicModelChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
-        query_params={"site_id": "$site"},
+        query_params={"location_id": "$location"},
+    )
+    add_locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(), required=False, query_params={"content_type": VLAN._meta.label_lower}
+    )
+    remove_locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(), required=False, query_params={"content_type": VLAN._meta.label_lower}
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     description = forms.CharField(max_length=100, required=False)
@@ -1045,8 +775,6 @@ class VLANBulkEditForm(
     class Meta:
         model = VLAN
         nullable_fields = [
-            "site",
-            "location",
             "vlan_group",
             "tenant",
             "description",
@@ -1055,7 +783,6 @@ class VLANBulkEditForm(
 
 class VLANFilterForm(
     NautobotFilterForm,
-    LocatableModelFilterFormMixin,
     TenancyFilterForm,
     StatusModelFilterFormMixin,
     RoleModelFilterFormMixin,
@@ -1063,9 +790,7 @@ class VLANFilterForm(
     model = VLAN
     field_order = [
         "q",
-        "region",
-        "site",
-        "location",
+        "locations",
         "group_id",
         "status",
         "role",
@@ -1073,14 +798,20 @@ class VLANFilterForm(
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
+    locations = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        required=False,
+        null_option="None",
+        query_params={"content_type": VLAN._meta.label_lower},
+    )
     group_id = DynamicModelMultipleChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
         label="VLAN group",
         null_option="None",
-        query_params={"region": "$region"},
     )
-    tag = TagFilterField(model)
+    tags = TagFilterField(model)
 
 
 #
@@ -1089,6 +820,16 @@ class VLANFilterForm(
 
 
 class ServiceForm(NautobotModelForm):
+    device = DynamicModelChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        label="Device",
+    )
+    virtual_machine = DynamicModelChoiceField(
+        queryset=VirtualMachine.objects.all(),
+        required=False,
+        label="Virtual Machine",
+    )
     ports = NumericArrayField(
         base_field=forms.IntegerField(min_value=SERVICE_PORT_MIN, max_value=SERVICE_PORT_MAX),
         help_text="Comma-separated list of one or more port numbers. A range may be specified using a hyphen.",
@@ -1098,6 +839,8 @@ class ServiceForm(NautobotModelForm):
         model = Service
         fields = [
             "name",
+            "device",
+            "virtual_machine",
             "protocol",
             "ports",
             "ip_addresses",
@@ -1119,11 +862,11 @@ class ServiceForm(NautobotModelForm):
         # Limit IP address choices to those assigned to interfaces of the parent device/VM
         if self.instance.device:
             self.fields["ip_addresses"].queryset = IPAddress.objects.filter(
-                interface__in=self.instance.device.vc_interfaces.values_list("id", flat=True)
+                interfaces__in=self.instance.device.vc_interfaces.values_list("id", flat=True)
             )
         elif self.instance.virtual_machine:
             self.fields["ip_addresses"].queryset = IPAddress.objects.filter(
-                vminterface__in=self.instance.virtual_machine.interfaces.values_list("id", flat=True)
+                vm_interfaces__in=self.instance.virtual_machine.interfaces.values_list("id", flat=True)
             )
         else:
             self.fields["ip_addresses"].choices = []
@@ -1137,30 +880,10 @@ class ServiceFilterForm(NautobotFilterForm):
         required=False,
         widget=StaticSelect2Multiple(),
     )
-    port = forms.IntegerField(
+    ports = forms.IntegerField(
         required=False,
     )
-    tag = TagFilterField(model)
-
-
-class ServiceCSVForm(CustomFieldModelCSVForm):
-    device = CSVModelChoiceField(
-        queryset=Device.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Required if not assigned to a VM",
-    )
-    virtual_machine = CSVModelChoiceField(
-        queryset=VirtualMachine.objects.all(),
-        required=False,
-        to_field_name="name",
-        help_text="Required if not assigned to a device",
-    )
-    protocol = CSVChoiceField(choices=ServiceProtocolChoices, help_text="IP protocol")
-
-    class Meta:
-        model = Service
-        fields = Service.csv_headers
+    tags = TagFilterField(model)
 
 
 class ServiceBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):

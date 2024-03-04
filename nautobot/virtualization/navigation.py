@@ -1,5 +1,12 @@
-from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
-
+from nautobot.core.apps import (
+    NavContext,
+    NavGrouping,
+    NavItem,
+    NavMenuAddButton,
+    NavMenuGroup,
+    NavMenuItem,
+    NavMenuTab,
+)
 
 menu_items = (
     NavMenuTab(
@@ -24,12 +31,6 @@ menu_items = (
                                     "virtualization.add_virtualmachine",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="virtualization:virtualmachine_import",
-                                permissions=[
-                                    "virtualization.add_virtualmachine",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -39,14 +40,7 @@ menu_items = (
                         permissions=[
                             "virtualization.view_vminterface",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="virtualization:vminterface_import",
-                                permissions=[
-                                    "virtualization.add_vminterface",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                 ),
             ),
@@ -68,12 +62,6 @@ menu_items = (
                                     "virtualization.add_cluster",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="virtualization:cluster_import",
-                                permissions=[
-                                    "virtualization.add_cluster",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -86,12 +74,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="virtualization:clustertype_add",
-                                permissions=[
-                                    "virtualization.add_clustertype",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="virtualization:clustertype_import",
                                 permissions=[
                                     "virtualization.add_clustertype",
                                 ],
@@ -112,13 +94,52 @@ menu_items = (
                                     "virtualization.add_clustergroup",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="virtualization:clustergroup_import",
-                                permissions=[
-                                    "virtualization.add_clustergroup",
-                                ],
-                            ),
                         ),
+                    ),
+                ),
+            ),
+        ),
+    ),
+)
+
+
+navigation = (
+    NavContext(
+        name="Inventory",
+        groups=(
+            NavGrouping(
+                name="Virtualization",
+                weight=600,
+                items=(
+                    NavItem(
+                        name="Virtual Machines",
+                        weight=100,
+                        link="virtualization:virtualmachine_list",
+                        permissions=["virtualization.view_virtualmachine"],
+                    ),
+                    NavItem(
+                        name="VM Interfaces",
+                        weight=200,
+                        link="virtualization:vminterface_list",
+                        permissions=["virtualization.view_vminterface"],
+                    ),
+                    NavItem(
+                        name="Clusters",
+                        weight=300,
+                        link="virtualization:cluster_list",
+                        permissions=["virtualization.view_cluster"],
+                    ),
+                    NavItem(
+                        name="Cluster Types",
+                        weight=400,
+                        link="virtualization:clustertype_list",
+                        permissions=["virtualization.view_clustertype"],
+                    ),
+                    NavItem(
+                        name="Cluster Groups",
+                        weight=500,
+                        link="virtualization:clustergroup_list",
+                        permissions=["virtualization.view_clustergroup"],
                     ),
                 ),
             ),

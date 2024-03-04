@@ -1,8 +1,23 @@
 import graphene
-import graphene_django_optimizer as gql_optimizer
 
-from nautobot.core.graphql.utils import construct_resolver
 from nautobot.circuits.graphql.types import CircuitTerminationType
+from nautobot.core.graphql.types import OptimizedNautobotObjectType
+from nautobot.core.graphql.utils import construct_resolver
+from nautobot.dcim.filters import (
+    CableFilterSet,
+    ConsolePortFilterSet,
+    ConsoleServerPortFilterSet,
+    DeviceFilterSet,
+    FrontPortFilterSet,
+    InterfaceFilterSet,
+    LocationFilterSet,
+    PlatformFilterSet,
+    PowerFeedFilterSet,
+    PowerOutletFilterSet,
+    PowerPortFilterSet,
+    RackFilterSet,
+    RearPortFilterSet,
+)
 from nautobot.dcim.graphql.mixins import CableTerminationMixin, PathEndpointMixin
 from nautobot.dcim.models import (
     Cable,
@@ -12,41 +27,27 @@ from nautobot.dcim.models import (
     Device,
     FrontPort,
     Interface,
+    Location,
+    Platform,
     PowerFeed,
     PowerOutlet,
     PowerPort,
     Rack,
     RearPort,
-    Site,
 )
-from nautobot.dcim.filters import (
-    CableFilterSet,
-    ConsoleServerPortFilterSet,
-    ConsolePortFilterSet,
-    DeviceFilterSet,
-    FrontPortFilterSet,
-    InterfaceFilterSet,
-    PowerFeedFilterSet,
-    PowerOutletFilterSet,
-    PowerPortFilterSet,
-    RackFilterSet,
-    RearPortFilterSet,
-    SiteFilterSet,
-)
-from nautobot.extras.graphql.types import TagType  # noqa: F401
 from nautobot.extras.models import DynamicGroup
 
 
-class SiteType(gql_optimizer.OptimizedDjangoObjectType):
-    """Graphql Type Object for Site model."""
+class LocationType(OptimizedNautobotObjectType):
+    """Graphql Type Object for Location model."""
 
     class Meta:
-        model = Site
-        filterset_class = SiteFilterSet
+        model = Location
+        filterset_class = LocationFilterSet
         exclude = ["images", "_name"]
 
 
-class DeviceType(gql_optimizer.OptimizedDjangoObjectType):
+class DeviceType(OptimizedNautobotObjectType):
     """Graphql Type Object for Device model."""
 
     class Meta:
@@ -57,10 +58,20 @@ class DeviceType(gql_optimizer.OptimizedDjangoObjectType):
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self)
+        return DynamicGroup.objects.get_for_object(self, use_cache=True)
 
 
-class RackType(gql_optimizer.OptimizedDjangoObjectType):
+class PlatformType(OptimizedNautobotObjectType):
+    """GraphQL type object for Platform model."""
+
+    network_driver_mappings = graphene.types.generic.GenericScalar()
+
+    class Meta:
+        model = Platform
+        filterset_class = PlatformFilterSet
+
+
+class RackType(OptimizedNautobotObjectType):
     """Graphql Type Object for Rack model."""
 
     class Meta:
@@ -71,10 +82,10 @@ class RackType(gql_optimizer.OptimizedDjangoObjectType):
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
 
     def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self)
+        return DynamicGroup.objects.get_for_object(self, use_cache=True)
 
 
-class CableType(gql_optimizer.OptimizedDjangoObjectType):
+class CableType(OptimizedNautobotObjectType):
     """Graphql Type Object for Cable model."""
 
     class Meta:
@@ -98,20 +109,24 @@ class CableType(gql_optimizer.OptimizedDjangoObjectType):
         return None
 
 
-class CablePathType(gql_optimizer.OptimizedDjangoObjectType):
+class CablePathType(OptimizedNautobotObjectType):
     """GraphQL type object for CablePath model."""
 
     class Meta:
         model = CablePath
 
 
-class InterfaceType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin, PathEndpointMixin):
+class InterfaceType(OptimizedNautobotObjectType, CableTerminationMixin, PathEndpointMixin):
     """Graphql Type Object for Interface model."""
 
     class Meta:
         model = Interface
         filterset_class = InterfaceFilterSet
         exclude = ["_name"]
+
+    # At the DB level, mac_address is null=False, but empty strings are represented as null in the ORM and REST API,
+    # so for consistency, we'll keep that same representation in GraphQL.
+    mac_address = graphene.String(required=False)
 
     # Field Definitions
     cable_peer_circuit_termination = graphene.Field("nautobot.circuits.graphql.types.CircuitTerminationType")
@@ -120,7 +135,6 @@ class InterfaceType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMix
     cable_peer_rear_port = graphene.Field("nautobot.dcim.graphql.types.RearPortType")
     connected_circuit_termination = graphene.Field("nautobot.circuits.graphql.types.CircuitTerminationType")
     connected_interface = graphene.Field("nautobot.dcim.graphql.types.InterfaceType")
-    ip_addresses = graphene.List("nautobot.ipam.graphql.types.IPAddressType")
 
     # Resolver Definitions
     resolve_cable_peer_circuit_termination = construct_resolver("CircuitTermination", "cable_peer")
@@ -130,16 +144,8 @@ class InterfaceType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMix
     resolve_connected_circuit_termination = construct_resolver("CircuitTermination", "connected_endpoint")
     resolve_connected_interface = construct_resolver("Interface", "connected_endpoint")
 
-    # Interface.ip_addresses is the reverse side of a GenericRelation that cannot be auto-optimized.
-    # See: https://github.com/tfoxy/graphene-django-optimizer#advanced-usage
-    @gql_optimizer.resolver_hints(
-        model_field="ip_addresses",
-    )
-    def resolve_ip_addresses(self, args):
-        return self.ip_addresses.all()
 
-
-class ConsolePortType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin, PathEndpointMixin):
+class ConsolePortType(OptimizedNautobotObjectType, CableTerminationMixin, PathEndpointMixin):
     """Graphql Type Object for ConsolePort model."""
 
     class Meta:
@@ -159,7 +165,7 @@ class ConsolePortType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationM
     resolve_connected_console_server_port = construct_resolver("ConsoleServerPort", "connected_endpoint")
 
 
-class ConsoleServerPortType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin, PathEndpointMixin):
+class ConsoleServerPortType(OptimizedNautobotObjectType, CableTerminationMixin, PathEndpointMixin):
     """Graphql Type Object for ConsoleServerPort model."""
 
     class Meta:
@@ -179,7 +185,7 @@ class ConsoleServerPortType(gql_optimizer.OptimizedDjangoObjectType, CableTermin
     resolve_connected_console_port = construct_resolver("ConsolePort", "connected_endpoint")
 
 
-class FrontPortType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin):
+class FrontPortType(OptimizedNautobotObjectType, CableTerminationMixin):
     """Graphql Type Object for FrontPort model."""
 
     class Meta:
@@ -203,7 +209,7 @@ class FrontPortType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMix
     resolve_cable_peer_rear_port = construct_resolver("RearPort", "cable_peer")
 
 
-class PowerFeedType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin, PathEndpointMixin):
+class PowerFeedType(OptimizedNautobotObjectType, CableTerminationMixin, PathEndpointMixin):
     """Graphql Type Object for PowerFeed model."""
 
     class Meta:
@@ -219,7 +225,7 @@ class PowerFeedType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMix
     resolve_connected_power_port = construct_resolver("PowerPort", "connected_endpoint")
 
 
-class PowerOutletType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin, PathEndpointMixin):
+class PowerOutletType(OptimizedNautobotObjectType, CableTerminationMixin, PathEndpointMixin):
     """Graphql Type Object for PowerOutlet model."""
 
     class Meta:
@@ -235,7 +241,7 @@ class PowerOutletType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationM
     resolve_connected_power_port = construct_resolver("PowerPort", "connected_endpoint")
 
 
-class PowerPortType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin, PathEndpointMixin):
+class PowerPortType(OptimizedNautobotObjectType, CableTerminationMixin, PathEndpointMixin):
     """Graphql Type Object for PowerPort model."""
 
     class Meta:
@@ -255,7 +261,7 @@ class PowerPortType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMix
     resolve_connected_power_outlet = construct_resolver("PowerOutlet", "connected_endpoint")
 
 
-class RearPortType(gql_optimizer.OptimizedDjangoObjectType, CableTerminationMixin):
+class RearPortType(OptimizedNautobotObjectType, CableTerminationMixin):
     """Graphql Type Object for RearPort model."""
 
     class Meta:

@@ -15,7 +15,6 @@ import nautobot.extras.utils
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [

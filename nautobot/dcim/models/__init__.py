@@ -17,17 +17,29 @@ from .device_components import (
     DeviceBay,
     FrontPort,
     Interface,
+    InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     InventoryItem,
     PathEndpoint,
     PowerOutlet,
     PowerPort,
     RearPort,
 )
-from .devices import Device, DeviceRedundancyGroup, DeviceType, Manufacturer, Platform, VirtualChassis
+from .devices import (
+    Device,
+    DeviceRedundancyGroup,
+    DeviceType,
+    DeviceTypeToSoftwareImageFile,
+    HardwareFamily,
+    Manufacturer,
+    Platform,
+    SoftwareImageFile,
+    SoftwareVersion,
+    VirtualChassis,
+)
 from .locations import Location, LocationType
 from .power import PowerFeed, PowerPanel
 from .racks import Rack, RackGroup, RackReservation
-from .sites import Region, Site
 
 __all__ = (
     "BaseInterface",
@@ -43,9 +55,13 @@ __all__ = (
     "DeviceBayTemplate",
     "DeviceRedundancyGroup",
     "DeviceType",
+    "DeviceTypeToSoftwareImageFile",
     "FrontPort",
     "FrontPortTemplate",
+    "HardwareFamily",
     "Interface",
+    "InterfaceRedundancyGroup",
+    "InterfaceRedundancyGroupAssociation",
     "InterfaceTemplate",
     "InventoryItem",
     "Location",
@@ -64,7 +80,7 @@ __all__ = (
     "RackReservation",
     "RearPort",
     "RearPortTemplate",
-    "Region",
-    "Site",
+    "SoftwareImageFile",
+    "SoftwareVersion",
     "VirtualChassis",
 )

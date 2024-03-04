@@ -2,13 +2,13 @@
 
 from django.db import migrations
 import django.db.models.deletion
+
 import nautobot.extras.models.roles
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ("extras", "0058_collect_roles_from_related_apps_roles"),
+        ("extras", "0062_collect_roles_from_related_apps_roles"),
         ("virtualization", "0011_alter_vminterface_mac_address"),
     ]
 

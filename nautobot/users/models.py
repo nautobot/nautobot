@@ -2,7 +2,7 @@ import binascii
 import os
 
 from django.conf import settings
-from django.contrib.auth.models import AbstractUser, Group, UserManager
+from django.contrib.auth.models import AbstractUser, Group, UserManager as UserManager_
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinLengthValidator
@@ -10,11 +10,10 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin
 from nautobot.core.models.fields import JSONArrayField
-from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import flatten_dict
-
+from nautobot.extras.models.change_logging import ChangeLoggedModel
 
 __all__ = (
     "AdminGroup",
@@ -29,6 +28,23 @@ __all__ = (
 #
 
 
+class UserQuerySet(CompositeKeyQuerySetMixin, models.QuerySet):
+    """
+    Add support for composite-keys to the User queryset.
+
+    Note that this is *NOT* based around RestrictedQuerySet.
+    """
+
+
+class UserManager(BaseManager, UserManager_):
+    """
+    Natural-key subclass of Django's UserManager.
+    """
+
+    def get_queryset(self):
+        return UserQuerySet(self.model, using=self._db)
+
+
 class User(BaseModel, AbstractUser):
     """
     Nautobot implements its own User model to suport several specific use cases.
@@ -38,11 +54,13 @@ class User(BaseModel, AbstractUser):
 
     config_data = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
 
-    # We must use the stock UserManager instead of RestrictedQuerySet from BaseModel
+    # TODO: we don't currently have a general "Users" guide.
+    documentation_static_path = "docs/development/core/user-preferences.html"
     objects = UserManager()
 
     class Meta:
         db_table = "auth_user"
+        ordering = ["username"]
 
     def get_config(self, path, default=None):
         """
@@ -171,6 +189,9 @@ class Token(BaseModel):
     write_enabled = models.BooleanField(default=True, help_text="Permit create/update/delete operations using this key")
     description = models.CharField(max_length=200, blank=True)
 
+    documentation_static_path = "docs/user-guide/platform-functionality/users/token.html"
+    natural_key_field_names = ["pk"]  # default would be `["key"]`, which is obviously not ideal!
+
     class Meta:
         ordering = ["created"]
 
@@ -200,16 +221,15 @@ class Token(BaseModel):
 #
 
 
-class ObjectPermission(BaseModel):
+class ObjectPermission(BaseModel, ChangeLoggedModel):
     """
     A mapping of view, add, change, and/or delete permission for users and/or groups to an arbitrary set of objects
     identified by ORM query parameters.
     """
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
     description = models.CharField(max_length=200, blank=True)
     enabled = models.BooleanField(default=True)
-
     # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
     # pylint: disable=unsupported-binary-operation
     object_types = models.ManyToManyField(
@@ -225,8 +245,9 @@ class ObjectPermission(BaseModel):
                     "users",
                 ]
             )
-            | Q(app_label="auth", model__in=["group", "user"])
-            | Q(app_label="users", model__in=["objectpermission", "token"])
+            | Q(app_label="admin", model__in=["logentry"])
+            | Q(app_label="auth", model__in=["group"])
+            | Q(app_label="users", model__in=["objectpermission", "token", "user"])
         ),
         related_name="object_permissions",
     )
@@ -244,7 +265,7 @@ class ObjectPermission(BaseModel):
         help_text="Queryset filter matching the applicable objects of the selected type(s)",
     )
 
-    objects = RestrictedQuerySet.as_manager()
+    documentation_static_path = "docs/user-guide/platform-functionality/users/objectpermission.html"
 
     class Meta:
         ordering = ["name"]

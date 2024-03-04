@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load helpers %}
+{% load static %}
+{% load django_tables2 %}
+
+{% block extra_styles %}
+    <style>
+       td {
+            white-space: nowrap;
+            overflow:hidden;
+       }
+    </style>
+    {{ block.super }}
+{% endblock %}
+{% block content %}
+<form action="" method="post" enctype="multipart/form-data" class="form form-horizontal">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-md-10 col-md-offset-1">
+            <div class="panel panel-info">
+                <div class="panel-heading"><strong>Confirm Merging IP Addresses</strong></div>
+                <div class="panel-body">
+                    <p><strong>Warning:</strong> The following operation will merge some or all of these {{ queryset.count }} IP Address records. Please select the record(s) you wish to merge and the attribute values you want to carry forward to the merged record.</p>
+                    {% block message_extra %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-10 col-md-offset-1">
+                <table class="table table-hover table-headings w-auto">
+                <thead>
+                    <th>
+                        Merging IP Addresses
+                    </th>
+                    <th>
+                        Host
+                    </th>
+                    <th>
+                        Mask Length
+                    </th>
+                    <th>
+                        Namespace
+                    </th>
+                    <th>
+                        Type
+                    </th>
+                    <th>
+                        Status
+                    </th>
+                    <th>
+                        Role
+                    </th>
+                    <th>
+                        DNS Name
+                    </th>
+                    <th>
+                        Description
+                    </th>
+                    <th>
+                        Tenant
+                    </th>
+                    <th>
+                        NAT IP (Inside)
+                    </th>
+                    <th>
+                        Tags
+                    </th>
+                    {% for field, value in queryset.first.get_custom_fields.items %}
+                        <th>
+                            {{ field.label }}
+                        </th>
+                    {% endfor %}
+                    {% with relationships=queryset.first.get_relationships_data %}
+                            {% if relationships.source or relationships.destination or relationships.peer %}
+                                {% for side, relationships in relationships.items %}
+                                    {% for relationship, value in relationships.items %}
+                                    <th>
+                                        {{ value.label }}
+                                    </th>
+                                    {% endfor %}
+                                {% endfor %}
+                            {% endif %}
+                    {% endwith %}
+                </thead>
+                <tbody>
+                {% for ip in queryset %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" onclick='handleClick(this);' id="pk" name="pk" value="{{ip.pk}}" checked>
+                                <label for="pk"><a href="{% url 'ipam:ipaddress' ip.pk %}">{{ ip }}</a></label>
+                            </td>
+                            <td>
+                                <input type="hidden" id="host" name="host" value="{{ip.host}}" {% if forloop.first %} checked {% endif %}>
+                                <label for="host">{{ip.host}}</label>
+                            </td>
+                            <td>
+                                <input type="radio" id="mask_length" name="mask_length" value="{{ip.mask_length}}" required {% if forloop.first %} checked {% endif %}>
+                                <label for="mask_length">{{ip.mask_length | placeholder }}</label>
+                            </td>
+                            <td>
+                                <input type="radio" id="namespace" name="namespace" value="{{ip.parent.namespace.pk}}" required {% if forloop.first %} checked {% endif %}>
+                                <label for="namespace">{{ip.parent.namespace | hyperlinked_object }}</label>
+                            </td>
+                            <td>
+                                {% if forloop.first %}
+                                    <input type="radio" id="type" name="type" value="{{ip.type}}" required {% if forloop.first %} checked {% endif %}>
+                                {% else %}
+                                    <input type="radio" id="type" name="type" value="{{ip.type}}" required>
+                                {% endif %}
+                                <label for="type">{{ip.type}}</label>
+                            </td>
+                            <td>
+                                <input type="radio" id="status" name="status" value="{{ip.status.pk}}" required {% if forloop.first %} checked {% endif %}>
+                                <label for="status">{{ip.status | hyperlinked_object}}</label>
+                            </td>
+                            <td>
+                                <input type="radio" id="role" name="role" value="{{ip.role.pk}}" required {% if forloop.first %} checked {% endif %}>
+                                <label for="role">{{ip.role | hyperlinked_object}}</label>
+                            </td>
+                            <td>
+                                <input type="radio" id="dns_name" name="dns_name" value="{{ip.dns_name}}" required {% if forloop.first %} checked {% endif %}>
+                                <label for="dns_name">{{ip.dns_name | placeholder}}</label>
+                            </td>
+                            <td>
+                                <input type="radio" id="description" name="description" value="{{ip.description}}" required {% if forloop.first %} checked {% endif %}>
+                                <label for="description">{{ip.description | placeholder }}</label>
+                            </td>
+                            <td>
+                                <input type="radio" id="tenant" name="tenant" value="{{ip.tenant.pk}}" required {% if forloop.first %} checked {% endif %}>
+                                <label for="tenant">{{ip.tenant | hyperlinked_object}}</label>
+                            </td>
+                            <td>
+                                <input type="radio" id="nat_inside" name="nat_inside" value="{{ip.nat_inside.pk}}" required {% if forloop.first %} checked {% endif %}>
+                                <label for="nat_inside">{{ip.nat_inside | hyperlinked_object}}</label>
+                            </td>
+                            <td>
+                                <input type="radio" id="tags" name="tags" value="{{ip.tags.all | queryset_to_pks}}" required {% if forloop.first %} checked {% endif %}>
+                                <label for="tags">
+                                    {% for tag in ip.tags.all %}
+                                        {% tag tag url %}
+                                    {% empty %}
+                                        {{ ip.tags.all | placeholder }}
+                                    {% endfor %}
+                                </label>
+                            </td>
+                            {% for field, value in ip.get_custom_fields.items %}
+                                <td>
+                                    <input type="radio" id="cf_{{ field.key }}" name="cf_{{ field.key }}" value="{{ip.pk}}" required {% if forloop.parentloop.first %} checked {% endif %}>
+                                    <label for="cf_{{ field.key }}">
+                                        {% if field.type == 'boolean' %}
+                                                {{ value | render_boolean }}
+                                            {% elif field.type == 'url' and value %}
+                                                <a href="{{ value }}">{{ value|truncatechars:70 }}</a>
+                                            {% elif field.type == 'multi-select' and value %}
+                                                {{ value|join:", " }}
+                                            {% elif field.type == 'json' and value is not None %}
+                                                <pre>{{ value|render_json }}</pre>
+                                            {% elif value or value == 0 %}
+                                                {{ value }}
+                                            {% else %}
+                                                <span class="text-muted">&mdash;</span>
+                                            {% endif %}
+                                    </label>
+                                </td>
+                            {% endfor %}
+                            {% with relationships=ip.get_relationships_data %}
+                            {% if relationships.source or relationships.destination or relationships.peer %}
+                                {% for side, relationships in relationships.items %}
+                                    {% for relationship, value in relationships.items %}
+                                        {% if not value.has_many and value.value %}
+                                            <td>
+                                                <input type="radio" id="cr_{{relationship.key}}" name="cr_{{relationship.key}}" value="{{ value.value.pk }}" required {% if forloop.parentloop.parentloop.first %} checked {% endif %}>
+                                                <label for="cr_{{relationship.key}}"><a href="{{ value.url }}">{{ value.value }}</a></label>
+                                            </td>
+                                        {% elif value.has_many and value.queryset.count %}
+                                            <td>
+                                                <input type="radio" id="cr_{{relationship.key}}" name="cr_{{relationship.key}}" value="{{ value.queryset | queryset_to_pks }}" required {% if forloop.parentloop.parentloop.first %} checked {% endif %}>
+                                                <label for="cr_{{relationship.key}}">
+                                                    <a href="{% url 'extras:relationshipassociation_list' %}?relationship={{relationship.key}}&{{side}}_id={{object.id}}">
+                                                        {{ value.queryset.count }}
+                                                        {% if value.peer_type.model_class is not None %}
+                                                            {% if value.queryset.count > 1 %}
+                                                                {{ value.peer_type.model_class|meta:"verbose_name_plural" }}
+                                                            {% else %}
+                                                                {{ value.peer_type.model_class|meta:"verbose_name" }}
+                                                            {% endif %}
+                                                        {% else %}
+                                                            {{ value.peer_type }}(s)
+                                                        {% endif %}
+                                                    </a>
+                                            </label>
+                                            </td>
+                                        {% else %}
+                                            <td>
+                                                <input type="radio" id="cr_{{relationship.key}}" name="cr_{{relationship.key}}" value="" required {% if forloop.parentloop.parentloop.first %} checked {% endif %}>
+                                                <label for="cr_{{relationship.key}}"><span class="text-muted">&mdash;</span></label>
+                                            </td>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                        </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-5 col-md-offset-7">
+        {% block buttons %}
+            <button type="submit" name="_merge" class="btn btn-primary"><i class="mdi mdi-set-merge"></i> Merge and Go to the Next Duplicate</button>
+            <button type="submit" name="_skip" class="btn btn-warning"><i class="mdi mdi-debug-step-over"></i> Skip and Go to the Next Duplicate</button>
+            <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+        {% endblock %}
+    </div>
+</div>
+</form>
+{% endblock %}
+{% block javascript %}
+    {{ block.super }}
+    <script>
+        // Disable the entire row of attributes from selection if the IP is de-selected from merging.
+        function handleClick(cb) {
+            if (cb.checked == false) {
+                const rads = [...cb.closest("tr").querySelectorAll("[type=radio]")];
+                rads.forEach(rad =>  rad.disabled = true);
+                rads.forEach(rad =>  rad.checked ? rad.checked = false : ()=>{});
+            } else {
+                const rads = [...cb.closest("tr").querySelectorAll("[type=radio]")];
+                rads.forEach(rad =>  rad.disabled = false);
+            }
+        }
+    </script>
+{% endblock javascript %}

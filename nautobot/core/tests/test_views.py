@@ -1,23 +1,74 @@
+import json
+import os
 import re
+import types
+from unittest import mock
 import urllib.parse
 
-from django.test import override_settings
+from django.contrib.contenttypes.models import ContentType
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings, RequestFactory
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
+from jsonschema.exceptions import SchemaError, ValidationError
+from jsonschema.validators import Draft7Validator
+from prometheus_client.parser import text_string_to_metric_families
 
+from nautobot.core import settings
 from nautobot.core.testing import TestCase
+from nautobot.core.testing.api import APITestCase
+from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.views import NautobotMetricsView
+from nautobot.core.views.mixins import GetReturnURLMixin
+from nautobot.dcim.models.locations import Location
+from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models import FileProxy
+from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
+from nautobot.extras.registry import registry
+from nautobot.users.models import ObjectPermission
+
+
+class GetReturnURLMixinTestCase(TestCase):
+    """Tests for the API of GetReturnURLMixin."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.factory = RequestFactory(SERVER_NAME="nautobot.example.com")
+        cls.mixin = GetReturnURLMixin()
+
+    def test_get_return_url_explicit(self):
+        request = self.factory.get("/", {"return_url": "/dcim/devices/"})
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=None), "/dcim/devices/")
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=Location.objects.first()), "/dcim/devices/")
+
+        request = self.factory.get("/", {"return_url": "/dcim/devices/?status=Active"})
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=None), "/dcim/devices/?status=Active")
+
+    def test_get_return_url_explicit_unsafe(self):
+        request = self.factory.get("/", {"return_url": "http://example.com"})
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=None), reverse("home"))
+
+    def test_get_return_url_explicit_punycode(self):
+        """
+        Replace the 'i' in '/dcim/' with a unicode dotless 'ı' and make sure we're not fooled by it.
+        """  # noqa: RUF002  # ambiguous-unicode-character-docstring -- fully intentional here!
+        request = self.factory.get("/", {"return_url": "/dcım/devices/"})  # noqa: RUF001  # ambiguous-unicode-character-string -- fully intentional here!
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=None), "/dc%C4%B1m/devices/")
+
+    def test_get_return_url_default_with_obj(self):
+        request = self.factory.get("/")
+        location = Location.objects.first()
+        self.assertEqual(self.mixin.get_return_url(request=request, obj=location), location.get_absolute_url())
 
 
 class HomeViewTestCase(TestCase):
     def test_home(self):
-
         url = reverse("home")
 
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
 
     def test_search(self):
-
         url = reverse("search")
         params = {
             "q": "foo",
@@ -32,7 +83,7 @@ class HomeViewTestCase(TestCase):
 
         # Search bar in nav
         nav_search_bar_pattern = re.compile(
-            '<nav.*<form action="/search/" method="get" class="navbar-form navbar-right" id="navbar_search" role="search">.*</form>.*</nav>'
+            '<nav.*<form action="/search/" method="get" class="navbar-form" id="navbar_search" role="search">.*</form>.*</nav>'
         )
         nav_search_bar_result = nav_search_bar_pattern.search(
             response.content.decode(response.charset).replace("\n", "")
@@ -48,8 +99,7 @@ class HomeViewTestCase(TestCase):
 
         return nav_search_bar_result, body_search_bar_result
 
-    @override_settings(HIDE_RESTRICTED_UI=True)
-    def test_search_bar_not_visible_if_user_not_authenticated_and_hide_restricted_ui_True(self):
+    def test_search_bar_not_visible_if_user_not_authenticated(self):
         self.client.logout()
 
         nav_search_bar_result, body_search_bar_result = self.make_request()
@@ -57,23 +107,7 @@ class HomeViewTestCase(TestCase):
         self.assertIsNone(nav_search_bar_result)
         self.assertIsNone(body_search_bar_result)
 
-    @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_search_bar_visible_if_user_authenticated_and_hide_restricted_ui_True(self):
-        nav_search_bar_result, body_search_bar_result = self.make_request()
-
-        self.assertIsNotNone(nav_search_bar_result)
-        self.assertIsNotNone(body_search_bar_result)
-
-    @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_search_bar_visible_if_hide_restricted_ui_False(self):
-        # Assert if user is authenticated
-        nav_search_bar_result, body_search_bar_result = self.make_request()
-
-        self.assertIsNotNone(nav_search_bar_result)
-        self.assertIsNotNone(body_search_bar_result)
-
-        # Assert if user is logout
-        self.client.logout()
+    def test_search_bar_visible_if_user_authenticated(self):
         nav_search_bar_result, body_search_bar_result = self.make_request()
 
         self.assertIsNotNone(nav_search_bar_result)
@@ -96,13 +130,20 @@ class HomeViewTestCase(TestCase):
 
 @override_settings(BRANDING_TITLE="Nautobot")
 class SearchFieldsTestCase(TestCase):
+    def test_search_bar_redirect_to_login(self):
+        self.client.logout()
+        response = self.client.get(reverse("search") + "?q=prefix")
+        # Assert that if the user is not logged in
+        # SearchForm will redirect the user to the login Page
+        self.assertEqual(response.status_code, 302)
+
     def test_global_and_model_search_bar(self):
-        self.add_permissions("dcim.view_site", "dcim.view_device")
+        self.add_permissions("dcim.view_location", "dcim.view_device")
 
         # Assert model search bar present in list UI
-        response = self.client.get(reverse("dcim:site_list"))
+        response = self.client.get(reverse("dcim:location_list"))
         self.assertInHTML(
-            '<input type="text" name="q" class="form-control" required placeholder="Search Sites" id="id_q">',
+            '<input type="text" name="q" class="form-control" required placeholder="Search Locations" id="id_q">',
             response.content.decode(response.charset),
         )
 
@@ -121,7 +162,7 @@ class SearchFieldsTestCase(TestCase):
 
 class FilterFormsTestCase(TestCase):
     def test_support_for_both_default_and_dynamic_filter_form_in_ui(self):
-        self.add_permissions("dcim.view_site", "circuits.view_circuit")
+        self.add_permissions("dcim.view_location", "circuits.view_circuit")
 
         filter_tabs = """
             <ul id="tabs" class="nav nav-tabs">
@@ -138,7 +179,7 @@ class FilterFormsTestCase(TestCase):
             </ul>
             """
 
-        response = self.client.get(reverse("dcim:site_list"))
+        response = self.client.get(reverse("dcim:location_list"))
         self.assertInHTML(
             filter_tabs,
             response.content.decode(response.charset),
@@ -149,6 +190,37 @@ class FilterFormsTestCase(TestCase):
             filter_tabs,
             response.content.decode(response.charset),
         )
+
+    def test_filtering_on_custom_select_filter_field(self):
+        """Assert CustomField select and multiple select fields can be filtered using multiple entries"""
+        self.add_permissions("dcim.view_location")
+
+        multi_select_cf = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_MULTISELECT, label="Multiple Choice"
+        )
+        select_cf = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_SELECT, label="choice")
+        choices = ["Foo", "Bar", "FooBar"]
+        for cf in [multi_select_cf, select_cf]:
+            cf.content_types.set([ContentType.objects.get_for_model(Location)])
+            CustomFieldChoice.objects.create(custom_field=cf, value=choices[0])
+            CustomFieldChoice.objects.create(custom_field=cf, value=choices[1])
+            CustomFieldChoice.objects.create(custom_field=cf, value=choices[2])
+
+        locations = Location.objects.all()[:3]
+        for idx, location in enumerate(locations):
+            location.cf[multi_select_cf.key] = choices[:2]
+            location.cf[select_cf.key] = choices[idx]
+            location.save()
+
+        query_param = (
+            f"?cf_{multi_select_cf.key}={choices[0]}&cf_{multi_select_cf.key}={choices[1]}"
+            f"&cf_{select_cf.key}={choices[0]}&cf_{select_cf.key}={choices[1]}"
+        )
+        url = reverse("dcim:location_list") + query_param
+        response = self.client.get(url)
+        response_content = response.content.decode(response.charset).replace("\n", "")
+        self.assertInHTML(locations[0].name, response_content)
+        self.assertInHTML(locations[1].name, response_content)
 
 
 class ForceScriptNameTestcase(TestCase):
@@ -175,77 +247,44 @@ class ForceScriptNameTestcase(TestCase):
             self.assertTrue(url.startswith(prefix))
 
 
-class NavRestrictedUI(TestCase):
+class NavAppsUITestCase(TestCase):
     def setUp(self):
         super().setUp()
 
-        self.url = reverse("plugins:plugins_list")
+        self.url = reverse("apps:apps_list")
         self.item_weight = 100  # TODO: not easy to introspect from the nav menu struct, so hard-code it here for now
 
     def make_request(self):
         response = self.client.get(reverse("home"))
         return response.content.decode(response.charset)
 
-    @override_settings(HIDE_RESTRICTED_UI=True)
-    def test_installed_plugins_visible_to_staff_with_hide_restricted_ui_true(self):
-        """The "Installed Plugins" menu item should be available to is_staff user regardless of HIDE_RESTRICTED_UI."""
-        # Make user admin
-        self.user.is_staff = True
-        self.user.save()
-
+    def test_installed_apps_visible(self):
+        """The "Installed Apps" menu item should be available to an authenticated user regardless of permissions."""
         response_content = self.make_request()
         self.assertInHTML(
             f"""
-            <li>
-              <div class="buttons pull-right"></div>
-              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Plugins</a>
-            </li>
-            """,
-            response_content,
-        )
-
-    @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_installed_plugins_visible_to_staff_with_hide_restricted_ui_false(self):
-        """The "Installed Plugins" menu item should be available to is_staff user regardless of HIDE_RESTRICTED_UI."""
-        # Make user admin
-        self.user.is_staff = True
-        self.user.save()
-
-        response_content = self.make_request()
-        self.assertInHTML(
-            f"""
-            <li>
-              <div class="buttons pull-right"></div>
-              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Plugins</a>
-            </li>
-            """,
-            response_content,
-        )
-
-    @override_settings(HIDE_RESTRICTED_UI=True)
-    def test_installed_plugins_not_visible_to_non_staff_user_with_hide_restricted_ui_true(self):
-        """The "Installed Plugins" menu item should be hidden from a non-staff user when HIDE_RESTRICTED_UI=True."""
-        response_content = self.make_request()
-
-        self.assertNotRegex(response_content, r"Installed\s+Plugins")
-
-    @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_installed_plugins_disabled_to_non_staff_user_with_hide_restricted_ui_false(self):
-        """The "Installed Plugins" menu item should be disabled for a non-staff user when HIDE_RESTRICTED_UI=False."""
-        response_content = self.make_request()
-
-        self.assertInHTML(
-            f"""
-            <li class="disabled">
-              <div class="buttons pull-right"></div>
-              <a href="{self.url}" data-item-weight="{self.item_weight}">Installed Plugins</a>
-            </li>
+            <a href="{self.url}"
+                data-item-weight="{self.item_weight}">
+                Installed Apps
+            </a>
             """,
             response_content,
         )
 
 
-class LoginUI(TestCase):
+class LoginUITestCase(TestCase):
+    def setUp(self):
+        super().setUp()
+
+        self.footer_elements = [
+            '<a href="#theme_modal" data-toggle="modal" data-target="#theme_modal" id="btn-theme-modal"><i class="mdi mdi-theme-light-dark text-primary"></i>Theme</a>',
+            '<a href="/static/docs/index.html">Docs</a>',
+            '<i class="mdi mdi-cloud-braces text-primary"></i> <a href="/api/docs/">API</a>',
+            '<i class="mdi mdi-graphql text-primary"></i> <a href="/graphql/">GraphQL</a>',
+            '<i class="mdi mdi-xml text-primary"></i> <a href="https://github.com/nautobot/nautobot">Code</a>',
+            '<i class="mdi mdi-lifebuoy text-primary"></i> <a href="https://github.com/nautobot/nautobot/wiki">Help</a>',
+        ]
+
     def make_request(self):
         response = self.client.get(reverse("login"))
         sso_login_pattern = re.compile('<a href=".*">Continue with SSO</a>')
@@ -268,3 +307,336 @@ class LoginUI(TestCase):
         self.client.logout()
         sso_login_search_result = self.make_request()
         self.assertIsNotNone(sso_login_search_result)
+
+    @override_settings(BANNER_TOP="Hello, Banner Top", BANNER_BOTTOM="Hello, Banner Bottom")
+    def test_routes_redirect_back_to_login_unauthenticated(self):
+        """Assert that api docs and graphql redirects to login page if user is unauthenticated."""
+        self.client.logout()
+        headers = {"HTTP_ACCEPT": "text/html"}
+        urls = [reverse("api_docs"), reverse("graphql")]
+        for url in urls:
+            response = self.client.get(url, follow=True, **headers)
+            self.assertHttpStatus(response, 200)
+            redirect_chain = [(f"/login/?next={url}", 302)]
+            self.assertEqual(response.redirect_chain, redirect_chain)
+            response_content = response.content.decode(response.charset).replace("\n", "")
+            # Assert Footer items(`self.footer_elements`), Banner and Banner Top is hidden
+            for footer_text in self.footer_elements:
+                self.assertNotIn(footer_text, response_content)
+            # Only API Docs implements BANNERS
+            if url == urls[0]:
+                self.assertNotIn("Hello, Banner Top", response_content)
+                self.assertNotIn("Hello, Banner Bottom", response_content)
+
+
+class MetricsViewTestCase(TestCase):
+    def query_and_parse_metrics(self):
+        response = self.client.get(reverse("metrics"))
+        self.assertHttpStatus(response, 200, msg="/metrics should return a 200 HTTP status code.")
+        page_content = response.content.decode(response.charset)
+        return text_string_to_metric_families(page_content)
+
+    def test_metrics_extensibility(self):
+        """Assert that the example metric from the Example App shows up _exactly_ when the app is enabled."""
+        test_metric_name = "nautobot_example_metric_count"
+        metrics_with_app = self.query_and_parse_metrics()
+        metric_names_with_app = {metric.name for metric in metrics_with_app}
+        self.assertIn(test_metric_name, metric_names_with_app)
+        with override_settings(PLUGINS=[]):
+            # Clear out the app metric registry because it is not updated when settings are changed but Nautobot is not
+            # restarted.
+            registry["app_metrics"].clear()
+            metrics_without_app = self.query_and_parse_metrics()
+            metric_names_without_app = {metric.name for metric in metrics_without_app}
+            self.assertNotIn(test_metric_name, metric_names_without_app)
+        metric_names_with_app.remove(test_metric_name)
+        self.assertSetEqual(metric_names_with_app, metric_names_without_app)
+
+
+class AuthenticateMetricsTestCase(APITestCase):
+    def test_metrics_authentication(self):
+        """Assert that if metrics require authentication, a user not logged in gets a 403."""
+        self.client.logout()
+        headers = {}
+        response = self.client.get(reverse("metrics"), **headers)
+        self.assertHttpStatus(response, 403, msg="/metrics should return a 403 HTTP status code.")
+
+    def test_metrics(self):
+        """Assert that if metrics don't require authentication, a user not logged in gets a 200."""
+        self.factory = RequestFactory()
+        self.client.logout()
+
+        request = self.factory.get("/")
+        response = NautobotMetricsView.as_view()(request)
+        self.assertHttpStatus(response, 200, msg="/metrics should return a 200 HTTP status code.")
+
+
+class ErrorPagesTestCase(TestCase):
+    """Tests for 4xx and 5xx error page rendering."""
+
+    @override_settings(DEBUG=False)
+    def test_404_default_support_message(self):
+        """Nautobot's custom 404 page should be used and should include a default support message."""
+        with self.assertTemplateUsed("404.html"):
+            response = self.client.get("/foo/bar")
+        self.assertContains(response, "Network to Code", status_code=404)
+        response_content = response.content.decode(response.charset)
+        self.assertInHTML(
+            "If further assistance is required, please join the <code>#nautobot</code> channel on "
+            '<a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
+            "Slack community</a> and post your question.",
+            response_content,
+        )
+
+    @override_settings(DEBUG=False, SUPPORT_MESSAGE="Hello world!")
+    def test_404_custom_support_message(self):
+        """Nautobot's custom 404 page should be used and should include a custom support message if defined."""
+        with self.assertTemplateUsed("404.html"):
+            response = self.client.get("/foo/bar")
+        self.assertNotContains(response, "Network to Code", status_code=404)
+        response_content = response.content.decode(response.charset)
+        self.assertInHTML("Hello world!", response_content)
+
+    @override_settings(DEBUG=False)
+    @mock.patch("nautobot.core.views.HomeView.get", side_effect=Exception)
+    def test_500_default_support_message(self, mock_get):
+        """Nautobot's custom 500 page should be used and should include a default support message."""
+        url = reverse("home")
+        with self.assertTemplateUsed("500.html"):
+            self.client.raise_request_exception = False
+            response = self.client.get(url)
+        self.assertContains(response, "Network to Code", status_code=500)
+        response_content = response.content.decode(response.charset)
+        self.assertInHTML(
+            "If further assistance is required, please join the <code>#nautobot</code> channel on "
+            '<a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
+            "Slack community</a> and post your question.",
+            response_content,
+        )
+
+    @override_settings(DEBUG=False, SUPPORT_MESSAGE="Hello world!")
+    @mock.patch("nautobot.core.views.HomeView.get", side_effect=Exception)
+    def test_500_custom_support_message(self, mock_get):
+        """Nautobot's custom 500 page should be used and should include a custom support message if defined."""
+        url = reverse("home")
+        with self.assertTemplateUsed("500.html"):
+            self.client.raise_request_exception = False
+            response = self.client.get(url)
+        self.assertNotContains(response, "Network to Code", status_code=500)
+        response_content = response.content.decode(response.charset)
+        self.assertInHTML("Hello world!", response_content)
+
+
+class DBFileStorageViewTestCase(TestCase):
+    """Test authentication/permission enforcement for django_db_file_storage views."""
+
+    def setUp(self):
+        super().setUp()
+        self.test_file_1 = SimpleUploadedFile(name="test_file_1.txt", content=b"I am content.\n")
+        self.file_proxy_1 = FileProxy.objects.create(name=self.test_file_1.name, file=self.test_file_1)
+        self.test_file_2 = SimpleUploadedFile(name="test_file_2.txt", content=b"I am content.\n")
+        self.file_proxy_2 = FileProxy.objects.create(name=self.test_file_2.name, file=self.test_file_2)
+        self.url = f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_1.file.name}"
+
+    def test_get_file_anonymous(self):
+        self.client.logout()
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 403)
+
+    def test_get_file_without_permission(self):
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 403)
+
+    def test_get_object_with_permission(self):
+        self.add_permissions(get_permission_for_model(FileProxy, "view"))
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
+
+    def test_get_object_with_constrained_permission(self):
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": self.file_proxy_1.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(FileProxy))
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
+        url = f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_2.file.name}"
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 404)
+
+
+class SettingsJSONSchemaViewTestCase(TestCase):
+    """Test for the JSON Schema in nautobot/core/settings.json"""
+
+    @classmethod
+    def setUpTestData(cls):
+        file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/settings.json"
+        with open(file_path, "r") as jsonfile:
+            cls.json_data = json.load(jsonfile)
+
+    def test_settings_json_schema_valid(self):
+        """Test the validity of the JSON Schema in settings.json"""
+        try:
+            Draft7Validator.check_schema(self.json_data)
+        except SchemaError as e:
+            raise ValidationError({"data_schema": e.message})
+
+    def test_settings_json_schema_contains_valid_setting_variables(self):
+        """Test the validity of the settings variables from settings.json and their types with those in settings.py"""
+        # This list contains all variables that exist in settings.py but not in the JSON schema in settings.json.
+        # ADMINS does not exist in either settings.json or settings.py
+        UNDOCUMENTED_SETTINGS = [
+            "ADMINS",
+            "ALLOW_REQUEST_PROFILING",
+            "ALLOWED_URL_SCHEMES",
+            "AUTHENTICATION_BACKENDS",
+            "AUTH_USER_MODEL",
+            "BASE_DIR",
+            "BRANDING_POWERED_BY_URL",
+            "CELERY_ACCEPT_CONTENT",
+            "CELERY_BEAT_SCHEDULER",
+            "CELERY_BROKER_TRANSPORT_OPTIONS",
+            "CELERY_RESULT_ACCEPT_CONTENT",
+            "CELERY_RESULT_BACKEND",
+            "CELERY_RESULT_EXPIRES",
+            "CELERY_RESULT_EXTENDED",
+            "CELERY_RESULT_SERIALIZER",
+            "CELERY_TASK_SEND_SENT_EVENT",
+            "CELERY_TASK_SERIALIZER",
+            "CELERY_TASK_TRACK_STARTED",
+            "CELERY_WORKER_SEND_TASK_EVENTS",
+            "CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED",
+            "CONSTANCE_ADDITIONAL_FIELDS",
+            "CONSTANCE_BACKEND",
+            "CONSTANCE_CONFIG",
+            "CONSTANCE_CONFIG_FIELDSETS",
+            "CONSTANCE_DATABASE_CACHE_BACKEND",
+            "CONSTANCE_DATABASE_PREFIX",
+            "CONSTANCE_IGNORE_ADMIN_VERSION_CHECK",
+            "CSRF_FAILURE_VIEW",
+            "DATABASE_ROUTERS",
+            "DATA_UPLOAD_MAX_NUMBER_FIELDS",
+            "DEFAULT_AUTO_FIELD",
+            "DRF_REACT_TEMPLATE_TYPE_MAP",
+            "EXEMPT_EXCLUDE_MODELS",
+            "FILTERS_NULL_CHOICE_LABEL",
+            "FILTERS_NULL_CHOICE_VALUE",
+            "GRAPHENE",
+            "HOSTNAME",
+            "INSTALLED_APPS",
+            "LANGUAGE_CODE",
+            "LOGIN_REDIRECT_URL",
+            "LOGIN_URL",
+            "LOG_LEVEL",
+            "MEDIA_URL",
+            "MESSAGE_TAGS",
+            "MIDDLEWARE",
+            "PROMETHEUS_EXPORT_MIGRATIONS",
+            "REMOTE_AUTH_AUTO_CREATE_USER",
+            "REMOTE_AUTH_HEADER",
+            "REST_FRAMEWORK",
+            "REST_FRAMEWORK_ALLOWED_VERSIONS",
+            "REST_FRAMEWORK_VERSION",
+            "ROOT_URLCONF",
+            "SECURE_PROXY_SSL_HEADER",
+            "SESSION_CACHE_ALIAS",
+            "SESSION_ENGINE",
+            "SHELL_PLUS_DONT_LOAD",
+            "SILKY_ANALYZE_QUERIES",
+            "SILKY_AUTHENTICATION",
+            "SILKY_AUTHORISATION",
+            "SILKY_INTERCEPT_FUNC",
+            "SILKY_PERMISSIONS",
+            "SILKY_PYTHON_PROFILER",
+            "SILKY_PYTHON_PROFILER_BINARY",
+            "SILKY_PYTHON_PROFILER_EXTENDED_FILE_NAME",
+            "SOCIAL_AUTH_BACKEND_PREFIX",
+            "SOCIAL_AUTH_POSTGRES_JSONFIELD",
+            "SPECTACULAR_SETTINGS",
+            "STATICFILES_DIRS",
+            "STATIC_URL",
+            "TEMPLATES",
+            "TESTING",
+            "TEST_RUNNER",
+            "USE_I18N",
+            "USE_TZ",
+            "USE_X_FORWARDED_HOST",
+            "VERSION",
+            "VERSION_MAJOR",
+            "VERSION_MINOR",
+            "WEBSERVER_WARMUP",
+            "WSGI_APPLICATION",
+            "X_FRAME_OPTIONS",
+        ]
+        # Retrieve all variables from settings.py.
+        # and trim out all noises by retaining variables with only uppercase letters and "_".
+        existing_settings_variables = list(settings.__dict__.keys())
+        existing_settings_variables = [
+            word for word in existing_settings_variables if word == word.upper() and not word.startswith("_")
+        ]
+
+        # Some of the variables in the JSON schema are contained in the CONSTANCE_CONFIG setting variable, e.g. BANNER_TOP, BANNER_BOTTOM and etc.
+        existing_constance_config_variables = list(settings.__dict__.get("CONSTANCE_CONFIG").keys())
+        # All the documented settings variable in the JSON schema from settings.json
+        existing_json_schema_variables = list(self.json_data["properties"].keys())
+
+        # Check if there is any undocumented setting variable in settings.py.
+        expected_variables = set(existing_json_schema_variables) | set(UNDOCUMENTED_SETTINGS)
+        for variable in existing_settings_variables:
+            if variable not in expected_variables:
+                self.fail(f"Undocumented settings variable {variable} detected in nautobot/core/settings.py")
+        # Check if there is any nonexistent settings variable in settings.json.
+        expected_variables = (
+            set(existing_settings_variables) | set(existing_constance_config_variables) | set(UNDOCUMENTED_SETTINGS)
+        )
+        for variable in self.json_data["properties"].keys():
+            if variable not in expected_variables:
+                self.fail(f"Nonexistent settings variable {variable} detected in nautobot/core/settings.json")
+
+        # Check if the values of the settings variables conform to what is specified in the JSON Schema.
+        TYPE_MAPPING = {
+            "string": [str],
+            "object": [dict],
+            "integer": [int],
+            "boolean": [bool],
+            "array": [list, tuple],
+            "#/definitions/absolute_path": [str],
+            "#/definitions/callable": [types.FunctionType],
+            "#/definitions/regex": [str],
+            "#/definitions/relative_path": [str],
+        }
+        for key, value in self.json_data["properties"].items():
+            settings_value = getattr(settings, key, None)
+            if settings_value is not None:
+                self.assertIn(type(settings_value), TYPE_MAPPING[value.get("type", value.get("$ref", None))])
+
+
+class SilkUIAccessTestCase(TestCase):
+    """Test access control related to the django-silk UI"""
+
+    def test_access_for_non_superuser(self):
+        # Login as non-superuser
+        self.user.is_superuser = False
+        self.user.save()
+        self.client.force_login(self.user)
+
+        # Attempt to access the view
+        response = self.client.get(reverse("silk:summary"))
+
+        # Check for redirect or forbidden status code (302 or 403)
+        self.assertIn(response.status_code, [302, 403])
+
+    def test_access_for_superuser(self):
+        # Login as superuser
+        self.user.is_superuser = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        # Attempt to access the view
+        response = self.client.get(reverse("silk:summary"))
+
+        # Check for success status code (e.g., 200)
+        self.assertEqual(response.status_code, 200)

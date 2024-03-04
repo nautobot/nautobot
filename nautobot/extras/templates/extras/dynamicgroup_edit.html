@@ -1,13 +1,28 @@
-{% extends "generic/object_edit.html" %}
+{% extends 'generic/object_create.html' %}
 {% load static %}
 {% load form_helpers %}
+
+{% block form_errors %}
+    {% if form.non_field_errors %}
+        <div class="panel panel-danger">
+            <div class="panel-heading"><strong>Errors</strong></div>
+            <div class="panel-body">
+                {{ form.non_field_errors }}
+                {% for child in children.forms %}
+                    {% if child.errors %}
+                        {% for error in child.errors.values %}{{ error }}{% endfor %}
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
 
 {% block form %}
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Dynamic Group</strong></div>
         <div class="panel-body">
             {% render_field form.name %}
-            {% render_field form.slug %}
             {% render_field form.description %}
             {% render_field form.content_type %}
         </div>
@@ -27,73 +42,93 @@
                 <div class="tab-pane active" id="filter-form">
                     {% if filter_form %}
                     <span class="help-block">
-			Select the filtering criteria to determine membership of objects matching
-			the Content Type for this Dynamic Group. Fields that are not a dropdown are
-			expected to have string inputs and do not support multiple values.
+                        Select the filtering criteria to determine membership of objects matching
+                        the Content Type for this Dynamic Group. Fields that are not a dropdown are
+                        expected to have string inputs and do not support multiple values.
                     </span>
+
+                        <div class="panel panel-default">
+                          <div class="panel-heading"><strong>Object Fields</strong></div>
+                          <div class="panel-body">
+                            {% render_form filter_form excluded_fields="[]" %}
+                          </div>
+                        </div>
+
+                        {% if filter_form.custom_fields %}
+                        <div class="panel panel-default">
+                          <div class="panel-heading"><strong>Custom Fields</strong></div>
+                          <div class="panel-body">
+                            {% render_custom_fields filter_form %}
+                          </div>
+                        </div>
+                        {% endif %}
+
+                        {% if filter_form.relationships %}
+                        <div class="panel panel-default">
+                          <div class="panel-heading"><strong>Relationships</strong></div>
+                          <div class="panel-body">
+                            {% render_relationships filter_form %}
+                          </div>
+                        </div>
+                        {% endif %}
+
                     {% else %}
                     <span class="help-block">
-			Filtering criteria will be available after initially saving this group and
-			returning to this page.
+                        Filtering criteria will be available after initially saving this group and
+                        returning to this page.
                     </span>
                     {% endif %}
-                    {% render_form filter_form %}
                 </div>
                 <div class="tab-pane" id="children-form">
                     {% if children.errors %}
-                        <div class="panel panel-danger">
-                            <div class="panel-heading"><strong>Errors</strong></div>
-                            <div class="panel-body">
-                                Please correct the error(s) below:
+                        <div class="text-danger">
+                            Please correct the error(s) below:
 
-                                {% for child in children.forms %}
-                                    {% if child.errors %}
-                                        {% for error in child.errors.values %}{{ error }}{% endfor %}
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
+                            {% for child in children.forms %}
+                                {% if child.errors %}
+                                    {% for error in child.errors.values %}{{ error }}{% endfor %}
+                                {% endif %}
+                            {% endfor %}
                         </div>
                     {% endif %}
                     {{ children.non_field_errors }}
-                    <div class="form-group{% if children.errors %} has-error{% endif %}">
-                        <table class="table" id="children">
-                            {{ children.management_form }}
-                            {% for child_form in children.forms %}
-                                {% if forloop.first %}
-                                    <thead>
-                                        <tr>
-                                            <th>Weight</th>
-                                            {% for field in child_form.visible_fields %}
-                                                <th>{{ field.label|capfirst }}</th>
+                    <table class="table" id="children">
+                        {{ children.management_form }}
+                        {% for child_form in children.forms %}
+                            {% if forloop.first %}
+                                <thead>
+                                    <tr>
+                                        <th>Weight</th>
+                                        {% for field in child_form.visible_fields %}
+                                            <th>{{ field.label|capfirst }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                            {% endif %}
+                            <tr class="formset_row-{{ children.prefix }}">
+                                <td><i class="mdi mdi-drag-horizontal drag-handler"></i></td>
+                                {% for field in child_form.visible_fields %}
+                                    <td>
+                                        {% if forloop.first %}
+                                            {% for hidden in child_form.hidden_fields %}
+                                                {{ hidden }}
                                             {% endfor %}
-                                        </tr>
-                                    </thead>
-                                {% endif %}
-                                <tr class="formset_row-{{ children.prefix }}">
-                                    <td><i class="mdi mdi-drag-horizontal drag-handler"></i></td>
-                                    {% for field in child_form.visible_fields %}
-                                        <td>
-                                            {% if forloop.first %}
-                                                {% for hidden in child_form.hidden_fields %}
-                                                    {{ hidden }}
+                                        {% endif %}
+                                        {{ field }}
+                                        {% if field.errors %}
+                                            <ul>
+                                                {% for error in field.errors %}
+                                                    {# Embed an HTML comment indicating the error for extraction by tests #}
+                                                    <!-- FORM-ERROR {{ field.name }}: {{ error }} -->
+                                                    <li class="text-danger">{{ error }}</li>
                                                 {% endfor %}
-                                            {% endif %}
-                                            {{ field }}
-                                            {% if field.errors %}
-                                                <ul>
-                                                    {% for error in field.errors %}
-                                                        {# Embed an HTML comment indicating the error for extraction by tests #}
-                                                        <!-- FORM-ERROR {{ field.name }}: {{ error }} -->
-                                                        <li clas="text-danger">{{ error }}</li>
-                                                    {% endfor %}
-                                                </ul>
-                                            {% endif %}
-                                        </td>
-                                    {% endfor %}
-                                </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
+                                            </ul>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </table>
                 </div>
             </div>
         </div>

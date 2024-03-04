@@ -1,4 +1,6 @@
 from django_filters.rest_framework.backends import DjangoFilterBackend
+from rest_framework.filters import OrderingFilter
+from tree_queries.models import TreeNode
 
 
 class NautobotFilterBackend(DjangoFilterBackend):
@@ -17,13 +19,25 @@ class NautobotFilterBackend(DjangoFilterBackend):
 
         for non_filter_param in (
             "api_version",  # used to select the Nautobot API version
-            "brief",  # used to select NestedSerializer rather than Serializer
+            "depth",  # nested levels of the serializers default to depth=0
             "format",  # "json" or "api", used in the interactive HTML REST API views
-            "include",  # used to include computed fields (excluded by default)
+            "include",  # used to include computed fields, relationships, config-contexts, etc. (excluded by default)
             "limit",  # pagination
             "offset",  # pagination
+            "sort",  # sorting of results
         ):
             data.pop(non_filter_param, None)
 
         kwargs["data"] = data
         return kwargs
+
+
+class NautobotOrderingFilter(OrderingFilter):
+    """Custom Ordering Filter backend."""
+
+    def filter_queryset(self, request, queryset, view):
+        filtered_queryset = super().filter_queryset(request, queryset, view)
+        ordering = self.get_ordering(request, queryset, view)
+        if ordering and issubclass(queryset.model, TreeNode):
+            filtered_queryset = filtered_queryset.extra(order_by=ordering)
+        return filtered_queryset

@@ -2,8 +2,9 @@ from django.core.exceptions import ValidationError
 from django.db import models
 import netaddr
 
-from .formfields import IPNetworkFormField
 from . import lookups
+from .constants import IPV4_BYTE_LENGTH
+from .formfields import IPNetworkFormField
 
 
 class VarbinaryIPField(models.BinaryField):
@@ -40,7 +41,7 @@ class VarbinaryIPField(models.BinaryField):
             # Distinguish between
             # \x00\x00\x00\x01 (IPv4 0.0.0.1) and
             # \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01 (IPv6 ::1), among other cases
-            version = 4 if len(value) == 4 else 6
+            version = 4 if len(value) == IPV4_BYTE_LENGTH else 6
             value = int_value
         except TypeError:
             version = None  # It's a string, IP version should be self-evident
@@ -87,6 +88,11 @@ class VarbinaryIPField(models.BinaryField):
         defaults = {"form_class": self.form_class()}
         defaults.update(kwargs)
         return super().formfield(*args, **defaults)
+
+    def get_default(self):
+        value = super().get_default()
+        # Prevent None or "" values from being represented as b''
+        return None if value in self.empty_values else value
 
 
 VarbinaryIPField.register_lookup(lookups.IExact)

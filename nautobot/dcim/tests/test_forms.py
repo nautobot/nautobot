@@ -1,34 +1,31 @@
 from django.test import TestCase
 
-from nautobot.dcim.forms import CableCSVForm, DeviceForm, InterfaceCreateForm, InterfaceCSVForm
-from nautobot.dcim.choices import DeviceFaceChoices, InterfaceStatusChoices, InterfaceTypeChoices
-
+from nautobot.dcim.choices import DeviceFaceChoices, InterfaceTypeChoices, RackWidthChoices
+from nautobot.dcim.forms import DeviceFilterForm, DeviceForm, InterfaceCreateForm, RackForm
 from nautobot.dcim.models import (
     Device,
     DeviceType,
     Interface,
+    Location,
+    LocationType,
+    Manufacturer,
     Platform,
     Rack,
-    Site,
-    VirtualChassis,
 )
 from nautobot.extras.models import Role, SecretsGroup, Status
+from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
-
-
-def get_id(model, slug):
-    return model.objects.get(slug=slug).id
 
 
 class DeviceTestCase(TestCase):
     def setUp(self):
-        self.device_status = Status.objects.get_for_model(Device).get(slug="active")
+        self.device_status = Status.objects.get_for_model(Device).first()
 
     @classmethod
     def setUpTestData(cls):
-
-        cls.site = Site.objects.first()
-        cls.rack = Rack.objects.create(name="Rack 1", site=cls.site)
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        rack_status = Status.objects.get_for_model(Rack).first()
+        cls.rack = Rack.objects.create(name="Rack 1", location=cls.location, status=rack_status)
 
         # Platforms that have a manufacturer.
         mfr_platforms = Platform.objects.filter(manufacturer__isnull=False)
@@ -45,17 +42,17 @@ class DeviceTestCase(TestCase):
 
         Device.objects.create(
             name="Device 1",
-            status=Status.objects.get_for_model(Device).get(slug="active"),
+            status=Status.objects.get_for_model(Device).first(),
             device_type=cls.device_type,
             role=cls.device_role,
-            site=cls.site,
+            location=cls.location,
             rack=cls.rack,
             position=1,
         )
-        cluster_type = ClusterType.objects.create(name="Cluster Type 1", slug="cluster-type-1")
-        cluster_group = ClusterGroup.objects.create(name="Cluster Group 1", slug="cluster-group-1")
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster_group = ClusterGroup.objects.create(name="Cluster Group 1")
         Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, cluster_group=cluster_group)
-        SecretsGroup.objects.create(name="Secrets Group 1", slug="secrets-group-1")
+        SecretsGroup.objects.create(name="Secrets Group 1")
 
     def test_racked_device(self):
         form = DeviceForm(
@@ -65,7 +62,7 @@ class DeviceTestCase(TestCase):
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": self.rack.pk,
                 "face": DeviceFaceChoices.FACE_FRONT,
                 "position": 1 + self.device_type.u_height,
@@ -84,7 +81,7 @@ class DeviceTestCase(TestCase):
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": self.rack.pk,
                 "face": DeviceFaceChoices.FACE_FRONT,
                 "position": 1,
@@ -103,7 +100,7 @@ class DeviceTestCase(TestCase):
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": None,
                 "face": None,
                 "position": None,
@@ -123,7 +120,7 @@ class DeviceTestCase(TestCase):
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": None,
                 "face": DeviceFaceChoices.FACE_REAR,
                 "platform": None,
@@ -141,7 +138,7 @@ class DeviceTestCase(TestCase):
                 "tenant": None,
                 "manufacturer": self.manufacturer.pk,
                 "device_type": self.device_type.pk,
-                "site": self.site.pk,
+                "location": self.location.pk,
                 "rack": None,
                 "position": 10,
                 "platform": None,
@@ -151,23 +148,31 @@ class DeviceTestCase(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("position", form.errors)
 
+    def test_filter_form_dg_priority_correct_value(self):
+        """Validate the form allows a string separated by a comma for multiple values."""
+        form = DeviceFilterForm(data={"device_redundancy_group_priority": "1,2"})
+        self.assertTrue(form.is_valid())
+        self.assertListEqual(form.cleaned_data["device_redundancy_group_priority"], [1, 2])
+
 
 class LabelTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
-        site = Site.objects.first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
         device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
         cls.device = Device.objects.create(
             name="Device 2",
             device_type=device_type,
             role=device_role,
-            site=site,
+            location=location,
+            status=device_status,
         )
 
     def test_interface_label_count_valid(self):
         """Test that a `label` can be generated for each generated `name` from `name_pattern` on InterfaceCreateForm"""
-        status_active = Status.objects.get_for_model(Interface).get(slug=InterfaceStatusChoices.STATUS_ACTIVE)
+        status_active = Status.objects.get_for_model(Interface).first()
         interface_data = {
             "device": self.device.pk,
             "name_pattern": "eth[0-9]",
@@ -193,203 +198,65 @@ class LabelTestCase(TestCase):
         self.assertIn("label_pattern", form.errors)
 
 
-class TestCableCSVForm(TestCase):
-    @classmethod
-    def setUpTestData(cls):
-        site = Site.objects.first()
-        device_type = DeviceType.objects.first()
-        device_role = Role.objects.get_for_model(Device).first()
-        cls.device_1 = Device.objects.create(
-            name="Device 1",
-            device_type=device_type,
-            role=device_role,
-            site=site,
-        )
-        cls.device_2 = Device.objects.create(
-            name="Device 2",
-            device_type=device_type,
-            role=device_role,
-            site=site,
-        )
-        cls.interface_1 = Interface.objects.create(
-            device=cls.device_1,
-            name="Interface 1",
-            type=InterfaceTypeChoices.TYPE_LAG,
-        )
-        cls.interface_2 = Interface.objects.create(
-            device=cls.device_2,
-            name="Interface 2",
-            type=InterfaceTypeChoices.TYPE_LAG,
+class RackTestCase(TestCase):
+    def test_update_rack_location(self):
+        """Asset updating duplicate device caused by update to rack location is caught by rack clean"""
+        # Rack post save signal tries updating rack devices if location is changed, which may result in an Exception
+        # Asset this error is caught by RackForm.clean
+        tenant = Tenant.objects.first()
+        locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1")
+        devicetype = DeviceType.objects.create(model="Device Type 1", manufacturer=manufacturer)
+        devicerole = Role.objects.get_for_model(Device).first()
+        status = Status.objects.get(name="Active")
+        racks = (
+            Rack.objects.create(name="Rack 1", location=locations[0], status=status),
+            Rack.objects.create(name="Rack 2", location=locations[1], status=status),
         )
 
-    def test_add_error_method_converts_error_fields_to_equivalent_in_CableCSVForm(self):
-        """Test invalid input (cabling to LAG interfaces) is correctly reported in the form."""
+        Device.objects.create(
+            name="device1",
+            role=devicerole,
+            device_type=devicetype,
+            location=racks[0].location,
+            rack=racks[0],
+            tenant=tenant,
+            status=status,
+        )
+        Device.objects.create(
+            name="device1",
+            role=devicerole,
+            device_type=devicetype,
+            location=racks[1].location,
+            rack=racks[1],
+            tenant=tenant,
+            status=status,
+        )
         data = {
-            "side_a_device": self.device_1.name,
-            "side_a_type": "dcim.interface",
-            "side_a_name": self.interface_1.name,
-            "side_b_device": self.device_2.name,
-            "side_b_type": "dcim.interface",
-            "side_b_name": self.interface_2.name,
-            "status": "connected",
+            "name": racks[0].name,
+            "location": racks[1].location.pk,
+            "status": racks[0].status.pk,
+            "u_height": 48,
+            "width": RackWidthChoices.WIDTH_19IN,
         }
-        headers = {
-            "side_a_device": None,
-            "side_a_type": None,
-            "side_a_name": None,
-            "side_b_device": None,
-            "side_b_type": None,
-            "side_b_name": None,
-            "status": None,
-        }
-        form = CableCSVForm(data, headers=headers)
-        self.assertFalse(form.is_valid())
-        self.assertIn("side_a_name", form.errors)
-        self.assertNotIn("termination_a_id", form.errors)
-
-
-class TestInterfaceCSVForm(TestCase):
-    @classmethod
-    def setUpTestData(cls):
-        site = Site.objects.first()
-        device_type = DeviceType.objects.first()
-        device_role = Role.objects.get_for_model(Device).first()
-
-        cls.devices = (
-            Device.objects.create(
-                name="Device 1",
-                device_type=device_type,
-                role=device_role,
-                site=site,
-            ),
-            Device.objects.create(
-                name="Device 2",
-                device_type=device_type,
-                role=device_role,
-                site=site,
-            ),
-            Device.objects.create(
-                name="Device 3",
-                device_type=device_type,
-                role=device_role,
-                site=site,
+        form = RackForm(data=data, instance=racks[0])
+        self.assertEqual(
+            str(form.errors.as_data()["location"][0]),
+            str(
+                [
+                    f"Device(s) ['device1'] already exist in location {locations[1]} and "
+                    "would conflict with same-named devices in this rack."
+                ]
             ),
         )
 
-        virtualchassis = VirtualChassis.objects.create(
-            name="Virtual Chassis 1", master=cls.devices[0], domain="domain-1"
-        )
-        Device.objects.filter(id=cls.devices[0].id).update(virtual_chassis=virtualchassis, vc_position=1)
-        Device.objects.filter(id=cls.devices[1].id).update(virtual_chassis=virtualchassis, vc_position=2)
-
-        cls.interfaces = (
-            Interface.objects.create(
-                device=cls.devices[0],
-                name="Interface 1",
-                type=InterfaceTypeChoices.TYPE_1GE_SFP,
-            ),
-            Interface.objects.create(
-                device=cls.devices[1],
-                name="Interface 2",
-                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-            ),
-            Interface.objects.create(
-                device=cls.devices[1],
-                name="Interface 3",
-                type=InterfaceTypeChoices.TYPE_LAG,
-            ),
-            Interface.objects.create(
-                device=cls.devices[2],
-                name="Interface 4",
-                type=InterfaceTypeChoices.TYPE_LAG,
-            ),
-            Interface.objects.create(
-                device=cls.devices[2],
-                name="Interface 5",
-                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-            ),
-        )
-        cls.headers_1 = {
-            "device": None,
-            "name": None,
-            "status": None,
-            "parent_interface": None,
-            "bridge": None,
-            "type": None,
+        # Check for https://github.com/nautobot/nautobot/issues/4149
+        data = {
+            "name": "New name",
+            "location": racks[0].location.pk,
+            "status": racks[0].status.pk,
+            "u_height": 48,
+            "width": RackWidthChoices.WIDTH_19IN,
         }
-        cls.headers_2 = {
-            "device": None,
-            "name": None,
-            "status": None,
-            "lag": None,
-            "bridge": None,
-            "type": None,
-        }
-
-    def test_interface_belonging_to_common_device_or_vc_allowed(self):
-        """Test parent, bridge, and LAG interfaces belonging to common device or VC is valid"""
-
-        data_1 = {
-            "device": self.devices[0].name,
-            "name": "interface test",
-            "status": "active",
-            "parent_interface": self.interfaces[0].name,
-            "bridge": self.interfaces[2].name,
-            "type": InterfaceTypeChoices.TYPE_VIRTUAL,
-        }
-
-        form = InterfaceCSVForm(data_1, headers=self.headers_1)
+        form = RackForm(data=data, instance=racks[0])
         self.assertTrue(form.is_valid())
-        form.save()
-
-        interface = Interface.objects.get(name="interface test", device=self.devices[0])
-        self.assertEqual(interface.parent_interface, self.interfaces[0])
-        self.assertEqual(interface.bridge, self.interfaces[2])
-
-        # Assert LAG
-        data_2 = {
-            "device": self.devices[0].name,
-            "name": "interface lagged",
-            "status": "active",
-            "lag": self.interfaces[2].name,
-            "bridge": self.interfaces[1].name,
-            "type": InterfaceTypeChoices.TYPE_100ME_FIXED,
-        }
-
-        form = InterfaceCSVForm(data_2, headers=self.headers_2)
-        self.assertTrue(form.is_valid())
-        form.save()
-
-        interface = Interface.objects.get(name="interface lagged", device=self.devices[0])
-        self.assertEqual(interface.lag, self.interfaces[2])
-        self.assertEqual(interface.bridge, self.interfaces[1])
-
-    def test_interface_not_belonging_to_common_device_or_vc_not_allowed(self):
-        """Test parent, bridge, and LAG interfaces not belonging to common device or VC is invalid"""
-        data = {
-            "device": self.devices[0].name,
-            "name": "interface test",
-            "status": "active",
-            "parent_interface": self.interfaces[4].name,
-            "bridge": self.interfaces[4].name,
-            "type": InterfaceTypeChoices.TYPE_VIRTUAL,
-        }
-
-        form = InterfaceCSVForm(data, headers=self.headers_1)
-        self.assertFalse(form.is_valid())
-        self.assertTrue(form.has_error("parent_interface"))
-        self.assertTrue(form.has_error("bridge"))
-
-        # Assert LAG
-        data = {
-            "device": self.devices[0].name,
-            "name": "interface lagged",
-            "status": "active",
-            "lag": self.interfaces[3].name,
-            "bridge": self.interfaces[1].name,
-            "type": InterfaceTypeChoices.TYPE_VIRTUAL,
-        }
-
-        form = InterfaceCSVForm(data, headers=self.headers_2)
-        self.assertFalse(form.is_valid())
-        self.assertTrue(form.has_error("lag"))

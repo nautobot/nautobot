@@ -1,26 +1,39 @@
 import datetime
 import json
+import logging
 import re
 
 from django import template
 from django.conf import settings
 from django.contrib.staticfiles.finders import find
-from django.templatetags.static import StaticNode, static
+from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
-from django.utils.html import format_html, strip_tags
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
+from django.utils.text import slugify as django_slugify
 from django_jinja import library
 from markdown import markdown
 import yaml
 
+from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
-from nautobot.core.utils import color, config, data, lookup
+from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
+from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
-HTML_TRUE = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>'
-HTML_FALSE = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
-HTML_NONE = '<span class="text-muted">&mdash;</span>'
+# S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
+HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
+HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')  # noqa: S308
+HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')  # noqa: S308
+
+DEFAULT_SUPPORT_MESSAGE = (
+    "If further assistance is required, please join the `#nautobot` channel "
+    "on [Network to Code's Slack community](https://slack.networktocode.com/) and post your question."
+)
 
 register = template.Library()
+
+
+logger = logging.getLogger(__name__)
 
 
 #
@@ -38,10 +51,11 @@ def hyperlinked_object(value, field="display"):
     additionally if there is an `object.description` this will be used as the title of the hyperlink.
 
     Args:
-        value (django.db.models.Model, None)
+        value (Union[django.db.models.Model, None]): Instance of a Django model or None.
+        field (Optional[str]): Name of the field to use for the display value. Defaults to "display".
 
     Returns:
-        str: String representation of the value (hyperlinked if it defines get_absolute_url()) or a placeholder.
+        (str): String representation of the value (hyperlinked if it defines get_absolute_url()) or a placeholder.
 
     Examples:
         >>> hyperlinked_object(device)
@@ -69,6 +83,24 @@ def hyperlinked_object(value, field="display"):
 
 @library.filter()
 @register.filter()
+def hyperlinked_email(value):
+    """Render an email address as a `mailto:` hyperlink."""
+    if value is None:
+        return placeholder(value)
+    return format_html('<a href="mailto:{}">{}</a>', value, value)
+
+
+@library.filter()
+@register.filter()
+def hyperlinked_phone_number(value):
+    """Render a phone number as a `tel:` hyperlink."""
+    if value is None:
+        return placeholder(value)
+    return format_html('<a href="tel:{}">{}</a>', value, value)
+
+
+@library.filter()
+@register.filter()
 def placeholder(value):
     """Render a muted placeholder if value is falsey, else render the value.
 
@@ -76,7 +108,7 @@ def placeholder(value):
         value (any): Input value, can be any variable.
 
     Returns:
-        str: Placeholder in HTML, or the string representation of the value.
+        (str): Placeholder in HTML, or the string representation of the value.
 
     Example:
         >>> placeholder("")
@@ -86,7 +118,7 @@ def placeholder(value):
     """
     if value:
         return value
-    return mark_safe(HTML_NONE)
+    return HTML_NONE
 
 
 @library.filter()
@@ -99,7 +131,7 @@ def add_html_id(element_str, id_str):
         id_str (str): String to add as the `id` attribute of the element_str.
 
     Returns:
-        str: HTML string with added `id`.
+        (str): HTML string with added `id`.
 
     Example:
         >>> add_html_id("<div></div>", "my-div")
@@ -110,7 +142,7 @@ def add_html_id(element_str, id_str):
     match = re.match(r"^(.*?<\w+) ?(.*)$", element_str, flags=re.DOTALL)
     if not match:
         return element_str
-    return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))
+    return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))  # noqa: S308  # suspicious-mark-safe-usage
 
 
 @library.filter()
@@ -120,17 +152,17 @@ def render_boolean(value):
 
     Args:
         value (any): Input value, can be any variable.
-        A truthy value (for example non-empty string / True / non-zero number) is considered True.
-        A falsey value other than None (for example "" or 0 or False) is considered False.
-        A value of None is considered neither True nor False.
+            A truthy value (for example non-empty string / True / non-zero number) is considered True.
+            A falsey value other than None (for example "" or 0 or False) is considered False.
+            A value of None is considered neither True nor False.
 
     Returns:
-        str: HTML
-        '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>' if True value
-        - or -
-        '<span class="text-muted">&mdash;</span>' if None value
-        - or -
-        '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>' if False value
+        (str): HTML
+            '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>' if True value
+            - or -
+            '<span class="text-muted">&mdash;</span>' if None value
+            - or -
+            '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>' if False value
 
     Examples:
         >>> render_boolean(None)
@@ -141,10 +173,10 @@ def render_boolean(value):
         '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>'
     """
     if value is None:
-        return mark_safe(HTML_NONE)
+        return HTML_NONE
     if bool(value):
-        return mark_safe(HTML_TRUE)
-    return mark_safe(HTML_FALSE)
+        return HTML_TRUE
+    return HTML_FALSE
 
 
 @library.filter()
@@ -156,36 +188,43 @@ def render_markdown(value):
     Example:
         {{ text | render_markdown }}
     """
-    # Strip HTML tags
-    value = strip_tags(value)
-
-    # Sanitize Markdown links
-    schemes = "|".join(settings.ALLOWED_URL_SCHEMES)
-    pattern = rf"\[(.+)\]\((?!({schemes})).*:(.+)\)"
-    value = re.sub(pattern, "[\\1](\\3)", value, flags=re.IGNORECASE)
-
     # Render Markdown
     html = markdown(value, extensions=["fenced_code", "tables"])
 
-    return mark_safe(html)
+    # Sanitize rendered HTML
+    html = nautobot_logging.clean_html(html)
+
+    return mark_safe(html)  # noqa: S308  # suspicious-mark-safe-usage, OK here since we sanitized the string earlier
 
 
 @library.filter()
 @register.filter()
-def render_json(value):
+def render_json(value, syntax_highlight=True):
     """
     Render a dictionary as formatted JSON.
+
+    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a
+    `<code class="language-json>` HTML tag to flag it for syntax highlighting by highlight.js.
     """
-    return json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
+    rendered_json = json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
+    if syntax_highlight:
+        return format_html('<code class="language-json">{}</code>', rendered_json)
+    return rendered_json
 
 
 @library.filter()
 @register.filter()
-def render_yaml(value):
+def render_yaml(value, syntax_highlight=True):
     """
     Render a dictionary as formatted YAML.
+
+    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a
+    `<code class="language-yaml>` HTML tag to flag it for syntax highlighting by highlight.js.
     """
-    return yaml.dump(json.loads(json.dumps(value, ensure_ascii=False)), allow_unicode=True)
+    rendered_yaml = yaml.dump(json.loads(json.dumps(value, ensure_ascii=False)), allow_unicode=True)
+    if syntax_highlight:
+        return format_html('<code class="language-yaml">{}</code>', rendered_yaml)
+    return rendered_yaml
 
 
 @library.filter()
@@ -200,7 +239,7 @@ def meta(obj, attr):
         attr (str): name of the attribute to access
 
     Returns:
-        any: return the value of the attribute
+        (any): return the value of the attribute
     """
     return getattr(obj._meta, attr, "")
 
@@ -216,7 +255,7 @@ def viewname(model, action):
         action (str): name of the action in the viewname
 
     Returns:
-        str: return the name of the view for the model/action provided.
+        (str): return the name of the view for the model/action provided.
     Examples:
         >>> viewname(Device, "list")
         "dcim:device_list"
@@ -235,7 +274,7 @@ def validated_viewname(model, action):
         action (str): name of the action in the viewname
 
     Returns:
-        str or None: return the name of the view for the model/action provided if valid, or None if invalid.
+        (Union[str, None]): return the name of the view for the model/action provided if valid, or None if invalid.
     """
     viewname_str = lookup.get_route_for_model(model, action)
 
@@ -243,6 +282,34 @@ def validated_viewname(model, action):
         # Validate and return the view name. We don't return the actual URL yet because many of the templates
         # are written to pass a name to {% url %}.
         reverse(viewname_str)
+        return viewname_str
+    except NoReverseMatch:
+        return None
+
+
+@library.filter()
+@register.filter()
+def validated_api_viewname(model, action):
+    """
+    Return the API view name for the given model and action if valid, or None if invalid.
+
+    Args:
+        model (models.Model): Class or Instance of a Django Model
+        action (str): name of the action in the viewname
+
+    Returns:
+        (Union[str, None]): return the name of the API view for the model/action provided if valid, or None if invalid.
+    """
+    viewname_str = lookup.get_route_for_model(model, action, api=True)
+
+    try:
+        # Validate and return the view name. We don't return the actual URL yet because many of the templates
+        # are written to pass a name to {% url %}.
+        if action == "detail":
+            # Detail views require an argument, so we'll pass a dummy value just for validation
+            reverse(viewname_str, args=["00000000-0000-0000-0000-000000000000"])
+        else:
+            reverse(viewname_str)
         return viewname_str
     except NoReverseMatch:
         return None
@@ -258,7 +325,7 @@ def bettertitle(value):
         value (str): string to convert to Title Case
 
     Returns:
-        str: string in Title format
+        (str): string in Title format
 
     Example:
         >>> bettertitle("IP address")
@@ -310,7 +377,7 @@ def fgcolor(value):
         value (str): Color in RRGGBB format, with or without #
 
     Returns:
-        str: ideal foreground color, either black (#000000) or white (#ffffff)
+        (str): ideal foreground color, either black (#000000) or white (#ffffff)
 
     Example:
         >>> fgcolor("#999999")
@@ -332,7 +399,7 @@ def divide(x, y):
         y (int or float): divisor number
 
     Returns:
-        int: x/y (rounded)
+        (int): x/y (rounded)
 
     Examples:
         >>> divide(10, 3)
@@ -353,7 +420,7 @@ def percentage(x, y):
         y (int or float): divisor number
 
     Returns:
-        int: x/y as a percentage
+        (int): x/y as a percentage
 
     Examples:
         >>> percentage(2, 10)
@@ -368,31 +435,39 @@ def percentage(x, y):
 @library.filter()
 @register.filter()
 def get_docs_url(model):
-    """Return the documentation URL for the specified model.
+    """Return the likely static documentation path for the specified model, if it can be found/predicted.
 
-    Nautobot Core models have a path like docs/models/{app_label}/{model_name}
-    while plugins will have {app_label}/docs/models/{model_name}. If the html file
-    does not exist, this function will return None.
+    - Core models, as of 2.0, are usually at `docs/user-guide/core-data-model/{app_label}/{model_name}.html`.
+        - Models in the `extras` app are usually at `docs/user-guide/platform-functionality/{model_name}.html`.
+    - Apps (plugins) are generally expected to be documented at `{app_label}/docs/models/{model_name}.html`.
+
+    Any model can define a `documentation_static_path` class attribute if it needs to override the above expectations.
+
+    If a file doesn't exist at the expected static path, this will return None.
 
     Args:
         model (models.Model): Instance of a Django model
 
     Returns:
-        str: static URL for the documentation of the object.
-        or
-        None
+        (Union[str, None]): static URL for the documentation of the object or None if not found.
 
     Example:
-        >>> get_docs_url(obj)
-        "static/docs/models/dcim/site.html"
+        >>> get_docs_url(location_instance)
+        "static/docs/models/dcim/location.html"
     """
-    path = f"docs/models/{model._meta.app_label}/{model._meta.model_name}.html"
-    if model._meta.app_label in settings.PLUGINS:
+    if hasattr(model, "documentation_static_path"):
+        path = model.documentation_static_path
+    elif model._meta.app_label in settings.PLUGINS:
         path = f"{model._meta.app_label}/docs/models/{model._meta.model_name}.html"
+    elif model._meta.app_label == "extras":
+        path = f"docs/user-guide/platform-functionality/{model._meta.model_name}.html"
+    else:
+        path = f"docs/user-guide/core-data-model/{model._meta.app_label}/{model._meta.model_name}.html"
 
     # Check to see if documentation exists in any of the static paths.
     if find(path):
         return static(path)
+    logger.debug("No documentation found for %s (expected to find it at %s)", type(model), path)
     return None
 
 
@@ -428,7 +503,7 @@ def split(string, sep=","):
         sep (str default=,): separator to look for in the string
 
     Returns:
-        [list]: List of string, if the separator wasn't found, list of 1
+        (list[str]): List of string, if the separator wasn't found, list of 1
     """
     return string.split(sep)
 
@@ -442,10 +517,10 @@ def as_range(n):
         n (int, str): Number of element in the range
 
     Returns:
-        [list, Range]: range function from o to the value provided. Returns an empty list if n is not valid.
+        (Union[list, Range]): range function from o to the value provided. Returns an empty list if n is not valid.
 
     Example:
-        {% for i in record.parents|as_range %}
+        {% for i in record.ancestors.count|as_range %}
             <i class="mdi mdi-circle-small"></i>
         {% endfor %}
     """
@@ -465,7 +540,7 @@ def meters_to_feet(n):
         n (int, float, str): Number of meters to convert
 
     Returns:
-        [float]: Value in feet
+        (float): Value in feet
     """
     return float(n) * 3.28084
 
@@ -477,13 +552,13 @@ def get_item(d, key):
 
     Args:
         d (dict): dictionary containing the data to access
-        key (str]): name of the item/key to access
+        key (str): name of the item/key to access
 
     Returns:
-        [any]: Value of the item in the dictionary provided
+        (any): Value of the item in the dictionary provided
 
     Example:
-        >>> get_items(data, key)
+        >>> get_item(data, key)
         "value"
     """
     return d.get(key)
@@ -491,8 +566,10 @@ def get_item(d, key):
 
 @library.filter()
 @register.filter()
-def settings_or_config(key):
+def settings_or_config(key, app_name=None):
     """Get a value from Django settings (if specified there) or Constance configuration (otherwise)."""
+    if app_name:
+        return get_app_settings_or_config(app_name, key)
     return config.get_settings_or_config(key)
 
 
@@ -503,6 +580,12 @@ def quote_string(value):
     if isinstance(value, str):
         return f'"{value}"'
     return value
+
+
+@library.filter()
+def slugify(value):
+    """Return a slugified version of the value."""
+    return django_slugify(value)
 
 
 #
@@ -546,7 +629,7 @@ def utilization_graph(utilization_data, warning_threshold=75, danger_threshold=9
         danger_threshold (int, optional): Danger Threshold Value. Defaults to 90.
 
     Returns:
-        dict: Dictionary with utilization, warning threshold, danger threshold, utilization count, and total count for
+        (dict): Dictionary with utilization, warning threshold, danger threshold, utilization count, and total count for
                 display
     """
     # See https://github.com/nautobot/nautobot/issues/1169
@@ -573,7 +656,7 @@ def utilization_graph_raw_data(numerator, denominator, warning_threshold=75, dan
         danger_threshold (int, optional): Danger Threshold Value. Defaults to 90.
 
     Returns:
-        dict: Dictionary with utilization, warning threshold, danger threshold, utilization count, and total count for
+        (dict): Dictionary with utilization, warning threshold, danger threshold, utilization count, and total count for
                 display
     """
     # Check for possible division by zero error
@@ -659,7 +742,7 @@ def modal_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type
         obj_type (string, optional): Used in title of form to display object type. Defaults to None.
 
     Returns:
-        dict: Passed in values used to render HTML.
+        (dict): Passed in values used to render HTML.
     """
     return {
         "editing": editing,
@@ -678,8 +761,49 @@ def custom_branding_or_static(branding_asset, static_asset):
     branding has been configured in settings, else it returns stock branding via static.
     """
     if settings.BRANDING_FILEPATHS.get(branding_asset):
-        return f"{ settings.MEDIA_URL }{ settings.BRANDING_FILEPATHS.get(branding_asset) }"
-    return StaticNode.handle_simple(static_asset)
+        url = f"{ settings.MEDIA_URL }{ settings.BRANDING_FILEPATHS.get(branding_asset) }"
+    else:
+        url = StaticNode.handle_simple(static_asset)
+    return add_nautobot_version_query_param_to_url(url)
+
+
+@register.simple_tag
+def support_message():
+    """
+    Return the configured support message (if any) or else the default.
+    """
+    try:
+        message = config.get_settings_or_config("SUPPORT_MESSAGE")
+    except AttributeError:
+        message = ""
+    if not message:
+        message = DEFAULT_SUPPORT_MESSAGE
+    return render_markdown(message)
+
+
+@register.simple_tag
+def versioned_static(file_path):
+    """Returns a versioned static file URL with a query parameter containing the version number."""
+    url = static(file_path)
+    return add_nautobot_version_query_param_to_url(url)
+
+
+@register.simple_tag
+def tree_hierarchy_ui_representation(tree_depth, hide_hierarchy_ui):
+    """Generates a visual representation of a tree record hierarchy using dots.
+
+    Args:
+        tree_depth (range): A range representing the depth of the tree nodes.
+        hide_hierarchy_ui (bool): Indicates whether to hide the hierarchy UI.
+
+    Returns:
+        str: A string containing dots (representing hierarchy levels) if `hide_hierarchy_ui` is False,
+             otherwise an empty string.
+    """
+    if hide_hierarchy_ui or tree_depth == 0:
+        return ""
+    ui_representation = " ".join(['<i class="mdi mdi-circle-small"></i>' for _ in tree_depth])
+    return mark_safe(ui_representation)  # noqa: S308 # suspicious-mark-safe-usage, OK here since its just the `i` tag
 
 
 @library.filter()
@@ -690,3 +814,11 @@ def hyperlinked_object_with_color(obj):
         content = f'<span class="label" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{hyperlinked_object(obj)}</span>'
         return format_html(content)
     return "—"
+
+
+@register.filter()
+def queryset_to_pks(obj):
+    """Return all object UUIDs as a string separated by `,`"""
+    result = list(obj.values_list("pk", flat=True)) if obj else []
+    result = [str(entry) for entry in result]
+    return ",".join(result)

@@ -50,21 +50,27 @@ DEVICE_LINK = """
 </a>
 """
 
-DEVICEBAY_STATUS = """
-{% if record.installed_device_id %}
-    {% load helpers %}
-    <span class="label" style="color: {{ record.installed_device.status.color|fgcolor }}; background-color: #{{ record.installed_device.status.color }}">
-        {{ record.installed_device.get_status_display }}
-    </span>
-{% else %}
-    <span class="label label-default">Vacant</span>
-{% endif %}
-"""
-
 INTERFACE_IPADDRESSES = """
 {% for ip in record.ip_addresses.all %}
-    <a href="{{ ip.get_absolute_url }}">{{ ip }}</a><br />
+    <a href="{{ ip.get_absolute_url }}">{{ ip }}</a> (<a href="{{ ip.parent.namespace.get_absolute_url }}">{{ ip.parent.namespace }}</a>)<br />
 {% endfor %}
+"""
+
+INTERFACE_REDUNDANCY_GROUP_INTERFACES = """
+<a href="{% url 'dcim:interface_list' %}?interface_redundancy_groups={{record}}">{{ record.interfaces.count }}</a>
+"""
+
+INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES = """
+{% for ip in record.interface.ip_addresses.all %}
+    <a href="{{ ip.get_absolute_url }}">{{ ip }}</a> (<a href="{{ ip.parent.namespace.get_absolute_url }}">{{ ip.parent.namespace }}</a>)<br />
+{% endfor %}
+"""
+
+INTERFACE_REDUNDANCY_INTERFACE_PRIORITY = """
+{% load helpers %}
+<span class="badge badge-default">
+    {{ record.priority|placeholder }}
+</span>
 """
 
 INTERFACE_TAGGED_VLANS = """
@@ -79,12 +85,13 @@ INTERFACE_TAGGED_VLANS = """
 {% endif %}
 """
 
+LINKED_RECORD_COUNT = """
+<a href="{{ record.get_absolute_url }}">{{ value }}</a>
+"""
 
 TREE_LINK = """
 {% load helpers %}
-{% for i in record.tree_depth|as_range %}
-    <i class="mdi mdi-circle-small"></i>
-{% endfor %}
+{% tree_hierarchy_ui_representation record.tree_depth|as_range table.order_by %}
 <a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
 """
 
@@ -103,7 +110,7 @@ POWERFEED_CABLETERMINATION = """
 """
 
 RACKGROUP_ELEVATIONS = """
-<a href="{% url 'dcim:rack_elevation_list' %}?site={{ record.site.slug }}&group_id={{ record.pk }}" class="btn btn-xs btn-primary" title="View elevations">
+<a href="{% url 'dcim:rack_elevation_list' %}?location={{ record.location.pk }}&rack_group={{ record.pk }}" class="btn btn-xs btn-primary" title="View elevations">
     <i class="mdi mdi-server"></i>
 </a>
 """
@@ -191,7 +198,7 @@ POWEROUTLET_BUTTONS = """
 """
 
 INTERFACE_BUTTONS = """
-{% if perms.ipam.add_ipaddress %}
+{% if perms.ipam.add_ipaddress and perms.dcim.change_interface %}
     <a href="{% url 'ipam:ipaddress_add' %}?interface={{ record.pk }}&return_url={% url 'dcim:device_interfaces' pk=object.pk %}" class="btn btn-xs btn-success" title="Add IP address">
         <i class="mdi mdi-plus-thick" aria-hidden="true"></i>
     </a>

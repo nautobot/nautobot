@@ -1,10 +1,11 @@
 from rest_framework.routers import APIRootView
 
 from nautobot.circuits import filters
-from nautobot.circuits.models import Provider, CircuitTermination, CircuitType, Circuit, ProviderNetwork
+from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core.models.querysets import count_related
 from nautobot.dcim.api.views import PathEndpointMixin
 from nautobot.extras.api.views import NautobotModelViewSet
+
 from . import serializers
 
 
@@ -58,12 +59,11 @@ class CircuitViewSet(NautobotModelViewSet):
 
 
 class CircuitTerminationViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = CircuitTermination.objects.select_related("circuit", "site", "cable").prefetch_related(
+    queryset = CircuitTermination.objects.select_related("circuit", "location", "cable").prefetch_related(
         "_path__destination"
     )
     serializer_class = serializers.CircuitTerminationSerializer
     filterset_class = filters.CircuitTerminationFilterSet
-    brief_prefetch_fields = ["circuit"]
 
 
 #

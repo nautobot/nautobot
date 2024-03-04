@@ -15,8 +15,6 @@ __all__ = (
     "parse_alphanumeric_range",
     "parse_numeric_range",
     "restrict_form_fields",
-    "parse_csv",
-    "validate_csv",
 )
 
 
@@ -28,6 +26,8 @@ def parse_numeric_range(string, base=10):
       '2,8-b,d,f' => [2, 8, 9, a, b, d, f]
     """
     values = []
+    if not string:
+        return values
     for dash_range in string.split(","):
         try:
             begin, end = dash_range.split("-")
@@ -85,15 +85,15 @@ def expand_alphanumeric_pattern(string):
             yield f"{lead}{i}{remnant}"
 
 
-def expand_ipaddress_pattern(string, family):
+def expand_ipaddress_pattern(string, ip_version):
     """
     Expand an IP address pattern into a list of strings. Examples:
       '192.0.2.[1,2,100-250]/24' => ['192.0.2.1/24', '192.0.2.2/24', '192.0.2.100/24' ... '192.0.2.250/24']
       '2001:db8:0:[0,fd-ff]::/64' => ['2001:db8:0:0::/64', '2001:db8:0:fd::/64', ... '2001:db8:0:ff::/64']
     """
-    if family not in [4, 6]:
-        raise Exception(f"Invalid IP address family: {family}")
-    if family == 4:
+    if ip_version not in [4, 6]:
+        raise ValueError(f"Invalid IP address version: {ip_version}")
+    if ip_version == 4:
         regex = forms.IP4_EXPANSION_PATTERN
         base = 10
     else:
@@ -103,17 +103,17 @@ def expand_ipaddress_pattern(string, family):
     parsed_range = parse_numeric_range(pattern, base)
     for i in parsed_range:
         if re.search(regex, remnant):
-            for string2 in expand_ipaddress_pattern(remnant, family):
-                yield "".join([lead, format(i, "x" if family == 6 else "d"), string2])
+            for string2 in expand_ipaddress_pattern(remnant, ip_version):
+                yield "".join([lead, format(i, "x" if ip_version == 6 else "d"), string2])
         else:
-            yield "".join([lead, format(i, "x" if family == 6 else "d"), remnant])
+            yield "".join([lead, format(i, "x" if ip_version == 6 else "d"), remnant])
 
 
 def add_blank_choice(choices):
     """
     Add a blank choice to the beginning of a choices list.
     """
-    return ((None, "---------"),) + tuple(choices)
+    return ((None, "---------"), *tuple(choices))
 
 
 def form_from_model(model, fields):
@@ -137,56 +137,6 @@ def restrict_form_fields(form, user, action="view"):
     for field in form.fields.values():
         if hasattr(field, "queryset") and issubclass(field.queryset.__class__, querysets.RestrictedQuerySet):
             field.queryset = field.queryset.restrict(user, action)
-
-
-def parse_csv(reader):
-    """
-    Parse a csv_reader object into a headers dictionary and a list of records dictionaries. Raise an error
-    if the records are formatted incorrectly. Return headers and records as a tuple.
-    """
-    records = []
-    headers = {}
-
-    # Consume the first line of CSV data as column headers. Create a dictionary mapping each header to an optional
-    # "to" field specifying how the related object is being referenced. For example, importing a Device might use a
-    # `site.slug` header, to indicate the related site is being referenced by its slug.
-
-    for header in next(reader):
-        if "." in header:
-            field, to_field = header.split(".", 1)
-            headers[field] = to_field
-        else:
-            headers[header] = None
-
-    # Parse CSV rows into a list of dictionaries mapped from the column headers.
-    for i, row in enumerate(reader, start=1):
-        if len(row) != len(headers):
-            raise django_forms.ValidationError(f"Row {i}: Expected {len(headers)} columns but found {len(row)}")
-        row = [col.strip() for col in row]
-        record = dict(zip(headers.keys(), row))
-        records.append(record)
-
-    return headers, records
-
-
-def validate_csv(headers, fields, required_fields):
-    """
-    Validate that parsed csv data conforms to the object's available fields. Raise validation errors
-    if parsed csv data contains invalid headers or does not contain required headers.
-    """
-    # Validate provided column headers
-    for field, to_field in headers.items():
-        if field not in fields:
-            raise django_forms.ValidationError(f'Unexpected column header "{field}" found.')
-        if to_field and not hasattr(fields[field], "to_field_name"):
-            raise django_forms.ValidationError(f'Column "{field}" is not a related object; cannot use dots')
-        if to_field and not hasattr(fields[field].queryset.model, to_field):
-            raise django_forms.ValidationError(f'Invalid related object attribute for column "{field}": {to_field}')
-
-    # Validate required fields
-    for f in required_fields:
-        if f not in headers:
-            raise django_forms.ValidationError(f'Required column header "{f}" not found.')
 
 
 def add_field_to_filter_form_class(form_class, field_name, field_obj):

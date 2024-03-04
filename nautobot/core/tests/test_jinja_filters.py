@@ -29,6 +29,7 @@ class NautobotJinjaFilterTest(TestCase):
             "meta",
             "viewname",
             "validated_viewname",
+            "validated_api_viewname",
             "bettertitle",
             "humanize_speed",
             "tzoffset",
@@ -42,19 +43,21 @@ class NautobotJinjaFilterTest(TestCase):
             "as_range",
             "meters_to_feet",
             "get_item",
+            "settings_or_config",
+            "slugify",
         ]
 
-        # For each helper, try to render a jinja template with render_jinja2 and fail if TemplateAssertionError is raised
+        # For each helper, try to render jinja template with render_jinja2 and fail if TemplateAssertionError is raised
         for helper in helpers_to_validate:
             try:
                 data.render_jinja2("{{ data | " + helper + " }}", {"data": None})
             except TemplateAssertionError:
                 raise
-            except Exception:
+            except Exception:  # noqa: S110  # try-except-pass -- an antipattern in general, but OK here
                 pass
 
     def test_netutils_filters_in_jinja(self):
-        """Import the list of all Jinja filters from Netutils and validate that all of them have been properly loaded in Django Jinja"""
+        """Import all Jinja filters from Netutils and validate that all have been properly loaded in Django Jinja."""
         filters = jinja2_convenience_function()
 
         for filter_ in filters.keys():
@@ -62,7 +65,7 @@ class NautobotJinjaFilterTest(TestCase):
                 data.render_jinja2("{{ data | " + filter_ + " }}", {"data": None})
             except TemplateAssertionError:
                 raise
-            except Exception:
+            except Exception:  # noqa: S110  # try-except-pass -- an antipattern in general, but OK here
                 pass
 
     def test_sandboxed_render(self):
@@ -73,11 +76,11 @@ class NautobotJinjaFilterTest(TestCase):
 
     def test_safe_render(self):
         """Assert that safe Jinja rendering still works."""
-        site = dcim_models.Site.objects.filter(region__isnull=False).first()
-        template_code = "{{ obj.region.name }}"
+        location = dcim_models.Location.objects.filter(parent__isnull=False).first()
+        template_code = "{{ obj.parent.name }}"
         try:
-            value = data.render_jinja2(template_code=template_code, context={"obj": site})
+            value = data.render_jinja2(template_code=template_code, context={"obj": location})
         except SecurityError:
             self.fail("SecurityError raised on safe Jinja template render")
         else:
-            self.assertEqual(value, site.region.name)
+            self.assertEqual(value, location.parent.name)

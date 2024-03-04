@@ -3,7 +3,6 @@ import argparse
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
-
 HELP_TEXT = """
 Performs Nautobot common server upgrade operations using a single entrypoint.
 
@@ -14,7 +13,7 @@ This will run the following management commands with default settings, in order:
 - collectstatic
 - remove_stale_contenttypes
 - clearsessions
-- invalidate all
+- send_installation_metrics
 """
 
 
@@ -43,13 +42,6 @@ class Command(BaseCommand):
             help="Do not automatically collect static files into a single location.",
         )
         parser.add_argument(
-            "--no-invalidate-all",
-            action="store_false",
-            dest="invalidate_all",
-            default=True,
-            help="Do not automatically invalidate cache for entire application.",
-        )
-        parser.add_argument(
             "--no-migrate",
             action="store_false",
             dest="migrate",
@@ -70,45 +62,82 @@ class Command(BaseCommand):
             default=True,
             help="Do not automatically generate missing cable paths.",
         )
+        parser.add_argument(
+            "--no-send-installation-metrics",
+            action="store_false",
+            dest="send_installation_metrics",
+            default=True,
+            help="Do not automatically send installation metrics.",
+        )
+        parser.add_argument(
+            "--no-refresh-content-type-cache",
+            action="store_false",
+            dest="refresh_content_type_cache",
+            default=True,
+            help="Do not automatically refresh content type cache.",
+        )
+        parser.add_argument(
+            "--no-refresh-dynamic-group-member-caches",
+            action="store_false",
+            dest="refresh_dynamic_group_member_caches",
+            default=True,
+            help="Do not automatically refresh dynamic group member caches.",
+        )
 
     def handle(self, *args, **options):
         # Run migrate
         if options.get("migrate"):
-            print("Performing database migrations...")
+            self.stdout.write("Performing database migrations...")
             call_command(
                 "migrate",
+                skip_checks=False,  # make sure Postgres version check and others are applied
                 interactive=False,
                 traceback=options["traceback"],
                 verbosity=options["verbosity"],
             )
-            print()
+            self.stdout.write()
 
         # Run trace_paths
         if options.get("trace_paths"):
-            print("Generating cable paths...")
+            self.stdout.write("Generating cable paths...")
             call_command("trace_paths", no_input=True)
-            print()
+            self.stdout.write()
 
         # Run collectstatic
         if options.get("collectstatic"):
-            print("Collecting static files...")
+            self.stdout.write("Collecting static files...")
             call_command("collectstatic", interactive=False)
-            print()
+            self.stdout.write()
 
         # Run remove_stale_contenttypes
         if options.get("remove_stale_contenttypes"):
-            print("Removing stale content types...")
+            self.stdout.write("Removing stale content types...")
             call_command("remove_stale_contenttypes", interactive=False)
-            print()
+            self.stdout.write()
 
         # Run clearsessions
         if options.get("clearsessions"):
-            print("Removing expired sessions...")
+            self.stdout.write("Removing expired sessions...")
             call_command("clearsessions")
-            print()
+            self.stdout.write()
 
-        # Run invalidate all
-        if options.get("invalidate_all"):
-            print("Invalidating cache...")
-            call_command("invalidate", "all")
-            print()
+        # Send installation metrics
+        if options.get("send_installation_metrics"):
+            self.stdout.write("Sending installation metrics...")
+            call_command("send_installation_metrics")
+            self.stdout.write()
+        else:
+            self.stdout.write("--no-send-installation-metrics was specified; skipping installation metrics.")
+            self.stdout.write()
+
+        # Run refresh_content_type_cache
+        if options.get("remove_stale_contenttypes") or options.get("refresh_content_type_cache"):
+            self.stdout.write("Refreshing _content_type cache")
+            call_command("refresh_content_type_cache")
+            self.stdout.write()
+
+        # Run refresh_dynamic_group_member_caches
+        if options.get("refresh_dynamic_group_member_caches"):
+            self.stdout.write("Refreshing dynamic group member caches...")
+            call_command("refresh_dynamic_group_member_caches")
+            self.stdout.write()

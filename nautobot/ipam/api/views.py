@@ -1,19 +1,22 @@
 from django.conf import settings
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework.routers import APIRootView
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.dcim.models import Location
 from nautobot.extras.api.views import NautobotModelViewSet
 from nautobot.ipam import filters
 from nautobot.ipam.models import (
-    Aggregate,
     IPAddress,
+    IPAddressToInterface,
+    Namespace,
     Prefix,
     RIR,
     RouteTarget,
@@ -21,7 +24,10 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
+    VRFDeviceAssignment,
+    VRFPrefixAssignment,
 )
+
 from . import serializers
 
 
@@ -35,21 +41,39 @@ class IPAMRootView(APIRootView):
 
 
 #
+# Namespace
+#
+
+
+class NamespaceViewSet(NautobotModelViewSet):
+    queryset = Namespace.objects.all()
+    serializer_class = serializers.NamespaceSerializer
+    filterset_class = filters.NamespaceFilterSet
+
+
+#
 # VRFs
 #
 
 
 class VRFViewSet(NautobotModelViewSet):
-    queryset = (
-        VRF.objects.select_related("tenant")
-        .prefetch_related("import_targets", "export_targets", "tags")
-        .annotate(
-            ipaddress_count=count_related(IPAddress, "vrf"),
-            prefix_count=count_related(Prefix, "vrf"),
-        )
+    queryset = VRF.objects.select_related("namespace", "tenant").prefetch_related(
+        "devices", "virtual_machines", "prefixes", "import_targets", "export_targets", "tags"
     )
     serializer_class = serializers.VRFSerializer
     filterset_class = filters.VRFFilterSet
+
+
+class VRFDeviceAssignmentViewSet(NautobotModelViewSet):
+    queryset = VRFDeviceAssignment.objects.select_related("vrf", "device", "virtual_machine")
+    serializer_class = serializers.VRFDeviceAssignmentSerializer
+    filterset_class = filters.VRFDeviceAssignmentFilterSet
+
+
+class VRFPrefixAssignmentViewSet(NautobotModelViewSet):
+    queryset = VRFPrefixAssignment.objects.select_related("vrf", "prefix")
+    serializer_class = serializers.VRFPrefixAssignmentSerializer
+    filterset_class = filters.VRFPrefixAssignmentFilterSet
 
 
 #
@@ -69,20 +93,9 @@ class RouteTargetViewSet(NautobotModelViewSet):
 
 
 class RIRViewSet(NautobotModelViewSet):
-    queryset = RIR.objects.annotate(aggregate_count=count_related(Aggregate, "rir"))
+    queryset = RIR.objects.annotate(assigned_prefix_count=count_related(Prefix, "rir"))
     serializer_class = serializers.RIRSerializer
     filterset_class = filters.RIRFilterSet
-
-
-#
-# Aggregates
-#
-
-
-class AggregateViewSet(NautobotModelViewSet):
-    queryset = Aggregate.objects.select_related("rir").prefetch_related("tags")
-    serializer_class = serializers.AggregateSerializer
-    filterset_class = filters.AggregateFilterSet
 
 
 #
@@ -90,22 +103,69 @@ class AggregateViewSet(NautobotModelViewSet):
 #
 
 
+@extend_schema_view(
+    bulk_update=extend_schema(
+        responses={"200": serializers.PrefixLegacySerializer(many=True)}, versions=["2.0", "2.1"]
+    ),
+    bulk_partial_update=extend_schema(
+        responses={"200": serializers.PrefixLegacySerializer(many=True)}, versions=["2.0", "2.1"]
+    ),
+    create=extend_schema(responses={"201": serializers.PrefixLegacySerializer}, versions=["2.0", "2.1"]),
+    list=extend_schema(responses={"200": serializers.PrefixLegacySerializer(many=True)}, versions=["2.0", "2.1"]),
+    partial_update=extend_schema(responses={"200": serializers.PrefixLegacySerializer}, versions=["2.0", "2.1"]),
+    retrieve=extend_schema(responses={"200": serializers.PrefixLegacySerializer}, versions=["2.0", "2.1"]),
+    update=extend_schema(responses={"200": serializers.PrefixLegacySerializer}, versions=["2.0", "2.1"]),
+)
 class PrefixViewSet(NautobotModelViewSet):
     queryset = Prefix.objects.select_related(
+        "namespace",
+        "parent",
+        "rir",
         "role",
-        "site",
         "status",
         "tenant",
         "vlan",
-        "vrf__tenant",
-    ).prefetch_related("tags")
+    ).prefetch_related("locations", "tags")
     serializer_class = serializers.PrefixSerializer
     filterset_class = filters.PrefixFilterSet
 
     def get_serializer_class(self):
         if self.action == "available_prefixes" and self.request.method == "POST":
             return serializers.PrefixLengthSerializer
+        if (
+            not getattr(self, "swagger_fake_view", False)
+            and self.request.major_version == 2
+            and self.request.minor_version < 2
+        ):
+            # API version 2.0 or 2.1 - use the legacy serializer
+            return serializers.PrefixLegacySerializer
         return super().get_serializer_class()
+
+    class LocationIncompatibleLegacyBehavior(APIException):
+        status_code = 412
+        default_detail = (
+            "This object has multiple Locations and so cannot be represented in the 2.0 or 2.1 REST API. "
+            "Please correct the data or use a later API version."
+        )
+        default_code = "precondition_failed"
+
+    def retrieve(self, request, pk=None):
+        try:
+            return super().retrieve(request, pk)
+        except Location.MultipleObjectsReturned as e:
+            raise self.LocationIncompatibleLegacyBehavior from e
+
+    def list(self, request):
+        try:
+            return super().list(request)
+        except Location.MultipleObjectsReturned as e:
+            raise self.LocationIncompatibleLegacyBehavior from e
+
+    def update(self, request, *args, **kwargs):
+        try:
+            return super().update(request, *args, **kwargs)
+        except Location.MultipleObjectsReturned as e:
+            raise self.LocationIncompatibleLegacyBehavior from e
 
     @extend_schema(methods=["get"], responses={200: serializers.AvailablePrefixSerializer(many=True)})
     @extend_schema(methods=["post"], responses={201: serializers.PrefixSerializer(many=False)})
@@ -119,7 +179,6 @@ class PrefixViewSet(NautobotModelViewSet):
         """
         prefix = get_object_or_404(self.queryset, pk=pk)
         if request.method == "POST":
-
             with cache.lock("available-prefixes", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT):
                 available_prefixes = prefix.get_available_prefixes()
 
@@ -137,13 +196,12 @@ class PrefixViewSet(NautobotModelViewSet):
                 requested_prefixes = serializer.validated_data
                 # Allocate prefixes to the requested objects based on availability within the parent
                 for requested_prefix in requested_prefixes:
-
                     # Find the first available prefix equal to or larger than the requested size
                     for available_prefix in available_prefixes.iter_cidrs():
                         if requested_prefix["prefix_length"] >= available_prefix.prefixlen:
                             allocated_prefix = f"{available_prefix.network}/{requested_prefix['prefix_length']}"
                             requested_prefix["prefix"] = allocated_prefix
-                            requested_prefix["vrf"] = prefix.vrf.pk if prefix.vrf else None
+                            requested_prefix["namespace"] = prefix.namespace.pk
                             break
                     else:
                         return Response(
@@ -155,7 +213,7 @@ class PrefixViewSet(NautobotModelViewSet):
                     available_prefixes.remove(allocated_prefix)
 
                 # Initialize the serializer with a list or a single object depending on what was requested
-                context = {"request": request}
+                context = {"request": request, "depth": 0}
                 if isinstance(request.data, list):
                     serializer = serializers.PrefixSerializer(data=requested_prefixes, many=True, context=context)
                 else:
@@ -173,7 +231,6 @@ class PrefixViewSet(NautobotModelViewSet):
                 many=True,
                 context={
                     "request": request,
-                    "vrf": prefix.vrf,
                 },
             )
 
@@ -205,9 +262,7 @@ class PrefixViewSet(NautobotModelViewSet):
 
         # Create the next available IP within the prefix
         if request.method == "POST":
-
             with cache.lock("available-ips", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT):
-
                 # Normalize to a list of objects
                 requested_ips = request.data if isinstance(request.data, list) else [request.data]
 
@@ -224,15 +279,15 @@ class PrefixViewSet(NautobotModelViewSet):
                         status=status.HTTP_204_NO_CONTENT,
                     )
 
-                # Assign addresses from the list of available IPs and copy VRF assignment from the parent prefix
+                # Assign addresses from the list of available IPs and copy Namespace assignment from the parent Prefix
                 available_ips = iter(available_ips)
                 prefix_length = prefix.prefix.prefixlen
                 for requested_ip in requested_ips:
                     requested_ip["address"] = f"{next(available_ips)}/{prefix_length}"
-                    requested_ip["vrf"] = prefix.vrf.pk if prefix.vrf else None
+                    requested_ip["namespace"] = prefix.namespace.pk
 
                 # Initialize the serializer with a list or a single object depending on what was requested
-                context = {"request": request}
+                context = {"request": request, "depth": 0}
                 if isinstance(request.data, list):
                     serializer = serializers.IPAddressSerializer(data=requested_ips, many=True, context=context)
                 else:
@@ -264,7 +319,6 @@ class PrefixViewSet(NautobotModelViewSet):
                 context={
                     "request": request,
                     "prefix": prefix.prefix,
-                    "vrf": prefix.vrf,
                 },
             )
 
@@ -279,13 +333,24 @@ class PrefixViewSet(NautobotModelViewSet):
 class IPAddressViewSet(NautobotModelViewSet):
     queryset = IPAddress.objects.select_related(
         "nat_inside",
-        "status",
+        "parent",
         "role",
+        "status",
         "tenant",
-        "vrf__tenant",
-    ).prefetch_related("tags", "assigned_object", "nat_outside_list")
+    ).prefetch_related("tags", "nat_outside_list")
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet
+
+
+#
+# IP address to interface
+#
+
+
+class IPAddressToInterfaceViewSet(NautobotModelViewSet):
+    queryset = IPAddressToInterface.objects.select_related("interface", "ip_address", "vm_interface")
+    serializer_class = serializers.IPAddressToInterfaceSerializer
+    filterset_class = filters.IPAddressToInterfaceFilterSet
 
 
 #
@@ -294,7 +359,7 @@ class IPAddressViewSet(NautobotModelViewSet):
 
 
 class VLANGroupViewSet(NautobotModelViewSet):
-    queryset = VLANGroup.objects.select_related("site").annotate(vlan_count=count_related(VLAN, "vlan_group"))
+    queryset = VLANGroup.objects.select_related("location").annotate(vlan_count=count_related(VLAN, "vlan_group"))
     serializer_class = serializers.VLANGroupSerializer
     filterset_class = filters.VLANGroupFilterSet
 
@@ -304,11 +369,21 @@ class VLANGroupViewSet(NautobotModelViewSet):
 #
 
 
+@extend_schema_view(
+    bulk_update=extend_schema(responses={"200": serializers.VLANLegacySerializer(many=True)}, versions=["2.0", "2.1"]),
+    bulk_partial_update=extend_schema(
+        responses={"200": serializers.VLANLegacySerializer(many=True)}, versions=["2.0", "2.1"]
+    ),
+    create=extend_schema(responses={"201": serializers.VLANLegacySerializer}, versions=["2.0", "2.1"]),
+    list=extend_schema(responses={"200": serializers.VLANLegacySerializer(many=True)}, versions=["2.0", "2.1"]),
+    partial_update=extend_schema(responses={"200": serializers.VLANLegacySerializer}, versions=["2.0", "2.1"]),
+    retrieve=extend_schema(responses={"200": serializers.VLANLegacySerializer}, versions=["2.0", "2.1"]),
+    update=extend_schema(responses={"200": serializers.VLANLegacySerializer}, versions=["2.0", "2.1"]),
+)
 class VLANViewSet(NautobotModelViewSet):
     queryset = (
         VLAN.objects.select_related(
             "vlan_group",
-            "site",
             "status",
             "role",
             "tenant",
@@ -318,6 +393,42 @@ class VLANViewSet(NautobotModelViewSet):
     )
     serializer_class = serializers.VLANSerializer
     filterset_class = filters.VLANFilterSet
+
+    class LocationIncompatibleLegacyBehavior(APIException):
+        status_code = 412
+        default_detail = (
+            "This object has multiple Locations and so cannot be represented in the 2.0 or 2.1 REST API. "
+            "Please correct the data or use a later API version."
+        )
+        default_code = "precondition_failed"
+
+    def get_serializer_class(self):
+        if (
+            not getattr(self, "swagger_fake_view", False)
+            and self.request.major_version == 2
+            and self.request.minor_version < 2
+        ):
+            # API version 2.1 or earlier - use the legacy serializer
+            return serializers.VLANLegacySerializer
+        return super().get_serializer_class()
+
+    def retrieve(self, request, pk=None):
+        try:
+            return super().retrieve(request, pk)
+        except Location.MultipleObjectsReturned as e:
+            raise self.LocationIncompatibleLegacyBehavior from e
+
+    def list(self, request):
+        try:
+            return super().list(request)
+        except Location.MultipleObjectsReturned as e:
+            raise self.LocationIncompatibleLegacyBehavior from e
+
+    def update(self, request, *args, **kwargs):
+        try:
+            return super().update(request, *args, **kwargs)
+        except Location.MultipleObjectsReturned as e:
+            raise self.LocationIncompatibleLegacyBehavior from e
 
 
 #

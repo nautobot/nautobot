@@ -5,18 +5,15 @@ from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
-from django.db.models import JSONField, ManyToManyField
+from django.db.models import JSONField, ManyToManyField, ManyToManyRel
 from django.forms.models import model_to_dict
-from django.utils.text import slugify
 from netaddr import IPNetwork
-from rest_framework.test import APIClient
-from taggit.managers import TaggableManager
+from rest_framework.test import APIClient, APIRequestFactory
 
 from nautobot.core import testing
 from nautobot.core.models import fields as core_fields
 from nautobot.core.utils import permissions
-from nautobot.extras import management
-from nautobot.extras import models as extras_models
+from nautobot.extras import management, models as extras_models, signals as extras_signals
 from nautobot.users import models as users_models
 
 # Use the proper swappable User model
@@ -65,6 +62,13 @@ class NautobotTestCaseMixin:
             # Force login explicitly with the first-available backend
             self.client.force_login(self.user)
 
+    def tearDown(self):
+        """Clear lru_cache data to avoid leakage of information between test cases when running in parallel."""
+        extras_signals.invalidate_lru_cache(extras_models.CustomField)
+        extras_signals.invalidate_lru_cache(extras_models.ComputedField)
+        extras_signals.invalidate_lru_cache(extras_models.Relationship)
+        super().tearDown()
+
     def prepare_instance(self, instance):
         """
         Test cases can override this method to perform any necessary manipulation of an instance prior to its evaluation
@@ -93,17 +97,17 @@ class NautobotTestCaseMixin:
                 field = None
 
             # Handle ManyToManyFields
-            if value and isinstance(field, (ManyToManyField, TaggableManager)):
-
+            if value and isinstance(field, (ManyToManyField, ManyToManyRel, core_fields.TagsField)):
                 # Only convert ContentType to <app_label>.<model> for API serializers/views
                 if api and field.related_model is ContentType:
                     model_dict[key] = sorted([f"{ct.app_label}.{ct.model}" for ct in value])
                 # Otherwise always convert object instances to pk
                 else:
+                    if isinstance(field, ManyToManyRel):
+                        value = value.all()
                     model_dict[key] = sorted([obj.pk for obj in value])
 
             if api:
-
                 # Replace ContentType primary keys with <app_label>.<model>
                 if isinstance(getattr(instance, key), ContentType):
                     ct = ContentType.objects.get(pk=value)
@@ -114,7 +118,6 @@ class NautobotTestCaseMixin:
                     model_dict[key] = str(value)
 
             else:
-
                 # Convert ArrayFields to CSV strings
                 if isinstance(field, core_fields.JSONArrayField):
                     model_dict[key] = ",".join([str(v) for v in value])
@@ -153,14 +156,13 @@ class NautobotTestCaseMixin:
         if isinstance(expected_status, int):
             expected_status = [expected_status]
         if response.status_code not in expected_status:
+            err_message = f"Expected HTTP status(es) {expected_status}; received {response.status_code}:"
             if hasattr(response, "data"):
                 # REST API response; pass the response data through directly
-                err = response.data
-            else:
-                # Attempt to extract form validation errors from the response HTML
-                form_errors = testing.extract_form_failures(response.content.decode(response.charset))
-                err = form_errors or response.content.decode(response.charset) or "No data"
-            err_message = f"Expected HTTP status(es) {expected_status}; received {response.status_code}: {err}"
+                err_message += f"\n{response.data}"
+            # Attempt to extract form validation errors from the response HTML
+            form_errors = testing.extract_form_failures(response.content.decode(response.charset))
+            err_message += "\n" + str(form_errors or response.content.decode(response.charset) or "No data")
             if msg:
                 err_message = f"{msg}\n{err_message}"
         self.assertIn(response.status_code, expected_status, err_message)
@@ -186,6 +188,9 @@ class NautobotTestCaseMixin:
             if isinstance(v, list):
                 # Sort lists of values. This includes items like tags, or other M2M fields
                 new_model_dict[k] = sorted(v)
+            elif k == "data_schema" and isinstance(v, str):
+                # Standardize the data_schema JSON, since the column is JSON and MySQL/dolt do not guarantee order
+                new_model_dict[k] = self.standardize_json(v)
             else:
                 new_model_dict[k] = v
 
@@ -196,6 +201,9 @@ class NautobotTestCaseMixin:
                 if isinstance(v, list):
                     # Sort lists of values. This includes items like tags, or other M2M fields
                     relevant_data[k] = sorted(v)
+                elif k == "data_schema" and isinstance(v, str):
+                    # Standardize the data_schema JSON, since the column is JSON and MySQL/dolt do not guarantee order
+                    relevant_data[k] = self.standardize_json(v)
                 else:
                     relevant_data[k] = v
 
@@ -213,6 +221,15 @@ class NautobotTestCaseMixin:
     # Convenience methods
     #
 
+    def absolute_api_url(self, obj):
+        """Get the absolute API URL ("http://nautobot.example.com/api/...") for a given object."""
+        request = APIRequestFactory(SERVER_NAME="nautobot.example.com").get("")
+        return request.build_absolute_uri(obj.get_absolute_url(api=True))
+
+    def standardize_json(self, data):
+        obj = json.loads(data)
+        return json.dumps(obj, sort_keys=True)
+
     @classmethod
     def create_tags(cls, *names):
         """
@@ -226,4 +243,4 @@ class NautobotTestCaseMixin:
             DeprecationWarning,
             stacklevel=2,
         )
-        return [extras_models.Tag.objects.create(name=name, slug=slugify(name)) for name in names]
+        return [extras_models.Tag.objects.create(name=name) for name in names]

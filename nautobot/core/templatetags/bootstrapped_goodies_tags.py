@@ -16,7 +16,7 @@ def render_with_template_if_exist(context, template, fallback):  # pylint: disab
     text = fallback
     try:
         text = render_to_string(template, context)
-    except Exception:
+    except Exception:  # noqa: S110  # try-except-pass --  generally an antipattern, but it's intentional here
         pass
     return text
 
@@ -36,7 +36,7 @@ def language_selector(context):
         context["i18n_is_set"] = True
         try:
             output = render_to_string(template_, context)
-        except Exception:
+        except Exception:  # noqa: S110  # try-except-pass --  generally an antipattern, but it's intentional here
             pass
     return output
 
@@ -96,7 +96,10 @@ def render_app_label(context, app, fallback=""):
 
 @register.simple_tag(takes_context=True)
 def render_app_description(
-    context, app, fallback="", template="/admin_app_description.html"  # pylint: disable=redefined-outer-name
+    context,
+    app,
+    fallback="",
+    template="/admin_app_description.html",  # pylint: disable=redefined-outer-name
 ):
     """Render the application description using the default template name. If it cannot find a
     template matching the given path, fallback to the fallback argument.

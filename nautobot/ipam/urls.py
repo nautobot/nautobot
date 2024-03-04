@@ -1,9 +1,10 @@
 from django.urls import path
 
+from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
+
 from . import views
 from .models import (
-    Aggregate,
     IPAddress,
     Prefix,
     RIR,
@@ -15,11 +16,16 @@ from .models import (
 )
 
 app_name = "ipam"
+
+router = NautobotUIViewSetRouter()
+router.register("namespaces", views.NamespaceUIViewSet)
+router.register("ip-address-to-interface", views.IPAddressToInterfaceUIViewSet)
+
 urlpatterns = [
     # VRFs
     path("vrfs/", views.VRFListView.as_view(), name="vrf_list"),
     path("vrfs/add/", views.VRFEditView.as_view(), name="vrf_add"),
-    path("vrfs/import/", views.VRFBulkImportView.as_view(), name="vrf_import"),
+    path("vrfs/import/", views.VRFBulkImportView.as_view(), name="vrf_import"),  # 3.0 TODO: remove, unused
     path("vrfs/edit/", views.VRFBulkEditView.as_view(), name="vrf_bulk_edit"),
     path("vrfs/delete/", views.VRFBulkDeleteView.as_view(), name="vrf_bulk_delete"),
     path("vrfs/<uuid:pk>/", views.VRFView.as_view(), name="vrf"),
@@ -46,7 +52,7 @@ urlpatterns = [
     ),
     path(
         "route-targets/import/",
-        views.RouteTargetBulkImportView.as_view(),
+        views.RouteTargetBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="routetarget_import",
     ),
     path(
@@ -85,68 +91,43 @@ urlpatterns = [
     # RIRs
     path("rirs/", views.RIRListView.as_view(), name="rir_list"),
     path("rirs/add/", views.RIREditView.as_view(), name="rir_add"),
-    path("rirs/import/", views.RIRBulkImportView.as_view(), name="rir_import"),
+    path("rirs/import/", views.RIRBulkImportView.as_view(), name="rir_import"),  # 3.0 TODO: remove, unused
     path("rirs/delete/", views.RIRBulkDeleteView.as_view(), name="rir_bulk_delete"),
-    path("rirs/<slug:slug>/", views.RIRView.as_view(), name="rir"),
-    path("rirs/<slug:slug>/edit/", views.RIREditView.as_view(), name="rir_edit"),
-    path("rirs/<slug:slug>/delete/", views.RIRDeleteView.as_view(), name="rir_delete"),
+    path("rirs/<uuid:pk>/", views.RIRView.as_view(), name="rir"),
+    path("rirs/<uuid:pk>/edit/", views.RIREditView.as_view(), name="rir_edit"),
+    path("rirs/<uuid:pk>/delete/", views.RIRDeleteView.as_view(), name="rir_delete"),
     path(
-        "rirs/<slug:slug>/changelog/",
+        "rirs/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="rir_changelog",
         kwargs={"model": RIR},
     ),
     path(
-        "rirs/<slug:slug>/notes/",
+        "rirs/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="rir_notes",
         kwargs={"model": RIR},
     ),
-    # Aggregates
-    path("aggregates/", views.AggregateListView.as_view(), name="aggregate_list"),
-    path("aggregates/add/", views.AggregateEditView.as_view(), name="aggregate_add"),
+    # Namespaces
     path(
-        "aggregates/import/",
-        views.AggregateBulkImportView.as_view(),
-        name="aggregate_import",
+        "namespaces/<uuid:pk>/ip-addresses/",
+        views.NamespaceIPAddressesView.as_view(),
+        name="namespace_ipaddresses",
     ),
     path(
-        "aggregates/edit/",
-        views.AggregateBulkEditView.as_view(),
-        name="aggregate_bulk_edit",
+        "namespaces/<uuid:pk>/prefixes/",
+        views.NamespacePrefixesView.as_view(),
+        name="namespace_prefixes",
     ),
     path(
-        "aggregates/delete/",
-        views.AggregateBulkDeleteView.as_view(),
-        name="aggregate_bulk_delete",
-    ),
-    path("aggregates/<uuid:pk>/", views.AggregateView.as_view(), name="aggregate"),
-    path(
-        "aggregates/<uuid:pk>/edit/",
-        views.AggregateEditView.as_view(),
-        name="aggregate_edit",
-    ),
-    path(
-        "aggregates/<uuid:pk>/delete/",
-        views.AggregateDeleteView.as_view(),
-        name="aggregate_delete",
-    ),
-    path(
-        "aggregates/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="aggregate_changelog",
-        kwargs={"model": Aggregate},
-    ),
-    path(
-        "aggregates/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="aggregate_notes",
-        kwargs={"model": Aggregate},
+        "namespaces/<uuid:pk>/vrfs/",
+        views.NamespaceVRFsView.as_view(),
+        name="namespace_vrfs",
     ),
     # Prefixes
     path("prefixes/", views.PrefixListView.as_view(), name="prefix_list"),
     path("prefixes/add/", views.PrefixEditView.as_view(), name="prefix_add"),
-    path("prefixes/import/", views.PrefixBulkImportView.as_view(), name="prefix_import"),
+    path("prefixes/import/", views.PrefixBulkImportView.as_view(), name="prefix_import"),  # 3.0 TODO: remove, unused
     path("prefixes/edit/", views.PrefixBulkEditView.as_view(), name="prefix_bulk_edit"),
     path(
         "prefixes/delete/",
@@ -198,13 +179,18 @@ urlpatterns = [
     ),
     path(
         "ip-addresses/import/",
-        views.IPAddressBulkImportView.as_view(),
+        views.IPAddressBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="ipaddress_import",
     ),
     path(
         "ip-addresses/edit/",
         views.IPAddressBulkEditView.as_view(),
         name="ipaddress_bulk_edit",
+    ),
+    path(
+        "ip-addresses/merge/",
+        views.IPAddressMergeView.as_view(),
+        name="ipaddress_merge",
     ),
     path(
         "ip-addresses/delete/",
@@ -222,6 +208,16 @@ urlpatterns = [
         ObjectDynamicGroupsView.as_view(),
         name="ipaddress_dynamicgroups",
         kwargs={"model": IPAddress},
+    ),
+    path(
+        "ip-addresses/<uuid:pk>/interfaces/",
+        views.IPAddressInterfacesView.as_view(),
+        name="ipaddress_interfaces",
+    ),
+    path(
+        "ip-addresses/<uuid:pk>/vm-interfaces/",
+        views.IPAddressVMInterfacesView.as_view(),
+        name="ipaddress_vm_interfaces",
     ),
     path(
         "ip-addresses/<uuid:pk>/notes/",
@@ -250,7 +246,7 @@ urlpatterns = [
     path("vlan-groups/add/", views.VLANGroupEditView.as_view(), name="vlangroup_add"),
     path(
         "vlan-groups/import/",
-        views.VLANGroupBulkImportView.as_view(),
+        views.VLANGroupBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="vlangroup_import",
     ),
     path(
@@ -284,7 +280,7 @@ urlpatterns = [
     # VLANs
     path("vlans/", views.VLANListView.as_view(), name="vlan_list"),
     path("vlans/add/", views.VLANEditView.as_view(), name="vlan_add"),
-    path("vlans/import/", views.VLANBulkImportView.as_view(), name="vlan_import"),
+    path("vlans/import/", views.VLANBulkImportView.as_view(), name="vlan_import"),  # 3.0 TODO: remove, unused
     path("vlans/edit/", views.VLANBulkEditView.as_view(), name="vlan_bulk_edit"),
     path("vlans/delete/", views.VLANBulkDeleteView.as_view(), name="vlan_bulk_delete"),
     path("vlans/<uuid:pk>/", views.VLANView.as_view(), name="vlan"),
@@ -314,7 +310,8 @@ urlpatterns = [
     ),
     # Services
     path("services/", views.ServiceListView.as_view(), name="service_list"),
-    path("services/import/", views.ServiceBulkImportView.as_view(), name="service_import"),
+    path("services/add/", views.ServiceEditView.as_view(), name="service_add"),
+    path("services/import/", views.ServiceBulkImportView.as_view(), name="service_import"),  # 3.0 TODO: remove, unused
     path("services/edit/", views.ServiceBulkEditView.as_view(), name="service_bulk_edit"),
     path(
         "services/delete/",
@@ -341,3 +338,5 @@ urlpatterns = [
         kwargs={"model": Service},
     ),
 ]
+
+urlpatterns += router.urls

@@ -1,0 +1,33 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+{% load helpers %}
+{% load static %}
+
+{% block form_fields %}
+                                {% render_field form.device %}
+                                {% render_field form.parent %}
+                                {% render_field form.name %}
+                                {% render_field form.label %}
+                                {% render_field form.manufacturer %}
+                                {% render_field form.software_version %}
+                                <div class="form-group" id="software_version_image_container" style="display:none">
+                                    <div class="col-md-3"></div>
+                                    <div class="col-md-9">
+                                        <span class="help-block">
+                                            <span id="software_version_image_description"><img src="{% static 'img/ajax-loader.gif' %}"></span>
+                                            <ul id="software_version_image_list">
+                                                <li> Software images for the selected software version will appear here </li>
+                                            </ul>
+                                        </span>
+                                    </div>
+                                </div>
+                                {% render_field form.software_image_files %}
+                                {% render_field form.part_id %}
+                                {% render_field form.serial %}
+                                {% render_field form.asset_tag %}
+                                {% render_field form.description %}
+{% endblock %}
+
+{% block javascript %}
+    {% include 'dcim/inc/edit_form_softwareversion_js.html' %}
+{% endblock %}

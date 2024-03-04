@@ -1,8 +1,7 @@
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import sys
-from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from django.core.management.base import BaseCommand
-
 
 request_counter = 1
 
@@ -11,7 +10,6 @@ class WebhookHandler(BaseHTTPRequestHandler):
     show_headers = True
 
     def __getattr__(self, item):
-
         # Return the same method for any type of HTTP request (GET, POST, etc.)
         if item.startswith("do_"):
             return self.do_ANY

@@ -21,8 +21,11 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #
 # CACHES = {
 #     "default": {
-#         "BACKEND": "django_redis.cache.RedisCache",
-#         "LOCATION": parse_redis_connection(redis_database=0),
+#         "BACKEND": os.getenv(
+#             "NAUTOBOT_CACHES_BACKEND",
+#             "django_prometheus.cache.backends.redis.RedisCache" if METRICS_ENABLED else "django_redis.cache.RedisCache",
+#         ),
+#         "LOCATION": parse_redis_connection(redis_database=1),
 #         "TIMEOUT": 300,
 #         "OPTIONS": {
 #             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -31,17 +34,12 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #     }
 # }
 
-# Redis connection to use for caching.
-#
-# CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", parse_redis_connection(redis_database=1))
+# Number of seconds to cache ContentType lookups. Set to 0 to disable caching.
+# CONTENT_TYPE_CACHE_TIMEOUT = int(os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT", "0"))
 
 # Celery broker URL used to tell workers where queues are located
 #
 # CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
-
-# Celery results backend URL to tell workers where to publish task results
-#
-# CELERY_RESULT_BACKEND = os.getenv("NAUTOBOT_CELERY_RESULT_BACKEND", parse_redis_connection(redis_database=0))
 
 # Database configuration. See the Django documentation for a complete list of available parameters:
 #   https://docs.djangoproject.com/en/stable/ref/settings/#databases
@@ -55,14 +53,15 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),  # Database port (leave blank for default)
 #         "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", "300")),  # Database timeout
 #         "ENGINE": os.getenv(
-#             "NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"
+#             "NAUTOBOT_DB_ENGINE",
+#             "django_prometheus.db.backends.postgresql" if METRICS_ENABLED else "django.db.backends.postgresql",
 #         ),  # Database driver ("mysql" or "postgresql")
 #     }
 # }
 
 # Ensure proper Unicode handling for MySQL
 #
-if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
+if DATABASES["default"]["ENGINE"].endswith("mysql"):
     DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
 
 # This key is used for secure generation of random numbers and strings. It must never be exposed outside of this file.
@@ -157,6 +156,11 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #
 # MEDIA_ROOT = os.path.join(NAUTOBOT_ROOT, "media").rstrip("/")
 
+# Set to True to use session cookies instead of persistent cookies.
+# Session cookies will expire when a browser is closed.
+#
+# SESSION_EXPIRE_AT_BROWSER_CLOSE = is_truthy(os.getenv("NAUTOBOT_SESSION_EXPIRE_AT_BROWSER_CLOSE", "False"))
+
 # The length of time (in seconds) for which a user will remain logged into the web UI before being prompted to
 # re-authenticate. (Default: 1209600 [14 days])
 #
@@ -226,6 +230,10 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     "icon_mask": os.getenv(
 #         "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None
 #     ),  # mono-chrome icon used for the mask-icon header
+#     "header_bullet": os.getenv(
+#         "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
+#     ),  # bullet image used for various view headers
+#     "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None),  # bullet image used for nav menu headers
 # }
 
 # Prepended to CSV, YAML and export template filenames (i.e. `nautobot_device.yml`)
@@ -244,25 +252,9 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     "help": os.getenv("NAUTOBOT_BRANDING_URLS_HELP", "https://github.com/nautobot/nautobot/wiki"),
 # }
 
-# Cache timeout in seconds. Cannot be 0. Defaults to 900 (15 minutes). To disable caching, set CACHEOPS_ENABLED to False
-#
-# CACHEOPS_DEFAULTS = {"timeout": int(os.getenv("NAUTOBOT_CACHEOPS_TIMEOUT", "900"))}
-
-# Set to True to enable caching with cacheops. (Default: False)
-#
-# CACHEOPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CACHEOPS_ENABLED", "False"))
-
-# Set to True to enable periodic health checks for the Redis server connection used by cacheops.
-#
-# CACHEOPS_HEALTH_CHECK_ENABLED = False
-
 # Options to pass to the Celery broker transport, for example when using Celery with Redis Sentinel.
 #
 # CELERY_BROKER_TRANSPORT_OPTIONS = {}
-
-# Options to pass to the Celery result backend transport, for example when using Celery with Redis Sentinel.
-#
-# CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {}
 
 # Default celery queue name that will be used by workers and tasks if no queue is specified
 # CELERY_TASK_DEFAULT_QUEUE = os.getenv("NAUTOBOT_CELERY_TASK_DEFAULT_QUEUE", "default")
@@ -311,23 +303,18 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     r'^(https?://)?(\w+\.)?example\.com$',
 # ]
 
-# Set to True to disable rendering of the IP prefix hierarchy in the the IPAM prefix list view.
-# Useful in case of poor performance when rendering this page.
+# Device names are not guaranteed globally-unique by Nautobot but in practice they often are.
+# Set this to True to use the device name alone as the natural key for Device objects.
+# Set this to False to use the sequence (name, tenant, location) as the natural key instead.
 #
-# DISABLE_PREFIX_LIST_HIERARCHY = False
-
-# Enforcement of unique IP space can be toggled on a per-VRF basis. To enforce unique IP space
-# within the global table (all prefixes and IP addresses not assigned to a VRF), set ENFORCE_GLOBAL_UNIQUE to True.
-#
-# ENFORCE_GLOBAL_UNIQUE = is_truthy(os.getenv("NAUTOBOT_ENFORCE_GLOBAL_UNIQUE", "False"))
+# DEVICE_NAME_AS_NATURAL_KEY = False
 
 # Exempt certain models from the enforcement of view permissions. Models listed here will be viewable by all users and
 # by anonymous users. List models in the form `<app>.<model>`. Add '*' to this list to exempt all models.
 # Defaults to [].
 #
 # EXEMPT_VIEW_PERMISSIONS = [
-#     'dcim.site',
-#     'dcim.region',
+#     'dcim.location',
 #     'ipam.prefix',
 # ]
 
@@ -346,10 +333,6 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # GRAPHQL_CUSTOM_FIELD_PREFIX = "cf"
 # GRAPHQL_RELATIONSHIP_PREFIX = "rel"
 
-# Set to True to hide rather than disabling UI elements that a user doesn't have permission to access.
-#
-# HIDE_RESTRICTED_UI = False
-
 # HTTP proxies Nautobot should use when sending outbound HTTP requests (e.g. for webhooks).
 #
 # HTTP_PROXIES = {
@@ -357,9 +340,29 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     'https': 'http://10.10.1.10:1080',
 # }
 
+# Send anonymized installation metrics when `nautobot-server post_upgrade` command is run.
+#
+INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "{{ installation_metrics_enabled | default(True) }}"))
+
+# Storage backend to use for Job input files and Job output files.
+#
+# Note: the default is for backwards compatibility and it is recommended to change it if possible for your deployment.
+#
+# JOB_FILE_IO_STORAGE = os.getenv("NAUTOBOT_JOB_FILE_IO_STORAGE", "db_file_storage.storage.DatabaseFileStorage")
+
+# Maximum size in bytes of any single file created by Job.create_file().
+#
+# JOB_CREATE_FILE_MAX_SIZE = 10 << 20
+
 # Directory where Jobs can be discovered.
 #
 # JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
+
+# Location names are not guaranteed globally-unique by Nautobot but in practice they often are.
+# Set this to True to use the location name alone as the natural key for Location objects.
+# Set this to False to use the sequence (name, parent__name, parent__parent__name, ...) as the natural key instead.
+#
+# LOCATION_NAME_AS_NATURAL_KEY = False
 
 # Log Nautobot deprecation warnings. Note that this setting is ignored (deprecation logs always enabled) if DEBUG = True
 #
@@ -376,6 +379,10 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # Expose Prometheus monitoring metrics at the HTTP endpoint '/metrics'
 #
 # METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_METRICS_ENABLED", "False"))
+
+# Require API Authentication to HTTP endpoint '/metrics'
+#
+# METRICS_AUTHENTICATED = is_truthy(os.getenv("NAUTOBOT_METRICS_AUTHENTICATED", "False"))
 
 # Credentials that Nautobot will uses to authenticate to devices when connecting via NAPALM.
 #
@@ -442,7 +449,10 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # SANITIZER_PATTERNS = [
 #     # General removal of username-like and password-like tokens
 #     (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
-#     (re.compile(r"(username|password|passwd|pwd)(\s*i?s?\s*:?\s*)?\S+", re.IGNORECASE), r"\1\2{replacement}"),
+#     (
+#         re.compile(r"(username|password|passwd|pwd|secret|secrets)([\"']?(?:\s+is.?|:)?\s+)\S+[\"']?", re.IGNORECASE),
+#         r"\1\2{replacement}",
+#     ),
 # ]
 
 # Configure SSO, for more information see docs/configuration/authentication/sso.md
@@ -465,6 +475,13 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #
 # STRICT_FILTERING = is_truthy(os.getenv("NAUTOBOT_STRICT_FILTERING", "True"))
 
+# Custom message to display on 4xx and 5xx error pages. Markdown is supported.
+#
+# SUPPORT_MESSAGE = (
+#     "If further assistance is required, please join the `#nautobot` channel "
+#     "on [Network to Code's Slack community](https://slack.networktocode.com) and post your question."
+# )
+
 # UI_RACK_VIEW_TRUNCATE_FUNCTION
 #
 # def UI_RACK_VIEW_TRUNCATE_FUNCTION(device_display_name):
@@ -483,3 +500,6 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # or a package containing an application.
 # https://docs.nautobot.com/projects/core/en/latest/configuration/optional-settings/#extra-applications
 # EXTRA_INSTALLED_APPS = []
+
+# Allow users to enable request profiling on their login session
+# ALLOW_REQUEST_PROFILING = False

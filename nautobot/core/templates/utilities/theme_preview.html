@@ -1,0 +1,905 @@
+{% extends 'base.html' %}
+{% load buttons %}
+{% load helpers %}
+
+{% block header %}
+<div class="row noprint">
+    <div class="col-md-12">
+        <ol class="breadcrumb">
+            <li><a href="{% url 'home' %}">Nautobot</a></li>
+            <li><a href="{% url 'theme_preview' %}">Theme Preview</a></li>
+        </ol>
+    </div>
+</div>
+
+<h1>{% block title %}Nautobot Theme Preview{% endblock %}</h1>
+<hr>
+{% endblock %}
+
+{% block content %}
+<!-- Begin example of "object_list.html" -->
+<div class="row noprint">
+    <div class="col-sm-8 col-md-9">
+        <ol class="breadcrumb">
+            <li><a>Statuses</a></li>
+        </ol>
+    </div>
+    <div class="col-sm-4 col-md-3">
+        <form>
+            <div class="input-group">
+                <input type="text" name="q" class="form-control" placeholder="Search Statuses">
+                <span class="input-group-btn">
+                    <button type="submit" class="btn btn-primary">
+                        <span class="mdi mdi-magnify"></span>
+                    </button>
+                </span>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="pull-right noprint">
+    <button type="button" class="btn btn-default"><i class="mdi mdi-cog"></i> Configure</button>
+    <button type="button" class="btn btn-default"><i class="mdi mdi-filter"></i> Filter</button>
+    {% add_button content_type.model_class|validated_viewname:"add" %}
+    {% job_import_button content_type %}
+    {% export_button content_type %}
+</div>
+<h1>Object Listing</h1>
+<div class="row">
+    <div class="col-md-12">
+        <form>
+            {% include "panel_table.html" %}
+            <div class="pull-left noprint">
+                <button type="submit" name="_edit" class="btn btn-warning btn-sm">
+                    <span class="mdi mdi-pencil"></span> Edit Selected
+                </button>
+                <button type="submit" name="_delete" class="btn btn-danger btn-sm">
+                    <span class="mdi mdi-trash-can-outline"></span> Delete Selected
+                </button>
+            </div>
+        </form>
+        <!-- Begin nested example of "inc/paginator.html" -->
+        <div class="paginator text-right">
+            <nav>
+                <ul class="pagination pull-right">
+                    <li><a><i class="mdi mdi-chevron-double-left"></i></a></li>
+                    <li><a>1</a></li>
+                    <li><a>2</a></li>
+                    <li class="active"><a>3</a></li>
+                    <li><a>4</a></li>
+                    <li><a>5</a></li>
+                    <li class="disabled"><span>&hellip;</span></li>
+                    <li><a>10</a></li>
+                    <li><a><i class="mdi mdi-chevron-double-right"></i></a></li>
+                </ul>
+            </nav>
+            <form>
+                <select name="per_page" id="per_page">
+                    <option value="25" selected="selected">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select> per page
+            </form>
+            <div class="text-right text-muted">
+                Showing 50-75 of 250
+            </div>
+        </div>
+        <!-- End nested example of "inc/paginator.html" -->
+        <div class="clearfix"></div>
+    </div>
+</div>
+<!-- End example of "object_list.html" -->
+<hr>
+
+<!-- Begin example of "object_retrieve.html" -->
+<div class="row">
+    <div class="col-sm-8 col-md-9">
+        <ol class="breadcrumb">
+            <li><a>Statuses</a></li>
+            <li>{{ object|hyperlinked_object }}</li>
+        </ol>
+    </div>
+    <div class="col-sm-4 col-md-3">
+        <form>
+            <div class="input-group">
+                <input type="text" name="q" class="form-control" placeholder="Search Statuses">
+                <span class="input-group-btn">
+                    <button type="submit" class="btn btn-primary">
+                        <span class="mdi mdi-magnify"></span>
+                    </button>
+                </span>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="pull-right noprint">
+    {% clone_button object %}
+    {% edit_button object %}
+    {% delete_button object %}
+</div>
+<h1>
+    <span class="hover_copy">
+        Object Detail
+        <button type="button" class="btn btn-inline btn-default hover_copy_button">
+            <span class="mdi mdi-content-copy"></span>
+        </button>
+    </span>
+</h1>
+{% include 'inc/created_updated.html' %}
+<ul class="nav nav-tabs">
+    <li role="presentation" class="active"><a>Object</a></li>
+    <li role="presentation"><a>Advanced</a></li>
+    <li role="presentation"><a>Notes</a></li>
+    <li role="presentation"><a>Change Log</a></li>
+</ul>
+<div class="tab-content">
+    <div role="tabpanel" class="tab-pane active">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading"><strong>Status</strong></div>
+                    <table class="table table-hover panel-body attr-table">
+                        <tr>
+                            <td>Name</td>
+                            <td>{{ object.name }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading"><strong>Right Side</strong></div>
+                    <table class="table table-hover panel-body attr-table">
+                        <tr>
+                            <td>Property</td>
+                            <td>Value</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End example of "object_retrieve.html" -->
+<hr>
+
+<!-- Begin example of "object_create.html" -->
+<form class="form form-horizontal">
+    <div class="row">
+        <div class="col-md-6 col-md-offset-3">
+            <h3>
+                <div class="pull-right">
+                    <a class="btn btn-link btn-xs"><i class="mdi mdi-help-circle"></i></a>
+                </div>
+                Add a new object
+            </h3>
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Object</strong></div>
+                <div class="panel-body">
+                    <div class="form-group">
+                        <label class="col-md-3 control-label" for="id_name">Name</label>
+                        <div class="col-md-9">
+                            <input type="text" name="name" class="form-control" placeholder="Name" id="id_name">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-3 control-label required" for="id_status">Status</label>
+                        <div class="col-md-9">
+                            <select name="status" class="nautobot-select2-api form-control select2-hidden-accessible" data-query-param-content_types="[&quot;dcim.device&quot;]" display-field="display" value-field="id" data-depth="0" required="" placeholder="Status" data-url="/api/extras/statuses/" id="id_status">
+                            </select>
+                            <span class="help-block">Help text for this form field</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-md-offset-3 text-right">
+            <button type="submit" class="btn btn-primary">Create</button>
+            <button type="submit" class="btn btn-primary">Create and Add Another</button>
+            <a class="btn btn-default">Cancel</a>
+        </div>
+    </div>
+</form>
+<!-- End example of "object_create.html" -->
+<hr>
+
+<div class="row">
+    <div class="col-md-12">
+        <!-- Begin example of home page panel -->
+        <div class="homepage_column" style="columns: 4 360px">
+            <div class="panel panel-default" style="break-inside: avoid">
+                <div class="panel-heading">
+                    <strong>Home Page Panel</strong>
+                </div>
+                <div class="list-group">
+                    <div class="list-group-item">
+                        <span class="badge pull-right">123</span>
+                        <h4 class="list-group-item-heading">
+                            <a>Locations</a>
+                        </h4>
+                        <p class="list-group-item-text text-muted">Hierarchical geographic locations</p>
+                    </div>
+                    <div class="list-group-item">
+                        <span class="badge pull-right"><i class="mdi mdi-lock"></i></span>
+                        <h4 class="list-group-item-heading">Tenants</h4>
+                        <p class="list-group-item-text text-muted">Customers or departments</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- End example of home page panel -->
+    </div>
+</div>
+<hr>
+
+<div class="row">
+    <div class="col-md-6">
+        <h1>Buttons</h1>
+        <div class="panel panel-default">
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td><code>btn-lg</code></td>
+                    <td>
+                        <button type="button" class="btn btn-lg btn-default">Default</button>
+                        <button type="button" class="btn btn-lg btn-primary">Primary</button>
+                        <button type="button" class="btn btn-lg btn-success">Success</button>
+                        <button type="button" class="btn btn-lg btn-info">Info</button>
+                        <button type="button" class="btn btn-lg btn-warning">Warning</button>
+                        <button type="button" class="btn btn-lg btn-danger">Danger</button>
+                        <button type="button" class="btn btn-lg btn-link">Link</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td><code>btn</code></td>
+                    <td>
+                        <button type="button" class="btn btn-default">Default</button>
+                        <button type="button" class="btn btn-primary">Primary</button>
+                        <button type="button" class="btn btn-success">Success</button>
+                        <button type="button" class="btn btn-info">Info</button>
+                        <button type="button" class="btn btn-warning">Warning</button>
+                        <button type="button" class="btn btn-danger">Danger</button>
+                        <button type="button" class="btn btn-link">Link</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td><code>btn-sm</code></td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-default">Default</button>
+                        <button type="button" class="btn btn-sm btn-primary">Primary</button>
+                        <button type="button" class="btn btn-sm btn-success">Success</button>
+                        <button type="button" class="btn btn-sm btn-info">Info</button>
+                        <button type="button" class="btn btn-sm btn-warning">Warning</button>
+                        <button type="button" class="btn btn-sm btn-danger">Danger</button>
+                        <button type="button" class="btn btn-sm btn-link">Link</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td><code>btn-xs</code></td>
+                    <td>
+                        <button type="button" class="btn btn-xs btn-default">Default</button>
+                        <button type="button" class="btn btn-xs btn-primary">Primary</button>
+                        <button type="button" class="btn btn-xs btn-success">Success</button>
+                        <button type="button" class="btn btn-xs btn-info">Info</button>
+                        <button type="button" class="btn btn-xs btn-warning">Warning</button>
+                        <button type="button" class="btn btn-xs btn-danger">Danger</button>
+                        <button type="button" class="btn btn-xs btn-link">Link</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td><code>btn disabled</code></td>
+                    <td>
+                        <button type="button" class="btn btn-default disabled">Default</button>
+                        <button type="button" class="btn btn-primary disabled">Primary</button>
+                        <button type="button" class="btn btn-success disabled">Success</button>
+                        <button type="button" class="btn btn-info disabled">Info</button>
+                        <button type="button" class="btn btn-warning disabled">Warning</button>
+                        <button type="button" class="btn btn-danger disabled">Danger</button>
+                        <button type="button" class="btn btn-link disabled">Link</button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <h1>Headings and Labels</h1>
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <h1>
+                    h1. Heading 1
+                    <small>title for most object views</small>
+                    <span class="label label-default">Default</span>
+                    <span class="label label-primary">Primary</span>
+                    <span class="label label-success">Success</span>
+                    <span class="label label-info">Info</span>
+                    <span class="label label-warning">Warning</span>
+                    <span class="label label-danger">Danger</span>
+                </h1>
+                <h2>
+                    h2. Heading 2
+                    <small>used for special purposes such as Location detail "badges"</small>
+                    <span class="label label-default">Default</span>
+                    <span class="label label-primary">Primary</span>
+                    <span class="label label-success">Success</span>
+                    <span class="label label-info">Info</span>
+                    <span class="label label-warning">Warning</span>
+                    <span class="label label-danger">Danger</span>
+                </h2>
+                <h3>
+                    h3. Heading 3
+                    <small>title for object create/edit forms</small>
+                    <span class="label label-default">Default</span>
+                    <span class="label label-primary">Primary</span>
+                    <span class="label label-success">Success</span>
+                    <span class="label label-info">Info</span>
+                    <span class="label label-warning">Warning</span>
+                    <span class="label label-danger">Danger</span>
+                </h3>
+                <h4>
+                    h4. Heading 4
+                    <small>used in modal titles and a few others</small>
+                    <span class="label label-default">Default</span>
+                    <span class="label label-primary">Primary</span>
+                    <span class="label label-success">Success</span>
+                    <span class="label label-info">Info</span>
+                    <span class="label label-warning">Warning</span>
+                    <span class="label label-danger">Danger</span>
+                </h4>
+                <h5>
+                    h5. Heading 5
+                    <small>used in user profiles and cable traces</small>
+                    <span class="label label-default">Default</span>
+                    <span class="label label-primary">Primary</span>
+                    <span class="label label-success">Success</span>
+                    <span class="label label-info">Info</span>
+                    <span class="label label-warning">Warning</span>
+                    <span class="label label-danger">Danger</span>
+                </h5>
+                <h6>
+                    h6. Heading 6
+                    <small>Unused in core</small>
+                    <span class="label label-default">Default</span>
+                    <span class="label label-primary">Primary</span>
+                    <span class="label label-success">Success</span>
+                    <span class="label label-info">Info</span>
+                    <span class="label label-warning">Warning</span>
+                    <span class="label label-danger">Danger</span>
+                </h6>
+                <p>
+                    p. Paragraph
+                    <small>Small text</small>
+                    <span class="label label-default">Default</span>
+                    <span class="label label-primary">Primary</span>
+                    <span class="label label-success">Success</span>
+                    <span class="label label-info">Info</span>
+                    <span class="label label-warning">Warning</span>
+                    <span class="label label-danger">Danger</span>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+<hr>
+
+<h1>Tables</h1>
+<div class="row">
+    <div class="col-md-6">
+        <h2>Panel Table With Heading</h2>
+        <div class="panel panel-default">
+            <div class="panel-heading">Heading Text</div>
+            <table class="table table-hover table-headings">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Username</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>Mark</td>
+                        <td>Otto</td>
+                        <td>@mdo</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Jacob</td>
+                        <td>Thornton</td>
+                        <td>@fat</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>Larry</td>
+                        <td>the Bird</td>
+                        <td>@twitter</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <h2>Condensed Table (use with caution)</h2>
+        <div class="panel panel-default">
+            <table class="table table-condensed table-hover table-headings">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Username</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>Mark</td>
+                        <td>Otto</td>
+                        <td>@mdo</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Jacob</td>
+                        <td>Thornton</td>
+                        <td>@fat</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td colspan="2">Larry the Bird</td>
+                        <td>@twitter</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-6">
+        <h2>Attribute Table for Object Detail View</h2>
+        <div class="panel panel-default">
+            <div class="panel-heading">Object Attributes</div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Attribute</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td>Attribute</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td>Attribute</td>
+                    <td>Value</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <h2>Table with colored rows</h2>
+        <div class="panel panel-default">
+            <table class="table table-hover panel-body table-headings">
+                <thead>
+                    <tr>
+                        <th>Class</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="active"><td>Active</td></tr>
+                    <tr class="success"><td>Success</td></tr>
+                    <tr class="info"><td>Info</td></tr>
+                    <tr class="warning"><td>Warning</td></tr>
+                    <tr class="danger"><td>Danger</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-6">
+        <h2>Striped Table (not generally recommended)</h2>
+        <div class="panel panel-default">
+            <table class="table table-striped table-hover table-headings">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Username</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>Mark</td>
+                        <td>Otto</td>
+                        <td>@mdo</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Jacob</td>
+                        <td>Thornton</td>
+                        <td>@fat</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>Larry</td>
+                        <td>the Bird</td>
+                        <td>@twitter</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <h2>Bordered Table (not generally recommended)</h2>
+        <div class="panel panel-default">
+            <table class="table table-bordered table-hover table-headings">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Username</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td rowspan="2">1</td>
+                        <td>Mark</td>
+                        <td>Otto</td>
+                        <td>@mdo</td>
+                    </tr>
+                    <tr>
+                        <td>Mark</td>
+                        <td>Otto</td>
+                        <td>@TwBootstrap</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Jacob</td>
+                        <td>Thornton</td>
+                        <td>@fat</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td colspan="2">Larry the Bird</td>
+                        <td>@twitter</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<hr>
+
+<div class="row">
+    <div class="col-sm-6">
+        <h1>Alerts</h1>
+        <div class="alert alert-success" role="alert">
+            <strong>Well done!</strong> You successfully read this important alert message.
+        </div>
+        <div class="alert alert-info" role="alert">
+            <strong>Heads up!</strong> This alert needs your attention, but it's not super important.
+        </div>
+        <div class="alert alert-warning" role="alert">
+            <strong>Warning!</strong> Best check yo self, you're not looking too good.
+        </div>
+        <div class="alert alert-danger" role="alert">
+            <strong>Oh snap!</strong> Change a few things up and try submitting again.
+        </div>
+    </div>
+
+    <div class="col-sm-6">
+        <h1>Text Markup</h1>
+        <pre>def hello():
+    print("Hello World!")
+    raise SystemExit()</pre>
+        <div class="row">
+            <div class="col-sm-6">
+                <pre><code class="language-json">{
+    "This": [
+        "is",
+        "JSON",
+        "with",
+        "syntax",
+        "highlighting."
+    ]
+}</code></pre>
+            </div>
+            <div class="col-sm-6">
+        <pre><code class="language-yaml">---
+This:
+  - is
+  - YAML
+  - with
+  - syntax
+  - highlighting.</code></pre>
+            </div>
+        </div>
+        <div>
+            This is some ordinary text.
+            <span class="text-muted">This is some muted text.</span>
+            <span class="text-primary">This is primary text.</span>
+            <span class="text-success">This is success text.</span>
+            <span class="text-info">This is info text.</span>
+            <span class="text-warning">This is warning text.</span>
+            <span class="text-danger">This is danger text.</span>
+            <code>This is code text.</code>
+            <kbd>This is kbd text.</kbd>
+            <span class="bg-primary">This is text with a primary background.</span>
+            <span class="bg-success">This is text with a success background.</span>
+            <span class="bg-info">This is text with a info background.</span>
+            <span class="bg-warning">This is text with a warning background.</span>
+            <span class="bg-danger">This is text with a danger background.</span>
+        </div>
+    </div>
+</div>
+<hr>
+
+<h1>Panels</h1>
+<div class="row">
+    <div class="col-sm-4">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title">Default</h3>
+            </div>
+            <div class="panel-body">
+                Panel content
+            </div>
+        </div>
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                <h3 class="panel-title">Primary</h3>
+            </div>
+            <div class="panel-body">
+                Panel content
+            </div>
+            <div class="panel-footer">
+                Panel footer
+            </div>
+        </div>
+    </div><!-- /.col-sm-4 -->
+    <div class="col-sm-4">
+        <div class="panel panel-success">
+            <div class="panel-heading">
+                <h3 class="panel-title">Success</h3>
+            </div>
+            <div class="panel-body">
+                Panel content
+            </div>
+        </div>
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                <h3 class="panel-title">Info</h3>
+            </div>
+            <div class="panel-body">
+                Panel content
+            </div>
+            <div class="panel-footer">
+                Panel footer
+            </div>
+        </div>
+    </div><!-- /.col-sm-4 -->
+    <div class="col-sm-4">
+        <div class="panel panel-warning">
+            <div class="panel-heading">
+                <h3 class="panel-title">Warning</h3>
+            </div>
+            <div class="panel-body">
+                Panel content
+            </div>
+        </div>
+        <div class="panel panel-danger">
+            <div class="panel-heading">
+                <h3 class="panel-title">Danger</h3>
+            </div>
+            <div class="panel-body">
+                Panel content
+            </div>
+            <div class="panel-footer">
+                Panel footer
+            </div>
+        </div>
+    </div><!-- /.col-sm-4 -->
+</div>
+<hr>
+
+<h1>Progress bars</h1>
+<div class="row">
+    <div class="col-md-4">
+        <div class="progress">
+            <div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width: 60%;"><span class="sr-only">60% Complete</span></div>
+        </div>
+        <div class="progress">
+            <div class="progress-bar progress-bar-success" role="progressbar" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100" style="width: 40%"><span class="sr-only">40% Complete (success)</span></div>
+        </div>
+        <div class="progress">
+            <div class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style="width: 20%"><span class="sr-only">20% Complete</span></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="progress">
+            <div class="progress-bar progress-bar-warning" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width: 60%"><span class="sr-only">60% Complete (warning)</span></div>
+        </div>
+        <div class="progress">
+            <div class="progress-bar progress-bar-danger" role="progressbar" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100" style="width: 80%"><span class="sr-only">80% Complete (danger)</span></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="progress">
+            <div class="progress-bar progress-bar-striped" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width: 60%"><span class="sr-only">60% Complete</span></div>
+        </div>
+        <div class="progress">
+            <div class="progress-bar progress-bar-success" style="width: 35%"><span class="sr-only">35% Complete (success)</span></div>
+            <div class="progress-bar progress-bar-warning" style="width: 20%"><span class="sr-only">20% Complete (warning)</span></div>
+            <div class="progress-bar progress-bar-danger" style="width: 10%"><span class="sr-only">10% Complete (danger)</span></div>
+        </div>
+    </div>
+</div>
+<hr>
+
+
+<h1>List groups</h1>
+<div class="row">
+    <div class="col-sm-4">
+        <ul class="list-group">
+            <li class="list-group-item">Cras justo odio</li>
+            <li class="list-group-item">Dapibus ac facilisis in</li>
+            <li class="list-group-item">Morbi leo risus</li>
+            <li class="list-group-item">Porta ac consectetur ac</li>
+            <li class="list-group-item">Vestibulum at eros</li>
+        </ul>
+    </div><!-- /.col-sm-4 -->
+    <div class="col-sm-4">
+        <div class="list-group">
+            <a href="#" class="list-group-item active">
+                Cras justo odio
+            </a>
+            <a href="#" class="list-group-item">Dapibus ac facilisis in</a>
+            <a href="#" class="list-group-item">Morbi leo risus</a>
+            <a href="#" class="list-group-item">Porta ac consectetur ac</a>
+            <a href="#" class="list-group-item">Vestibulum at eros</a>
+        </div>
+    </div><!-- /.col-sm-4 -->
+    <div class="col-sm-4">
+        <div class="list-group">
+            <a href="#" class="list-group-item active">
+                <h4 class="list-group-item-heading">List group item heading</h4>
+                <p class="list-group-item-text">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
+            </a>
+            <a href="#" class="list-group-item">
+                <h4 class="list-group-item-heading">List group item heading</h4>
+                <p class="list-group-item-text">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
+            </a>
+            <a href="#" class="list-group-item">
+                <h4 class="list-group-item-heading">List group item heading</h4>
+                <p class="list-group-item-text">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
+            </a>
+        </div>
+    </div><!-- /.col-sm-4 -->
+</div>
+</hr>
+
+<h1>Wells</h1>
+<div class="well">
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas sed diam eget risus varius blandit sit amet non magna. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent commodo cursus magna, vel scelerisque nisl consectetur et. Cras mattis consectetur purus sit amet fermentum. Duis mollis, est non commodo luctus, nisi erat porttitor ligula, eget lacinia odio sem nec elit. Aenean lacinia bibendum nulla sed consectetur.</p>
+</div>
+<hr>
+
+<div class="row">
+    <div class="col-md-3">
+        <h1>Badges</h1>
+        <p>
+            <a href="#">Inbox <span class="badge">42</span></a>
+        </p>
+        <ul class="nav nav-pills" role="tablist">
+            <li role="presentation" class="active"><a href="#">Home <span class="badge">42</span></a></li>
+            <li role="presentation"><a href="#">Profile</a></li>
+            <li role="presentation"><a href="#">Messages <span class="badge">3</span></a></li>
+        </ul>
+    </div>
+    <div class="col-md-3">
+        <h1>Dropdown menus</h1>
+        <div class="dropdown open theme-dropdown clearfix">
+            <a id="dropdownMenu1" href="#" class="sr-only dropdown-toggle" role="button" aria-haspopup="true" aria-expanded="false">Dropdown <span class="caret"></span></a>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                <li class="active"><a href="#">Action</a></li>
+                <li><a href="#">Another action</a></li>
+                <li><a href="#">Something else here</a></li>
+                <li role="separator" class="divider"></li>
+                <li><a href="#">Separated link</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <h1>Navs</h1>
+        <ul class="nav nav-tabs" role="tablist">
+            <li role="presentation" class="active"><a href="#">Home</a></li>
+            <li role="presentation"><a href="#">Profile</a></li>
+            <li role="presentation"><a href="#">Messages</a></li>
+        </ul>
+        <ul class="nav nav-pills" role="tablist">
+            <li role="presentation" class="active"><a href="#">Home</a></li>
+            <li role="presentation"><a href="#">Profile</a></li>
+            <li role="presentation"><a href="#">Messages</a></li>
+        </ul>
+    </div>
+</div>
+<hr>
+
+<h1>Navbars</h1>
+<div class="row">
+    <div class="col-md-6">
+        <nav class="navbar navbar-default">
+            <div class="container">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="#">Project name</a>
+                </div>
+                <div class="navbar-collapse collapse">
+                    <ul class="nav navbar-nav">
+                        <li class="active"><a href="#">Home</a></li>
+                        <li><a href="#">About</a></li>
+                        <li><a href="#">Contact</a></li>
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Dropdown <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <li><a href="#">Action</a></li>
+                                <li><a href="#">Another action</a></li>
+                                <li><a href="#">Something else here</a></li>
+                                <li role="separator" class="divider"></li>
+                                <li class="dropdown-header">Nav header</li>
+                                <li><a href="#">Separated link</a></li>
+                                <li><a href="#">One more separated link</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div><!--/.nav-collapse -->
+            </div>
+        </nav>
+    </div>
+    <div class="col-md-6">
+        <nav class="navbar navbar-inverse">
+            <div class="container">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="#">Project name</a>
+                </div>
+                <div class="navbar-collapse collapse">
+                    <ul class="nav navbar-nav">
+                        <li class="active"><a href="#">Home</a></li>
+                        <li><a href="#">About</a></li>
+                        <li><a href="#">Contact</a></li>
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Dropdown <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <li><a href="#">Action</a></li>
+                                <li><a href="#">Another action</a></li>
+                                <li><a href="#">Something else here</a></li>
+                                <li role="separator" class="divider"></li>
+                                <li class="dropdown-header">Nav header</li>
+                                <li><a href="#">Separated link</a></li>
+                                <li><a href="#">One more separated link</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div><!--/.nav-collapse -->
+            </div>
+        </nav>
+    </div>
+</div>
+{% endblock %}

@@ -2,7 +2,6 @@
 
 from django.db import migrations
 
-
 # Models that need to share their parent's timestamps.
 COMPONENT_MODELS = [
     "dcim.consoleport",
@@ -35,7 +34,6 @@ def populate_device_component_timestamps(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("dcim", "0015_device_components__changeloggedmodel"),
     ]

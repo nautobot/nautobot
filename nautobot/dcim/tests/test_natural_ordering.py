@@ -4,32 +4,30 @@ from nautobot.dcim.models import (
     Device,
     DeviceType,
     Interface,
+    Location,
+    LocationType,
     Manufacturer,
-    Site,
 )
-from nautobot.extras.models import Role
+from nautobot.extras.models import Role, Status
 
 
 class NaturalOrderingTestCase(TestCase):
-    def setUp(self):
-
-        site = Site.objects.first()
-        manufacturer = Manufacturer.objects.create(name="Test Manufacturer 1", slug="test-manufacturer-1")
+    @classmethod
+    def setUpTestData(cls):
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(
             manufacturer=manufacturer,
             model="Test Device Type 1",
-            slug="test-device-type-1",
         )
         devicerole = Role.objects.get_for_model(Device).first()
-        self.device = Device.objects.create(
-            device_type=devicetype,
-            role=devicerole,
-            name="Test Device 1",
-            site=site,
+        devicestatus = Status.objects.get_for_model(Device).first()
+        cls.device = Device.objects.create(
+            device_type=devicetype, role=devicerole, name="Test Device 1", location=location, status=devicestatus
         )
+        cls.interface_status = Status.objects.get_for_model(Interface).first()
 
     def test_interface_ordering_numeric(self):
-
         INTERFACES = [
             "0",
             "0.0",
@@ -66,7 +64,7 @@ class NaturalOrderingTestCase(TestCase):
         ]
 
         for name in INTERFACES:
-            iface = Interface(device=self.device, name=name)
+            iface = Interface(device=self.device, name=name, status=self.interface_status)
             iface.save()
 
         self.assertListEqual(
@@ -75,7 +73,6 @@ class NaturalOrderingTestCase(TestCase):
         )
 
     def test_interface_ordering_linux(self):
-
         INTERFACES = [
             "eth0",
             "eth0.1",
@@ -90,7 +87,7 @@ class NaturalOrderingTestCase(TestCase):
         ]
 
         for name in INTERFACES:
-            iface = Interface(device=self.device, name=name)
+            iface = Interface(device=self.device, name=name, status=self.interface_status)
             iface.save()
 
         self.assertListEqual(
@@ -99,7 +96,6 @@ class NaturalOrderingTestCase(TestCase):
         )
 
     def test_interface_ordering_junos(self):
-
         INTERFACES = [
             "xe-0/0/0",
             "xe-0/0/1",
@@ -143,7 +139,7 @@ class NaturalOrderingTestCase(TestCase):
         ]
 
         for name in INTERFACES:
-            iface = Interface(device=self.device, name=name)
+            iface = Interface(device=self.device, name=name, status=self.interface_status)
             iface.save()
 
         self.assertListEqual(
@@ -152,7 +148,6 @@ class NaturalOrderingTestCase(TestCase):
         )
 
     def test_interface_ordering_ios(self):
-
         INTERFACES = [
             "GigabitEthernet0/1",
             "GigabitEthernet0/2",
@@ -170,7 +165,7 @@ class NaturalOrderingTestCase(TestCase):
         ]
 
         for name in INTERFACES:
-            iface = Interface(device=self.device, name=name)
+            iface = Interface(device=self.device, name=name, status=self.interface_status)
             iface.save()
 
         self.assertListEqual(

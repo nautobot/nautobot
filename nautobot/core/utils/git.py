@@ -6,6 +6,8 @@ import os
 
 from git import Repo
 
+from nautobot.core.utils.logging import sanitize
+
 logger = logging.getLogger(__name__)
 
 # namedtuple takes a git log diff status and its accompanying text.
@@ -22,6 +24,11 @@ GIT_STATUS_MAP = {
     "T": "File Type Changed",
     "U": "File Unmerged",
     "X": "Unknown",
+}
+
+# Environment variables to set on appropriate `git` CLI calls
+GIT_ENVIRONMENT = {
+    "GIT_TERMINAL_PROMPT": "0",  # never prompt for user input such as credentials - important to avoid hangs!
 }
 
 
@@ -58,10 +65,14 @@ class GitRepo:
             url (str): git repo url
             clone_initially (bool): True if the repo needs to be cloned
         """
-        if os.path.isdir(path):
+        self.url = url
+        self.sanitized_url = sanitize(url)
+        if os.path.isdir(path) and os.path.isdir(os.path.join(path, ".git")):
             self.repo = Repo(path=path)
         elif clone_initially:
-            self.repo = Repo.clone_from(url, to_path=path)
+            # Don't log `url` as it may include authentication details.
+            logger.debug("Cloning git repository to %s...", path)
+            self.repo = Repo.clone_from(url, to_path=path, env=GIT_ENVIRONMENT)
         else:
             self.repo = Repo.init(path)
             self.repo.create_remote("origin", url=url)
@@ -69,17 +80,26 @@ class GitRepo:
         if url not in self.repo.remotes.origin.urls:
             self.repo.remotes.origin.set_url(url)
 
+    @property
+    def head(self):
+        """Current checked out repository head commit."""
+        return self.repo.head.commit.hexsha
+
     def fetch(self):
-        self.repo.remotes.origin.fetch()
+        with self.repo.git.custom_environment(**GIT_ENVIRONMENT):
+            self.repo.remotes.origin.fetch()
 
     def checkout(self, branch, commit_hexsha=None):
         """
         Check out the given branch, and optionally the specified commit within that branch.
+
+        Returns:
+            (str, bool): commit_hexsha the repo contains now, whether any change occurred
         """
         # Short-circuit logic - do we already have this commit checked out?
-        if commit_hexsha and commit_hexsha == self.repo.head.commit.hexsha:
+        if commit_hexsha and commit_hexsha == self.head:
             logger.debug(f"Commit {commit_hexsha} is already checked out.")
-            return commit_hexsha
+            return (commit_hexsha, False)
 
         self.fetch()
         if commit_hexsha:
@@ -92,7 +112,7 @@ class GitRepo:
                 raise RuntimeError(f"Requested to check out commit `{commit_hexsha}`, but it's not in branch {branch}!")
             logger.info(f"Checking out commit `{commit_hexsha}` on branch `{branch}`...")
             self.repo.git.checkout(commit_hexsha)
-            return commit_hexsha
+            return (commit_hexsha, True)
 
         if branch in self.repo.heads:
             branch_head = self.repo.heads[branch]
@@ -102,7 +122,7 @@ class GitRepo:
                 branch_head.set_tracking_branch(self.repo.remotes.origin.refs[branch])
             except IndexError as git_error:
                 logger.error(
-                    "Branch %s does not exist at %s. %s", branch, list(self.repo.remotes.origin.urls)[0], git_error
+                    "Branch %s does not exist at %s. %s", branch, next(iter(self.repo.remotes.origin.urls)), git_error
                 )
                 raise BranchDoesNotExist(
                     f"Please create branch '{branch}' in upstream and try again."
@@ -117,7 +137,7 @@ class GitRepo:
         self.repo.head.reset(f"origin/{branch}", index=True, working_tree=True)
         commit_hexsha = self.repo.head.reference.commit.hexsha
         logger.info(f"Latest commit on branch `{branch}` is `{commit_hexsha}`")
-        return commit_hexsha
+        return (commit_hexsha, True)
 
     def diff_remote(self, branch):
         logger.debug("Fetching from remote.")
@@ -127,7 +147,7 @@ class GitRepo:
             self.repo.remotes.origin.refs[branch]
         except IndexError as git_error:
             logger.error(
-                "Branch %s does not exist at %s. %s", branch, list(self.repo.remotes.origin.urls)[0], git_error
+                "Branch %s does not exist at %s. %s", branch, next(iter(self.repo.remotes.origin.urls)), git_error
             )
             raise BranchDoesNotExist(
                 f"Please create branch '{branch}' in upstream and try again."

@@ -7,14 +7,14 @@ def get_job_results(request):
     """Callback function to collect job history for panel."""
     return (
         JobResult.objects.filter(status__in=JobResultStatusChoices.READY_STATES)
-        .defer("data")
+        .defer("result")
         .order_by("-date_done")[:10]
     )
 
 
 def get_changelog(request):
     """Callback function to collect changelog for panel."""
-    return ObjectChange.objects.restrict(request.user, "view").select_related("user", "changed_object_type")[:15]
+    return ObjectChange.objects.restrict(request.user, "view")[:15]
 
 
 layout = (

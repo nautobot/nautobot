@@ -1,6 +1,6 @@
-from nautobot.core.api import OrderedDefaultRouter
-from . import views
+from nautobot.core.api.routers import OrderedDefaultRouter
 
+from . import views
 
 router = OrderedDefaultRouter()
 router.APIRootView = views.TenancyRootView

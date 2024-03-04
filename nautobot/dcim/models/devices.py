@@ -1,6 +1,5 @@
 from collections import OrderedDict
 
-import yaml
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -9,26 +8,36 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, ProtectedError, Q
 from django.urls import reverse
-from django.utils.safestring import mark_safe
+from django.utils.functional import cached_property, classproperty
+from django.utils.html import format_html
+import yaml
 
-from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField, PositiveSmallIntegerField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models import BaseManager, RestrictedQuerySet
+from nautobot.core.models.fields import NaturalOrderingField, PositiveSmallIntegerField
+from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
-from nautobot.extras.models import ConfigContextModel, RoleRequiredRoleModelMixin, StatusModel
+from nautobot.dcim.choices import (
+    DeviceFaceChoices,
+    DeviceRedundancyGroupFailoverStrategyChoices,
+    SoftwareImageFileHashingAlgorithmChoices,
+    SubdeviceRoleChoices,
+)
+from nautobot.dcim.utils import get_all_network_driver_mappings
+from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
+
 from .device_components import (
     ConsolePort,
     ConsoleServerPort,
     DeviceBay,
     FrontPort,
     Interface,
+    InventoryItem,
     PowerOutlet,
     PowerPort,
     RearPort,
 )
-
 
 __all__ = (
     "Device",
@@ -46,11 +55,9 @@ __all__ = (
 
 
 @extras_features(
-    "custom_fields",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Manufacturer(OrganizationalModel):
@@ -59,10 +66,7 @@ class Manufacturer(OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
-
-    csv_headers = ["name", "slug", "description"]
 
     class Meta:
         ordering = ["name"]
@@ -70,20 +74,55 @@ class Manufacturer(OrganizationalModel):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("dcim:manufacturer", args=[self.slug])
-
-    def to_csv(self):
-        return (self.name, self.slug, self.description)
-
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
+    "webhooks",
+)
+class HardwareFamily(PrimaryModel):
+    """
+    A Hardware Family is a model that represents a grouping of DeviceTypes.
+    """
+
+    name = models.CharField(max_length=100, unique=True)
+    description = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name_plural = "hardware families"
+
+    def __str__(self):
+        return self.name
+
+
+@extras_features("graphql")
+class DeviceTypeToSoftwareImageFile(BaseModel, ChangeLoggedModel):
+    device_type = models.ForeignKey(
+        "dcim.DeviceType", on_delete=models.CASCADE, related_name="software_image_file_mappings"
+    )
+    software_image_file = models.ForeignKey(
+        "dcim.SoftwareImageFile", on_delete=models.PROTECT, related_name="device_type_mappings"
+    )
+
+    class Meta:
+        unique_together = [
+            ["device_type", "software_image_file"],
+        ]
+        verbose_name = "device type to software image file mapping"
+        verbose_name_plural = "device type to software image file mappings"
+
+    def __str__(self):
+        return f"{self.device_type!s} - {self.software_image_file!s}"
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
     "webhooks",
 )
 class DeviceType(PrimaryModel):
@@ -103,9 +142,14 @@ class DeviceType(PrimaryModel):
     """
 
     manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="device_types")
+    hardware_family = models.ForeignKey(
+        to="dcim.HardwareFamily",
+        on_delete=models.PROTECT,
+        related_name="device_types",
+        blank=True,
+        null=True,
+    )
     model = models.CharField(max_length=100)
-    # 2.0 TODO: Remove unique=None to make slug globally unique. This would be a breaking change.
-    slug = AutoSlugField(populate_from="model", unique=None, db_index=True)
     part_number = models.CharField(max_length=50, blank=True, help_text="Discrete part number (optional)")
     # 2.0 TODO: Profile filtering on this field if it could benefit from an index
     u_height = PositiveSmallIntegerField(default=1, verbose_name="Height (U)")
@@ -126,6 +170,13 @@ class DeviceType(PrimaryModel):
     )
     front_image = models.ImageField(upload_to="devicetype-images", blank=True)
     rear_image = models.ImageField(upload_to="devicetype-images", blank=True)
+    software_image_files = models.ManyToManyField(
+        to="dcim.SoftwareImageFile",
+        through=DeviceTypeToSoftwareImageFile,
+        related_name="device_types",
+        blank=True,
+        verbose_name="Software Image Files",
+    )
     comments = models.TextField(blank=True)
 
     clone_fields = [
@@ -139,8 +190,6 @@ class DeviceType(PrimaryModel):
         ordering = ["manufacturer", "model"]
         unique_together = [
             ["manufacturer", "model"],
-            # 2.0 TODO: Remove unique_together to make slug globally unique. This would be a breaking change.
-            ["manufacturer", "slug"],
         ]
 
     def __str__(self):
@@ -156,15 +205,11 @@ class DeviceType(PrimaryModel):
         self._original_front_image = self.front_image if self.present_in_database else None
         self._original_rear_image = self.rear_image if self.present_in_database else None
 
-    def get_absolute_url(self):
-        return reverse("dcim:devicetype", args=[self.pk])
-
     def to_yaml(self):
         data = OrderedDict(
             (
                 ("manufacturer", self.manufacturer.name),
                 ("model", self.model),
-                ("slug", self.slug),
                 ("part_number", self.part_number),
                 ("u_height", self.u_height),
                 ("is_full_depth", self.is_full_depth),
@@ -174,23 +219,23 @@ class DeviceType(PrimaryModel):
         )
 
         # Component templates
-        if self.consoleporttemplates.exists():
+        if self.console_port_templates.exists():
             data["console-ports"] = [
                 {
                     "name": c.name,
                     "type": c.type,
                 }
-                for c in self.consoleporttemplates.all()
+                for c in self.console_port_templates.all()
             ]
-        if self.consoleserverporttemplates.exists():
+        if self.console_server_port_templates.exists():
             data["console-server-ports"] = [
                 {
                     "name": c.name,
                     "type": c.type,
                 }
-                for c in self.consoleserverporttemplates.all()
+                for c in self.console_server_port_templates.all()
             ]
-        if self.powerporttemplates.exists():
+        if self.power_port_templates.exists():
             data["power-ports"] = [
                 {
                     "name": c.name,
@@ -198,52 +243,52 @@ class DeviceType(PrimaryModel):
                     "maximum_draw": c.maximum_draw,
                     "allocated_draw": c.allocated_draw,
                 }
-                for c in self.powerporttemplates.all()
+                for c in self.power_port_templates.all()
             ]
-        if self.poweroutlettemplates.exists():
+        if self.power_outlet_templates.exists():
             data["power-outlets"] = [
                 {
                     "name": c.name,
                     "type": c.type,
-                    "power_port": c.power_port.name if c.power_port else None,
+                    "power_port": c.power_port_template.name if c.power_port_template else None,
                     "feed_leg": c.feed_leg,
                 }
-                for c in self.poweroutlettemplates.all()
+                for c in self.power_outlet_templates.all()
             ]
-        if self.interfacetemplates.exists():
+        if self.interface_templates.exists():
             data["interfaces"] = [
                 {
                     "name": c.name,
                     "type": c.type,
                     "mgmt_only": c.mgmt_only,
                 }
-                for c in self.interfacetemplates.all()
+                for c in self.interface_templates.all()
             ]
-        if self.frontporttemplates.exists():
+        if self.front_port_templates.exists():
             data["front-ports"] = [
                 {
                     "name": c.name,
                     "type": c.type,
-                    "rear_port": c.rear_port.name,
+                    "rear_port": c.rear_port_template.name,
                     "rear_port_position": c.rear_port_position,
                 }
-                for c in self.frontporttemplates.all()
+                for c in self.front_port_templates.all()
             ]
-        if self.rearporttemplates.exists():
+        if self.rear_port_templates.exists():
             data["rear-ports"] = [
                 {
                     "name": c.name,
                     "type": c.type,
                     "positions": c.positions,
                 }
-                for c in self.rearporttemplates.all()
+                for c in self.rear_port_templates.all()
             ]
-        if self.devicebaytemplates.exists():
+        if self.device_bay_templates.exists():
             data["device-bays"] = [
                 {
                     "name": c.name,
                 }
-                for c in self.devicebaytemplates.all()
+                for c in self.device_bay_templates.all()
             ]
 
         return yaml.dump(dict(data), sort_keys=False, allow_unicode=True)
@@ -271,17 +316,19 @@ class DeviceType(PrimaryModel):
         elif self.present_in_database and self._original_u_height > 0 and self.u_height == 0:
             racked_instance_count = Device.objects.filter(device_type=self, position__isnull=False).count()
             if racked_instance_count:
-                url = f"{reverse('dcim:device_list')}?manufacturer_id={self.manufacturer_id}&device_type_id={self.pk}"
+                url = f"{reverse('dcim:device_list')}?manufacturer={self.manufacturer_id}&device_type={self.pk}"
                 raise ValidationError(
                     {
-                        "u_height": mark_safe(
-                            f'Unable to set 0U height: Found <a href="{url}">{racked_instance_count} instances</a> already '
-                            f"mounted within racks."
+                        "u_height": format_html(
+                            "Unable to set 0U height: "
+                            'Found <a href="{}">{} instances</a> already mounted within racks.',
+                            url,
+                            racked_instance_count,
                         )
                     }
                 )
 
-        if (self.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT) and self.devicebaytemplates.count():
+        if (self.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT) and self.device_bay_templates.count():
             raise ValidationError(
                 {
                     "subdevice_role": "Must delete all device bay templates associated with this device before "
@@ -328,16 +375,16 @@ class DeviceType(PrimaryModel):
 #
 
 
-@extras_features("custom_fields", "custom_validators", "relationships", "graphql")
+@extras_features("custom_validators", "graphql")
 class Platform(OrganizationalModel):
     """
     Platform refers to the software or firmware running on a Device. For example, "Cisco IOS-XR" or "Juniper Junos".
-    Nautobot uses Platforms to determine how to interact with devices when pulling inventory data or other information by
-    specifying a NAPALM driver.
+
+    Nautobot uses Platforms to determine how to interact with devices when pulling inventory data or other information
+    by specifying a network driver; `netutils` is then used to derive library-specific driver information from this.
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     manufacturer = models.ForeignKey(
         to="dcim.Manufacturer",
         on_delete=models.PROTECT,
@@ -346,11 +393,19 @@ class Platform(OrganizationalModel):
         null=True,
         help_text="Optionally limit this platform to devices of a certain manufacturer",
     )
+    network_driver = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=(
+            "The normalized network driver to use when interacting with devices, e.g. cisco_ios, arista_eos, etc."
+            " Library-specific driver names will be derived from this setting as appropriate"
+        ),
+    )
     napalm_driver = models.CharField(
         max_length=50,
         blank=True,
         verbose_name="NAPALM driver",
-        help_text="The name of the NAPALM driver to use when interacting with devices",
+        help_text="The name of the NAPALM driver to use when Nautobot internals interact with devices",
     )
     napalm_args = models.JSONField(
         encoder=DjangoJSONEncoder,
@@ -361,14 +416,12 @@ class Platform(OrganizationalModel):
     )
     description = models.CharField(max_length=200, blank=True)
 
-    csv_headers = [
-        "name",
-        "slug",
-        "manufacturer",
-        "napalm_driver",
-        "napalm_args",
-        "description",
-    ]
+    @cached_property
+    def network_driver_mappings(self):
+        """Dictionary of library-specific network drivers derived from network_driver by netutils library mapping or NETWORK_DRIVERS setting."""
+
+        network_driver_mappings = get_all_network_driver_mappings()
+        return network_driver_mappings.get(self.network_driver, {})
 
     class Meta:
         ordering = ["name"]
@@ -376,38 +429,23 @@ class Platform(OrganizationalModel):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("dcim:platform", args=[self.slug])
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.manufacturer.name if self.manufacturer else None,
-            self.napalm_driver,
-            self.napalm_args,
-            self.description,
-        )
-
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
-    "relationships",
     "statuses",
     "webhooks",
 )
-class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleModelMixin):
+class Device(PrimaryModel, ConfigContextModel):
     """
     A Device represents a piece of physical hardware. Each Device is assigned a DeviceType,
     Role, and (optionally) a Platform. Device names are not required, however if one is set it must be unique.
 
-    Each Device must be assigned to a Site and/or Location, and optionally to a Rack within that.
+    Each Device must be assigned to a Location, and optionally to a Rack within that.
     Associating a device with a particular rack face or unit is optional (for example, vertically mounted PDUs
     do not consume rack units).
 
@@ -416,7 +454,9 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     creation of a Device.
     """
 
-    device_type = models.ForeignKey(to="dcim.DeviceType", on_delete=models.PROTECT, related_name="instances")
+    device_type = models.ForeignKey(to="dcim.DeviceType", on_delete=models.PROTECT, related_name="devices")
+    status = StatusField(blank=False, null=False)
+    role = RoleField(blank=False, null=False)
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -431,24 +471,26 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         blank=True,
         null=True,
     )
-    name = models.CharField(max_length=64, blank=True, null=True, db_index=True)
+    name = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- intentional, see below
+        max_length=64,
+        blank=True,
+        null=True,  # because name is part of uniqueness constraint but is optional
+        db_index=True,
+    )
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, null=True, db_index=True)
     serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number", db_index=True)
     asset_tag = models.CharField(
-        max_length=50,
+        max_length=100,
         blank=True,
         null=True,
         unique=True,
         verbose_name="Asset tag",
         help_text="A unique tag used to identify this device",
     )
-    site = models.ForeignKey(to="dcim.Site", on_delete=models.PROTECT, related_name="devices")
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
         related_name="devices",
-        blank=True,
-        null=True,
     )
     rack = models.ForeignKey(
         to="dcim.Rack",
@@ -467,7 +509,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     )
     # todoindex:
     face = models.CharField(max_length=50, blank=True, choices=DeviceFaceChoices, verbose_name="Rack face")
-    primary_ip4 = models.OneToOneField(
+    primary_ip4 = models.ForeignKey(
         to="ipam.IPAddress",
         on_delete=models.SET_NULL,
         related_name="primary_ip4_for",
@@ -475,7 +517,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         null=True,
         verbose_name="Primary IPv4",
     )
-    primary_ip6 = models.OneToOneField(
+    primary_ip6 = models.ForeignKey(
         to="ipam.IPAddress",
         on_delete=models.SET_NULL,
         related_name="primary_ip6_for",
@@ -500,7 +542,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     device_redundancy_group = models.ForeignKey(
         to="dcim.DeviceRedundancyGroup",
         on_delete=models.SET_NULL,
-        related_name="members",
+        related_name="devices",
         blank=True,
         null=True,
         verbose_name="Device Redundancy Group",
@@ -512,6 +554,14 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         verbose_name="Device Redundancy Group Priority",
         help_text="The priority the device has in the device redundancy group.",
     )
+    software_version = models.ForeignKey(
+        to="dcim.SoftwareVersion",
+        on_delete=models.PROTECT,
+        related_name="devices",
+        blank=True,
+        null=True,
+        help_text="The software version installed on this device",
+    )
     # 2.0 TODO: Profile filtering on this field if it could benefit from an index
     vc_position = PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
     vc_priority = PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
@@ -521,41 +571,27 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
         on_delete=models.SET_NULL,
+        related_name="devices",
         default=None,
         blank=True,
         null=True,
     )
 
-    objects = ConfigContextModelQuerySet.as_manager()
+    software_image_files = models.ManyToManyField(
+        to="dcim.SoftwareImageFile",
+        related_name="devices",
+        blank=True,
+        verbose_name="Software Image Files",
+        help_text="Override the software image files associated with the software version for this device",
+    )
 
-    csv_headers = [
-        "name",
-        "role",
-        "tenant",
-        "manufacturer",
-        "device_type",
-        "platform",
-        "serial",
-        "asset_tag",
-        "status",
-        "site",
-        "location",
-        "rack_group",
-        "rack_name",
-        "position",
-        "face",
-        "device_redundancy_group",
-        "device_redundancy_group_priority",
-        "secrets_group",
-        "primary_ip",
-        "comments",
-    ]
+    objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
+
     clone_fields = [
         "device_type",
         "role",
         "tenant",
         "platform",
-        "site",
         "location",
         "rack",
         "status",
@@ -563,10 +599,22 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
         "secrets_group",
     ]
 
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def natural_key_field_names(cls):  # pylint: disable=no-self-argument
+        """
+        When DEVICE_NAME_AS_NATURAL_KEY is set in settings or Constance, we use just the `name` for simplicity.
+        """
+        if get_settings_or_config("DEVICE_NAME_AS_NATURAL_KEY"):
+            # opt-in simplified "pseudo-natural-key"
+            return ["name"]
+        else:
+            # true natural-key given current uniqueness constraints
+            return ["name", "tenant", "location"]  # location should be last since it's potentially variadic
+
     class Meta:
         ordering = ("_name",)  # Name may be null
         unique_together = (
-            ("site", "tenant", "name"),  # See validate_unique below
+            ("location", "tenant", "name"),  # See validate_unique below
             ("rack", "position", "face"),
             ("virtual_chassis", "vc_position"),
         )
@@ -574,39 +622,27 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
     def __str__(self):
         return self.display or super().__str__()
 
-    def get_absolute_url(self):
-        return reverse("dcim:device", args=[self.pk])
-
     def validate_unique(self, exclude=None):
-
-        # Check for a duplicate name on a device assigned to the same Site and no Tenant. This is necessary
+        # Check for a duplicate name on a device assigned to the same Location and no Tenant. This is necessary
         # because Django does not consider two NULL fields to be equal, and thus will not trigger a violation
         # of the uniqueness constraint without manual intervention.
-        if self.name and hasattr(self, "site") and self.tenant is None:
-            if Device.objects.exclude(pk=self.pk).filter(name=self.name, site=self.site, tenant__isnull=True):
+        if self.name and hasattr(self, "location") and self.tenant is None:
+            if Device.objects.exclude(pk=self.pk).filter(name=self.name, location=self.location, tenant__isnull=True):
                 raise ValidationError({"name": "A device with this name already exists."})
 
         super().validate_unique(exclude)
 
     def clean(self):
-        super().clean()
+        from nautobot.ipam import models as ipam_models  # circular import workaround
 
-        # Validate site/rack combination
-        if self.rack and self.site != self.rack.site:
-            raise ValidationError(
-                {
-                    "rack": f"Rack {self.rack} does not belong to site {self.site}.",
-                }
-            )
+        super().clean()
 
         # Validate location
         if self.location is not None:
-            if self.location.base_site != self.site:
-                raise ValidationError(
-                    {"location": f'Location "{self.location}" does not belong to site "{self.site}".'}
-                )
+            # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to assign a Rack belongs to
+            # the parent Location or the child location of `self.location`?
 
-            if self.rack is not None and self.rack.location is not None and self.rack.location != self.location:
+            if self.rack is not None and self.rack.location != self.location:
                 raise ValidationError({"rack": f'Rack "{self.rack}" does not belong to location "{self.location}".'})
 
             # self.cluster is validated somewhat later, see below
@@ -645,7 +681,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
             )
 
         if self.rack:
-
             try:
                 # Child devices cannot be assigned to a rack face/unit
                 if self.device_type.is_child_device and self.face:
@@ -684,32 +719,28 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
 
         # Validate primary IP addresses
         vc_interfaces = self.vc_interfaces.all()
-        if self.primary_ip4:
-            if self.primary_ip4.family != 4:
-                raise ValidationError({"primary_ip4": f"{self.primary_ip4} is not an IPv4 address."})
-            if self.primary_ip4.assigned_object in vc_interfaces:
-                pass
-            elif (
-                self.primary_ip4.nat_inside is not None and self.primary_ip4.nat_inside.assigned_object in vc_interfaces
-            ):
-                pass
-            else:
-                raise ValidationError(
-                    {"primary_ip4": f"The specified IP address ({self.primary_ip4}) is not assigned to this device."}
-                )
-        if self.primary_ip6:
-            if self.primary_ip6.family != 6:
-                raise ValidationError({"primary_ip6": f"{self.primary_ip6} is not an IPv6 address."})
-            if self.primary_ip6.assigned_object in vc_interfaces:
-                pass
-            elif (
-                self.primary_ip6.nat_inside is not None and self.primary_ip6.nat_inside.assigned_object in vc_interfaces
-            ):
-                pass
-            else:
-                raise ValidationError(
-                    {"primary_ip6": f"The specified IP address ({self.primary_ip6}) is not assigned to this device."}
-                )
+        for field in ["primary_ip4", "primary_ip6"]:
+            ip = getattr(self, field)
+            if ip is not None:
+                if field == "primary_ip4":
+                    if ip.ip_version != 4:
+                        raise ValidationError({f"{field}": f"{ip} is not an IPv4 address."})
+                else:
+                    if ip.ip_version != 6:
+                        raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
+                if ipam_models.IPAddressToInterface.objects.filter(ip_address=ip, interface__in=vc_interfaces).exists():
+                    pass
+                elif (
+                    ip.nat_inside is not None
+                    and ipam_models.IPAddressToInterface.objects.filter(
+                        ip_address=ip.nat_inside, interface__in=vc_interfaces
+                    ).exists()
+                ):
+                    pass
+                else:
+                    raise ValidationError(
+                        {f"{field}": f"The specified IP address ({ip}) is not assigned to this device."}
+                    )
 
         # Validate manufacturer/platform
         if hasattr(self, "device_type") and self.platform:
@@ -722,12 +753,6 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
                         )
                     }
                 )
-
-        # A Device can only be assigned to a Cluster in the same Site (or no Site)
-        if self.cluster and self.cluster.site is not None and self.cluster.site != self.site:
-            raise ValidationError(
-                {"cluster": f"The assigned cluster belongs to a different site ({self.cluster.site})"}
-            )
 
         # A Device can only be assigned to a Cluster in the same location or parent location, if any
         if (
@@ -756,6 +781,7 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
                     }
                 )
 
+        # Validate device is a member of a device redundancy group if it has a device redundancy group priority set
         if self.device_redundancy_group_priority is not None and self.device_redundancy_group is None:
             raise ValidationError(
                 {
@@ -763,55 +789,57 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
                 }
             )
 
-    def save(self, *args, **kwargs):
+        # Validate device software version has a software image file that matches the device's device type or is a default image
+        if self.software_version is not None and not any(
+            (
+                self.software_version.software_image_files.filter(device_types=self.device_type).exists(),
+                self.software_version.software_image_files.filter(default_image=True).exists(),
+            )
+        ):
+            raise ValidationError(
+                {
+                    "software_version": (
+                        f"No software image files for version '{self.software_version}' are "
+                        f"valid for device type {self.device_type}."
+                    )
+                }
+            )
 
+    def save(self, *args, **kwargs):
         is_new = not self.present_in_database
 
         super().save(*args, **kwargs)
 
-        # If this is a new Device, instantiate all of the related components per the DeviceType definition
+        # If this is a new Device, instantiate all related components per the DeviceType definition
         if is_new:
-            ConsolePort.objects.bulk_create([x.instantiate(self) for x in self.device_type.consoleporttemplates.all()])
-            ConsoleServerPort.objects.bulk_create(
-                [x.instantiate(self) for x in self.device_type.consoleserverporttemplates.all()]
-            )
-            PowerPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.powerporttemplates.all()])
-            PowerOutlet.objects.bulk_create([x.instantiate(self) for x in self.device_type.poweroutlettemplates.all()])
-            Interface.objects.bulk_create([x.instantiate(self) for x in self.device_type.interfacetemplates.all()])
-            RearPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.rearporttemplates.all()])
-            FrontPort.objects.bulk_create([x.instantiate(self) for x in self.device_type.frontporttemplates.all()])
-            DeviceBay.objects.bulk_create([x.instantiate(self) for x in self.device_type.devicebaytemplates.all()])
+            self.create_components()
 
-        # Update Site and Rack assignment for any child Devices
+        # Update Location and Rack assignment for any child Devices
         devices = Device.objects.filter(parent_bay__device=self)
         for device in devices:
-            device.site = self.site
+            device.location = self.location
             device.rack = self.rack
             device.save()
 
-    def to_csv(self):
-        return (
-            self.name or "",
-            self.role.name,
-            self.tenant.name if self.tenant else None,
-            self.device_type.manufacturer.name,
-            self.device_type.model,
-            self.platform.name if self.platform else None,
-            self.serial,
-            self.asset_tag,
-            self.get_status_display(),
-            self.site.name,
-            self.location.name if self.location else None,
-            self.rack.group.name if self.rack and self.rack.group else None,
-            self.rack.name if self.rack else None,
-            self.position,
-            self.get_face_display(),
-            self.device_redundancy_group.slug if self.device_redundancy_group else None,
-            self.device_redundancy_group_priority,
-            self.secrets_group.name if self.secrets_group else None,
-            self.primary_ip if self.primary_ip else None,
-            self.comments,
-        )
+    def create_components(self):
+        """Create device components from the device type definition."""
+        # The order of these is significant as
+        # - PowerOutlet depends on PowerPort
+        # - FrontPort depends on FrontPort
+        component_models = [
+            (ConsolePort, self.device_type.console_port_templates.all()),
+            (ConsoleServerPort, self.device_type.console_server_port_templates.all()),
+            (PowerPort, self.device_type.power_port_templates.all()),
+            (PowerOutlet, self.device_type.power_outlet_templates.all()),
+            (Interface, self.device_type.interface_templates.all()),
+            (RearPort, self.device_type.rear_port_templates.all()),
+            (FrontPort, self.device_type.front_port_templates.all()),
+            (DeviceBay, self.device_type.device_bay_templates.all()),
+        ]
+        instantiated_components = []
+        for model, templates in component_models:
+            model.objects.bulk_create([x.instantiate(self) for x in templates])
+        return instantiated_components
 
     @property
     def display(self):
@@ -907,12 +935,10 @@ class Device(PrimaryModel, ConfigContextModel, StatusModel, RoleRequiredRoleMode
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class VirtualChassis(PrimaryModel):
@@ -927,10 +953,10 @@ class VirtualChassis(PrimaryModel):
         blank=True,
         null=True,
     )
-    name = models.CharField(max_length=64, db_index=True)
+    name = models.CharField(max_length=64, unique=True)
     domain = models.CharField(max_length=30, blank=True)
 
-    csv_headers = ["name", "domain", "master"]
+    natural_key_field_names = ["name"]
 
     class Meta:
         ordering = ["name"]
@@ -938,9 +964,6 @@ class VirtualChassis(PrimaryModel):
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("dcim:virtualchassis", kwargs={"pk": self.pk})
 
     @property
     def member_interfaces(self):
@@ -958,7 +981,6 @@ class VirtualChassis(PrimaryModel):
             )
 
     def delete(self, *args, **kwargs):
-
         # Check for LAG interfaces split across member chassis
         interfaces = Interface.objects.filter(device__in=self.members.all(), lag__isnull=False).exclude(
             lag__device=F("device")
@@ -971,32 +993,23 @@ class VirtualChassis(PrimaryModel):
 
         return super().delete(*args, **kwargs)
 
-    def to_csv(self):
-        return (
-            self.name,
-            self.domain,
-            self.master.name if self.master else None,
-        )
-
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "dynamic_groups",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
-class DeviceRedundancyGroup(PrimaryModel, StatusModel):
+class DeviceRedundancyGroup(PrimaryModel):
     """
     A DeviceRedundancyGroup represents a logical grouping of physical hardware for the purposes of high-availability.
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
+    status = StatusField(blank=False, null=False)
     description = models.CharField(max_length=200, blank=True)
 
     failover_strategy = models.CharField(
@@ -1011,6 +1024,7 @@ class DeviceRedundancyGroup(PrimaryModel, StatusModel):
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
         on_delete=models.SET_NULL,
+        related_name="device_redundancy_groups",
         default=None,
         blank=True,
         null=True,
@@ -1022,26 +1036,180 @@ class DeviceRedundancyGroup(PrimaryModel, StatusModel):
         "secrets_group",
     ]
 
-    csv_headers = ["name", "failover_strategy", "status", "secrets_group", "comments"]
-
     class Meta:
         ordering = ("name",)
 
     @property
-    def members_sorted(self):
-        return self.members.order_by("device_redundancy_group_priority")
+    def devices_sorted(self):
+        return self.devices.order_by("device_redundancy_group_priority")
 
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("dcim:deviceredundancygroup", args=[self.slug])
 
-    def to_csv(self):
-        return (
-            self.name,
-            self.failover_strategy,
-            self.get_status_display(),
-            self.secrets_group.name if self.secrets_group else None,
-            self.comments,
+#
+# Software image files
+#
+
+
+class SoftwareImageFileQuerySet(RestrictedQuerySet):
+    """Queryset for SoftwareImageFile objects."""
+
+    def get_for_object(self, obj):
+        """Return all SoftwareImageFiles assigned to the given object."""
+        from nautobot.virtualization.models import VirtualMachine
+
+        if isinstance(obj, Device):
+            if obj.software_image_files.exists():
+                return obj.software_image_files.all()
+            device_type_qs = self.filter(software_version__devices=obj, device_types=obj.device_type)
+            if device_type_qs.exists():
+                return device_type_qs
+            return self.filter(software_version__devices=obj, default_image=True)
+        elif isinstance(obj, InventoryItem):
+            if obj.software_image_files.exists():
+                return obj.software_image_files.all()
+            else:
+                return self.filter(software_version__inventory_items=obj)
+        elif isinstance(obj, DeviceType):
+            qs = self.filter(device_types=obj)
+        elif isinstance(obj, VirtualMachine):
+            if obj.software_image_files.exists():
+                return obj.software_image_files.all()
+            else:
+                qs = self.filter(software_version__virtual_machines=obj)
+        else:
+            valid_types = "Device, DeviceType, InventoryItem and VirtualMachine"
+            raise TypeError(f"{obj} is not a valid object type. Valid types are {valid_types}.")
+
+        return qs
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "statuses",
+    "webhooks",
+)
+class SoftwareImageFile(PrimaryModel):
+    """A software image file for a Device, Virtual Machine or Inventory Item."""
+
+    software_version = models.ForeignKey(
+        to="SoftwareVersion",
+        on_delete=models.CASCADE,
+        related_name="software_image_files",
+        verbose_name="Software Version",
+    )
+    image_file_name = models.CharField(blank=False, max_length=255, verbose_name="Image File Name")
+    image_file_checksum = models.CharField(blank=True, max_length=256, verbose_name="Image File Checksum")
+    hashing_algorithm = models.CharField(
+        choices=SoftwareImageFileHashingAlgorithmChoices,
+        blank=True,
+        max_length=255,
+        verbose_name="Hashing Algorithm",
+        help_text="Hashing algorithm for image file checksum",
+    )
+    image_file_size = models.PositiveBigIntegerField(
+        blank=True,
+        null=True,
+        verbose_name="Image File Size",
+        help_text="Image file size in bytes",
+    )
+    download_url = models.URLField(blank=True, verbose_name="Download URL")
+    default_image = models.BooleanField(
+        verbose_name="Default Image", help_text="Is the default image for this software version", default=False
+    )
+    status = StatusField(blank=False, null=False)
+
+    objects = BaseManager.from_queryset(SoftwareImageFileQuerySet)()
+
+    class Meta:
+        ordering = ("software_version", "image_file_name")
+        unique_together = ("image_file_name", "software_version")
+
+    def __str__(self):
+        return f"{self.software_version} - {self.image_file_name}"
+
+    def delete(self, *args, **kwargs):
+        """
+        Intercept the ProtectedError for SoftwareImageFiles that are assigned to a DeviceType and provide a better
+        error message. Instead of raising an exception on the DeviceTypeToSoftwareImageFile object, raise on the DeviceType.
+        """
+
+        try:
+            return super().delete(*args, **kwargs)
+        except models.ProtectedError as exc:
+            protected_device_types = [
+                instance.device_type
+                for instance in exc.protected_objects
+                if isinstance(instance, DeviceTypeToSoftwareImageFile)
+            ]
+            if protected_device_types:
+                raise ProtectedError(
+                    "Cannot delete some instances of model 'SoftwareImageFile' because they are "
+                    "referenced through protected foreign keys: 'DeviceType.software_image_files'.",
+                    protected_device_types,
+                ) from exc
+            raise exc
+
+
+class SoftwareVersionQuerySet(RestrictedQuerySet):
+    """Queryset for SoftwareVersion objects."""
+
+    def get_for_object(self, obj):
+        """Return all SoftwareVersions assigned to the given object."""
+        from nautobot.virtualization.models import VirtualMachine
+
+        if isinstance(obj, Device):
+            qs = self.filter(devices=obj)
+        elif isinstance(obj, InventoryItem):
+            qs = self.filter(inventory_items=obj)
+        elif isinstance(obj, DeviceType):
+            qs = self.filter(software_image_files__device_types=obj)
+        elif isinstance(obj, VirtualMachine):
+            qs = self.filter(virtual_machines=obj)
+        else:
+            valid_types = "Device, DeviceType, InventoryItem and VirtualMachine"
+            raise TypeError(f"{obj} is not a valid object type. Valid types are {valid_types}.")
+
+        return qs
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "statuses",
+    "webhooks",
+)
+class SoftwareVersion(PrimaryModel):
+    """A software version for a Device, Virtual Machine or Inventory Item."""
+
+    platform = models.ForeignKey(to="dcim.Platform", on_delete=models.CASCADE)
+    version = models.CharField(max_length=255)
+    alias = models.CharField(max_length=255, blank=True, help_text="Optional alternative label for this version")
+    release_date = models.DateField(null=True, blank=True, verbose_name="Release Date")
+    end_of_support_date = models.DateField(null=True, blank=True, verbose_name="End of Support Date")
+    documentation_url = models.URLField(blank=True, verbose_name="Documentation URL")
+    long_term_support = models.BooleanField(
+        verbose_name="Long Term Support", default=False, help_text="Is a Long Term Support version"
+    )
+    pre_release = models.BooleanField(verbose_name="Pre-Release", default=False, help_text="Is a Pre-Release version")
+    status = StatusField(blank=False, null=False)
+
+    objects = BaseManager.from_queryset(SoftwareVersionQuerySet)()
+
+    class Meta:
+        ordering = ("platform", "version", "end_of_support_date", "release_date")
+        unique_together = (
+            "platform",
+            "version",
         )
+
+    def __str__(self):
+        if self.alias:
+            return self.alias
+        return f"{self.platform} - {self.version}"

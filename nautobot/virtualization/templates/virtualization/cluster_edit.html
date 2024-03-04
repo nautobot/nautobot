@@ -1,4 +1,4 @@
-{% extends 'generic/object_edit.html' %}
+{% extends 'generic/object_create.html' %}
 {% load form_helpers %}
 
 {% block form %}
@@ -8,8 +8,6 @@
             {% render_field form.name %}
             {% render_field form.cluster_type %}
             {% render_field form.cluster_group %}
-            {% render_field form.region %}
-            {% render_field form.site %}
             {% render_field form.location %}
         </div>
     </div>

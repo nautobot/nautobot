@@ -14,7 +14,6 @@ from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEvent
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, CHANGELOG_MAX_OBJECT_REPR
 from nautobot.extras.utils import extras_features
 
-
 #
 # Change logging
 #
@@ -26,7 +25,7 @@ class ChangeLoggedModel(models.Model):
     null to facilitate adding these fields to existing instances via a database migration.
     """
 
-    created = models.DateField(auto_now_add=True, blank=True, null=True)
+    created = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     last_updated = models.DateTimeField(auto_now=True, blank=True, null=True)
 
     class Meta:
@@ -77,14 +76,14 @@ class ObjectChange(BaseModel):
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
-        related_name="changes",
+        related_name="object_changes",
         blank=True,
         null=True,
     )
-    user_name = models.CharField(max_length=150, editable=False)
+    user_name = models.CharField(max_length=150, editable=False, db_index=True)
     request_id = models.UUIDField(editable=False, db_index=True)
     action = models.CharField(max_length=50, choices=ObjectChangeActionChoices)
-    changed_object_type = models.ForeignKey(to=ContentType, on_delete=models.PROTECT, related_name="+")
+    changed_object_type = models.ForeignKey(to=ContentType, on_delete=models.SET_NULL, null=True, related_name="+")
     changed_object_id = models.UUIDField(db_index=True)
     changed_object = GenericForeignKey(ct_field="changed_object_type", fk_field="changed_object_id")
     change_context = models.CharField(
@@ -96,7 +95,7 @@ class ObjectChange(BaseModel):
     change_context_detail = models.CharField(max_length=CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, blank=True, editable=False)
     related_object_type = models.ForeignKey(
         to=ContentType,
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name="+",
         blank=True,
         null=True,
@@ -108,25 +107,18 @@ class ObjectChange(BaseModel):
     object_data = models.JSONField(encoder=DjangoJSONEncoder, editable=False)
     object_data_v2 = models.JSONField(encoder=NautobotKombuJSONEncoder, editable=False, null=True, blank=True)
 
-    csv_headers = [
-        "time",
-        "user",
-        "user_name",
-        "request_id",
-        "action",
-        "changed_object_type",
-        "changed_object_id",
-        "related_object_type",
-        "related_object_id",
-        "object_repr",
-        "object_data",
-        "change_context",
-        "change_context_detail",
-    ]
+    documentation_static_path = "docs/user-guide/platform-functionality/change-logging.html"
+    natural_key_field_names = ["pk"]
 
     class Meta:
         ordering = ["-time"]
         get_latest_by = "time"
+        # [request_id, changed_object_type, changed_object_id] is not sufficient to uniquely identify an ObjectChange,
+        # as a single bulk-create or bulk-edit REST API request may modify the same object multiple times, such as in
+        # the case of creating CircuitTerminations for both ends of a single Circuit in a single request.
+        unique_together = [
+            ["time", "request_id", "changed_object_type", "changed_object_id"],
+        ]
         indexes = [
             models.Index(
                 name="extras_objectchange_triple_idx",
@@ -136,13 +128,32 @@ class ObjectChange(BaseModel):
                 name="extras_objectchange_double_idx",
                 fields=["request_id", "changed_object_type_id"],
             ),
+            models.Index(
+                name="extras_objectchange_rtime_idx",
+                fields=["-time"],
+            ),
+            models.Index(
+                name="changed_object_idx",
+                fields=["changed_object_type", "changed_object_id"],
+            ),
+            models.Index(
+                name="related_object_idx",
+                fields=["related_object_type", "related_object_id"],
+            ),
+            models.Index(
+                name="user_changed_object_idx",
+                fields=["user", "changed_object_type", "changed_object_id"],
+            ),
+            models.Index(
+                name="user_name_changed_object_idx",
+                fields=["user_name", "changed_object_type", "changed_object_id"],
+            ),
         ]
 
     def __str__(self):
         return f"{self.changed_object_type} {self.object_repr} {self.get_action_display().lower()} by {self.user_name}"
 
     def save(self, *args, **kwargs):
-
         # Record the user's name and the object's representation as static strings
         if not self.user_name:
             if self.user:
@@ -154,26 +165,6 @@ class ObjectChange(BaseModel):
             self.object_repr = str(self.changed_object)[:CHANGELOG_MAX_OBJECT_REPR]
 
         return super().save(*args, **kwargs)
-
-    def get_absolute_url(self):
-        return reverse("extras:objectchange", args=[self.pk])
-
-    def to_csv(self):
-        return (
-            self.time,
-            self.user,
-            self.user_name,
-            self.request_id,
-            self.get_action_display(),
-            self.changed_object_type,
-            self.changed_object_id,
-            self.related_object_type,
-            self.related_object_id,
-            self.object_repr,
-            self.object_data,
-            self.change_context,
-            self.change_context_detail,
-        )
 
     def get_action_class(self):
         return ObjectChangeActionChoices.CSS_CLASSES.get(self.action)

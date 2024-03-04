@@ -1,16 +1,18 @@
 import json
+import re
 
-from django.contrib.contenttypes.models import ContentType
 from django.core import exceptions
-from django.core.validators import RegexValidator, MaxLengthValidator, MinValueValidator
+from django.core.validators import MaxLengthValidator, MinValueValidator, RegexValidator
 from django.db import models
 from django.utils.functional import cached_property
 from django.utils.text import slugify
 from django_extensions.db.fields import AutoSlugField as _AutoSlugField
 from netaddr import AddrFormatError, EUI, mac_unix_expanded
+from taggit.managers import TaggableManager
 
 from nautobot.core.forms import fields, widgets
 from nautobot.core.models import ordering
+from nautobot.core.models.managers import TagsManager
 
 
 class mac_unix_expanded_uppercase(mac_unix_expanded):
@@ -63,7 +65,19 @@ def slugify_dots_to_dashes(content):
 
 
 def slugify_dashes_to_underscores(content):
-    """Custom slugify_function - use underscores instead of dashes; resulting slug can be used as a variable name."""
+    """
+    Custom slugify_function - use underscores instead of dashes; resulting slug can be used as a variable name,
+    as well as a graphql safe string.
+    Note: If content starts with a non graphql-safe character, e.g. a digit
+    This method will prepend an "a" to content to make it graphql-safe
+    e.g:
+        123 main st -> a123_main_st
+    """
+    graphql_safe_pattern = re.compile("[_A-Za-z]")
+    # If the first letter of the slug is not GraphQL safe.
+    # We append "a" to it.
+    if graphql_safe_pattern.fullmatch(content[0]) is None:
+        content = "a" + content
     return slugify(content).replace("-", "_")
 
 
@@ -134,27 +148,57 @@ class AutoSlugField(_AutoSlugField):
             return ""
 
 
-class ForeignKeyLimitedByContentTypes(models.ForeignKey):
+class ForeignKeyWithAutoRelatedName(models.ForeignKey):
+    """
+    Extend base ForeignKey functionality to create a smarter default `related_name`.
+
+    For example, "ip_addresses" instead of "ipaddress_set", "ipaddresss", or "ipam_ipaddress_related".
+
+    Primarily useful for cases of abstract base classes that define ForeignKeys, such as
+    `nautobot.dcim.models.device_components.ComponentModel`.
+    """
+
+    def __init__(self, *args, related_name=None, **kwargs):
+        super().__init__(*args, related_name=related_name, **kwargs)
+        self._autogenerate_related_name = related_name is None
+
+    def contribute_to_class(self, cls, *args, **kwargs):
+        super().contribute_to_class(cls, *args, **kwargs)
+
+        if self._autogenerate_related_name and not cls._meta.abstract and hasattr(cls._meta, "verbose_name_plural"):
+            # "IP addresses" -> "ip_addresses"
+            related_name = "_".join(re.findall(r"\w+", str(cls._meta.verbose_name_plural))).lower()
+            self.remote_field.related_name = related_name
+
+
+class ForeignKeyLimitedByContentTypes(ForeignKeyWithAutoRelatedName):
     """
     An abstract model field that automatically restricts ForeignKey options based on content_types.
 
     For instance, if the model "Role" contains two records: role_1 and role_2, role_1's content_types
-    are set to "dcim.site" and "dcim.device" while the role_2's content_types are set to
-    "circuit.circuit" and "dcim.site."
+    are set to "dcim.location" and "dcim.device" while the role_2's content_types are set to
+    "circuit.circuit" and "dcim.location."
 
     Then, for the field `role` on the Device model, role_1 is the only Role that is available,
-    while role_1 & role_2 are both available for the Site model.
+    while role_1 & role_2 are both available for the Location model.
 
     The limit_choices_to for the field are automatically derived from:
         - the content-type to which the field is attached (e.g. `dcim.device`)
     """
 
-    def __init__(self, **kwargs):
-        kwargs.setdefault("null", True)
-        super().__init__(**kwargs)
-
     def get_limit_choices_to(self):
-        return {"content_types": ContentType.objects.get_for_model(self.model)}
+        """
+        Limit this field to only objects which are assigned to this model's content-type.
+
+        Note that this is implemented via specifying `content_types__app_label=` and `content_types__model=`
+        rather than via the more obvious `content_types=ContentType.objects.get_for_model(self.model)`
+        because the latter approach would involve a database query, and in some cases
+        (most notably FilterSet definition) this function is called **before** database migrations can be run.
+        """
+        return {
+            "content_types__app_label": self.model._meta.app_label,
+            "content_types__model": self.model._meta.model_name,
+        }
 
     def formfield(self, **kwargs):
         """Return a prepped formfield for use in model forms."""
@@ -288,7 +332,7 @@ class JSONArrayField(models.JSONField):
                 # Assume we're deserializing
                 vals = json.loads(value)
                 value = [self.base_field.to_python(val) for val in vals]
-            except json.JSONDecodeError as e:
+            except (TypeError, json.JSONDecodeError) as e:
                 raise exceptions.ValidationError(e)
         return value
 
@@ -337,6 +381,7 @@ class JSONArrayField(models.JSONField):
         )
 
 
+# TODO: we probably need to do the same for PositiveIntegerField as well...
 class PositiveSmallIntegerField(models.PositiveSmallIntegerField):
     """Extend models.PositiveSmallIntegerField to provide basic validators.
 
@@ -353,4 +398,22 @@ class PositiveSmallIntegerField(models.PositiveSmallIntegerField):
         return validators_
 
 
-# TODO: we probably need to do the same for PositiveIntegerField as well...
+class TagsField(TaggableManager):
+    """Override FormField method on taggit.managers.TaggableManager to match the Nautobot UI."""
+
+    def __init__(self, *args, **kwargs):
+        from nautobot.extras.models.tags import TaggedItem
+
+        kwargs.setdefault("through", TaggedItem)
+        kwargs.setdefault("manager", TagsManager)
+        kwargs.setdefault("ordering", ["name"])
+        super().__init__(*args, **kwargs)
+
+    def formfield(self, form_class=fields.DynamicModelMultipleChoiceField, **kwargs):
+        from nautobot.extras.models.tags import Tag
+
+        queryset = Tag.objects.get_for_model(self.model)
+        kwargs.setdefault("queryset", queryset)
+        kwargs.setdefault("required", False)
+        kwargs.setdefault("query_params", {"content_types": self.model._meta.label_lower})
+        return super().formfield(form_class=form_class, **kwargs)

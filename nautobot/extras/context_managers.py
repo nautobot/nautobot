@@ -1,12 +1,14 @@
-import uuid
 from contextlib import contextmanager
+import uuid
 
 from django.contrib.auth import get_user_model
-from django.db.models.signals import m2m_changed, pre_delete, post_save
+from django.contrib.auth.models import AnonymousUser
 from django.test.client import RequestFactory
 
 from nautobot.extras.choices import ObjectChangeEventContextChoices
-from nautobot.extras.signals import _handle_changed_object, _handle_deleted_object
+from nautobot.extras.models import ObjectChange
+from nautobot.extras.signals import change_context_state
+from nautobot.extras.webhooks import enqueue_webhooks
 
 
 class ChangeContext:
@@ -75,14 +77,6 @@ class WebChangeContext(ChangeContext):
     context = ObjectChangeEventContextChoices.CONTEXT_WEB
 
 
-# Taken from django.utils.functional (<3.0)
-def curry(_curried_func, *args, **kwargs):
-    def _curried(*moreargs, **morekwargs):
-        return _curried_func(*args, *moreargs, **{**kwargs, **morekwargs})
-
-    return _curried
-
-
 @contextmanager
 def change_logging(change_context):
     """
@@ -91,26 +85,22 @@ def change_logging(change_context):
 
     :param change_context: ChangeContext instance
     """
-    # Curry signals receivers to pass the current request
-    handle_changed_object = curry(_handle_changed_object, change_context)
-    handle_deleted_object = curry(_handle_deleted_object, change_context)
 
-    # Connect our receivers to the post_save and post_delete signals.
-    post_save.connect(handle_changed_object, dispatch_uid="handle_changed_object")
-    m2m_changed.connect(handle_changed_object, dispatch_uid="handle_changed_object")
-    pre_delete.connect(handle_deleted_object, dispatch_uid="handle_deleted_object")
+    # Set change logging state
+    prev_state = change_context_state.set(change_context)
 
-    yield
-
-    # Disconnect change logging signals. This is necessary to avoid recording any errant
-    # changes during test cleanup.
-    post_save.disconnect(handle_changed_object, dispatch_uid="handle_changed_object")
-    m2m_changed.disconnect(handle_changed_object, dispatch_uid="handle_changed_object")
-    pre_delete.disconnect(handle_deleted_object, dispatch_uid="handle_deleted_object")
+    try:
+        yield
+    finally:
+        # Reset change logging state. This is necessary to avoid recording any errant
+        # changes during test cleanup.
+        change_context_state.reset(prev_state)
 
 
 @contextmanager
-def web_request_context(user, context_detail="", change_id=None):
+def web_request_context(
+    user, context_detail="", change_id=None, context=ObjectChangeEventContextChoices.CONTEXT_ORM, request=None
+):
     """
     Emulate the context of an HTTP request, which provides functions like change logging and webhook processing
     in response to data changes. This context manager is for use with low level utility tooling, such as the
@@ -124,19 +114,41 @@ def web_request_context(user, context_detail="", change_id=None):
     >>> from nautobot.extras.context_managers import web_request_context
     >>> user = User.objects.get(username="admin")
     >>> with web_request_context(user, context_detail="manual-fix"):
-    ...     lax = Site(name="LAX")
+    ...     lt = Location.objects.get(name="Root")
+    ...     lax = Location(name="LAX", location_type=lt)
     ...     lax.validated_save()
 
     :param user: User object
     :param context_detail: Optional extra details about the transaction (ex: the plugin name that initiated the change)
     :param change_id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
+    :param context: Optional string value of the generated change log entries' "change_context" field, defaults to ObjectChangeEventContextChoices.CONTEXT_ORM.
+        Valid choices are in nautobot.extras.choices.ObjectChangeEventContextChoices
+    :param request: Optional web request instance, one will be generated if not supplied
     """
+    from nautobot.extras.jobs import enqueue_job_hooks  # prevent circular import
 
-    if not isinstance(user, get_user_model()):
-        raise TypeError("The user object must be an instance of nautobot.users.models.User")
+    valid_contexts = {
+        ObjectChangeEventContextChoices.CONTEXT_JOB: JobChangeContext,
+        ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK: JobHookChangeContext,
+        ObjectChangeEventContextChoices.CONTEXT_ORM: ORMChangeContext,
+        ObjectChangeEventContextChoices.CONTEXT_WEB: WebChangeContext,
+    }
 
-    request = RequestFactory().request(SERVER_NAME="web_request_context")
-    request.user = user
-    change_context = ORMChangeContext(request=request, context_detail=context_detail, change_id=change_id)
-    with change_logging(change_context):
-        yield request
+    if context not in valid_contexts:
+        raise TypeError(f"{context} is not a valid context")
+
+    if not isinstance(user, (get_user_model(), AnonymousUser)):
+        raise TypeError(f"{user} is not a valid user object")
+
+    if request is None:
+        request = RequestFactory().request(SERVER_NAME="web_request_context")
+        request.user = user
+    change_context = valid_contexts[context](request=request, context_detail=context_detail, change_id=change_id)
+    try:
+        with change_logging(change_context):
+            yield request
+    finally:
+        # enqueue jobhooks and webhooks, use change_context.change_id in case change_id was not supplied
+        for object_change in ObjectChange.objects.filter(request_id=change_context.change_id).iterator():
+            enqueue_job_hooks(object_change)
+            enqueue_webhooks(object_change)

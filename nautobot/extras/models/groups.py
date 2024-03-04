@@ -1,51 +1,50 @@
 """Dynamic Groups Models."""
 
 import logging
+import pickle
 
-import django_filters
 from django import forms
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
-from django.urls import reverse
 from django.utils.functional import cached_property
+import django_filters
 
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import DynamicModelChoiceField
 from nautobot.core.forms.widgets import StaticSelect2
-from nautobot.core.models import BaseModel
-from nautobot.core.models.fields import AutoSlugField, PositiveSmallIntegerField
+from nautobot.core.models import BaseManager, BaseModel
+from nautobot.core.models.fields import PositiveSmallIntegerField
 from nautobot.core.models.generics import OrganizationalModel
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices
-from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
+from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGroupQuerySet
 from nautobot.extras.utils import extras_features
-
 
 logger = logging.getLogger(__name__)
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class DynamicGroup(OrganizationalModel):
     """Dynamic Group Model."""
 
     name = models.CharField(max_length=100, unique=True, help_text="Dynamic Group name")
-    slug = AutoSlugField(max_length=100, unique=True, help_text="Unique slug", populate_from="name")
     description = models.CharField(max_length=200, blank=True)
     content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
         verbose_name="Object Type",
         help_text="The type of object for this Dynamic Group.",
+        related_name="dynamic_groups",
     )
     filter = models.JSONField(
         encoder=DjangoJSONEncoder,
@@ -61,21 +60,22 @@ class DynamicGroup(OrganizationalModel):
         related_name="parents",
     )
 
-    objects = DynamicGroupQuerySet.as_manager()
+    objects = BaseManager.from_queryset(DynamicGroupQuerySet)()
 
     clone_fields = ["content_type", "filter"]
 
-    # This is used as a `startswith` check on field names, so these can be
-    # explicit fields or just substrings.
+    # This is used as a `startswith` check on field names, so these can be explicit fields or just
+    # substrings.
     #
-    # Currently this means skipping "search", custom fields, and custom relationships.
+    # Currently this means skipping "computed fields" and "comments".
     #
-    # FIXME(jathan): As one example, `DeviceFilterSet.q` filter searches in `comments`. The issue
-    # really being that this field renders as a textarea and it's not cute in the UI. Might be able
-    # to dynamically change the widget if we decide we do want to support this field.
+    # - Computed fields are skipped because they are generated at call time and
+    #   therefore cannot be queried
+    # - Comments are skipped because they are TextFields that require an exact
+    #   match and are better covered by the search (`q`) field.
     #
     # Type: tuple
-    exclude_filter_fields = ("q", "cf_", "cr_", "cpf_", "comments")  # Must be a tuple
+    exclude_filter_fields = ("cpf_", "comments")  # Must be a tuple
 
     class Meta:
         ordering = ["content_type", "name"]
@@ -88,9 +88,6 @@ class DynamicGroup(OrganizationalModel):
 
     def __str__(self):
         return self.name
-
-    def natural_key(self):
-        return (self.slug,)
 
     @property
     def model(self):
@@ -251,7 +248,6 @@ class DynamicGroup(OrganizationalModel):
 
         # Filter out unwanted fields from the filterform
         for filterset_field_name, filterset_field in filterset_fields.items():
-
             # Skip filter fields that have methods defined. They are not reversible.
             if skip_method_filters and filterset_field.method is not None:
                 # Don't skip method fields that also have a "generate_query_" method
@@ -306,6 +302,10 @@ class DynamicGroup(OrganizationalModel):
             raise RuntimeError(f"Could not determine queryset for model '{model}'")
 
         filterset = self.filterset_class(self.filter, model.objects.all())
+        if not filterset.is_valid():
+            logger.warning('Filter for DynamicGroup "%s" is not valid', self)
+            return model.objects.none()
+
         qs = filterset.qs
 
         # Make sure that this instance can't be a member of its own group.
@@ -316,7 +316,7 @@ class DynamicGroup(OrganizationalModel):
 
     @property
     def members(self):
-        """Return the member objects for this group."""
+        """Return the member objects for this group, never cached."""
         # If there are child groups, return the generated group queryset, otherwise use this group's
         # `filter` directly.
         if self.children.exists():
@@ -324,12 +324,74 @@ class DynamicGroup(OrganizationalModel):
         return self.get_queryset()
 
     @property
+    def members_cache_key(self):
+        """Return the cache key for this group's members."""
+        return f"{self.__class__.__name__}.{self.id}.members_cached"
+
+    @property
+    def members_cached(self):
+        """Return the member objects for this group, cached if available."""
+
+        unpickled_query = None
+        try:
+            cached_query = cache.get(self.members_cache_key)
+            if cached_query is not None:
+                unpickled_query = pickle.loads(cached_query)  # noqa: S301  # suspicious-pickle-usage -- we know, but we control what's in the DB
+        except pickle.UnpicklingError:
+            logger.warning("Failed to unpickle cached members for %s", self)
+        finally:
+            if unpickled_query is None:
+                unpickled_query = self.members.all()
+                cached_query = pickle.dumps(unpickled_query)  # Explicitly pickle the query to evaluate it.
+                cache.set(
+                    self.members_cache_key, cached_query, get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT")
+                )
+
+        return unpickled_query
+
+    def update_cached_members(self):
+        """
+        Update the cached members of the groups. Also returns the updated cached members.
+        """
+
+        cache.delete(self.members_cache_key)
+
+        return self.members_cached
+
+    def has_member(self, obj, use_cache=False):
+        """
+        Return True if the given object is a member of this group.
+
+        Does check if object's content type matches this group's content type.
+
+        Args:
+            obj (django.db.models.Model): The object to check for membership.
+            use_cache (bool, optional): Whether to use the cache and run the query directly. Defaults to False.
+
+        Returns:
+            bool: True if the object is a member of this group, otherwise False.
+        """
+
+        # Object's class may have content type cached, so check that first.
+        try:
+            if use_cache and type(obj)._content_type.id != self.content_type_id:
+                return False
+        except AttributeError:
+            # Object did not have `_content_type` even though we wanted to use it.
+            pass
+
+        if not use_cache and ContentType.objects.get_for_model(obj).id != self.content_type_id:
+            return False
+
+        if not use_cache:
+            return self.members.filter(pk=obj.pk).exists()
+        else:
+            return obj in list(self.members_cached)
+
+    @property
     def count(self):
         """Return the number of member objects in this group."""
         return self.members.count()
-
-    def get_absolute_url(self):
-        return reverse("extras:dynamicgroup", kwargs={"slug": self.slug})
 
     def get_group_members_url(self):
         """Get URL to group members."""
@@ -348,6 +410,17 @@ class DynamicGroup(OrganizationalModel):
         # Get the authoritative source of filter fields we want to keep.
         filter_fields = self.get_filter_fields()
 
+        # Check for potential legacy filters from v1.x that is no longer valid in v2.x.
+        # Raise the validation error in DynamicGroup form handling.
+        error_message = ""
+        invalid_filter_exist = False
+        for key, value in self.filter.items():
+            if key not in filter_fields:
+                invalid_filter_exist = True
+                error_message += f"Invalid filter '{key}' detected with value {value}\n"
+        if invalid_filter_exist:
+            raise ValidationError(error_message)
+
         # Populate the filterset from the incoming `form_data`. The filterset's internal form is
         # used for validation, will be used by us to extract cleaned data for final processing.
         filterset_class = self.filterset_class
@@ -356,6 +429,9 @@ class DynamicGroup(OrganizationalModel):
 
         # Use the auto-generated filterset form perform creation of the filter dictionary.
         filterset_form = filterset.form
+
+        # Get the declared form for any overloaded form field definitions.
+        declared_form = get_form_for_model(filterset._meta.model, form_prefix="Filter")
 
         # It's expected that the incoming data has already been cleaned by a form. This `is_valid()`
         # call is primarily to reduce the fields down to be able to work with the `cleaned_data` from the
@@ -367,9 +443,11 @@ class DynamicGroup(OrganizationalModel):
         # empty/null value fields.
         new_filter = {}
         for field_name in filter_fields:
-            field = filterset_form.fields[field_name]
+            field = declared_form.declared_fields.get(field_name, filterset_form.fields[field_name])
             field_value = filterset_form.cleaned_data[field_name]
 
+            # TODO: This could/should check for both "convenience" FilterForm fields (ex: DynamicModelMultipleChoiceField)
+            # and literal FilterSet fields (ex: MultiValueCharFilter).
             if isinstance(field, forms.ModelMultipleChoiceField):
                 field_to_query = field.to_field_name or "pk"
                 new_value = [getattr(item, field_to_query) for item in field_value]
@@ -451,6 +529,15 @@ class DynamicGroup(OrganizationalModel):
             )
         return super().delete(*args, **kwargs)
 
+    def clean_fields(self, exclude=None):
+        if exclude is None:
+            exclude = []
+
+        if "filter" not in exclude:
+            self.clean_filter()
+
+        super().clean_fields(exclude=exclude)
+
     def clean(self):
         super().clean()
 
@@ -460,9 +547,6 @@ class DynamicGroup(OrganizationalModel):
 
             if self.content_type != database_object.content_type:
                 raise ValidationError({"content_type": "ContentType cannot be changed once created"})
-
-        # Validate `filter` dict
-        self.clean_filter()
 
     def generate_query_for_filter(self, filter_field, value):
         """
@@ -474,6 +558,10 @@ class DynamicGroup(OrganizationalModel):
             Value passed to the filter
         """
         query = models.Q()
+        if filter_field is None:
+            logger.warning(f"Filter data is not valid for DynamicGroup {self}")
+            return query
+
         field_name = filter_field.field_name
 
         # Attempt to account for `ModelChoiceFilter` where `to_field_name` MAY be set.
@@ -497,8 +585,8 @@ class DynamicGroup(OrganizationalModel):
         elif hasattr(filter_field, "generate_query"):
             # Is this a list of strings? Well let's resolve it to related model objects so we can
             # pass it to `generate_query` to get a correct Q object back out. When values are being
-            # reconstructed from saved filters, lists of slugs are common e.g. (`{"site": ["ams01",
-            # "ams02"]}`, the value being a list of site slugs (`["ams01", "ams02"]`).
+            # reconstructed from saved filters, lists of names are common e.g. (`{"location": ["ams01",
+            # "ams02"]}`, the value being a list of location names (`["ams01", "ams02"]`).
             if value and isinstance(value, list) and isinstance(value[0], str):
                 model_field = django_filters.utils.get_model_field(self._model, filter_field.field_name)
                 related_model = model_field.related_model
@@ -536,7 +624,7 @@ class DynamicGroup(OrganizationalModel):
         # In this case we want all filters for a group's filter dict in a set intersection (boolean
         # AND) because ALL filter conditions must match for the filter parameters to be valid.
         for field_name, value in fs.data.items():
-            filter_field = fs.filters[field_name]
+            filter_field = fs.filters.get(field_name)
             query &= self.generate_query_for_filter(filter_field, value)
 
         return query
@@ -868,7 +956,9 @@ class DynamicGroupMembership(BaseModel):
     operator = models.CharField(choices=DynamicGroupOperatorChoices.CHOICES, max_length=12)
     weight = PositiveSmallIntegerField()
 
-    objects = DynamicGroupMembershipQuerySet.as_manager()
+    objects = BaseManager.from_queryset(DynamicGroupMembershipQuerySet)()
+
+    documentation_static_path = "docs/user-guide/platform-functionality/dynamicgroup.html"
 
     class Meta:
         unique_together = ["group", "parent_group", "operator", "weight"]
@@ -877,20 +967,10 @@ class DynamicGroupMembership(BaseModel):
     def __str__(self):
         return f"{self.parent_group} > {self.operator} ({self.weight}) > {self.group}"
 
-    def natural_key(self):
-        return self.group.natural_key() + self.parent_group.natural_key() + (self.operator, self.weight)
-
-    natural_key.dependencies = ["extras.dynamicgroup"]
-
     @property
     def name(self):
         """Return the group name."""
         return self.group.name
-
-    @property
-    def slug(self):
-        """Return the group slug."""
-        return self.group.slug
 
     @property
     def filter(self):
@@ -907,9 +987,12 @@ class DynamicGroupMembership(BaseModel):
         """Return the group count."""
         return self.group.count
 
-    def get_absolute_url(self):
+    def get_absolute_url(self, api=False):
         """Return the group's absolute URL."""
-        return self.group.get_absolute_url()
+        # TODO: we should be able to have an absolute UI URL for this model in the new UI
+        if not api:
+            return self.group.get_absolute_url(api=api)
+        return super().get_absolute_url(api=api)
 
     def get_group_members_url(self):
         """Return the group members URL."""

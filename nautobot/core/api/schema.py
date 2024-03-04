@@ -4,7 +4,8 @@ import re
 from drf_spectacular.contrib.django_filters import DjangoFilterExtension
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
-from drf_spectacular.plumbing import build_array_type, build_media_type_object, is_serializer
+from drf_spectacular.plumbing import build_array_type, build_media_type_object, get_doc, is_serializer
+from drf_spectacular.serializers import PolymorphicProxySerializerExtension
 from rest_framework import serializers
 from rest_framework.relations import ManyRelatedField
 
@@ -13,7 +14,6 @@ from nautobot.core.api import (
     SerializedPKRelatedField,
     WritableNestedSerializer,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +53,40 @@ class NautobotAutoSchema(AutoSchema):
             return None
         return super()._get_paginator()
 
+    def get_description(self):
+        """
+        Get the appropriate description for a given API endpoint.
+
+        By default, if a specific action doesn't have its own docstring, and neither does the view class,
+        drf-spectacular will walk up the MRO of the view class until it finds a docstring, and use that.
+        Most of our viewsets (for better or for worse) do not have docstrings, and so it'll find and use the generic
+        docstring of the `NautobotModelViewSet` class, which isn't very useful to the end user. Instead of doing that,
+        we only use the docstring of the view itself (ignoring its parent class docstrings), or if none exists, we
+        make an attempt at rendering a basically accurate default description.
+        """
+        action_or_method = getattr(self.view, getattr(self.view, "action", self.method.lower()), None)
+        action_doc = get_doc(action_or_method)
+        if action_doc:
+            return action_doc
+
+        if self.view.__doc__:
+            view_doc = get_doc(self.view.__class__)
+            if view_doc:
+                return view_doc
+
+        # Fall back to a generic default description
+        if hasattr(self.view, "queryset") and self.method.lower() in self.method_mapping:
+            action = self.method_mapping[self.method.lower()].replace("_", " ").capitalize()
+            model_name = self.view.queryset.model._meta.verbose_name
+            if action == "Create":
+                return f"{action} one or more {model_name} objects."
+            if "{id}" in self.path:
+                return f"{action} a {model_name} object."
+            return f"{action} a list of {model_name} objects."
+
+        # Give up
+        return super().get_description()
+
     def get_filter_backends(self):
         """Nautobot's custom bulk operations, even though they return a list of records, are NOT filterable."""
         if self.is_bulk_action:
@@ -62,7 +96,7 @@ class NautobotAutoSchema(AutoSchema):
     def get_operation(self, *args, **kwargs):
         operation = super().get_operation(*args, **kwargs)
         # drf-spectacular never generates a requestBody for DELETE operations, but our bulk-delete operations need one
-        if "requestBody" not in operation and self.is_bulk_action and self.method == "DELETE":
+        if operation is not None and "requestBody" not in operation and self.is_bulk_action and self.method == "DELETE":
             # based on drf-spectacular's `_get_request_body()`, `_get_request_for_media_type()`,
             # `_unwrap_list_serializer()`, and `_get_request_for_media_type()` methods
             request_serializer = self.get_request_serializer()
@@ -78,6 +112,22 @@ class NautobotAutoSchema(AutoSchema):
                 "required": True,
             }
 
+        # Inject a custom description for the "id" parameter since ours has custom lookup behavior.
+        if operation is not None and "parameters" in operation:
+            for param in operation["parameters"]:
+                if param["name"] == "id" and "description" not in param:
+                    param["description"] = "Unique object identifier, either a UUID primary key or a composite key."
+            if self.method == "GET":
+                if "depth" not in operation["parameters"]:
+                    operation["parameters"].append(
+                        {
+                            "in": "query",
+                            "name": "depth",
+                            "required": False,
+                            "description": "Serializer Depth",
+                            "schema": {"type": "integer", "minimum": 0, "maximum": 10, "default": 1},
+                        }
+                    )
         return operation
 
     def get_operation_id(self):
@@ -102,7 +152,7 @@ class NautobotAutoSchema(AutoSchema):
             if re.search(r"<drf_format_suffix\w*:\w+>", self.path_regex):
                 tokenized_path.append("formatted")
 
-            return "_".join(tokenized_path + [action])
+            return "_".join([*tokenized_path, action])
 
         # For all other view actions, operation-id is the same as in the base class
         return super().get_operation_id()
@@ -263,6 +313,14 @@ class NautobotFilterExtension(DjangoFilterExtension):
     target_class = "nautobot.core.api.filter_backends.NautobotFilterBackend"
 
 
+class NautobotPolymorphicProxySerializerExtension(PolymorphicProxySerializerExtension):
+    """
+    Extend the PolymorphicProxySerializerExtension to cover Nautobot's PolymorphicProxySerializer class.
+    """
+
+    target_class = "nautobot.core.api.serializers.PolymorphicProxySerializer"
+
+
 class ChoiceFieldFix(OpenApiSerializerFieldExtension):
     """
     Schema field fix for ChoiceField fields.
@@ -289,7 +347,7 @@ class ChoiceFieldFix(OpenApiSerializerFieldExtension):
         choices = self.target._choices
 
         value_type = "string"
-        # IPAddressFamilyChoices and RackWidthChoices are int values, not strings
+        # IPAddressVersionChoices and RackWidthChoices are int values, not strings
         if all(isinstance(x, int) for x in [c for c in list(choices.keys()) if c is not None]):
             value_type = "integer"
         # I don't think we have any of these left in the code base at present,

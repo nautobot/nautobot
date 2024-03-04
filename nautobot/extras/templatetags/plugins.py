@@ -10,7 +10,7 @@ from nautobot.extras.registry import registry
 register = template_.Library()
 
 
-logger = logging.getLogger("nautobot.plugins")
+logger = logging.getLogger(__name__)
 
 
 def _get_registered_content(obj, method, template_context, return_html=True):
@@ -31,7 +31,6 @@ def _get_registered_content(obj, method, template_context, return_html=True):
     objects = []
     html = ""
     for template_extension in template_extensions:
-
         # If the class has not overridden the specified method, we can skip it (because we know it
         # will raise NotImplementedError).
         if getattr(template_extension, method) == getattr(TemplateExtension, method):
@@ -53,7 +52,7 @@ def _get_registered_content(obj, method, template_context, return_html=True):
     if not return_html:
         return objects
 
-    return mark_safe(html)
+    return mark_safe(html)  # noqa: S308  # suspicious-mark-safe-usage -- we have to trust plugins to provide safe HTML
 
 
 @register.simple_tag(takes_context=True)

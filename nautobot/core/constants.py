@@ -1,3 +1,7 @@
+from copy import deepcopy
+
+import nh3
+
 SEARCH_MAX_RESULTS = 15
 
 #
@@ -6,45 +10,96 @@ SEARCH_MAX_RESULTS = 15
 
 SEARCH_MAX_RESULTS = 15
 
-FILTER_CHAR_BASED_LOOKUP_MAP = dict(
-    n="exact",
-    ic="icontains",
-    nic="icontains",
-    iew="iendswith",
-    niew="iendswith",
-    isw="istartswith",
-    nisw="istartswith",
-    ie="iexact",
-    nie="iexact",
-    re="regex",
-    nre="regex",
-    ire="iregex",
-    nire="iregex",
-)
+FILTER_CHAR_BASED_LOOKUP_MAP = {
+    "n": "exact",
+    "ic": "icontains",
+    "nic": "icontains",
+    "iew": "iendswith",
+    "niew": "iendswith",
+    "isw": "istartswith",
+    "nisw": "istartswith",
+    "ie": "iexact",
+    "nie": "iexact",
+    "re": "regex",
+    "nre": "regex",
+    "ire": "iregex",
+    "nire": "iregex",
+}
 
-FILTER_NUMERIC_BASED_LOOKUP_MAP = dict(n="exact", lte="lte", lt="lt", gte="gte", gt="gt")
+FILTER_NUMERIC_BASED_LOOKUP_MAP = {
+    "n": "exact",
+    "lte": "lte",
+    "lt": "lt",
+    "gte": "gte",
+    "gt": "gt",
+}
 
-FILTER_NEGATION_LOOKUP_MAP = dict(n="exact")
+FILTER_NEGATION_LOOKUP_MAP = {"n": "exact"}
+
+#
+# User input sanitization
+#
+
+# Subset of the HTML tags allowed by default by ammonia:
+# https://github.com/rust-ammonia/ammonia/blob/master/src/lib.rs
+HTML_ALLOWED_TAGS = nh3.ALLOWED_TAGS - {
+    # no image maps at present
+    "area",
+    "map",
+    # no document-level markup at present
+    "article",
+    "aside",
+    "footer",
+    "header",
+    "nav",
+    # miscellaneous out-of-scope for now
+    "data",
+    "dfn",
+    "figcaption",
+    "figure",
+}
+
+# Variant of the HTML attributes allowed by default by ammonia:
+# https://github.com/rust-ammonia/ammonia/blob/master/src/lib.rs
+# at present we just copy nh3.ALLOWED_ATTRIBUTES but we can modify this later as desired and appropriate
+HTML_ALLOWED_ATTRIBUTES = deepcopy(nh3.ALLOWED_ATTRIBUTES)
 
 
 #
-# HTTP Request META safe copy
+# Reserved Names
 #
 
-HTTP_REQUEST_META_SAFE_COPY = [
-    "CONTENT_LENGTH",
-    "CONTENT_TYPE",
-    "HTTP_ACCEPT",
-    "HTTP_ACCEPT_ENCODING",
-    "HTTP_ACCEPT_LANGUAGE",
-    "HTTP_HOST",
-    "HTTP_REFERER",
-    "HTTP_USER_AGENT",
-    "QUERY_STRING",
-    "REMOTE_ADDR",
-    "REMOTE_HOST",
-    "REMOTE_USER",
-    "REQUEST_METHOD",
-    "SERVER_NAME",
-    "SERVER_PORT",
-]
+RESERVED_NAMES_FOR_OBJECT_DETAIL_VIEW_SCHEMA = ["Other Fields", "Object Details"]
+
+#
+# Factory defaults
+#
+
+NAUTOBOT_BOOL_ITERATOR_DEFAULT_LENGTH = 8
+NAUTOBOT_BOOL_ITERATOR_DEFAULT_PROBABILITY = 50
+
+
+#
+# CSV Import/Export
+#
+
+CSV_NULL_TYPE = "NULL"
+CSV_NO_OBJECT = "NoObject"
+# VarbinaryIPField Represents b'NoObject' as `::4e6f:4f62:6a65:6374`
+VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT = "::4e6f:4f62:6a65:6374"
+
+
+# For our purposes, COMPOSITE_KEY_SEPARATOR needs to be:
+# 1. Safe in a URL path component (so that we can do URLS like "/dcim/devices/<composite_key>/delete/")
+#    Per RFC3986 section 2.3 the general "unreserved" characters are ALPHA and DIGIT and the characters -._~
+#    Per RFC3986 section 3.3 path components also permit characters :@ and the "sub-delims" characters !$&'()*+,;=
+# 2. Not readily confused with characters commonly seen in un-escaped natural key component fields
+#    "." is already ruled out as an unreserved character but also would appear in IPv4 IPAddress and Prefix objects
+#    ":" similarly would appear in IPv6 IPAddress/Prefix objects
+#    "/" would appear in Prefix objects as well as various numbered device component names
+# 3. Safe in a URL query string component (so that we can do URLs like "/dcim/devices/?location=<composite_key>"
+#    This rules out "&" and "="
+COMPOSITE_KEY_SEPARATOR = ";"
+
+# For the natural slug separator, it's much simpler and we can just go with "_".
+NATURAL_SLUG_SEPARATOR = "_"

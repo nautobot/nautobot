@@ -3,19 +3,6 @@
 {% load helpers %}
 {% load plugins %}
 
-{% block buttons %}
-        {% plugin_buttons object %}
-        {% if perms.ipam.add_vlangroup %}
-            {% clone_button object %}
-        {% endif %}
-        {% if perms.ipam.change_vlangroup %}
-            {% edit_button object key="pk" %}
-        {% endif %}
-        {% if perms.ipam.delete_vlangroup %}
-            {% delete_button object key="pk" %}
-        {% endif %}
-{% endblock buttons %}
-
 {% block content_left_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
@@ -27,17 +14,13 @@
                     <td>{{ object.description|placeholder }}</td>
                 </tr>
                 <tr>
-                    <td>Site</td>
-                    <td>{{ object.site|hyperlinked_object }}</td>
-                </tr>
-                <tr>
                     <td>Location</td>
                     <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
                 </tr>
                 <tr>
                     <td>VLANs</td>
                     <td>
-                        <a href="{% url 'ipam:vlan_list' %}?group_id={{ object.pk }}">{{ vlans_count }}</a>
+                        <a href="{% url 'ipam:vlan_list' %}?vlan_group={{ object.pk }}">{{ vlans_count }}</a>
                     </td>
                 </tr>
             </table>

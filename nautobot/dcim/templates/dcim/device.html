@@ -18,15 +18,6 @@
                                 </div>
                                 <table class="table table-hover panel-body attr-table">
                                     <tr>
-                                        <td>Site</td>
-                                        <td>
-                                            {% if object.site.region %}
-                                                {{ object.site.region|hyperlinked_object }} /
-                                            {% endif %}
-                                            {{ object.site|hyperlinked_object }}
-                                        </td>
-                                    </tr>
-                                    <tr>
                                         <td>Location</td>
                                         <td>
                                             {% include 'dcim/inc/location_hierarchy.html' with location=object.location %}
@@ -35,8 +26,8 @@
                                     <tr>
                                         <td>Rack</td>
                                         <td>
-                                            {% if object.rack and object.rack_group %}
-                                                {{ object.rack.group|hyperlinked_object }} /
+                                            {% if object.rack and object.rack.rack_group %}
+                                                {{ object.rack.rack_group|hyperlinked_object }} /
                                             {% endif %}
                                             {{ object.rack|hyperlinked_object }}
                                         </td>
@@ -67,6 +58,11 @@
                                                 {{ object.tenant.tenant_group|hyperlinked_object }} /
                                             {% endif %}
                                             {{ object.tenant|hyperlinked_object }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Hardware Family</td>
+                                        <td>{{ object.device_type.hardware_family|hyperlinked_object }}</td>
                                         </td>
                                     </tr>
                                     <tr>
@@ -148,11 +144,16 @@
                                         <td>
                                             {% if object.primary_ip4 %}
                                                 <span class="hover_copy">
-                                                    {{ object.primary_ip4|hyperlinked_object|add_html_id:"ipv4" }}
+                                                    {{ object.primary_ip4|hyperlinked_object|add_html_id:"ipv4" }} ({{ object.primary_ip4.parent.namespace|hyperlinked_object }})
                                                     {% if object.primary_ip4.nat_inside %}
                                                         <span>(NAT for {{ object.primary_ip4.nat_inside.address.ip }})</span>
-                                                    {% elif object.primary_ip4.nat_outside %}
-                                                        <span>(NAT: {{ object.primary_ip4.nat_outside.address.ip }})</span>
+                                                    {% elif object.primary_ip4.nat_outside_list.exists %}
+                                                        <br /><span>NAT: </span>
+                                                        <ul>
+                                                            {% for nat in object.primary_ip4.nat_outside_list.all %}
+                                                                <li>{{ nat|hyperlinked_object }}</li>
+                                                            {% endfor %}
+                                                        </ul>
                                                     {% endif %}
                                                     <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv4">
                                                         <span class="mdi mdi-content-copy"></span>
@@ -161,7 +162,6 @@
                                             {% else %}
                                                 <span class="text-muted">&mdash;</span>
                                             {% endif %}
-                                            
                                         </td>
                                     </tr>
                                     <tr>
@@ -169,11 +169,16 @@
                                         <td>
                                             {% if object.primary_ip6 %}
                                                 <span class="hover_copy">
-                                                    {{ object.primary_ip6|hyperlinked_object|add_html_id:"ipv6" }}
+                                                    {{ object.primary_ip6|hyperlinked_object|add_html_id:"ipv6" }} ({{ object.primary_ip6.parent.namespace|hyperlinked_object }})
                                                     {% if object.primary_ip6.nat_inside %}
                                                         <span>(NAT for {{ object.primary_ip6.nat_inside.address.ip }})</span>
-                                                    {% elif object.primary_ip6.nat_outside %}
-                                                        <span>(NAT: {{ object.primary_ip6.nat_outside.address.ip }})</span>
+                                                    {% elif object.primary_ip6.nat_outside_list.exists %}
+                                                        <br /><span>NAT: </span>
+                                                        <ul>
+                                                            {% for nat in object.primary_ip6.nat_outside_list.all %}
+                                                                <li>{{ nat|hyperlinked_object }}</li>
+                                                            {% endfor %}
+                                                        </ul>
                                                     {% endif %}
                                                     <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#ipv6">
                                                         <span class="mdi mdi-content-copy"></span>
@@ -211,6 +216,7 @@
                                             </td>
                                         </tr>
                                     {% endif %}
+                                    {% include 'dcim/inc/detail_softwareversion_softwareimagefile_rows.html' %}
                                 </table>
                             </div>
                             {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields_advanced_ui=False %}
@@ -274,6 +280,7 @@
                                     </table>
                                 </div>
                             {% endif %}
+                            {% include 'panel_table.html' with table=vrf_table heading="Assigned VRFs" %}
                             <div class="panel panel-default">
                                 <div class="panel-heading">
                                     <strong>Services</strong>
@@ -339,5 +346,47 @@
         </div>
     </div>
   </div>
+{% if is_contact_associatable_model %}
+    <div id="contacts" role="tabpanel" class="tab-pane {% if request.GET.tab == 'contacts' %}active{% else %}fade{% endif %}">
+        <div class="row">
+            <div class="col-md-12">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <strong>Contact Associations</strong>
+                        </div>
+                        <div class="pull-right noprint">
+                            <!-- Insert table config button here -->
+                        </div>
+                        <div class="table-responsive">
+                            {% render_table associated_contacts_table 'inc/table.html' %}
+                        </div>
+                        <div class="panel-footer noprint">
+                            {% if perms.extras.change_contactassociation %}
+                                <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{request.path}}" class="btn btn-warning btn-xs">
+                                    <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
+                                </button>
+                            {% endif %}
+                            {% if perms.extras.delete_contactassociation %}
+                                <button type="submit" formaction="{% url 'extras:contactassociation_bulk_delete' %}?return_url={{request.path}}" class="btn btn-danger btn-xs">
+                                    <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
+                                </button>
+                            {% endif %}
+                            {% if perms.extras.add_contactassociation %}
+                                <div class="pull-right">
+                                    <a href="{% url 'extras:object_contact_team_assign' %}?return_url={{request.path}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" class="btn btn-primary btn-xs">
+                                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contact
+                                    </a>
+                                </div>
+                            {% endif %}
+                            <div class="clearfix"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
+{% endif %}
 {% endblock content %}

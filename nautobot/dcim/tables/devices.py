@@ -18,27 +18,35 @@ from nautobot.dcim.models import (
     DeviceRedundancyGroup,
     FrontPort,
     Interface,
+    InterfaceRedundancyGroup,
+    InterfaceRedundancyGroupAssociation,
     InventoryItem,
     Platform,
     PowerOutlet,
     PowerPort,
     RearPort,
+    SoftwareImageFile,
+    SoftwareVersion,
     VirtualChassis,
 )
 from nautobot.dcim.utils import cable_status_color_css
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
+
 from .template_code import (
     CABLETERMINATION,
     CONSOLEPORT_BUTTONS,
     CONSOLESERVERPORT_BUTTONS,
     DEVICE_LINK,
     DEVICEBAY_BUTTONS,
-    DEVICEBAY_STATUS,
     FRONTPORT_BUTTONS,
     INTERFACE_BUTTONS,
     INTERFACE_IPADDRESSES,
+    INTERFACE_REDUNDANCY_GROUP_INTERFACES,
+    INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES,
+    INTERFACE_REDUNDANCY_INTERFACE_PRIORITY,
     INTERFACE_TAGGED_VLANS,
+    LINKED_RECORD_COUNT,
     PATHENDPOINT,
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
@@ -63,11 +71,15 @@ __all__ = (
     "DeviceTable",
     "FrontPortTable",
     "InterfaceTable",
+    "InterfaceRedundancyGroupTable",
+    "InterfaceRedundancyGroupAssociationTable",
     "InventoryItemTable",
     "PlatformTable",
     "PowerOutletTable",
     "PowerPortTable",
     "RearPortTable",
+    "SoftwareImageFileTable",
+    "SoftwareVersionTable",
     "VirtualChassisTable",
 )
 
@@ -82,15 +94,15 @@ class PlatformTable(BaseTable):
     name = tables.LinkColumn()
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
-        url_params={"platform": "slug"},
+        url_params={"platform": "pk"},
         verbose_name="Devices",
     )
-    vm_count = LinkedCountColumn(
+    virtual_machine_count = LinkedCountColumn(
         viewname="virtualization:virtualmachine_list",
-        url_params={"platform": "slug"},
+        url_params={"platform": "pk"},
         verbose_name="VMs",
     )
-    actions = ButtonsColumn(Platform, pk_field="slug")
+    actions = ButtonsColumn(Platform)
 
     class Meta(BaseTable.Meta):
         model = Platform
@@ -99,10 +111,10 @@ class PlatformTable(BaseTable):
             "name",
             "manufacturer",
             "device_count",
-            "vm_count",
-            "slug",
+            "virtual_machine_count",
             "napalm_driver",
             "napalm_args",
+            "network_driver",
             "description",
             "actions",
         )
@@ -111,8 +123,9 @@ class PlatformTable(BaseTable):
             "name",
             "manufacturer",
             "device_count",
-            "vm_count",
+            "virtual_machine_count",
             "napalm_driver",
+            "network_driver",
             "description",
             "actions",
         )
@@ -127,7 +140,6 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK)
     tenant = TenantColumn()
-    site = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     device_type = tables.LinkColumn(
@@ -162,7 +174,6 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "platform",
             "serial",
             "asset_tag",
-            "site",
             "location",
             "rack",
             "position",
@@ -184,7 +195,6 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "name",
             "status",
             "tenant",
-            "site",
             "location",
             "rack",
             "role",
@@ -197,7 +207,7 @@ class DeviceImportTable(BaseTable):
     name = tables.TemplateColumn(template_code=DEVICE_LINK)
     status = ColoredLabelColumn()
     tenant = TenantColumn()
-    site = tables.Column(linkify=True)
+    location = tables.Column(linkify=True)
     rack = tables.Column(linkify=True)
     role = tables.Column(verbose_name="Role")
     device_type = tables.Column(verbose_name="Type")
@@ -208,7 +218,7 @@ class DeviceImportTable(BaseTable):
             "name",
             "status",
             "tenant",
-            "site",
+            "location",
             "rack",
             "position",
             "role",
@@ -529,6 +539,7 @@ class BaseInterfaceTable(BaseTable):
         orderable=False,
         verbose_name="Tagged VLANs",
     )
+    vrf = tables.Column(linkify=True, verbose_name="VRF")
 
 
 class InterfaceTable(StatusTableMixin, DeviceComponentTable, BaseInterfaceTable, PathEndpointTable):
@@ -547,6 +558,7 @@ class InterfaceTable(StatusTableMixin, DeviceComponentTable, BaseInterfaceTable,
             "type",
             "mgmt_only",
             "mtu",
+            "vrf",
             "mode",
             "mac_address",
             "description",
@@ -597,6 +609,7 @@ class DeviceInterfaceTable(InterfaceTable):
             "lag",
             "mgmt_only",
             "mtu",
+            "vrf",
             "mode",
             "mac_address",
             "description",
@@ -619,6 +632,7 @@ class DeviceInterfaceTable(InterfaceTable):
             "parent_interface",
             "lag",
             "mtu",
+            "vrf",
             "mode",
             "description",
             "ip_addresses",
@@ -759,7 +773,7 @@ class DeviceRearPortTable(RearPortTable):
 
 
 class DeviceBayTable(DeviceComponentTable):
-    status = tables.TemplateColumn(template_code=DEVICEBAY_STATUS)
+    installed_device__status = ColoredLabelColumn()
     installed_device = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:devicebay_list")
 
@@ -770,7 +784,7 @@ class DeviceBayTable(DeviceComponentTable):
             "device",
             "name",
             "label",
-            "status",
+            "installed_device__status",
             "installed_device",
             "description",
             "tags",
@@ -780,7 +794,7 @@ class DeviceBayTable(DeviceComponentTable):
             "device",
             "name",
             "label",
-            "status",
+            "installed_device__status",
             "installed_device",
             "description",
         )
@@ -800,7 +814,7 @@ class DeviceDeviceBayTable(DeviceBayTable):
             "pk",
             "name",
             "label",
-            "status",
+            "installed_device__status",
             "installed_device",
             "description",
             "tags",
@@ -810,7 +824,7 @@ class DeviceDeviceBayTable(DeviceBayTable):
             "pk",
             "name",
             "label",
-            "status",
+            "installed_device__status",
             "installed_device",
             "description",
             "actions",
@@ -917,14 +931,194 @@ class VirtualChassisTable(BaseTable):
 class DeviceRedundancyGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    member_count = tables.TemplateColumn(
-        template_code="""<a href="{{ record.get_absolute_url }}">{{ value }}</a>""",
-        verbose_name="Members",
+    device_count = tables.TemplateColumn(
+        template_code=LINKED_RECORD_COUNT,
+        verbose_name="Devices",
     )
     secrets_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:deviceredundancygroup_list")
 
     class Meta(BaseTable.Meta):
         model = DeviceRedundancyGroup
-        fields = ("pk", "name", "slug", "status", "failover_strategy", "member_count", "secrets_group", "tags")
-        default_columns = ("pk", "name", "status", "failover_strategy", "member_count")
+        fields = ("pk", "name", "status", "failover_strategy", "device_count", "secrets_group", "tags")
+        default_columns = ("pk", "name", "status", "failover_strategy", "device_count")
+
+
+#
+# Interface Redundancy Group
+#
+
+
+class InterfaceRedundancyGroupTable(BaseTable):
+    """Table for list view."""
+
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    interfaces = tables.TemplateColumn(
+        template_code=INTERFACE_REDUNDANCY_GROUP_INTERFACES,
+        orderable=False,
+        verbose_name="Interfaces",
+    )
+    actions = ButtonsColumn(InterfaceRedundancyGroup)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroup
+        fields = (
+            "pk",
+            "name",
+            "description",
+            "protocol",
+            "protocol_group_id",
+            "interfaces",
+        )
+
+
+class InterfaceRedundancyGroupAssociationTable(BaseTable):
+    """Table for list view."""
+
+    pk = ToggleColumn()
+    interface_redundancy_group = tables.Column(linkify=True, verbose_name="Group Name")
+    interface_redundancy_group__virtual_ip = tables.Column(linkify=True, verbose_name="Virtual IP")
+    interface_redundancy_group__protocol_group_id = tables.Column(verbose_name="Group ID")
+    priority = tables.TemplateColumn(template_code=INTERFACE_REDUNDANCY_INTERFACE_PRIORITY)
+    interface__device = tables.Column(linkify=True)
+    interface = tables.Column(linkify=True)
+    interface__status = ColoredLabelColumn()
+    interface_redundancy_group__status = ColoredLabelColumn(verbose_name="Group Status")
+    interface__ip_addresses = tables.TemplateColumn(
+        template_code=INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES,
+        orderable=False,
+        verbose_name="IP Addresses",
+    )
+    actions = ButtonsColumn(
+        model=InterfaceRedundancyGroupAssociation,
+        buttons=("edit", "delete"),
+    )
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = InterfaceRedundancyGroupAssociation
+        fields = (
+            "pk",
+            "interface_redundancy_group",
+            "interface",
+            "priority",
+            "interface_redundancy_group__status",
+            "interface_redundancy_group__virtual_ip",
+            "interface_redundancy_group__protocol",
+            "interface_redundancy_group__protocol_group_id",
+            "interface__device",
+            "interface__name",
+            "interface__status",
+            "interface__label",
+            "interface__enabled",
+            "interface__type",
+            "interface__description",
+            "interface__ip_addresses",
+        )
+
+        default_columns = ("priority", "actions")
+
+
+#
+# Software image files
+#
+
+
+class SoftwareImageFileTable(StatusTableMixin, BaseTable):
+    pk = ToggleColumn()
+    image_file_name = tables.Column(linkify=True)
+    software_version = tables.Column(linkify=True)
+    default_image = BooleanColumn()
+    device_type_count = LinkedCountColumn(
+        viewname="dcim:devicetype_list",
+        url_params={"software_image_files": "pk"},
+        verbose_name="Device Types",
+    )
+    tags = TagColumn(url_name="dcim:softwareimagefile_list")
+    actions = ButtonsColumn(SoftwareImageFile)
+
+    class Meta(BaseTable.Meta):
+        model = SoftwareImageFile
+        fields = (
+            "pk",
+            "image_file_name",
+            "status",
+            "software_version",
+            "default_image",
+            "image_file_checksum",
+            "hashing_algorithm",
+            "download_url",
+            "device_type_count",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "image_file_name",
+            "status",
+            "software_version",
+            "default_image",
+            "device_type_count",
+            "tags",
+            "actions",
+        )
+
+
+class SoftwareVersionTable(StatusTableMixin, BaseTable):
+    pk = ToggleColumn()
+    version = tables.Column(linkify=True)
+    software_image_file_count = LinkedCountColumn(
+        viewname="dcim:softwareimagefile_list",
+        url_params={"software_version": "pk"},
+        verbose_name="Software Image Files",
+    )
+    device_count = LinkedCountColumn(
+        viewname="dcim:device_list",
+        url_params={"software_version": "pk"},
+        verbose_name="Devices",
+    )
+    inventory_item_count = LinkedCountColumn(
+        viewname="dcim:inventoryitem_list",
+        url_params={"software_version": "pk"},
+        verbose_name="Inventory Items",
+    )
+    tags = TagColumn(url_name="dcim:softwareversion_list")
+    actions = ButtonsColumn(SoftwareVersion)
+
+    class Meta(BaseTable.Meta):
+        model = SoftwareVersion
+        fields = (
+            "pk",
+            "version",
+            "alias",
+            "status",
+            "platform",
+            "release_date",
+            "end_of_support_date",
+            "long_term_support",
+            "pre_release",
+            "documentation_url",
+            "software_image_file_count",
+            "device_count",
+            "inventory_item_count",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "version",
+            "alias",
+            "platform",
+            "status",
+            "release_date",
+            "end_of_support_date",
+            "software_image_file_count",
+            "device_count",
+            "inventory_item_count",
+            "tags",
+            "actions",
+        )

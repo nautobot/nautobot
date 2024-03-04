@@ -1,5 +1,5 @@
-import logging
 from collections import defaultdict
+import logging
 
 from django.conf import settings
 from django.contrib.auth.backends import (
@@ -11,12 +11,13 @@ from django.db.models import Q
 
 from nautobot.core.utils.permissions import (
     permission_is_exempt,
+    qs_filter_from_constraints,
     resolve_permission,
     resolve_permission_ct,
 )
 from nautobot.users.models import ObjectPermission
 
-logger = logging.getLogger("nautobot.authentication")
+logger = logging.getLogger(__name__)
 
 
 class ObjectPermissionBackend(ModelBackend):
@@ -81,16 +82,11 @@ class ObjectPermissionBackend(ModelBackend):
         if model._meta.label_lower != ".".join((app_label, model_name)):
             raise ValueError(f"Invalid permission {perm} for model {model}")
 
-        # Compile a query filter that matches all instances of the specified model
-        obj_perm_constraints = self.get_all_permissions(user_obj)[perm]
-        constraints = Q()
-        for perm_constraints in obj_perm_constraints:
-            if perm_constraints:
-                constraints |= Q(**perm_constraints)
-            else:
-                # Found ObjectPermission with null constraints; allow model-level access
-                constraints = Q()
-                break
+        # Compile a QuerySet filter that matches all instances of the specified model
+        tokens = {
+            "$user": user_obj,
+        }
+        constraints = qs_filter_from_constraints(self.get_all_permissions(user_obj)[perm], tokens)
 
         # Permission to perform the requested action on the object depends on whether the specified object matches
         # the specified constraints. Note that this check is made against the *database* record representing the object,
@@ -153,7 +149,7 @@ def assign_permissions_to_user(user, permissions=None):
         except ValueError:
             logging.error(
                 f"Invalid permission name: '{permission_name}'. Permissions must be in the form "
-                "<app>.<action>_<model>. (Example: dcim.add_site)"
+                "<app>.<action>_<model>. (Example: dcim.add_location)"
             )
     if permissions_list:
         logger.debug(f"Assigned permissions to remotely-authenticated user {user}: {permissions_list}")

@@ -16,9 +16,9 @@
                     <td>{{ object.is_private | render_boolean }}</td>
                 </tr>
                 <tr>
-                    <td>Aggregates</td>
+                    <td>Assigned Prefixes</td>
                     <td>
-                        <a href="{% url 'ipam:aggregate_list' %}?rir={{ object.slug }}">{{ aggregate_table.rows|length }}</a>
+                        <a href="{% url 'ipam:prefix_list' %}?rir={{ object.name }}">{{ assigned_prefix_table.rows|length }}</a>
                     </td>
                 </tr>
             </table>
@@ -28,17 +28,17 @@
 {% block content_full_width_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
-                <strong>Aggregates</strong>
+                <strong>Assigned Prefixes</strong>
             </div>
-            {% include 'inc/table.html' with table=aggregate_table %}
-            {% if perms.ipam.add_aggregate %}
+            {% include 'inc/table.html' with table=assigned_prefix_table %}
+            {% if perms.ipam.add_prefix %}
                 <div class="panel-footer text-right noprint">
-                    <a href="{% url 'ipam:aggregate_add' %}?rir={{ object.pk }}" class="btn btn-xs btn-primary">
-                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add aggregate
+                    <a href="{% url 'ipam:prefix_add' %}?rir={{ object.pk }}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add prefix
                     </a>
                 </div>
             {% endif %}
         </div>
-        {% include 'inc/paginator.html' with paginator=aggregate_table.paginator page=aggregate_table.page %}
+        {% include 'inc/paginator.html' with paginator=assigned_prefix_table.paginator page=assigned_prefix_table.page %}
         <div class="row"></div>
 {% endblock content_full_width_page %}

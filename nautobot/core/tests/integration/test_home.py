@@ -1,8 +1,6 @@
-from django.test.utils import override_settings
-
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.core.testing.integration import SeleniumTestCase
-from nautobot.dcim.models import PowerFeed, PowerPanel, Site
+from nautobot.dcim.models import Location, PowerFeed, PowerPanel
 from nautobot.tenancy.models import Tenant
 
 
@@ -12,7 +10,7 @@ class HomeTestCase(SeleniumTestCase):
     fixtures = ["user-data.json"]  # bob/bob
     layout = {
         "Organization": {
-            "Sites": {"model": Site, "permission": "dcim.view_site"},
+            "Locations": {"model": Location, "permission": "dcim.view_location"},
             "Tenant": {"model": Tenant, "permission": "tenancy.view_tenant"},
         },
         "Power": {
@@ -82,53 +80,13 @@ class HomeTestCase(SeleniumTestCase):
                     counter_html = int(item_html.find_by_xpath("./../../span").first.html)
                     self.assertEqual(counter, counter_html)
 
-    @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_homepage_render_no_permissions(self):
-        """
-        Render homepage with no permissions.
-        """
-        self.browser.visit(self.live_server_url)
-
-        columns_html = self.browser.find_by_css("div[class='homepage_column']")
-        for panel_name, panel_details in self.layout.items():
-            columns_html.first.find_by_xpath(f".//strong[text()='{panel_name}']")
-            for item_name, _ in panel_details.items():
-                item_html = columns_html.first.find_by_xpath(f".//h4[contains(text(), '{item_name}')]")
-                self.assertTrue("mdi mdi-lock" in item_html.find_by_xpath("./../span").html)
-
-    @override_settings(HIDE_RESTRICTED_UI=False)
-    def test_homepage_render_limit_permissions(self):
-        """
-        Render homepage with limited permissions.
-        """
-        self.add_permissions("dcim.view_site")
-        self.add_permissions("circuits.view_circuit")
-        user_permissions = self.user.get_all_permissions()
-
-        self.browser.visit(self.live_server_url)
-
-        columns_html = self.browser.find_by_css("div[class='homepage_column']")
-        for panel_name, panel_details in self.layout.items():
-            columns_html.first.find_by_xpath(f".//*[text()='{panel_name}']")
-            for item_name, item_details in panel_details.items():
-                if item_details["permission"] in user_permissions:
-                    item_html = columns_html.first.find_by_xpath(f".//a[contains(text(), '{item_name}')]")
-                    if item_details.get("model"):
-                        counter = item_details["model"].objects.count()
-                        counter_html = int(item_html.find_by_xpath("./../../span").html)
-                        self.assertEqual(counter, counter_html)
-                else:
-                    item_html = columns_html.first.find_by_xpath(f".//h4[contains(text(), '{item_name}')]")
-                    self.assertTrue("mdi mdi-lock" in item_html.find_by_xpath("./../span").html)
-
-    @override_settings(HIDE_RESTRICTED_UI=True)
-    def test_homepage_render_limit_permissions_with_restricted_ui(self):
+    def test_homepage_render_with_limit_permissions(self):
         """
         Render homepage with limited permissions and restricted UI.
-        This restricts the user to be able to view ONLY sites and circuits.
+        This restricts the user to be able to view ONLY locations and circuits.
         It then checks the UI for these restrictions.
         """
-        self.add_permissions("dcim.view_site")
+        self.add_permissions("dcim.view_location")
         self.add_permissions("circuits.view_circuit")
         user_permissions = self.user.get_all_permissions()
 
@@ -143,7 +101,7 @@ class HomeTestCase(SeleniumTestCase):
                         f"/div[@class='panel-heading']"
                         f"/strong[contains(text(), '{panel_name}')]"
                         f"/../.."
-                        f"/div[@class='list-group']"
+                        f"/div[@class='list-group collapse in collapsible-div']"
                     )
                     links = panel_element_to_search.links.find_by_text(item_name)
                     if item_details["permission"] in user_permissions:

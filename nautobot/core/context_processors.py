@@ -20,7 +20,7 @@ def get_saml_idp():
     value = ""
     if idp_map is not None:
         try:
-            idp = list(idp_map.keys())[0]
+            idp = next(iter(idp_map.keys()))
         except IndexError:
             pass
         else:
@@ -33,9 +33,10 @@ def settings(request):
     """
     Expose Django settings in the template context. Example: {{ settings.DEBUG }}
     """
-
+    root_template = "base_django.html"
     return {
         "settings": django_settings,
+        "root_template": root_template,
     }
 
 

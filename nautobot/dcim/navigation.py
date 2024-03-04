@@ -1,61 +1,18 @@
-from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
-
+from nautobot.core.apps import (
+    NavContext,
+    NavGrouping,
+    NavItem,
+    NavMenuAddButton,
+    NavMenuGroup,
+    NavMenuItem,
+    NavMenuTab,
+)
 
 menu_items = (
     NavMenuTab(
         name="Organization",
         weight=100,
         groups=(
-            NavMenuGroup(
-                name="Sites",
-                weight=100,
-                items=(
-                    NavMenuItem(
-                        link="dcim:site_list",
-                        name="Sites",
-                        weight=100,
-                        permissions=[
-                            "dcim.view_site",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="dcim:site_add",
-                                permissions=[
-                                    "dcim.add_site",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="dcim:site_import",
-                                permissions=[
-                                    "dcim.add_site",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
-                        link="dcim:region_list",
-                        name="Regions",
-                        weight=200,
-                        permissions=[
-                            "dcim.view_region",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="dcim:region_add",
-                                permissions=[
-                                    "dcim.add_region",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="dcim:region_import",
-                                permissions=[
-                                    "dcim.add_region",
-                                ],
-                            ),
-                        ),
-                    ),
-                ),
-            ),
             NavMenuGroup(
                 name="Locations",
                 weight=150,
@@ -74,12 +31,6 @@ menu_items = (
                                     "dcim.add_locationtype",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="dcim:locationtype_import",
-                                permissions=[
-                                    "dcim.add_locationtype",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -92,12 +43,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="dcim:location_add",
-                                permissions=[
-                                    "dcim.add_location",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="dcim:location_import",
                                 permissions=[
                                     "dcim.add_location",
                                 ],
@@ -124,12 +69,6 @@ menu_items = (
                                     "dcim.add_rack",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="dcim:rack_import",
-                                permissions=[
-                                    "dcim.add_rack",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -146,12 +85,6 @@ menu_items = (
                                     "dcim.add_rackgroup",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="dcim:rackgroup_import",
-                                permissions=[
-                                    "dcim.add_rackgroup",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -164,12 +97,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="dcim:rackreservation_add",
-                                permissions=[
-                                    "dcim.add_rackreservation",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="dcim:rackreservation_import",
                                 permissions=[
                                     "dcim.add_rackreservation",
                                 ],
@@ -211,34 +138,6 @@ menu_items = (
                                     "dcim.add_device",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="dcim:device_import",
-                                permissions=[
-                                    "dcim.add_device",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
-                        link="dcim:platform_list",
-                        name="Platforms",
-                        weight=300,
-                        permissions=[
-                            "dcim.view_platform",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="dcim:platform_add",
-                                permissions=[
-                                    "dcim.add_platform",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="dcim:platform_import",
-                                permissions=[
-                                    "dcim.add_platform",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -251,12 +150,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="dcim:virtualchassis_add",
-                                permissions=[
-                                    "dcim.add_virtualchassis",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="dcim:virtualchassis_import",
                                 permissions=[
                                     "dcim.add_virtualchassis",
                                 ],
@@ -277,10 +170,20 @@ menu_items = (
                                     "dcim.add_deviceredundancygroup",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="dcim:deviceredundancygroup_import",
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:interfaceredundancygroup_list",
+                        name="Interface Redundancy Groups",
+                        weight=600,
+                        permissions=[
+                            "dcim.view_interfaceredundancygroup",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:interfaceredundancygroup_add",
                                 permissions=[
-                                    "dcim.add_deviceredundancygroup",
+                                    "dcim.add_interfaceredundancygroup",
                                 ],
                             ),
                         ),
@@ -305,12 +208,6 @@ menu_items = (
                                     "dcim.add_devicetype",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="dcim:devicetype_import",
-                                permissions=[
-                                    "dcim.add_devicetype",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -327,10 +224,74 @@ menu_items = (
                                     "dcim.add_manufacturer",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="dcim:manufacturer_import",
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:hardwarefamily_list",
+                        name="Hardware Families",
+                        weight=300,
+                        permissions=[
+                            "dcim.view_hardwarefamily",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:hardwarefamily_add",
                                 permissions=[
-                                    "dcim.add_manufacturer",
+                                    "dcim.add_hardwarefamily",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            NavMenuGroup(
+                name="Software",
+                weight=250,
+                items=(
+                    NavMenuItem(
+                        link="dcim:platform_list",
+                        name="Platforms",
+                        weight=100,
+                        permissions=[
+                            "dcim.view_platform",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:platform_add",
+                                permissions=[
+                                    "dcim.add_platform",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:softwareversion_list",
+                        name="Software Versions",
+                        weight=200,
+                        permissions=[
+                            "dcim.view_softwareversion",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:softwareversion_add",
+                                permissions=[
+                                    "dcim.add_softwareversion",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:softwareimagefile_list",
+                        name="Software Image Files",
+                        weight=300,
+                        permissions=[
+                            "dcim.view_softwareimagefile",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:softwareimagefile_add",
+                                permissions=[
+                                    "dcim.add_softwareimagefile",
                                 ],
                             ),
                         ),
@@ -348,14 +309,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_cable",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:cable_import",
-                                permissions=[
-                                    "dcim.add_cable",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:console_connections_list",
@@ -399,14 +353,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_interface",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:interface_import",
-                                permissions=[
-                                    "dcim.add_interface",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:frontport_list",
@@ -415,14 +362,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_frontport",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:frontport_import",
-                                permissions=[
-                                    "dcim.add_frontport",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:rearport_list",
@@ -431,14 +371,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_rearport",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:rearport_import",
-                                permissions=[
-                                    "dcim.add_rearport",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:consoleport_list",
@@ -447,14 +380,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_consoleport",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:consoleport_import",
-                                permissions=[
-                                    "dcim.add_consoleport",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:consoleserverport_list",
@@ -463,14 +389,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_consoleserverport",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:consoleserverport_import",
-                                permissions=[
-                                    "dcim.add_consoleserverport",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:powerport_list",
@@ -479,14 +398,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_powerport",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:powerport_import",
-                                permissions=[
-                                    "dcim.add_powerport",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:poweroutlet_list",
@@ -495,14 +407,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_poweroutlet",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:poweroutlet_import",
-                                permissions=[
-                                    "dcim.add_poweroutlet",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:devicebay_list",
@@ -511,14 +416,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_devicebay",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:devicebay_import",
-                                permissions=[
-                                    "dcim.add_devicebay",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                     NavMenuItem(
                         link="dcim:inventoryitem_list",
@@ -527,14 +425,7 @@ menu_items = (
                         permissions=[
                             "dcim.view_inventoryitem",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="dcim:inventoryitem_import",
-                                permissions=[
-                                    "dcim.add_inventoryitem",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                 ),
             ),
@@ -561,12 +452,6 @@ menu_items = (
                                     "dcim.add_powerfeed",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="dcim:powerfeed_import",
-                                permissions=[
-                                    "dcim.add_powerfeed",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -582,13 +467,227 @@ menu_items = (
                                     "dcim.add_powerpanel",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="dcim:powerpanel_import",
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    ),
+)
+
+
+navigation = (
+    NavContext(
+        name="Inventory",
+        groups=(
+            NavGrouping(
+                name="Devices",
+                weight=100,
+                items=(
+                    NavItem(
+                        name="Devices",
+                        link="dcim:device_list",
+                        weight=100,
+                        permissions=["dcim.view_device"],
+                    ),
+                    NavItem(
+                        name="Device Types",
+                        weight=200,
+                        link="dcim:devicetype_list",
+                        permissions=["dcim.view_devicetype"],
+                    ),
+                    NavItem(
+                        link="dcim:platform_list",
+                        name="Platforms",
+                        weight=300,
+                        permissions=[
+                            "dcim.view_platform",
+                        ],
+                    ),
+                    NavItem(
+                        link="dcim:manufacturer_list",
+                        name="Manufacturers",
+                        weight=400,
+                        permissions=[
+                            "dcim.view_manufacturer",
+                        ],
+                    ),
+                    NavItem(
+                        link="dcim:virtualchassis_list",
+                        name="Virtual Chassis",
+                        weight=500,
+                        permissions=[
+                            "dcim.view_virtualchassis",
+                        ],
+                    ),
+                    NavItem(
+                        name="Device Redundancy Groups",
+                        weight=600,
+                        link="dcim:deviceredundancygroup_list",
+                        permissions=["dcim.view_deviceredundancygroup"],
+                    ),
+                    NavGrouping(
+                        name="Connections",
+                        weight=700,
+                        items=(
+                            NavItem(
+                                name="Cables",
+                                weight=100,
+                                link="dcim:cable_list",
+                                permissions=["dcim.view_cable"],
+                            ),
+                            NavItem(
+                                name="Console Connections",
+                                weight=200,
+                                link="dcim:console_connections_list",
                                 permissions=[
-                                    "dcim.add_powerpanel",
+                                    "dcim.view_consoleport",
+                                    "dcim.view_consoleserverport",
                                 ],
                             ),
+                            NavItem(
+                                name="Power Connections",
+                                weight=300,
+                                link="dcim:power_connections_list",
+                                permissions=[
+                                    "dcim.view_powerport",
+                                    "dcim.view_poweroutlet",
+                                ],
+                            ),
+                            NavItem(
+                                name="Interface Connections",
+                                weight=400,
+                                link="dcim:interface_connections_list",
+                                permissions=["dcim.view_interface"],
+                            ),
                         ),
+                    ),
+                    NavGrouping(
+                        name="Components",
+                        weight=800,
+                        items=(
+                            NavItem(
+                                name="Interfaces",
+                                weight=100,
+                                link="dcim:interface_list",
+                                permissions=["dcim.view_interface"],
+                            ),
+                            NavItem(
+                                name="Front Ports",
+                                weight=200,
+                                link="dcim:frontport_list",
+                                permissions=["dcim.view_frontport"],
+                            ),
+                            NavItem(
+                                name="Rear Ports",
+                                weight=300,
+                                link="dcim:rearport_list",
+                                permissions=["dcim.view_rearport"],
+                            ),
+                            NavItem(
+                                name="Console Ports",
+                                weight=400,
+                                link="dcim:consoleport_list",
+                                permissions=["dcim.view_consoleport"],
+                            ),
+                            NavItem(
+                                name="Console Server Ports",
+                                weight=500,
+                                link="dcim:consoleserverport_list",
+                                permissions=["dcim.view_consoleserverport"],
+                            ),
+                            NavItem(
+                                name="Power Ports",
+                                weight=600,
+                                link="dcim:powerport_list",
+                                permissions=["dcim.view_powerport"],
+                            ),
+                            NavItem(
+                                name="Power Outlets",
+                                weight=700,
+                                link="dcim:poweroutlet_list",
+                                permissions=["dcim.view_poweroutlet"],
+                            ),
+                            NavItem(
+                                name="Device Bays",
+                                weight=800,
+                                link="dcim:devicebay_list",
+                                permissions=["dcim.view_devicebay"],
+                            ),
+                            NavItem(
+                                name="Inventory Items",
+                                weight=900,
+                                link="dcim:inventoryitem_list",
+                                permissions=["dcim.view_inventoryitem"],
+                            ),
+                        ),
+                    ),
+                    # space reserved for Dynamic Groups item with weight 900
+                    NavItem(
+                        name="Racks",
+                        weight=1000,
+                        link="dcim:rack_list",
+                        permissions=["dcim.view_rack"],
+                    ),
+                    NavItem(
+                        name="Rack Groups",
+                        weight=1100,
+                        link="dcim:rackgroup_list",
+                        permissions=["dcim.view_rackgroup"],
+                    ),
+                    NavItem(
+                        name="Rack Reservations",
+                        weight=1200,
+                        link="dcim:rackreservation_list",
+                        permissions=["dcim.view_rackreservation"],
+                    ),
+                    NavItem(
+                        name="Rack Elevations",
+                        weight=1300,
+                        link="dcim:rack_elevation_list",
+                        permissions=["dcim.view_rack"],
+                    ),
+                ),
+            ),
+            NavGrouping(
+                name="Organization",
+                weight=200,
+                items=(
+                    NavItem(
+                        link="dcim:location_list",
+                        name="Locations",
+                        weight=100,
+                        permissions=[
+                            "dcim.view_location",
+                        ],
+                    ),
+                    NavItem(
+                        link="dcim:locationtype_list",
+                        name="Location Types",
+                        weight=200,
+                        permissions=[
+                            "dcim.view_locationtype",
+                        ],
+                    ),
+                ),
+            ),
+            # space reserved for Tenants at weight 300
+            # space reserved for Circuits at weight 400
+            NavGrouping(
+                name="Power",
+                weight=500,
+                items=(
+                    NavItem(
+                        name="Power Feeds",
+                        link="dcim:powerfeed_list",
+                        weight=100,
+                        permissions=["dcim.view_powerfeed"],
+                    ),
+                    NavItem(
+                        name="Power Panels",
+                        weight=200,
+                        link="dcim:powerpanel_list",
+                        permissions=["dcim.view_powerpanel"],
                     ),
                 ),
             ),

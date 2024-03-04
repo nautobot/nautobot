@@ -5,7 +5,6 @@ class DCIMConfig(NautobotConfig):
     name = "nautobot.dcim"
     verbose_name = "DCIM"
     searchable_models = [
-        "site",
         "location",
         "rack",
         "rackgroup",
@@ -18,4 +17,4 @@ class DCIMConfig(NautobotConfig):
 
     def ready(self):
         super().ready()
-        import nautobot.dcim.signals  # noqa: F401
+        import nautobot.dcim.signals  # noqa: F401  # unused-import -- but this import installs the signals

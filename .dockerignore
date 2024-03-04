@@ -12,6 +12,8 @@
 !README.md
 !docs
 !mkdocs.yml
+!package.json
+!package-lock.json
 
 # Add specific exclusions
 **/__pycache__

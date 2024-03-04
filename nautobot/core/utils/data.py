@@ -1,11 +1,11 @@
-from collections import OrderedDict, namedtuple
+from collections import namedtuple, OrderedDict
 from decimal import Decimal
 import uuid
 
+from django.core import validators
 from django.template import engines
 
 from nautobot.dcim import choices  # TODO move dcim.choices.CableLengthUnitChoices into core
-
 
 # Setup UtilizationData named tuple for use by multiple methods
 UtilizationData = namedtuple("UtilizationData", ["numerator", "denominator"])
@@ -66,13 +66,44 @@ def is_uuid(value):
     return False
 
 
+def is_url(value):
+    """
+    Validate whether a value is a URL.
+
+    Args:
+        value (str): String to validate.
+
+    Returns:
+        (bool): True if the value is a valid URL, False otherwise.
+    """
+    try:
+        return validators.URLValidator()(value) is None
+    except validators.ValidationError:
+        return False
+
+
+def merge_dicts_without_collision(d1, d2):
+    """
+    Merge two dicts into a new dict, but raise a ValueError if any key exists with differing values across both dicts.
+    """
+    intersection = d1.keys() & d2.keys()
+    for k in intersection:
+        if d1[k] != d2[k]:
+            raise ValueError(f'Conflicting values for key "{k}": ({d1[k]!r}, {d2[k]!r})')
+    return {**d1, **d2}
+
+
 def render_jinja2(template_code, context):
     """
     Render a Jinja2 template with the provided context. Return the rendered content.
     """
     rendering_engine = engines["jinja"]
     template = rendering_engine.from_string(template_code)
-    return template.render(context=context)
+    # For reasons unknown to me, django-jinja2 `template.render()` implicitly calls `mark_safe()` on the rendered text.
+    # This is a security risk in general, especially so in our case because we're often using this function to render
+    # a user-provided template and don't want to open ourselves up to script injection or similar issues.
+    # There's no `mark_unsafe()` function, but concatenating a SafeString to an ordinary string (even "") suffices.
+    return "" + template.render(context=context)
 
 
 def shallow_compare_dict(source_dict, destination_dict, exclude=None):

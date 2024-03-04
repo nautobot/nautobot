@@ -31,10 +31,10 @@ add "&raw" to the end of the URL within a browser.
         href="{% static 'flatpickr-4.6.9/themes/light.min.css' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/themes/light.min.css'">
   <link rel="stylesheet" id="dark-theme"
-        href="{% static 'css/dark.css' %}?v{{ settings.VERSION }}"
+        href="{% versioned_static 'css/dark.css' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=css/dark.css'" disabled="disabled" />
   <link rel="stylesheet"
-        href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
+        href="{% versioned_static 'css/base.css' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
   <link rel="apple-touch-icon" sizes="180x180" href="{% custom_branding_or_static 'icon_180' 'img/nautobot_icon_180x180.png' %}">
   <link rel="icon" type="image/png" sizes="32x32" href="{% custom_branding_or_static 'icon_32' 'img/nautobot_icon_32x32.png' %}">
@@ -52,6 +52,10 @@ add "&raw" to the end of the URL within a browser.
       height: 100%;
       margin: 0;
       width: 100%;
+    }
+    .toolbar .dropdown-menu > li > a {
+        clear: left;
+        margin-right: 120px;  /* leave room for the "Save Changes" button if present */
     }
   </style>
   <!-- As Nautobot may be run without internet access, we source these files locally rather than from an online CDN -->
@@ -113,11 +117,11 @@ add "&raw" to the end of the URL within a browser.
                         <div class="buttons pull-right">
                             <a class="btn btn-xs btn-warning" onclick="save()"><i class="mdi mdi-content-save-edit"></i> Save Changes</a>
                         </div>
-                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">
+                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">
                             <strong>{{ query.name }}</strong>
                         </a>
                     {% else %}
-                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">{{ query.name }}</a>
+                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">{{ query.name }}</a>
                     {% endif %}
                 </li>
               {% endfor %}
@@ -163,7 +167,6 @@ add "&raw" to the end of the URL within a browser.
     }
 
     function save() {
-      graphql_data = getHashParams();
       var url = new URL(window.location.href);
       var id = url.searchParams.get("id");
       var result_window = $(".result-window").find(".CodeMirror-code");
@@ -179,10 +182,13 @@ add "&raw" to the end of the URL within a browser.
         return
       };
 
+      var graphql_data = JSON.stringify({"query": getHashParams().query});
+
       $.ajax({
         url: `{% url 'extras-api:graphqlquery-list' %}${id}/`,
         method: "PATCH",
         headers: {"X-CSRFTOKEN": "{{ csrf_token }}"},
+        contentType: "application/json",
         dataType: "json",
         data: graphql_data,
         success: function(data) {

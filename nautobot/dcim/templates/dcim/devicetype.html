@@ -4,7 +4,7 @@
 {% load plugins %}
 
 {% block extra_breadcrumbs %}
-                <li><a href="{% url 'dcim:devicetype_list' %}?manufacturer={{ object.manufacturer.slug }}">{{ object.manufacturer }}</a></li>
+                <li><a href="{% url 'dcim:devicetype_list' %}?manufacturer={{ object.manufacturer.name }}">{{ object.manufacturer }}</a></li>
 {% endblock extra_breadcrumbs %}
 
 {% block buttons %}
@@ -46,10 +46,10 @@
             {% clone_button object %}
         {% endif %}
         {% if perms.dcim.change_devicetype %}
-            {% edit_button object key="pk" %}
+            {% edit_button object %}
         {% endif %}
         {% if perms.dcim.delete_devicetype %}
-            {% delete_button object key="pk" %}
+            {% delete_button object %}
         {% endif %}
 {% endblock buttons %}
 
@@ -63,13 +63,18 @@
                 <table class="table table-hover panel-body attr-table">
                     <tr>
                         <td>Manufacturer</td>
-                        <td><a href="{% url 'dcim:devicetype_list' %}?manufacturer={{ object.manufacturer.slug }}">{{ object.manufacturer }}</a></td>
+                        <td><a href="{% url 'dcim:devicetype_list' %}?manufacturer={{ object.manufacturer.name }}">{{ object.manufacturer }}</a></td>
+                    </tr>
+                    <tr>
+                        <td>Hardware Family</td>
+                        <td>
+                            {{ object.hardware_family | hyperlinked_object }}
+                        </td>
                     </tr>
                     <tr>
                         <td>Model Name</td>
                         <td>
                             {{ object.model }}<br/>
-                            <small class="text-muted">{{ object.slug }}</small>
                         </td>
                     </tr>
                     <tr>
@@ -115,8 +120,8 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Instances</td>
-                        <td><a href="{% url 'dcim:device_list' %}?device_type_id={{ object.pk }}">{{ instance_count }}</a></td>
+                        <td>Device Instances</td>
+                        <td><a href="{% url 'dcim:device_list' %}?device_type={{ object.pk }}">{{ instance_count }}</a></td>
                     </tr>
                 </table>
             </div>
@@ -135,6 +140,9 @@
                     {% endif %}
                 </div>
             </div>
+            {% if object.software_image_files.count %}
+                {% include 'panel_table.html' with table=software_image_files_table heading='Software Image Files' %}
+            {% endif %}
 {% endblock content_right_page %}
 
 {% block content_full_width_page %}

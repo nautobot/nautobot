@@ -1,14 +1,13 @@
 from nautobot.core.choices import ChoiceSet
 
 
-class IPAddressFamilyChoices(ChoiceSet):
-
-    FAMILY_4 = 4
-    FAMILY_6 = 6
+class IPAddressVersionChoices(ChoiceSet):
+    VERSION_4 = 4
+    VERSION_6 = 6
 
     CHOICES = (
-        (FAMILY_4, "IPv4"),
-        (FAMILY_6, "IPv6"),
+        (VERSION_4, "IPv4"),
+        (VERSION_6, "IPv6"),
     )
 
 
@@ -18,17 +17,26 @@ class IPAddressFamilyChoices(ChoiceSet):
 
 
 class PrefixStatusChoices(ChoiceSet):
-
-    STATUS_CONTAINER = "container"
     STATUS_ACTIVE = "active"
     STATUS_RESERVED = "reserved"
     STATUS_DEPRECATED = "deprecated"
 
     CHOICES = (
-        (STATUS_CONTAINER, "Container"),
         (STATUS_ACTIVE, "Active"),
         (STATUS_RESERVED, "Reserved"),
         (STATUS_DEPRECATED, "Deprecated"),
+    )
+
+
+class PrefixTypeChoices(ChoiceSet):
+    TYPE_CONTAINER = "container"
+    TYPE_NETWORK = "network"
+    TYPE_POOL = "pool"
+
+    CHOICES = (
+        (TYPE_CONTAINER, "Container"),
+        (TYPE_NETWORK, "Network"),
+        (TYPE_POOL, "Pool"),
     )
 
 
@@ -38,24 +46,18 @@ class PrefixStatusChoices(ChoiceSet):
 
 
 class IPAddressStatusChoices(ChoiceSet):
-
     STATUS_ACTIVE = "active"
     STATUS_RESERVED = "reserved"
     STATUS_DEPRECATED = "deprecated"
-    STATUS_DHCP = "dhcp"
-    STATUS_SLAAC = "slaac"
 
     CHOICES = (
         (STATUS_ACTIVE, "Active"),
         (STATUS_RESERVED, "Reserved"),
         (STATUS_DEPRECATED, "Deprecated"),
-        (STATUS_DHCP, "DHCP"),
-        (STATUS_SLAAC, "SLAAC"),
     )
 
 
 class IPAddressRoleChoices(ChoiceSet):
-
     ROLE_LOOPBACK = "loopback"
     ROLE_SECONDARY = "secondary"
     ROLE_ANYCAST = "anycast"
@@ -88,13 +90,24 @@ class IPAddressRoleChoices(ChoiceSet):
     }
 
 
+class IPAddressTypeChoices(ChoiceSet):
+    TYPE_DHCP = "dhcp"
+    TYPE_HOST = "host"
+    TYPE_SLAAC = "slaac"
+
+    CHOICES = (
+        (TYPE_DHCP, "DHCP"),
+        (TYPE_HOST, "Host"),
+        (TYPE_SLAAC, "SLAAC"),
+    )
+
+
 #
 # VLANs
 #
 
 
 class VLANStatusChoices(ChoiceSet):
-
     STATUS_ACTIVE = "active"
     STATUS_RESERVED = "reserved"
     STATUS_DEPRECATED = "deprecated"
@@ -112,7 +125,6 @@ class VLANStatusChoices(ChoiceSet):
 
 
 class ServiceProtocolChoices(ChoiceSet):
-
     PROTOCOL_TCP = "tcp"
     PROTOCOL_UDP = "udp"
 

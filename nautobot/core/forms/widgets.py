@@ -121,8 +121,8 @@ class APISelect(SelectWithDisabled):
     A select widget populated via an API call
 
     Args:
-        api_url: API endpoint URL. Required if not set automatically by the parent field.
-        api_version: API version.
+        api_url (str): API endpoint URL. Required if not set automatically by the parent field.
+        api_version (str): API version.
     """
 
     def __init__(self, api_url=None, full=False, api_version=None, *args, **kwargs):
@@ -156,7 +156,6 @@ class APISelect(SelectWithDisabled):
         self.attrs[key] = json.dumps(values, ensure_ascii=False)
 
     def get_context(self, name, value, attrs):
-
         # This adds null options to DynamicModelMultipleChoiceField selected choices
         # example <select ..>
         #           <option .. selected value="null">None</option>

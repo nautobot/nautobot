@@ -1,5 +1,3 @@
-import csv
-from io import StringIO
 import json
 import re
 
@@ -9,16 +7,16 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
-from django.db.models import Count, Q
-from django.forms.fields import BoundField, InvalidJSONInput
-from django.forms.fields import JSONField as _JSONField
+from django.db.models import Q
+from django.forms.fields import BoundField, InvalidJSONInput, JSONField as _JSONField
+from django.templatetags.static import static
 from django.urls import reverse
+from django.utils.html import format_html
 import django_filters
 from netaddr import EUI
 from netaddr.core import AddrFormatError
 
-from nautobot.core import choices as core_choices
-from nautobot.core import forms
+from nautobot.core import choices as core_choices, forms
 from nautobot.core.forms import widgets
 from nautobot.core.models import validators
 from nautobot.core.utils import data as data_utils, lookup
@@ -50,21 +48,22 @@ __all__ = (
 
 class CSVDataField(django_forms.CharField):
     """
-    A CharField (rendered as a Textarea) which accepts CSV-formatted data. It returns data as a two-tuple: The first
-    item is a dictionary of column headers, mapping field names to the attribute by which they match a related object
-    (where applicable). The second item is a list of dictionaries, each representing a discrete row of CSV data.
+    A CharField (rendered as a Textarea) which expects CSV-formatted data.
 
-    :param from_form: The form from which the field derives its validation rules.
+    Initial value is a list of headers corresponding to the required fields for the given serializer class.
+
+    This no longer actually does any CSV parsing or validation on its own,
+    as that is now handled by the NautobotCSVParser class and the REST API serializers.
+
+    Args:
+        required_field_names (list[str]): List of field names representing required fields for this import.
     """
 
     widget = django_forms.Textarea
 
-    def __init__(self, from_form, *args, **kwargs):
-
-        form = from_form()
-        self.model = form.Meta.model
-        self.fields = form.fields
-        self.required_fields = [name for name, field in form.fields.items() if field.required]
+    def __init__(self, *args, required_field_names="", **kwargs):
+        self.required_field_names = required_field_names
+        kwargs.setdefault("required", False)
 
         super().__init__(*args, **kwargs)
 
@@ -72,7 +71,7 @@ class CSVDataField(django_forms.CharField):
         if not self.label:
             self.label = ""
         if not self.initial:
-            self.initial = ",".join(self.required_fields) + "\n"
+            self.initial = ",".join(self.required_field_names) + "\n"
         if not self.help_text:
             self.help_text = (
                 "Enter the list of column headers followed by one line per record to be imported, using "
@@ -80,37 +79,17 @@ class CSVDataField(django_forms.CharField):
                 "in double quotes."
             )
 
-    def to_python(self, value):
-        if value is None:
-            return None
-        reader = csv.reader(StringIO(value.strip()))
-        return forms.parse_csv(reader)
-
-    def validate(self, value):
-        if value is None:
-            return None
-        headers, _records = value
-        forms.validate_csv(headers, self.fields, self.required_fields)
-
-        return value
-
 
 class CSVFileField(django_forms.FileField):
     """
-    A FileField (rendered as a ClearableFileInput) which accepts a file containing CSV-formatted data. It returns
-    data as a two-tuple: The first item is a dictionary of column headers, mapping field names to the attribute
-    by which they match a related object (where applicable). The second item is a list of dictionaries, each
-    representing a discrete row of CSV data.
+    A FileField (rendered as a ClearableFileInput) which expects a file containing CSV-formatted data.
 
-    :param from_form: The form from which the field derives its validation rules.
+    This no longer actually does any CSV parsing or validation on its own,
+    as that is now handled by the NautobotCSVParser class and the REST API serializers.
     """
 
-    def __init__(self, from_form, *args, **kwargs):
-
-        form = from_form()
-        self.model = form.Meta.model
-        self.fields = form.fields
-        self.required_fields = [name for name, field in form.fields.items() if field.required]
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("required", False)
 
         super().__init__(*args, **kwargs)
 
@@ -124,37 +103,19 @@ class CSVFileField(django_forms.FileField):
             )
 
     def to_python(self, file):
+        """For parity with CSVDataField, this returns the CSV text rather than an UploadedFile object."""
         if file is None:
             return None
 
         file = super().to_python(file)
-        csv_str = file.read().decode("utf-8-sig").strip()
-        # Check if there is only one column of input
-        # If so a delimiter cannot be determined and it will raise an exception.
-        # In that case we will use csv.excel class
-        # Which defines the usual properties of an Excel-generated CSV file.
-        try:
-            dialect = csv.Sniffer().sniff(csv_str, delimiters=",")
-        except csv.Error:
-            dialect = csv.excel
-        reader = csv.reader(csv_str.splitlines(), dialect)
-        headers, records = forms.parse_csv(reader)
-
-        return headers, records
-
-    def validate(self, value):
-        if value is None:
-            return None
-
-        headers, _records = value
-        forms.validate_csv(headers, self.fields, self.required_fields)
-
-        return value
+        return file.read().decode("utf-8-sig").strip()
 
 
 class CSVChoiceField(django_forms.ChoiceField):
     """
     Invert the provided set of choices to take the human-friendly label as input, and return the database value.
+
+    Despite the name, this is no longer used in CSV imports since 2.0, but *is* used in JSON/YAML import of DeviceTypes.
     """
 
     STATIC_CHOICES = True
@@ -166,7 +127,10 @@ class CSVChoiceField(django_forms.ChoiceField):
 
 class CSVMultipleChoiceField(CSVChoiceField):
     """
-    A version of CSVChoiceField that supports and emits a list of choice values
+    A version of CSVChoiceField that supports and emits a list of choice values.
+
+    As with CSVChoiceField, the name is misleading, as this is no longer used for CSV imports, but is used for
+    JSON/YAML import of DeviceTypes still.
     """
 
     def to_python(self, value):
@@ -184,6 +148,9 @@ class CSVMultipleChoiceField(CSVChoiceField):
 class CSVModelChoiceField(django_forms.ModelChoiceField):
     """
     Provides additional validation for model choices entered as CSV data.
+
+    Note: class name is misleading; the subclass CSVContentTypeField (below) is also used in FilterSets, where it has
+    nothing to do with CSV data.
     """
 
     default_error_messages = {
@@ -194,14 +161,14 @@ class CSVModelChoiceField(django_forms.ModelChoiceField):
         try:
             return super().to_python(value)
         except MultipleObjectsReturned:
-            raise django_forms.ValidationError(
-                f'"{value}" is not a unique value for this field; multiple objects were found'
-            )
+            raise ValidationError(f'"{value}" is not a unique value for this field; multiple objects were found')
 
 
 class CSVContentTypeField(CSVModelChoiceField):
     """
     Reference a ContentType in the form `{app_label}.{model}`.
+
+    Note: class name is misleading; this field is also used in numerous FilterSets where it has nothing to do with CSV.
     """
 
     STATIC_CHOICES = True
@@ -232,11 +199,11 @@ class CSVContentTypeField(CSVModelChoiceField):
         try:
             app_label, model = value.split(".")
         except ValueError:
-            raise django_forms.ValidationError('Object type must be specified as "<app_label>.<model>"')
+            raise ValidationError('Object type must be specified as "<app_label>.<model>"')
         try:
             return self.queryset.get(app_label=app_label, model=model)
         except ObjectDoesNotExist:
-            raise django_forms.ValidationError("Invalid object type")
+            raise ValidationError("Invalid object type")
 
 
 class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
@@ -308,7 +275,7 @@ class MultiValueCharField(django_forms.CharField):
 
         return [
             # Only append non-empty values (this avoids e.g. trying to cast '' as an integer)
-            super(self.field_class, self).to_python(v)  # pylint: disable=bad-super-call
+            self.field_class.to_python(self, v)
             for v in value
             if v
         ]
@@ -317,6 +284,9 @@ class MultiValueCharField(django_forms.CharField):
 class CSVMultipleContentTypeField(MultipleContentTypeField):
     """
     Reference a list of `ContentType` objects in the form `{app_label}.{model}'.
+
+    Note: This is unused in Nautobot core at this time, but some apps (data-validation-engine) use this for non-CSV
+    purposes, similar to CSVContentTypeField above.
     """
 
     def prepare_value(self, value):
@@ -333,7 +303,7 @@ class CSVMultipleContentTypeField(MultipleContentTypeField):
                 try:
                     model = apps.get_model(v)
                 except (ValueError, LookupError):
-                    raise django_forms.ValidationError(
+                    raise ValidationError(
                         self.error_messages["invalid_choice"],
                         code="invalid_choice",
                         params={"value": v},
@@ -384,11 +354,16 @@ class ExpandableIPAddressField(django_forms.CharField):
             )
 
     def to_python(self, value):
-        # Hackish address family detection but it's all we have to work with
+        # Ensure that a subnet mask has been specified. This prevents IPs from defaulting to a /32 or /128.
+        if len(value.split("/")) != 2:
+            raise ValidationError("CIDR mask (e.g. /24) is required.")
+
+        # Hackish address version detection but it's all we have to work with
         if "." in value and re.search(forms.IP4_EXPANSION_PATTERN, value):
             return list(forms.expand_ipaddress_pattern(value, 4))
         elif ":" in value and re.search(forms.IP6_EXPANSION_PATTERN, value):
             return list(forms.expand_ipaddress_pattern(value, 6))
+
         return [value]
 
 
@@ -399,12 +374,16 @@ class CommentField(django_forms.CharField):
 
     widget = django_forms.Textarea
     default_label = ""
-    # TODO: Port Markdown cheat sheet to internal documentation
-    default_helptext = (
-        '<i class="mdi mdi-information-outline"></i> '
-        '<a href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet" target="_blank">'
-        "Markdown</a> syntax is supported"
-    )
+
+    @property
+    def default_helptext(self):
+        # TODO: Port Markdown cheat sheet to internal documentation
+        return format_html(
+            '<i class="mdi mdi-information-outline"></i> '
+            '<a href="https://www.markdownguide.org/cheat-sheet/#basic-syntax" rel="noopener noreferrer">Markdown</a> '
+            'syntax is supported, as well as <a href="{}#render_markdown">a limited subset of HTML</a>.',
+            static("docs/user-guide/platform-functionality/template-filters.html"),
+        )
 
     def __init__(self, *args, **kwargs):
         required = kwargs.pop("required", False)
@@ -426,7 +405,7 @@ class MACAddressField(django_forms.Field):
         try:
             value = EUI(value.strip())
         except AddrFormatError:
-            raise forms.ValidationError(self.error_messages["invalid"], code="invalid")
+            raise ValidationError(self.error_messages["invalid"], code="invalid")
 
         return value
 
@@ -461,24 +440,6 @@ class SlugField(django_forms.SlugField):
         self.widget.attrs["slug-source"] = slug_source
 
 
-class TagFilterField(django_forms.MultipleChoiceField):
-    """
-    A filter field for the tags of a model. Only the tags used by a model are displayed.
-
-    :param model: The model of the filter
-    """
-
-    widget = widgets.StaticSelect2Multiple
-
-    def __init__(self, model, *args, **kwargs):
-        def get_choices():
-            tags = model.tags.annotate(count=Count("extras_taggeditem_items")).order_by("name")
-            return [(str(tag.slug), f"{tag.name} ({tag.count})") for tag in tags]
-
-        # Choices are fetched each time the form is initialized
-        super().__init__(label="Tags", choices=get_choices, required=False, *args, **kwargs)
-
-
 class DynamicModelChoiceMixin:
     """
     :param display_field: The name of the attribute of an API response object to display in the selection list
@@ -487,7 +448,7 @@ class DynamicModelChoiceMixin:
     :param null_option: The string used to represent a null selection (if any)
     :param disabled_indicator: The name of the field which, if populated, will disable selection of the
         choice (optional)
-    :param brief_mode: Use the "brief" format (?brief=true) when making API requests (default)
+    :param depth: Nested serialization depth when making API requests (default: `0` or a flat representation)
     """
 
     filter = django_filters.ModelChoiceFilter  # 2.0 TODO(Glenn): can we rename this? pylint: disable=redefined-builtin
@@ -500,7 +461,7 @@ class DynamicModelChoiceMixin:
         initial_params=None,
         null_option=None,
         disabled_indicator=None,
-        brief_mode=True,
+        depth=0,
         *args,
         **kwargs,
     ):
@@ -509,7 +470,7 @@ class DynamicModelChoiceMixin:
         self.initial_params = initial_params or {}
         self.null_option = null_option
         self.disabled_indicator = disabled_indicator
-        self.brief_mode = brief_mode
+        self.depth = depth
 
         # to_field_name is set by ModelChoiceField.__init__(), but we need to set it early for reference
         # by widget_attrs()
@@ -534,15 +495,29 @@ class DynamicModelChoiceMixin:
         if self.disabled_indicator is not None:
             attrs["disabled-indicator"] = self.disabled_indicator
 
-        # Toggle brief mode
-        if not self.brief_mode:
-            attrs["data-full"] = "true"
+        # Toggle depth
+        attrs["data-depth"] = self.depth
 
         # Attach any static query parameters
         for key, value in self.query_params.items():
             widget.add_query_param(key, value)
 
         return attrs
+
+    def prepare_value(self, value):
+        """
+        Augment the behavior of forms.ModelChoiceField.prepare_value().
+
+        Specifically, if `value` is a PK, but we have `to_field_name` set, we need to look up the model instance
+        from the given PK, so that the base class will get the appropriate field value rather than just keeping the PK,
+        because the rendered form field needs this in order to correctly prepopulate a default selection.
+        """
+        if self.to_field_name and data_utils.is_uuid(value):
+            try:
+                value = self.queryset.get(pk=value)
+            except ObjectDoesNotExist:
+                pass
+        return super().prepare_value(value)
 
     def get_bound_field(self, form, field_name):
         bound_field = BoundField(form, self, field_name)
@@ -604,20 +579,6 @@ class DynamicModelMultipleChoiceField(DynamicModelChoiceMixin, django_forms.Mode
 
     filter = django_filters.ModelMultipleChoiceFilter
     widget = widgets.APISelectMultiple
-
-    def prepare_value(self, value):
-        """
-        Ensure that a single string value (i.e. UUID) is accurately represented as a list of one item.
-
-        This is necessary because otherwise the superclass will split the string into individual characters,
-        resulting in an error (https://github.com/nautobot/nautobot/issues/512).
-
-        Note that prepare_value() can also be called with an object instance or list of instances; in that case,
-        we do *not* want to convert a single instance to a list of one entry.
-        """
-        if isinstance(value, str):
-            value = [value]
-        return super().prepare_value(value)
 
 
 class LaxURLField(django_forms.URLField):
@@ -814,3 +775,28 @@ class MultiMatchModelMultipleChoiceField(DynamicModelChoiceMixin, django_filters
         if null:
             result += [self.null_value]
         return result
+
+
+class TagFilterField(DynamicModelMultipleChoiceField):
+    """
+    A filter field for the tags of a model. Only the tags used by a model are displayed.
+
+    :param model: The model of the filter
+    """
+
+    def __init__(self, model, *args, query_params=None, queryset=None, **kwargs):
+        from nautobot.extras.models import Tag
+
+        if queryset is None:
+            queryset = Tag.objects.get_for_model(model)
+        query_params = query_params or {}
+        query_params.update({"content_types": model._meta.label_lower})
+        super().__init__(
+            label="Tags",
+            query_params=query_params,
+            queryset=queryset,
+            required=False,
+            to_field_name="name",
+            *args,
+            **kwargs,
+        )

@@ -2,7 +2,9 @@
 
 import inspect
 
+from django.apps import apps
 from django.conf import settings
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model
 from django.utils.module_loading import import_string
@@ -35,7 +37,6 @@ def get_model_from_name(model_name):
 
     :return: Found model.
     """
-    from django.apps import apps
 
     try:
         return apps.get_model(model_name)
@@ -46,7 +47,7 @@ def get_model_from_name(model_name):
 def get_route_for_model(model, action, api=False):
     """
     Return the URL route name for the given model and action. Does not perform any validation.
-    Supports both core and plugin routes.
+    Supports both core and App routes.
 
     Args:
         model (models.Model, str): Class, Instance, or dotted string of a Django Model
@@ -54,32 +55,42 @@ def get_route_for_model(model, action, api=False):
         api (bool): If set, return an API route.
 
     Returns:
-        str: return the name of the view for the model/action provided.
+        (str): return the name of the view for the model/action provided.
 
     Examples:
         >>> get_route_for_model(Device, "list")
         "dcim:device_list"
         >>> get_route_for_model(Device, "list", api=True)
         "dcim-api:device-list"
-        >>> get_route_for_model("dcim.site", "list")
-        "dcim:site_list"
-        >>> get_route_for_model("dcim.site", "list", api=True)
-        "dcim-api:site-list"
+        >>> get_route_for_model("dcim.location", "list")
+        "dcim:location_list"
+        >>> get_route_for_model("dcim.location", "list", api=True)
+        "dcim-api:location-list"
         >>> get_route_for_model(ExampleModel, "list")
-        "plugins:example_plugin:examplemodel_list"
+        "plugins:example_app:examplemodel_list"
         >>> get_route_for_model(ExampleModel, "list", api=True)
-        "plugins-api:example_plugin-api:examplemodel-list"
+        "plugins-api:example_app-api:examplemodel-list"
     """
 
     if isinstance(model, str):
         model = get_model_from_name(model)
 
     suffix = "" if not api else "-api"
-    prefix = f"{model._meta.app_label}{suffix}:{model._meta.model_name}"
-    sep = "_" if not api else "-"
+    # The `contenttypes` and `auth` app doesn't provide REST API endpoints,
+    # but Nautobot provides one for the ContentType model in our `extras` and Group model in `users` app.
+    if model is ContentType:
+        app_label = "extras"
+    elif model is Group:
+        app_label = "users"
+    else:
+        app_label = model._meta.app_label
+    prefix = f"{app_label}{suffix}:{model._meta.model_name}"
+    sep = ""
+    if action != "":
+        sep = "_" if not api else "-"
     viewname = f"{prefix}{sep}{action}"
 
-    if model._meta.app_label in settings.PLUGINS:
+    if apps.get_app_config(app_label).name in settings.PLUGINS:
         viewname = f"plugins{suffix}:{viewname}"
 
     return viewname
@@ -96,8 +107,13 @@ def get_related_class_for_model(model, module_name, object_suffix):
 
     If a matching class is not found, this will return `None`.
 
+    Args:
+        model (Union[BaseModel, str]): A model class, instance, or dotted representation
+        module_name (str): The name of the module to search for the object class
+        object_suffix (str): The suffix to append to the model name to find the object class
+
     Returns:
-        Either the matching object class or None
+        (Union[BaseModel, str]): Either the matching object class or None
     """
     if isinstance(model, str):
         model = get_model_from_name(model)
@@ -109,11 +125,9 @@ def get_related_class_for_model(model, module_name, object_suffix):
         raise TypeError(f"{model!r} is not a subclass of a Django Model class")
 
     # e.g. "nautobot.dcim.forms.DeviceFilterForm"
-    app_label = model._meta.app_label
+    app_config = apps.get_app_config(model._meta.app_label)
     object_name = f"{model.__name__}{object_suffix}"
-    object_path = f"{app_label}.{module_name}.{object_name}"
-    if app_label not in settings.PLUGINS:
-        object_path = f"nautobot.{object_path}"
+    object_path = f"{app_config.name}.{module_name}.{object_name}"
 
     try:
         return import_string(object_path)
@@ -132,8 +146,11 @@ def get_filterset_for_model(model):
 
     If a matching `FilterSet` is not found, this will return `None`.
 
+    Args:
+        model (BaseModel): A model class
+
     Returns:
-        Either the `FilterSet` class or `None`
+        (Union[FilterSet,None]): Either the `FilterSet` class or `None`
     """
     return get_related_class_for_model(model, module_name="filters", object_suffix="FilterSet")
 
@@ -152,7 +169,7 @@ def get_form_for_model(model, form_prefix=""):
             `FooFilterForm`) that will come after the model name.
 
     Returns:
-        Either the `Form` class or `None`
+        (Union[Form, None]): Either the `Form` class or `None`
     """
     object_suffix = f"{form_prefix}Form"
     return get_related_class_for_model(model, module_name="forms", object_suffix=object_suffix)
@@ -166,7 +183,52 @@ def get_table_for_model(model):
 
     If a matching `Table` is not found, this will return `None`.
 
+    Args:
+        model (BaseModel): A model class
+
     Returns:
-        Either the `Table` class or `None`
+        (Union[Table, None]): Either the `Table` class or `None`
     """
     return get_related_class_for_model(model, module_name="tables", object_suffix="Table")
+
+
+def get_view_for_model(model, view_type=""):
+    """Return the `UIViewSet` or `<view_type>View` class associated with a given `model`.
+
+    The view class is expected to be in the `views` module within the app associated with the model,
+    and its name is expected to be either `{ModelName}UIViewSet` or `{ModelName}{view_type}View`.
+
+    If neither view class is found, this will return `None`.
+    """
+    result = get_related_class_for_model(model, module_name="views", object_suffix="UIViewSet")
+    if result is None:
+        result = get_related_class_for_model(model, module_name="views", object_suffix=f"{view_type}View")
+    return result
+
+
+def get_created_and_last_updated_usernames_for_model(instance):
+    """
+    Args:
+        instance: A model class instance
+
+    Returns:
+        created_by: Username of the user that created the instance
+        last_updated_by: Username of the user that last modified the instance
+    """
+    from nautobot.extras.choices import ObjectChangeActionChoices
+    from nautobot.extras.models import ObjectChange
+
+    object_change_records = get_changes_for_model(instance)
+    created_by = None
+    last_updated_by = None
+    try:
+        created_by_record = object_change_records.get(action=ObjectChangeActionChoices.ACTION_CREATE)
+        created_by = created_by_record.user_name
+    except ObjectChange.DoesNotExist:
+        pass
+
+    last_updated_by_record = object_change_records.first()
+    if last_updated_by_record:
+        last_updated_by = last_updated_by_record.user_name
+
+    return created_by, last_updated_by

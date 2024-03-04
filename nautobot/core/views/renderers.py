@@ -3,26 +3,27 @@ import logging
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
 from nautobot.core.forms import (
+    restrict_form_fields,
     SearchForm,
     TableConfigForm,
-    restrict_form_fields,
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
-    get_filterable_params_from_filter_params,
     normalize_querydict,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import check_filter_for_display
-from nautobot.extras.models.change_logging import ChangeLoggedModel, ObjectChange
+from nautobot.core.views.utils import check_filter_for_display, get_csv_form_fields_from_serializer_class
+from nautobot.extras.models.change_logging import ObjectChange
+from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import get_base_template
 
 
@@ -34,22 +35,17 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
     # Log error messages within NautobotHTMLRenderer
     logger = logging.getLogger(__name__)
 
-    def get_filter_params(self, view, request):
-        """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
-        filter_params = request.GET.copy()
-        return get_filterable_params_from_filter_params(filter_params, view.non_filter_params, view.filterset_class)
-
     def get_dynamic_filter_form(self, view, request, *args, filterset_class=None, **kwargs):
         """
         Helper function to obtain the filter_form_class,
         and then initialize and return the filter_form used in the ObjectListView UI.
         """
         factory_formset_params = {}
+        filterset = None
         if filterset_class:
-            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
-                request.GET, filterset_class
-            )
-        return DynamicFilterFormSet(filterset_class=view.filterset_class, data=factory_formset_params)
+            filterset = filterset_class()
+            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(request.GET, filterset)
+        return DynamicFilterFormSet(filterset=filterset, data=factory_formset_params)
 
     def construct_user_permissions(self, request, model):
         """
@@ -67,9 +63,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         Helper function to construct and paginate the table for rendering used in the ObjectListView, ObjectBulkUpdateView and ObjectBulkDestroyView.
         """
         table_class = view.get_table_class()
-        queryset = view.get_queryset()
+        request = kwargs.get("request", view.request)
+        queryset = view.alter_queryset(request)
         if view.action in ["list", "notes", "changelog"]:
-            request = kwargs.get("request", view.request)
             if view.action == "list":
                 permissions = kwargs.get("permissions", {})
                 table = table_class(queryset, user=request.user)
@@ -96,15 +92,25 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request),
             }
+            max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
+            if max_page_size and paginate["per_page"] > max_page_size:
+                messages.warning(
+                    request,
+                    f'Requested "per_page" is too large. No more than {max_page_size} items may be displayed at a time.',
+                )
             return RequestConfig(request, paginate).configure(table)
         else:
             pk_list = kwargs.get("pk_list", [])
             table = table_class(queryset.filter(pk__in=pk_list), orderable=False)
+            if view.action in ["bulk_destroy", "bulk_update"]:
+                # Hide actions column if present
+                if "actions" in table.columns:
+                    table.columns.hide("actions")
             return table
 
     def validate_action_buttons(self, view, request):
         """Verify actions in self.action_buttons are valid view actions."""
-        queryset = view.get_queryset()
+        queryset = view.alter_queryset(request)
         always_valid_actions = ("export",)
         valid_actions = []
         invalid_actions = []
@@ -135,26 +141,23 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             return {}
         view = renderer_context["view"]
         request = renderer_context["request"]
-        # Check if queryset attribute is set before doing anything.
-        queryset = view.get_queryset()
+        # Check if queryset attribute is set before doing anything
+        is_contact_associatable_model = view.is_contact_associatable_model
+        queryset = view.alter_queryset(request)
         model = queryset.model
         form_class = view.get_form_class()
         content_type = ContentType.objects.get_for_model(model)
         form = None
         table = None
         search_form = None
-        changelog_url = None
         instance = None
         filter_form = None
-        queryset = view.alter_queryset(request)
         display_filter_params = []
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = self.construct_user_permissions(request, model)
         if view.action in ["create", "retrieve", "update", "destroy", "changelog", "notes"]:
             instance = view.get_object()
             return_url = view.get_return_url(request, instance)
-            if isinstance(instance, ChangeLoggedModel):
-                changelog_url = instance.get_changelog_url()
         else:
             return_url = view.get_return_url(request)
         # Get form for context rendering according to view.action unless it is previously set.
@@ -163,21 +166,15 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             form = data["form"]
         else:
             if view.action == "list":
-                filter_params = self.get_filter_params(view, request)
                 if view.filterset_class is not None:
-                    filterset = view.filterset_class(filter_params, view.queryset)
-                    filterset_filters = filterset.get_filters()
-                    view.queryset = filterset.qs
-                    if not filterset.is_valid():
-                        messages.error(
-                            request,
-                            mark_safe(f"Invalid filters were specified: {filterset.errors}"),
-                        )
-                        view.queryset = view.queryset.none()
-
+                    view.queryset = view.filter_queryset(queryset)
+                    if view.filterset is not None:
+                        filterset_filters = view.filterset.filters
+                    else:
+                        filterset_filters = view.filterset.get_filters()
                     display_filter_params = [
                         check_filter_for_display(filterset_filters, field_name, values)
-                        for field_name, values in filter_params.items()
+                        for field_name, values in view.filter_params.items()
                     ]
                     if view.filterset_form_class is not None:
                         filter_form = view.filterset_form_class(request.GET, label_suffix="")
@@ -186,7 +183,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
-                initial_data = normalize_querydict(request.GET)
+                initial_data = normalize_querydict(request.GET, form_class=form_class)
                 form = form_class(instance=instance, initial=initial_data)
                 restrict_form_fields(form, request.user)
             elif view.action == "bulk_destroy":
@@ -198,7 +195,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     }
                     form = form_class(initial=initial)
                 table = self.construct_table(view, pk_list=pk_list)
-            elif view.action == "bulk_create":
+            elif view.action == "bulk_create":  # 3.0 TODO: remove, replaced by ImportObjects system Job
                 form = view.get_form()
                 if request.data:
                     table = data.get("table")
@@ -221,8 +218,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 table = self.construct_table(view, object=instance, content_type=content_type)
 
         context = {
-            "changelog_url": changelog_url,  # NOTE: This context key is deprecated in favor of `object.get_changelog_url`.
             "content_type": content_type,
+            "is_contact_associatable_model": is_contact_associatable_model,
             "form": form,
             "filter_form": filter_form,
             "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset_class=view.filterset_class),
@@ -240,6 +237,15 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "verbose_name_plural": queryset.model._meta.verbose_name_plural,
         }
         if view.action == "retrieve":
+            created_by, last_updated_by = get_created_and_last_updated_usernames_for_model(instance)
+
+            context["created_by"] = created_by
+            context["last_updated_by"] = last_updated_by
+            associated_contacts = instance.associated_contacts.restrict(request.user, "view").order_by("role__name")
+            if is_contact_associatable_model:
+                context["associated_contacts_table"] = AssociatedContactsTable(data=associated_contacts)
+            else:
+                context["associated_contacts_table"] = None
             context.update(view.get_extra_context(request, instance))
         else:
             if view.action == "list":
@@ -258,11 +264,11 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                         "editing": instance.present_in_database,
                     }
                 )
-            elif view.action == "bulk_create":
+            elif view.action == "bulk_create":  # 3.0 TODO: remove, replaced by ImportObjects system Job
                 context.update(
                     {
                         "active_tab": view.bulk_create_active_tab if view.bulk_create_active_tab else "csv-data",
-                        "fields": view.bulk_create_form_class(model).fields if view.bulk_create_form_class else None,
+                        "fields": get_csv_form_fields_from_serializer_class(view.serializer_class),
                     }
                 )
             elif view.action in ["changelog", "notes"]:
@@ -283,4 +289,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         # Get the corresponding template based on self.action in view.get_template_name() unless it is already specified in the Response() data.
         # See form_valid() for self.action == "bulk_create".
         self.template = data.get("template", view.get_template_name())
+
+        # NautobotUIViewSets pass "use_new_ui" in context as they share the same class and are just different methods
+        self.use_new_ui = data.get("use_new_ui", False)
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)

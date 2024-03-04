@@ -21,18 +21,17 @@ __all__ = (
 
 class LocationTypeTable(BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
     parent = tables.Column(linkify=True)
     nestable = BooleanColumn()
     content_types = ContentTypesColumn(truncate_words=15)
-    actions = ButtonsColumn(LocationType, pk_field="slug")
+    actions = ButtonsColumn(LocationType)
 
     class Meta(BaseTable.Meta):
         model = LocationType
         fields = (
             "pk",
             "name",
-            "slug",
             "parent",
             "nestable",
             "content_types",
@@ -47,32 +46,27 @@ class LocationTypeTable(BaseTable):
             "description",
             "actions",
         )
-        orderable = False
 
 
 class LocationTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=TREE_LINK, orderable=False, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
     location_type = tables.Column(linkify=True)
-    site = tables.Column(linkify=True)
     parent = tables.Column(linkify=True)
     tenant = TenantColumn()
     tags = TagColumn(url_name="dcim:location_list")
-    actions = ButtonsColumn(Location, pk_field="slug")
+    actions = ButtonsColumn(Location)
 
     class Meta(BaseTable.Meta):
         model = Location
         fields = (
             "pk",
             "name",
-            "slug",
             "status",
-            "site",
             "location_type",
             "parent",
             "tenant",
             "description",
-            "actions",
             "facility",
             "asn",
             "time_zone",
@@ -84,6 +78,6 @@ class LocationTable(StatusTableMixin, BaseTable):
             "contact_phone",
             "contact_email",
             "tags",
+            "actions",
         )
-        default_columns = ("pk", "name", "status", "site", "tenant", "description", "tags", "actions")
-        orderable = False
+        default_columns = ("pk", "name", "status", "parent", "tenant", "description", "tags", "actions")

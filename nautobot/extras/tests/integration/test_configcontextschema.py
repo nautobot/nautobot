@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.testing.integration import SeleniumTestCase
-from nautobot.dcim.models import Device, DeviceType, Manufacturer, Site
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.models import ConfigContext, ConfigContextSchema, Role, Status
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
@@ -93,7 +93,6 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         # Schemas
         schema = ConfigContextSchema.objects.create(
             name="schema",
-            slug="schema",
             data_schema={
                 "type": "object",
                 "additionalProperties": False,
@@ -102,18 +101,24 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         )
 
         # ConfigContext
-        ConfigContext.objects.create(name="context 1", weight=101, data=context_data, schema=schema)
+        ConfigContext.objects.create(name="context 1", weight=101, data=context_data, config_context_schema=schema)
 
         # Device
-        site = Site.objects.create(name="site", slug="site", status=Status.objects.get_for_model(Site).first())
-        manufacturer = Manufacturer.objects.create(name="manufacturer", slug="manufacturer")
+        device_ct = ContentType.objects.get_for_model(Device)
+        location_type, _ = LocationType.objects.get_or_create(name="Campus")
+        location_type.content_types.add(device_ct)
+        location = Location.objects.create(
+            name="location",
+            status=Status.objects.get_for_model(Location).first(),
+            location_type=location_type,
+        )
+        manufacturer = Manufacturer.objects.create(name="Manufacturer")
         device_type = DeviceType.objects.create(model="device_type", manufacturer=manufacturer)
         device_role, _ = Role.objects.get_or_create(name="Device Role")
-        device_ct = ContentType.objects.get_for_model(Device)
         device_role.content_types.add(device_ct)
         Device.objects.create(
             name="device",
-            site=site,
+            location=location,
             device_type=device_type,
             role=device_role,
             status=Status.objects.get_for_model(Device).first(),
@@ -122,7 +127,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         )
 
         # Virtual Machine
-        cluster_type = ClusterType.objects.create(name="cluster_type", slug="cluster-type")
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="cluster", cluster_type=cluster_type)
         VirtualMachine.objects.create(
             name="virtual_machine",
@@ -133,7 +138,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         )
 
         # Navigate to ConfigContextSchema Validation tab
-        self.browser.visit(f"{self.live_server_url}/extras/config-context-schemas/{schema.slug}/")
+        self.browser.visit(f"{self.live_server_url}/extras/config-context-schemas/{schema.pk}/")
         self.browser.links.find_by_text("Validation").click()
 
         # Assert Validation states
@@ -143,7 +148,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         for row in self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr"):
             self.assertEqual(
                 row.find_by_tag("td")[-2].html,
-                '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
+                '<span class="text-success"><i class="mdi mdi-check-bold" title="" data-original-title="Yes"></i></span>',
             )
 
         # Edit the schema
@@ -165,7 +170,7 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         for row in self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr"):
             self.assertEqual(
                 row.find_by_tag("td")[-2].html,
-                '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+                '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
             )
 
         # Edit the device local context data and redirect back to the validation tab
@@ -183,15 +188,15 @@ class ConfigContextSchemaTestCase(SeleniumTestCase):
         # Config context still fails
         self.assertEqual(
             self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr")[0].find_by_tag("td")[-2].html,
-            '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+            '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
         )
         # Device now passes
         self.assertEqual(
             self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr")[1].find_by_tag("td")[-2].html,
-            '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
+            '<span class="text-success"><i class="mdi mdi-check-bold" title="" data-original-title="Yes"></i></span>',
         )
         # Virtual machine still fails
         self.assertEqual(
             self.browser.find_by_xpath("//div[@class[contains(., 'panel')]]//tbody/tr")[2].find_by_tag("td")[-2].html,
-            '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+            '<span class="text-danger"><i class="mdi mdi-close-thick" title="" data-original-title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
         )

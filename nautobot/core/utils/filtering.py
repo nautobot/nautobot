@@ -4,19 +4,14 @@ from django import forms
 from django_filters import (
     BooleanFilter,
     ChoiceFilter,
-    DateFilter,
-    DateTimeFilter,
     ModelMultipleChoiceFilter,
     MultipleChoiceFilter,
     NumberFilter,
-    TimeFilter,
-    UUIDFilter,
 )
 from django_filters.utils import verbose_lookup_expr
 
 from nautobot.core import exceptions
 from nautobot.core.utils.lookup import get_filterset_for_model
-
 
 # Check if field name contains a lookup expr
 # e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr
@@ -28,11 +23,11 @@ def build_lookup_label(field_name, _verbose_name):
     Return lookup expr with its verbose name
 
     Args:
-        field_name (str): Field name e.g slug__iew
+        field_name (str): Field name e.g name__iew
         _verbose_name (str): The verbose name for the lookup expr which is suffixed to the field name e.g iew -> iendswith
 
     Examples:
-        >>> build_lookup_label("slug__iew", "iendswith")
+        >>> build_lookup_label("name__iew", "iendswith")
         >>> "ends-with (iew)"
     """
     verbose_name = verbose_lookup_expr(_verbose_name) or "exact"
@@ -69,47 +64,54 @@ def get_all_lookup_expr_for_field(model, field_name):
                     "name": build_lookup_label(name, field.lookup_expr),
                 }
             )
+        elif name == field_name and not name.startswith("has_"):
+            lookup_expr_choices.append(
+                {
+                    "id": name,
+                    "name": "exact",
+                }
+            )
 
     return lookup_expr_choices
 
 
-def get_filterset_field(filterset_class, field_name):
-    field = filterset_class().filters.get(field_name)
+def get_filterset_field(filterset, field_name):
+    field = filterset.filters.get(field_name)
     if field is None:
-        raise exceptions.FilterSetFieldNotFound(f"{field_name} is not a valid {filterset_class.__name__} field")
+        raise exceptions.FilterSetFieldNotFound(f"{field_name} is not a valid {type(filterset).__name__} field")
     return field
 
 
-def get_filterset_parameter_form_field(model, parameter):
+def get_filterset_parameter_form_field(model, parameter, filterset=None):
     """
     Return the relevant form field instance for a filterset parameter e.g DynamicModelMultipleChoiceField, forms.IntegerField e.t.c
     """
     # Avoid circular import
-    from nautobot.dcim.models import Device
-    from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, StatusFilter
-    from nautobot.extras.models import ConfigContext, Role, Status, Tag
-    from nautobot.extras.utils import ChangeLoggedModelsQuery, RoleModelsQuery, TaggableClassesQuery
+    from nautobot.core.filters import MultiValueDecimalFilter, MultiValueFloatFilter
     from nautobot.core.forms import (
         BOOLEAN_CHOICES,
-        DatePicker,
-        DateTimePicker,
         DynamicModelMultipleChoiceField,
         MultipleContentTypeField,
         StaticSelect2,
         StaticSelect2Multiple,
-        TimePicker,
     )
-    from nautobot.core.forms.widgets import (
-        MultiValueCharInput,
-    )
+    from nautobot.dcim.models import Device
+    from nautobot.extras.filters import ContentTypeMultipleChoiceFilter, CustomFieldFilterMixin, StatusFilter
+    from nautobot.extras.models import ConfigContext, Role, Status, Tag
+    from nautobot.extras.utils import ChangeLoggedModelsQuery, RoleModelsQuery, TaggableClassesQuery
     from nautobot.virtualization.models import VirtualMachine
 
-    filterset_class = get_filterset_for_model(model)
-    field = get_filterset_field(filterset_class, parameter)
+    if filterset is None or filterset.Meta.model != model:
+        filterset = get_filterset_for_model(model)()
+    field = get_filterset_field(filterset, parameter)
     form_field = field.field
 
     # TODO(Culver): We are having to replace some widgets here because multivalue_field_factory that generates these isn't smart enough
-    if isinstance(field, NumberFilter):
+    if isinstance(field, CustomFieldFilterMixin):
+        form_field = field.custom_field.to_filter_form_field(lookup_expr=field.lookup_expr)
+    elif isinstance(field, (MultiValueDecimalFilter, MultiValueFloatFilter)):
+        form_field = forms.DecimalField()
+    elif isinstance(field, NumberFilter):
         form_field = forms.IntegerField()
     elif isinstance(field, ModelMultipleChoiceFilter):
         related_model = Status if isinstance(field, StatusFilter) else field.extra["queryset"].model
@@ -125,8 +127,16 @@ def get_filterset_parameter_form_field(model, parameter):
             form_attr["query_params"] = {"content_types": model._meta.label_lower}
 
         form_field = DynamicModelMultipleChoiceField(**form_attr)
-    elif isinstance(field, ContentTypeMultipleChoiceFilter):
-        plural_name = model._meta.verbose_name_plural
+    elif isinstance(
+        field, ContentTypeMultipleChoiceFilter
+    ):  # While there are other objects using `ContentTypeMultipleChoiceFilter`, the case where
+        # models that have such a filter and the `verbose_name_plural` has multiple words is ony one: "dynamic groups".
+        from nautobot.core.models.fields import slugify_dashes_to_underscores  # Avoid circular import
+
+        plural_name = slugify_dashes_to_underscores(model._meta.verbose_name_plural)
+        # Cable-connectable models use "cable_terminations", not "cables", as the feature name
+        if plural_name == "cables":
+            plural_name == "cable_terminations"
         try:
             form_field = MultipleContentTypeField(choices_as_strings=True, feature=plural_name)
         except KeyError:
@@ -135,32 +145,17 @@ def get_filterset_parameter_form_field(model, parameter):
             # In this case use queryset
             queryset_map = {
                 "tags": TaggableClassesQuery,
-                "job hooks": ChangeLoggedModelsQuery,
+                "job_hooks": ChangeLoggedModelsQuery,
                 "roles": RoleModelsQuery,
             }
             form_field = MultipleContentTypeField(
                 choices_as_strings=True, queryset=queryset_map[plural_name]().as_queryset()
             )
     elif isinstance(field, (MultipleChoiceFilter, ChoiceFilter)) and "choices" in field.extra:
-        form_field_class = forms.ChoiceField
-        form_field_class.widget = StaticSelect2Multiple()
-        form_attr = {"choices": field.extra.get("choices")}
+        form_field = forms.MultipleChoiceField(choices=field.extra.get("choices"), widget=StaticSelect2Multiple)
 
-        form_field = form_field_class(**form_attr)
-    elif isinstance(field, (BooleanFilter,)):  # Yes / No choice
-        form_field_class = forms.ChoiceField
-        form_field_class.widget = StaticSelect2()
-        form_attr = {"choices": BOOLEAN_CHOICES}
-
-        form_field = form_field_class(**form_attr)
-    elif isinstance(field, DateTimeFilter):
-        form_field.widget = DateTimePicker()
-    elif isinstance(field, DateFilter):
-        form_field.widget = DatePicker()
-    elif isinstance(field, TimeFilter):
-        form_field.widget = TimePicker()
-    elif isinstance(field, UUIDFilter):
-        form_field.widget = MultiValueCharInput()
+    elif isinstance(field, BooleanFilter):
+        form_field = forms.ChoiceField(choices=BOOLEAN_CHOICES, widget=StaticSelect2)
 
     form_field.required = False
     form_field.initial = None
@@ -169,3 +164,34 @@ def get_filterset_parameter_form_field(model, parameter):
     css_classes = form_field.widget.attrs.get("class", "")
     form_field.widget.attrs["class"] = "form-control " + css_classes
     return form_field
+
+
+def get_filter_field_label(filter_field):
+    """
+    Return a label for a given field name and value.
+
+    Args:
+        filter_field (Filter): The filter to get a label for
+
+    Returns:
+        (str): The label for the given field
+    """
+
+    if filter_field.label:
+        return filter_field.label
+    elif hasattr(filter_field, "relationship"):
+        return filter_field.relationship.get_label(side=filter_field.side)
+    elif hasattr(filter_field, "custom_field"):
+        return filter_field.custom_field.label
+    else:
+        return _field_name_to_display(filter_field.field_name)
+
+
+def _field_name_to_display(field_name):
+    """
+    Return a more human readable version of a field name.
+    """
+    field_name = field_name.replace("_custom_field_data__", "")
+    split_field = field_name.split("__") if "__" in field_name else field_name.split("_")
+    words = " ".join(split_field)
+    return words[0].upper() + words[1:]

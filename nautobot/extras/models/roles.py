@@ -3,16 +3,14 @@ from django.db import models
 
 from nautobot.core.models.fields import ForeignKeyLimitedByContentTypes, PositiveSmallIntegerField
 from nautobot.core.models.name_color_content_types import NameColorContentTypesModel
-from nautobot.extras.utils import RoleModelsQuery, extras_features
+from nautobot.extras.utils import extras_features, RoleModelsQuery
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class Role(NameColorContentTypesModel):
@@ -37,28 +35,4 @@ class RoleField(ForeignKeyLimitedByContentTypes):
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("to", Role)
         kwargs.setdefault("on_delete", models.PROTECT)
-        kwargs.setdefault("blank", True)
-        kwargs.setdefault("related_name", "%(app_label)s_%(class)s_related")
         super().__init__(*args, **kwargs)
-
-
-class RoleModelMixin(models.Model):
-    """
-    Abstract base class for any model which may have roles.
-    """
-
-    role = RoleField()
-
-    class Meta:
-        abstract = True
-
-
-class RoleRequiredRoleModelMixin(RoleModelMixin):
-    """
-    Abstract base class for any model which may have roles with role field required.
-    """
-
-    role = RoleField(null=False, blank=False)
-
-    class Meta:
-        abstract = True

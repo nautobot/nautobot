@@ -3,12 +3,12 @@
 from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
-import nautobot.extras.models.statuses
 import taggit.managers
+
+import nautobot.extras.models.statuses
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [

@@ -1,53 +1,64 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
 from collections import OrderedDict
+import functools
 import inspect
 import json
 import logging
 import os
-import shutil
+import tempfile
 from textwrap import dedent
-import traceback
+from typing import final
 import warnings
 
+from billiard.einfo import ExceptionInfo, ExceptionWithTraceback
+from celery import states
+from celery.exceptions import NotRegistered, Retry
+from celery.result import EagerResult
+from celery.utils.functional import maybe_list
+from celery.utils.log import get_task_logger
+from celery.utils.nodenames import gethostname
 from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import RegexValidator
-from django.db import transaction, IntegrityError
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
-from django.test.client import RequestFactory
-from django.utils import timezone
 from django.utils.functional import classproperty
+from kombu.utils.uuid import uuid
 import netaddr
 import yaml
 
-from nautobot.core.celery import nautobot_task
-from nautobot.core.exceptions import AbortTransaction
+from nautobot.core.celery import app as celery_app
+from nautobot.core.celery.task import Task
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    JSONField,
 )
-from nautobot.core.utils.requests import copy_safe_request
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.lookup import get_model_from_name
+from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from nautobot.extras.context_managers import web_request_context
+from nautobot.extras.forms import JobForm
+from nautobot.extras.models import (
+    FileProxy,
+    Job as JobModel,
+    JobHook,
+    JobResult,
+    ObjectChange,
+)
+from nautobot.extras.utils import ChangeLoggedModelsQuery, task_queues_as_choices
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
     MinPrefixLengthValidator,
     prefix_validator,
 )
-
-from .choices import LogLevelChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
-from .context_managers import change_logging, JobChangeContext, JobHookChangeContext
-from .datasources.git import ensure_git_repository
-from .forms import JobForm
-from .models import FileProxy, GitRepository, Job as JobModel, JobHook, ObjectChange, ScheduledJob
-from .registry import registry
-from .utils import ChangeLoggedModelsQuery, get_job_content_type, jobs_in_directory, task_queues_as_choices
-
 
 User = get_user_model()
 
@@ -61,6 +72,7 @@ __all__ = [
     "IPAddressVar",
     "IPAddressWithMaskVar",
     "IPNetworkVar",
+    "JSONVar",
     "MultiChoiceVar",
     "MultiObjectVar",
     "ObjectVar",
@@ -68,20 +80,20 @@ __all__ = [
     "TextVar",
 ]
 
-logger = logging.getLogger("nautobot.jobs")
+logger = logging.getLogger(__name__)
 
 
-class BaseJob:
-    """Base model for jobs (reports, scripts).
+class RunJobTaskFailed(Exception):
+    """Celery task failed for some reason."""
+
+
+class BaseJob(Task):
+    """Base model for jobs.
 
     Users can subclass this directly if they want to provide their own base class for implementing multiple jobs
     with shared functionality; if no such sharing is required, use Job class instead.
 
-    For backward compatibility with NetBox, this class has several APIs that can be implemented by the user:
-
-    1. run(self, data, commit) - First method called when invoking a Job, can handle setup and parameter storage.
-    2. test_*(self) - Any method matching this pattern will be called next
-    3. post_run(self) - Last method called, will be called even in case of an exception during the above methods
+    Jobs must define at minimum a run method.
     """
 
     class Meta:
@@ -90,10 +102,8 @@ class BaseJob:
 
         - name (str)
         - description (str)
-        - commit_default (bool)
         - hidden (bool)
         - field_order (list)
-        - read_only (bool)
         - approval_required (bool)
         - soft_time_limit (int)
         - time_limit (int)
@@ -102,131 +112,403 @@ class BaseJob:
         """
 
     def __init__(self):
-        self.logger = logging.getLogger(f"nautobot.jobs.{self.__class__.__name__}")
+        self.logger = get_task_logger(self.__module__)
 
-        self.request = None
-        self.active_test = "main"
-        self.failed = False
-        self._job_result = None
+    def __call__(self, *args, **kwargs):
+        # Attempt to resolve serialized data back into original form by creating querysets or model instances
+        # If we fail to find any objects, we consider this a job execution error, and fail.
+        # This might happen when a job sits on the queue for a while (i.e. scheduled) and data has changed
+        # or it might be bad input from an API request, or manual execution.
+        try:
+            deserialized_kwargs = self.deserialize_data(kwargs)
+        except Exception as err:
+            self.logger.error("%s", err)
+            raise RunJobTaskFailed("Error initializing job") from err
+        if isinstance(self, JobHookReceiver):
+            change_context = ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK
+        else:
+            change_context = ObjectChangeEventContextChoices.CONTEXT_JOB
 
-        # Compile test methods and initialize results skeleton
-        self.test_methods = []
+        with web_request_context(user=self.user, context_detail=self.class_path, context=change_context):
+            if self.celery_kwargs.get("nautobot_job_profile", False) is True:
+                import cProfile
 
-        for method_name in dir(self):
-            if method_name.startswith("test_") and callable(getattr(self, method_name)):
-                self.test_methods.append(method_name)
+                # TODO: This should probably be available as a file download rather than dumped to the hard drive.
+                # Pending this: https://github.com/nautobot/nautobot/issues/3352
+                profiling_path = f"{tempfile.gettempdir()}/nautobot-jobresult-{self.job_result.id}.pstats"
+                self.logger.info(
+                    "Writing profiling information to %s.", profiling_path, extra={"grouping": "initialization"}
+                )
+
+                with cProfile.Profile() as pr:
+                    try:
+                        output = self.run(*args, **deserialized_kwargs)
+                    except Exception as err:
+                        pr.dump_stats(profiling_path)
+                        raise err
+                    else:
+                        pr.dump_stats(profiling_path)
+                        return output
+            else:
+                return self.run(*args, **deserialized_kwargs)
 
     def __str__(self):
         return str(self.name)
 
     # See https://github.com/PyCQA/pylint-django/issues/240 for why we have a pylint disable on each classproperty below
 
+    # TODO(jathan): Could be interesting for custom stuff when the Job is
+    # enabled in the database and then therefore registered in Celery
+    @classmethod
+    def on_bound(cls, app):
+        """Called when the task is bound to an app.
+
+        Note:
+            This class method can be defined to do additional actions when
+            the task class is bound to an app.
+        """
+
+    # TODO(jathan): Could be interesting for showing the Job's class path as the
+    # shadow name vs. the Celery task_name?
+    def shadow_name(self, args, kwargs, options):
+        """Override for custom task name in worker logs/monitoring.
+
+        Example:
+                from celery.utils.imports import qualname
+
+                def shadow_name(task, args, kwargs, options):
+                    return qualname(args[0])
+
+                @app.task(shadow_name=shadow_name, serializer='pickle')
+                def apply_function_async(fun, *args, **kwargs):
+                    return fun(*args, **kwargs)
+
+        Arguments:
+            args (Tuple): Task positional arguments.
+            kwargs (Dict): Task keyword arguments.
+            options (Dict): Task execution options.
+        """
+
+    def before_start(self, task_id, args, kwargs):
+        """Handler called before the task starts.
+
+        Arguments:
+            task_id (str): Unique id of the task to execute.
+            args (Tuple): Original arguments for the task to execute.
+            kwargs (Dict): Original keyword arguments for the task to execute.
+
+        Returns:
+            (None): The return value of this handler is ignored.
+        """
+        self.clear_cache()
+
+        try:
+            self.job_result
+        except ObjectDoesNotExist as err:
+            raise RunJobTaskFailed(f"Unable to find associated job result for job {task_id}") from err
+
+        try:
+            self.job_model
+        except ObjectDoesNotExist as err:
+            raise RunJobTaskFailed(f"Unable to find associated job model for job {task_id}") from err
+
+        if not self.job_model.enabled:
+            self.logger.error(
+                "Job %s is not enabled to be run!",
+                self.job_model,
+                extra={"object": self.job_model, "grouping": "initialization"},
+            )
+            raise RunJobTaskFailed(f"Job {self.job_model} is not enabled to be run!")
+
+        soft_time_limit = self.job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
+        time_limit = self.job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
+        if time_limit <= soft_time_limit:
+            self.logger.warning(
+                "The hard time limit of %s seconds is less than "
+                "or equal to the soft time limit of %s seconds. "
+                "This job will fail silently after %s seconds.",
+                time_limit,
+                soft_time_limit,
+                time_limit,
+                extra={"grouping": "initialization"},
+            )
+
+        self.logger.info("Running job", extra={"grouping": "initialization"})
+
+    def run(self, *args, **kwargs):
+        """
+        Method invoked when this Job is run.
+        """
+        raise NotImplementedError("Jobs must define the run method.")
+
+    def on_success(self, retval, task_id, args, kwargs):
+        """Success handler.
+
+        Run by the worker if the task executes successfully.
+
+        Arguments:
+            retval (Any): The return value of the task.
+            task_id (str): Unique id of the executed task.
+            args (Tuple): Original arguments for the executed task.
+            kwargs (Dict): Original keyword arguments for the executed task.
+
+        Returns:
+            (None): The return value of this handler is ignored.
+        """
+
+    def on_retry(self, exc, task_id, args, kwargs, einfo):
+        """Retry handler.
+
+        This is run by the worker when the task is to be retried.
+
+        Arguments:
+            exc (Exception): The exception sent to :meth:`retry`.
+            task_id (str): Unique id of the retried task.
+            args (Tuple): Original arguments for the retried task.
+            kwargs (Dict): Original keyword arguments for the retried task.
+            einfo (~billiard.einfo.ExceptionInfo): Exception information.
+
+        Returns:
+            (None): The return value of this handler is ignored.
+        """
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        """Error handler.
+
+        This is run by the worker when the task fails.
+
+        Arguments:
+            exc (Exception): The exception raised by the task.
+            task_id (str): Unique id of the failed task.
+            args (Tuple): Original arguments for the task that failed.
+            kwargs (Dict): Original keyword arguments for the task that failed.
+            einfo (~billiard.einfo.ExceptionInfo): Exception information.
+
+        Returns:
+            (None): The return value of this handler is ignored.
+        """
+
+    def after_return(self, status, retval, task_id, args, kwargs, einfo):
+        """
+        Handler called after the task returns.
+
+        Arguments:
+            status (str): Current task state.
+            retval (Any): Task return value/exception.
+            task_id (str): Unique id of the task.
+            args (tuple):  Original arguments for the task that returned.
+            kwargs (dict): Original keyword arguments for the task that returned.
+            einfo (ExceptionInfo): ExceptionInfo instance, containing the traceback (if any).
+
+        Returns:
+            (None): The return value of this handler is ignored.
+        """
+
+        # Cleanup FileProxy objects
+        file_fields = list(self._get_file_vars())
+        file_ids = [kwargs[f] for f in file_fields if f in kwargs]
+        if file_ids:
+            self._delete_file_proxies(*file_ids)
+
+        if status == JobResultStatusChoices.STATUS_SUCCESS:
+            self.logger.info("Job completed", extra={"grouping": "post_run"})
+
+        # TODO(gary): document this in job author docs
+        # Super.after_return must be called for chords to function properly
+        super().after_return(status, retval, task_id, args, kwargs, einfo=einfo)
+
+    def apply(
+        self,
+        args=None,
+        kwargs=None,
+        link=None,
+        link_error=None,
+        task_id=None,
+        retries=None,
+        throw=None,
+        logfile=None,
+        loglevel=None,
+        headers=None,
+        **options,
+    ):
+        """Fix celery's apply method to propagate options to the task result"""
+        # trace imports Task, so need to import inline.
+        from celery.app.trace import build_tracer
+
+        app = self._get_app()
+        args = args or ()
+        kwargs = kwargs or {}
+        task_id = task_id or uuid()
+        retries = retries or 0
+        if throw is None:
+            throw = app.conf.task_eager_propagates
+
+        # Make sure we get the task instance, not class.
+        task = app._tasks[self.name]
+
+        request = {
+            "id": task_id,
+            "retries": retries,
+            "is_eager": True,
+            "logfile": logfile,
+            "loglevel": loglevel or 0,
+            "hostname": gethostname(),
+            "callbacks": maybe_list(link),
+            "errbacks": maybe_list(link_error),
+            "headers": headers,
+            "ignore_result": options.get("ignore_result", False),
+            "delivery_info": {
+                "is_eager": True,
+                "exchange": options.get("exchange"),
+                "routing_key": options.get("routing_key"),
+                "priority": options.get("priority"),
+            },
+            "properties": options,  # one line fix to overloaded method
+        }
+        if "stamped_headers" in options:
+            request["stamped_headers"] = maybe_list(options["stamped_headers"])
+            request["stamps"] = {header: maybe_list(options.get(header, [])) for header in request["stamped_headers"]}
+
+        tb = None
+        tracer = build_tracer(
+            task.name,
+            task,
+            eager=True,
+            propagate=throw,
+            app=self._get_app(),
+        )
+        ret = tracer(task_id, args, kwargs, request)
+        retval = ret.retval
+        if isinstance(retval, ExceptionInfo):
+            retval, tb = retval.exception, retval.traceback
+            if isinstance(retval, ExceptionWithTraceback):
+                retval = retval.exc
+        if isinstance(retval, Retry) and retval.sig is not None:
+            return retval.sig.apply(retries=retries + 1)
+        state = states.SUCCESS if ret.info is None else ret.info.state
+        return EagerResult(task_id, retval, state, traceback=tb)
+
+    @final
     @classproperty
-    def file_path(cls):  # pylint: disable=no-self-argument
+    def file_path(cls) -> str:  # pylint: disable=no-self-argument
         return inspect.getfile(cls)
 
+    @final
     @classproperty
-    def class_path(cls):  # pylint: disable=no-self-argument
+    def class_path(cls) -> str:  # pylint: disable=no-self-argument
         """
-        Unique identifier of a specific Job class, in the form <source_grouping>/<module_name>/<ClassName>.
+        Unique identifier of a specific Job class, in the form <module_name>.<ClassName>.
 
         Examples:
-        local/my_script/MyScript
-        plugins/my_plugin.jobs/MyPluginJob
-        git.my-repository/myjob/MyJob
+        - my_script.MyScript - Local Job
+        - nautobot.core.jobs.MySystemJob - System Job
+        - my_plugin.jobs.MyPluginJob - App-provided Job
+        - git_repository.jobs.myjob.MyJob - GitRepository Job
         """
-        # TODO(Glenn): it'd be nice if this were derived more automatically instead of needing this logic
-        if cls in registry["plugin_jobs"]:
-            source_grouping = "plugins"
-        elif cls.file_path.startswith(settings.JOBS_ROOT):
-            source_grouping = "local"
-        elif cls.file_path.startswith(settings.GIT_ROOT):
-            # $GIT_ROOT/<repo_slug>/jobs/job.py -> <repo_slug>
-            source_grouping = ".".join(
-                [
-                    "git",
-                    os.path.basename(os.path.dirname(os.path.dirname(cls.file_path))),
-                ]
-            )
-        else:
-            raise RuntimeError(
-                f"Unknown/unexpected job file_path {cls.file_path}, should be one of "
-                + ", ".join([settings.JOBS_ROOT, settings.GIT_ROOT])
-            )
+        return f"{cls.__module__}.{cls.__name__}"
 
-        return "/".join([source_grouping, cls.__module__, cls.__name__])
-
+    @final
     @classproperty
-    def class_path_dotted(cls):  # pylint: disable=no-self-argument
+    def class_path_dotted(cls) -> str:  # pylint: disable=no-self-argument
         """
         Dotted class_path, suitable for use in things like Python logger names.
-        """
-        return cls.class_path.replace("/", ".")
 
+        Deprecated as of Nautobot 2.0: just use .class_path instead.
+        """
+        return cls.class_path
+
+    @final
     @classproperty
-    def class_path_js_escaped(cls):  # pylint: disable=no-self-argument
+    def class_path_js_escaped(cls) -> str:  # pylint: disable=no-self-argument
         """
         Escape various characters so that the class_path can be used as a jQuery selector.
         """
-        return cls.class_path.replace("/", r"\/").replace(".", r"\.")
+        return cls.class_path.replace(".", r"\.")
 
+    @final
     @classproperty
-    def grouping(cls):  # pylint: disable=no-self-argument
+    def grouping(cls) -> str:  # pylint: disable=no-self-argument
         module = inspect.getmodule(cls)
         return getattr(module, "name", module.__name__)
 
-    @classproperty
-    def name(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "name", cls.__name__)
+    @final
+    @classmethod
+    def _get_meta_attr_and_assert_type(cls, attr_name, default, expected_type):
+        result = getattr(cls.Meta, attr_name, default)
+        if not isinstance(result, expected_type):
+            raise TypeError(f"Meta.{attr_name} should be {expected_type}, not {type(result)}")
+        return result
 
+    @final
     @classproperty
-    def description(cls):  # pylint: disable=no-self-argument
-        return dedent(getattr(cls.Meta, "description", "")).strip()
+    def name(cls) -> str:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("name", cls.__name__, expected_type=str)
 
+    @final
     @classproperty
-    def description_first_line(cls):  # pylint: disable=no-self-argument
+    def description(cls) -> str:  # pylint: disable=no-self-argument
+        return dedent(cls._get_meta_attr_and_assert_type("description", "", expected_type=str)).strip()
+
+    @final
+    @classproperty
+    def description_first_line(cls) -> str:  # pylint: disable=no-self-argument
         if cls.description:  # pylint: disable=using-constant-test
             return cls.description.splitlines()[0]
         return ""
 
+    @final
     @classproperty
-    def commit_default(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "commit_default", True)
+    def dryrun_default(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("dryrun_default", False, expected_type=bool)
 
+    @final
     @classproperty
-    def hidden(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "hidden", False)
+    def hidden(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("hidden", False, expected_type=bool)
 
+    @final
     @classproperty
     def field_order(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "field_order", None)
+        return cls._get_meta_attr_and_assert_type("field_order", [], expected_type=(list, tuple))
 
+    @final
     @classproperty
-    def read_only(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "read_only", False)
+    def read_only(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("read_only", False, expected_type=bool)
 
+    @final
     @classproperty
-    def approval_required(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "approval_required", False)
+    def approval_required(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("approval_required", False, expected_type=bool)
 
+    @final
     @classproperty
-    def soft_time_limit(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "soft_time_limit", 0)
+    def soft_time_limit(cls) -> int:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("soft_time_limit", 0, expected_type=int)
 
+    @final
     @classproperty
-    def time_limit(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "time_limit", 0)
+    def time_limit(cls) -> int:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("time_limit", 0, expected_type=int)
 
+    @final
     @classproperty
-    def has_sensitive_variables(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "has_sensitive_variables", True)
+    def has_sensitive_variables(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("has_sensitive_variables", True, expected_type=bool)
 
+    @final
     @classproperty
-    def task_queues(cls):  # pylint: disable=no-self-argument
-        return getattr(cls.Meta, "task_queues", [])
+    def supports_dryrun(cls) -> bool:  # pylint: disable=no-self-argument
+        return isinstance(getattr(cls, "dryrun", None), DryRunVar)
 
+    @final
     @classproperty
-    def properties_dict(cls):  # pylint: disable=no-self-argument
+    def task_queues(cls) -> list:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("task_queues", [], expected_type=(list, tuple))
+
+    @final
+    @classproperty
+    def properties_dict(cls) -> dict:  # pylint: disable=no-self-argument
         """
         Return all relevant classproperties as a dict.
 
@@ -237,20 +519,25 @@ class BaseJob:
             "grouping": cls.grouping,
             "description": cls.description,
             "approval_required": cls.approval_required,
-            "commit_default": cls.commit_default,
             "hidden": cls.hidden,
-            "read_only": cls.read_only,
             "soft_time_limit": cls.soft_time_limit,
             "time_limit": cls.time_limit,
             "has_sensitive_variables": cls.has_sensitive_variables,
             "task_queues": cls.task_queues,
         }
 
+    @final
+    @classproperty
+    def registered_name(cls) -> str:  # pylint: disable=no-self-argument
+        return f"{cls.__module__}.{cls.__name__}"
+
     @classmethod
     def _get_vars(cls):
         """
-        Return dictionary of ScriptVariable attributes defined on this class and any base classes to the top of the inheritance chain.
-        The variables are sorted in the order that they were defined, with variables defined on base classes appearing before subclass variables.
+        Return dictionary of ScriptVariable attributes defined on this class or any of its base parent classes.
+
+        The variables are sorted in the order that they were defined,
+        with variables defined on base classes appearing before subclass variables.
         """
         cls_vars = {}
         # get list of base classes, including cls, in reverse method resolution order: [BaseJob, Job, cls]
@@ -274,81 +561,89 @@ class BaseJob:
 
         return file_vars
 
-    @property
-    def job_result(self):
-        return self._job_result
-
-    @job_result.setter
-    def job_result(self, value):
-        # Initialize job_result data format for our usage
-        value.data = OrderedDict()
-
-        self._job_result = value
-
-    @property
-    def results(self):
+    @classmethod
+    def as_form_class(cls):
         """
-        The results generated by this job.
-        ** If you need the logs, you will need to filter on JobLogEntry **
-            Ex.
-            from nautobot.extras.models import JogLogEntry
+        Dynamically generate a Django form class corresponding to the variables in this Job.
 
-            JobLogEntry.objects.filter(job_result=self.job_result, <other criteria>)
-
-        {
-            "output": "...",
-        }
+        In most cases you should use `.as_form()` instead of calling this method directly.
         """
-        return self.job_result.data if self.job_result else None
+        fields = {name: var.as_field() for name, var in cls._get_vars().items()}
+        return type("JobForm", (JobForm,), fields)
 
-    def as_form(self, data=None, files=None, initial=None, approval_view=False):
+    @classmethod
+    def as_form(cls, data=None, files=None, initial=None, approval_view=False):
         """
         Return a Django form suitable for populating the context data required to run this Job.
 
         `approval_view` will disable all fields from modification and is used to display the form
         during a approval review workflow.
         """
-        fields = {name: var.as_field() for name, var in self._get_vars().items()}
-        FormClass = type("JobForm", (JobForm,), fields)
 
-        form = FormClass(data, files, initial=initial)
+        form = cls.as_form_class()(data, files, initial=initial)
 
         try:
-            job_model = JobModel.objects.get_for_class_path(self.class_path)
-            read_only = job_model.read_only if job_model.read_only_override else self.read_only
-            commit_default = job_model.commit_default if job_model.commit_default_override else self.commit_default
-            task_queues = job_model.task_queues if job_model.task_queues_override else self.task_queues
+            job_model = JobModel.objects.get_for_class_path(cls.class_path)
+            dryrun_default = job_model.dryrun_default if job_model.dryrun_default_override else cls.dryrun_default
+            task_queues = job_model.task_queues if job_model.task_queues_override else cls.task_queues
         except JobModel.DoesNotExist:
-            # 2.0 TODO: remove this fallback, Job records should always exist.
-            logger.error("No Job instance found in the database corresponding to %s", self.class_path)
-            read_only = self.read_only
-            commit_default = self.commit_default
-            task_queues = self.task_queues
-
-        if read_only:
-            # Hide the commit field for read only jobs
-            form.fields["_commit"].widget = forms.HiddenInput()
-            form.fields["_commit"].initial = False
-        elif not initial or "_commit" not in initial:
-            # Set initial "commit" checkbox state based on the Meta parameter
-            form.fields["_commit"].initial = commit_default
+            logger.error("No Job instance found in the database corresponding to %s", cls.class_path)
+            dryrun_default = cls.dryrun_default
+            task_queues = cls.task_queues
 
         # Update task queue choices
         form.fields["_task_queue"].choices = task_queues_as_choices(task_queues)
 
+        if cls.supports_dryrun and (not initial or "dryrun" not in initial):
+            # Set initial "dryrun" checkbox state based on the Meta parameter
+            form.fields["dryrun"].initial = dryrun_default
+        if not settings.DEBUG:
+            form.fields["_profile"].widget = forms.HiddenInput()
+
         # https://github.com/PyCQA/pylint/issues/3484
-        if self.field_order:  # pylint: disable=using-constant-test
-            form.order_fields(self.field_order)
+        if cls.field_order:  # pylint: disable=using-constant-test
+            form.order_fields(cls.field_order)
 
         if approval_view:
             # Set `disabled=True` on all fields
             for _, field in form.fields.items():
                 field.disabled = True
 
-            # Alter the commit help text to avoid confusion concerning approval dry-runs
-            form.fields["_commit"].help_text = "Commit changes to the database"
-
         return form
+
+    def clear_cache(self):
+        """
+        Clear all cached properties on this instance without accessing them. This is required because
+        celery reuses task instances for multiple runs.
+        """
+        try:
+            del self.celery_kwargs
+        except AttributeError:
+            pass
+        try:
+            del self.job_result
+        except AttributeError:
+            pass
+        try:
+            del self.job_model
+        except AttributeError:
+            pass
+
+    @functools.cached_property
+    def job_model(self):
+        return JobModel.objects.get(module_name=self.__module__, job_class_name=self.__name__)
+
+    @functools.cached_property
+    def job_result(self):
+        return JobResult.objects.get(id=self.request.id)
+
+    @functools.cached_property
+    def celery_kwargs(self):
+        return self.job_result.celery_kwargs or {}
+
+    @property
+    def user(self):
+        return getattr(self.job_result, "user", None)
 
     @staticmethod
     def serialize_data(data):
@@ -371,7 +666,7 @@ class BaseJob:
                 return_data[field_name] = value.pk
             # FileVar (Save each FileVar as a FileProxy)
             elif isinstance(value, InMemoryUploadedFile):
-                return_data[field_name] = BaseJob.save_file(value)
+                return_data[field_name] = BaseJob._save_file_to_proxy(value)
             # IPAddressVar, IPAddressWithMaskVar, IPNetworkVar
             elif isinstance(value, netaddr.ip.BaseIP):
                 return_data[field_name] = str(value)
@@ -381,6 +676,7 @@ class BaseJob:
 
         return return_data
 
+    # TODO: can the deserialize_data logic be moved to NautobotKombuJSONEncoder?
     @classmethod
     def deserialize_data(cls, data):
         """
@@ -400,7 +696,7 @@ class BaseJob:
             raise TypeError("Data should be a dictionary.")
 
         for field_name, value in data.items():
-            # If a field isn't a var, skip it (e.g. `_commit`).
+            # If a field isn't a var, skip it (e.g. `_task_queue`).
             try:
                 var = cls_vars[field_name]
             except KeyError:
@@ -417,9 +713,10 @@ class BaseJob:
                 queryset = var.field_attrs["queryset"].filter(pk__in=value)
                 if queryset.count() < len(value):
                     # Not all objects found
-                    not_found_pk_list = value - list(queryset.values_list("pk", flat=True))
+                    found_pks = set(queryset.values_list("pk", flat=True))
+                    not_found_pks = set(value).difference(found_pks)
                     raise queryset.model.DoesNotExist(
-                        f"Failed to find requested objects for var {field_name}: [{', '.join(not_found_pk_list)}]"
+                        f"Failed to find requested objects for var {field_name}: [{', '.join(not_found_pks)}]"
                     )
                 return_data[field_name] = var.field_attrs["queryset"].filter(pk__in=value)
 
@@ -429,7 +726,7 @@ class BaseJob:
                 else:
                     return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
             elif isinstance(var, FileVar):
-                return_data[field_name] = cls.load_file(value)
+                return_data[field_name] = cls._load_file_from_proxy(value)
             # IPAddressVar is a netaddr.IPAddress object
             elif isinstance(var, IPAddressVar):
                 return_data[field_name] = netaddr.IPAddress(value)
@@ -441,8 +738,9 @@ class BaseJob:
 
         return return_data
 
-    def validate_data(self, data, files=None):
-        cls_vars = self._get_vars()
+    @classmethod
+    def validate_data(cls, data, files=None):
+        cls_vars = cls._get_vars()
 
         if not isinstance(data, dict):
             raise ValidationError("Job data needs to be a dict")
@@ -452,27 +750,33 @@ class BaseJob:
                 raise ValidationError({k: "Job data contained an unknown property"})
 
         # defer validation to the form object
-        f = self.as_form(data=self.deserialize_data(data), files=files)
+        f = cls.as_form(data=cls.deserialize_data(data), files=files)
         if not f.is_valid():
             raise ValidationError(f.errors)
 
         return f.cleaned_data
 
+    @classmethod
+    def prepare_job_kwargs(cls, job_kwargs):
+        """Process dict and return kwargs that exist as ScriptVariables on this job."""
+        job_vars = cls._get_vars()
+        return {k: v for k, v in job_kwargs.items() if k in job_vars}
+
     @staticmethod
-    def load_file(pk):
+    def _load_file_from_proxy(pk):
         """Load a file proxy stored in the database by primary key.
 
         Args:
             pk (uuid): Primary key of the `FileProxy` to retrieve
 
         Returns:
-            File-like object
+            (File): A File-like object
         """
         fp = FileProxy.objects.get(pk=pk)
         return fp.file
 
     @staticmethod
-    def save_file(uploaded_file):
+    def _save_file_to_proxy(uploaded_file):
         """
         Save an uploaded file to the database as a file proxy and return the
         primary key.
@@ -481,105 +785,27 @@ class BaseJob:
             uploaded_file (file): File handle of file to save to database
 
         Returns:
-            uuid
+            (uuid): The pk of the `FileProxy` object
         """
         fp = FileProxy.objects.create(name=uploaded_file.name, file=uploaded_file)
         return fp.pk
 
-    @staticmethod
-    def delete_files(*files_to_delete):
+    def _delete_file_proxies(self, *files_to_delete):
         """Given an unpacked list of primary keys for `FileProxy` objects, delete them.
 
         Args:
             files_to_delete (*args): List of primary keys to delete
 
         Returns:
-            int (number of objects deleted)
+            (int): number of objects deleted
         """
         files = FileProxy.objects.filter(pk__in=files_to_delete)
         num = 0
         for fp in files:
             fp.delete()  # Call delete() on each, so `FileAttachment` is reaped
             num += 1
-        logger.debug(f"Deleted {num} file proxies")
+        self.logger.debug("Deleted %d file proxies", num, extra={"grouping": "post_run"})
         return num
-
-    def run(self, data, commit):
-        """
-        Method invoked when this Job is run, before any "test_*" methods.
-        """
-
-    def post_run(self):
-        """
-        Method invoked after "run()" and all "test_*" methods.
-        """
-
-    # Logging
-
-    def _log(self, obj, message, level_choice=LogLevelChoices.LOG_DEFAULT):
-        """
-        Log a message. Do not call this method directly; use one of the log_* wrappers below.
-        """
-        self.job_result.log(
-            message,
-            obj=obj,
-            level_choice=level_choice,
-            grouping=self.active_test,
-            logger=self.logger,
-        )
-
-    def log(self, message):
-        """
-        Log a generic message which is not associated with a particular object.
-        """
-        self._log(None, message, level_choice=LogLevelChoices.LOG_DEFAULT)
-
-    def log_debug(self, message):
-        """
-        Log a debug message which is not associated with a particular object.
-        """
-        self._log(None, message, level_choice=LogLevelChoices.LOG_DEFAULT)
-
-    def log_success(self, obj=None, message=None):
-        """
-        Record a successful test against an object. Logging a message is optional.
-        If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
-        """
-        if isinstance(obj, str) and message is None:
-            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_SUCCESS)
-        else:
-            self._log(obj, message, level_choice=LogLevelChoices.LOG_SUCCESS)
-
-    def log_info(self, obj=None, message=None):
-        """
-        Log an informational message.
-        If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
-        """
-        if isinstance(obj, str) and message is None:
-            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_INFO)
-        else:
-            self._log(obj, message, level_choice=LogLevelChoices.LOG_INFO)
-
-    def log_warning(self, obj=None, message=None):
-        """
-        Log a warning.
-        If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
-        """
-        if isinstance(obj, str) and message is None:
-            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_WARNING)
-        else:
-            self._log(obj, message, level_choice=LogLevelChoices.LOG_WARNING)
-
-    def log_failure(self, obj=None, message=None):
-        """
-        Log a failure. Calling this method will automatically mark the overall job as failed.
-        If the object provided is a string, treat it as a message. This is a carryover of Netbox Report API
-        """
-        if isinstance(obj, str) and message is None:
-            self._log(obj=None, message=obj, level_choice=LogLevelChoices.LOG_FAILURE)
-        else:
-            self._log(obj, message, level_choice=LogLevelChoices.LOG_FAILURE)
-        raise RunJobTaskFailed(message)
 
     # Convenience functions
 
@@ -603,6 +829,32 @@ class BaseJob:
 
         return data
 
+    def create_file(self, filename, content):
+        """
+        Create a file that can later be downloaded by users.
+
+        Args:
+            filename (str): Name of the file to create, including extension
+            content (str, bytes): Content to populate the created file with.
+
+        Raises:
+            (ValueError): if the provided content exceeds JOB_CREATE_FILE_MAX_SIZE in length
+
+        Returns:
+            (FileProxy): record that was created
+        """
+        if isinstance(content, str):
+            content = content.encode("utf-8")
+        max_size = get_settings_or_config("JOB_CREATE_FILE_MAX_SIZE")
+        actual_size = len(content)
+        if actual_size > max_size:
+            raise ValueError(f"Provided {actual_size} bytes of content, but JOB_CREATE_FILE_MAX_SIZE is {max_size}")
+        fp = FileProxy.objects.create(
+            name=filename, job_result=self.job_result, file=ContentFile(content, name=filename)
+        )
+        self.logger.info("Created file [%s](%s)", filename, fp.file.url)
+        return fp
+
 
 class Job(BaseJob):
     """
@@ -623,7 +875,6 @@ class ScriptVariable:
     form_field = forms.CharField
 
     def __init__(self, label="", description="", default=None, required=True, widget=None):
-
         # Initialize field attributes
         if not hasattr(self, "field_attrs"):
             self.field_attrs = {}
@@ -678,7 +929,7 @@ class StringVar(ScriptVariable):
 
 class TextVar(ScriptVariable):
     """
-    Free-form text data. Renders as a <textarea>.
+    Free-form text data. Renders as a `<textarea>`.
     """
 
     form_field = forms.CharField
@@ -720,6 +971,23 @@ class BooleanVar(ScriptVariable):
         self.field_attrs["required"] = False
 
 
+class DryRunVar(BooleanVar):
+    """
+    Special boolean variable that bypasses approval requirements if this is set to True on job execution.
+    """
+
+    description = "Check to run job in dryrun mode."
+
+    def __init__(self, *args, **kwargs):
+        # Default must be false unless overridden through `dryrun_default` meta attribute
+        kwargs["default"] = False
+
+        # Default description if one was not provided
+        kwargs.setdefault("description", self.description)
+
+        super().__init__(*args, **kwargs)
+
+
 class ChoiceVar(ScriptVariable):
     """
     Select one of several predefined static choices, passed as a list of two-tuples. Example:
@@ -754,10 +1022,11 @@ class ObjectVar(ScriptVariable):
     """
     A single object within Nautobot.
 
-    :param model: The Nautobot model being referenced
-    :param display_field: The attribute of the returned object to display in the selection list (default: 'name')
-    :param query_params: A dictionary of additional query parameters to attach when making REST API requests (optional)
-    :param null_option: The label to use as a "null" selection option (optional)
+    Args:
+        model (Model): The Nautobot model being referenced
+        display_field (str): The attribute of the returned object to display in the selection list
+        query_params (dict): Additional query parameters to attach when making REST API requests
+        null_option (str): The label to use as a "null" selection option
     """
 
     form_field = DynamicModelChoiceField
@@ -850,6 +1119,14 @@ class IPNetworkVar(ScriptVariable):
             self.field_attrs["validators"].append(MaxPrefixLengthValidator(max_prefix_length))
 
 
+class JSONVar(ScriptVariable):
+    """
+    Like TextVar but with native serializing of JSON data.
+    """
+
+    form_field = JSONField
+
+
 class JobHookReceiver(Job):
     """
     Base class for job hook receivers. Job hook receivers are jobs that are initiated
@@ -858,9 +1135,8 @@ class JobHookReceiver(Job):
 
     object_change = ObjectVar(model=ObjectChange)
 
-    def run(self, data, commit):
+    def run(self, object_change):
         """JobHookReceiver subclasses generally shouldn't need to override this method."""
-        object_change = data["object_change"]
         self.receive_job_hook(
             change=object_change,
             action=object_change.action,
@@ -871,9 +1147,36 @@ class JobHookReceiver(Job):
         """
         Method to be implemented by concrete JobHookReceiver subclasses.
 
-        :param change: an instance of `nautobot.extras.models.ObjectChange`
-        :param action: a string with the action performed on the changed object ("create", "update" or "delete")
-        :param changed_object: an instance of the object that was changed, or `None` if the object has been deleted
+        Args:
+            change (ObjectChange): an instance of `nautobot.extras.models.ObjectChange`
+            action (str): a string with the action performed on the changed object ("create", "update" or "delete")
+            changed_object (Model): an instance of the object that was changed, or `None` if the object has been deleted
+        """
+        raise NotImplementedError
+
+
+class JobButtonReceiver(Job):
+    """
+    Base class for job button receivers. Job button receivers are jobs that are initiated
+    from UI buttons and are not intended to be run from the job form UI or API like standard jobs.
+    """
+
+    object_pk = StringVar()
+    object_model_name = StringVar()
+
+    def run(self, object_pk, object_model_name):
+        """JobButtonReceiver subclasses generally shouldn't need to override this method."""
+        model = get_model_from_name(object_model_name)
+        obj = model.objects.get(pk=object_pk)
+
+        self.receive_job_button(obj=obj)
+
+    def receive_job_button(self, obj):
+        """
+        Method to be implemented by concrete JobButtonReceiver subclasses.
+
+        Args:
+            obj (Model): an instance of the object that triggered this job
         """
         raise NotImplementedError
 
@@ -882,11 +1185,8 @@ def is_job(obj):
     """
     Returns True if the given object is a Job subclass.
     """
-    from .scripts import Script, BaseScript
-    from .reports import Report
-
     try:
-        return issubclass(obj, Job) and obj not in [Job, Script, BaseScript, Report, JobHookReceiver]
+        return issubclass(obj, Job) and obj not in [Job, JobHookReceiver, JobButtonReceiver]
     except TypeError:
         return False
 
@@ -898,361 +1198,16 @@ def is_variable(obj):
     return isinstance(obj, ScriptVariable)
 
 
-def get_jobs():
-    """
-    Compile a dictionary of all jobs available across all modules in the jobs path(s).
-
-    Returns an OrderedDict:
-
-    {
-        "local": {
-            <module_name>: {
-                "name": <human-readable module name>,
-                "jobs": {
-                   <class_name>: <job_class>,
-                   <class_name>: <job_class>,
-                   ...
-                },
-            },
-            <module_name>: { ... },
-            ...
-        },
-        "git.<repository-slug>": {
-            <module_name>: { ... },
-        },
-        ...
-        "plugins": {
-            <module_name>: { ... },
-        }
-    }
-    """
-    jobs = OrderedDict()
-
-    paths = _get_job_source_paths()
-
-    # Iterate over all filesystem sources (local, git.<slug1>, git.<slug2>, etc.)
-    for source, path in paths.items():
-        for job_info in jobs_in_directory(path):
-            jobs.setdefault(source, {})
-            if job_info.module_name not in jobs[source]:
-                jobs[source][job_info.module_name] = {"name": job_info.job_class.grouping, "jobs": OrderedDict()}
-            jobs[source][job_info.module_name]["jobs"][job_info.job_class_name] = job_info.job_class
-
-    # Add jobs from plugins (which were already imported at startup)
-    for cls in registry["plugin_jobs"]:
-        module = inspect.getmodule(cls)
-        jobs.setdefault("plugins", {}).setdefault(module.__name__, {"name": cls.grouping, "jobs": OrderedDict()})
-        jobs["plugins"][module.__name__]["jobs"][cls.__name__] = cls
-
-    return jobs
-
-
-def _get_job_source_paths():
-    """
-    Helper function to get_jobs().
-
-    Constructs a dict of {"grouping": filesystem_path, ...}.
-    Current groupings are "local", "git.<repository_slug>".
-    Plugin jobs aren't loaded dynamically from a source_path and so are not included in this function
-    """
-    paths = {}
-    # Locally installed jobs
-    if settings.JOBS_ROOT and os.path.exists(settings.JOBS_ROOT):
-        paths["local"] = settings.JOBS_ROOT
-
-    # Jobs derived from Git repositories
-    if settings.GIT_ROOT and os.path.isdir(settings.GIT_ROOT):
-        for repository_record in GitRepository.objects.all():
-            if "extras.job" not in repository_record.provided_contents:
-                # This repository isn't marked as containing jobs that we should use.
-                continue
-
-            try:
-                # In the case where we have multiple Nautobot instances, or multiple worker instances,
-                # they are not required to share a common filesystem; therefore, we may need to refresh our local clone
-                # of the Git repository to ensure that it is in sync with the latest repository clone from any instance.
-                ensure_git_repository(
-                    repository_record,
-                    head=repository_record.current_head,
-                    logger=logger,
-                )
-            except Exception as exc:
-                logger.error(f"Error during local clone of Git repository {repository_record}: {exc}")
-                continue
-
-            jobs_path = os.path.join(repository_record.filesystem_path, "jobs")
-            if os.path.isdir(jobs_path):
-                paths[f"git.{repository_record.slug}"] = jobs_path
-            else:
-                logger.warning(f"Git repository {repository_record} is configured to provide jobs, but none are found!")
-
-        # TODO(Glenn): when a Git repo is deleted or its slug is changed, we update the local filesystem
-        # (see extras/signals.py, extras/models/datasources.py), but as noted above, there may be multiple filesystems
-        # involved, so not all local clones of deleted Git repositories may have been deleted yet.
-        # For now, if we encounter a "leftover" Git repo here, we delete it now.
-        for git_slug in os.listdir(settings.GIT_ROOT):
-            git_path = os.path.join(settings.GIT_ROOT, git_slug)
-            if not os.path.isdir(git_path):
-                logger.warning(
-                    f"Found non-directory {git_slug} in {settings.GIT_ROOT}. Only Git repositories should exist here."
-                )
-            elif not os.path.isdir(os.path.join(git_path, ".git")):
-                logger.warning(f"Directory {git_slug} in {settings.GIT_ROOT} does not appear to be a Git repository.")
-            elif not GitRepository.objects.filter(slug=git_slug):
-                logger.warning(f"Deleting unmanaged (leftover?) repository at {git_path}")
-                shutil.rmtree(git_path)
-
-    return paths
-
-
-def get_job_classpaths():
-    """
-    Get a list of all known Job class_path strings.
-
-    This is used as a cacheable, light-weight alternative to calling get_jobs() or get_job()
-    when all that's needed is to verify whether a given job exists.
-    """
-    jobs_dict = get_jobs()
-    result = set()
-    for grouping_name, modules_dict in jobs_dict.items():
-        for module_name in modules_dict:
-            for class_name in modules_dict[module_name]["jobs"]:
-                result.add(f"{grouping_name}/{module_name}/{class_name}")
-    return result
-
-
 def get_job(class_path):
     """
-    Retrieve a specific job class by its class_path.
+    Retrieve a specific job class by its class_path (`<module_name>.<JobClassName>`).
 
-    Note that this is built atop get_jobs() and so is not a particularly light-weight API;
-    if all you need to do is to verify whether a given class_path exists, use get_job_classpaths() instead.
-
-    Returns None if not found.
+    May return None if the job isn't properly registered with Celery at this time.
     """
     try:
-        grouping_name, module_name, class_name = class_path.split("/", 2)
-    except ValueError:
-        logger.error(f'Invalid class_path value "{class_path}"')
+        return celery_app.tasks[class_path].__class__
+    except NotRegistered:
         return None
-
-    jobs = get_jobs()
-    return jobs.get(grouping_name, {}).get(module_name, {}).get("jobs", {}).get(class_name, None)
-
-
-class RunJobTaskFailed(Exception):
-    """Celery task failed for some reason."""
-
-
-@nautobot_task
-def run_job(data, request, job_result_pk, commit=True, *args, **kwargs):
-    """
-    Helper function to call the "run()", "test_*()", and "post_run" methods on a Job.
-
-    This function is responsible for setting up the job execution, handing the DB tranaction
-    and rollback conditions, plus post execution cleanup and saving the JobResult record.
-    """
-    from nautobot.extras.models import JobResult  # avoid circular import
-
-    # Getting the correct job result can fail if the stored data cannot be serialized.
-    # Catching `TypeError: the JSON object must be str, bytes or bytearray, not int`
-    job_result = JobResult.objects.get(pk=job_result_pk)
-
-    job_model = job_result.job_model
-    initialization_failure = None
-    job_model = JobModel.objects.get_for_class_path(job_result.name)
-
-    if not job_model.enabled:
-        initialization_failure = f"Job {job_model} is not enabled to be run!"
-    else:
-        job_class = job_model.job_class
-
-        if not job_model.installed or not job_class:
-            initialization_failure = f'Unable to locate job "{job_result.name}" to run it!'
-
-    if initialization_failure:
-        job_result.log(
-            message=initialization_failure,
-            obj=job_model,
-            level_choice=LogLevelChoices.LOG_FAILURE,
-            grouping="initialization",
-            logger=logger,
-        )
-        raise RunJobTaskFailed(initialization_failure)
-
-    job = job_class()
-    job.active_test = "initialization"
-    job.job_result = job_result
-
-    soft_time_limit = job_model.soft_time_limit or settings.CELERY_TASK_SOFT_TIME_LIMIT
-    time_limit = job_model.time_limit or settings.CELERY_TASK_TIME_LIMIT
-    if time_limit <= soft_time_limit:
-        job_result.log(
-            f"The hard time limit of {time_limit} seconds is less than "
-            f"or equal to the soft time limit of {soft_time_limit} seconds. "
-            f"This job will fail silently after {time_limit} seconds.",
-            level_choice=LogLevelChoices.LOG_WARNING,
-            grouping="initialization",
-            logger=logger,
-        )
-
-    file_ids = None
-    try:
-        # Capture the file IDs for any FileProxy objects created so we can cleanup later.
-        file_fields = list(job._get_file_vars())
-        file_ids = [data[f] for f in file_fields]
-
-        # Attempt to resolve serialized data back into original form by creating querysets or model instances
-        # If we fail to find any objects, we consider this a job execution error, and fail.
-        # This might happen when a job sits on the queue for a while (i.e. scheduled) and data has changed
-        # or it might be bad input from an API request, or manual execution.
-
-        data = job_class.deserialize_data(data)
-    # TODO(jathan): Another place where because `log()` is called which mutates `.data`, we must
-    # explicitly call `save()` again. We need to see if we can move more of this to `NauotbotTask`
-    # and/or the DB backend as well.
-    except Exception:
-        stacktrace = traceback.format_exc()
-        job_result.log(
-            f"Error initializing job:\n```\n{stacktrace}\n```",
-            level_choice=LogLevelChoices.LOG_FAILURE,
-            grouping="initialization",
-            logger=logger,
-        )
-        job_result.save()
-        if file_ids:
-            # Cleanup FileProxy objects
-            job.delete_files(*file_ids)  # pylint: disable=not-an-iterable
-        raise
-
-    if job_model.read_only:
-        # Force commit to false for read only jobs.
-        commit = False
-
-    # TODO(Glenn): validate that all args required by this job are set in the data or else log helpful errors?
-
-    job.logger.info(f"Running job (commit={commit})")
-
-    # Add the current request as a property of the job
-    job.request = request
-
-    def _run_job():
-        """
-        Core job execution task.
-
-        We capture this within a subfunction to allow for conditionally wrapping it with the change_logging
-        context manager (which is only relevant if commit == True).
-
-        If the job is marked as read_only == True, then commit is forced to False and no log messages will be
-        emitted related to reverting database changes.
-        """
-        started = timezone.now()
-        job.results["output"] = ""
-        try:
-            with transaction.atomic():
-                # Script-like behavior
-                job.active_test = "run"
-                output = job.run(data=data, commit=commit)
-                if output:
-                    job.results["output"] += "\n" + str(output)
-
-                # Report-like behavior
-                for method_name in job.test_methods:
-                    job.active_test = method_name
-                    output = getattr(job, method_name)()
-                    if output:
-                        job.results["output"] += "\n" + str(output)
-
-                job.logger.info("job completed successfully")
-
-                if not commit:
-                    raise AbortTransaction("Database changes have been reverted automatically.")
-
-        except AbortTransaction:
-            if not job_model.read_only:
-                job.log_info(message="Database changes have been reverted automatically.")
-
-        except Exception:
-            if not job_model.read_only:
-                job.log_info(message="Database changes have been reverted due to error.")
-            raise
-
-        # TODO(jathan): For now we still need to call `save()` so that any output data from the job
-        # that was stored gets saved to the `JobResult`. We need to consider where this should be
-        # moved as we get closer to eliminating `run_job()` entirely. Hint: Probably inside of
-        # `NautobotTask` class.
-        finally:
-            try:
-                job_result.save()
-            except IntegrityError:
-                # handle job_model deleted while job was running
-                job_result.job_model = None
-                job_result.save()
-            if file_ids:
-                job.delete_files(*file_ids)  # Cleanup FileProxy objects
-
-        # TODO(jathan): Pretty sure this can also be handled by the backend, but
-        # leaving it for now.
-        # record data about this jobrun in the schedule
-        if job_result.schedule:
-            job_result.schedule.total_run_count += 1
-            job_result.schedule.last_run_at = started
-            job_result.schedule.save()
-
-        # Perform any post-run tasks
-        # 2.0 TODO Remove post_run() method entirely
-        job.active_test = "post_run"
-        output = job.post_run()
-        # TODO(jathan): We need to call `save()` here too so that any appended output from
-        # `post_run` gets stored on the `JobResult`. We need to move this out of here as well.
-        if output:
-            job.results["output"] += "\n" + str(output)
-            job_result.save()
-
-        job_result.refresh_from_db()
-        job.logger.info(f"Job completed in {job_result.duration}")
-
-        # TODO(jathan): For now this is only output from `post_run()` which is not straightforward.
-        # We need to think about what we want to be returned from job runs and stored as
-        # `JobResult.result`, otherwise it will always be `None`.
-        return output
-
-    # Execute the job. If commit == True, wrap it with the change_logging context manager to ensure we
-    # process change logs, webhooks, etc.
-    if commit:
-        context_class = JobHookChangeContext if job_model.is_job_hook_receiver else JobChangeContext
-        change_context = context_class(user=request.user, context_detail=job_model.slug)
-        with change_logging(change_context):
-            output = _run_job()
-    else:
-        output = _run_job()
-
-    # This is just passing through the return value from `post_run()` which for now will always be
-    # `None` (see above).
-    return output
-
-
-@nautobot_task
-def scheduled_job_handler(*args, **kwargs):
-    """
-    A thin wrapper around JobResult.enqueue_job() that allows for it to be called as an async task
-    for the purposes of enqueuing scheduled jobs at their recurring intervals. Thus, JobResult.enqueue_job()
-    is responsible for enqueuing the actual job for execution and this method is the task executed
-    by the scheduler to kick off the job execution on a recurring interval.
-    """
-    from nautobot.extras.models import JobResult  # avoid circular import
-
-    user_pk = kwargs.pop("user")
-    user = User.objects.get(pk=user_pk)
-    name = kwargs.pop("name")
-    scheduled_job_pk = kwargs.pop("scheduled_job_pk")
-    celery_kwargs = kwargs.pop("celery_kwargs", {})
-    schedule = ScheduledJob.objects.get(pk=scheduled_job_pk)
-
-    job_content_type = get_job_content_type()
-    JobResult.enqueue_job(
-        run_job, name, job_content_type, user, celery_kwargs=celery_kwargs, schedule=schedule, **kwargs
-    )
 
 
 def enqueue_job_hooks(object_change):
@@ -1260,19 +1215,17 @@ def enqueue_job_hooks(object_change):
     Find job hook(s) assigned to this changed object type + action and enqueue them
     to be processed
     """
-    from nautobot.extras.models import JobResult  # avoid circular import
 
     # Job hooks cannot trigger other job hooks
     if object_change.change_context == ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
         return
 
     # Determine whether this type of object supports job hooks
-    model_type = object_change.changed_object._meta.model
-    if model_type not in ChangeLoggedModelsQuery().list_subclasses():
+    content_type = object_change.changed_object_type
+    if content_type not in ChangeLoggedModelsQuery().as_queryset():
         return
 
     # Retrieve any applicable job hooks
-    content_type = ContentType.objects.get_for_model(object_change.changed_object)
     action_flag = {
         ObjectChangeActionChoices.ACTION_CREATE: "type_create",
         ObjectChangeActionChoices.ACTION_UPDATE: "type_update",
@@ -1282,16 +1235,5 @@ def enqueue_job_hooks(object_change):
 
     # Enqueue the jobs related to the job_hooks
     for job_hook in job_hooks:
-        job_content_type = get_job_content_type()
         job_model = job_hook.job
-        request = RequestFactory().request(SERVER_NAME="job_hook")
-        request.user = object_change.user
-        JobResult.enqueue_job(
-            run_job,
-            job_model.class_path,
-            job_content_type,
-            object_change.user,
-            data=job_model.job_class.serialize_data({"object_change": object_change}),
-            request=copy_safe_request(request),
-            commit=True,
-        )
+        JobResult.enqueue_job(job_model, object_change.user, object_change=object_change.pk)

@@ -2,9 +2,22 @@ import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from netutils.lib_mapper import (
+    ANSIBLE_LIB_MAPPER_REVERSE,
+    HIERCONFIG_LIB_MAPPER_REVERSE,
+    NAPALM_LIB_MAPPER_REVERSE,
+    NETMIKO_LIB_MAPPER_REVERSE,
+    NETUTILSPARSER_LIB_MAPPER_REVERSE,
+    NTCTEMPLATES_LIB_MAPPER_REVERSE,
+    PYATS_LIB_MAPPER_REVERSE,
+    PYNTC_LIB_MAPPER_REVERSE,
+    SCRAPLI_LIB_MAPPER_REVERSE,
+)
 
 from nautobot.core.utils.color import hex_to_rgb, lighten_color, rgb_to_hex
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import InterfaceModeChoices
+from nautobot.dcim.constants import NETUTILS_NETWORK_DRIVER_MAPPING_NAMES
 
 
 def compile_path_node(ct_id, object_id):
@@ -49,9 +62,66 @@ def cable_status_color_css(record):
     return f"background-color: #{lighter_color}"
 
 
+def get_network_driver_mapping_tool_names():
+    """
+    Return a list of all available network driver tool names derived from the netutils library and the optional NETWORK_DRIVERS setting.
+
+    Tool names are "ansible", "hier_config", "napalm", "netmiko", etc...
+    """
+    network_driver_names = NETUTILS_NETWORK_DRIVER_MAPPING_NAMES.copy()
+    network_driver_names.update(get_settings_or_config("NETWORK_DRIVERS").keys())
+
+    return sorted(network_driver_names)
+
+
+def get_all_network_driver_mappings():
+    """
+    Return a dict of all available network driver mappings derived from the netutils library and the optional NETWORK_DRIVERS setting.
+
+    Example output:
+        {
+            "cisco_ios": {
+                "ansible": "cisco.ios.ios",
+                "napalm": "ios",
+            },
+            "cisco_nxos": {
+                "ansible": "cisco.nxos.nxos",
+                "napalm": "nxos",
+            },
+            etc...
+        }
+    """
+    network_driver_mappings = {}
+
+    # initialize mapping from netutils library
+    for tool_name, mappings in (
+        ("ansible", ANSIBLE_LIB_MAPPER_REVERSE),
+        ("hier_config", HIERCONFIG_LIB_MAPPER_REVERSE),
+        ("napalm", NAPALM_LIB_MAPPER_REVERSE),
+        ("netmiko", NETMIKO_LIB_MAPPER_REVERSE),
+        ("netutils_parser", NETUTILSPARSER_LIB_MAPPER_REVERSE),
+        ("ntc_templates", NTCTEMPLATES_LIB_MAPPER_REVERSE),
+        ("pyats", PYATS_LIB_MAPPER_REVERSE),
+        ("pyntc", PYNTC_LIB_MAPPER_REVERSE),
+        ("scrapli", SCRAPLI_LIB_MAPPER_REVERSE),
+    ):
+        for normalized_name, mapped_name in mappings.items():
+            network_driver_mappings.setdefault(normalized_name, {})
+            network_driver_mappings[normalized_name][tool_name] = mapped_name
+
+    # add mappings from optional NETWORK_DRIVERS setting
+    network_drivers_config = get_settings_or_config("NETWORK_DRIVERS")
+    for tool_name, mappings in network_drivers_config.items():
+        for normalized_name, mapped_name in mappings.items():
+            network_driver_mappings.setdefault(normalized_name, {})
+            network_driver_mappings[normalized_name][tool_name] = mapped_name
+
+    return network_driver_mappings
+
+
 def validate_interface_tagged_vlans(instance, model, pk_set):
     """
-    Validate that the VLANs being added to the 'tagged_vlans' field of an Interface instance are all from the same site
+    Validate that the VLANs being added to the 'tagged_vlans' field of an Interface instance are all from the same location
     as the parent device or are global and that the mode of the Interface is set to `InterfaceModeChoices.MODE_TAGGED`.
 
     Args:
@@ -66,15 +136,21 @@ def validate_interface_tagged_vlans(instance, model, pk_set):
         )
 
     # Filter the model objects based on the primary keys passed in kwargs and exclude the ones that have
-    # a site that is not the parent's site or None
-    tagged_vlans = model.objects.filter(pk__in=pk_set).exclude(site__isnull=True).exclude(site=instance.parent.site)
+    # a location that is not the parent's location or None
+    # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to add a VLAN
+    # belongs to the parent Location or the child location of the parent device to the `tagged_vlan` field of the interface?
+    tagged_vlans = (
+        model.objects.filter(pk__in=pk_set)
+        .exclude(locations__isnull=True)
+        .exclude(locations__in=[instance.parent.location])
+    )
 
     if tagged_vlans.count():
         raise ValidationError(
             {
                 "tagged_vlans": (
                     f"Tagged VLAN with names {list(tagged_vlans.values_list('name', flat=True))} must all belong to the "
-                    f"same site as the interface's parent device, or it must be global."
+                    f"same location as the interface's parent device, or it must be global."
                 )
             }
         )

@@ -10,11 +10,11 @@ from netaddr import IPNetwork
 
 from nautobot.core.settings_funcs import sso_auth_enabled
 from nautobot.core.testing import NautobotTestClient, TestCase
-from nautobot.dcim.models import Site
-from nautobot.extras.models import Status
-from nautobot.ipam.models import Prefix
+from nautobot.core.utils import lookup
+from nautobot.dcim.models import Location, LocationType
+from nautobot.extras.models import ObjectChange, Status
+from nautobot.ipam.models import Namespace, Prefix
 from nautobot.users.models import ObjectPermission, Token
-
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -51,7 +51,7 @@ class ExternalAuthenticationTestCase(TestCase):
         self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_REMOTE_USER")
 
         # Client should not be authenticated
-        self.client.get(reverse("home"), follow=True, **headers)  # noqa
+        self.client.get(reverse("home"), follow=True, **headers)
         self.assertNotIn("_auth_user_id", self.client.session)
 
     @override_settings(AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS)
@@ -161,8 +161,8 @@ class ExternalAuthenticationTestCase(TestCase):
         AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS,
         REMOTE_AUTH_AUTO_CREATE_USER=True,
         EXTERNAL_AUTH_DEFAULT_PERMISSIONS={
-            "dcim.add_site": None,
-            "dcim.change_site": None,
+            "dcim.add_location": None,
+            "dcim.change_location": None,
         },
     )
     def test_external_auth_default_permissions(self):
@@ -178,7 +178,7 @@ class ExternalAuthenticationTestCase(TestCase):
         self.assertEqual(settings.REMOTE_AUTH_HEADER, "HTTP_REMOTE_USER")
         self.assertEqual(
             settings.EXTERNAL_AUTH_DEFAULT_PERMISSIONS,
-            {"dcim.add_site": None, "dcim.change_site": None},
+            {"dcim.add_location": None, "dcim.change_location": None},
         )
 
         response = self.client.get(reverse("home"), follow=True, **headers)
@@ -190,7 +190,7 @@ class ExternalAuthenticationTestCase(TestCase):
             new_user.pk,
             msg="Authentication failed",
         )
-        self.assertTrue(new_user.has_perms(["dcim.add_site", "dcim.change_site"]))
+        self.assertTrue(new_user.has_perms(["dcim.add_location", "dcim.change_location"]))
 
     @override_settings(
         SOCIAL_AUTH_BACKEND_PREFIX="custom_auth.backend",
@@ -240,21 +240,67 @@ class ObjectPermissionAPIViewTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-
-        cls.sites = Site.objects.all()[:3]
+        cls.location_type = LocationType.objects.get(name="Campus")
+        cls.locations = Location.objects.filter(location_type=cls.location_type)[:3]
+        cls.namespace = Namespace.objects.first()
 
         cls.statuses = Status.objects.get_for_model(Prefix)
 
         cls.prefixes = [
-            Prefix.objects.create(prefix=IPNetwork("10.0.0.0/24"), site=cls.sites[0], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.1.0/24"), site=cls.sites[0], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.2.0/24"), site=cls.sites[0], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.3.0/24"), site=cls.sites[1], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.4.0/24"), site=cls.sites[1], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.5.0/24"), site=cls.sites[1], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.6.0/24"), site=cls.sites[2], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.7.0/24"), site=cls.sites[2], status=cls.statuses[0]),
-            Prefix.objects.create(prefix=IPNetwork("10.0.8.0/24"), site=cls.sites[2], status=cls.statuses[0]),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.0.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[0],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.1.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[0],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.2.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[0],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.3.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[1],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.4.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[1],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.5.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[1],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.6.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[2],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.7.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[2],
+                status=cls.statuses[0],
+            ),
+            Prefix.objects.create(
+                prefix=IPNetwork("10.0.8.0/24"),
+                namespace=cls.namespace,
+                location=cls.locations[2],
+                status=cls.statuses[0],
+            ),
         ]
 
     def setUp(self):
@@ -267,7 +313,6 @@ class ObjectPermissionAPIViewTestCase(TestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_object(self):
-
         # Attempt to retrieve object without permission
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[0].pk})
         response = self.client.get(url, **self.header)
@@ -276,7 +321,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": self.sites[0].name},
+            constraints={"locations__name__in": [self.locations[0].name]},
             actions=["view"],
         )
         obj_perm.users.add(self.user)
@@ -303,7 +348,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": self.sites[0].name},
+            constraints={"locations__name__in": [self.locations[0].name]},
             actions=["view"],
         )
         obj_perm.users.add(self.user)
@@ -312,14 +357,15 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Retrieve all objects. Only permitted objects should be returned.
         response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["count"], Prefix.objects.filter(site=self.sites[0]).count())
+        self.assertEqual(response.data["count"], Prefix.objects.filter(locations__in=[self.locations[0]]).count())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_create_object(self):
         url = reverse("ipam-api:prefix-list")
         data = {
             "prefix": "10.0.9.0/24",
-            "site": self.sites[1].pk,
+            "namespace": self.namespace.pk,
+            "locations": [self.locations[1].pk],
             "status": self.statuses[1].pk,
         }
         initial_count = Prefix.objects.count()
@@ -331,7 +377,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": self.sites[0].name},
+            constraints={"locations__name__in": [self.locations[0].name]},
             actions=["add"],
         )
         obj_perm.users.add(self.user)
@@ -343,16 +389,15 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         self.assertEqual(Prefix.objects.count(), initial_count)
 
         # Create a permitted object
-        data["site"] = self.sites[0].pk
+        data["locations"] = [self.locations[0].pk]
         response = self.client.post(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 201)
         self.assertEqual(Prefix.objects.count(), initial_count + 1)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_edit_object(self):
-
         # Attempt to edit an object without permission
-        data = {"site": self.sites[0].pk}
+        data = {"locations": [self.locations[0].pk]}
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[0].pk})
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 403)
@@ -360,14 +405,14 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": f"{self.sites[0].name}"},
+            constraints={"locations__name__in": [self.locations[0].name]},
             actions=["change"],
         )
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
 
         # Attempt to edit a non-permitted object
-        data = {"site": self.sites[0].pk}
+        data = {"locations": [self.locations[0].pk]}
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[3].pk})
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 404)
@@ -379,14 +424,13 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Attempt to modify a permitted object to a non-permitted object
-        data["site"] = self.sites[1].pk
+        data["locations"] = [self.locations[1].pk]
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[0].pk})
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 403)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_delete_object(self):
-
         # Attempt to delete an object without permission
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[0].pk})
         response = self.client.delete(url, format="json", **self.header)
@@ -395,7 +439,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Assign object permission
         obj_perm = ObjectPermission.objects.create(
             name="Test permission",
-            constraints={"site__name": self.sites[0].name},
+            constraints={"locations__name__in": [self.locations[0].name]},
             actions=["delete"],
         )
         obj_perm.users.add(self.user)
@@ -410,3 +454,129 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[0].pk})
         response = self.client.delete(url, format="json", **self.header)
         self.assertEqual(response.status_code, 204)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_user_token_constraints(self):
+        """
+        Test user token as permission constraints.
+        """
+        url = reverse("ipam-api:prefix-list")
+        data = [
+            {
+                "prefix": "10.0.9.0/24",
+                "namespace": self.namespace.pk,
+                "location": self.locations[1].pk,
+                "status": self.statuses[1].pk,
+            },
+            {
+                "prefix": "10.0.10.0/24",
+                "namespace": self.namespace.pk,
+                "location": self.locations[1].pk,
+                "status": self.statuses[1].pk,
+            },
+        ]
+
+        obj_user2 = User.objects.create(username="new-user")
+        token_user2 = Token.objects.create(user=obj_user2)
+        header_user2 = {"HTTP_AUTHORIZATION": f"Token {token_user2.key}"}
+        # Assign object permission to both users to create Prefixes
+        obj_perm = ObjectPermission.objects.create(
+            name="Test ipam permission",
+            actions=["add"],
+        )
+        obj_perm.users.add(self.user, obj_user2)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
+        # Create one Prefix object per user
+        self.client.post(url, data[0], format="json", **self.header)
+        self.client.post(url, data[1], format="json", **header_user2)
+
+        # Assign object permission to both users to view Change Logs, based on user token constraint
+        obj_perm = ObjectPermission.objects.create(
+            name="Test change log permission",
+            constraints={"user": "$user"},
+            actions=["view", "list"],
+        )
+        obj_perm.users.add(self.user, obj_user2)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(ObjectChange))
+
+        # Retrieve all ObjectChange Log entries for every user
+        url = reverse(lookup.get_route_for_model(ObjectChange, "list", api=True))
+        response_user1 = self.client.get(url, **self.header)
+        response_user2 = self.client.get(url, **header_user2)
+
+        # Assert every user has permissions to view Change Logs
+        self.assertTrue(self.user.has_perms(["extras.view_objectchange", "extras.list_objectchange"]))
+        self.assertTrue(obj_user2.has_perms(["extras.view_objectchange", "extras.list_objectchange"]))
+
+        # Check against 1st user's response
+        self.assertEqual(response_user1.status_code, 200)
+        self.assertEqual(response_user1.data["count"], 1)
+        self.assertEqual(response_user1.data["results"][0]["user"]["id"], self.user.pk)
+
+        # Check against 2nd user's response
+        self.assertEqual(response_user2.status_code, 200)
+        self.assertEqual(response_user2.data["count"], 1)
+        self.assertEqual(response_user2.data["results"][0]["user"]["id"], obj_user2.pk)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_user_token_list_constraints(self):
+        """
+        Test user token as permission of a list of constraints.
+        """
+        url = reverse("ipam-api:prefix-list")
+        data = [
+            {
+                "prefix": "10.0.9.0/24",
+                "namespace": self.namespace.pk,
+                "location": self.locations[1].pk,
+                "status": self.statuses[1].pk,
+            },
+            {
+                "prefix": "10.0.10.0/24",
+                "namespace": self.namespace.pk,
+                "location": self.locations[1].pk,
+                "status": self.statuses[1].pk,
+            },
+        ]
+
+        obj_user2 = User.objects.create(username="new-user")
+        token_user2 = Token.objects.create(user=obj_user2)
+        header_user2 = {"HTTP_AUTHORIZATION": f"Token {token_user2.key}"}
+        # Assign object permission to both users to create Prefixes
+        obj_perm = ObjectPermission.objects.create(
+            name="Test ipam permission",
+            actions=["add"],
+        )
+        obj_perm.users.add(self.user, obj_user2)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Prefix))
+        # Create one Prefix object per user
+        self.client.post(url, data[0], format="json", **self.header)
+        self.client.post(url, data[1], format="json", **header_user2)
+
+        # Assign object permission to both users to view Change Logs, based on user token constraint
+        obj_perm = ObjectPermission.objects.create(
+            name="Test change log permission",
+            constraints=[{"user": "$user"}, {"action": "delete"}],
+            actions=["view", "list"],
+        )
+        obj_perm.users.add(self.user, obj_user2)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(ObjectChange))
+
+        # Retrieve all ObjectChange Log entries for every user
+        url = reverse(lookup.get_route_for_model(ObjectChange, "list", api=True))
+        response_user1 = self.client.get(url, **self.header)
+        response_user2 = self.client.get(url, **header_user2)
+
+        # Assert every user has permissions to view Change Logs
+        self.assertTrue(self.user.has_perms(["extras.view_objectchange", "extras.list_objectchange"]))
+        self.assertTrue(obj_user2.has_perms(["extras.view_objectchange", "extras.list_objectchange"]))
+
+        # Check against 1st user's response
+        self.assertEqual(response_user1.status_code, 200)
+        self.assertEqual(response_user1.data["count"], 1)
+        self.assertEqual(response_user1.data["results"][0]["user"]["id"], self.user.pk)
+
+        # Check against 2nd user's response
+        self.assertEqual(response_user2.status_code, 200)
+        self.assertEqual(response_user2.data["count"], 1)
+        self.assertEqual(response_user2.data["results"][0]["user"]["id"], obj_user2.pk)

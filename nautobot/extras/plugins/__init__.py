@@ -1,29 +1,26 @@
 import collections
-import inspect
+from functools import partial
 from importlib import import_module
+import inspect
 from logging import getLogger
-
-from packaging import version
 
 from django.core.exceptions import ValidationError
 from django.template.loader import get_template
 from django.urls import get_resolver, URLPattern
+from packaging import version
 
 from nautobot.core.apps import (
     NautobotConfig,
-    NavMenuButton,
-    NavMenuGroup,
-    NavMenuItem,
     NavMenuTab,
-    register_menu_items,
     register_homepage_panels,
+    register_menu_items,
 )
-from nautobot.core.choices import ButtonColorChoices
+from nautobot.core.signals import nautobot_database_ready
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.choices import BannerClassChoices
-from nautobot.extras.registry import registry, register_datasource_contents
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import import_object
+from nautobot.extras.registry import register_datasource_contents, registry
 from nautobot.extras.secrets import register_secrets_provider
 
 logger = getLogger(__name__)
@@ -35,6 +32,7 @@ registry["plugin_custom_validators"] = collections.defaultdict(list)
 registry["plugin_graphql_types"] = []
 registry["plugin_jobs"] = []
 registry["plugin_template_extensions"] = collections.defaultdict(list)
+registry["app_metrics"] = []
 
 
 #
@@ -73,10 +71,8 @@ class NautobotAppConfig(NautobotConfig):
     # along with the plugin.
     installed_apps = []
 
-    # Cacheops configuration. Cache all operations by default.
-    caching_config = {
-        "*": {"ops": "all"},
-    }
+    # Default constance configuration parameters
+    constance_config = {}
 
     # URL reverse lookup names, a la "plugins:myplugin:home", "plugins:myplugin:configure", "plugins:myplugin:docs"
     home_view_name = None
@@ -93,6 +89,7 @@ class NautobotAppConfig(NautobotConfig):
     homepage_layout = "homepage.layout"
     jinja_filters = "jinja_filters"
     jobs = "jobs.jobs"
+    metrics = "metrics.metrics"
     menu_items = "navigation.menu_items"
     secrets_providers = "secrets.secrets_providers"
     template_extensions = "template_content.template_extensions"
@@ -116,6 +113,7 @@ class NautobotAppConfig(NautobotConfig):
                 (urlp for urlp in (urlpatterns or []) if isinstance(urlp, URLPattern)),
                 key=lambda urlp: (urlp.name, str(urlp.pattern)),
             ),
+            "constance_config": self.constance_config,
         }
 
         # Register banner function (if defined)
@@ -146,6 +144,15 @@ class NautobotAppConfig(NautobotConfig):
         if jobs is not None:
             register_jobs(jobs)
             self.features["jobs"] = jobs
+
+        # Import metrics (if present)
+        metrics = import_object(f"{self.__module__}.{self.metrics}")
+        if metrics is not None:
+            register_metrics(metrics)
+            self.features["metrics"] = []  # Initialize as empty, to be filled by the signal handler
+            # Inject the metrics to discover into the signal handler.
+            signal_callback = partial(discover_metrics, metrics=metrics)
+            nautobot_database_ready.connect(signal_callback, sender=self)
 
         # Register plugin navigation menu items (if defined)
         menu_items = import_object(f"{self.__module__}.{self.menu_items}")
@@ -227,7 +234,6 @@ class NautobotAppConfig(NautobotConfig):
         # TODO(jathan): This is fine for now, but as we expand the functionality
         # of plugins, we'll need to consider something like pydantic or attrs.
         setting_validations = {
-            "caching_config": dict,
             "default_settings": dict,
             "installed_apps": list,
             "middleware": list,
@@ -249,7 +255,9 @@ class NautobotAppConfig(NautobotConfig):
 
         # Apply default configuration values
         for setting, value in cls.default_settings.items():
-            if setting not in user_config:
+            # user_config and constance_config take precedence
+            # this is to support legacy apps that supply default_settings and constance_config
+            if setting not in user_config and setting not in cls.constance_config:
                 user_config[setting] = value
 
 
@@ -424,6 +432,16 @@ def register_jobs(class_list):
     # That is done in response to the `nautobot_database_ready` signal, see nautobot.extras.signals.refresh_job_models
 
 
+def register_metrics(function_list):
+    """
+    Register a list of metric functions
+    """
+    for metric in function_list:
+        if not callable(metric):
+            raise TypeError(f"{metric} is not a callable.")
+        registry["app_metrics"].append(metric)
+
+
 class FilterExtension:
     """Class that may be returned by a registered Filter Extension function."""
 
@@ -443,8 +461,8 @@ def register_filter_extensions(filter_extensions, plugin_name):
     """
     Register a list of FilterExtension classes
     """
-    from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
     from nautobot.core.forms.utils import add_field_to_filter_form_class
+    from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 
     for filter_extension in filter_extensions:
         if not issubclass(filter_extension, FilterExtension):
@@ -486,124 +504,17 @@ def register_filter_extensions(filter_extensions, plugin_name):
 #
 
 
-# 2.2 TODO: remove in favor of NavMenuItem
-@class_deprecated_in_favor_of(NavMenuItem)
-class PluginMenuItem:
-    """
-    This class represents a navigation menu item. This constitutes primary link and its text, but also allows for
-    specifying additional link buttons that appear to the right of the item in the van menu.
-
-    Links are specified as Django reverse URL strings.
-    Buttons are each specified as a list of PluginMenuButton instances.
-    """
-
-    permissions = []
-    buttons = []
-
-    def __init__(self, link, link_text, permissions=None, buttons=None):
-        self.link = link
-        self.link_text = link_text
-        if permissions is not None:
-            if not isinstance(permissions, (list, tuple)):
-                raise TypeError("Permissions must be passed as a tuple or list.")
-            self.permissions = permissions
-        if buttons is not None:
-            if not isinstance(buttons, (list, tuple)):
-                raise TypeError("Buttons must be passed as a tuple or list.")
-            self.buttons = buttons
-
-
-# 2.2 TODO: remove in favor of NavMenuButton
-@class_deprecated_in_favor_of(NavMenuButton)
-class PluginMenuButton:
-    """
-    This class represents a button within a PluginMenuItem. Note that button colors should come from
-    ButtonColorChoices.
-    """
-
-    color = ButtonColorChoices.DEFAULT
-    permissions = []
-
-    def __init__(self, link, title, icon_class, color=None, permissions=None):
-        self.link = link
-        self.title = title
-        self.icon_class = icon_class
-        if permissions is not None:
-            if not isinstance(permissions, (list, tuple)):
-                raise TypeError("Permissions must be passed as a tuple or list.")
-            self.permissions = permissions
-        if color is not None:
-            if color not in ButtonColorChoices.values():
-                raise ValueError("Button color must be a choice within ButtonColorChoices.")
-            self.color = color
-
-
 def register_plugin_menu_items(section_name, menu_items):
     """
-    Register a list of PluginMenuItem instances for a given menu section (e.g. plugin name)
+    Register a list of NavMenuTab instances for a given menu section (e.g. plugin name)
     """
-    new_menu_items = []
-    new_menu_item_weight = 100
-
     nav_menu_items = set()
 
-    permissions = set()
-
     for menu_item in menu_items:
-        if isinstance(menu_item, PluginMenuItem):
-            # translate old-style plugin menu definitions into the new nav-menu items and buttons
-
-            new_menu_button_weight = 100
-            new_menu_buttons = []
-            for button in menu_item.buttons:
-                new_menu_buttons.append(
-                    NavMenuButton(
-                        link=button.link,
-                        title=button.title,
-                        icon_class=button.icon_class,
-                        button_class=button.color,
-                        permissions=button.permissions,
-                        weight=new_menu_button_weight,
-                    )
-                )
-                new_menu_button_weight += 100
-
-            new_menu_items.append(
-                NavMenuItem(
-                    link=menu_item.link,
-                    name=menu_item.link_text,
-                    permissions=menu_item.permissions,
-                    weight=new_menu_item_weight,
-                    buttons=new_menu_buttons,
-                )
-            )
-            new_menu_item_weight += 100
-            permissions = permissions.union(menu_item.permissions)
-        elif isinstance(menu_item, NavMenuTab):
+        if isinstance(menu_item, NavMenuTab):
             nav_menu_items.add(menu_item)
         else:
-            raise TypeError("Top level objects need to be an instance of NavMenuTab or PluginMenuItem: {menu_tab}")
-
-    if new_menu_items:
-        # wrap bare item/button list into the default "Plugins" menu tab and appropriate grouping
-        if registry["nav_menu"]["tabs"].get("Plugins"):
-            weight = (
-                registry["nav_menu"]["tabs"]["Plugins"]["groups"][
-                    list(registry["nav_menu"]["tabs"]["Plugins"]["groups"])[-1]
-                ]["weight"]
-                + 100
-            )
-        else:
-            weight = 100
-        nav_menu_items.add(
-            NavMenuTab(
-                name="Plugins",
-                weight=5000,
-                # Permissions cast to tuple to match development pattern.
-                permissions=tuple(permissions),
-                groups=(NavMenuGroup(name=section_name, weight=weight, items=new_menu_items),),
-            ),
-        )
+            raise TypeError(f"Top level objects need to be an instance of NavMenuTab: {menu_item}")
 
     register_menu_items(nav_menu_items)
 
@@ -668,7 +579,6 @@ def register_custom_validators(class_list):
 
 
 def register_override_views(override_views, plugin):
-
     validation_error = (
         "Plugin '{}' tried to override view '{}' but did not contain a valid app name "
         "(e.g. `dcim:device`, `plugins:myplugin:myview`)."
@@ -695,3 +605,24 @@ def register_override_views(override_views, plugin):
         for pattern in app_resolver.url_patterns:
             if isinstance(pattern, URLPattern) and hasattr(pattern, "name") and pattern.name == view_name:
                 pattern.callback = view
+
+
+def discover_metrics(sender, *, apps, metrics, **kwargs):
+    """
+    Callback to discover metrics.
+
+    This is necessary because we need to actually evaluate the metric generator fully to discover which metrics it
+    provides. This allows us to give an accurate overview on the plugin detail page. However, because the metrics might
+    import models themselves, they can only be run after migrations have taken place. This is ensured by connecting
+    this signal handler to the nautobot_database_ready signal for each app.
+    """
+    if not metrics:
+        return
+    for metric in metrics:
+        # Iterate over all the metric instances in this metric. This is done because a single callable might
+        # return multiple metrics with different names. Note: If a metric is _always_ returned from its
+        # callable, there would be inconsistency in the 'features' dict. This would however be a bad practice on
+        # the metric definition side, as any metric that _could_ exist _should_ always also exist, even if set
+        # to some initial value (ref: https://prometheus.io/docs/practices/instrumentation/#avoid-missing-metrics).
+        for metric_instance in metric():
+            sender.features["metrics"].append(metric_instance.name)

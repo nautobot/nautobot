@@ -1,13 +1,9 @@
-from nautobot.core.api import OrderedDefaultRouter
-from . import views
+from nautobot.core.api.routers import OrderedDefaultRouter
 
+from . import views
 
 router = OrderedDefaultRouter()
 router.APIRootView = views.DCIMRootView
-
-# Sites
-router.register("regions", views.RegionViewSet)
-router.register("sites", views.SiteViewSet)
 
 # Locations
 router.register("location-types", views.LocationTypeViewSet)
@@ -19,6 +15,7 @@ router.register("racks", views.RackViewSet)
 router.register("rack-reservations", views.RackReservationViewSet)
 
 # Device types
+router.register("hardware-families", views.HardwareFamilyViewSet)
 router.register("manufacturers", views.ManufacturerViewSet)
 router.register("device-types", views.DeviceTypeViewSet)
 
@@ -59,6 +56,10 @@ router.register(
 # Cables
 router.register("cables", views.CableViewSet)
 
+# Interface Redundancy Group
+router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupViewSet)
+router.register("interface-redundancy-group-associations", views.InterfaceRedundancyGroupAssociationViewSet)
+
 # Virtual chassis
 router.register("virtual-chassis", views.VirtualChassisViewSet)
 
@@ -68,6 +69,11 @@ router.register("power-feeds", views.PowerFeedViewSet)
 
 # Device Redundancy Group
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupViewSet)
+
+# Software image files
+router.register("software-image-files", views.SoftwareImageFileViewSet)
+router.register("software-versions", views.SoftwareVersionViewSet)
+router.register("device-types-to-software-image-files", views.DeviceTypeToSoftwareImageFileViewSet)
 
 # Miscellaneous
 router.register("connected-device", views.ConnectedDeviceViewSet, basename="connected-device")

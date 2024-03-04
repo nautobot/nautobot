@@ -1,14 +1,20 @@
 from collections import namedtuple
+import logging
 import platform
 import sys
 
+from django.apps import apps
 from django.conf import settings
 from django.http import JsonResponse
 from django.urls import reverse
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.utils import formatting
+from rest_framework.utils.field_mapping import get_nested_relation_kwargs
+from rest_framework.utils.model_meta import _get_to_field, RelationInfo
 
 from nautobot.core.api import exceptions
+
+logger = logging.getLogger(__name__)
 
 
 def dict_to_filter_params(d, prefix=""):
@@ -66,7 +72,7 @@ def get_api_version_serializer(serializer_choices, api_version):
         api_version (str): Request API version
 
     Returns:
-        returns the serializer for the api_version if found in serializer_choices else None
+        (Serializer): the serializer for the api_version if found in serializer_choices else None
     """
     for versions, serializer in serializer_choices:
         if api_version in versions:
@@ -75,14 +81,14 @@ def get_api_version_serializer(serializer_choices, api_version):
 
 
 def versioned_serializer_selector(obj, serializer_choices, default_serializer):
-    """Returns appropriate serializer class depending on request api_version, brief and swagger_fake_view
+    """Returns appropriate serializer class depending on request api_version, and swagger_fake_view
 
     Args:
         obj (ViewSet instance):
         serializer_choices (tuple): Tuple of SerializerVersions
         default_serializer (Serializer): Default Serializer class
     """
-    if not obj.brief and not getattr(obj, "swagger_fake_view", False) and hasattr(obj.request, "major_version"):
+    if not getattr(obj, "swagger_fake_view", False) and hasattr(obj.request, "major_version"):
         api_version = f"{obj.request.major_version}.{obj.request.minor_version}"
         serializer = get_api_version_serializer(serializer_choices, api_version)
         if serializer is not None:
@@ -93,20 +99,64 @@ def versioned_serializer_selector(obj, serializer_choices, default_serializer):
 def get_serializer_for_model(model, prefix=""):
     """
     Dynamically resolve and return the appropriate serializer for a model.
+
+    Raises:
+        SerializerNotFound: if the requested serializer cannot be located.
     """
-    app_name, model_name = model._meta.label.split(".")
+    app_label, model_name = model._meta.label.split(".")
+    if app_label == "contenttypes" and model_name == "ContentType":
+        app_path = "nautobot.extras"
     # Serializers for Django's auth models are in the users app
-    if app_name == "auth":
-        app_name = "users"
-    serializer_name = f"{app_name}.api.serializers.{prefix}{model_name}Serializer"
-    if app_name not in settings.PLUGINS:
-        serializer_name = f"nautobot.{serializer_name}"
+    elif app_label == "auth":
+        app_path = "nautobot.users"
+    else:
+        app_path = apps.get_app_config(app_label).name
+    serializer_name = f"{app_path}.api.serializers.{prefix}{model_name}Serializer"
     try:
         return dynamic_import(serializer_name)
-    except AttributeError:
+    except AttributeError as exc:
         raise exceptions.SerializerNotFound(
-            f"Could not determine serializer for {app_name}.{model_name} with prefix '{prefix}'"
-        )
+            f"Could not determine serializer for {app_label}.{model_name} with prefix '{prefix}'"
+        ) from exc
+
+
+def nested_serializers_for_models(models, prefix=""):
+    """
+    Dynamically resolve and return the appropriate nested serializers for a list of models.
+
+    Unlike get_serializer_for_model, this will skip any models for which an appropriate serializer cannot be found,
+    logging a message instead of raising the SerializerNotFound exception.
+
+    Used exclusively in OpenAPI schema generation.
+    """
+    serializer_classes = []
+    for model in models:
+        try:
+            serializer_classes.append(get_serializer_for_model(model, prefix=prefix))
+        except exceptions.SerializerNotFound as exc:
+            logger.error("%s", exc)
+            continue
+
+    nested_serializer_classes = []
+    for serializer_class in serializer_classes:
+        nested_serializer_name = f"Nested{serializer_class.__name__}"
+        if nested_serializer_name in NESTED_SERIALIZER_CACHE:
+            nested_serializer_classes.append(NESTED_SERIALIZER_CACHE[nested_serializer_name])
+        else:
+
+            class NautobotNestedSerializer(serializer_class):
+                class Meta(serializer_class.Meta):
+                    fields = ["id", "object_type", "url"]
+
+                def get_field_names(self, declared_fields, info):
+                    """Don't auto-add any other fields to the field_names!"""
+                    return serializers.HyperlinkedModelSerializer.get_field_names(self, declared_fields, info)
+
+            NautobotNestedSerializer.__name__ = nested_serializer_name
+            NESTED_SERIALIZER_CACHE[nested_serializer_name] = NautobotNestedSerializer
+            nested_serializer_classes.append(NautobotNestedSerializer)
+
+    return nested_serializer_classes
 
 
 def is_api_request(request):
@@ -151,3 +201,159 @@ def rest_api_server_error(request, *args, **kwargs):
         "python_version": platform.python_version(),
     }
     return JsonResponse(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# TODO: This is part of the drf-react-template work towards auto-generating create/edit form UI from the REST API.
+def format_output(field, field_value):
+    """TODO: docstring required."""
+    data = {
+        "field_name": field,  # Form field placeholder
+        "type": "others",  # Param type e.g select field, char field, datetime field etc.
+        "choices": [],  # Param choices for select fields
+        "help_text": None,  # Form field placeholder
+        "label": None,  # Form field placeholder
+        "required": False,  # Form field placeholder
+    }
+    # TODO: fix these local imports if at all possible
+    from rest_framework.fields import CharField, IntegerField
+    from rest_framework.serializers import ListSerializer
+
+    from nautobot.core.api import ChoiceField, WritableNestedSerializer
+
+    kwargs = {}
+    if isinstance(field_value, (WritableNestedSerializer, ListSerializer)):
+        kwargs = {
+            "type": "dynamic-choice-field",
+        }
+        extra_kwargs = {}
+
+        if isinstance(field_value, WritableNestedSerializer):
+            extra_kwargs = {
+                "label": getattr(field_value, "label", None) or field,
+                "required": field_value.required,
+                "help_text": field_value.help_text,
+            }
+        elif isinstance(field_value, ListSerializer):
+            extra_kwargs = {
+                "label": "Tags",
+                "required": False,
+            }
+        kwargs.update(extra_kwargs)
+    elif isinstance(field_value, ChoiceField):
+        kwargs = {
+            "type": "choice-field",
+            "label": getattr(field_value, "label", None) or field,
+            "required": field_value.required,
+            "help_text": field_value.help_text,
+            "choices": field_value.choices.items(),
+        }
+    elif isinstance(field_value, CharField):
+        kwargs = {
+            "type": "char-field",
+            "label": getattr(field_value, "label", None) or field,
+            "required": field_value.required,
+            "help_text": field_value.help_text,
+        }
+    elif isinstance(field_value, IntegerField):
+        kwargs = {
+            "type": "integer-field",
+            "label": getattr(field_value, "label", None) or field,
+            "required": field_value.required,
+            "help_text": field_value.help_text,
+        }
+    data.update(kwargs)
+    return data
+
+
+def get_relation_info_for_nested_serializers(model_class, related_model, field_name):
+    """Get the DRF RelationInfo object needed for build_nested_field()"""
+    relation_info = RelationInfo(
+        model_field=getattr(type(model_class), field_name),
+        related_model=type(related_model),
+        to_many=False,
+        has_through_model=False,
+        to_field=_get_to_field(getattr(type(model_class), field_name)),
+        reverse=False,
+    )
+    return relation_info
+
+
+def get_nested_serializer_depth(serializer):
+    """
+    Determine the correct depth value based on the request.
+    This method is used mostly in SerializerMethodField where
+    DRF does not automatically build a serializer for us because the field
+    is not a native model field.
+    """
+    request = serializer.context.get("request", None)
+    # If we do not have a request or request.method is not GET default depth to 0
+    if not request or request.method != "GET" or not hasattr(serializer.Meta, "depth"):
+        depth = 0
+    else:
+        depth = serializer.Meta.depth
+    return depth
+
+
+NESTED_SERIALIZER_CACHE = {}
+
+
+def nested_serializer_factory(relation_info, nested_depth):
+    """
+    Return a NestedSerializer representation of a serializer field.
+    This method should only be called in build_nested_field()
+    in which relation_info and nested_depth are already given.
+    """
+    nested_serializer_name = f"Nested{nested_depth}{relation_info.related_model.__name__}"
+    # If we already have built a suitable NestedSerializer we return the cached serializer.
+    # else we build a new one and store it in the cache for future use.
+    if nested_serializer_name in NESTED_SERIALIZER_CACHE:
+        field_class = NESTED_SERIALIZER_CACHE[nested_serializer_name]
+        field_kwargs = get_nested_relation_kwargs(relation_info)
+    else:
+        base_serializer_class = get_serializer_for_model(relation_info.related_model)
+
+        class NautobotNestedSerializer(base_serializer_class):
+            class Meta(base_serializer_class.Meta):
+                is_nested = True
+                depth = nested_depth - 1
+
+        NautobotNestedSerializer.__name__ = nested_serializer_name
+        NESTED_SERIALIZER_CACHE[nested_serializer_name] = NautobotNestedSerializer
+        field_class = NautobotNestedSerializer
+        field_kwargs = get_nested_relation_kwargs(relation_info)
+    return field_class, field_kwargs
+
+
+def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_related_field, obj_related_field_name):
+    """
+    Handle serialization of GenericForeignKey fields at an appropriate depth.
+
+    When depth = 0, return a brief representation of the related object, containing URL, PK, and object_type.
+    When depth > 0, return the data for the appropriate nested serializer, plus a "generic_foreign_key = True" field.
+
+    Args:
+        serializer (BaseSerializer): BaseSerializer
+        depth (int): Levels of nested serialization
+        obj (BaseModel): Object needs to be serialized
+        obj_related_field (BaseModel): Related object needs to be serialized
+        obj_related_field_name (str): Object's field name that represents the related object.
+    """
+    if depth == 0:
+        url = obj_related_field.get_absolute_url(api=True)
+        if serializer.context.get("request"):
+            url = serializer.context.get("request").build_absolute_uri(url)
+
+        result = {
+            "id": obj_related_field.pk,
+            "object_type": obj_related_field._meta.label_lower,
+            "url": url,
+        }
+        return result
+    else:
+        relation_info = get_relation_info_for_nested_serializers(obj, obj_related_field, obj_related_field_name)
+        field_class, field_kwargs = serializer.build_nested_field(obj_related_field_name, relation_info, depth)
+        data = field_class(
+            obj_related_field, context={"request": serializer.context.get("request")}, **field_kwargs
+        ).data
+        data["generic_foreign_key"] = True
+        return data

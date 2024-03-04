@@ -12,12 +12,13 @@ from nautobot.core.authentication import (
     assign_permissions_to_user,
 )
 from nautobot.core.settings_funcs import (
-    sso_auth_enabled,
-    remote_auth_enabled,
     ldap_auth_enabled,
+    remote_auth_enabled,
+    sso_auth_enabled,
 )
 from nautobot.core.views import server_error
-from nautobot.extras.context_managers import change_logging, WebChangeContext
+from nautobot.extras.choices import ObjectChangeEventContextChoices
+from nautobot.extras.context_managers import web_request_context
 
 
 class RemoteUserMiddleware(RemoteUserMiddleware_):
@@ -92,11 +93,18 @@ class ObjectChangeMiddleware:
         except Resolver404:
             change_context_detail = ""
 
-        # Pass request rather than user here because at this point in the request handling logic, request.user may not have been set yet
-        change_context = WebChangeContext(request=request, context_detail=change_context_detail)
+        # Bypass change logging for health check requests to prevent database connection exhaustion
+        if change_context_detail == "health_check:health_check_home":
+            response = self.get_response(request)
+            return response
 
         # Process the request with change logging enabled
-        with change_logging(change_context):
+        with web_request_context(
+            request.user,
+            context_detail=change_context_detail,
+            context=ObjectChangeEventContextChoices.CONTEXT_WEB,
+            request=request,
+        ):
             response = self.get_response(request)
 
         return response
@@ -115,7 +123,6 @@ class ExceptionHandlingMiddleware:
         return self.get_response(request)
 
     def process_exception(self, request, exception):
-
         # Don't catch exceptions when in debug mode
         if settings.DEBUG:
             return None

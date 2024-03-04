@@ -8,7 +8,6 @@ def null_macaddress_to_empty(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("virtualization", "0009_cluster_location"),
     ]

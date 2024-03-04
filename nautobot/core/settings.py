@@ -5,15 +5,16 @@ import sys
 
 from django.contrib.messages import constants as messages
 import django.forms
+from django.utils.safestring import mark_safe
 
 from nautobot import __version__
-from nautobot.core.settings_funcs import is_truthy, parse_redis_connection  # noqa: F401
+from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
 
 #
 # Environment setup
 #
 
-# This is used for display in the UI.
+# This is used for display in the UI. There are also VERSION_MAJOR and VERSION_MINOR derived from this later.
 VERSION = __version__
 
 # Hostname of the system. This is displayed in the web UI footers along with the
@@ -28,7 +29,7 @@ AUTH_USER_MODEL = "users.User"
 
 # Set the default AutoField for 3rd party apps
 # N.B. Ideally this would be a `UUIDField`, but due to Django restrictions
-#      we can’t do that yet
+#      we can't do that yet
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
@@ -59,10 +60,9 @@ ALLOWED_URL_SCHEMES = (
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
-# By default, Nautobot will permit users to create duplicate prefixes and IP addresses in the global
-# table (that is, those which are not assigned to any VRF). This behavior can be disabled by setting
-# ENFORCE_GLOBAL_UNIQUE to True.
-ENFORCE_GLOBAL_UNIQUE = is_truthy(os.getenv("NAUTOBOT_ENFORCE_GLOBAL_UNIQUE", "False"))
+# Disable linking of Config Context objects via Dynamic Groups by default. This could cause performance impacts
+# when a large number of dynamic groups are present
+CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED", "False"))
 
 # Exclude potentially sensitive models from wildcard view exemption. These may still be exempted
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
@@ -72,9 +72,22 @@ EXEMPT_EXCLUDE_MODELS = (
     ("users", "objectpermission"),
 )
 
+# Models to exempt from the enforcement of view permissions
 EXEMPT_VIEW_PERMISSIONS = []
+
+# The file path to a directory where cloned Git repositories will be located
 GIT_ROOT = os.getenv("NAUTOBOT_GIT_ROOT", os.path.join(NAUTOBOT_ROOT, "git").rstrip("/"))
+
+# HTTP proxies to use for outbound requests originating from Nautobot (e.g. when sending webhook requests)
 HTTP_PROXIES = None
+
+# Send anonymized installation metrics when post_upgrade or send_installation_metrics management commands are run
+INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "True"))
+
+# The storage backend to use for Job input files and Job output files
+JOB_FILE_IO_STORAGE = os.getenv("NAUTOBOT_JOB_FILE_IO_STORAGE", "db_file_storage.storage.DatabaseFileStorage")
+
+# The file path to a directory where locally installed Jobs can be discovered
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 
 # Log Nautobot deprecation warnings. Note that this setting is ignored (deprecation logs always enabled) if DEBUG = True
@@ -83,6 +96,7 @@ LOG_DEPRECATION_WARNINGS = is_truthy(os.getenv("NAUTOBOT_LOG_DEPRECATION_WARNING
 MAINTENANCE_MODE = is_truthy(os.getenv("NAUTOBOT_MAINTENANCE_MODE", "False"))
 # Metrics
 METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_METRICS_ENABLED", "False"))
+METRICS_AUTHENTICATED = is_truthy(os.getenv("NAUTOBOT_METRICS_AUTHENTICATED", "False"))
 
 # Napalm
 NAPALM_ARGS = {}
@@ -111,7 +125,10 @@ SOCIAL_AUTH_BACKEND_PREFIX = "social_core.backends"
 SANITIZER_PATTERNS = [
     # General removal of username-like and password-like tokens
     (re.compile(r"(https?://)?\S+\s*@", re.IGNORECASE), r"\1{replacement}@"),
-    (re.compile(r"(username|password|passwd|pwd)(\s*i?s?\s*:?\s*)?\S+", re.IGNORECASE), r"\1\2{replacement}"),
+    (
+        re.compile(r"(username|password|passwd|pwd|secret|secrets)([\"']?(?:\s+is.?|:)?\s+)\S+[\"']?", re.IGNORECASE),
+        r"\1\2{replacement}",
+    ),
 ]
 
 # Storage
@@ -142,16 +159,6 @@ TEST_PERFORMANCE_BASELINE_FILE = os.getenv(
 )
 
 #
-# Django cryptography
-#
-
-# CRYPTOGRAPHY_BACKEND = cryptography.hazmat.backends.default_backend()
-# CRYPTOGRAPHY_DIGEST = cryptography.hazmat.primitives.hashes.SHA256
-CRYPTOGRAPHY_KEY = None  # Defaults to SECRET_KEY if unset
-CRYPTOGRAPHY_SALT = "nautobot-cryptography"
-
-
-#
 # Django Prometheus
 #
 
@@ -172,11 +179,12 @@ STRICT_FILTERING = is_truthy(os.getenv("NAUTOBOT_STRICT_FILTERING", "True"))
 #
 
 REST_FRAMEWORK_VERSION = VERSION.rsplit(".", 1)[0]  # Use major.minor as API version
-current_major, current_minor = REST_FRAMEWORK_VERSION.split(".")
+VERSION_MAJOR, VERSION_MINOR = [int(v) for v in REST_FRAMEWORK_VERSION.split(".")]
 # We support all major.minor API versions from 2.0 to the present latest version.
 # Similar logic exists in tasks.py, please keep them in sync!
-assert current_major == "2", f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {current_major}"
-REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{current_major}.{minor}" for minor in range(0, int(current_minor) + 1)]
+if VERSION_MAJOR != 2:
+    raise RuntimeError(f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {VERSION_MAJOR}")
+REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{VERSION_MAJOR}.{minor}" for minor in range(0, VERSION_MINOR + 1)]
 
 REST_FRAMEWORK = {
     "ALLOWED_VERSIONS": REST_FRAMEWORK_ALLOWED_VERSIONS,
@@ -184,20 +192,27 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
         "nautobot.core.api.authentication.TokenAuthentication",
     ),
-    "DEFAULT_FILTER_BACKENDS": ("nautobot.core.api.filter_backends.NautobotFilterBackend",),
+    "DEFAULT_FILTER_BACKENDS": (
+        "nautobot.core.api.filter_backends.NautobotFilterBackend",
+        "nautobot.core.api.filter_backends.NautobotOrderingFilter",
+    ),
     "DEFAULT_METADATA_CLASS": "nautobot.core.api.metadata.NautobotMetadata",
     "DEFAULT_PAGINATION_CLASS": "nautobot.core.api.pagination.OptionalLimitOffsetPagination",
     "DEFAULT_PERMISSION_CLASSES": ("nautobot.core.api.authentication.TokenPermissions",),
     "DEFAULT_RENDERER_CLASSES": (
-        "rest_framework.renderers.JSONRenderer",
+        "nautobot.core.api.renderers.NautobotJSONRenderer",
         "nautobot.core.api.renderers.FormlessBrowsableAPIRenderer",
+        "nautobot.core.api.renderers.NautobotCSVRenderer",
     ),
-    "DEFAULT_PARSER_CLASSES": ("rest_framework.parsers.JSONParser",),
+    "DEFAULT_PARSER_CLASSES": (
+        "rest_framework.parsers.JSONParser",
+        "nautobot.core.api.parsers.NautobotCSVParser",
+    ),
     "DEFAULT_SCHEMA_CLASS": "nautobot.core.api.schema.NautobotAutoSchema",
-    # Version to use if the client doesn't request otherwise.
-    # This should only change (if at all) with Nautobot major (breaking) releases.
-    "DEFAULT_VERSION": "2.0",
+    # Version to use if the client doesn't request otherwise. Default to current (i.e. latest)
+    "DEFAULT_VERSION": REST_FRAMEWORK_VERSION,
     "DEFAULT_VERSIONING_CLASS": "nautobot.core.api.versioning.NautobotAPIVersioning",
+    "ORDERING_PARAM": "sort",  # This is not meant to be changed by users, but is used internally by the API
     "PAGE_SIZE": None,
     "SCHEMA_COERCE_METHOD_NAMES": {
         # Default mappings
@@ -230,7 +245,14 @@ SPECTACULAR_SETTINGS = {
     # use sidecar - locally packaged UI files, not CDN
     "SWAGGER_UI_DIST": "SIDECAR",
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "displayOperationId": True,
+    },
     "REDOC_DIST": "SIDECAR",
+    # Do not list all possible enum values in the description of filter fields and the like
+    # In addition to being highly verbose, it's inaccurate for filter fields like *__ic and *__re
+    "ENUM_GENERATE_CHOICE_DESCRIPTION": False,
     "ENUM_NAME_OVERRIDES": {
         # These choice enums need to be overridden because they get assigned to the `type` field and
         # result in this error:
@@ -239,16 +261,23 @@ SPECTACULAR_SETTINGS = {
         "ConsolePortTypeChoices": "nautobot.dcim.choices.ConsolePortTypeChoices",
         "CustomFieldTypeChoices": "nautobot.extras.choices.CustomFieldTypeChoices",
         "InterfaceTypeChoices": "nautobot.dcim.choices.InterfaceTypeChoices",
+        "IPAddressTypeChoices": "nautobot.ipam.choices.IPAddressTypeChoices",
         "PortTypeChoices": "nautobot.dcim.choices.PortTypeChoices",
         "PowerFeedTypeChoices": "nautobot.dcim.choices.PowerFeedTypeChoices",
         "PowerOutletTypeChoices": "nautobot.dcim.choices.PowerOutletTypeChoices",
         "PowerPortTypeChoices": "nautobot.dcim.choices.PowerPortTypeChoices",
+        "PrefixTypeChoices": "nautobot.ipam.choices.PrefixTypeChoices",
         "RackTypeChoices": "nautobot.dcim.choices.RackTypeChoices",
         "RelationshipTypeChoices": "nautobot.extras.choices.RelationshipTypeChoices",
         # These choice enums need to be overridden because they get assigned to different names with the same choice set and
         # result in this error:
         #   encountered multiple names for the same choice set
         "JobExecutionTypeIntervalChoices": "nautobot.extras.choices.JobExecutionType",
+        # These choice enums need to be overridden because they get assigned to the `protocol` field and
+        # result in this error:
+        #    enum naming encountered a non-optimally resolvable collision for fields named "protocol".
+        "InterfaceRedundancyGroupProtocolChoices": "nautobot.dcim.choices.InterfaceRedundancyGroupProtocolChoices",
+        "ServiceProtocolChoices": "nautobot.ipam.choices.ServiceProtocolChoices",
     },
     # Create separate schema components for PATCH requests (fields generally are not `required` on PATCH)
     "COMPONENT_SPLIT_PATCH": True,
@@ -276,7 +305,10 @@ DATABASES = {
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": os.getenv("NAUTOBOT_DB_PORT", ""),
         "CONN_MAX_AGE": int(os.getenv("NAUTOBOT_DB_TIMEOUT", "300")),
-        "ENGINE": os.getenv("NAUTOBOT_DB_ENGINE", "django.db.backends.postgresql"),
+        "ENGINE": os.getenv(
+            "NAUTOBOT_DB_ENGINE",
+            "django_prometheus.db.backends.postgresql" if METRICS_ENABLED else "django.db.backends.postgresql",
+        ),
     }
 }
 
@@ -297,13 +329,18 @@ DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "False"))
 INTERNAL_IPS = ("127.0.0.1", "::1")
 FORCE_SCRIPT_NAME = None
 
-TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
+TESTING = "test" in sys.argv
 
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 
 if TESTING:
-    # keep log quiet by default when running unit/integration tests
-    LOGGING = {}
+    # Log to null handler instead of stderr during testing
+    LOGGING = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "handlers": {"console": {"level": "INFO", "class": "logging.NullHandler"}},
+        "loggers": {"nautobot": {"handlers": ["console"], "level": "INFO"}},
+    }
 else:
     LOGGING = {
         "version": 1,
@@ -340,6 +377,7 @@ else:
     }
 
 MEDIA_ROOT = os.path.join(NAUTOBOT_ROOT, "media").rstrip("/")
+SESSION_EXPIRE_AT_BROWSER_CLOSE = is_truthy(os.getenv("NAUTOBOT_SESSION_EXPIRE_AT_BROWSER_CLOSE", "False"))
 SESSION_COOKIE_AGE = int(os.getenv("NAUTOBOT_SESSION_COOKIE_AGE", "1209600"))  # 2 weeks, in seconds
 SESSION_FILE_PATH = os.getenv("NAUTOBOT_SESSION_FILE_PATH", None)
 SHORT_DATE_FORMAT = os.getenv("NAUTOBOT_SHORT_DATE_FORMAT", "Y-m-d")
@@ -360,7 +398,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.humanize",
-    "cacheops",  # v2 TODO(jathan); Remove cacheops.
     "corsheaders",
     "django_filters",
     "django_jinja",
@@ -388,9 +425,14 @@ INSTALLED_APPS = [
     "graphene_django",
     "health_check",
     "health_check.storage",
+    # We have custom implementations of these in nautobot.extras.health_checks:
+    # "health_check.db",
+    # "health_check.contrib.migrations",
+    # "health_check.contrib.redis",
     "django_extensions",
     "constance.backends.database",
     "django_ajax_tables",
+    "silk",
 ]
 
 # Middleware
@@ -398,6 +440,7 @@ MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "silk.middleware.SilkyMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -501,6 +544,7 @@ LOGIN_REDIRECT_URL = "home"
 
 CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 CONSTANCE_DATABASE_PREFIX = "constance:nautobot:"
+CONSTANCE_DATABASE_CACHE_BACKEND = "default"
 CONSTANCE_IGNORE_ADMIN_VERSION_CHECK = True  # avoid potential errors in a multi-node deployment
 
 CONSTANCE_ADDITIONAL_FIELDS = {
@@ -523,87 +567,151 @@ CONSTANCE_ADDITIONAL_FIELDS = {
             "required": False,
         },
     ],
+    "optional_json_field": [
+        "django.forms.fields.JSONField",
+        {
+            "required": False,
+        },
+    ],
 }
 
 CONSTANCE_CONFIG = {
-    "BANNER_BOTTOM": [
-        "",
-        "Custom HTML to display in a banner at the bottom of all pages.",
-    ],
-    "BANNER_LOGIN": [
-        "",
-        "Custom HTML to display in a banner at the top of the login page.",
-    ],
-    "BANNER_TOP": [
-        "",
-        "Custom HTML to display in a banner at the top of all pages.",
-    ],
-    "CHANGELOG_RETENTION": [
-        90,
-        "Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
-    ],
-    "DISABLE_PREFIX_LIST_HIERARCHY": [
-        False,
-        "Disable rendering parent/child relationships in the IPAM Prefix list view and instead show a flat list.",
-    ],
-    "HIDE_RESTRICTED_UI": [
-        False,
-        "If set to True, users with limited permissions will not be shown menu items and home-page elements that "
-        "they do not have permission to access.",
-    ],
-    "MAX_PAGE_SIZE": [
-        1000,
-        "Maximum number of objects that a user can list in one UI page or one API call.\n"
+    "ALLOW_REQUEST_PROFILING": ConstanceConfigItem(
+        default=False,
+        help_text="Allow users to enable request profiling on their login session.",
+        field_type=bool,
+    ),
+    "BANNER_BOTTOM": ConstanceConfigItem(
+        default="",
+        help_text="Custom HTML to display in a banner at the bottom of all pages.",
+    ),
+    "BANNER_LOGIN": ConstanceConfigItem(
+        default="",
+        help_text="Custom HTML to display in a banner at the top of the login page.",
+    ),
+    "BANNER_TOP": ConstanceConfigItem(
+        default="",
+        help_text="Custom HTML to display in a banner at the top of all pages.",
+    ),
+    "CHANGELOG_RETENTION": ConstanceConfigItem(
+        default=90,
+        help_text="Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
+        field_type=int,
+    ),
+    "DEVICE_NAME_AS_NATURAL_KEY": ConstanceConfigItem(
+        default=False,
+        help_text="Device names are not guaranteed globally-unique by Nautobot but in practice they often are. "
+        "Set this to True to use the device name alone as the natural key for Device objects. "
+        "Set this to False to use the sequence (name, tenant, location) as the natural key instead.",
+        field_type=bool,
+    ),
+    "DEPLOYMENT_ID": ConstanceConfigItem(
+        default="",
+        help_text="Randomly generated UUID used to identify this installation.\n"
+        "Used for sending anonymous installation metrics, when settings.INSTALLATION_METRICS_ENABLED is set to True.",
+        field_type=str,
+    ),
+    "DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT": ConstanceConfigItem(
+        default=0,
+        help_text="Dynamic Group member cache timeout in seconds. This is the amount of time that a Dynamic Group's member list "
+        "will be cached in Django cache backend. Since retrieving the member list of a Dynamic Group can be a very "
+        "expensive operation, especially in reverse, this cache is used to speed up the process of retrieving the "
+        "member list. This cache is invalidated when a Dynamic Group is saved. Set to 0 to disable caching.",
+        field_type=int,
+    ),
+    "JOB_CREATE_FILE_MAX_SIZE": ConstanceConfigItem(
+        default=10 << 20,
+        help_text=mark_safe(  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
+            "Maximum size (in bytes) of any single file generated by a <code>Job.create_file()</code> call."
+        ),
+        field_type=int,
+    ),
+    "LOCATION_NAME_AS_NATURAL_KEY": ConstanceConfigItem(
+        default=False,
+        help_text="Location names are not guaranteed globally-unique by Nautobot but in practice they often are. "
+        "Set this to True to use the location name alone as the natural key for Location objects. "
+        "Set this to False to use the sequence (name, parent__name, parent__parent__name, ...) "
+        "as the natural key instead.",
+        field_type=bool,
+    ),
+    "MAX_PAGE_SIZE": ConstanceConfigItem(
+        default=1000,
+        help_text="Maximum number of objects that a user can list in one UI page or one API call.\n"
         "If set to 0, a user can retrieve an unlimited number of objects.",
-    ],
-    "PAGINATE_COUNT": [
-        50,
-        "Default number of objects to display per page when listing objects in the UI and/or REST API.",
-    ],
-    "PER_PAGE_DEFAULTS": [
-        [25, 50, 100, 250, 500, 1000],
-        "Pagination options to present to the user to choose amongst.\n"
+        field_type=int,
+    ),
+    "PAGINATE_COUNT": ConstanceConfigItem(
+        default=50,
+        help_text="Default number of objects to display per page when listing objects in the UI and/or REST API.",
+        field_type=int,
+    ),
+    "PER_PAGE_DEFAULTS": ConstanceConfigItem(
+        default=[25, 50, 100, 250, 500, 1000],
+        help_text="Pagination options to present to the user to choose amongst.\n"
         "For proper user experience, this list should include the PAGINATE_COUNT and MAX_PAGE_SIZE values as options.",
         # Use custom field type defined above
-        "per_page_defaults_field",
-    ],
-    "PREFER_IPV4": [
-        False,
-        "Whether to prefer IPv4 primary addresses over IPv6 primary addresses for devices.",
-    ],
-    "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT": [
-        22,
-        "Default height (in pixels) of a rack unit in a rack elevation diagram",
-    ],
-    "RACK_ELEVATION_DEFAULT_UNIT_WIDTH": [
-        230,
-        "Default width (in pixels) of a rack unit in a rack elevation diagram",
-    ],
-    "RELEASE_CHECK_TIMEOUT": [
-        24 * 3600,
-        "Number of seconds (must be at least 3600, or one hour) to cache the result of a release check "
+        field_type="per_page_defaults_field",
+    ),
+    "NETWORK_DRIVERS": ConstanceConfigItem(
+        default={},
+        help_text=mark_safe(  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
+            "Extend or override default Platform.network_driver translations provided by "
+            '<a href="https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/">netutils</a>. '
+            "Enter a dictionary in JSON format, for example:\n"
+            '<pre><code class="language-json">{\n'
+            '    "netmiko": {"my_network_driver": "cisco_ios"},\n'
+            '    "pyats": {"my_network_driver": "iosxe"} \n'
+            "}</code></pre>",
+        ),
+        # Use custom field type defined above
+        field_type="optional_json_field",
+    ),
+    "PREFER_IPV4": ConstanceConfigItem(
+        default=False,
+        help_text="Whether to prefer IPv4 primary addresses over IPv6 primary addresses for devices.",
+        field_type=bool,
+    ),
+    "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT": ConstanceConfigItem(
+        default=22, help_text="Default height (in pixels) of a rack unit in a rack elevation diagram", field_type=int
+    ),
+    "RACK_ELEVATION_DEFAULT_UNIT_WIDTH": ConstanceConfigItem(
+        default=230, help_text="Default width (in pixels) of a rack unit in a rack elevation diagram", field_type=int
+    ),
+    "RELEASE_CHECK_TIMEOUT": ConstanceConfigItem(
+        default=24 * 3600,
+        help_text="Number of seconds (must be at least 3600, or one hour) to cache the result of a release check "
         "before checking again for a new release.",
         # Use custom field type defined above
-        "release_check_timeout_field",
-    ],
-    "RELEASE_CHECK_URL": [
-        "",
-        "URL of GitHub repository REST API endpoint to poll periodically for availability of new Nautobot releases.\n"
+        field_type="release_check_timeout_field",
+    ),
+    "RELEASE_CHECK_URL": ConstanceConfigItem(
+        default="",
+        help_text="URL of GitHub repository REST API endpoint to poll periodically for availability of new Nautobot releases.\n"
         'This can be set to the official repository "https://api.github.com/repos/nautobot/nautobot/releases" or '
         "a custom fork.\nSet this to an empty string to disable automatic update checks.",
         # Use custom field type defined above
-        "release_check_url_field",
-    ],
+        field_type="release_check_url_field",
+    ),
+    "SUPPORT_MESSAGE": ConstanceConfigItem(
+        default="",
+        help_text="Help message to include on 4xx and 5xx error pages. "
+        "Markdown is supported, as are some HTML tags and attributes.\n"
+        "If unspecified, instructions to join Network to Code's Slack community will be provided.",
+    ),
 }
 
 CONSTANCE_CONFIG_FIELDSETS = {
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
     "Change Logging": ["CHANGELOG_RETENTION"],
-    "Device Connectivity": ["PREFER_IPV4"],
+    "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4"],
+    "Installation Metrics": ["DEPLOYMENT_ID"],
+    "Natural Keys": ["DEVICE_NAME_AS_NATURAL_KEY", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
+    "Performance": ["DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT", "JOB_CREATE_FILE_MAX_SIZE"],
     "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["DISABLE_PREFIX_LIST_HIERARCHY", "HIDE_RESTRICTED_UI"],
+    "User Interface": ["SUPPORT_MESSAGE"],
+    "Debugging": ["ALLOW_REQUEST_PROFILING"],
 }
 
 #
@@ -640,31 +748,14 @@ GRAPHQL_COMPUTED_FIELD_PREFIX = "cpf"
 # Caching
 #
 
-# v2 TODO(jathan): Remove all cacheops settings.
-# The django-cacheops plugin is used to cache querysets. The built-in Django
-# caching is not used.
-CACHEOPS = {
-    "auth.user": {"ops": "get", "timeout": 60 * 15},
-    "auth.*": {"ops": ("fetch", "get")},
-    "auth.permission": {"ops": "all"},
-    "circuits.*": {"ops": "all"},
-    "dcim.*": {"ops": "all"},
-    "ipam.*": {"ops": "all"},
-    "extras.*": {"ops": "all"},
-    "users.*": {"ops": "all"},
-    "tenancy.*": {"ops": "all"},
-    "virtualization.*": {"ops": "all"},
-}
-CACHEOPS_DEGRADE_ON_FAILURE = True
-CACHEOPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CACHEOPS_ENABLED", "False"))
-CACHEOPS_REDIS = os.getenv("NAUTOBOT_CACHEOPS_REDIS", parse_redis_connection(redis_database=1))
-CACHEOPS_DEFAULTS = {"timeout": int(os.getenv("NAUTOBOT_CACHEOPS_TIMEOUT", "900"))}
-
 # The django-redis cache is used to establish concurrent locks using Redis.
 CACHES = {
     "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": parse_redis_connection(redis_database=0),
+        "BACKEND": os.getenv(
+            "NAUTOBOT_CACHES_BACKEND",
+            "django_prometheus.cache.backends.redis.RedisCache" if METRICS_ENABLED else "django_redis.cache.RedisCache",
+        ),
+        "LOCATION": parse_redis_connection(redis_database=1),
         "TIMEOUT": 300,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -672,6 +763,9 @@ CACHES = {
         },
     }
 }
+
+# Number of seconds to cache ContentType lookups. Set to 0 to disable caching.
+CONTENT_TYPE_CACHE_TIMEOUT = int(os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT", "0"))
 
 #
 # Celery (used for background processing)
@@ -689,14 +783,17 @@ CELERY_RESULT_EXTENDED = True
 # A value of None or 0 means results will never expire (depending on backend specifications).
 CELERY_RESULT_EXPIRES = None
 
-# If set to True, result messages will be persistent. This means the messages won’t be lost after a broker restart.
-CELERY_RESULT_PERSISTENT = True
-
 # Instruct celery to report the started status of a job, instead of just `pending`, `finished`, or `failed`
 CELERY_TASK_TRACK_STARTED = True
 
-# If enabled, a `task-sent` event will be sent for every task so tasks can be tracked before they’re consumed by a worker.
+# If enabled, a `task-sent` event will be sent for every task so tasks can be tracked before they're consumed by a worker.
 CELERY_TASK_SEND_SENT_EVENT = True
+
+# If enabled stdout and stderr of running jobs will be redirected to the task logger.
+CELERY_WORKER_REDIRECT_STDOUTS = is_truthy(os.getenv("NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS", "True"))
+
+# The log level of log messages generated by redirected job stdout and stderr. Can be one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`.
+CELERY_WORKER_REDIRECT_STDOUTS_LEVEL = os.getenv("NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS_LEVEL", "WARNING")
 
 # Send task-related events so that tasks can be monitored using tools like flower. Sets the default value for the workers -E argument.
 CELERY_WORKER_SEND_TASK_EVENTS = True
@@ -753,6 +850,10 @@ BRANDING_FILEPATHS = {
     "icon_mask": os.getenv(
         "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None
     ),  # mono-chrome icon used for the mask-icon header
+    "header_bullet": os.getenv(
+        "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
+    ),  # bullet image used for various view headers
+    "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None),  # bullet image used for nav menu headers
 }
 
 # Title to use in place of "Nautobot"
@@ -794,3 +895,67 @@ def UI_RACK_VIEW_TRUNCATE_FUNCTION(device_display_name):
     :type: str
     """
     return str(device_display_name).split(".")[0]
+
+
+# Custom JSON schema serializer field type mappingss. These will be added to
+# `NautobotProcessingMixin.TYPE_MAP`.
+# Format: `{serializer_field_class.__name__}` => `{json_schema_type}`
+# See: https://github.com/yoyowallet/drf-react-template-framework#settings
+DRF_REACT_TEMPLATE_TYPE_MAP = {
+    "ContentTypeField": {"type": "string", "enum": "choices"},
+    "CustomFieldsDataField": {"type": "object", "widget": "textarea"},
+    "DateTimeField": {"type": "string", "format": "date-time", "widget": "date-time"},
+    "ImageField": {"type": "string", "format": "data-url"},
+    "IPFieldSerializer": {"type": "string"},
+    "JSONField": {"type": "string", "widget": "textarea"},
+    "MultipleChoiceJSONField": {"type": "array", "required": [], "enum": "choices"},
+    "ManyRelatedField": {"type": "array", "required": []},
+    #
+    # Foreign Key fields
+    #
+    # enum=choices is the one that works in the UI as a related field but it
+    # includes ALL related objects in the schema.
+    # "NautobotHyperlinkedRelatedField": {"type": "string", "enum": "choices"},
+    # readOnly=True disables the fields in the UI; not what we want.
+    # "NautobotHyperlinkedRelatedField": {"type": "string", "readOnly": True},
+    # type=string results in a free text field; also not what we want. For now,
+    # however, this will keep things moving so the unit tests pass.
+    "NautobotHyperlinkedRelatedField": {"type": "object"},
+    "PrimaryKeyRelatedField": {"type": "string", "enum": "choices"},
+    "RelationshipsDataField": {"type": "object"},
+    "SlugField": {"type": "string"},
+    "TimeZoneSerializerField": {"type": "string"},
+    "UUIDField": {"type": "string", "format": "uuid"},
+}
+
+
+#
+# django-silk is used for optional request profiling for debugging purposes
+#
+
+SILKY_PYTHON_PROFILER = True
+SILKY_PYTHON_PROFILER_BINARY = True
+SILKY_PYTHON_PROFILER_EXTENDED_FILE_NAME = True
+SILKY_ANALYZE_QUERIES = False  # See the docs for the implications of turning this on https://github.com/jazzband/django-silk?tab=readme-ov-file#enable-query-analysis
+SILKY_AUTHENTICATION = True  # User must login
+SILKY_AUTHORISATION = True  # User must have permissions
+
+
+# This makes it so that only superusers can access the silk UI
+def silk_user_permissions(user):
+    return user.is_superuser
+
+
+SILKY_PERMISSIONS = silk_user_permissions
+
+
+# This ensures profiling only happens when enabled on the sessions. Users are able
+# to turn this on or off in their user profile. It also ignores health-check requests.
+def silk_request_logging_intercept_logic(request):
+    if request.path != "/health/":
+        if request.session.get("silk_record_requests", False):
+            return True
+    return False
+
+
+SILKY_INTERCEPT_FUNC = silk_request_logging_intercept_logic

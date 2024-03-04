@@ -11,11 +11,11 @@ from nautobot.circuits.filters import (
 )
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core.testing import FilterTestCases
-from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Location, Region, Site
-from nautobot.extras.models import Role, Status
+from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Location
+from nautobot.extras.models import Role, Status, Tag
 
 
-class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
+class ProviderTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTestCases.FilterTestCase):
     queryset = Provider.objects.all()
     filterset = ProviderFilterSet
 
@@ -29,46 +29,30 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
         ["noc_contact"],
         ["portal_url"],
         ["provider_networks", "provider_networks__id"],
-        ["provider_networks", "provider_networks__slug"],
-        ["site", "circuits__circuit_terminations__site__id"],
-        ["site", "circuits__circuit_terminations__site__slug"],
+        ["provider_networks", "provider_networks__name"],
     )
 
     @classmethod
     def setUpTestData(cls):
-
         providers = Provider.objects.all()[:2]
+        providers[0].tags.set(Tag.objects.get_for_model(Provider))
         circuit_types = CircuitType.objects.all()[:2]
-        cls.regions = Region.objects.filter(sites__isnull=False, children__isnull=True, parent__isnull=True)[:2]
         cls.locations = Location.objects.filter(children__isnull=True)[:2]
 
-        sites = (
-            Site.objects.filter(region=cls.regions[0]).first(),
-            Site.objects.filter(region=cls.regions[1]).first(),
-        )
-
+        status = Status.objects.get_for_model(Circuit).first()
         circuits = (
-            Circuit.objects.create(provider=providers[0], circuit_type=circuit_types[0], cid="Test Circuit 1"),
-            Circuit.objects.create(provider=providers[1], circuit_type=circuit_types[1], cid="Test Circuit 1"),
+            Circuit.objects.create(
+                provider=providers[0], circuit_type=circuit_types[0], cid="Test Circuit 1", status=status
+            ),
+            Circuit.objects.create(
+                provider=providers[1], circuit_type=circuit_types[1], cid="Test Circuit 1", status=status
+            ),
         )
 
-        CircuitTermination.objects.create(circuit=circuits[0], site=sites[0], term_side="A")
-        CircuitTermination.objects.create(circuit=circuits[1], site=sites[0], term_side="A")
-        CircuitTermination.objects.create(
-            circuit=circuits[0], site=cls.locations[0].base_site, location=cls.locations[0], term_side="Z"
-        )
-        CircuitTermination.objects.create(
-            circuit=circuits[1], site=cls.locations[1].base_site, location=cls.locations[1], term_side="Z"
-        )
-
-    def test_region(self):
-        expected = self.queryset.filter(
-            circuits__circuit_terminations__site__region__in=[self.regions[0].pk, self.regions[1].pk]
-        )
-        params = {"region": [self.regions[0].pk, self.regions[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
-        params = {"region": [self.regions[0].slug, self.regions[1].slug]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
+        CircuitTermination.objects.create(circuit=circuits[0], location=cls.locations[0], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[1], location=cls.locations[1], term_side="A")
+        CircuitTermination.objects.create(circuit=circuits[0], location=cls.locations[0], term_side="Z")
+        CircuitTermination.objects.create(circuit=circuits[1], location=cls.locations[1], term_side="Z")
 
     def test_location(self):
         expected = self.queryset.filter(
@@ -76,18 +60,17 @@ class ProviderTestCase(FilterTestCases.NameSlugFilterTestCase):
         )
         params = {"location": [self.locations[0].pk, self.locations[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
-        params = {"location": [self.locations[0].slug, self.locations[1].slug]}
+        params = {"location": [self.locations[0].name, self.locations[1].name]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
 
 
-class CircuitTypeTestCase(FilterTestCases.NameSlugFilterTestCase):
+class CircuitTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = CircuitType.objects.all()
     filterset = CircuitTypeFilterSet
 
     generic_filter_tests = (
         ["description"],
         ["name"],
-        ["slug"],
     )
 
 
@@ -103,41 +86,32 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         ["install_date"],
         ["commit_rate"],
         ["provider", "provider__id"],
-        ["provider", "provider__slug"],
+        ["provider", "provider__name"],
         ["provider_network", "circuit_terminations__provider_network__id"],
-        ["provider_network", "circuit_terminations__provider_network__slug"],
+        ["provider_network", "circuit_terminations__provider_network__name"],
         ["circuit_type", "circuit_type__id"],
-        ["circuit_type", "circuit_type__slug"],
-        ["status", "status__slug"],
-        ["site", "circuit_terminations__site__id"],
-        ["site", "circuit_terminations__site__slug"],
+        ["circuit_type", "circuit_type__name"],
+        ["status", "status__id"],
+        ["status", "status__name"],
         ["circuit_termination_a"],
         ["circuit_termination_z"],
         ["circuit_terminations"],
     )
 
     def test_location(self):
-        locations = Location.objects.filter(children__isnull=True, site__isnull=False)[:2]
+        locations = Location.objects.filter(children__isnull=True, parent__isnull=True)[:2]
         factory.CircuitTerminationFactory.create(
-            has_location=True, location=locations[0], has_site=True, site=locations[0].site
+            has_location=True,
+            location=locations[0],
         )
         factory.CircuitTerminationFactory.create(
-            has_location=True, location=locations[1], has_site=True, site=locations[1].site
+            has_location=True,
+            location=locations[1],
         )
         expected = self.queryset.filter(circuit_terminations__location__in=[locations[0].pk, locations[1].pk])
         params = {"location": [locations[0].pk, locations[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
-        params = {"location": [locations[0].slug, locations[1].slug]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
-
-    def test_region(self):
-        regions = Region.objects.filter(sites__isnull=False, children__isnull=True)[:2]
-        factory.CircuitTerminationFactory.create(has_site=True, site=regions[0].sites.first())
-        factory.CircuitTerminationFactory.create(has_site=True, site=regions[1].sites.first())
-        expected = self.queryset.filter(circuit_terminations__site__region__in=[regions[0].pk, regions[1].pk])
-        params = {"region": [regions[0].pk, regions[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
-        params = {"region": [regions[0].slug, regions[1].slug]}
+        params = {"location": [locations[0].name, locations[1].name]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
 
     def test_search(self):
@@ -156,18 +130,15 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         ["description"],
         ["port_speed"],
         ["pp_info"],
-        ["provider_network", "provider_network__slug"],
+        ["provider_network", "provider_network__name"],
         ["provider_network", "provider_network__id"],
-        ["site", "site__id"],
-        ["site", "site__slug"],
         ["upstream_speed"],
         ["xconnect_id"],
     )
 
     @classmethod
     def setUpTestData(cls):
-
-        sites = Site.objects.all()
+        location = Location.objects.filter(parent__isnull=False).first()
         devicetype = DeviceType.objects.first()
         devicerole = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).first()
@@ -175,23 +146,25 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
             device_type=devicetype,
             role=devicerole,
             name="TestDevice1",
-            site=sites[0],
             status=device_status,
+            location=location,
         )
         device2 = Device.objects.create(
             device_type=devicetype,
             role=devicerole,
             name="TestDevice2",
-            site=sites[1],
             status=device_status,
+            location=location,
         )
-        interface1 = Interface.objects.create(device=device1, name="eth0")
-        interface2 = Interface.objects.create(device=device2, name="eth0")
+        interface_status = Status.objects.get_for_model(Interface).first()
+        interface1 = Interface.objects.create(device=device1, name="eth0", status=interface_status)
+        interface2 = Interface.objects.create(device=device2, name="eth0", status=interface_status)
 
         circuit_terminations = CircuitTermination.objects.all()
+        circuit_terminations[0].tags.set(Tag.objects.get_for_model(CircuitTermination))
 
         cable_statuses = Status.objects.get_for_model(Cable)
-        status_connected = cable_statuses.get(slug="connected")
+        status_connected = cable_statuses.get(name="Connected")
 
         Cable.objects.create(
             termination_a=circuit_terminations[0],
@@ -207,7 +180,7 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
     def test_term_side(self):
         for choice in CircuitTerminationSideChoices.values():
             with self.subTest(f"term_side: {choice}"):
-                params = {"term_side": choice}
+                params = {"term_side": [choice]}
                 filterset_result = self.filterset(params, self.queryset).qs
                 qs_result = self.queryset.filter(term_side=choice)
                 self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
@@ -223,7 +196,7 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
 
-class ProviderNetworkTestCase(FilterTestCases.NameSlugFilterTestCase):
+class ProviderNetworkTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = ProviderNetwork.objects.all()
     filterset = ProviderNetworkFilterSet
 
@@ -233,6 +206,5 @@ class ProviderNetworkTestCase(FilterTestCases.NameSlugFilterTestCase):
         ["description"],
         ["name"],
         ["provider", "provider__id"],
-        ["provider", "provider__slug"],
-        ["slug"],
+        ["provider", "provider__name"],
     )

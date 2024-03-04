@@ -1,11 +1,11 @@
 from .change_logging import ChangeLoggedModel, ObjectChange
-from .roles import Role, RoleRequiredRoleModelMixin, RoleModelMixin
-from .statuses import Status, StatusField, StatusModel
+from .contacts import Contact, ContactAssociation, Team
 from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel
 from .datasources import GitRepository
 from .groups import DynamicGroup, DynamicGroupMembership
 from .jobs import (
     Job,
+    JobButton,
     JobHook,
     JobLogEntry,
     JobResult,
@@ -18,6 +18,7 @@ from .models import (
     ConfigContextSchema,
     CustomLink,
     ExportTemplate,
+    ExternalIntegration,
     FileAttachment,
     FileProxy,
     GraphQLQuery,
@@ -27,9 +28,10 @@ from .models import (
     Webhook,
 )
 from .relationships import Relationship, RelationshipAssociation, RelationshipModel
+from .roles import Role, RoleField
 from .secrets import Secret, SecretsGroup, SecretsGroupAssociation
+from .statuses import Status, StatusField, StatusModel
 from .tags import Tag, TaggedItem
-
 
 __all__ = (
     "ChangeLoggedModel",
@@ -37,6 +39,8 @@ __all__ = (
     "ConfigContext",
     "ConfigContextModel",
     "ConfigContextSchema",
+    "Contact",
+    "ContactAssociation",
     "CustomField",
     "CustomFieldChoice",
     "CustomFieldModel",
@@ -44,6 +48,7 @@ __all__ = (
     "DynamicGroup",
     "DynamicGroupMembership",
     "ExportTemplate",
+    "ExternalIntegration",
     "FileAttachment",
     "FileProxy",
     "GitRepository",
@@ -51,6 +56,7 @@ __all__ = (
     "HealthCheckTestModel",
     "ImageAttachment",
     "Job",
+    "JobButton",
     "JobHook",
     "JobLogEntry",
     "JobResult",
@@ -60,8 +66,7 @@ __all__ = (
     "RelationshipModel",
     "RelationshipAssociation",
     "Role",
-    "RoleRequiredRoleModelMixin",
-    "RoleModelMixin",
+    "RoleField",
     "ScheduledJob",
     "ScheduledJobs",
     "Secret",
@@ -72,5 +77,6 @@ __all__ = (
     "StatusModel",
     "Tag",
     "TaggedItem",
+    "Team",
     "Webhook",
 )

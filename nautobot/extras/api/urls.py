@@ -1,6 +1,6 @@
-from nautobot.core.api import OrderedDefaultRouter
-from . import views
+from nautobot.core.api.routers import OrderedDefaultRouter
 
+from . import views
 
 router = OrderedDefaultRouter()
 router.APIRootView = views.ExtrasRootView
@@ -13,6 +13,10 @@ router.register("config-contexts", views.ConfigContextViewSet)
 
 # Config context schemas
 router.register("config-context-schemas", views.ConfigContextSchemaViewSet)
+
+# Contacts
+router.register("contacts", views.ContactViewSet)
+router.register("contact-associations", views.ContactAssociationViewSet)
 
 # ContentTypes
 router.register("content-types", views.ContentTypeViewSet)
@@ -31,6 +35,12 @@ router.register("dynamic-group-memberships", views.DynamicGroupMembershipViewSet
 # Export templates
 router.register("export-templates", views.ExportTemplateViewSet)
 
+# External integrations
+router.register("external-integrations", views.ExternalIntegrationViewSet)
+
+# File proxies
+router.register("file-proxies", views.FileProxyViewSet)
+
 # Git repositories
 router.register("git-repositories", views.GitRepositoryViewSet)
 
@@ -42,6 +52,10 @@ router.register("image-attachments", views.ImageAttachmentViewSet)
 
 # Jobs
 router.register("jobs", views.JobViewSet)
+router.register("jobs", views.JobByNameViewSet)
+
+# Job Buttons
+router.register("job-buttons", views.JobButtonViewSet)
 
 # Job hooks
 router.register("job-hooks", views.JobHooksViewSet)
@@ -78,6 +92,9 @@ router.register("statuses", views.StatusViewSet)
 
 # Tags
 router.register("tags", views.TagViewSet)
+
+# Teams
+router.register("teams", views.TeamViewSet)
 
 # Webhooks
 router.register("webhooks", views.WebhooksViewSet)

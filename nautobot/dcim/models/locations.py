@@ -2,25 +2,23 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.urls import reverse
-
+from django.utils.functional import classproperty
 from timezone_field import TimeZoneField
 
-from nautobot.core.models.fields import AutoSlugField, NaturalOrderingField
+from nautobot.core.models.fields import NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.core.models.tree_queries import TreeModel, TreeQuerySet
+from nautobot.core.models.tree_queries import TreeManager, TreeModel, TreeQuerySet
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.fields import ASNField
-from nautobot.extras.models import StatusModel
+from nautobot.extras.models import StatusField
 from nautobot.extras.utils import extras_features, FeatureQuery
 
 
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "webhooks",
 )
 class LocationType(TreeModel, OrganizationalModel):
@@ -33,7 +31,6 @@ class LocationType(TreeModel, OrganizationalModel):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from="name")
     description = models.CharField(max_length=200, blank=True)
     content_types = models.ManyToManyField(
         to=ContentType,
@@ -47,26 +44,17 @@ class LocationType(TreeModel, OrganizationalModel):
         help_text="Allow Locations of this type to be parents/children of other Locations of this same type",
     )
 
-    csv_headers = ["name", "slug", "parent", "description", "nestable", "content_types"]
+    clone_fields = [
+        "parent",
+        "nestable",
+        "content_types",
+    ]
 
     class Meta:
         ordering = ("name",)
 
     def __str__(self):
         return self.name
-
-    def get_absolute_url(self):
-        return reverse("dcim:locationtype", args=[self.slug])
-
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.parent.name if self.parent else None,
-            self.description,
-            self.nestable,
-            ",".join(f"{ct.app_label}.{ct.model}" for ct in self.content_types.order_by("app_label", "model")),
-        )
 
     def clean(self):
         """
@@ -122,60 +110,48 @@ class LocationQuerySet(TreeQuerySet):
         return self.filter(location_type__content_types=content_type)
 
 
+class LocationManager(TreeManager.from_queryset(LocationQuerySet)):
+    pass
+
+
 @extras_features(
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
-    "relationships",
     "statuses",
     "webhooks",
 )
-class Location(TreeModel, StatusModel, PrimaryModel):
+class Location(TreeModel, PrimaryModel):
     """
     A Location represents an arbitrarily specific geographic location, such as a campus, building, floor, room, etc.
 
-    As presently implemented, Location is an intermediary model between Site and RackGroup - more specific than a Site,
-    less specific (and more broadly applicable) than a RackGroup:
+    As presently implemented, Location is a model less specific (and more broadly applicable) than a RackGroup:
+    Location (location_type="Building")
+      Location (location_type="Room")
+        RackGroup
+          Rack
+            Device
+        Device
+        Prefix
+        etc.
+      VLANGroup
+      Prefix
+      etc.
 
-    Region
-      Region
-        Site
-          Location (location_type="Building")
-            Location (location_type="Room")
-              RackGroup
-                Rack
-                  Device
-              Device
-            Prefix
-            etc.
-          VLANGroup
-          Prefix
-          etc.
-
-    As such, as presently implemented, every Location either has a parent Location or a "parent" Site.
-
-    In the future, we plan to collapse Region and Site (and likely RackGroup as well) into the Location model.
+    As such, as presently implemented, every Location, depends on its LocationType, do/don't have a parent Location.
+    In the future, we plan to collapse RackGroup into the Location model.
     """
 
     # A Location's name is unique within context of its parent, not globally unique.
     name = models.CharField(max_length=100, db_index=True)
     _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
-    # However a Location's slug *is* globally unique.
-    slug = AutoSlugField(populate_from=["parent__slug", "name"])
     location_type = models.ForeignKey(
         to="dcim.LocationType",
         on_delete=models.PROTECT,
         related_name="locations",
     )
-    site = models.ForeignKey(
-        to="dcim.Site",
-        on_delete=models.CASCADE,
-        related_name="locations",
-        blank=True,
-        null=True,
-    )
+    status = StatusField(blank=False, null=False)
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -214,33 +190,10 @@ class Location(TreeModel, StatusModel, PrimaryModel):
     comments = models.TextField(blank=True)
     images = GenericRelation(to="extras.ImageAttachment")
 
-    objects = LocationQuerySet.as_manager(with_tree_fields=True)
-
-    csv_headers = [
-        "name",
-        "slug",
-        "location_type",
-        "site",
-        "status",
-        "parent",
-        "tenant",
-        "description",
-        "facility",
-        "asn",
-        "time_zone",
-        "physical_address",
-        "shipping_address",
-        "latitude",
-        "longitude",
-        "contact_name",
-        "contact_phone",
-        "contact_email",
-        "comments",
-    ]
+    objects = LocationManager()
 
     clone_fields = [
         "location_type",
-        "site",
         "status",
         "parent",
         "tenant",
@@ -264,36 +217,40 @@ class Location(TreeModel, StatusModel, PrimaryModel):
     def __str__(self):
         return self.name
 
-    def get_absolute_url(self):
-        return reverse("dcim:location", args=[self.slug])
+    @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
+    def natural_key_field_lookups(cls):  # pylint: disable=no-self-argument
+        """
+        Due to the recursive nature of Location's natural key, we need a custom implementation of this property.
 
-    def to_csv(self):
-        return (
-            self.name,
-            self.slug,
-            self.location_type.name,
-            self.site.name if self.site else None,
-            self.get_status_display(),
-            self.parent.name if self.parent else None,
-            self.tenant.name if self.tenant else None,
-            self.description,
-            self.facility,
-            self.asn,
-            self.time_zone,
-            self.physical_address,
-            self.shipping_address,
-            self.latitude,
-            self.longitude,
-            self.contact_name,
-            self.contact_phone,
-            self.contact_email,
-            self.comments,
-        )
+        When LOCATION_NAME_AS_NATURAL_KEY is set in settings or Constance, we use just the `name` for simplicity,
+        even though it's not technically guaranteed to be globally unique.
 
-    @property
-    def base_site(self):
-        """The site that this Location belongs to, if any, or that its root ancestor belongs to, if any."""
-        return self.site or self.ancestors().first().site
+        Otherwise, this returns a set of natural key lookups based on the current maximum depth of the Location tree.
+        For example if the tree is 2 layers deep, it will return ["name", "parent__name", "parent__parent__name"].
+
+        Without this custom implementation, the generic `natural_key_field_lookups` would recurse infinitely.
+        """
+        if get_settings_or_config("LOCATION_NAME_AS_NATURAL_KEY"):
+            # opt-in simplified "pseudo-natural-key"
+            return ["name"]
+
+        lookups = []
+        name = "name"
+        for _ in range(cls.objects.max_depth + 1):
+            lookups.append(name)
+            name = f"parent__{name}"
+        return lookups
+
+    @classmethod
+    def natural_key_args_to_kwargs(cls, args):
+        """Handle the possibility that more recursive "parent" lookups were specified than we initially expected."""
+        args = list(args)
+        natural_key_field_lookups = list(cls.natural_key_field_lookups)
+        while len(args) < len(natural_key_field_lookups):
+            args.append(None)
+        while len(args) > len(natural_key_field_lookups):
+            natural_key_field_lookups.append(f"parent__{natural_key_field_lookups[-1]}")
+        return dict(zip(natural_key_field_lookups, args))
 
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a Location with no parent.
@@ -335,22 +292,7 @@ class Location(TreeModel, StatusModel, PrimaryModel):
                         {"parent": f"A Location of type {self.location_type} must not have a parent Location."}
                     )
 
-                # In a future release, Site will become a kind of Location, and the resulting data migration will be
-                # much cleaner if it doesn't have to deal with Locations that have two "parents".
-                if self.site is not None:
-                    raise ValidationError(
-                        {"site": "A Location cannot have both a parent Location and an associated Site."}
-                    )
-
         else:  # Our location type has a parent type of its own
-            # We must *not* have a site.
-            # In a future release, Site will become a kind of Location, and the resulting data migration will be
-            # much cleaner if it doesn't have to deal with Locations that have two "parents".
-            if self.site is not None:
-                raise ValidationError(
-                    {"site": f"A location of type {self.location_type} must not have an associated Site."}
-                )
-
             # We *must* have a parent location.
             if self.parent is None:
                 raise ValidationError(

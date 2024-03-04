@@ -10,19 +10,18 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError,
 )
-from django.db import transaction, IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import ManyToManyField, ProtectedError
-from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput, Textarea
-from django.http import HttpResponse
+from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import NoReverseMatch, reverse
-from django.utils.html import escape
-from django.utils.http import is_safe_url
-from django.utils.safestring import mark_safe
+from django.utils.encoding import iri_to_uri
+from django.utils.html import format_html
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
-from nautobot.core.forms import SearchForm
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import (
     BootstrapMixin,
@@ -31,23 +30,32 @@ from nautobot.core.forms import (
     CSVDataField,
     CSVFileField,
     ImportForm,
-    TableConfigForm,
     restrict_form_fields,
+    SearchForm,
+    TableConfigForm,
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
-from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     get_filterable_params_from_filter_params,
     normalize_querydict,
 )
-from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequiredMixin
-from nautobot.core.views.utils import check_filter_for_display, csv_format, handle_protectederror, prepare_cloned_fields
-from nautobot.extras.models import CustomField, ExportTemplate
-from nautobot.extras.models.change_logging import ChangeLoggedModel
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.utils import (
+    check_filter_for_display,
+    get_csv_form_fields_from_serializer_class,
+    handle_protectederror,
+    import_csv_helper,
+    prepare_cloned_fields,
+)
+from nautobot.extras.models import ContactAssociation, ExportTemplate
+from nautobot.extras.tables import AssociatedContactsTable
+from nautobot.extras.utils import remove_prefix_from_cf_key
 
 
 class ObjectView(ObjectPermissionRequiredMixin, View):
@@ -60,6 +68,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
 
     queryset = None
     template_name = None
+    is_contact_associatable_model = True
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -88,55 +97,59 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             "active_tab": request.GET.get("tab", "main"),
         }
 
-    # 2.0 TODO: Remove this method in 2.0. Can be retrieved from instance itself now
-    # instance.get_changelog_url()
-    # Only available on models that support changelogs
-    def get_changelog_url(self, instance):
-        """Return the changelog URL for a given instance."""
-        meta = self.queryset.model._meta
-
-        # Don't try to generate a changelog_url for an ObjectChange.
-        if meta.model_name == "objectchange":
-            return None
-
-        route = get_route_for_model(instance, "changelog")
-
-        # Iterate the pk-like fields and try to get a URL, or return None.
-        fields = ["pk", "slug"]
-        for field in fields:
-            if not hasattr(instance, field):
-                continue
-
-            try:
-                return reverse(route, kwargs={field: getattr(instance, field)})
-            except NoReverseMatch:
-                continue
-
-        # This object likely doesn't have a changelog route defined.
-        return None
-
     def get(self, request, *args, **kwargs):
         """
-        Generic GET handler for accessing an object by PK or slug
+        Generic GET handler for accessing an object.
         """
         instance = get_object_or_404(self.queryset, **kwargs)
+        # Get the ObjectChange records to populate the advanced tab information
+        created_by, last_updated_by = get_created_and_last_updated_usernames_for_model(instance)
 
-        changelog_url = None
+        # TODO: this feels inelegant - should the tabs lookup be a dedicated endpoint rather than piggybacking
+        # on the object-retrieve endpoint?
+        # TODO: similar functionality probably needed in NautobotUIViewSet as well, not currently present
+        if request.GET.get("viewconfig", None) == "true":
+            # TODO: we shouldn't be importing a private-named function from another module. Should it be renamed?
+            from nautobot.extras.templatetags.plugins import _get_registered_content
 
-        if isinstance(instance, ChangeLoggedModel):
-            changelog_url = instance.get_changelog_url()
-
-        return render(
-            request,
-            self.get_template_name(),
-            {
+            temp_fake_context = {
                 "object": instance,
+                "request": request,
+                "settings": {},
+                "csrf_token": "",
+                "perms": {},
+            }
+
+            plugin_tabs = _get_registered_content(instance, "detail_tabs", temp_fake_context, return_html=False)
+            resp = {"tabs": plugin_tabs}
+            return JsonResponse(resp)
+        else:
+            content_type = ContentType.objects.get_for_model(self.queryset.model)
+            context = {
+                "object": instance,
+                "is_contact_associatable_model": self.is_contact_associatable_model,
+                "content_type": content_type,
                 "verbose_name": self.queryset.model._meta.verbose_name,
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                "changelog_url": changelog_url,  # 2.0 TODO: Remove in 2.0. This information can be retrieved from the object itself now.
+                "created_by": created_by,
+                "last_updated_by": last_updated_by,
                 **self.get_extra_context(request, instance),
-            },
-        )
+            }
+            if self.is_contact_associatable_model:
+                paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+                associations = (
+                    ContactAssociation.objects.filter(
+                        associated_object_id=instance.id,
+                        associated_object_type=content_type,
+                    )
+                    .restrict(request.user, "view")
+                    .order_by("role__name")
+                )
+                associations_table = AssociatedContactsTable(associations, orderable=False)
+                RequestConfig(request, paginate).configure(associations_table)
+                associations_table.columns.show("pk")
+                context["associated_contacts_table"] = associations_table
+            return render(request, self.get_template_name(), context)
 
 
 class ObjectListView(ObjectPermissionRequiredMixin, View):
@@ -159,7 +172,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     template_name = "generic/object_list.html"
     action_buttons = ("add", "import", "export")
     non_filter_params = (
-        "export",  # trigger for CSV/export-template/YAML export
+        "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
@@ -168,11 +181,12 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
         filter_params = request.GET.copy()
-        return get_filterable_params_from_filter_params(filter_params, self.non_filter_params, self.filterset)
+        return get_filterable_params_from_filter_params(filter_params, self.non_filter_params, self.filterset())
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
 
+    # 3.0 TODO: remove, irrelevant after #4746
     def queryset_to_yaml(self):
         """
         Export the queryset of objects as concatenated YAML documents.
@@ -180,37 +194,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         yaml_data = [obj.to_yaml() for obj in self.queryset]
 
         return "---\n".join(yaml_data)
-
-    def queryset_to_csv(self):
-        """
-        Export the queryset of objects as comma-separated value (CSV), using the model's to_csv() method.
-        """
-        csv_data = []
-        custom_field_names = []
-
-        # Start with the column headers
-        headers = self.queryset.model.csv_headers.copy()
-
-        # Add custom field headers, if any
-        if hasattr(self.queryset.model, "_custom_field_data"):
-            for custom_field in CustomField.objects.get_for_model(self.queryset.model):
-                headers.append("cf_" + custom_field.slug)
-                # 2.0 TODO: #824 custom_field.slug
-                custom_field_names.append(custom_field.name)
-
-        csv_data.append(",".join(headers))
-
-        # Iterate through the queryset appending each object
-        for obj in self.queryset:
-            data = obj.to_csv()
-
-            # 2.0 TODO: #824 use custom_field_slug
-            for custom_field_name in custom_field_names:
-                data += (obj.cf.get(custom_field_name, ""),)
-
-            csv_data.append(csv_format(data))
-
-        return "\n".join(csv_data)
 
     def validate_action_buttons(self, request):
         """Verify actions in self.action_buttons are valid view actions."""
@@ -231,7 +214,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         return valid_actions
 
     def get(self, request):
-
         model = self.queryset.model
         content_type = ContentType.objects.get_for_model(model)
 
@@ -242,33 +224,32 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         if self.filterset:
             filter_params = self.get_filter_params(request)
             filterset = self.filterset(filter_params, self.queryset)
-            filterset_filters = filterset.get_filters()
             self.queryset = filterset.qs
             if not filterset.is_valid():
                 messages.error(
                     request,
-                    mark_safe(f"Invalid filters were specified: {filterset.errors}"),
+                    format_html("Invalid filters were specified: {}", filterset.errors),
                 )
                 self.queryset = self.queryset.none()
 
             display_filter_params = [
-                check_filter_for_display(filterset_filters, field_name, values)
+                check_filter_for_display(filterset.filters, field_name, values)
                 for field_name, values in filter_params.items()
             ]
 
             if request.GET:
                 factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
-                    request.GET, self.filterset
+                    request.GET, filterset
                 )
-                dynamic_filter_form = DynamicFilterFormSet(filterset_class=self.filterset, data=factory_formset_params)
+                dynamic_filter_form = DynamicFilterFormSet(filterset=filterset, data=factory_formset_params)
             else:
-                dynamic_filter_form = DynamicFilterFormSet(filterset_class=self.filterset)
+                dynamic_filter_form = DynamicFilterFormSet(filterset=filterset)
 
             if self.filterset_form:
                 filter_form = self.filterset_form(filter_params, label_suffix="")
 
         # Check for export template rendering
-        if request.GET.get("export"):
+        if request.GET.get("export"):  # 3.0 TODO: remove, irrelevant after #4746
             et = get_object_or_404(
                 ExportTemplate,
                 content_type=content_type,
@@ -283,16 +264,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 )
 
         # Check for YAML export support
-        elif "export" in request.GET and hasattr(model, "to_yaml"):
+        elif "export" in request.GET and hasattr(model, "to_yaml"):  # 3.0 TODO: remove, irrelevant after #4746
             response = HttpResponse(self.queryset_to_yaml(), content_type="text/yaml")
             filename = f"{settings.BRANDING_PREPENDED_FILENAME}{self.queryset.model._meta.verbose_name_plural}.yaml"
-            response["Content-Disposition"] = f'attachment; filename="{filename}"'
-            return response
-
-        # Fall back to built-in CSV formatting if export requested but no template specified
-        elif "export" in request.GET and hasattr(model, "to_csv"):
-            response = HttpResponse(self.queryset_to_csv(), content_type="text/csv")
-            filename = f"{settings.BRANDING_PREPENDED_FILENAME}{self.queryset.model._meta.verbose_name_plural}.csv"
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
 
@@ -309,7 +283,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         table_config_form = None
         if self.table:
             # Construct the objects table
-            table = self.table(self.queryset, user=request.user)
+            # Order By is needed in the table `__init__` method
+            order_by = self.request.GET.getlist("sort")
+            table = self.table(self.queryset, user=request.user, order_by=order_by)
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
 
@@ -320,6 +296,12 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             }
             RequestConfig(request, paginate).configure(table)
             table_config_form = TableConfigForm(table=table)
+            max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
+            if max_page_size and paginate["per_page"] > max_page_size:
+                messages.warning(
+                    request,
+                    f'Requested "per_page" is too large. No more than {max_page_size} items may be displayed at a time.',
+                )
 
         # For the search form field, use a custom placeholder.
         q_placeholder = "Search " + bettertitle(model._meta.verbose_name_plural)
@@ -369,7 +351,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     queryset = None
     model_form = None
-    template_name = "generic/object_edit.html"
+    template_name = "generic/object_create.html"
 
     def get_required_permission(self):
         # self._permission_action is set by dispatch() to either "add" or "change" depending on whether
@@ -378,8 +360,8 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     def get_object(self, kwargs):
         """Retrieve an object based on `kwargs`."""
-        # Look up an existing object by slug, PK, or name, if provided.
-        for field in ("slug", "pk", "name"):
+        # Look up an existing object by PK, name, or slug, if provided.
+        for field in ("pk", "name", "slug"):
             if field in kwargs:
                 return get_object_or_404(self.queryset, **{field: kwargs[field]})
         return self.queryset.model()
@@ -389,11 +371,11 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         Return any additional context data for the template.
 
         Args:
-            request: The current request
-            instance: The object being edited
+            request (HttpRequest): The current request
+            instance (Model): The object being edited
 
         Returns:
-            dict
+            (dict): Additional context data
         """
         return {}
 
@@ -411,7 +393,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
 
-        initial_data = normalize_querydict(request.GET)
+        initial_data = normalize_querydict(request.GET, form_class=self.model_form)
         form = self.model_form(instance=obj, initial=initial_data)
         restrict_form_fields(form, request.user)
 
@@ -428,8 +410,19 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             },
         )
 
+    def successful_post(self, request, obj, created, logger):
+        """Callback after the form is successfully saved but before redirecting the user."""
+        verb = "Created" if created else "Modified"
+        msg = f"{verb} {self.queryset.model._meta.verbose_name}"
+        logger.info(f"{msg} {obj} (PK: {obj.pk})")
+        try:
+            msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+        except AttributeError:
+            msg = format_html("{} {}", msg, obj)
+        messages.success(request, msg)
+
     def post(self, request, *args, **kwargs):
-        logger = logging.getLogger("nautobot.views.ObjectEditView")
+        logger = logging.getLogger(__name__ + ".ObjectEditView")
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
         form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
         restrict_form_fields(form, request.user)
@@ -447,17 +440,10 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                 if hasattr(form, "save_note") and callable(form.save_note):
                     form.save_note(instance=obj, user=request.user)
-                verb = "Created" if object_created else "Modified"
-                msg = f"{verb} {self.queryset.model._meta.verbose_name}"
-                logger.info(f"{msg} {obj} (PK: {obj.pk})")
-                if hasattr(obj, "get_absolute_url"):
-                    msg = f'{msg} <a href="{obj.get_absolute_url()}">{escape(obj)}</a>'
-                else:
-                    msg = f"{msg} {escape(obj)}"
-                messages.success(request, mark_safe(msg))
+
+                self.successful_post(request, obj, object_created, logger)
 
                 if "_addanother" in request.POST:
-
                     # If the object has clone_fields, pre-populate a new instance of the form
                     if hasattr(obj, "clone_fields"):
                         url = f"{request.path}?{prepare_cloned_fields(obj)}"
@@ -466,8 +452,8 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                     return redirect(request.get_full_path())
 
                 return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(return_url)
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
                 else:
                     return redirect(self.get_return_url(request, obj))
 
@@ -509,8 +495,8 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     def get_object(self, kwargs):
         """Retrieve an object based on `kwargs`."""
-        # Look up an existing object by slug or PK, or name if provided.
-        for field in ("slug", "pk", "name"):
+        # Look up an existing object by PK, name, or slug, if provided.
+        for field in ("pk", "name", "slug"):
             if field in kwargs:
                 return get_object_or_404(self.queryset, **{field: kwargs[field]})
         return self.queryset.model()
@@ -531,7 +517,7 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
     def post(self, request, **kwargs):
-        logger = logging.getLogger("nautobot.views.ObjectDeleteView")
+        logger = logging.getLogger(__name__ + ".ObjectDeleteView")
         obj = self.get_object(kwargs)
         form = ConfirmationForm(request.POST)
 
@@ -550,8 +536,8 @@ class ObjectDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             messages.success(request, msg)
 
             return_url = form.cleaned_data.get("return_url")
-            if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                return redirect(return_url)
+            if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                return redirect(iri_to_uri(return_url))
             else:
                 return redirect(self.get_return_url(request, obj))
 
@@ -612,7 +598,7 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
     def post(self, request):
-        logger = logging.getLogger("nautobot.views.BulkCreateView")
+        logger = logging.getLogger(__name__ + ".BulkCreateView")
         model = self.queryset.model
         form = self.form(request.POST)
         model_form = self.model_form(request.POST)
@@ -624,10 +610,8 @@ class BulkCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
             try:
                 with transaction.atomic():
-
                     # Create objects from the expanded. Abort the transaction on the first validation error.
                     for value in pattern:
-
                         # Reinstantiate the model form each time to avoid overwriting the same instance. Use a mutable
                         # copy of the POST QueryDict so that we can update the target field value.
                         model_form = self.model_form(request.POST.copy())
@@ -714,7 +698,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
     def post(self, request):
-        logger = logging.getLogger("nautobot.views.ObjectImportView")
+        logger = logging.getLogger(__name__ + ".ObjectImportView")
         form = ImportForm(request.POST)
 
         if form.is_valid():
@@ -734,10 +718,8 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                     model_form.data[field_name] = field.initial
 
             if model_form.is_valid():
-
                 try:
                     with transaction.atomic():
-
                         # Save the primary object
                         obj = model_form.save()
 
@@ -755,7 +737,6 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                             related_obj_pks = []
                             for i, rel_obj_data in enumerate(data.get(field_name, [])):
-
                                 f = related_object_form(obj, rel_obj_data)
 
                                 for subfield_name, field in f.fields.items():
@@ -790,15 +771,15 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 logger.info(f"Import object {obj} (PK: {obj.pk})")
                 messages.success(
                     request,
-                    mark_safe(f'Imported object: <a href="{obj.get_absolute_url()}">{obj}</a>'),
+                    format_html('Imported object: <a href="{}">{}</a>', obj.get_absolute_url(), obj),
                 )
 
                 if "_addanother" in request.POST:
                     return redirect(request.get_full_path())
 
                 return_url = form.cleaned_data.get("return_url")
-                if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(return_url)
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
                 else:
                     return redirect(self.get_return_url(request, obj))
 
@@ -827,55 +808,56 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
 
-class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
+class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  # 3.0 TODO: remove as it's no longer used
     """
     Import objects in bulk (CSV format).
 
+    Deprecated - replaced by ImportObjects system Job.
+
     queryset: Base queryset for the model
-    model_form: The form used to create each imported object
     table: The django-tables2 Table used to render the list of imported objects
     template_name: The name of the template
-    widget_attrs: A dict of attributes to apply to the import widget (e.g. to require a session key)
     """
 
     queryset = None
-    model_form = None
     table = None
     template_name = "generic/object_bulk_import.html"
-    widget_attrs = {}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.serializer_class = get_serializer_for_model(self.queryset.model)
+        self.fields = get_csv_form_fields_from_serializer_class(self.serializer_class)
+        self.required_field_names = [
+            field["name"]
+            for field in get_csv_form_fields_from_serializer_class(self.serializer_class)
+            if field["required"]
+        ]
 
     def _import_form(self, *args, **kwargs):
         class CSVImportForm(BootstrapMixin, Form):
-            csv_data = CSVDataField(from_form=self.model_form, widget=Textarea(attrs=self.widget_attrs))
-            csv_file = CSVFileField(from_form=self.model_form)
+            csv_data = CSVDataField(required_field_names=self.required_field_names)
+            csv_file = CSVFileField()
 
         return CSVImportForm(*args, **kwargs)
-
-    def _save_obj(self, obj_form, request):
-        """
-        Provide a hook to modify the object immediately before saving it (e.g. to encrypt secret data).
-        """
-        return obj_form.save()
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "add")
 
     def get(self, request):
-
         return render(
             request,
             self.template_name,
             {
                 "form": self._import_form(),
-                "fields": self.model_form().fields,
-                "obj_type": self.model_form._meta.model._meta.verbose_name,
+                "fields": self.fields,
+                "obj_type": self.queryset.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
                 "active_tab": "csv-data",
             },
         )
 
     def post(self, request):
-        logger = logging.getLogger("nautobot.views.BulkImportView")
+        logger = logging.getLogger(__name__ + ".BulkImportView")
         new_objs = []
         form = self._import_form(request.POST, request.FILES)
 
@@ -885,22 +867,7 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             try:
                 # Iterate through CSV data and bind each row to a new model form instance.
                 with transaction.atomic():
-                    if request.FILES:
-                        field_name = "csv_file"
-                    else:
-                        field_name = "csv_data"
-                    headers, records = form.cleaned_data[field_name]
-                    for row, data in enumerate(records, start=1):
-                        obj_form = self.model_form(data, headers=headers)
-                        restrict_form_fields(obj_form, request.user)
-
-                        if obj_form.is_valid():
-                            obj = self._save_obj(obj_form, request)
-                            new_objs.append(obj)
-                        else:
-                            for field, err in obj_form.errors.items():
-                                form.add_error(field_name, f"Row {row} {field}: {err[0]}")
-                            raise ValidationError("")
+                    new_objs = import_csv_helper(request=request, form=form, serializer_class=self.serializer_class)
 
                     # Enforce object-level permissions
                     if self.queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
@@ -939,8 +906,8 @@ class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             self.template_name,
             {
                 "form": form,
-                "fields": self.model_form().fields,
-                "obj_type": self.model_form._meta.model._meta.verbose_name,
+                "fields": self.fields,
+                "obj_type": self.queryset.model._meta.verbose_name,
                 "return_url": self.get_return_url(request),
                 "active_tab": "csv-file" if form.has_error("csv_file") else "csv-data",
             },
@@ -975,16 +942,19 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         # For example, a parent object can be defined given some parameter from the request URL.
         return obj
 
+    def extra_post_save_action(self, obj, form):
+        """Extra actions after a form is saved"""
+
     def post(self, request, **kwargs):
-        logger = logging.getLogger("nautobot.views.BulkEditView")
+        logger = logging.getLogger(__name__ + ".BulkEditView")
         model = self.queryset.model
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
         if request.POST.get("_all"):
             if self.filterset is not None:
-                pk_list = self.filterset(request.GET, model.objects.only("pk")).qs
+                pk_list = list(self.filterset(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True))
             else:
-                pk_list = model.objects.all()
+                pk_list = list(model.objects.all().values_list("pk", flat=True))
         else:
             pk_list = request.POST.getlist("pk")
 
@@ -1003,21 +973,14 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 ]
                 nullified_fields = request.POST.getlist("_nullify")
 
-                # 2.0 TODO: #824 this won't really be needed once obj.cf is indexed by slug rather than by name
-                form_cf_to_key = {f"cf_{cf.slug}": cf.name for cf in CustomField.objects.get_for_model(model)}
-
                 try:
-
                     with transaction.atomic():
-
                         updated_objects = []
                         for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
-
                             obj = self.alter_obj(obj, request, [], kwargs)
 
                             # Update standard fields. If a field is listed in _nullify, delete its value.
                             for name in standard_fields:
-
                                 try:
                                     model_field = model._meta.get_field(name)
                                 except FieldDoesNotExist:
@@ -1041,11 +1004,10 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                             # Update custom fields
                             for field_name in form_custom_fields:
-                                # 2.0 TODO: #824 when we use slug in obj.cf we can just do obj.cf[field_name[3:]]
                                 if field_name in form.nullable_fields and field_name in nullified_fields:
-                                    obj.cf[form_cf_to_key[field_name]] = None
+                                    obj.cf[remove_prefix_from_cf_key(field_name)] = None
                                 elif form.cleaned_data.get(field_name) not in (None, "", []):
-                                    obj.cf[form_cf_to_key[field_name]] = form.cleaned_data[field_name]
+                                    obj.cf[remove_prefix_from_cf_key(field_name)] = form.cleaned_data[field_name]
 
                             obj.full_clean()
                             obj.save()
@@ -1064,6 +1026,8 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                             if hasattr(form, "save_note") and callable(form.save_note):
                                 form.save_note(instance=obj, user=request.user)
+
+                            self.extra_post_save_action(obj, form)
 
                         # Enforce object-level permissions
                         if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(
@@ -1109,6 +1073,9 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         if not table.rows:
             messages.warning(request, f"No {model._meta.verbose_name_plural} were selected.")
             return redirect(self.get_return_url(request))
+        # Hide actions column if present
+        if "actions" in table.columns:
+            table.columns.hide("actions")
 
         context = {
             "form": form,
@@ -1144,12 +1111,17 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         return get_permission_for_model(self.queryset.model, "change")
 
     def post(self, request):
-        logger = logging.getLogger("nautobot.views.BulkRenameView")
+        logger = logging.getLogger(__name__ + ".BulkRenameView")
+        query_pks = request.POST.getlist("pk")
+        selected_objects = self.queryset.filter(pk__in=query_pks) if query_pks else None
+
+        # selected_objects would return False; if no query_pks or invalid query_pks
+        if not selected_objects:
+            messages.warning(request, f"No valid {self.queryset.model._meta.verbose_name_plural} were selected.")
+            return redirect(self.get_return_url(request))
 
         if "_preview" in request.POST or "_apply" in request.POST:
-            form = self.form(request.POST, initial={"pk": request.POST.getlist("pk")})
-            selected_objects = self.queryset.filter(pk__in=form.initial["pk"])
-
+            form = self.form(request.POST, initial={"pk": query_pks})
             if form.is_valid():
                 try:
                     with transaction.atomic():
@@ -1188,8 +1160,7 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                     form.add_error(None, msg)
 
         else:
-            form = self.form(initial={"pk": request.POST.getlist("pk")})
-            selected_objects = self.queryset.filter(pk__in=form.initial["pk"])
+            form = self.form(initial={"pk": query_pks})
 
         return render(
             request,
@@ -1199,8 +1170,24 @@ class BulkRenameView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 "obj_type_plural": self.queryset.model._meta.verbose_name_plural,
                 "selected_objects": selected_objects,
                 "return_url": self.get_return_url(request),
+                "parent_name": self.get_selected_objects_parents_name(selected_objects),
             },
         )
+
+    def get_selected_objects_parents_name(self, selected_objects):
+        """
+        Return selected_objects parent name.
+
+        This method is intended to be overridden by child classes to return the parent name of the selected objects.
+
+        Args:
+            selected_objects (list[BaseModel]): The objects being renamed
+
+        Returns:
+            (str): The parent name of the selected objects
+        """
+
+        return ""
 
 
 class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
@@ -1227,15 +1214,15 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         return redirect(self.get_return_url(request))
 
     def post(self, request, **kwargs):
-        logger = logging.getLogger("nautobot.views.BulkDeleteView")
+        logger = logging.getLogger(__name__ + ".BulkDeleteView")
         model = self.queryset.model
 
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all"):
             if self.filterset is not None:
-                pk_list = self.filterset(request.GET, model.objects.only("pk")).qs
+                pk_list = list(self.filterset(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True))
             else:
-                pk_list = model.objects.all()
+                pk_list = list(model.objects.all().values_list("pk", flat=True))
         else:
             pk_list = request.POST.getlist("pk")
 
@@ -1282,6 +1269,9 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 f"No {model._meta.verbose_name_plural} were selected for deletion.",
             )
             return redirect(self.get_return_url(request))
+        # Hide actions column if present
+        if "actions" in table.columns:
+            table.columns.hide("actions")
 
         context = {
             "form": form,
@@ -1316,6 +1306,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 # Device/VirtualMachine components
 #
 
+
 # TODO: Replace with BulkCreateView
 class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     """
@@ -1325,13 +1316,12 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
     queryset = None
     form = None
     model_form = None
-    template_name = None
+    template_name = "dcim/device_component_add.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "add")
 
     def get(self, request):
-
         form = self.form(initial=request.GET)
         model_form = self.model_form(request.GET)
 
@@ -1347,12 +1337,11 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
         )
 
     def post(self, request):
-        logger = logging.getLogger("nautobot.views.ComponentCreateView")
+        logger = logging.getLogger(__name__ + ".ComponentCreateView")
         form = self.form(request.POST, initial=request.GET)
         model_form = self.model_form(request.POST)
 
         if form.is_valid():
-
             new_components = []
             data = deepcopy(request.POST)
 
@@ -1381,11 +1370,8 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
                             form.add_error(field, f"{name}: {err_str}")
 
             if not form.errors:
-
                 try:
-
                     with transaction.atomic():
-
                         # Create the new components
                         new_objs = []
                         for component_form in new_components:
@@ -1440,7 +1426,7 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
         return f"dcim.add_{self.queryset.model._meta.model_name}"
 
     def post(self, request):
-        logger = logging.getLogger("nautobot.views.BulkComponentCreateView")
+        logger = logging.getLogger(__name__ + ".BulkComponentCreateView")
         parent_model_name = self.parent_model._meta.verbose_name_plural
         model_name = self.queryset.model._meta.verbose_name_plural
         model = self.queryset.model
@@ -1471,9 +1457,7 @@ class BulkComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, 
 
                 try:
                     with transaction.atomic():
-
                         for obj in data["pk"]:
-
                             names = data["name_pattern"]
                             labels = data["label_pattern"] if "label_pattern" in data else None
                             for i, name in enumerate(names):

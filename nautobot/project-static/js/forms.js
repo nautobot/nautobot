@@ -4,14 +4,16 @@
 
 // Slugify
 function slugify(s, num_chars) {
-    s = s.replace(/[^\-\.\w\s]/g, '');          // Remove unneeded chars
+    s = s.replace(/[^_A-Za-z0-9\-\s\.]/g, '');  // Remove non-ascii chars
     s = s.replace(/^[\s\.]+|[\s\.]+$/g, '');    // Trim leading/trailing spaces
     s = s.replace(/[\-\.\s]+/g, '-');           // Convert spaces and decimals to hyphens
     s = s.toLowerCase();                        // Convert to lowercase
-    // Declare `const slugify_prefer_underscores = true` globally if you want to use underscores instead of hyphens
-    if (typeof slugify_prefer_underscores !== "undefined") {
-        s = s.replace(/-/g, '_');
+    s = s.replace(/-/g, '_');
+
+    if (/^[^_A-Za-z]/.test(s)) {  // Slug must start with a letter or underscore only
+        s = 'a' + s;
     }
+
     return s.substring(0, num_chars);           // Trim to first num_chars chars
 }
 
@@ -87,6 +89,11 @@ function initializeCheckboxes(context){
 function initializeSlugField(context){
     this_context = $(context);
     var slug_field = this_context.find('#id_slug');
+    // If id_slug field is not to be found
+    // check if it is rename to key field like what we did for CustomField and Relationship
+    if (slug_field.length == 0) {
+        slug_field = this_context.find('#id_key');
+    }
     if (slug_field.length != 0) {
         var slug_source_arr = slug_field.attr('slug-source').split(" ");
         var slug_length = slug_field.attr('maxlength');
@@ -153,155 +160,213 @@ function initializeColorPicker(context, dropdownParent=null){
     });
 }
 
+/**
+ * Retrieves the value of a property from a nested object using a string path.
+ *
+ * This method supports accessing deeply nested properties within an object.
+ * It is created to support extraction of nested values in the display-field
+ * and value-field for DynamicChoiceField.
+ *
+ * @param {Object} response - The object from which to retrieve the value.
+ * @param {string} fieldPath - The string representing the path to the desired property.
+ * @returns {*} The value of the specified property, or null if the path is invalid or the object is not found.
+ *
+ * @example
+ * let response = {
+ *   "id": 1234,
+ *   "vlan": {
+ *     "name": "myvlan"
+ *   },
+ *   "interfaces": [
+ *     { "name": "eth0", "status": "up" },
+ *     { "name": "eth1", "status": "down" }
+ *   ]
+ * }
+ * // returns "myvlan"
+ * resolvePath(response, "vlan.name")
+ *
+ * // returns "eth0"
+ * resolvePath(response, "interfaces[0].name")
+ *
+ * // returns "eth0"
+ * resolvePath(response, "interfaces.0.name")
+ */
+function resolvePath(response, fieldPath) {
+    if (!fieldPath)
+        return null;
+
+    if (typeof response !== 'object' || response === null || !response) {
+        console.error('Invalid response object');
+        return null;
+    }
+
+    return fieldPath
+           .replace(/\[|\]\.?/g, '.')
+           .split('.')
+           .filter(value => value)
+           .reduce((memo, value) => memo && memo[value], response);
+}
+
 // Dynamic Choice Selection
 function initializeDynamicChoiceSelection(context, dropdownParent=null){
     this_context = $(context);
-    this_context.find('.nautobot-select2-api').select2({
-        allowClear: true,
-        placeholder: "---------",
-        theme: "bootstrap",
-        width: "off",
-        dropdownParent: dropdownParent,
-        ajax: {
-            delay: 500,
+    this_context.find('.nautobot-select2-api').each(function(){
+        thisobj = $(this);
+        placeholder = thisobj.attr("data-null-option") || "---------";
+        thisobj.select2({
+            allowClear: true,
+            placeholder: placeholder,
+            theme: "bootstrap",
+            width: "off",
+            dropdownParent: dropdownParent,
+            ajax: {
+                delay: 500,
 
-            url: function(params) {
-                var element = this[0];
-                var url = parseURL(element.getAttribute("data-url"));
+                url: function(params) {
+                    var element = this[0];
+                    var url = parseURL(element.getAttribute("data-url"));
 
-                if (url.includes("{{")) {
-                    // URL is not fully rendered yet, abort the request
-                    return false;
-                }
-                return url;
-            },
+                    if (url.includes("{{")) {
+                        // URL is not fully rendered yet, abort the request
+                        return false;
+                    }
+                    return url;
+                },
 
-            data: function(params) {
-                var element = this[0];
-                // Paging. Note that `params.page` indexes at 1
-                var offset = (params.page - 1) * 50 || 0;
-                // Base query params
-                var parameters = {
-                    q: params.term,
-                    limit: 50,
-                    offset: offset,
-                };
+                data: function(params) {
+                    var element = this[0];
+                    // Paging. Note that `params.page` indexes at 1
+                    var offset = (params.page - 1) * 50 || 0;
+                    // Base query params
+                    var parameters = {
+                        q: params.term,
+                        limit: 50,
+                        offset: offset,
+                    };
 
-                // Set api_version
-                api_version = $(element).attr("data-api-version")
-                if(api_version)
-                parameters["api_version"] = api_version
+                    // Set api_version
+                    api_version = $(element).attr("data-api-version");
+                    if(api_version){
+                        parameters["api_version"] = api_version;
+                    }
 
 
-                // Allow for controlling the brief setting from within APISelect
-                parameters.brief = ( $(element).is('[data-full]') ? undefined : true );
+                    // Allow for controlling the depth setting from within APISelect
+                    parameters.depth = parseInt($(element).attr('data-depth'))
 
-                // Attach any extra query parameters
-                $.each(element.attributes, function(index, attr){
-                    if (attr.name.includes("data-query-param-")){
-                        var param_name = attr.name.split("data-query-param-")[1];
+                    // Attach any extra query parameters
+                    $.each(element.attributes, function(index, attr){
+                        if (attr.name.includes("data-query-param-")){
+                            var param_name = attr.name.split("data-query-param-")[1];
 
-                        $.each($.parseJSON(attr.value), function(index, value) {
-                            // Referencing the value of another form field
-                            if (value.startsWith('$')) {
-                                let element_id = $(element).attr("id")
-                                let ref_field;
+                            $.each($.parseJSON(attr.value), function(index, value) {
+                                // Referencing the value of another form field
+                                if (value.startsWith('$')) {
+                                    let element_id = $(element).attr("id");
+                                    let ref_field;
 
-                                if(element_id.includes("id_form-")){
-                                    let id_prefix = element_id.match(/id_form-[0-9]+-/i, "")[0]
-                                    ref_field = $("#" + id_prefix + value.slice(1));
+                                    if(element_id.includes("id_form-")){
+                                        let id_prefix = element_id.match(/id_form-[0-9]+-/i, "")[0];
+                                        ref_field = $("#" + id_prefix + value.slice(1));
+                                    }
+                                    else {
+                                        ref_field = $('#id_' + value.slice(1));
+                                    }
+
+                                    if (ref_field.val() && ref_field.is(":visible")) {
+                                        value = ref_field.val();
+                                    } else if (ref_field.attr("required") && ref_field.attr("data-null-option")) {
+                                        value = "null";
+                                    } else {
+                                        return true;  // Skip if ref_field has no value
+                                    }
                                 }
-                                else {
-                                    ref_field = $('#id_' + value.slice(1));
-                                }
-
-                                if (ref_field.val() && ref_field.is(":visible")) {
-                                    value = ref_field.val();
-                                } else if (ref_field.attr("required") && ref_field.attr("data-null-option")) {
-                                    value = "null";
+                                if (param_name in parameters) {
+                                    if (Array.isArray(parameters[param_name])) {
+                                        parameters[param_name].push(value);
+                                    } else {
+                                        parameters[param_name] = [parameters[param_name], value];
+                                    }
                                 } else {
-                                    return true;  // Skip if ref_field has no value
+                                    parameters[param_name] = value;
                                 }
-                            }
-                            if (param_name in parameters) {
-                                if (Array.isArray(parameters[param_name])) {
-                                    parameters[param_name].push(value);
-                                } else {
-                                    parameters[param_name] = [parameters[param_name], value];
-                                }
-                            } else {
-                                parameters[param_name] = value;
-                            }
+                            });
+                        }
+                    });
+
+                    // Attach contenttype to parameters
+                    contenttype = $(element).attr("data-contenttype");
+                    if(contenttype){
+                        parameters["content_type"] = contenttype;
+                    }
+
+                    // This will handle params with multiple values (i.e. for list filter forms)
+                    return $.param(parameters, true);
+                },
+
+                processResults: function (data) {
+                    var element = this.$element[0];
+                    $(element).children('option').attr('disabled', false);
+                    var results = data.results;
+
+                    results = results.reduce((results,record,idx) => {
+                        record.text = resolvePath(record, element.getAttribute('display-field')) || record.name;
+                        record.id = resolvePath(record, element.getAttribute('value-field')) || record.id;
+                        if(element.getAttribute('disabled-indicator') && record[element.getAttribute('disabled-indicator')]) {
+                            // The disabled-indicator equated to true, so we disable this option
+                            record.disabled = true;
+                        }
+
+                        if( record.group !== undefined && record.group !== null && record.site !== undefined && record.site !== null ) {
+                            results[record.site.name + ":" + record.group.name] = results[record.site.name + ":" + record.group.name] || { text: record.site.name + " / " + record.group.name, children: [] };
+                            results[record.site.name + ":" + record.group.name].children.push(record);
+                        }
+                        else if( record.group !== undefined && record.group !== null ) {
+                            results[record.group.name] = results[record.group.name] || { text: record.group.name, children: [] };
+                            results[record.group.name].children.push(record);
+                        }
+                        else if( record.site !== undefined && record.site !== null ) {
+                            results[record.site.name] = results[record.site.name] || { text: record.site.name, children: [] };
+                            results[record.site.name].children.push(record);
+                        }
+                        else if ( (record.group !== undefined || record.group == null) && (record.site !== undefined || record.site === null) ) {
+                            results['global'] = results['global'] || { text: 'Global', children: [] };
+                            results['global'].children.push(record);
+                        }
+                        else {
+                            results[idx] = record;
+                        }
+                        // DynamicGroupSerializer has a `children` field which fits an inappropriate if condition
+                        // in select2.min.js, which will result in the incorrect rendering of DynamicGroup DynamicChoiceField.
+                        // So we nullify the field here since we do not need this field.
+                        if (record?.url ? record.url.includes("dynamic-groups") : false){
+                            record.children = undefined;
+                        }
+
+                        return results;
+                    },Object.create(null));
+
+                    results = Object.values(results);
+
+                    // Handle the null option, but only add it once
+                    if (element.getAttribute('data-null-option') && data.previous === null) {
+                        results.unshift({
+                            id: 'null',
+                            text: element.getAttribute('data-null-option')
                         });
                     }
-                });
 
-                // Attach contenttype to parameters
-                contenttype = $(element).attr("data-contenttype");
-                if(contenttype){
-                    parameters["content_type"] = contenttype;
+                    // Check if there are more results to page
+                    var page = data.next !== null;
+                    return {
+                        results: results,
+                        pagination: {
+                            more: page
+                        }
+                    };
                 }
-
-                // This will handle params with multiple values (i.e. for list filter forms)
-                return $.param(parameters, true);
-            },
-
-            processResults: function (data) {
-                var element = this.$element[0];
-                $(element).children('option').attr('disabled', false);
-                var results = data.results;
-
-                results = results.reduce((results,record,idx) => {
-                    record.text = record[element.getAttribute('display-field')] || record.name;
-                    record.id = record[element.getAttribute('value-field')] || record.id;
-                    if(element.getAttribute('disabled-indicator') && record[element.getAttribute('disabled-indicator')]) {
-                        // The disabled-indicator equated to true, so we disable this option
-                        record.disabled = true;
-                    }
-
-                    if( record.group !== undefined && record.group !== null && record.site !== undefined && record.site !== null ) {
-                        results[record.site.name + ":" + record.group.name] = results[record.site.name + ":" + record.group.name] || { text: record.site.name + " / " + record.group.name, children: [] };
-                        results[record.site.name + ":" + record.group.name].children.push(record);
-                    }
-                    else if( record.group !== undefined && record.group !== null ) {
-                        results[record.group.name] = results[record.group.name] || { text: record.group.name, children: [] };
-                        results[record.group.name].children.push(record);
-                    }
-                    else if( record.site !== undefined && record.site !== null ) {
-                        results[record.site.name] = results[record.site.name] || { text: record.site.name, children: [] };
-                        results[record.site.name].children.push(record);
-                    }
-                    else if ( (record.group !== undefined || record.group == null) && (record.site !== undefined || record.site === null) ) {
-                        results['global'] = results['global'] || { text: 'Global', children: [] };
-                        results['global'].children.push(record);
-                    }
-                    else {
-                        results[idx] = record
-                    }
-
-                    return results;
-                },Object.create(null));
-
-                results = Object.values(results);
-
-                // Handle the null option, but only add it once
-                if (element.getAttribute('data-null-option') && data.previous === null) {
-                    results.unshift({
-                        id: 'null',
-                        text: element.getAttribute('data-null-option')
-                    });
-                }
-
-                // Check if there are more results to page
-                var page = data.next !== null;
-                return {
-                    results: results,
-                    pagination: {
-                        more: page
-                    }
-                };
             }
-        }
+        });
     });
 }
 
@@ -362,7 +427,6 @@ function initializeTags(context, dropdownParent=null){
                 var offset = (params.page - 1) * 50 || 0;
                 var parameters = {
                     q: params.term,
-                    brief: 1,
                     limit: 50,
                     offset: offset,
                 };
@@ -458,6 +522,61 @@ function initializeMultiValueChar(context, dropdownParent=null){
 
 function initializeDynamicFilterForm(context){
     this_context = $(context);
+
+    function initializeDynamicFilterSelect(element) {
+        // On change of a select field in default filter form
+        // Replicate that change into dynamic filter form and vice-versa
+        $(element).on("change", function (e){
+            let field_name = $(this).attr("name");
+            let field_values = $(this).select2('data');
+            let form_id = $(this).parents("form").attr("id");
+
+            let default_filters_field_dom = $(`#default-filter form select[name=${field_name}]`);
+            let advanced_filters_field_dom = $(`#advanced-filter #filterform-table tbody tr td select[name=${field_name}]`);
+
+            // Only apply logic if fields with same name attr are on both advanced and default filter form
+            if(default_filters_field_dom.length && advanced_filters_field_dom.length){
+                let default_filters_field_ids = default_filters_field_dom.select2('data').map(data => data["id"]);
+                let advanced_filters_field_ids = advanced_filters_field_dom.select2('data').map(data => data["id"]);
+
+                // Only change field value if both fields do not have equal values
+                if (JSON.stringify(advanced_filters_field_ids) !== JSON.stringify(default_filters_field_ids)){
+                    if(form_id === "dynamic-filter-form"){
+                        changeSelect2FieldValue(default_filters_field_dom, field_values);
+                    }
+                    else {
+                        changeSelect2FieldValue(advanced_filters_field_dom, field_values);
+                    }
+                }
+            }
+        });
+    }
+
+    function initializeDynamicFilterInput(element) {
+        // On change of input field in default filter form
+        // Replicate that change into dynamic filter form and vice-versa
+        $(element).on("change", function (e){
+            let field_name = $(this).attr("name");
+            let field_value = $(this).val();
+            let form_id = $(this).parents("form").attr("id");
+            let default_filters_field_dom = $(`#default-filter form input[name=${field_name}]`);
+            let advanced_filters_field_dom = $(`#advanced-filter #filterform-table tbody tr td input[name=${field_name}]`);
+
+            // Only apply logic if fields with same name attr are on both advanced and default filter form
+            if(default_filters_field_dom.length && advanced_filters_field_dom.length){
+                // Only change field value if both fields do not have equal values
+                if (default_filters_field_dom.val() !== advanced_filters_field_dom.val()){
+                    if(form_id === "dynamic-filter-form"){
+                        default_filters_field_dom.val(field_value);
+                    }
+                    else {
+                        advanced_filters_field_dom.val(field_value);
+                    }
+                }
+            }
+        })
+    }
+
     // Dynamic filter form
     this_context.find(".lookup_type-select").bind("change", function(){
         let parent_element = $(this).parents("tr")
@@ -468,15 +587,19 @@ function initializeDynamicFilterForm(context){
 
         if(lookup_type_val){
             $.ajax({
-                url: `/api/core/filterset-fields/lookup-value-dom-element/?field_name=${lookup_type_val}&content_type=${contenttype}`,
+                url: `/api/ui/core/filterset-fields/lookup-value-dom-element/?field_name=${lookup_type_val}&content_type=${contenttype}`,
                 async: true,
-                contentType: 'application/json',
-                dataType: 'json',
+                headers: {'Accept': '*/*'},
                 type: 'GET',
             }).done(function (response) {
-                newEl = $(response.dom_element)
+                newEl = $(response)
                 newEl.addClass("lookup_value-input")
                 replaceEl(lookup_value_element, newEl)
+                if (newEl.prop("tagName") == "SELECT") {
+                    initializeDynamicFilterSelect(newEl);
+                } else {
+                    initializeDynamicFilterInput(newEl);
+                }
             }).fail(function (xhr, status, error) {
                 // Default to Input:text field if error occurs
                 createInput(lookup_value_element)
@@ -498,6 +621,91 @@ function initializeDynamicFilterForm(context){
         lookup_value_element.val(null).trigger('change')
 
     })
+
+    // By default on lookup_value field names are form-\d-lookup_value, thats why
+    // on page load we change all `lookup_value` name to its relevant `lookup_type` value
+    this_context.find(".dynamic-filterform").each(function(){
+        lookup_type_value = $(this).find(".lookup_type-select").val();
+        lookup_value = $(this).find(".lookup_value-input");
+        lookup_value.attr("name", lookup_type_value);
+    })
+
+    // Remove applied filters
+    this_context.find(".remove-filter-param").on("click", function(){
+        let query_params = location.search;
+        let type = $(this).attr("data-field-type");
+        let field_value = $(this).attr("data-field-value");
+        let query_string = location.search.substr(1).split("&");
+
+        if (type === "parent") {
+            query_string = query_string.filter(item => item.search(field_value) < 0);
+        } else {
+            let parent = $(this).attr("data-field-parent");
+            query_string = query_string.filter(item => item.search(parent + "=" + field_value) < 0)
+        }
+        location.replace("?" + query_string.join("&"))
+    })
+
+    // On submit of filter form
+    this_context.find("#dynamic-filter-form, #default-filter form").on("submit", function(e){
+        e.preventDefault()
+        let dynamic_form = $("#dynamic-filter-form");
+        dynamic_form.find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
+        // Append q form field to dynamic filter form via hidden input
+        let q_field = $('#id_q')
+        let q_field_phantom = $('<input type="hidden" name="q" />')
+        q_field_phantom.val(q_field.val())
+        dynamic_form.append(q_field_phantom);
+
+        // Get the serialize data from the forms and filter out query_params which values are empty e.g ?sam=&dan=2 becomes dan=2
+        let dynamic_filter_form_query = $("#dynamic-filter-form").serialize().split("&").filter(params => params.split("=")[1]?.length || 0 )
+        let default_filter_form_query = $("#default-filter form").serialize().split("&").filter(params => params.split("=")[1]?.length || 0 )
+        // Union Operation
+        let search_query = [...new Set([...default_filter_form_query, ...dynamic_filter_form_query])].join("&")
+        location.replace("?" + search_query)
+    })
+
+    // On submit of filter search form
+    this_context.find("#search-form").on("submit", function(e){
+        // Since the Dynamic Filter Form will already grab my q field, just have it do a majority of the work.
+        e.preventDefault()
+        $("#dynamic-filter-form").submit()
+    })
+
+    // Clear new row values upon creation
+    this_context.find(".dynamic-filterform-add .add-row").click(function(){
+        let new_fields_parent_element = $(".dynamic-filterform").last()
+        let lookup_field_classes = [".lookup_field-select", ".lookup_type-select", ".lookup_value-input"];
+        lookup_field_classes.forEach(field_class => {
+            let element = new_fields_parent_element.find(field_class);
+            element.val(null).trigger('change')
+        })
+        // reinitialize jsify_form
+        initializeDynamicFilterForm($(document));
+    })
+
+    function changeSelect2FieldValue(dom_element, values){
+        dom_element.val(null)
+        values.forEach(function (value){
+            // Does an element already exist?
+            if (!dom_element.find("option[value='" + value.id + "']").length) {
+                let new_option = new Option(value.text, value.id, true, true);
+                dom_element.append(new_option);
+            }
+        })
+        dom_element.val(values.map(data => data["id"]));
+        dom_element.trigger('change');
+    }
+
+    this_context.find("#default-filter form select, #advanced-filter select").each(function() {
+        initializeDynamicFilterSelect(this);
+    });
+
+    // On change of input field in default filter form
+    // Replicate that change into dynamic filter form and vice-versa
+    this_context.find("#default-filter form input, #advanced-filter input").each(function() {
+        initializeDynamicFilterInput(this);
+    });
 }
 
 function initializeSortableList(context){

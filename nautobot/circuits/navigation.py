@@ -1,5 +1,12 @@
-from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
-
+from nautobot.core.apps import (
+    NavContext,
+    NavGrouping,
+    NavItem,
+    NavMenuAddButton,
+    NavMenuGroup,
+    NavMenuItem,
+    NavMenuTab,
+)
 
 menu_items = (
     NavMenuTab(
@@ -24,12 +31,6 @@ menu_items = (
                                     "circuits.add_circuit",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="circuits:circuit_import",
-                                permissions=[
-                                    "circuits.add_circuit",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -42,12 +43,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="circuits:circuittype_add",
-                                permissions=[
-                                    "circuits.add_circuittype",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="circuits:circuittype_import",
                                 permissions=[
                                     "circuits.add_circuittype",
                                 ],
@@ -74,12 +69,6 @@ menu_items = (
                                     "circuits.add_provider",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="circuits:provider_import",
-                                permissions=[
-                                    "circuits.add_provider",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -96,13 +85,61 @@ menu_items = (
                                     "circuits.add_providernetwork",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="circuits:providernetwork_import",
-                                permissions=[
-                                    "circuits.add_providernetwork",
-                                ],
-                            ),
                         ),
+                    ),
+                ),
+            ),
+        ),
+    ),
+)
+
+navigation = (
+    NavContext(
+        name="Inventory",
+        groups=(
+            NavGrouping(
+                name="Circuits",
+                weight=400,
+                items=(
+                    NavItem(
+                        link="circuits:circuit_list",
+                        name="Circuits",
+                        weight=100,
+                        permissions=[
+                            "circuits.view_circuit",
+                        ],
+                    ),
+                    NavItem(
+                        link="circuits:circuittermination_list",
+                        name="Circuit Terminations",
+                        weight=200,
+                        permissions=[
+                            "circuits.view_circuittermination",
+                        ],
+                    ),
+                    NavItem(
+                        link="circuits:circuittype_list",
+                        name="Circuit Types",
+                        weight=300,
+                        permissions=[
+                            "circuits.view_circuittype",
+                        ],
+                    ),
+                    NavItem(
+                        link="circuits:provider_list",
+                        name="Providers",
+                        weight=400,
+                        permissions=[
+                            "circuits.view_provider",
+                        ],
+                    ),
+                    NavItem(
+                        link="circuits:providernetwork_list",
+                        name="Provider Networks",
+                        weight=500,
+                        permissions=[
+                            "circuits.view_providernetwork",
+                        ],
                     ),
                 ),
             ),

@@ -1,30 +1,31 @@
+from functools import lru_cache
 import logging
 
 from django import forms
-from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.db.models import Q
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     widgets,
 )
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
-from nautobot.extras.choices import RelationshipTypeChoices, RelationshipRequiredSideChoices, RelationshipSideChoices
-from nautobot.extras.utils import FeatureQuery, extras_features
+from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import NotesMixin
-
+from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ class RelationshipModel(models.Model):
         "extras.RelationshipAssociation",
         content_type_field="source_type",
         object_id_field="source_id",
-        related_query_name="source_%(app_label)s_%(class)s",  # e.g. 'source_dcim_site', 'source_ipam_vlan'
+        related_query_name="source_%(app_label)s_%(class)s",  # e.g. 'source_dcim_location', 'source_ipam_vlan'
     )
     destination_for_associations = GenericRelation(
         "extras.RelationshipAssociation",
@@ -65,20 +66,20 @@ class RelationshipModel(models.Model):
         Return a dictionary of RelationshipAssociation querysets for all custom relationships
 
         Returns:
-            response {
-                "source": {
-                    <Relationship instance #1>: <RelationshipAssociation queryset #1>,
-                    <Relationship instance #2>: <RelationshipAssociation queryset #2>,
-                },
-                "destination": {
-                    <Relationship instance #3>: <RelationshipAssociation queryset #3>,
-                    <Relationship instance #4>: <RelationshipAssociation queryset #4>,
-                },
-                "peer": {
-                    <Relationship instance #5>: <RelationshipAssociation queryset #5>,
-                    <Relationship instance #6>: <RelationshipAssociation queryset #6>,
-                },
-            }
+            (dict): `{
+                    "source": {
+                        <Relationship instance #1>: <RelationshipAssociation queryset #1>,
+                        <Relationship instance #2>: <RelationshipAssociation queryset #2>,
+                    },
+                    "destination": {
+                        <Relationship instance #3>: <RelationshipAssociation queryset #3>,
+                        <Relationship instance #4>: <RelationshipAssociation queryset #4>,
+                    },
+                    "peer": {
+                        <Relationship instance #5>: <RelationshipAssociation queryset #5>,
+                        <Relationship instance #6>: <RelationshipAssociation queryset #6>,
+                    },
+                }`
         """
         src_relationships, dst_relationships = Relationship.objects.get_for_model(self)
         if advanced_ui is not None:
@@ -139,30 +140,30 @@ class RelationshipModel(models.Model):
         Used for rendering relationships in the UI; see nautobot/core/templates/inc/relationships_table_rows.html
 
         Returns:
-            response {
-                "source": {
-                    <Relationship instance #1>: {   # one-to-one relationship that self is the source of
-                        "label": "...",
-                        "peer_type": <ContentType>,
-                        "has_many": False,
-                        "value": <model instance>,     # single destination for this relationship
-                        "url": "...",
+            (dict): `{
+                    "source": {
+                        <Relationship instance #1>: {   # one-to-one relationship that self is the source of
+                            "label": "...",
+                            "peer_type": <ContentType>,
+                            "has_many": False,
+                            "value": <model instance>,     # single destination for this relationship
+                            "url": "...",
+                        },
+                        <Relationship instance #2>: {   # one-to-many or many-to-many relationship that self is a source for
+                            "label": "...",
+                            "peer_type": <ContentType>,
+                            "has_many": True,
+                            "value": None,
+                            "queryset": <RelationshipAssociation queryset #2>   # set of destinations for the relationship
+                        },
                     },
-                    <Relationship instance #2>: {   # one-to-many or many-to-many relationship that self is a source for
-                        "label": "...",
-                        "peer_type": <ContentType>,
-                        "has_many": True,
-                        "value": None,
-                        "queryset": <RelationshipAssociation queryset #2>   # set of destinations for the relationship
+                    "destination": {
+                        (same format as "source" dict - relationships that self is the destination of)
                     },
-                },
-                "destination": {
-                    (same format as "source" dict - relationships that self is the destination of)
-                },
-                "peer": {
-                    (same format as "source" dict - symmetric relationships that self is involved in)
-                },
-            }
+                    "peer": {
+                        (same format as "source" dict - symmetric relationships that self is involved in)
+                    },
+                }`
         """
 
         relationships_by_side = self.get_relationships(**kwargs)
@@ -174,7 +175,6 @@ class RelationshipModel(models.Model):
         }
         for side, relationships in relationships_by_side.items():
             for relationship, queryset in relationships.items():
-
                 peer_side = RelationshipSideChoices.OPPOSITE[side]
 
                 resp[side][relationship] = {
@@ -227,18 +227,17 @@ class RelationshipModel(models.Model):
     ):
         """
         Args:
-            output_for: either "ui" or "api" depending on usage
-            initial_data: submitted form/serializer data to validate against
-            relationships_key_specified: if the "relationships" key was provided or not
-            instance: an optional model instance to validate against
+            output_for (str): either "ui" or "api" depending on usage
+            initial_data (dict): submitted form/serializer data to validate against
+            relationships_key_specified (bool): if the "relationships" key was provided or not
+            instance (Optional[BaseModel]): an optional model instance to validate against
         Returns:
-            List of field error dicts if any are found
+            (list[dict]): List of field error dicts if any are found
         """
 
         required_relationships = Relationship.objects.get_required_for_model(cls)
         relationships_field_errors = {}
         for relation in required_relationships:
-
             opposite_side = RelationshipSideChoices.OPPOSITE[relation.required_on]
 
             if relation.skip_required(cls, opposite_side):
@@ -263,13 +262,12 @@ class RelationshipModel(models.Model):
 
             required_model_class = getattr(relation, f"{opposite_side}_type").model_class()
             required_model_meta = required_model_class._meta
-            cr_field_name = f"cr_{relation.slug}__{opposite_side}"
+            cr_field_name = f"cr_{relation.key}__{opposite_side}"
             name_plural = cls._meta.verbose_name_plural
-            field_key = relation.slug if output_for == "api" else cr_field_name
+            field_key = relation.key if output_for == "api" else cr_field_name
             field_errors = {field_key: []}
 
             if not required_model_class.objects.exists():
-
                 hint = (
                     f"You need to create {num_required_verbose} {required_model_meta.verbose_name} "
                     f"before instantiating a {cls._meta.verbose_name}."
@@ -278,9 +276,10 @@ class RelationshipModel(models.Model):
                 if output_for == "ui":
                     try:
                         add_url = reverse(get_route_for_model(required_model_class, "add"))
-                        hint = (
-                            f"<a target='_blank' href='{add_url}'>Click here</a> to create "
-                            f"a {required_model_meta.verbose_name}."
+                        hint = format_html(
+                            '<a target="_blank" href="{}">Click here</a> to create a {}.',
+                            add_url,
+                            required_model_meta.verbose_name,
                         )
                     except NoReverseMatch:
                         pass
@@ -292,15 +291,17 @@ class RelationshipModel(models.Model):
                     except NoReverseMatch:
                         pass
 
-                error_message = mark_safe(
-                    f"{name_plural[0].upper()}{name_plural[1:]} require "
-                    f"{num_required_verbose} {required_model_meta.verbose_name}, but no "
-                    f"{required_model_meta.verbose_name_plural} exist yet. {hint}"
+                error_message = format_html(
+                    "{} require {} {}, but no {} exist yet. ",
+                    bettertitle(name_plural),
+                    num_required_verbose,
+                    required_model_meta.verbose_name,
+                    required_model_meta.verbose_name_plural,
                 )
+                error_message += hint
                 field_errors[field_key].append(error_message)
 
             if initial_data is not None:
-
                 supplied_data = []
 
                 if output_for == "ui":
@@ -316,7 +317,7 @@ class RelationshipModel(models.Model):
                         )
                     elif output_for == "api":
                         field_errors[field_key].append(
-                            f'You need to specify ["relationships"]["{relation.slug}"]["{opposite_side}"]["objects"].'
+                            f'You need to specify ["relationships"]["{relation.key}"]["{opposite_side}"]["objects"].'
                         )
 
             if len(field_errors[field_key]) > 0:
@@ -325,18 +326,58 @@ class RelationshipModel(models.Model):
         return relationships_field_errors
 
 
-class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
+class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model):
+    @lru_cache(maxsize=128)
+    def get_for_model(self, model, hidden=None):
         """
         Return all Relationships assigned to the given model.
+
+        Args:
+            model (Model): The django model to which relationships are registered
+            hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
+
+        Returns a tuple of source and destination scoped relationship querysets.
+        """
+        return (
+            self.get_for_model_source(model, hidden=hidden),
+            self.get_for_model_destination(model, hidden=hidden),
+        )
+
+    @lru_cache(maxsize=128)
+    def get_for_model_source(self, model, hidden=None):
+        """
+        Return all Relationships assigned to the given model for the source side only.
+
+        Args:
+            model (Model): The django model to which relationships are registered
+            hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
         """
         content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        return (
-            self.get_queryset().filter(source_type=content_type),
-            self.get_queryset().filter(destination_type=content_type),
-        )
+        result = (
+            self.get_queryset().filter(source_type=content_type).select_related("source_type", "destination_type")
+        )  # You almost always will want access to the source_type/destination_type
+        if hidden is not None:
+            result = result.filter(source_hidden=hidden)
+        return result
+
+    @lru_cache(maxsize=128)
+    def get_for_model_destination(self, model, hidden=None):
+        """
+        Return all Relationships assigned to the given model for the destination side only.
+
+        Args:
+            model (Model): The django model to which relationships are registered
+            hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
+        """
+        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
+        result = (
+            self.get_queryset().filter(destination_type=content_type).select_related("source_type", "destination_type")
+        )  # You almost always will want access to the source_type/destination_type
+        if hidden is not None:
+            result = result.filter(destination_hidden=hidden)
+        return result
 
     def get_required_for_model(self, model):
         """
@@ -350,12 +391,11 @@ class RelationshipManager(models.Manager.from_queryset(RestrictedQuerySet)):
 
 
 class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
-
-    name = models.CharField(max_length=100, unique=True, help_text="Name of the relationship as displayed to users")
-    slug = AutoSlugField(
-        populate_from="name",
+    label = models.CharField(max_length=100, unique=True, help_text="Label of the relationship as displayed to users")
+    key = AutoSlugField(
+        populate_from="label",
         slugify_function=slugify_dashes_to_underscores,
-        help_text="Internal relationship name. Please use underscores rather than dashes in this slug.",
+        help_text="Internal relationship key. Please use underscores rather than dashes in this key.",
     )
     description = models.CharField(max_length=200, blank=True)
     type = models.CharField(
@@ -437,13 +477,14 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         'It will appear in the "Advanced" tab instead.',
     )
 
+    natural_key_field_names = ["key"]
     objects = RelationshipManager()
 
     class Meta:
-        ordering = ["name"]
+        ordering = ["label"]
 
     def __str__(self):
-        return self.name.replace("_", " ")
+        return self.label
 
     @property
     def symmetric(self):
@@ -458,9 +499,6 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         if self.symmetric:
             return self.source_type
         return None
-
-    def get_absolute_url(self):
-        return reverse("extras:relationship", args=[self.slug])
 
     def get_label(self, side):
         """Return the label for a given side, source or destination.
@@ -480,7 +518,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
         if side == RelationshipSideChoices.SIDE_SOURCE:
             destination_model = self.destination_type.model_class()
-            if not destination_model:  # perhaps a plugin was uninstalled?
+            if not destination_model:  # perhaps an App was uninstalled?
                 return str(self)
             if self.type in (
                 RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -493,7 +531,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
         elif side == RelationshipSideChoices.SIDE_DESTINATION:
             source_model = self.source_type.model_class()
-            if not source_model:  # perhaps a plugin was uninstalled?
+            if not source_model:  # perhaps an App was uninstalled?
                 return str(self)
             if self.type in (
                 RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -544,11 +582,11 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         model_class = object_type.model_class()
         if model_class:
             queryset = model_class.objects.all()
-        else:  # maybe a relationship to a model that no longer exists, such as a removed plugin?
+        else:  # maybe a relationship to a model that no longer exists, such as a removed App?
             queryset = None
 
         field_class = None
-        if queryset:
+        if queryset is not None:
             if self.has_many(peer_side):
                 field_class = DynamicModelMultipleChoiceField
             else:
@@ -566,7 +604,14 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
         return field
 
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
     def clean(self):
+        # Check if relationship.key is graphql safe.
+        if self.key != "":
+            check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
 
         # Check if source and destination filters are valid
         for side in ["source", "destination"]:
@@ -575,7 +620,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
             filter_ = getattr(self, f"{side}_filter")
             side_model = getattr(self, f"{side}_type").model_class()
-            if not side_model:  # can happen if for example a plugin providing the model was uninstalled
+            if not side_model:  # can happen if for example an App providing the model was uninstalled
                 raise ValidationError({f"{side}_type": "Unable to locate model class"})
             model_name = side_model._meta.label
             if not isinstance(filter_, dict):
@@ -666,7 +711,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         be skipped or not when validating required relationships.
         It will skip when any of the following conditions are True:
          - a relationship is marked as symmetric
-         - if a required model class is None (if it doesn't exist yet -- unimplemented/uninstalled plugins for instance)
+         - if a required model class is None (if it doesn't exist yet -- unimplemented/uninstalled Apps for instance)
 
         Args:
             referenced_instance_or_class: model instance or class
@@ -680,8 +725,8 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
             return True
 
         required_model_class = getattr(self, f"{RelationshipSideChoices.OPPOSITE[side]}_type").model_class()
-        # Handle the case where required_model_class is None (e.g., relationship to a plugin
-        # model for a plugin that's not installed at present):
+        # Handle the case where required_model_class is None (e.g., relationship to an App model for
+        # an App that's not installed at present):
         if required_model_class is None:
             logger.info("Relationship enforcement skipped as required model class doesn't exist yet.")
             return True
@@ -691,7 +736,9 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
 @extras_features("custom_validators")
 class RelationshipAssociation(BaseModel):
-    relationship = models.ForeignKey(to="extras.Relationship", on_delete=models.CASCADE, related_name="associations")
+    relationship = models.ForeignKey(
+        to="extras.Relationship", on_delete=models.CASCADE, related_name="relationship_associations"
+    )
 
     source_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="+")
     source_id = models.UUIDField(db_index=True)
@@ -700,6 +747,9 @@ class RelationshipAssociation(BaseModel):
     destination_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="+")
     destination_id = models.UUIDField(db_index=True)
     destination = GenericForeignKey(ct_field="destination_type", fk_field="destination_id")
+
+    documentation_static_path = "docs/user-guide/platform-functionality/relationship.html"
+    natural_key_field_names = ["relationship", "source_id", "destination_id"]
 
     class Meta:
         unique_together = (
@@ -718,7 +768,7 @@ class RelationshipAssociation(BaseModel):
         """
         Backend for get_source and get_destination methods.
 
-        In the case where we have a RelationshipAssociation to a plugin-provided model, but the plugin is
+        In the case where we have a RelationshipAssociation to an App-provided model, but the App is
         not presently installed/enabled, dereferencing the peer GenericForeignKey will throw an AttributeError:
             AttributeError: 'NoneType' object has no attribute '_base_manager'
         because ContentType.model_class() returned None unexpectedly.
@@ -731,12 +781,18 @@ class RelationshipAssociation(BaseModel):
             return getattr(self, name)
         except AttributeError:
             logger.error(
-                "Unable to locate RelationshipAssociation %s (of type %s). Perhaps a plugin is missing?",
+                "Unable to locate RelationshipAssociation %s (of type %s). Perhaps an App is missing?",
                 name,
                 getattr(self, f"{name}_type"),
             )
 
         return None
+
+    def get_absolute_url(self, api=False):
+        # TODO: in the new UI we should be able to have an actual UI URL for this model
+        if not api:
+            return self.relationship.get_absolute_url(api=api)
+        return super().get_absolute_url(api=api)
 
     def get_source(self):
         """Accessor for self.source - returns None if the object cannot be located."""
@@ -760,7 +816,6 @@ class RelationshipAssociation(BaseModel):
         return None
 
     def clean(self):
-
         if self.source_type != self.relationship.source_type:
             raise ValidationError(
                 {"source_type": f"source_type has a different value than defined in {self.relationship}"}

@@ -4,13 +4,13 @@ import django_filters
 from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueUUIDFilter,
+    NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
-    NameSlugSearchFilterSet,
     RelatedMembershipBooleanFilter,
     SearchFilter,
     TreeNodeMultipleChoiceFilter,
 )
-from nautobot.dcim.models import Cable, Device, DeviceType, Region, Site, Location
+from nautobot.dcim.models import Cable, Device, DeviceType, Location
 from nautobot.extras.filters import CustomFieldModelFilterSetMixin
 
 
@@ -25,10 +25,11 @@ class CableTerminationModelFilterSetMixin(django_filters.FilterSet):
     )
 
 
-class DeviceComponentTemplateModelFilterSetMixin(NameSlugSearchFilterSet, CustomFieldModelFilterSetMixin):
+class DeviceComponentTemplateModelFilterSetMixin(NameSearchFilterSet, CustomFieldModelFilterSetMixin):
     device_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
-        label="Device type (slug or ID)",
+        to_field_name="model",
+        label="Device type (model or ID)",
     )
     label = MultiValueCharFilter(label="Label")
     description = MultiValueCharFilter(label="Description")
@@ -44,15 +45,11 @@ class DeviceComponentModelFilterSetMixin(CustomFieldModelFilterSetMixin):
             "description": "icontains",
         },
     )
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="device__site__region",
-        label="Region (slug or ID)",
-    )
-    site = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="device__site",
-        queryset=Site.objects.all(),
-        label="Site (slug or ID)",
+    location = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="device__location",
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        label="Location (name or ID)",
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
@@ -62,24 +59,15 @@ class DeviceComponentModelFilterSetMixin(CustomFieldModelFilterSetMixin):
 
 
 class LocatableModelFilterSetMixin(django_filters.FilterSet):
-    """Mixin to add `region`, `site`, and `location` filter fields to a FilterSet.
+    """Mixin to add `location` filter fields to a FilterSet.
 
-    The expectation is that the linked model has `site` and `location` FK fields,
-    while `region` is indirectly associated via the `site`.
+    The expectation is that the linked model has `location` FK fields.
     """
 
-    region = TreeNodeMultipleChoiceFilter(
-        queryset=Region.objects.all(),
-        field_name="site__region",
-        label="Region (slug or ID)",
-    )
-    site = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Site.objects.all(),
-        label="Site (slug or ID)",
-    )
     location = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
-        label="Location (slug or ID)",
+        to_field_name="name",
+        label="Location (name or ID)",
     )
 
 

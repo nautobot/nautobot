@@ -2,6 +2,7 @@ from django.urls import path
 
 from nautobot.extras.views import ObjectChangeLogView, ObjectDynamicGroupsView, ObjectNotesView
 from nautobot.ipam.views import ServiceEditView
+
 from . import views
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
@@ -16,7 +17,7 @@ urlpatterns = [
     ),
     path(
         "cluster-types/import/",
-        views.ClusterTypeBulkImportView.as_view(),
+        views.ClusterTypeBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="clustertype_import",
     ),
     path(
@@ -25,28 +26,28 @@ urlpatterns = [
         name="clustertype_bulk_delete",
     ),
     path(
-        "cluster-types/<slug:slug>/",
+        "cluster-types/<uuid:pk>/",
         views.ClusterTypeView.as_view(),
         name="clustertype",
     ),
     path(
-        "cluster-types/<slug:slug>/edit/",
+        "cluster-types/<uuid:pk>/edit/",
         views.ClusterTypeEditView.as_view(),
         name="clustertype_edit",
     ),
     path(
-        "cluster-types/<slug:slug>/delete/",
+        "cluster-types/<uuid:pk>/delete/",
         views.ClusterTypeDeleteView.as_view(),
         name="clustertype_delete",
     ),
     path(
-        "cluster-types/<slug:slug>/changelog/",
+        "cluster-types/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="clustertype_changelog",
         kwargs={"model": ClusterType},
     ),
     path(
-        "cluster-types/<slug:slug>/notes/",
+        "cluster-types/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="clustertype_notes",
         kwargs={"model": ClusterType},
@@ -64,7 +65,7 @@ urlpatterns = [
     ),
     path(
         "cluster-groups/import/",
-        views.ClusterGroupBulkImportView.as_view(),
+        views.ClusterGroupBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="clustergroup_import",
     ),
     path(
@@ -73,28 +74,28 @@ urlpatterns = [
         name="clustergroup_bulk_delete",
     ),
     path(
-        "cluster-groups/<slug:slug>/",
+        "cluster-groups/<uuid:pk>/",
         views.ClusterGroupView.as_view(),
         name="clustergroup",
     ),
     path(
-        "cluster-groups/<slug:slug>/edit/",
+        "cluster-groups/<uuid:pk>/edit/",
         views.ClusterGroupEditView.as_view(),
         name="clustergroup_edit",
     ),
     path(
-        "cluster-groups/<slug:slug>/delete/",
+        "cluster-groups/<uuid:pk>/delete/",
         views.ClusterGroupDeleteView.as_view(),
         name="clustergroup_delete",
     ),
     path(
-        "cluster-groups/<slug:slug>/changelog/",
+        "cluster-groups/<uuid:pk>/changelog/",
         ObjectChangeLogView.as_view(),
         name="clustergroup_changelog",
         kwargs={"model": ClusterGroup},
     ),
     path(
-        "cluster-groups/<slug:slug>/notes/",
+        "cluster-groups/<uuid:pk>/notes/",
         ObjectNotesView.as_view(),
         name="clustergroup_notes",
         kwargs={"model": ClusterGroup},
@@ -102,7 +103,7 @@ urlpatterns = [
     # Clusters
     path("clusters/", views.ClusterListView.as_view(), name="cluster_list"),
     path("clusters/add/", views.ClusterEditView.as_view(), name="cluster_add"),
-    path("clusters/import/", views.ClusterBulkImportView.as_view(), name="cluster_import"),
+    path("clusters/import/", views.ClusterBulkImportView.as_view(), name="cluster_import"),  # 3.0 TODO: remove, unused
     path("clusters/edit/", views.ClusterBulkEditView.as_view(), name="cluster_bulk_edit"),
     path(
         "clusters/delete/",
@@ -157,7 +158,7 @@ urlpatterns = [
     ),
     path(
         "virtual-machines/import/",
-        views.VirtualMachineBulkImportView.as_view(),
+        views.VirtualMachineBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="virtualmachine_import",
     ),
     path(
@@ -218,7 +219,7 @@ urlpatterns = [
     path("interfaces/add/", views.VMInterfaceCreateView.as_view(), name="vminterface_add"),
     path(
         "interfaces/import/",
-        views.VMInterfaceBulkImportView.as_view(),
+        views.VMInterfaceBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="vminterface_import",
     ),
     path(

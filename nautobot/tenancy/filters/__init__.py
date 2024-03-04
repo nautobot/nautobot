@@ -1,21 +1,20 @@
 import django_filters
 
+from nautobot.circuits.models import Circuit
 from nautobot.core.filters import (
-    NameSlugSearchFilterSet,
+    NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
-from nautobot.circuits.models import Circuit
-from nautobot.dcim.models import Device, Location, Rack, RackReservation, Site
+from nautobot.dcim.models import Device, Location, Rack, RackReservation
 from nautobot.extras.filters import NautobotFilterSet
-from nautobot.ipam.models import Aggregate, IPAddress, Prefix, RouteTarget, VLAN, VRF
+from nautobot.ipam.models import IPAddress, Prefix, RouteTarget, VLAN, VRF
 from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, VirtualMachine
-
 
 __all__ = (
     "TenancyFilterSet",
@@ -25,14 +24,16 @@ __all__ = (
 )
 
 
-class TenantGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
+class TenantGroupFilterSet(NautobotFilterSet, NameSearchFilterSet):
     parent = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
-        label="Parent tenant group (slug or ID)",
+        label="Parent tenant group (name or ID)",
+        to_field_name="name",
     )
     children = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
-        label="Children (slug or ID)",
+        label="Children (name or ID)",
+        to_field_name="name",
     )
     has_children = RelatedMembershipBooleanFilter(
         field_name="children",
@@ -40,7 +41,8 @@ class TenantGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
     )
     tenants = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Tenant.objects.all(),
-        label="Tenants (slug or ID)",
+        label="Tenants (name or ID)",
+        to_field_name="name",
     )
     has_tenants = RelatedMembershipBooleanFilter(
         field_name="tenants",
@@ -49,14 +51,13 @@ class TenantGroupFilterSet(NautobotFilterSet, NameSlugSearchFilterSet):
 
     class Meta:
         model = TenantGroup
-        fields = ["id", "name", "slug", "description"]
+        fields = ["id", "name", "description"]
 
 
 class TenantFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
             "description": "icontains",
             "comments": "icontains",
         },
@@ -64,15 +65,8 @@ class TenantFilterSet(NautobotFilterSet):
     tenant_group = TreeNodeMultipleChoiceFilter(
         queryset=TenantGroup.objects.all(),
         field_name="tenant_group",
-        label="Tenant group (slug or ID)",
-    )
-    aggregates = django_filters.ModelMultipleChoiceFilter(
-        queryset=Aggregate.objects.all(),
-        label="Aggregates (ID)",
-    )
-    has_aggregates = RelatedMembershipBooleanFilter(
-        field_name="aggregates",
-        label="Has aggregates",
+        label="Tenant group (name or ID)",
+        to_field_name="name",
     )
     circuits = django_filters.ModelMultipleChoiceFilter(
         queryset=Circuit.objects.all(),
@@ -110,7 +104,8 @@ class TenantFilterSet(NautobotFilterSet):
     )
     locations = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
-        label="Locations (slugs and/or IDs)",
+        to_field_name="name",
+        label="Locations (names and/or IDs)",
     )
     has_locations = RelatedMembershipBooleanFilter(
         field_name="locations",
@@ -126,11 +121,10 @@ class TenantFilterSet(NautobotFilterSet):
     )
     rack_reservations = django_filters.ModelMultipleChoiceFilter(
         queryset=RackReservation.objects.all(),
-        field_name="rackreservations",
         label="Rack reservations (ID)",
     )
     has_rack_reservations = RelatedMembershipBooleanFilter(
-        field_name="rackreservations",
+        field_name="rack_reservations",
         label="Has rack reservations",
     )
     racks = NaturalKeyOrPKMultipleChoiceFilter(
@@ -150,11 +144,6 @@ class TenantFilterSet(NautobotFilterSet):
     has_route_targets = RelatedMembershipBooleanFilter(
         field_name="route_targets",
         label="Has route targets",
-    )
-    sites = NaturalKeyOrPKMultipleChoiceFilter(queryset=Site.objects.all(), label="Sites (slug or ID)")
-    has_sites = RelatedMembershipBooleanFilter(
-        field_name="sites",
-        label="Has sites",
     )
     virtual_machines = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualMachine.objects.all(),
@@ -190,7 +179,6 @@ class TenantFilterSet(NautobotFilterSet):
             "description",
             "id",
             "name",
-            "slug",
             "tags",
         ]
 

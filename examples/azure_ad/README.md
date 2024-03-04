@@ -2,7 +2,7 @@
 
 This example shows how to extend the Social Auth Pipeline to read groups from a groups claim in AzureAD and sync those with Nautobot.  
 
-Create a python module with the provided `group_sync.py` file in it. This could be done as part of a plugin or as a standalone python module.
+Create a python module with the provided `group_sync.py` file in it. This could be done as part of a Nautobot App, or as a standalone python module.
 
 In the `nautobot_config.py` set the following values with the settings from Azure:
 
@@ -32,3 +32,32 @@ SOCIAL_AUTH_PIPELINE = (
 ```
 
 If the name of the name of your Superuser and Staff groups vary from default you'll need to update the script accordingly.  This example is provided "as is" and may very well be unique for your Azure deployment.
+
+## Troubleshooting
+
+A few troubleshooting steps are provided below.
+
+### Roles are Not in SSO Response
+
+If no groups are being seen/sync'd after implementing this module into the `SOCIAL_AUTH_PIPELINE`, make sure the application allows for groups. Within **Azure Active Directory --> App registrations --> "your Nautobot app name"** to add `Groups Claim`.
+
+![add group claims](./docs/img/group_claim.png)
+
+By default the groups are named the `UUID` in the admin panel, if syncing based on a different attribute change the options within `Edit groups claim`.
+
+![edit group claims](./docs/img/edit_group_claim.png)
+
+Emit groups as role claims should be checked, also the different attributes to be sent in the response data are listed and can be chosen based on preference.
+
+### Displaying Logging from `my_custom_module`
+
+Update `LOGGING` in **nautobot_config.py**.
+
+```python
+LOGGING = {
+    # .....Omitted.....
+    "loggers": {
+        "my_custom_module": {"handlers": ["console", "file", "level": "DEBUG"]},
+    }
+}
+```
