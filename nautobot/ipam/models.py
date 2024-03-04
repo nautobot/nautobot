@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.utils.functional import cached_property
 import netaddr
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -51,8 +52,8 @@ logger = logging.getLogger(__name__)
 class Namespace(PrimaryModel):
     """Container for unique IPAM objects."""
 
-    name = models.CharField(max_length=255, unique=True, db_index=True)
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True, db_index=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -100,7 +101,7 @@ class VRF(PrimaryModel):
     are said to exist in the "global" table.)
     """
 
-    name = models.CharField(max_length=100, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     rd = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- see below
         max_length=constants.VRF_RD_MAX_LENGTH,
         blank=True,
@@ -138,7 +139,7 @@ class VRF(PrimaryModel):
         blank=True,
         null=True,
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     import_targets = models.ManyToManyField(to="ipam.RouteTarget", related_name="importing_vrfs", blank=True)
     export_targets = models.ManyToManyField(to="ipam.RouteTarget", related_name="exporting_vrfs", blank=True)
 
@@ -273,7 +274,7 @@ class VRFDeviceAssignment(BaseModel):
         verbose_name="Route distinguisher",
         help_text="Unique route distinguisher (as defined in RFC 4364)",
     )
-    name = models.CharField(blank=True, max_length=100)
+    name = models.CharField(blank=True, max_length=CHARFIELD_MAX_LENGTH)
 
     class Meta:
         unique_together = [
@@ -342,7 +343,7 @@ class RouteTarget(PrimaryModel):
         unique=True,
         help_text="Route target value (formatted in accordance with RFC 4360)",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -368,13 +369,13 @@ class RIR(OrganizationalModel):
     space. This can be an organization like ARIN or RIPE, or a governing standard such as RFC 1918.
     """
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     is_private = models.BooleanField(
         default=False,
         verbose_name="Private",
         help_text="IP space managed by this RIR is considered private",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     objects = BaseManager.from_queryset(RIRQuerySet)()
 
@@ -475,7 +476,7 @@ class Prefix(PrimaryModel):
         null=True,
         help_text="Date this prefix was allocated to an RIR, reserved in IPAM, etc.",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     objects = BaseManager.from_queryset(PrefixQuerySet)()
 
@@ -1025,14 +1026,14 @@ class IPAddress(PrimaryModel):
         help_text='The IP Addresses for which this address is the "outside" IP',
     )
     dns_name = models.CharField(
-        max_length=255,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         validators=[DNSValidator],
         verbose_name="DNS Name",
         help_text="Hostname or FQDN (not case-sensitive)",
         db_index=True,
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     clone_fields = [
         "tenant",
@@ -1269,7 +1270,7 @@ class VLANGroup(OrganizationalModel):
     A VLAN group is an arbitrary collection of VLANs within which VLAN IDs and names must be unique.
     """
 
-    name = models.CharField(max_length=100, db_index=True, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True, unique=True)
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -1277,7 +1278,7 @@ class VLANGroup(OrganizationalModel):
         blank=True,
         null=True,
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
         ordering = ("name",)
@@ -1342,7 +1343,7 @@ class VLAN(PrimaryModel):
     vid = models.PositiveSmallIntegerField(
         verbose_name="ID", validators=[MinValueValidator(1), MaxValueValidator(4094)]
     )
-    name = models.CharField(max_length=255, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     status = StatusField(blank=False, null=False)
     role = RoleField(blank=True, null=True)
     tenant = models.ForeignKey(
@@ -1352,7 +1353,7 @@ class VLAN(PrimaryModel):
         blank=True,
         null=True,
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     clone_fields = [
         "locations",
@@ -1451,7 +1452,7 @@ class Service(PrimaryModel):
         null=True,
         blank=True,
     )
-    name = models.CharField(max_length=100, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     protocol = models.CharField(max_length=50, choices=choices.ServiceProtocolChoices)
     ports = JSONArrayField(
         base_field=models.PositiveIntegerField(
@@ -1468,7 +1469,7 @@ class Service(PrimaryModel):
         blank=True,
         verbose_name="IP addresses",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
         ordering = (

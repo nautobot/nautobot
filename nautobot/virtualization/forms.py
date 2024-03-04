@@ -1,6 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     add_blank_choice,
     BootstrapMixin,
@@ -515,7 +516,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         label="MTU",
     )
     mac_address = forms.CharField(required=False, label="MAC Address")
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     mode = forms.ChoiceField(
         choices=add_blank_choice(InterfaceModeChoices),
         required=False,
@@ -583,7 +584,7 @@ class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixi
         max_value=INTERFACE_MTU_MAX,
         label="MTU",
     )
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     mode = forms.ChoiceField(
         choices=add_blank_choice(InterfaceModeChoices),
         required=False,
