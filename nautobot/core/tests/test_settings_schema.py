@@ -92,6 +92,7 @@ class SettingsJSONSchemaTestCase(TestCase):
     @mock.patch.object(sys, "argv", [])  # to trick settings.TESTING to evaluate to False
     def test_default_settings_vs_schema(self):
         """Check the default settings in nautobot.core.settings against the schema."""
+        # Force reimport of settings module after mocking out os.environ and sys.argv above
         sys.modules.pop("nautobot.core.settings", None)
         import nautobot.core.settings as nautobot_settings
 
@@ -177,6 +178,7 @@ class SettingsJSONSchemaTestCase(TestCase):
 
         keys = [key for key in keys if key == key.upper() and not key.startswith("_") and key not in FROZEN_SETTINGS]
 
+        # Test that settings variables are accurately described in the schema
         for key in keys:
             with self.subTest(f"Checking for settings attribute {key} in the settings schema"):
                 self.assertIn(key, self.schema_data["properties"])
@@ -200,6 +202,7 @@ class SettingsJSONSchemaTestCase(TestCase):
                 # Is the default in the settings correctly documented?
                 self.assertEqual(getattr(nautobot_settings, key), self.schema_data["properties"][key]["default"])
 
+        # Test that schema properties actually exist in the settings
         for key in self.schema_data["properties"]:
             if key in getattr(nautobot_settings, "CONSTANCE_CONFIG"):
                 # Constance settings don't have a value set by default in nautobot.core.settings,
