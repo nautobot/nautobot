@@ -49,13 +49,6 @@ class ClusterTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
             params = {"clusters": [self.clusters[0].pk, self.clusters[1].name]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-        with self.subTest("Has Clusters"):
-            params = {"has_clusters": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-            params = {"has_clusters": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
 
 class ClusterGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = ClusterGroup.objects.all()
@@ -88,13 +81,6 @@ class ClusterGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
         with self.subTest("Clusters"):
             params = {"clusters": [self.clusters[0].pk, self.clusters[1].name]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-        with self.subTest("Has Clusters"):
-            params = {"has_clusters": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-            params = {"has_clusters": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
 
 class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
@@ -192,24 +178,10 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             params = {"devices": [self.device.pk, self.device.name]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-        with self.subTest("Has Devices"):
-            params = {"has_devices": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-            params = {"has_devices": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
     def test_virtual_machines(self):
         with self.subTest("Virtual Machines"):
             params = {"virtual_machines": [self.virtualmachine.pk, self.virtualmachine.name]}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-        with self.subTest("Has Virtual Machines"):
-            params = {"has_virtual_machines": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-            params = {"has_virtual_machines": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_location(self):
         params = {"location": [self.locations[0].pk, self.locations[1].pk]}

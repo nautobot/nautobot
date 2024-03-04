@@ -1268,38 +1268,10 @@ class PlatformTestCase(FilterTestCases.NameOnlyFilterTestCase):
         params = {"devices": [devices[0].pk, devices[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(devices))
 
-    def test_has_devices(self):
-        with self.subTest():
-            params = {"has_devices": True}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(devices__isnull=True),
-            )
-        with self.subTest():
-            params = {"has_devices": False}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(devices__isnull=False),
-            )
-
     def test_virtual_machines(self):
         virtual_machines = [VirtualMachine.objects.first(), VirtualMachine.objects.last()]
         params = {"virtual_machines": [virtual_machines[0].pk, virtual_machines[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(virtual_machines))
-
-    def test_has_virtual_machines(self):
-        with self.subTest():
-            params = {"has_virtual_machines": True}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(virtual_machines__isnull=True),
-            )
-        with self.subTest():
-            params = {"has_virtual_machines": False}
-            self.assertQuerysetEqual(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.exclude(virtual_machines__isnull=False),
-            )
 
 
 class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
