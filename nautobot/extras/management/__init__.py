@@ -126,7 +126,7 @@ def populate_status_choices(apps=global_apps, schema_editor=None, **kwargs):
 
     When it is ran again post-migrate will be a noop.
     """
-    _create_custom_role_or_status_instances(apps=apps, metadata_model="status", **kwargs)
+    _create_custom_role_or_status_instances(apps=apps, metadatamodel="status", **kwargs)
 
 
 def populate_role_choices(apps=global_apps, schema_editor=None, **kwargs):
@@ -137,7 +137,7 @@ def populate_role_choices(apps=global_apps, schema_editor=None, **kwargs):
 
     When it is ran again post-migrate will be a noop.
     """
-    _create_custom_role_or_status_instances(apps=apps, metadata_model="role", **kwargs)
+    _create_custom_role_or_status_instances(apps=apps, metadatamodel="role", **kwargs)
 
 
 def clear_status_choices(apps=global_apps, schema_editor=None, **kwargs):
@@ -148,7 +148,7 @@ def clear_status_choices(apps=global_apps, schema_editor=None, **kwargs):
 
     When it is ran again post-migrate will be a noop.
     """
-    _clear_custom_role_or_status_instances(apps=apps, metadata_model="status", **kwargs)
+    _clear_custom_role_or_status_instances(apps=apps, metadatamodel="status", **kwargs)
 
 
 def clear_role_choices(apps=global_apps, schema_editor=None, **kwargs):
@@ -159,10 +159,10 @@ def clear_role_choices(apps=global_apps, schema_editor=None, **kwargs):
 
     When it is ran again post-migrate will be a noop.
     """
-    _clear_custom_role_or_status_instances(apps=apps, metadata_model="role", **kwargs)
+    _clear_custom_role_or_status_instances(apps=apps, metadatamodel="role", **kwargs)
 
 
-def export_metadata_from_choiceset(choiceset, color_map=None, description_map=None, metadata_model=None):
+def export_metadata_from_choiceset(choiceset, color_map=None, description_map=None, metadatamodel=None):
     """
     e.g. `export_metadata_from_choiceset(DeviceStatusChoices, content_type)`
 
@@ -172,14 +172,14 @@ def export_metadata_from_choiceset(choiceset, color_map=None, description_map=No
         choiceset (dict): A dictionary containing list of 2-tuples of (model_path, choiceset)
         color_map (dict): A dictionary of status/role name -> default hex_color
         description_map (dict): A dictionary of status/role name -> default description
-        metadata_model (str): "role" or "status"
+        metadatamodel (str): "role" or "status"
     """
-    if metadata_model.lower() == "role":
+    if metadatamodel.lower() == "role":
         if color_map is None:
             color_map = ROLE_COLOR_MAP
         if description_map is None:
             description_map = ROLE_DESCRIPTION_MAP
-    elif metadata_model.lower() == "status":
+    elif metadatamodel.lower() == "status":
         if color_map is None:
             color_map = STATUS_COLOR_MAP
         if description_map is None:
@@ -208,7 +208,7 @@ def _create_custom_role_or_status_instances(
     using=DEFAULT_DB_ALIAS,  # unused
     apps=global_apps,
     models=None,
-    metadata_model=None,
+    metadatamodel=None,
     **kwargs,
 ):
     """
@@ -218,7 +218,7 @@ def _create_custom_role_or_status_instances(
     `ChoiceSet` enums in flat files.
     Args:
         models (dict): A list of model contenttype strings e.g. models=["circuits.Circuit", "dcim.Cable", "dcim.Device","dcim.PowerFeed"]
-        metadata_model (str): "role" or "status"
+        metadatamodel (str): "role" or "status"
     """
 
     # Only print a newline if we have verbosity!
@@ -230,11 +230,11 @@ def _create_custom_role_or_status_instances(
         verbosity = 1
 
     choiceset_map = {}
-    if metadata_model.lower() == "role":
+    if metadatamodel.lower() == "role":
         choiceset_map = ROLE_CHOICESET_MAP
         if not models:
             models = choiceset_map.keys()
-    elif metadata_model.lower() == "status":
+    elif metadatamodel.lower() == "status":
         choiceset_map = STATUS_CHOICESET_MAP
         if not models:
             models = choiceset_map.keys()
@@ -243,10 +243,12 @@ def _create_custom_role_or_status_instances(
 
     # Prep the app and get the model dynamically
     try:
-        Metadata_Model = apps.get_model(f"extras.{metadata_model}")
+        MetadatModel = apps.get_model(f"extras.{metadatamodel}")
         ContentType = apps.get_model("contenttypes.ContentType")
     except LookupError:
-        return
+        raise LookupError(
+            f"Could not find extras.{metadatamodel} and/or contenttypes.ContentType. Please make sure the correct migration dependencies are set before using this method"
+        )
 
     added_total = 0
     linked_total = 0
@@ -255,7 +257,7 @@ def _create_custom_role_or_status_instances(
     for model_path in models:
         choiceset = choiceset_map[model_path]
         content_type = ContentType.objects.get_for_model(apps.get_model(model_path))
-        choices = export_metadata_from_choiceset(choiceset, metadata_model=metadata_model)
+        choices = export_metadata_from_choiceset(choiceset, metadatamodel=metadatamodel)
 
         if verbosity >= 2:
             print(f"    Model {model_path}", flush=True)
@@ -269,7 +271,7 @@ def _create_custom_role_or_status_instances(
             try:
                 # May fail with an IntegrityError if a status with a different slug has a name matching this one
                 # May fail with a FieldError if the Status model no longer has a slug field
-                obj, created = Metadata_Model.objects.get_or_create(slug=slug, defaults=defaults)
+                obj, created = MetadatModel.objects.get_or_create(slug=slug, defaults=defaults)
             except (IntegrityError, FieldError) as error:
                 # OK, what if we look up by name instead?
                 defaults = choice_kwargs.copy()
@@ -280,10 +282,10 @@ def _create_custom_role_or_status_instances(
                 if isinstance(error, FieldError):
                     defaults.pop("slug")
                 try:
-                    obj, created = Metadata_Model.objects.get_or_create(name=name, defaults=defaults)
+                    obj, created = MetadatModel.objects.get_or_create(name=name, defaults=defaults)
                 except IntegrityError as err:
                     raise SystemExit(
-                        f"Unexpected error while running data migration to populate {metadata_model} for {model_path}: {err}"
+                        f"Unexpected error while running data migration to populate {metadatamodel} for {model_path}: {err}"
                     ) from err
 
             # Make sure the content-type is associated.
@@ -291,14 +293,14 @@ def _create_custom_role_or_status_instances(
                 obj.content_types.add(content_type)
 
             if created and verbosity >= 2:
-                print(f"      Adding and linking {metadata_model} {obj.name}", flush=True)
+                print(f"      Adding and linking {metadatamodel} {obj.name}", flush=True)
                 added_total += 1
             elif not created and verbosity >= 2:
-                print(f"      Linking to existing {metadata_model} {obj.name}", flush=True)
+                print(f"      Linking to existing {metadatamodel} {obj.name}", flush=True)
                 linked_total += 1
 
     if verbosity >= 2:
-        print(f"    Added {added_total}, linked {linked_total} {metadata_model} records")
+        print(f"    Added {added_total}, linked {linked_total} {metadatamodel} records")
 
 
 def _clear_custom_role_or_status_instances(
@@ -306,7 +308,7 @@ def _clear_custom_role_or_status_instances(
     schema_editor=None,
     verbosity=2,
     models=None,
-    metadata_model=None,
+    metadatamodel=None,
     clear_all_model_statuses=True,
     **kwargs,
 ):
@@ -314,7 +316,7 @@ def _clear_custom_role_or_status_instances(
     Remove content types from statuses/roles, and if no content types remain, delete the status/role instance as well.
     Args:
         models (dict): A list of model contenttype strings e.g. models=["circuits.Circuit", "dcim.Cable", "dcim.Device","dcim.PowerFeed"]
-        metadata_model (str): "role" or "status"
+        metadatamodel (str): "role" or "status"
         clear_all_model_statuses (bool): Set it to True will clear all statuses for this model. Set it to False will only clear default statuses for this model.
     """
     if "test" in sys.argv:
@@ -322,11 +324,11 @@ def _clear_custom_role_or_status_instances(
         verbosity = 1
 
     choiceset_map = {}
-    if metadata_model.lower() == "role":
+    if metadatamodel.lower() == "role":
         choiceset_map = ROLE_CHOICESET_MAP
         if not models:
             models = choiceset_map.keys()
-    elif metadata_model.lower() == "status":
+    elif metadatamodel.lower() == "status":
         choiceset_map = STATUS_CHOICESET_MAP
         if not models:
             models = choiceset_map.keys()
@@ -335,10 +337,12 @@ def _clear_custom_role_or_status_instances(
 
     # Prep the app and get the model dynamically
     try:
-        Metadata_Model = apps.get_model(f"extras.{metadata_model}")
+        MetadatModel = apps.get_model(f"extras.{metadatamodel}")
         ContentType = apps.get_model("contenttypes.ContentType")
     except LookupError:
-        return
+        raise LookupError(
+            f"Could not find extras.{metadatamodel} and/or contenttypes.ContentType. Please make sure the correct migration dependencies are set before using this method"
+        )
 
     deleted_total = 0
     unlinked_total = 0
@@ -347,7 +351,7 @@ def _clear_custom_role_or_status_instances(
         choiceset = choiceset_map[model_path]
         model = apps.get_model(model_path)
         content_type = ContentType.objects.get_for_model(model)
-        choices = export_metadata_from_choiceset(choiceset, metadata_model=metadata_model)
+        choices = export_metadata_from_choiceset(choiceset, metadatamodel=metadatamodel)
 
         if verbosity >= 2:
             print(f"    Model {model_path}", flush=True)
@@ -357,25 +361,25 @@ def _clear_custom_role_or_status_instances(
             names = [choice_kwargs["name"] for choice_kwargs in choices]
         else:
             # Clear all statuses/roles for this model
-            names = Metadata_Model.objects.filter(content_types=content_type).values_list("name", flat=True)
+            names = MetadatModel.objects.filter(content_types=content_type).values_list("name", flat=True)
 
         for name in names:
             try:
-                obj = Metadata_Model.objects.get(name=name)
+                obj = MetadatModel.objects.get(name=name)
                 obj.content_types.remove(content_type)
                 if not obj.content_types.all().exists():
                     obj.delete()
                     if verbosity >= 2:
-                        print(f"      Deleting {metadata_model} {obj.name}", flush=True)
+                        print(f"      Deleting {metadatamodel} {obj.name}", flush=True)
                     deleted_total += 1
                 else:
                     if verbosity >= 2:
-                        print(f"      Unlinking {metadata_model} {obj.name}", flush=True)
+                        print(f"      Unlinking {metadatamodel} {obj.name}", flush=True)
                     unlinked_total += 1
             except Exception as err:
                 raise SystemExit(
-                    f"Unexpected error while running data migration to remove {metadata_model} {name} for {model_path}: {err}"
+                    f"Unexpected error while running data migration to remove {metadatamodel} {name} for {model_path}: {err}"
                 )
 
     if verbosity >= 2:
-        print(f"    Deleted {deleted_total}, unlinked {unlinked_total} {metadata_model} records")
+        print(f"    Deleted {deleted_total}, unlinked {unlinked_total} {metadatamodel} records")
