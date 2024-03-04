@@ -20,7 +20,7 @@ def clear_default_status_and_role_choices_for_contact_associations(apps, schema_
 class Migration(migrations.Migration):
     dependencies = [
         ("contenttypes", "0001_initial"),
-        ("extras", "0104_contact_contactassociation_team"),
+        ("extras", "0105_update_all_charfields_max_length_to_255"),
     ]
 
     operations = [

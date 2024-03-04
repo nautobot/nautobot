@@ -243,7 +243,7 @@ def _create_custom_role_or_status_instances(
 
     # Prep the app and get the model dynamically
     try:
-        MetadatModel = apps.get_model(f"extras.{metadatamodel}")
+        MetadataModel = apps.get_model(f"extras.{metadatamodel}")
         ContentType = apps.get_model("contenttypes.ContentType")
     except LookupError:
         raise LookupError(
@@ -271,7 +271,7 @@ def _create_custom_role_or_status_instances(
             try:
                 # May fail with an IntegrityError if a status with a different slug has a name matching this one
                 # May fail with a FieldError if the Status model no longer has a slug field
-                obj, created = MetadatModel.objects.get_or_create(slug=slug, defaults=defaults)
+                obj, created = MetadataModel.objects.get_or_create(slug=slug, defaults=defaults)
             except (IntegrityError, FieldError) as error:
                 # OK, what if we look up by name instead?
                 defaults = choice_kwargs.copy()
@@ -282,7 +282,7 @@ def _create_custom_role_or_status_instances(
                 if isinstance(error, FieldError):
                     defaults.pop("slug")
                 try:
-                    obj, created = MetadatModel.objects.get_or_create(name=name, defaults=defaults)
+                    obj, created = MetadataModel.objects.get_or_create(name=name, defaults=defaults)
                 except IntegrityError as err:
                     raise SystemExit(
                         f"Unexpected error while running data migration to populate {metadatamodel} for {model_path}: {err}"
@@ -337,7 +337,7 @@ def _clear_custom_role_or_status_instances(
 
     # Prep the app and get the model dynamically
     try:
-        MetadatModel = apps.get_model(f"extras.{metadatamodel}")
+        MetadataModel = apps.get_model(f"extras.{metadatamodel}")
         ContentType = apps.get_model("contenttypes.ContentType")
     except LookupError:
         raise LookupError(
@@ -361,11 +361,11 @@ def _clear_custom_role_or_status_instances(
             names = [choice_kwargs["name"] for choice_kwargs in choices]
         else:
             # Clear all statuses/roles for this model
-            names = MetadatModel.objects.filter(content_types=content_type).values_list("name", flat=True)
+            names = MetadataModel.objects.filter(content_types=content_type).values_list("name", flat=True)
 
         for name in names:
             try:
-                obj = MetadatModel.objects.get(name=name)
+                obj = MetadataModel.objects.get(name=name)
                 obj.content_types.remove(content_type)
                 if not obj.content_types.all().exists():
                     obj.delete()
