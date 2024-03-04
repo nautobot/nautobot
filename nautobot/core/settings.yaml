@@ -1692,7 +1692,7 @@
                 (nautobot.extras.tests.test_views.JobTestCase)
             execution_time: 2.727531
       ```
-    "environment_variable": "TEST_PERFORMANCE_BASELINE_FILE"
+    "environment_variable": "NAUTOBOT_TEST_PERFORMANCE_BASELINE_FILE"
     "type": "string"
     "version_added": "1.5.0"
   "TEST_USE_FACTORIES":
