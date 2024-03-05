@@ -1,6 +1,5 @@
 from collections import OrderedDict
 import itertools
-import json
 import logging
 import os
 import platform
@@ -32,6 +31,7 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet as ModelViewSet_, ReadOnlyModelViewSet as ReadOnlyModelViewSet_
+import yaml
 
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
@@ -991,13 +991,13 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
 
 
 class SettingsJSONSchemaView(NautobotAPIVersionMixin, APIView):
-    """View that exposes the JSON Schema of the settings.json file in the REST API"""
+    """View that exposes the JSON Schema of the settings.yaml file in the REST API"""
 
     permission_classes = [IsAuthenticated]
 
     @extend_schema(exclude=True)
     def get(self, request):
-        file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/settings.json"
-        with open(file_path, "r") as jsonfile:
-            json_data = json.load(jsonfile)
-        return Response(json_data)
+        file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/settings.yaml"
+        with open(file_path, "r") as yamlfile:
+            schema_data = yaml.safe_load(yamlfile)
+        return Response(schema_data)

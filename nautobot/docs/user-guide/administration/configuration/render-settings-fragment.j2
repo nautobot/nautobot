@@ -1,0 +1,76 @@
+{% for property, attrs in settings_schema.properties.items() if required == attrs.is_required_setting|default(false) %}
+
+---
+
+{{ header }} `{{ property }}`
+
+{% if attrs.version_added|default(None) %}
++++ {{ attrs.version_added }}
+{% endif %}
+
+{% if attrs.default_literal|default(None) %}
+**Default:**
+
+{{ attrs.default_literal }}
+{% else %}
+{% with default = attrs.default|default(None) %}
+**Default:**
+{% if default is string %}`"{{ default }}"`
+{% elif default is boolean %}`{{ default|title }}`
+{% elif default is mapping and default != {} %}
+
+```python
+{{ default|pprint }}
+```
+
+{% else %}`{{ default }}`
+{% endif %}
+{% endwith %}
+{% endif %}
+
+{% if attrs.enum|default(None) %}
+**Permitted Values:**
+
+{% for enum in attrs.enum %}
+* `{{ enum|pprint }}`
+{% endfor %}
+{% endif %}
+
+{% if attrs.environment_variable|default(None) %}
+**Environment Variable:** `{{ attrs.environment_variable }}`
+{% elif attrs.properties|default(None) != None and attrs.properties.default|default(None) != None %}
+{% for property_attrs in attrs.properties.default.properties.values() if property_attrs.environment_variable|default(None) %}
+{% if loop.first %}
+**Environment Variables:**
+
+{% endif %}
+* `{{ property_attrs.environment_variable }}`
+{% endfor %}
+{% elif attrs.properties|default(None) != None %}
+{% for property_attrs in attrs.properties.values() if property_attrs.environment_variable|default(None) %}
+{% if loop.first %}
+**Environment Variables:**
+
+{% endif %}
+* `{{ property_attrs.environment_variable }}`
+{% endfor %}
+{% endif %}
+
+{{ attrs.description|default("") }}
+
+{{ attrs.details|default("") }}
+
+{% if attrs.is_constance_config|default(false) %}
+!!! tip
+    If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
+{% endif %}
+
+{% if attrs.see_also|default({}) %}
+**See Also:**
+
+{% for text, url in attrs.see_also.items() %}
+* [ {{ text }} ]({{ url }})
+{% endfor %}
+{% endif %}
+
+{% endfor %}
