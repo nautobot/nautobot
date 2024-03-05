@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from django import template
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.utils.html import format_html
@@ -111,7 +112,7 @@ def _render_job_button_for_obj(job_button, obj, context, content_type):
     try:
         _task_queue = job_button.job.task_queues[0]
     except IndexError:
-        _task_queue = "default"
+        _task_queue = settings.CELERY_TASK_DEFAULT_QUEUE
     hidden_inputs = format_html(
         HIDDEN_INPUTS,
         csrf_token=context["csrf_token"],

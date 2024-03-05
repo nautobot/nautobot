@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import urllib.parse
 import uuid
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -2058,7 +2059,9 @@ class JobButtonRenderingTestCase(TestCase):
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        self.assertIn('<input type="hidden" name="_task_queue" value="default">', content, content)
+        self.assertIn(
+            f'<input type="hidden" name="_task_queue" value="{settings.CELERY_TASK_DEFAULT_QUEUE,}">', content, content
+        )
 
     def test_view_object_with_unsafe_text(self):
         """Ensure that JobButton text can't be used as a vector for XSS."""
