@@ -34,75 +34,10 @@ High availability clustering of Redis for use with Celery can be performed using
 
 <!-- markdownlint-disable blanks-around-lists -->
 
-{% for property, attrs in settings_schema.properties.items() if attrs.is_required_setting|default(false) %}
+{% with header="##", required=true %}
 
----
+{% include "/user-guide/administration/configuration/render-settings-fragment.j2" %}
 
-## `{{ property }}`
-
-{% if attrs.version_added|default(None) %}
-+++ {{ attrs.version_added }}
-{% endif %}
-
-{% if attrs.default_literal|default(None) %}
-**Default:**
-
-{{ attrs.default_literal }}
-{% else %}
-{% with default = attrs.default|default(None) %}
-**Default:**
-{% if default is string %}`"{{ default }}"`
-{% elif default is boolean %}`{{ default|title }}`
-{% elif default is mapping and default != {} %}
-
-```python
-{{ default|pprint }}
-```
-
-{% else %}`{{ default }}`
-{% endif %}
 {% endwith %}
-{% endif %}
 
-{% if attrs.enum|default(None) %}
-**Permitted Values:**
-
-{% for enum in attrs.enum %}
-* `{{ enum|pprint }}`
-{% endfor %}
-{% endif %}
-
-{% if attrs.environment_variable|default(None) %}
-**Environment Variable:** `{{ attrs.environment_variable }}`
-{% elif attrs.properties|default(None) != None and attrs.properties.default|default(None) != None %}
-{% for property_attrs in attrs.properties.default.properties.values() if property_attrs.environment_variable|default(None) %}
-{% if loop.first %}
-**Environment Variables:**
-
-{% endif %}
-* `{{ property_attrs.environment_variable }}`
-{% endfor %}
-{% elif attrs.properties|default(None) != None %}
-{% for property_attrs in attrs.properties.values() if property_attrs.environment_variable|default(None) %}
-{% if loop.first %}
-**Environment Variables:**
-
-{% endif %}
-* `{{ property_attrs.environment_variable }}`
-{% endfor %}
-{% endif %}
-
-{{ attrs.description|default("") }}
-
-{{ attrs.details|default("") }}
-
-{% if attrs.see_also|default({}) %}
-**See Also:**
-
-{% for text, url in attrs.see_also.items() %}
-* [{{ text }}]({{ url }})
-{% endfor %}
-{% endif %}
-
-{% endfor %}
 <!-- markdownlint-enable blanks-around-lists -->
