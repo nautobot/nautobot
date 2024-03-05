@@ -230,61 +230,68 @@ class SettingsJSONSchemaTestCase(TestCase):
                         raise err from err2
                     self.assertEqual(getattr(django_defaults, key), self.settings_schema["properties"][key]["default"])
 
-    def test_environment_variable_settings(self):
-        """Check that settings with an environment_variable key are set from the environment."""
-
+    def _get_fake_env_value(self, value_type):
+        """Return a random fake value for an environment variable based on its type."""
         fake = faker.Faker()
+        if value_type == "boolean":
+            return str(fake.boolean())
+        elif value_type == "integer":
+            return str(fake.random_int())
+        return f"FAKE_ENV_{fake.word()}"
 
-        def _get_fake_value(value_type):
-            if value_type == "boolean":
-                return str(fake.boolean())
-            elif value_type == "integer":
-                return str(fake.random_int())
-            return f"FAKE_ENV_{fake.word()}"
+    def _parse_environment_variable_for_setting(self, setting_name, setting_schema):
+        """Attempt to parse an environment variable for a setting based on its schema."""
+        setting_type = setting_schema.get("type", "string")
+        env_var = setting_schema["environment_variable"]
 
+        # ALLOWED_HOSTS is a special case (space separated instead of commas)
+        if setting_name == "ALLOWED_HOSTS":
+            return os.environ[env_var].split(" ")
+        elif setting_type == "array":
+            children_type = setting_schema.get("items", {}).get("type", "string")
+            if children_type == "integer":
+                return [int(v) for v in os.environ[env_var].split(",")]
+            else:
+                return os.environ[env_var].split(",")
+        elif setting_type == "boolean":
+            return is_truthy(os.environ[env_var])
+        elif setting_type == "integer":
+            return int(os.environ[env_var])
+        else:
+            return os.environ[env_var]
+
+    def _set_fake_environment_variable(self, setting_name, setting_schema):
+        """Set a fake environment variable for a setting based on its schema."""
+        setting_type = setting_schema.get("type", "string")
+        env_var = setting_schema["environment_variable"]
+
+        # ALLOWED_HOSTS is a special case (space separated instead of commas)
+        if setting_name == "ALLOWED_HOSTS":
+            os.environ[env_var] = " ".join(self._get_fake_env_value("string") for _ in range(3))
+        elif setting_type == "array":
+            children_type = setting_schema.get("items", {}).get("type", "string")
+            os.environ[env_var] = ",".join(self._get_fake_env_value(children_type) for _ in range(3))
+        else:
+            os.environ[env_var] = self._get_fake_env_value(setting_type)
+
+    def test_environment_variable_settings(self):
+        """Check that settings with an environment_variable key are using the environment."""
         with mock.patch.dict(os.environ, {}):
             # Set fake environment vars based on defined schema types
-            for key, value in self.settings_schema["properties"].items():
-                if "environment_variable" not in value:
-                    continue
-                setting_type = value.get("type", "string")
-                env_var = value["environment_variable"]
-
-                # ALLOWED_HOSTS is a special case (space separated instead of commas)
-                if key == "ALLOWED_HOSTS":
-                    os.environ[env_var] = " ".join(_get_fake_value("string") for _ in range(3))
-                elif setting_type == "array":
-                    children_type = value.get("items", {}).get("type", "string")
-                    os.environ[env_var] = ",".join(_get_fake_value(children_type) for _ in range(3))
-                else:
-                    os.environ[env_var] = _get_fake_value(setting_type)
+            for name, schema in self.settings_schema["properties"].items():
+                if "environment_variable" in schema:
+                    self._set_fake_environment_variable(name, schema)
 
             # Force reimport of settings module after mocking out os.environ above
             sys.modules.pop("nautobot.core.settings", None)
             import nautobot.core.settings as nautobot_settings
 
-            # Test that settings are loaded from the mocked environment
-            for key, value in self.settings_schema["properties"].items():
-                if key not in nautobot_settings.__dict__.keys():
+            # Test that settings match the mocked environment
+            for name, schema in self.settings_schema["properties"].items():
+                if name not in nautobot_settings.__dict__.keys():
                     continue
-                if "environment_variable" not in self.settings_schema["properties"][key]:
+                if "environment_variable" not in schema:
                     continue
-                with self.subTest(f"Checking environment variable for settings attribute {key}"):
-                    setting_type = value.get("type", "string")
-                    env_var = self.settings_schema["properties"][key]["environment_variable"]
-                    # ALLOWED_HOSTS is a special case (space separated instead of commas)
-                    if key == "ALLOWED_HOSTS":
-                        expected_value = os.environ[env_var].split(" ")
-                    elif setting_type == "array":
-                        children_type = value.get("items", {}).get("type", "string")
-                        if children_type == "integer":
-                            expected_value = [int(v) for v in os.environ[env_var].split(",")]
-                        else:
-                            expected_value = os.environ[env_var].split(",")
-                    elif setting_type == "boolean":
-                        expected_value = is_truthy(os.environ[env_var])
-                    elif setting_type == "integer":
-                        expected_value = int(os.environ[env_var])
-                    else:
-                        expected_value = os.environ[env_var]
-                    self.assertEqual(getattr(nautobot_settings, key), expected_value)
+                with self.subTest(f"Checking environment variable for settings attribute {name}"):
+                    expected_value = self._parse_environment_variable_for_setting(name, schema)
+                    self.assertEqual(getattr(nautobot_settings, name), expected_value)
