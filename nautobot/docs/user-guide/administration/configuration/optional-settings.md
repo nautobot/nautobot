@@ -1290,6 +1290,90 @@ Please see the [official Django documentation on `MEDIA_ROOT`](https://docs.djan
 
 ---
 
+### OTEL_EXPORTER_OTLP_ENDPOINT
+
++++ 2.2.0
+
+Default: ``
+
+Environment Variable: `OTEL_EXPORTER_OTLP_ENDPOINT`
+
+When exporting to `otlp`, specify the endpoint URL to send metrics and traces to.
+
+---
+
+### OTEL_EXPORTER_OTLP_INSECURE
+
++++ 2.2.0
+
+Default: `False`
+
+Environment Variable: `OTEL_EXPORTER_OTLP_INSECURE`
+
+When exporting to `otlp` with `grpc`, send as insecure.
+
+---
+
+### OTEL_EXPORTER_OTLP_PROTOCOL
+
++++ 2.2.0
+
+Default: `grpc`
+
+Environment Variable: `OTEL_EXPORTER_OTLP_PROTOCOL`
+
+When exporting to `otlp`, specify the protocol to send metrics and traces in. Options include `grpc` and `http`.
+
+---
+
+### OTEL_METRICS_EXPORTER
+
++++ 2.2.0
+
+Default: `console`
+
+Environment Variable: `OTEL_METRICS_EXPORTER`
+
+Set where to export metrics to. Only a subset of the OpenTelemetry exporters are currently supported. Options include `console` and `otlp`.
+
+---
+
+### OTEL_PYTHON_DJANGO_INSTRUMENT
+
++++ 2.2.0
+
+Default: `False`
+
+Environment Variable: `OTEL_PYTHON_DJANGO_INSTRUMENT`
+
+Enable [OpenTelemetry](https://opentelemetry.io/) instumentation on Nautobot. This will allow for sending traces and metrics from Nautobot for underlying Django, Redis, Celery, Logging, and Database (Postgres or MySQL). This will generate OpenTelemetry formatted traces and metrics to be consumed by external observability tools.
+
+---
+
+### OTEL_PYTHON_LOG_CORRELATION
+
++++ 2.2.0
+
+Default: `True`
+
+Environment Variable: `OTEL_PYTHON_LOG_CORRELATION`
+
+Enable Log correlation. This will add the Trace ID, Span ID, and resource details to the logs.
+
+---
+
+### OTEL_TRACES_EXPORTER
+
++++ 2.2.0
+
+Default: `console`
+
+Environment Variable: `OTEL_TRACES_EXPORTER`
+
+Set where to export traces to. Only a subset of the OpenTelemetry exporters are currently supported. Options include `console` and `otlp`.
+
+---
+
 ### SESSION_EXPIRE_AT_BROWSER_CLOSE
 
 Default: `False`
