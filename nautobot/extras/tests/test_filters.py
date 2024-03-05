@@ -1866,7 +1866,7 @@ class RoleTestCase(FilterTestCases.NameOnlyFilterTestCase):
         params = {"q": value}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(name=value).distinct(),
+            self.queryset.filter(name__icontains=value).distinct(),
         )
         value = self.queryset.first().pk
         params = {"q": value}
