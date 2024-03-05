@@ -28,6 +28,7 @@ HIDDEN_INPUTS = """
 <input type="hidden" name="object_pk" value="{object_pk}">
 <input type="hidden" name="object_model_name" value="{object_model_name}">
 <input type="hidden" name="_schedule_type" value="immediately">
+<input type="hidden" name="_task_queue" value="{task_queue}">
 <input type="hidden" name="_return_url" value="{redirect_path}">
 <input type="hidden" name="_commit" value="on">
 """
@@ -107,12 +108,17 @@ def _render_job_button_for_obj(job_button, obj, context, content_type):
 
     # Disable buttons if the user doesn't have permission to run the underlying Job.
     has_run_perm = Job.objects.check_perms(context["user"], instance=job_button.job, action="run")
+    try:
+        _task_queue = job_button.job.task_queues[0]
+    except IndexError:
+        _task_queue = "default"
     hidden_inputs = format_html(
         HIDDEN_INPUTS,
         csrf_token=context["csrf_token"],
         object_pk=obj.pk,
         object_model_name=f"{content_type.app_label}.{content_type.model}",
         redirect_path=context["request"].path,
+        task_queue=_task_queue,
     )
     template_args = {
         "button_id": job_button.pk,
