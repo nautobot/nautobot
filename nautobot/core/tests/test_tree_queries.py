@@ -2,6 +2,18 @@ from nautobot.core.testing import TestCase
 from nautobot.dcim.models import Location
 
 
+class TestInvalidateMaxTreeDepthSignal(TestCase):
+    """Tests for the max tree depth cache invalidation signal."""
+
+    def test_invalidate_max_tree_depth_without_tree_fields(self):
+        """Test that max tree depth is not calculated by the invalidate_max_tree_depth signal."""
+        # Ensure that the max_depth hasn't already been cached
+        Location.objects.__dict__.pop("max_depth", None)
+        location = Location.objects.first()
+        with self.assertNumQueries(1):
+            location.save()
+
+
 class QuerySetAncestorTests(TestCase):
     """Tests for custom `TreeQuerySet.ancestors` method."""
 

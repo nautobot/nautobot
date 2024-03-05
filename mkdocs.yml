@@ -338,6 +338,8 @@ nav:
       - Relationships: "user-guide/feature-guides/relationships.md"
       - Software Image Files and Versions: "user-guide/feature-guides/software-image-files-and-versions.md"
     - Core Data Model:
+      - Overview:
+        - Introduction: "user-guide/core-data-model/overview/introduction.md"
       - Circuits:
         - Circuit: "user-guide/core-data-model/circuits/circuit.md"
         - Circuit Termination: "user-guide/core-data-model/circuits/circuittermination.md"
