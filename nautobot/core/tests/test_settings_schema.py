@@ -276,7 +276,7 @@ class SettingsJSONSchemaTestCase(TestCase):
             os.environ[env_var] = self._get_fake_env_value(setting_type)
 
     def test_environment_variable_settings(self):
-        """Check that settings with an environment_variable key are using the environment."""
+        """Check that settings with an environment_variable key are using the documented variable."""
         with mock.patch.dict(os.environ, {}):
             # Set fake environment vars based on defined schema types
             for name, schema in self.settings_schema["properties"].items():
@@ -289,10 +289,11 @@ class SettingsJSONSchemaTestCase(TestCase):
 
             # Test that settings match the mocked environment
             for name, schema in self.settings_schema["properties"].items():
-                if name not in nautobot_settings.__dict__.keys():
-                    continue
                 if "environment_variable" not in schema:
                     continue
                 with self.subTest(f"Checking environment variable for settings attribute {name}"):
+                    self.assertIn(
+                        name, nautobot_settings.__dict__.keys(), "Setting not found in nautobot.core.settings"
+                    )
                     expected_value = self._parse_environment_variable_for_setting(name, schema)
                     self.assertEqual(getattr(nautobot_settings, name), expected_value)

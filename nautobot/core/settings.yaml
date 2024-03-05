@@ -332,7 +332,6 @@ properties:
   CELERY_BROKER_USE_SSL:
     default: null
     description: "Optional configuration for Celery to use custom SSL certificates to connect to Redis."
-    environment_variable: "NAUTOBOT_CELERY_BROKER_USE_SSL"
     properties:
       ssl_ca_certs:
         "$ref": "#/definitions/absolute_path"
