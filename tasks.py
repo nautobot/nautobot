@@ -623,7 +623,7 @@ def ruff(context, fix=False, target=None, output_format="concise"):
 def yamllint(context):
     """Run yamllint to validate formatting applies to YAML standards."""
     # TODO: enable for directories other than nautobot/docs and fix all warnings
-    command = "yamllint nautobot/docs --format standard"
+    command = "yamllint nautobot/docs nautobot/core/settings.yaml --format standard"
     run_command(context, command)
 
 

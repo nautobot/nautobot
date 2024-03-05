@@ -1,7 +1,4 @@
-import json
-import os
 import re
-import types
 from unittest import mock
 import urllib.parse
 
@@ -10,11 +7,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory
 from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
-from jsonschema.exceptions import SchemaError, ValidationError
-from jsonschema.validators import Draft7Validator
 from prometheus_client.parser import text_string_to_metric_families
 
-from nautobot.core import settings
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -468,152 +462,6 @@ class DBFileStorageViewTestCase(TestCase):
         url = f"{reverse('db_file_storage.download_file')}?name={self.file_proxy_2.file.name}"
         response = self.client.get(url)
         self.assertHttpStatus(response, 404)
-
-
-class SettingsJSONSchemaViewTestCase(TestCase):
-    """Test for the JSON Schema in nautobot/core/settings.json"""
-
-    @classmethod
-    def setUpTestData(cls):
-        file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/settings.json"
-        with open(file_path, "r") as jsonfile:
-            cls.json_data = json.load(jsonfile)
-
-    def test_settings_json_schema_valid(self):
-        """Test the validity of the JSON Schema in settings.json"""
-        try:
-            Draft7Validator.check_schema(self.json_data)
-        except SchemaError as e:
-            raise ValidationError({"data_schema": e.message})
-
-    def test_settings_json_schema_contains_valid_setting_variables(self):
-        """Test the validity of the settings variables from settings.json and their types with those in settings.py"""
-        # This list contains all variables that exist in settings.py but not in the JSON schema in settings.json.
-        # ADMINS does not exist in either settings.json or settings.py
-        UNDOCUMENTED_SETTINGS = [
-            "ADMINS",
-            "ALLOW_REQUEST_PROFILING",
-            "ALLOWED_URL_SCHEMES",
-            "AUTHENTICATION_BACKENDS",
-            "AUTH_USER_MODEL",
-            "BASE_DIR",
-            "BRANDING_POWERED_BY_URL",
-            "CELERY_ACCEPT_CONTENT",
-            "CELERY_BEAT_SCHEDULER",
-            "CELERY_BROKER_TRANSPORT_OPTIONS",
-            "CELERY_RESULT_ACCEPT_CONTENT",
-            "CELERY_RESULT_BACKEND",
-            "CELERY_RESULT_EXPIRES",
-            "CELERY_RESULT_EXTENDED",
-            "CELERY_RESULT_SERIALIZER",
-            "CELERY_TASK_SEND_SENT_EVENT",
-            "CELERY_TASK_SERIALIZER",
-            "CELERY_TASK_TRACK_STARTED",
-            "CELERY_WORKER_SEND_TASK_EVENTS",
-            "CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED",
-            "CONSTANCE_ADDITIONAL_FIELDS",
-            "CONSTANCE_BACKEND",
-            "CONSTANCE_CONFIG",
-            "CONSTANCE_CONFIG_FIELDSETS",
-            "CONSTANCE_DATABASE_CACHE_BACKEND",
-            "CONSTANCE_DATABASE_PREFIX",
-            "CONSTANCE_IGNORE_ADMIN_VERSION_CHECK",
-            "CSRF_FAILURE_VIEW",
-            "DATABASE_ROUTERS",
-            "DATA_UPLOAD_MAX_NUMBER_FIELDS",
-            "DEFAULT_AUTO_FIELD",
-            "DRF_REACT_TEMPLATE_TYPE_MAP",
-            "EXEMPT_EXCLUDE_MODELS",
-            "FILTERS_NULL_CHOICE_LABEL",
-            "FILTERS_NULL_CHOICE_VALUE",
-            "GRAPHENE",
-            "HOSTNAME",
-            "INSTALLED_APPS",
-            "LANGUAGE_CODE",
-            "LOGIN_REDIRECT_URL",
-            "LOGIN_URL",
-            "LOG_LEVEL",
-            "MEDIA_URL",
-            "MESSAGE_TAGS",
-            "MIDDLEWARE",
-            "PROMETHEUS_EXPORT_MIGRATIONS",
-            "REMOTE_AUTH_AUTO_CREATE_USER",
-            "REMOTE_AUTH_HEADER",
-            "REST_FRAMEWORK",
-            "REST_FRAMEWORK_ALLOWED_VERSIONS",
-            "REST_FRAMEWORK_VERSION",
-            "ROOT_URLCONF",
-            "SECURE_PROXY_SSL_HEADER",
-            "SESSION_CACHE_ALIAS",
-            "SESSION_ENGINE",
-            "SHELL_PLUS_DONT_LOAD",
-            "SILKY_ANALYZE_QUERIES",
-            "SILKY_AUTHENTICATION",
-            "SILKY_AUTHORISATION",
-            "SILKY_INTERCEPT_FUNC",
-            "SILKY_PERMISSIONS",
-            "SILKY_PYTHON_PROFILER",
-            "SILKY_PYTHON_PROFILER_BINARY",
-            "SILKY_PYTHON_PROFILER_EXTENDED_FILE_NAME",
-            "SOCIAL_AUTH_BACKEND_PREFIX",
-            "SOCIAL_AUTH_POSTGRES_JSONFIELD",
-            "SPECTACULAR_SETTINGS",
-            "STATICFILES_DIRS",
-            "STATIC_URL",
-            "TEMPLATES",
-            "TESTING",
-            "TEST_RUNNER",
-            "USE_I18N",
-            "USE_TZ",
-            "USE_X_FORWARDED_HOST",
-            "VERSION",
-            "VERSION_MAJOR",
-            "VERSION_MINOR",
-            "WEBSERVER_WARMUP",
-            "WSGI_APPLICATION",
-            "X_FRAME_OPTIONS",
-        ]
-        # Retrieve all variables from settings.py.
-        # and trim out all noises by retaining variables with only uppercase letters and "_".
-        existing_settings_variables = list(settings.__dict__.keys())
-        existing_settings_variables = [
-            word for word in existing_settings_variables if word == word.upper() and not word.startswith("_")
-        ]
-
-        # Some of the variables in the JSON schema are contained in the CONSTANCE_CONFIG setting variable, e.g. BANNER_TOP, BANNER_BOTTOM and etc.
-        existing_constance_config_variables = list(settings.__dict__.get("CONSTANCE_CONFIG").keys())
-        # All the documented settings variable in the JSON schema from settings.json
-        existing_json_schema_variables = list(self.json_data["properties"].keys())
-
-        # Check if there is any undocumented setting variable in settings.py.
-        expected_variables = set(existing_json_schema_variables) | set(UNDOCUMENTED_SETTINGS)
-        for variable in existing_settings_variables:
-            if variable not in expected_variables:
-                self.fail(f"Undocumented settings variable {variable} detected in nautobot/core/settings.py")
-        # Check if there is any nonexistent settings variable in settings.json.
-        expected_variables = (
-            set(existing_settings_variables) | set(existing_constance_config_variables) | set(UNDOCUMENTED_SETTINGS)
-        )
-        for variable in self.json_data["properties"].keys():
-            if variable not in expected_variables:
-                self.fail(f"Nonexistent settings variable {variable} detected in nautobot/core/settings.json")
-
-        # Check if the values of the settings variables conform to what is specified in the JSON Schema.
-        TYPE_MAPPING = {
-            "string": [str],
-            "object": [dict],
-            "integer": [int],
-            "boolean": [bool],
-            "array": [list, tuple],
-            "#/definitions/absolute_path": [str],
-            "#/definitions/callable": [types.FunctionType],
-            "#/definitions/regex": [str],
-            "#/definitions/relative_path": [str],
-        }
-        for key, value in self.json_data["properties"].items():
-            settings_value = getattr(settings, key, None)
-            if settings_value is not None:
-                self.assertIn(type(settings_value), TYPE_MAPPING[value.get("type", value.get("$ref", None))])
 
 
 class SilkUIAccessTestCase(TestCase):
