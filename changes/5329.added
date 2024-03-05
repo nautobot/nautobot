@@ -1,1 +1,0 @@
-Added caching of `ChangeLoggedModelsQuery().as_queryset()` to improve performance when saving many objects in a change-logged context.

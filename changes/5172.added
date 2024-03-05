@@ -1,4 +1,0 @@
-Added Collapse Capable Side Navbar: Side Navbar is now able to be expanded and collapsed
-Added Expandable Main Content: The Main Content part of the UI grows as the Side Navbar collapses and shrinks as the Side Navbar expands.
-Added Better mobile friendly bottom navbar: This update will switch to vertically aligned bottom nav menu items once a certain media query is hit, making for a better mobile experience.
-Added automatic Side Navbar collapse for mobile devices.  This is based on media query and will trigger at specific width.

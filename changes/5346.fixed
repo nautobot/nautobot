@@ -1,1 +1,0 @@
-Fixed device LLDP view to work when interface names include a space.
