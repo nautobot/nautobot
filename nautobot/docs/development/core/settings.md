@@ -53,16 +53,16 @@ MY_SETTING = os.getenv("NAUTOBOT_MY_SETTING", "<default_value>")
 As of Nautobot 2.2.0, settings documentation is automatically generated from the contents of `nautobot/core/settings.yaml`. This document describes a JSON Schema for Nautobot settings, with a number of custom extensions to support richer documentation. In general, documentation for a typical string-based setting will take the following form:
 
 ```yaml title="nautobot/core/settings.yaml"
-"properties":
-  "MY_SETTING":
-    "default": "some_default"
-    "description": "My setting. One to three sentences here at most."
-    "details": "<optional additional details, examples, caveats, etc.>"
-    "environment_variable": "NAUTOBOT_MY_SETTING"
-    "see_also":
+properties:
+  MY_SETTING:
+    default: "some_default"
+    description: "My setting. One to three sentences here at most."
+    details: "<optional additional details, examples, caveats, etc.>"
+    environment_variable: "NAUTOBOT_MY_SETTING"
+    see_also:
       "Documentation on example.com": "http://docs.example.com/my-setting"
-    "type": "string"
-    "version_added": "2.2.0"
+    type: "string"
+    version_added: "2.2.0"
 ```
 
 As with a standard JSON Schema, it's possible to define other data types (`"type": "array"`, `"type": "object"`, etc.) and those will have other available/expected keys. Refer to documents like [Creating your first schema](https://json-schema.org/learn/getting-started-step-by-step) for details if you're less familiar with JSON Schema conventions.
@@ -76,6 +76,11 @@ The special keys added specifically for documentation are as follows:
 * `is_required_setting`: Set to `true` if this setting should be documented in `required-settings.md`; omit to default to `optional-settings.md`.
 * `see_also`: Optional dictionary of `"<link text>": "<link URL>"` entries that direct the user to other pages (local or remote) for additional details or context.
 * `version_added`: Nautobot version number where support for this setting was first added.
+
+Markdown rendering is supported for the `description`, `details`, and `default_literal` fields. The `see_also` field is also rendered as Markdown, but only the link text should include any markdown formatting.
+
+!!! info
+    Markdown is *technically* supported in other fields, but it's not recommended to use it outside of the fields above as it may not render as expected in all contexts.
 
 ### Technical Details of Settings Documentation
 
