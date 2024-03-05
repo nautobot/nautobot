@@ -66,7 +66,7 @@ menu_items = (
                         name="Roles",
                         weight=100,
                         permissions=[
-                            "extras.view_status",
+                            "extras.view_role",
                         ],
                         buttons=(
                             NavMenuAddButton(
