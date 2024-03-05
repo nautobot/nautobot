@@ -123,8 +123,7 @@ ENV PATH="${POETRY_HOME}/bin:${PATH}"
 
 RUN poetry config virtualenvs.create ${POETRY_VIRTUALENVS_CREATE} && \
     poetry config installer.parallel "${POETRY_INSTALLER_PARALLEL}" && \
-    poetry config installer.no-binary pyuwsgi && \
-    poetry config installer.no-binary lxml
+    poetry config installer.no-binary lxml,pyuwsgi
 
 ################################ Stage: python-dependencies (intermediate build target)
 
@@ -146,6 +145,10 @@ WORKDIR /source
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     poetry install --no-root --only main --no-ansi --extras all && \
     rm -rf /tmp/tmp*
+
+# Verify that pyuwsgi was installed correctly, i.e. with SSL support
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN pyuwsgi --cflags | sed 's/ /\n/g' | grep -e "^-DUWSGI_SSL$"
 
 ################################ Stage: python-dev-dependencies (intermediate build target)
 
