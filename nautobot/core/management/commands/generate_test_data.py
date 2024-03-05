@@ -77,7 +77,7 @@ class Command(BaseCommand):
                 TagFactory,
                 TeamFactory,
             )
-            from nautobot.extras.management import populate_status_choices
+            from nautobot.extras.management import populate_role_choices, populate_status_choices
             from nautobot.extras.utils import TaggableClassesQuery
             from nautobot.ipam.choices import PrefixTypeChoices
             from nautobot.ipam.factory import (
@@ -100,6 +100,7 @@ class Command(BaseCommand):
         factory.random.reseed_random(seed)
 
         self.stdout.write("Creating Roles...")
+        populate_role_choices(verbosity=0, using=db_name)
         RoleFactory.create_batch(20)
         self.stdout.write("Creating Statuses...")
         populate_status_choices(verbosity=0, using=db_name)

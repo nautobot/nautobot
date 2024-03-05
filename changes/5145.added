@@ -1,0 +1,1 @@
+Added data migration to populate default statuses and default roles for the `ContactAssociation` model.
