@@ -9,7 +9,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
     dependencies = [
         ("dcim", "0055_softwareimage_softwareversion_data_migration"),
-        ("ipam", "0048_alter_vlangroup_options"),
+        ("ipam", "0049_update_all_charfields_max_length_to_255"),
     ]
 
     operations = [

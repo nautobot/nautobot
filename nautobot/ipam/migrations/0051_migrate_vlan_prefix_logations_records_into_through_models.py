@@ -17,7 +17,7 @@ def migrate_prefix_vlan_locations_records(apps, schema):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("ipam", "0049_create_vlan_location_and_prefix_location_through_models"),
+        ("ipam", "0050_create_vlan_location_and_prefix_location_through_models"),
     ]
 
     operations = [migrations.RunPython(migrate_prefix_vlan_locations_records, migrations.RunPython.noop)]

@@ -1,4 +1,5 @@
 import random
+import secrets
 import string
 
 from django.db.models import Count, Q
@@ -218,11 +219,15 @@ class FilterTestCases:
             # Create random 5 char string to append to attribute, used for icontains partial lookup
             lookup = "".join(random.choices(string.ascii_lowercase, k=5))  # noqa: S311 # pseudo-random generator
             obj_field_value = getattr(obj, obj_field_name)
+
             if isinstance(obj_field_value, str):
                 updated_attr = obj_field_value + lookup
                 setattr(obj, obj_field_name, updated_attr)
+            elif isinstance(obj_field_value, int):
+                updated_attr = secrets.randbelow(100) + 1
+                setattr(obj, obj_field_name, updated_attr)
             else:
-                # Obj value can be a bool or an integer
+                # Obj value can be a bool
                 updated_attr = obj_field_value
             obj.save()
             # if lookup_method is iexact use the full updated attr

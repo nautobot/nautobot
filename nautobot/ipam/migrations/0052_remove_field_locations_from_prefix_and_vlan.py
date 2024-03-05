@@ -5,7 +5,7 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("ipam", "0050_migrate_vlan_prefix_logations_records_into_through_models"),
+        ("ipam", "0051_migrate_vlan_prefix_logations_records_into_through_models"),
     ]
 
     operations = [

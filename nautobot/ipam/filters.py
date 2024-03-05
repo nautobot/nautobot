@@ -329,15 +329,25 @@ class PrefixLocationAssignmentFilterSet(NautobotFilterSet):
             "location__name": "icontains",
         },
     )
-    # Prefix doesn't have an appropriate single natural-key field for a NaturalKeyOrPKMultipleChoiceFilter
-    prefix = django_filters.ModelMultipleChoiceFilter(
-        queryset=Prefix.objects.all(),
+    prefix = MultiValueCharFilter(
+        method="filter_prefix",
+        label="Prefix",
     )
     location = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Locations (name or ID)",
     )
+
+    def _strip_values(self, values):
+        return [value.strip() for value in values if value.strip()]
+
+    def filter_prefix(self, queryset, name, value):
+        prefixes = self._strip_values(value)
+        with contextlib.suppress(netaddr.AddrFormatError, ValueError):
+            prefixes_queryset = Prefix.objects.net_equals(*prefixes)
+            return queryset.filter(prefix__in=prefixes_queryset)
+        return queryset.none()
 
     class Meta:
         model = PrefixLocationAssignment
@@ -584,10 +594,6 @@ class VLANLocationAssignmentFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Locations (name or ID)",
     )
-
-    def search_by_prefix(self, queryset, name, value):
-        prefixes = [prefix.strip() for prefix in value if prefix.strip()]
-        return queryset.net_host_contained(*prefixes)
 
     class Meta:
         model = VLANLocationAssignment

@@ -689,9 +689,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "status": self.statuses.first().pk,
             "vlan_group": {
                 "location": {
-                    "status": {
-                        "name": self.vlan_group1.location.status.name
-                    },
+                    "status": {"name": self.vlan_group1.location.status.name},
                 }
             },
         }

@@ -5,7 +5,7 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("ipam", "0051_remove_field_locations_from_prefix_and_vlan"),
+        ("ipam", "0052_remove_field_locations_from_prefix_and_vlan"),
     ]
 
     operations = [
