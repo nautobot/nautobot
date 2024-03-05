@@ -29,6 +29,7 @@ The `invoke unittest` and `invoke integration-test` commands are intentionally d
 - New unit tests **must always** inherit from `nautobot.core.testing.TestCase` or one of its subclasses. Do not use `django.test.TestCase`.
     - API view test cases should generally inherit from one or more of the classes in `nautobot.core.testing.api.APIViewTestCases`.
     - Filterset test cases should generally inherit from `nautobot.core.testing.filters.FilterTestCases.FilterTestCase`.
+    - Form test cases should generally inherit from `nautobot.core.testing.forms.FormTestCases.BaseFormTestCase`.
     - Model test cases should generally inherit from `nautobot.core.testing.models.ModelTestCases.BaseModelTestCase`.
     - View test cases should generally inherit from one or more of the classes in `nautobot.core.testing.views.ViewTestCases`.
 - New integration tests **must always** inherit from `nautobot.core.testing.integration.SeleniumTestCase`. Do not use any other base class for integration tests.
