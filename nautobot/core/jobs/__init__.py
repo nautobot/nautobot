@@ -201,10 +201,10 @@ class ImportObjects(Job):
     csv_data = TextVar(label="CSV Data", required=False)
     csv_file = FileVar(label="CSV File", required=False)
     roll_back_if_error = BooleanVar(
-        label="Rollback if error",
+        label="All or nothing import",
         required=False,
         default=False,
-        description="If an error occurs while importing should all imports be rollback",
+        description="Enable so that if any error occurs while importing, even successfully imported objects will be discarded. Disable if a partial import is acceptable.",
     )
 
     template_name = "system_jobs/import_objects.html"
@@ -309,7 +309,7 @@ class ImportObjects(Job):
 
         if validation_failed:
             if roll_back_if_error:
-                raise RunJobTaskFailed("CSV import not successful, all imports where rolled back, see logs")
+                raise RunJobTaskFailed("CSV import not successful, all imports were rolled back, see logs")
             raise RunJobTaskFailed("CSV import not fully successful, see logs")
 
 
