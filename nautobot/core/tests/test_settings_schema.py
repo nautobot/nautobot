@@ -63,6 +63,7 @@ class SettingsJSONSchemaTestCase(TestCase):
         self.maxDiff = None
 
     def tearDown(self):
+        """Discard loaded `nautobot.core.settings` module to force it to be reloaded minus test interference."""
         sys.modules.pop("nautobot.core.settings", None)
 
     def test_schema_keys_sort_alpha(self):
