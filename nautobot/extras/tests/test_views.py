@@ -2060,7 +2060,7 @@ class JobButtonRenderingTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn(
-            f'<input type="hidden" name="_task_queue" value="{settings.CELERY_TASK_DEFAULT_QUEUE,}">', content, content
+            f'<input type="hidden" name="_task_queue" value="{settings.CELERY_TASK_DEFAULT_QUEUE}">', content, content
         )
 
     def test_view_object_with_unsafe_text(self):
