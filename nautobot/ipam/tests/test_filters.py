@@ -206,10 +206,11 @@ class PrefixLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
     queryset = PrefixLocationAssignment.objects.all()
     filterset = PrefixLocationAssignmentFilterSet
 
-    generic_filter_tests = (
-        ["location", "location__name"],
-        ["location", "location__id"],
-    )
+    # NOTE: No generic logic in place yet to test TreeNodeMultipleChoiceFilter
+    # generic_filter_tests = (
+    #     ["location", "location__name"],
+    #     ["location", "location__id"],
+    # )
 
     def test_prefix(self):
         ipv4_prefix = str(self.queryset.filter(prefix__ip_version=4).first().prefix)
@@ -1189,8 +1190,9 @@ class VLANLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
 
     generic_filter_tests = (
         ["vlan", "vlan__vid"],
-        ["location", "location__name"],
-        ["location", "location__id"],
+        # NOTE: No generic logic in place yet to test TreeNodeMultipleChoiceFilter
+        # ["location", "location__name"],
+        # ["location", "location__id"],
     )
 
 

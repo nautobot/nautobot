@@ -238,15 +238,9 @@ class FilterTestCases:
                 model_queryset = self.queryset.filter(**{f"{filter_field_name}__icontains": lookup})
             params = {"q": lookup}
             filterset_result = self.filterset(params, self.queryset)
-            self.assertTrue(filterset_result.is_valid())
 
-            try:
-                self.assertQuerysetEqualAndNotEmpty(filterset_result.qs, model_queryset)
-            except ValueError:
-                # ERROR (ValueError: Trying to compare non-ordered queryset against more than one ordered values)
-                # This occurs when the model.Meta.ordering is not set, ignore since we are testing the filtering
-                # not the order at which the filtering is done
-                self.assertQuerysetEqualAndNotEmpty(filterset_result.qs.order_by("pk"), model_queryset.order_by("pk"))
+            self.assertTrue(filterset_result.is_valid())
+            self.assertQuerysetEqualAndNotEmpty(filterset_result.qs, model_queryset, ordered=False, )
 
         def _get_relevant_filterset_queryset(self, queryset, *filter_params):
             """Gets the relevant queryset based on filter parameters."""
@@ -281,16 +275,16 @@ class FilterTestCases:
                 )
                 if should_skip_test:
                     continue
+                with self.subTest(f"Asserting '{filter_field_name}' `q` filter predicates"):
+                    queryset = self._get_relevant_filterset_queryset(self.queryset, filter_field_name)
+                    obj = queryset.first()
+                    obj_field_name = filter_field_name
 
-                queryset = self._get_relevant_filterset_queryset(self.queryset, filter_field_name)
-                obj = queryset.first()
-                obj_field_name = filter_field_name
+                    is_nested_filter_name = "__" in filter_field_name
 
-                is_nested_filter_name = "__" in filter_field_name
-
-                if is_nested_filter_name:
-                    obj, obj_field_name = self._get_nested_related_obj_and_its_field_name(obj, obj_field_name)
-                self._assert_q_filter_predicate_validity(obj, obj_field_name, filter_field_name, lookup_method)
+                    if is_nested_filter_name:
+                        obj, obj_field_name = self._get_nested_related_obj_and_its_field_name(obj, obj_field_name)
+                    self._assert_q_filter_predicate_validity(obj, obj_field_name, filter_field_name, lookup_method)
 
     class NameOnlyFilterTestCase(FilterTestCase):
         """Add simple tests for filtering by name."""

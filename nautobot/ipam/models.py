@@ -970,6 +970,7 @@ class PrefixLocationAssignment(BaseModel):
 
     class Meta:
         unique_together = ["prefix", "location"]
+        ordering = ["prefix", "location"]
 
     def __str__(self):
         return f"{self.prefix}: {self.location}"
@@ -1449,6 +1450,7 @@ class VLANLocationAssignment(BaseModel):
 
     class Meta:
         unique_together = ["vlan", "location"]
+        ordering = ["vlan", "location"]
 
     def __str__(self):
         return f"{self.vlan}: {self.location}"

@@ -752,6 +752,10 @@ class VLANForm(NautobotModelForm, TenancyForm):
         except ValidationError as e:
             raise forms.ValidationError(e.message_dict) from e
 
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        instance.locations.set(self.cleaned_data["locations"])
+
 
 class VLANBulkEditForm(
     TagsBulkEditFormMixin,

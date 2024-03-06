@@ -34,6 +34,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "unique_together": {("vlan", "location")},
+                "ordering": ["vlan", "location"],
             },
         ),
         migrations.CreateModel(
@@ -60,6 +61,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "unique_together": {("prefix", "location")},
+                "ordering": ["prefix", "location"],
             },
         ),
         migrations.AddField(
