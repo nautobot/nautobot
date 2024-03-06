@@ -1248,9 +1248,9 @@ class SoftwareVersion(PrimaryModel):
 class Controller(PrimaryModel, ConfigContextModel):
     """Controller model."""  # TODO: (whitej6) finialize description
 
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     status = StatusField(blank=False, null=False)
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.PROTECT,
@@ -1307,7 +1307,7 @@ class Controller(PrimaryModel, ConfigContextModel):
 class ControllerDeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
     """Controller model."""  # TODO: (whitej6) finialize description
 
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     weight = models.PositiveIntegerField(default=1000)
     controller = models.ForeignKey(
         to="dcim.Controller",
