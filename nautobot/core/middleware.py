@@ -19,6 +19,8 @@ from nautobot.core.settings_funcs import (
 from nautobot.core.views import server_error
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
+from nautobot.extras.models import ComputedField, CustomField, Relationship
+from nautobot.extras.signals import invalidate_lru_cache
 
 
 class RemoteUserMiddleware(RemoteUserMiddleware_):
@@ -149,3 +151,17 @@ class ExceptionHandlingMiddleware:
             return server_error(request, template_name=custom_template)
 
         return None
+
+
+class LRUCacheClearingMiddleware:
+    """Middleware to ensure that certain lru_caches are cleared before processing a request."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        invalidate_lru_cache(ComputedField)
+        invalidate_lru_cache(CustomField)
+        invalidate_lru_cache(Relationship)
+
+        return self.get_response(request)
