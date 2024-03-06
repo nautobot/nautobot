@@ -220,7 +220,9 @@ class PrefixLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
 
         # FIXME(timizuo): ValueError: Trying to compare non-ordered queryset against more than one ordered values
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(prefix__in=prefix_queryset)
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(prefix__in=prefix_queryset),
+            ordered=False,
         )
 
 

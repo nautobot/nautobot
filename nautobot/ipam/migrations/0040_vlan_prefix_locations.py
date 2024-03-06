@@ -72,7 +72,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="vlan",
             name="locations",
-           field=models.ManyToManyField(
+            field=models.ManyToManyField(
                 blank=True, related_name="vlans", through="ipam.VLANLocationAssignment", to="dcim.Location"
             ),
         ),
