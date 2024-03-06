@@ -225,7 +225,7 @@ class ImportObjects(Job):
                     raise AbortTransaction
                 return new_objs, validation_failed
         # If validation failed return an empty list, since all objs created where rolled back
-        self.logger.error("Rolling back all %s records.", len(new_objs))
+        self.logger.warning("Rolling back all %s records.", len(new_objs))
         return [], validation_failed
 
     def _perform_operation(self, data, serializer_class, queryset):

@@ -228,10 +228,10 @@ class ImportObjectsTestCase(TransactionTestCase):
 
             log_errors = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
             self.assertEqual(log_errors[0].message, "Row 1: `color`: `Enter a valid hexadecimal RGB color code.`")
-            self.assertEqual(log_errors[1].message, "Rolling back all 4 records.")
 
             log_warning = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING)
-            self.assertEqual(log_warning[0].message, "No status objects were created")
+            self.assertEqual(log_warning[0].message, "Rolling back all 4 records.")
+            self.assertEqual(log_warning[1].message, "No status objects were created")
 
         with self.subTest("Assert all other data are imported successfully if `roll_back_if_error` is False"):
             job_result = create_job_result_and_run_job(
