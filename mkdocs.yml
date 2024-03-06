@@ -101,6 +101,11 @@ plugins:
   - "gen-files":
       scripts:
         - docs/generate_code_reference_pages.py
+  - "macros":
+      module_name: "docs/macros"
+      on_error_fail: true
+      on_undefined: "strict"
+      render_by_default: false  # Only enable macros and Jinja2 rendering on specific pages
   - "mkdocs-version-annotations"
   - "section-index"
   - "mkdocstrings":
@@ -528,6 +533,7 @@ nav:
     - Core Developer Guide:
       - "development/core/index.md"
       - Getting Started: "development/core/getting-started.md"
+      - Adding and Updating Nautobot Settings: "development/core/settings.md"
       - Advanced Docker Compose Usage: "development/core/docker-compose-advanced-use-cases.md"
       - Application Registry: "development/core/application-registry.md"
       - Bootstrap UI: "development/core/bootstrap-ui.md"
