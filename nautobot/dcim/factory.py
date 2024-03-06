@@ -25,6 +25,8 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.models import (
+    Controller,
+    ControllerDeviceGroup,
     Device,
     DeviceRedundancyGroup,
     DeviceType,
@@ -40,7 +42,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
 )
-from nautobot.extras.models import Role, Status
+from nautobot.extras.models import Role, Status, ExternalIntegration
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
@@ -669,3 +671,35 @@ class SoftwareVersionFactory(PrimaryModelFactory):
     documentation_url = factory.Maybe("has_documentation_url", factory.Faker("uri"), "")
     long_term_support = NautobotBoolIterator()
     pre_release = NautobotBoolIterator()
+
+
+class ControllerFactory(PrimaryModelFactory):
+    class Meta:
+        model = Controller
+
+    class Params:
+        has_device = NautobotBoolIterator()
+
+    name = factory.Faker("word")
+    description = factory.Faker("sentence")
+    status = random_instance(lambda: Status.objects.get_for_model(Controller), allow_null=False)
+    role = random_instance(lambda: Role.objects.get_for_model(Controller), allow_null=False)
+    platform = random_instance(Platform, allow_null=False)
+    location = random_instance(Location, allow_null=False)
+    tenant = random_instance(Tenant, allow_null=True)
+    external_integration = random_instance(ExternalIntegration, allow_null=True)
+    deployed_controller_device = factory.Maybe("has_device", random_instance(Device), None)
+    # deployed_controller_group = factory.Maybe("has_device", random_instance(DeviceRedundancyGroup), None)
+
+
+class ControllerDeviceGroupFactory(PrimaryModelFactory):
+    class Meta:
+        model = ControllerDeviceGroup
+
+    name = factory.Faker("word")
+    controller = random_instance(Controller, allow_null=False)
+    weight = factory.Faker("pyint", min_value=1, max_value=1000)
+    parent = factory.Maybe(
+        factory.Iterator(ControllerDeviceGroup.objects.all()),
+        None,
+    )

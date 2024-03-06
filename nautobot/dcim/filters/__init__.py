@@ -41,6 +41,8 @@ from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -80,7 +82,7 @@ from nautobot.extras.filters import (
     RoleModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
-from nautobot.extras.models import SecretsGroup
+from nautobot.extras.models import SecretsGroup, ExternalIntegration
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
@@ -96,6 +98,8 @@ __all__ = (
     "ConsolePortTemplateFilterSet",
     "ConsoleServerPortFilterSet",
     "ConsoleServerPortTemplateFilterSet",
+    "ControllerFilterSet",
+    "ControllerDeviceGroupFilterSet",
     "DeviceBayFilterSet",
     "DeviceBayTemplateFilterSet",
     "DeviceFilterSet",
@@ -1825,4 +1829,80 @@ class DeviceTypeToSoftwareImageFileFilterSet(BaseFilterSet):
 
     class Meta:
         model = DeviceTypeToSoftwareImageFile
+        fields = "__all__"
+
+
+class ControllerFilterSet(
+    NautobotFilterSet,
+    LocatableModelFilterSetMixin,
+    TenancyModelFilterSetMixin,
+    LocalContextModelFilterSetMixin,
+    StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
+):
+    """Filters for Controller model."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+        }
+    )
+    location = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        label="Location (name or ID)",
+    )
+    platform = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Platform.objects.all(),
+        to_field_name="name",
+        label="Platform (name or ID)",
+    )
+    tenant = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Tenant.objects.all(),
+        to_field_name="name",
+        label="Tenant (name or ID)",
+    )
+    external_integration = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ExternalIntegration.objects.all(),
+        to_field_name="name",
+        label="External integration (name or ID)",
+    )
+    deployed_controller_device = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Deployed controller device (name or ID)",
+    )
+    deployed_controller_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DeviceRedundancyGroup.objects.all(),
+        to_field_name="name",
+        label="Deployed controller group (name or ID)",
+    )
+
+    class Meta:
+        model = Controller
+        fields = "__all__"
+
+
+class ControllerDeviceGroupFilterSet(NautobotFilterSet):
+    """Filters for ControllerDeviceGroup model."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+        }
+    )
+    controller = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Controller.objects.all(),
+        to_field_name="name",
+        label="Controller (name or ID)",
+    )
+    parent = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ControllerDeviceGroup.objects.all(),
+        to_field_name="name",
+        label="Parent group (name or ID)",
+    )
+
+    class Meta:
+        model = ControllerDeviceGroup
         fields = "__all__"

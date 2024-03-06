@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from timezone_field import TimeZoneFormField
 
+from nautobot.extras.models import ExternalIntegration
 from nautobot.circuits.models import Circuit, CircuitTermination, Provider
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
@@ -4095,4 +4096,123 @@ class SoftwareVersionForm(NautobotModelForm):
 
     class Meta:
         model = SoftwareVersion
+        fields = "__all__"
+
+
+class ControllerForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalContextModelForm):
+    """Controller credit/edit form."""
+
+    class Meta:
+        model = Controller
+        fields = "__all__"
+
+
+class ControllerFilterForm(
+    NautobotFilterForm,
+    LocalContextFilterForm,
+    LocatableModelFilterFormMixin,
+    TenancyFilterForm,
+    StatusModelFilterFormMixin,
+    RoleModelFilterFormMixin,
+):
+    """Controller basic filter form."""
+    model = Controller
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False, label="Name")
+    description = forms.CharField(required=False, label="Description")
+    location = DynamicModelMultipleChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        label="Location",
+    )
+    platform = DynamicModelMultipleChoiceField(
+        queryset=Platform.objects.all(),
+        required=False,
+        label="Platform",
+    )
+    tenant = DynamicModelMultipleChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+        label="Tenant",
+    )
+    external_integration = DynamicModelMultipleChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
+        label="External integration",
+    )
+    deployed_controller_device = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        label="Deployed controller device",
+    )
+    deployed_controller_group = DynamicModelMultipleChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(),
+        required=False,
+        label="Deployed controller group",
+    )
+
+
+    tags = TagFilterField(model)
+
+    field_order = [
+        "q",
+        "name",
+        "status",
+        "role",
+        "description",
+        "location",
+        "platform",
+        "tenant",
+        "external_integration",
+        "deployed_controller_device",
+        "deployed_controller_group",
+        "tags",
+    ]
+
+
+class ControllerBulkEditForm(
+    TagsBulkEditFormMixin,
+    LocatableModelBulkEditFormMixin,
+    StatusModelBulkEditFormMixin,
+    RoleModelBulkEditFormMixin,
+    NautobotBulkEditForm,
+    LocalContextModelBulkEditForm,
+):
+    """Controller bulk edit form."""
+
+    class Meta:
+        model = Controller
+        fields = "__all__"
+
+
+class ControllerDeviceGroupForm(NautobotModelForm):
+    """ControllerDeviceGroup credit/edit form."""
+
+    class Meta:
+        model = ControllerDeviceGroup
+        fields = "__all__"
+
+
+class ControllerDeviceGroupFilterForm(NautobotFilterForm):
+    """ControllerDeviceGroup basic filter form."""
+    model = ControllerDeviceGroup
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False, label="Name")
+    controller = DynamicModelChoiceField(
+        queryset=Controller.objects.all(),
+        required=False,
+        label="Controller",
+    )
+    parent = DynamicModelChoiceField(
+        queryset=ControllerDeviceGroup.objects.all(),
+        required=False,
+        label="Parent",
+    )
+
+
+class ControllerDeviceGroupBulkEditForm(NautobotBulkEditForm):
+    """ControllerDeviceGroup bulk edit form."""
+
+    class Meta:
+        model = ControllerDeviceGroup
         fields = "__all__"

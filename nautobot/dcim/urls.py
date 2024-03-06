@@ -39,6 +39,8 @@ router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIV
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
+router.register("controllers", views.ControllerUIViewSet)
+router.register("controller-device-groups", views.ControllerDeviceGroupUIViewSet)
 
 urlpatterns = [
     # Location types

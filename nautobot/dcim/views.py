@@ -47,6 +47,8 @@ from .models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -2996,3 +2998,28 @@ class SoftwareVersionUIViewSet(NautobotUIViewSet):
     )
     serializer_class = serializers.SoftwareVersionSerializer
     table_class = tables.SoftwareVersionTable
+
+
+#
+# Controllers
+#
+
+
+class ControllerUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.ControllerFilterSet
+    filterset_form_class = forms.ControllerFilterForm
+    form_class = forms.ControllerForm
+    bulk_update_form_class = forms.ControllerBulkEditForm
+    queryset = Controller.objects.all()
+    serializer_class = serializers.ControllerSerializer
+    table_class = tables.ControllerTable
+
+
+class ControllerDeviceGroupUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.ControllerDeviceGroupFilterSet
+    filterset_form_class = forms.ControllerDeviceGroupFilterForm
+    form_class = forms.ControllerDeviceGroupForm
+    bulk_update_form_class = forms.ControllerDeviceGroupBulkEditForm
+    queryset = ControllerDeviceGroup.objects.all()
+    serializer_class = serializers.ControllerDeviceGroupSerializer
+    table_class = tables.ControllerDeviceGroupTable

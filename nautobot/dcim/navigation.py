@@ -299,6 +299,44 @@ menu_items = (
                 ),
             ),
             NavMenuGroup(
+                name="Controllers",
+                weight=250,
+                items=(
+                    NavMenuItem(
+                        link="dcim:controller_list",
+                        name="Controllers",
+                        weight=200,
+                        permissions=[
+                            "dcim.view_controller",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:controller_add",
+                                permissions=[
+                                    "dcim.add_controller",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:controllerdevicegroup_list",
+                        name="Controller Device Groups",
+                        weight=300,
+                        permissions=[
+                            "dcim.view_controllerdevicegroup",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:controllerdevicegroup_add",
+                                permissions=[
+                                    "dcim.add_controllerdevicegroup",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            NavMenuGroup(
                 name="Connections",
                 weight=300,
                 items=(

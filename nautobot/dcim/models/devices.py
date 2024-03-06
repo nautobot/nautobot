@@ -1302,6 +1302,15 @@ class Controller(PrimaryModel, ConfigContextModel):
     class Meta:
         ordering = ("_name",)
 
+    def __str__(self):
+        return self.display or super().__str__()
+
+    @property
+    def display(self):
+        if self.name:
+            return self.name
+        return f"{self.platform} - {self.role}"
+
 
 @extras_features(
     "custom_links",
@@ -1309,8 +1318,6 @@ class Controller(PrimaryModel, ConfigContextModel):
     "dynamic_groups",
     "export_templates",
     "graphql",
-    "locations",
-    "statuses",
     "webhooks",
 )
 class ControllerDeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
