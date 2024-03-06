@@ -48,7 +48,7 @@ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
     --mount=type=cache,target="/var/lib/apt/lists",sharing=locked \
     apt-get update && \
     apt-get upgrade -y && \
-    apt-get install --no-install-recommends -y curl git mime-support libxml2 libmariadb3 openssl && \
+    apt-get install --no-install-recommends -y curl git mime-support libxml2 libxmlsec1-dev libxmlsec1-openssl libmariadb3 openssl && \
     apt-get autoremove -y
 
 # DL3013 - pin all Python package versions
@@ -79,7 +79,7 @@ FROM system-dependencies AS system-dev-dependencies
 # Install development/install-time OS dependencies
 # hadolint ignore=DL3008
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y build-essential libssl-dev libxmlsec1-dev libxmlsec1-openssl pkg-config libldap-dev libsasl2-dev libmariadb-dev nodejs npm && \
+    apt-get install --no-install-recommends -y build-essential libssl-dev pkg-config libldap-dev libsasl2-dev libmariadb-dev nodejs npm && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/*
@@ -125,7 +125,7 @@ ENV PATH="${POETRY_HOME}/bin:${PATH}"
 
 RUN poetry config virtualenvs.create ${POETRY_VIRTUALENVS_CREATE} && \
     poetry config installer.parallel "${POETRY_INSTALLER_PARALLEL}" && \
-    poetry config installer.no-binary pyuwsgi
+    poetry config installer.no-binary lxml,pyuwsgi
 
 ################################ Stage: python-dependencies (intermediate build target)
 
@@ -147,6 +147,10 @@ WORKDIR /source
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     poetry install --no-root --only main --no-ansi --extras all && \
     rm -rf /tmp/tmp*
+
+# Verify that pyuwsgi was installed correctly, i.e. with SSL support
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN pyuwsgi --cflags | sed 's/ /\n/g' | grep -e "^-DUWSGI_SSL$"
 
 ################################ Stage: python-dev-dependencies (intermediate build target)
 

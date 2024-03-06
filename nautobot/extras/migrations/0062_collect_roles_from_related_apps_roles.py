@@ -130,6 +130,8 @@ def clear_populated_roles(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
+        ("contenttypes", "0002_remove_content_type_name"),
+        ("dcim", "0001_initial_part_1"),
         ("extras", "0061_role_and_alter_status"),
     ]
 

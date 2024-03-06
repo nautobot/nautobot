@@ -72,6 +72,61 @@ Support for versions of PostgreSQL prior to 12.0 has been removed as these versi
 Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specific permissions will now always be hidden from users lacking those permissions. Additionally, users not logged in will now be automatically redirected to the login page.
 
 <!-- towncrier release notes start -->
+## v2.1.7 (2024-03-05)
+
+### Fixed
+
+- [#5387](https://github.com/nautobot/nautobot/issues/5387) - Fixed an error in the Dockerfile that resulted in `pyuwsgi` being installed without SSL support.
+
+## v2.1.6 (2024-03-04)
+
+### Security
+
+- [#5319](https://github.com/nautobot/nautobot/issues/5319) - Updated `cryptography` to 42.0.4 due to CVE-2024-26130. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+### Added
+
+- [#5172](https://github.com/nautobot/nautobot/issues/5172) - Added Collapse Capable Side Navbar: Side Navbar is now able to be expanded and collapsed
+- [#5172](https://github.com/nautobot/nautobot/issues/5172) - Added Expandable Main Content: The Main Content part of the UI grows as the Side Navbar collapses and shrinks as the Side Navbar expands.
+- [#5172](https://github.com/nautobot/nautobot/issues/5172) - Added Better mobile friendly bottom navbar: This update will switch to vertically aligned bottom nav menu items once a certain media query is hit, making for a better mobile experience.
+- [#5172](https://github.com/nautobot/nautobot/issues/5172) - Added automatic Side Navbar collapse for mobile devices.  This is based on media query and will trigger at specific width.
+- [#5329](https://github.com/nautobot/nautobot/issues/5329) - Added caching of `ChangeLoggedModelsQuery().as_queryset()` to improve performance when saving many objects in a change-logged context.
+- [#5361](https://github.com/nautobot/nautobot/issues/5361) - Added `nautobot.core.testing.forms.FormTestCases` base class and added it to `nautobot.apps.testing` as well.
+
+### Changed
+
+- [#5082](https://github.com/nautobot/nautobot/issues/5082) - Adjusted Edit / Create panels to occupy more page width on medium and large screens.
+
+### Fixed
+
+- [#4106](https://github.com/nautobot/nautobot/issues/4106) - Fixed inefficient query in VirtualMachine create form.
+- [#5172](https://github.com/nautobot/nautobot/issues/5172) - Fixed Brand Icon mouseover Background: Fix for mouseover effect on the Brand / Icon (was flashing white background vs being transparent) when in dark mode.
+- [#5307](https://github.com/nautobot/nautobot/issues/5307) - Fixed Custom Field form field(s) missing from git repository edit form.
+- [#5309](https://github.com/nautobot/nautobot/issues/5309) - Fixed `Tenant` UI detail view breadcrumb with invalid `TenantGroup` filter link.
+- [#5309](https://github.com/nautobot/nautobot/issues/5309) - Fixed `TenantGroup` UI detail view with invalid "add tenant" button invalid `query_params` link.
+- [#5309](https://github.com/nautobot/nautobot/issues/5309) - Fixed `DeviceForm` invalid `cluster` field `query_params`.
+- [#5309](https://github.com/nautobot/nautobot/issues/5309) - Fixed `PrefixForm` invalid `vlan` and `vlan_group` fields `query_params`.
+- [#5311](https://github.com/nautobot/nautobot/issues/5311) - Fixed dependencies in various migration files.
+- [#5332](https://github.com/nautobot/nautobot/issues/5332) - Fixed Docker image missing OS-level dependencies for SSO (SAML) support.
+- [#5334](https://github.com/nautobot/nautobot/issues/5334) - Fixed migration from 1.x failing when specific duplicate prefixes are present.
+- [#5343](https://github.com/nautobot/nautobot/issues/5343) - Fixed incorrect reference for `device.device_role` on the Rack detail view for non-racked device objects.
+- [#5345](https://github.com/nautobot/nautobot/issues/5345) - Fixed intermittent 405 errors when using the Docker image with SAML authentication.
+- [#5346](https://github.com/nautobot/nautobot/issues/5346) - Fixed device LLDP view to work when interface names include a space.
+- [#5365](https://github.com/nautobot/nautobot/issues/5365) - Fixed `invalidate_max_depth_cache` itself calculating `max_depth` on querysets without tree fields.
+
+### Documentation
+
+- [#4419](https://github.com/nautobot/nautobot/issues/4419) - Added documentation on `nautobot.apps` import locations.
+- [#4419](https://github.com/nautobot/nautobot/issues/4419) - Added documentation about the supported public interfaces.
+- [#4419](https://github.com/nautobot/nautobot/issues/4419) - Removed some incorrect content from the documentation about nav menu changes that were reverted during 2.0 development.
+- [#4511](https://github.com/nautobot/nautobot/issues/4511) - Added documentation on how to correctly implement NautobotUIViewSet with custom views.
+- [#5284](https://github.com/nautobot/nautobot/issues/5284) - Added a quick overview of the most used models.
+- [#5311](https://github.com/nautobot/nautobot/issues/5311) - Added documentation on writing custom migrations.
+- [#5326](https://github.com/nautobot/nautobot/issues/5326) - Fixed simple typo in creating-location-types-and-locations.md.
+- [#5330](https://github.com/nautobot/nautobot/issues/5330) - Updated SSO documentation to include a view for presenting SAML metadata.
+- [#5345](https://github.com/nautobot/nautobot/issues/5345) - Added a note to the Nautobot installation documentation about the need to do `pip3 install --no-binary=pyuwsgi` in order to have SSL support in `pyuwsgi`.
+- [#5345](https://github.com/nautobot/nautobot/issues/5345) - Added a note to the SSO documentation about the need to do `pip3 install --no-binary=lxml` to avoid incompatibilities between `lxml` and `xmlsec` packages.
+
 ## v2.1.5 (2024-02-21)
 
 ### Security
