@@ -233,7 +233,7 @@ class ImportObjectsTestCase(TransactionTestCase):
             log_warning = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING)
             self.assertEqual(log_warning[0].message, "No status objects were created")
 
-        with self.subTest("Assert all other data are imported successfully."):
+        with self.subTest("Assert all other data are imported successfully if `roll_back_if_error` is False"):
             job_result = create_job_result_and_run_job(
                 "nautobot.core.jobs",
                 "ImportObjects",
@@ -243,6 +243,7 @@ class ImportObjectsTestCase(TransactionTestCase):
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
             log_errors = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
             self.assertEqual(log_errors[0].message, "Row 1: `color`: `Enter a valid hexadecimal RGB color code.`")
+            self.assertFalse(Status.objects.filter(name="test_status0").exists()
             log_successes = JobLogEntry.objects.filter(
                 job_result=job_result, log_level=LogLevelChoices.LOG_INFO, message__icontains="created"
             )
