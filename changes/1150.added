@@ -1,0 +1,1 @@
+Added environment variable support for most admin-configurable settings (`ALLOW_REQUEST_PROFILING`, `BANNER_TOP`, etc.)

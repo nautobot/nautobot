@@ -7,6 +7,7 @@ from django.db.models import Q
 from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import Circuit, CircuitTermination, Provider
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     add_blank_choice,
     APISelect,
@@ -330,7 +331,7 @@ class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, 
     # location_type is not editable on existing instances
     parent = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     asn = forms.IntegerField(min_value=BGP_ASN_MIN, max_value=BGP_ASN_MAX, required=False, label="ASN")
     time_zone = TimeZoneFormField(
         choices=add_blank_choice(TimeZoneFormField().choices),
@@ -481,8 +482,8 @@ class RackBulkEditForm(
         query_params={"location": "$location"},
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    serial = forms.CharField(max_length=255, required=False, label="Serial Number")
-    asset_tag = forms.CharField(max_length=50, required=False)
+    serial = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, label="Serial Number")
+    asset_tag = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(RackTypeChoices),
         required=False,
@@ -621,7 +622,7 @@ class RackReservationBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         widget=StaticSelect2(),
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         nullable_fields = []
@@ -879,7 +880,7 @@ class ConsolePortTemplateCreateForm(ComponentTemplateCreateForm):
 
 class ConsolePortTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ConsolePortTemplate.objects.all(), widget=forms.MultipleHiddenInput())
-    label = forms.CharField(max_length=64, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(ConsolePortTypeChoices),
         required=False,
@@ -922,7 +923,7 @@ class ConsoleServerPortTemplateBulkEditForm(NautobotBulkEditForm):
         queryset=ConsoleServerPortTemplate.objects.all(),
         widget=forms.MultipleHiddenInput(),
     )
-    label = forms.CharField(max_length=64, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(ConsolePortTypeChoices),
         required=False,
@@ -969,7 +970,7 @@ class PowerPortTemplateCreateForm(ComponentTemplateCreateForm):
 
 class PowerPortTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=PowerPortTemplate.objects.all(), widget=forms.MultipleHiddenInput())
-    label = forms.CharField(max_length=64, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerPortTypeChoices),
         required=False,
@@ -1047,7 +1048,7 @@ class PowerOutletTemplateBulkEditForm(NautobotBulkEditForm):
         disabled=True,
         widget=forms.HiddenInput(),
     )
-    label = forms.CharField(max_length=64, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerOutletTypeChoices),
         required=False,
@@ -1109,7 +1110,7 @@ class InterfaceTemplateCreateForm(ComponentTemplateCreateForm):
 
 class InterfaceTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=InterfaceTemplate.objects.all(), widget=forms.MultipleHiddenInput())
-    label = forms.CharField(max_length=64, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(InterfaceTypeChoices),
         required=False,
@@ -1219,7 +1220,7 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
 
 class FrontPortTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=FrontPortTemplate.objects.all(), widget=forms.MultipleHiddenInput())
-    label = forms.CharField(max_length=64, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(PortTypeChoices),
         required=False,
@@ -1272,7 +1273,7 @@ class RearPortTemplateCreateForm(ComponentTemplateCreateForm):
 
 class RearPortTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=RearPortTemplate.objects.all(), widget=forms.MultipleHiddenInput())
-    label = forms.CharField(max_length=64, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(PortTypeChoices),
         required=False,
@@ -1310,7 +1311,7 @@ class DeviceBayTemplateCreateForm(ComponentTemplateCreateForm):
 
 class DeviceBayTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceBayTemplate.objects.all(), widget=forms.MultipleHiddenInput())
-    label = forms.CharField(max_length=64, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     description = forms.CharField(required=False)
 
     class Meta:
@@ -1575,7 +1576,6 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
     software_version = DynamicModelChoiceField(
         queryset=SoftwareVersion.objects.all(),
         required=False,
-        query_params={"device_types": "$device_type"},
     )
     controller_device_group = DynamicModelChoiceField(
         queryset=ControllerDeviceGroup.objects.all(),
@@ -1734,12 +1734,12 @@ class DeviceBulkEditForm(
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
-    serial = forms.CharField(max_length=255, required=False, label="Serial Number")
+    serial = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, label="Serial Number")
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
     device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
     device_redundancy_group_priority = forms.IntegerField(required=False, min_value=1)
-    software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
     software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
+    software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
 
     class Meta:
         model = Device
@@ -1903,7 +1903,7 @@ class ComponentCreateForm(ComponentForm):
     """
 
     device = DynamicModelChoiceField(queryset=Device.objects.all())
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
 
 class ComponentEditForm(NautobotModelForm):
@@ -1925,7 +1925,7 @@ class ComponentEditForm(NautobotModelForm):
 
 class DeviceBulkAddComponentForm(ComponentForm, CustomFieldModelBulkEditFormMixin):
     pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         nullable_fields = []
@@ -2832,6 +2832,12 @@ class InventoryItemForm(NautobotModelForm):
         required=False,
         label="Software version",
     )
+    software_image_files = DynamicModelMultipleChoiceField(
+        queryset=SoftwareImageFile.objects.all(),
+        required=False,
+        label="Software image files",
+        help_text="Override the software image files associated with the software version for this inventory item",
+    )
 
     class Meta:
         model = InventoryItem
@@ -2841,6 +2847,7 @@ class InventoryItemForm(NautobotModelForm):
             "name",
             "label",
             "manufacturer",
+            "software_image_files",
             "software_version",
             "part_id",
             "serial",
@@ -2857,19 +2864,25 @@ class InventoryItemCreateForm(ComponentCreateForm):
         required=False,
         query_params={"device": "$device"},
     )
-    part_id = forms.CharField(max_length=50, required=False, label="Part ID")
+    part_id = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, label="Part ID")
     serial = forms.CharField(
-        max_length=255,
+        max_length=CHARFIELD_MAX_LENGTH,
         required=False,
     )
     asset_tag = forms.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         required=False,
     )
     software_version = DynamicModelChoiceField(
         queryset=SoftwareVersion.objects.all(),
         required=False,
         label="Software version",
+    )
+    software_image_files = DynamicModelMultipleChoiceField(
+        queryset=SoftwareImageFile.objects.all(),
+        required=False,
+        label="Software image files",
+        help_text="Override the software image files associated with the software version for this inventory item",
     )
     field_order = (
         "device",
@@ -2878,6 +2891,7 @@ class InventoryItemCreateForm(ComponentCreateForm):
         "label_pattern",
         "manufacturer",
         "software_version",
+        "software_image_files",
         "part_id",
         "serial",
         "asset_tag",
@@ -2914,9 +2928,17 @@ class InventoryItemBulkEditForm(
     pk = forms.ModelMultipleChoiceField(queryset=InventoryItem.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
+    software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
 
     class Meta:
-        nullable_fields = ["description", "label", "manufacturer", "part_id", "software_version"]
+        nullable_fields = [
+            "description",
+            "label",
+            "manufacturer",
+            "part_id",
+            "software_image_files",
+            "software_version",
+        ]
 
 
 class InventoryItemFilterForm(DeviceComponentFilterForm):
@@ -3184,7 +3206,7 @@ class CableBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, Nau
         initial="",
         widget=StaticSelect2(),
     )
-    label = forms.CharField(max_length=100, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())  # RGB color code
     length = forms.IntegerField(min_value=1, required=False)
     length_unit = forms.ChoiceField(
@@ -3439,7 +3461,7 @@ class VCMemberSelectForm(BootstrapMixin, forms.Form):
 
 class VirtualChassisBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualChassis.objects.all(), widget=forms.MultipleHiddenInput())
-    domain = forms.CharField(max_length=30, required=False)
+    domain = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         nullable_fields = ["domain"]
@@ -3852,6 +3874,7 @@ class SoftwareImageFileBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFo
         widget=StaticSelect2(),
     )
     image_file_size = forms.IntegerField(required=False)
+    default_image = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Is default image")
     download_url = forms.URLField(required=False)
 
     class Meta:

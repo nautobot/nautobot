@@ -64,7 +64,7 @@ class ObjectNewContactForm(NautobotModelForm):
     associated_object_id = forms.CharField(required=True)
     role = DynamicModelChoiceField(
         queryset=Role.objects.all(),
-        required=False,
+        required=True,
         query_params={"content_types": ContactAssociation._meta.label_lower},
     )
     status = DynamicModelChoiceField(
@@ -102,7 +102,7 @@ class ObjectNewContactForm(NautobotModelForm):
 
 class ObjectNewTeamForm(NautobotModelForm):
     contacts = DynamicModelMultipleChoiceField(
-        queryset=Team.objects.all(),
+        queryset=Contact.objects.all(),
         required=False,
         label="Contact(s)",
     )
@@ -110,7 +110,7 @@ class ObjectNewTeamForm(NautobotModelForm):
     associated_object_id = forms.CharField(required=True)
     role = DynamicModelChoiceField(
         queryset=Role.objects.all(),
-        required=False,
+        required=True,
         query_params={"content_types": ContactAssociation._meta.label_lower},
     )
     status = DynamicModelChoiceField(

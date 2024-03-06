@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0056_softwareimage_m2m_and_device_fk"),
+        ("dcim", "0055_softwareimage_softwareversion_data_migration"),
         ("ipam", "0044_ip_version_nonnullable"),
     ]
 

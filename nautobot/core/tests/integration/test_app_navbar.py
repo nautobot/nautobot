@@ -39,7 +39,7 @@ class AppNavBarTestCase(SeleniumTestCase):
                 },
             },
         },
-        "Plugins": {
+        "Apps": {
             "Example Nautobot App": {
                 "Models": {
                     "permission": "example_app.view_examplemodel",
@@ -114,9 +114,9 @@ class AppNavBarTestCase(SeleniumTestCase):
 
         tab.click()
 
-    def test_app_navbar_plugins_tab(self):
+    def test_app_navbar_apps_tab(self):
         """
-        Test that old-style app menu definitions are correctly rendered to the Plugins menu tab.
+        Test that old-style app menu definitions are correctly rendered to the Apps menu tab.
         """
         # Set test user to admin
         self.user.is_superuser = True
@@ -125,12 +125,12 @@ class AppNavBarTestCase(SeleniumTestCase):
         # Retrieve home page
         self.browser.visit(self.live_server_url)
 
-        tab_xpath = "//*[@id='navbar']//*[normalize-space()='Plugins']"
+        tab_xpath = "//*[@id='navbar']//*[normalize-space()='Apps']"
         tab = self.browser.find_by_xpath(tab_xpath)
         tab.click()
         self.assertTrue(bool(tab["aria-expanded"]))
 
-        for group_name, items in self.navbar["Plugins"].items():
+        for group_name, items in self.navbar["Apps"].items():
             group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[normalize-space()='{group_name}']")
             for item_name, item_details in items.items():
                 item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[normalize-space()='{item_name}']]"

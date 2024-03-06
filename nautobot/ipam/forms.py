@@ -1,6 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     add_blank_choice,
     AddressFieldMixin,
@@ -83,7 +84,7 @@ class NamespaceBulkEditForm(
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Namespace.objects.all(), widget=forms.MultipleHiddenInput())
-    description = forms.CharField(max_length=200, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         model = Namespace
@@ -140,7 +141,7 @@ class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VRF.objects.all(), widget=forms.MultipleHiddenInput())
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         nullable_fields = [
@@ -182,7 +183,7 @@ class RouteTargetForm(NautobotModelForm, TenancyForm):
 class RouteTargetBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=RouteTarget.objects.all(), widget=forms.MultipleHiddenInput())
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    description = forms.CharField(max_length=200, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         nullable_fields = [
@@ -359,7 +360,7 @@ class PrefixBulkEditForm(
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
     date_allocated = forms.DateTimeField(required=False, widget=DateTimePicker)
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         model = Prefix
@@ -608,8 +609,8 @@ class IPAddressBulkEditForm(
         required=False,
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    dns_name = forms.CharField(max_length=255, required=False)
-    description = forms.CharField(max_length=100, required=False)
+    dns_name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         required=False,
         choices=add_blank_choice(IPAddressTypeChoices),
@@ -770,7 +771,7 @@ class VLANBulkEditForm(
         queryset=Location.objects.all(), required=False, query_params={"content_type": VLAN._meta.label_lower}
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         model = VLAN
@@ -897,7 +898,7 @@ class ServiceBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         base_field=forms.IntegerField(min_value=SERVICE_PORT_MIN, max_value=SERVICE_PORT_MAX),
         required=False,
     )
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         nullable_fields = [

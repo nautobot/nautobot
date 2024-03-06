@@ -248,7 +248,7 @@ class TokenEditView(LoginRequiredMixin, View):
 
         return render(
             request,
-            "generic/object_edit.html",
+            "generic/object_create.html",
             {
                 "obj": token,
                 "obj_type": token._meta.verbose_name,
@@ -281,7 +281,7 @@ class TokenEditView(LoginRequiredMixin, View):
 
         return render(
             request,
-            "generic/object_edit.html",
+            "generic/object_create.html",
             {
                 "obj": token,
                 "obj_type": token._meta.verbose_name,

@@ -25,16 +25,6 @@ services:
     env_file:
       - dev.env
     tty: true
-    healthcheck:
-      interval: 5s
-      timeout: 5s
-      start_period: 5m  # it takes a WHILE to run initial migrations with an empty DB
-      retries: 3
-      test:
-        - "CMD"
-        - "curl"
-        - "-f"
-        - "http://localhost:8080/health/"
   celery_worker:
     image: "local/nautobot-dev:local-py${PYTHON_VER}"
     ports:

@@ -2472,6 +2472,8 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
         ("parent", "parent__id"),
         ("parent", "parent__name"),
         ("part_id",),
+        ("software_image_files", "software_image_files__id"),
+        ("software_image_files", "software_image_files__image_file_name"),
         ("software_version", "software_version__id"),
         ("software_version", "software_version__version"),
     ]
@@ -2486,7 +2488,7 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
             Device.objects.get(name="Device 3"),
         )
 
-        software_versions = SoftwareVersion.objects.all()[:3]
+        software_versions = SoftwareVersion.objects.filter(software_image_files__isnull=False)[:3]
 
         inventory_items = (
             InventoryItem.objects.create(
@@ -2528,6 +2530,8 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
         )
         inventory_items[0].tags.set(Tag.objects.get_for_model(InventoryItem))
         inventory_items[1].tags.set(Tag.objects.get_for_model(InventoryItem)[:3])
+        inventory_items[0].software_image_files.set(software_versions[1].software_image_files.all())
+        inventory_items[1].software_image_files.set(software_versions[0].software_image_files.all())
 
         InventoryItem.objects.create(device=devices[0], name="Inventory Item 1A", parent=inventory_items[0])
         InventoryItem.objects.create(device=devices[1], name="Inventory Item 2A", parent=inventory_items[1])
@@ -3265,6 +3269,16 @@ class SoftwareImageFileFilterSetTestCase(FilterTestCases.FilterTestCase):
         virtual_machine0.save()
         virtual_machine1.software_image_file = SoftwareImageFile.objects.last()
         virtual_machine1.save()
+
+    def test_default_image(self):
+        params = {"default_image": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, SoftwareImageFile.objects.filter(default_image=True)
+        )
+        params = {"default_image": False}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, SoftwareImageFile.objects.filter(default_image=False)
+        )
 
 
 class SoftwareVersionFilterSetTestCase(FilterTestCases.FilterTestCase):

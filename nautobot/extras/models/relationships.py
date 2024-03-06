@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.html import format_html
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -391,13 +392,15 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 
 class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
-    label = models.CharField(max_length=100, unique=True, help_text="Label of the relationship as displayed to users")
+    label = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, unique=True, help_text="Label of the relationship as displayed to users"
+    )
     key = AutoSlugField(
         populate_from="label",
         slugify_function=slugify_dashes_to_underscores,
         help_text="Internal relationship key. Please use underscores rather than dashes in this key.",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     type = models.CharField(
         max_length=50,
         choices=RelationshipTypeChoices,
@@ -425,7 +428,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="The source object type to which this relationship applies.",
     )
     source_label = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         verbose_name="Source Label",
         help_text="Label for related destination objects, as displayed on the source object.",
@@ -454,7 +457,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="The destination object type to which this relationship applies.",
     )
     destination_label = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         verbose_name="Destination Label",
         help_text="Label for related source objects, as displayed on the destination object.",

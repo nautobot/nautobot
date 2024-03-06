@@ -1,0 +1,2 @@
+Added `/apps/` and `/api/apps/` URL groupings, initially containing only the `installed-apps/` sub-items.
+Added `nautobot-apps` key to the `/api/status/` REST API endpoint.

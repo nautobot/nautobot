@@ -239,7 +239,7 @@ All Python packages required by Nautobot will be installed automatically when ru
 
 Nautobot also supports the ability to install optional Python packages. If desired, these packages should be listed in `local_requirements.txt` within the `NAUTOBOT_ROOT` directory, such as `/opt/nautobot/local_requirements.txt`.
 
-If you decide to use any [Nautobot plugins](../../../apps/index.md), they should be listed in this file.
+If you decide to use any [Nautobot Apps](../../../apps/index.md), they should be listed in this file.
 
 We will cover two examples of common optional settings below.
 

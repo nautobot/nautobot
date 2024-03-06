@@ -1018,6 +1018,10 @@ class ViewTestCases:
 
         bulk_edit_data = {}
 
+        def validate_object_data_after_bulk_edit(self, pk_list):
+            for instance in self._get_queryset().filter(pk__in=pk_list):
+                self.assertInstanceEqual(instance, self.bulk_edit_data)
+
         def test_bulk_edit_objects_without_permission(self):
             pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
             data = {
@@ -1048,8 +1052,7 @@ class ViewTestCases:
 
             # Try POST with model-level permission
             self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 302)
-            for instance in self._get_queryset().filter(pk__in=pk_list):
-                self.assertInstanceEqual(instance, self.bulk_edit_data)
+            self.validate_object_data_after_bulk_edit(pk_list)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_edit_form_contains_all_pks(self):
@@ -1162,8 +1165,7 @@ class ViewTestCases:
             # Bulk edit permitted objects and expect a redirect back to the list view
             self.assertHttpStatus(self.client.post(self._get_url("bulk_edit"), data), 302)
             # Assert that the objects were all updated correctly
-            for instance in self._get_queryset().filter(pk__in=pk_list):
-                self.assertInstanceEqual(instance, self.bulk_edit_data)
+            self.validate_object_data_after_bulk_edit(pk_list)
 
     class BulkDeleteObjectsViewTestCase(ModelViewTestCase):
         """
