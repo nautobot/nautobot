@@ -1,1 +1,1 @@
-Fixed use of invalid permission for extras.Role in navigation.py
+Fixed use of incorrect permission for extras.Role in navigation.py.
