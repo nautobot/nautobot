@@ -335,6 +335,10 @@ The configuration settings `CACHEOPS`, `CACHEOPS_DEFAULTS`, `CACHEOPS_DEGRADE_ON
 
 When we launched Nautobot we introduced the `nautobot-server` command as the primary entrypoint to managing your application, replacing the legacy `manage.py` script that is common with Django-based applications. The original `manage.py` was left there initially in v1.0.0 as a fallback, however it is no longer needed, so we have removed it in Nautobot 2.0.
 
+#### Redundant Settings Variables
+
+The `ENFORCE_GLOBAL_UNIQUE` setting has been removed as now IPAM uniqueness is enforced by Namespaces. The `DISABLE_PREFIX_LIST_HIERARCHY` setting has been removed as prefix hierarchy is now implemented as a concrete `parent`/`children` relationship to improve performance.
+
 #### Redundant Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
 !!! warning

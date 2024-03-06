@@ -1,0 +1,2 @@
+Added `mkdocs-macros-plugin` as a development/documentation-rendering dependency.
+Refactored documentation in `optional-settings` and `required-settings` to be generated automatically from `settings.yaml` schema.
