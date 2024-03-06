@@ -91,7 +91,7 @@ Create or extend the relevant test cases to verify that the new field and any ac
 
 * API serializer/view tests (should be based on `nautobot.core.testing.api.APIViewTestCases`)
 * Filter tests (should be based on `nautobot.core.testing.filters.FilterTestCases`)
-* Form tests
+* Form tests (should be based on `nautobot.core.testing.forms.FormTestCases`)
 * Model tests (should be based on `nautobot.core.testing.models.ModelTestCases`)
 * View tests (should be based on `nautobot.core.testing.views.ViewTestCases`)
 

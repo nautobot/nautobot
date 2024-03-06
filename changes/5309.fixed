@@ -1,4 +1,0 @@
-Fixed `Tenant` UI detail view breadcrumb with invalid `TenantGroup` filter link.
-Fixed `TenantGroup` UI detail view with invalid "add tenant" button invalid query_params link.
-Fixed `DeviceForm` invalid `cluster` field query_params.
-Fixed `PrefixForm` invalid `vlan` and `vlan_group` fields query_params.

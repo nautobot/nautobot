@@ -1,1 +1,0 @@
-Fixed Docker image missing OS-level dependencies for SSO (SAML) support.
