@@ -8,6 +8,8 @@ from .cables import CableTable
 from .devices import (
     ConsolePortTable,
     ConsoleServerPortTable,
+    ControllerDeviceGroupTable,
+    ControllerTable,
     DeviceBayTable,
     DeviceConsolePortTable,
     DeviceConsoleServerPortTable,
@@ -63,6 +65,8 @@ __all__ = (
     "ConsolePortTemplateTable",
     "ConsoleServerPortTable",
     "ConsoleServerPortTemplateTable",
+    "ControllerTable",
+    "ControllerDeviceGroupTable",
     "DeviceBayTable",
     "DeviceBayTemplateTable",
     "DeviceConsolePortTable",

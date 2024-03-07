@@ -52,7 +52,7 @@ from nautobot.extras.forms import (
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
-from nautobot.extras.models import SecretsGroup, Status
+from nautobot.extras.models import ExternalIntegration, SecretsGroup, Status
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
@@ -4091,3 +4091,201 @@ class SoftwareVersionForm(NautobotModelForm):
     class Meta:
         model = SoftwareVersion
         fields = "__all__"
+
+
+class ControllerForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalContextModelForm):
+    """Controller create/edit form."""
+
+    class Meta:
+        model = Controller
+        fields = (
+            "name",
+            "status",
+            "role",
+            "description",
+            "platform",
+            "tenant",
+            "location",
+            "external_integration",
+            "deployed_controller_device",
+            "deployed_controller_group",
+            "tags",
+        )
+
+
+class ControllerFilterForm(
+    NautobotFilterForm,
+    LocalContextFilterForm,
+    LocatableModelFilterFormMixin,
+    TenancyFilterForm,
+    StatusModelFilterFormMixin,
+    RoleModelFilterFormMixin,
+):
+    """Controller basic filter form."""
+
+    model = Controller
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False, label="Name")
+    description = forms.CharField(required=False, label="Description")
+    platform = DynamicModelMultipleChoiceField(
+        queryset=Platform.objects.all(),
+        required=False,
+        label="Platform",
+    )
+    external_integration = DynamicModelMultipleChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
+        label="External integration",
+    )
+    deployed_controller_device = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        label="Deployed controller device",
+    )
+    deployed_controller_group = DynamicModelMultipleChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(),
+        required=False,
+        label="Deployed controller group",
+    )
+    tags = TagFilterField(model)
+    field_order = (
+        "q",
+        "name",
+        "status",
+        "role",
+        "description",
+        "location",
+        "platform",
+        "tenant",
+        "external_integration",
+        "deployed_controller_device",
+        "deployed_controller_group",
+        "tags",
+    )
+
+
+class ControllerBulkEditForm(
+    TagsBulkEditFormMixin,
+    LocatableModelBulkEditFormMixin,
+    StatusModelBulkEditFormMixin,
+    RoleModelBulkEditFormMixin,
+    NautobotBulkEditForm,
+    LocalContextModelBulkEditForm,
+):
+    """Controller bulk edit form."""
+
+    pk = forms.ModelMultipleChoiceField(
+        queryset=Controller.objects.all(),
+        widget=forms.MultipleHiddenInput,
+    )
+    platform = DynamicModelChoiceField(
+        queryset=Platform.objects.all(),
+        required=False,
+    )
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+    )
+    external_integration = DynamicModelChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
+    )
+    deployed_controller_device = DynamicModelChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+    )
+    deployed_controller_group = DynamicModelChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(),
+        required=False,
+    )
+
+    class Meta:
+        model = Controller
+        fields = (
+            "status",
+            "role",
+            "description",
+            "location",
+            "platform",
+            "tenant",
+            "external_integration",
+            "deployed_controller_device",
+            "deployed_controller_group",
+            "tags",
+        )
+
+
+class ControllerDeviceGroupForm(NautobotModelForm):
+    """ControllerDeviceGroup create/edit form."""
+
+    class Meta:
+        model = ControllerDeviceGroup
+        fields = (
+            "name",
+            "controller",
+            "parent",
+            "weight",
+            "tags",
+        )
+
+
+class ControllerDeviceGroupFilterForm(
+    LocalContextFilterForm,
+    NautobotFilterForm,
+):
+    """ControllerDeviceGroup basic filter form."""
+
+    model = ControllerDeviceGroup
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False, label="Name")
+    controller = DynamicModelChoiceField(
+        queryset=Controller.objects.all(),
+        required=False,
+        label="Controller",
+    )
+    parent = DynamicModelChoiceField(
+        queryset=ControllerDeviceGroup.objects.all(),
+        required=False,
+        label="Parent",
+    )
+    weight = forms.IntegerField(required=False, label="Weight")
+    subtree = DynamicModelMultipleChoiceField(
+        queryset=ControllerDeviceGroup.objects.all(),
+        to_field_name="name",
+        required=False,
+    )
+    tags = TagFilterField(model)
+    field_order = (
+        "q",
+        "name",
+        "controller",
+        "parent",
+        "weight",
+        "subtree",
+        "tags",
+    )
+
+
+class ControllerDeviceGroupBulkEditForm(
+    TagsBulkEditFormMixin,
+    NautobotBulkEditForm,
+    LocalContextModelBulkEditForm,
+):
+    """ControllerDeviceGroup bulk edit form."""
+
+    pk = forms.ModelMultipleChoiceField(
+        queryset=ControllerDeviceGroup.objects.all(),
+        widget=forms.MultipleHiddenInput,
+    )
+    controller = DynamicModelChoiceField(queryset=Controller.objects.all(), required=False)
+    parent = DynamicModelChoiceField(queryset=ControllerDeviceGroup.objects.all(), required=False)
+    weight = forms.IntegerField(required=False)
+
+    class Meta:
+        model = ControllerDeviceGroup
+        fields = (
+            "controller",
+            "parent",
+            "weight",
+            "tags",
+        )

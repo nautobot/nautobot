@@ -13,6 +13,8 @@ from nautobot.core.tables import (
 from nautobot.dcim.models import (
     ConsolePort,
     ConsoleServerPort,
+    Controller,
+    ControllerDeviceGroup,
     Device,
     DeviceBay,
     DeviceRedundancyGroup,
@@ -56,6 +58,8 @@ from .template_code import (
 __all__ = (
     "ConsolePortTable",
     "ConsoleServerPortTable",
+    "ControllerTable",
+    "ControllerDeviceGroupTable",
     "DeviceBayTable",
     "DeviceConsolePortTable",
     "DeviceConsoleServerPortTable",
@@ -1119,6 +1123,87 @@ class SoftwareVersionTable(StatusTableMixin, BaseTable):
             "software_image_file_count",
             "device_count",
             "inventory_item_count",
+            "tags",
+            "actions",
+        )
+
+
+class ControllerTable(BaseTable):
+    """Table for list view."""
+
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    status = ColoredLabelColumn()
+    location = tables.Column(linkify=True)
+    platform = tables.Column(linkify=True)
+    role = tables.Column(linkify=True)
+    tenant = TenantColumn()
+    external_integration = tables.Column(linkify=True)
+    deployed_controller_device = tables.Column(linkify=True)
+    deployed_controller_group = tables.Column(linkify=True)
+    tags = TagColumn(url_name="dcim:controller_list")
+    actions = ButtonsColumn(Controller)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = Controller
+        fields = (
+            "pk",
+            "name",
+            "status",
+            "location",
+            "platform",
+            "role",
+            "tenant",
+            "external_integration",
+            "deployed_controller_device",
+            "deployed_controller_group",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "status",
+            "location",
+            "platform",
+            "role",
+            "tenant",
+            "external_integration",
+            "deployed_controller_device",
+            "deployed_controller_group",
+            "actions",
+        )
+
+
+class ControllerDeviceGroupTable(BaseTable):
+    """Table for list view."""
+
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    weight = tables.Column()
+    controller = tables.Column(linkify=True)
+    tags = TagColumn(url_name="dcim:controllerdevicegroup_list")
+    actions = ButtonsColumn(ControllerDeviceGroup)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ControllerDeviceGroup
+        fields = (
+            "pk",
+            "name",
+            "weight",
+            "controller",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "weight",
+            "controller",
             "tags",
             "actions",
         )

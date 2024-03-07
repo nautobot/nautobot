@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
@@ -42,6 +42,8 @@ from .device_components import (
 )
 
 __all__ = (
+    "Controller",
+    "ControllerDeviceGroup",
     "Device",
     "DeviceRedundancyGroup",
     "DeviceType",
@@ -1246,7 +1248,10 @@ class SoftwareVersion(PrimaryModel):
     "webhooks",
 )
 class Controller(PrimaryModel, ConfigContextModel):
-    """Controller model."""  # TODO: (whitej6) finialize description
+    """Represents an entity that manages or controls one or more devices, acting as a central point of control.
+
+    A Controller can be deployed to a single device or a group of devices represented by a DeviceRedundancyGroup.
+    """
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     status = StatusField(blank=False, null=False)
@@ -1293,6 +1298,12 @@ class Controller(PrimaryModel, ConfigContextModel):
         null=True,
     )
 
+    class Meta:
+        ordering = ("name",)
+
+    def __str__(self):
+        return self.name or super().__str__()
+
 
 @extras_features(
     "custom_links",
@@ -1300,19 +1311,37 @@ class Controller(PrimaryModel, ConfigContextModel):
     "dynamic_groups",
     "export_templates",
     "graphql",
-    "locations",
-    "statuses",
     "webhooks",
 )
 class ControllerDeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
-    """Controller model."""  # TODO: (whitej6) finialize description
+    """Represents a mapping of controlled devices to a specific controller.
 
-    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
-    weight = models.PositiveIntegerField(default=1000)
+    This model allows for the organization of controlled devices into hierarchical groups for structured representation.
+    """
+
+    name = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        unique=True,
+        help_text="Name of the controller device group",
+    )
+    weight = models.PositiveIntegerField(
+        default=1000,
+        help_text="Weight of the controller device group, used to sort the groups within its parent group",
+    )
     controller = models.ForeignKey(
         to="dcim.Controller",
         on_delete=models.CASCADE,
-        related_name="+",
+        related_name="controller_device_groups",
         blank=False,
         null=False,
+        help_text="Controller that manages the devices in this group",
     )
+
+    class Meta:
+        ordering = (
+            "weight",
+            "name",
+        )
+
+    def __str__(self):
+        return self.name or super().__str__()

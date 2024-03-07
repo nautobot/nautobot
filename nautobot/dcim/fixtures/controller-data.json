@@ -1,0 +1,198 @@
+[
+  {
+    "model": "extras.status",
+    "fields": {
+      "name": "Active"
+    }
+  },
+  {
+    "model": "dcim.controller",
+    "pk": "f5e8a8b5-3d5d-439a-b8d3-9823d9a653f1",
+    "fields": {
+      "name": "Cisco ACI APIC - east",
+      "role": "4aa98135-c2a7-45d5-9c16-9b8b8e50497b",
+      "deployed_controller_device": "f5e8a8b5-3d5d-439a-b8d3-9823d9a653f1",
+      "status": ["Active"],
+      "location": "ea1dcc2e-e7c4-4918-8014-7fe3e9ac4115",
+      "platform": "7c9e3f5e-e1f2-4cc5-a20d-02b7b76ba9f5"
+    }
+  },
+  {
+    "model": "dcim.controller",
+    "pk": "e9f217c5-e1b2-4686-89d3-bab5b9a8331f",
+    "fields": {
+      "name": "Cisco Meraki SAAS",
+      "role": "4aa98135-c2a7-45d5-9c16-9b8b8e50497b",
+      "deployed_controller_device": "4176af93-6e71-4499-a316-5551ab3a832f",
+      "status": ["Active"],
+      "location": "6ef35bd1-0d34-4a57-bdca-8b6e8e845bba",
+      "platform": "41d87441-5e8a-495a-8488-f23553832498"
+    }
+  },
+  {
+    "model": "dcim.controllerdevicegroup",
+    "pk": "a80b9d35-6f67-480b-b8e7-f82a3c28dfb1",
+    "fields": {
+      "name": "campus",
+      "controller": "e9f217c5-e1b2-4686-89d3-bab5b9a8331f"
+    }
+  },
+  {
+    "model": "dcim.controllerdevicegroup",
+    "pk": "f735b5a7-8dde-4f12-922b-c8af98768a43",
+    "fields": {
+      "name": "dc",
+      "controller": "e9f217c5-e1b2-4686-89d3-bab5b9a8331f"
+    }
+  },
+  {
+    "model": "extras.role",
+    "pk": "4aa98135-c2a7-45d5-9c16-9b8b8e50497b",
+    "fields": {
+      "name": "Network Device"
+    }
+  },
+  {
+    "model": "tenancy.tenant",
+    "pk": "6a5c9935-ac58-4c48-b9ff-5c51b3deb7db",
+    "fields": {
+      "name": "Tenant A"
+    }
+  },
+  {
+      "model": "dcim.manufacturer",
+      "pk": "c6e8e8e8-3c02-47d9-b97b-81c2c5eac7b3",
+      "fields": {
+        "name": "Cisco"
+      }
+  },
+  {
+    "model": "dcim.devicetype",
+    "pk": "93591f46-3c02-47d9-b97b-81c2c5eac7b3",
+    "fields": {
+      "model": "Cisco Router",
+      "manufacturer": "c6e8e8e8-3c02-47d9-b97b-81c2c5eac7b3"
+    }
+  },
+  {
+      "model": "dcim.locationtype",
+      "pk": "f5e8a8b5-3d5d-439a-b8d3-9823d9a653f1",
+      "fields": {
+          "name": "Data Center"
+      }
+  },
+  {
+    "model": "dcim.location",
+    "pk": "ea1dcc2e-e7c4-4918-8014-7fe3e9ac4115",
+    "fields": {
+      "name": "DC-East",
+      "status": ["Active"],
+      "description": "East Data Center",
+      "location_type": "f5e8a8b5-3d5d-439a-b8d3-9823d9a653f1"
+    }
+  },
+  {
+    "model": "dcim.location",
+    "pk": "6ef35bd1-0d34-4a57-bdca-8b6e8e845bba",
+    "fields": {
+      "name": "Cloud Location",
+      "status": ["Active"],
+      "description": "SaaS-based Controllers",
+      "location_type": "f5e8a8b5-3d5d-439a-b8d3-9823d9a653f1"
+    }
+  },
+  {
+    "model": "dcim.platform",
+    "pk": "7c9e3f5e-e1f2-4cc5-a20d-02b7b76ba9f5",
+    "fields": {
+      "name": "cisco_apic",
+      "description": "Cisco ACI Platform"
+    }
+  },
+  {
+    "model": "dcim.platform",
+    "pk": "41d87441-5e8a-495a-8488-f23553832498",
+    "fields": {
+      "name": "cisco_meraki",
+      "description": "Cisco Meraki Cloud Controller"
+    }
+  },
+  {
+    "model": "dcim.device",
+    "pk": "f5e8a8b5-3d5d-439a-b8d3-9823d9a653f1",
+    "fields": {
+      "name": "DC-East-APIC-1",
+      "status": ["Active"],
+      "device_type": "93591f46-3c02-47d9-b97b-81c2c5eac7b3",
+      "role": "4aa98135-c2a7-45d5-9c16-9b8b8e50497b",
+      "tenant": "6a5c9935-ac58-4c48-b9ff-5c51b3deb7db",
+      "platform": "7c9e3f5e-e1f2-4cc5-a20d-02b7b76ba9f5",
+      "location": "ea1dcc2e-e7c4-4918-8014-7fe3e9ac4115"
+    }
+  },
+  {
+    "model": "dcim.device",
+    "pk": "4176af93-6e71-4499-a316-5551ab3a832f",
+    "fields": {
+      "name": "cisco_meraki_device",
+      "status": ["Active"],
+      "device_type": "93591f46-3c02-47d9-b97b-81c2c5eac7b3",
+      "role": "4aa98135-c2a7-45d5-9c16-9b8b8e50497b",
+      "tenant": "6a5c9935-ac58-4c48-b9ff-5c51b3deb7db",
+      "platform": "41d87441-5e8a-495a-8488-f23553832498",
+      "location": "6ef35bd1-0d34-4a57-bdca-8b6e8e845bba"
+    }
+  },
+  {
+    "model": "dcim.device",
+    "pk": "deadbeef-1234-5678-9abc-def012345678",
+    "fields": {
+      "name": "dal-fw01",
+      "status": ["Active"],
+      "device_type": "93591f46-3c02-47d9-b97b-81c2c5eac7b3",
+      "role": "4aa98135-c2a7-45d5-9c16-9b8b8e50497b",
+      "tenant": "6a5c9935-ac58-4c48-b9ff-5c51b3deb7db",
+      "platform": "41d87441-5e8a-495a-8488-f23553832498",
+      "location": "ea1dcc2e-e7c4-4918-8014-7fe3e9ac4115"
+    }
+  },
+  {
+    "model": "dcim.device",
+    "pk": "deadbeef-5678-1234-9abc-def012345678",
+    "fields": {
+      "name": "chi-fw01",
+      "status": ["Active"],
+      "device_type": "93591f46-3c02-47d9-b97b-81c2c5eac7b3",
+      "role": "4aa98135-c2a7-45d5-9c16-9b8b8e50497b",
+      "tenant": "6a5c9935-ac58-4c48-b9ff-5c51b3deb7db",
+      "platform": "41d87441-5e8a-495a-8488-f23553832498",
+      "location": "6ef35bd1-0d34-4a57-bdca-8b6e8e845bba"
+    }
+  },
+  {
+    "model": "dcim.device",
+    "pk": "deadbeef-9abc-1234-5678-def012345678",
+    "fields": {
+      "name": "nyc-fw99",
+      "status": ["Active"],
+      "device_type": "93591f46-3c02-47d9-b97b-81c2c5eac7b3",
+      "role": "4aa98135-c2a7-45d5-9c16-9b8b8e50497b",
+      "tenant": "6a5c9935-ac58-4c48-b9ff-5c51b3deb7db",
+      "platform": "41d87441-5e8a-495a-8488-f23553832498",
+      "location": "6ef35bd1-0d34-4a57-bdca-8b6e8e845bba"
+    }
+  },
+  {
+    "model": "dcim.device",
+    "pk": "deadbeef-9abc-def0-1234-567812345678",
+    "fields": {
+      "name": "jcy-fw99",
+      "status": ["Active"],
+      "device_type": "93591f46-3c02-47d9-b97b-81c2c5eac7b3",
+      "role": "4aa98135-c2a7-45d5-9c16-9b8b8e50497b",
+      "tenant": "6a5c9935-ac58-4c48-b9ff-5c51b3deb7db",
+      "platform": "41d87441-5e8a-495a-8488-f23553832498",
+      "location": "6ef35bd1-0d34-4a57-bdca-8b6e8e845bba"
+    }
+  }
+]
