@@ -15,47 +15,33 @@ class PluginNavBarTestCase(SeleniumTestCase):
 
     fixtures = ["user-data.json"]
     navbar = {
-        "Example Menu": {
-            "Example Group 1": {
-                "Example Model": {
-                    "permission": "example_plugin.view_examplemodel",
-                    "buttons": ["Add"],
-                },
-            },
-        },
         "Circuits": {
             "Circuits": {
                 "Circuits": {
-                    "permission": "circuits.view_circuit",
                     "buttons": ["Add"],
                 },
                 "Circuit Types": {
-                    "permission": "circuits.view_circuittype",
                     "buttons": ["Add"],
                 },
             },
             "Example Circuit Group": {
-                "Example Model": {
-                    "permission": "example_plugin.view_examplemodel",
+                "Example Models": {
                     "buttons": ["Add"],
                 },
             },
             "Providers": {
                 "Providers": {
-                    "permission": "circuits.view_provider",
                     "buttons": ["Add"],
                 },
             },
         },
         "Plugins": {
             "Example Nautobot App": {
-                "Models": {
-                    "permission": "example_plugin.view_examplemodel",
-                    "buttons": ["Add a new example model"],
+                "Example Models": {
+                    "buttons": ["Add"],
                 },
-                "Other Models": {
-                    "permission": "example_plugin.view_examplemodel",
-                    "buttons": [],
+                "Another Example Models": {
+                    "buttons": ["Add"],
                 },
             },
         },
@@ -87,7 +73,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
 
         group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[normalize-space()='Example Group 1']")
 
-        item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[normalize-space()='Example Model']]"
+        item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[normalize-space()='Example Models']]"
         group.find_by_xpath(item_xpath)
 
     def test_plugin_navbar_modify_circuits(self):
@@ -147,7 +133,7 @@ class PluginNavBarTestCase(SeleniumTestCase):
                 for button_name in item_details["buttons"]:
                     button = item.find_by_xpath(f"{item_xpath}/div//a[@data-original-title='{button_name}']")
                     if button_class := getattr(ButtonActionColorChoices, button_name.upper(), None):
-                        self.assertIn(button_class, button.get_attribute("class"))
+                        self.assertIn(button_class, button["class"])
                     if button_icon := getattr(ButtonActionIconChoices, button_name.upper(), None):
                         icon = button.find_by_xpath(f"{item_xpath}/div//a[@data-original-title='{button_name}']/i")
                         self.assertIn(button_icon, icon["class"])

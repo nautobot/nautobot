@@ -15,7 +15,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="plugins:example_plugin:examplemodel_list",
-                        name="Models",
+                        name="Example Models",
                         permissions=["example_plugin.view_examplemodel"],
                         buttons=(
                             NavMenuAddButton(
@@ -28,7 +28,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="plugins:example_plugin:anotherexamplemodel_list",
-                        name="Other Models",
+                        name="Another Example Models",
                         permissions=["example_plugin.view_anotherexamplemodel"],
                         buttons=(
                             NavMenuAddButton(
@@ -52,7 +52,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="plugins:example_plugin:examplemodel_list",
-                        name="Example Model",
+                        name="Example Models",
                         permissions=["example_plugin.view_examplemodel"],
                         buttons=(
                             NavMenuAddButton(
@@ -76,7 +76,7 @@ menu_items = (
                 items=(
                     NavMenuItem(
                         link="plugins:example_plugin:examplemodel_list",
-                        name="Example Model",
+                        name="Example Models",
                         permissions=["example_plugin.view_examplemodel"],
                         buttons=(
                             NavMenuAddButton(
