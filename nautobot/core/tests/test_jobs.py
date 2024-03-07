@@ -205,28 +205,54 @@ class ImportObjectsTestCase(TransactionTestCase):
         self.assertEqual(4, Status.objects.filter(name__startswith="test_status").count())
 
     def test_csv_import_bad_row(self):
-        """A row of incorrect data should fail validation for that object but import all others successfully."""
+        """A row of incorrect data should fail validation for that object but import all others successfully if `roll_back_if_error` is False."""
         csv_data = self.csv_data.split("\n")
         csv_data.insert(1, "test_status0,notacolor,dcim.device")
         csv_data = "\n".join(csv_data)
-        job_result = create_job_result_and_run_job(
-            "nautobot.core.jobs",
-            "ImportObjects",
-            content_type=ContentType.objects.get_for_model(Status).pk,
-            csv_data=csv_data,
-        )
-        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
-        log_errors = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
-        self.assertEqual(log_errors[0].message, "Row 1: `color`: `Enter a valid hexadecimal RGB color code.`")
-        log_successes = JobLogEntry.objects.filter(
-            job_result=job_result, log_level=LogLevelChoices.LOG_INFO, message__icontains="created"
-        )
-        self.assertEqual(log_successes[0].message, 'Row 2: Created record "test_status1"')
-        self.assertTrue(Status.objects.filter(name="test_status1").exists())
-        self.assertEqual(log_successes[1].message, 'Row 3: Created record "test_status2"')
-        self.assertTrue(Status.objects.filter(name="test_status2").exists())
-        self.assertEqual(log_successes[2].message, 'Row 4: Created record "test_status3"')
-        self.assertTrue(Status.objects.filter(name="test_status3").exists())
-        self.assertEqual(log_successes[3].message, 'Row 5: Created record "test_status4"')
-        self.assertTrue(Status.objects.filter(name="test_status4").exists())
-        self.assertEqual(log_successes[4].message, "Created 4 status object(s) from 5 row(s) of data")
+
+        with self.subTest("Assert `roll_back_if_error`: if error all records are rolled back"):
+            job_result = create_job_result_and_run_job(
+                "nautobot.core.jobs",
+                "ImportObjects",
+                content_type=ContentType.objects.get_for_model(Status).pk,
+                csv_data=csv_data,
+                roll_back_if_error=True,
+            )
+            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+            log_info = JobLogEntry.objects.filter(
+                job_result=job_result, log_level=LogLevelChoices.LOG_INFO, message__icontains="created"
+            )
+            for idx, status_name in enumerate(("test_status1", "test_status2", "test_status3", "test_status4")):
+                self.assertIn(f'Created record "{status_name}"', log_info[idx].message)
+                self.assertFalse(Status.objects.filter(name=status_name).exists())
+
+            log_errors = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+            self.assertEqual(log_errors[0].message, "Row 1: `color`: `Enter a valid hexadecimal RGB color code.`")
+
+            log_warning = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING)
+            self.assertEqual(log_warning[0].message, "Rolling back all 4 records.")
+            self.assertEqual(log_warning[1].message, "No status objects were created")
+
+        with self.subTest("Assert all other data are imported successfully if `roll_back_if_error` is False"):
+            job_result = create_job_result_and_run_job(
+                "nautobot.core.jobs",
+                "ImportObjects",
+                content_type=ContentType.objects.get_for_model(Status).pk,
+                csv_data=csv_data,
+            )
+            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+            log_errors = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+            self.assertEqual(log_errors[0].message, "Row 1: `color`: `Enter a valid hexadecimal RGB color code.`")
+            self.assertFalse(Status.objects.filter(name="test_status0").exists())
+            log_successes = JobLogEntry.objects.filter(
+                job_result=job_result, log_level=LogLevelChoices.LOG_INFO, message__icontains="created"
+            )
+            self.assertEqual(log_successes[0].message, 'Row 2: Created record "test_status1"')
+            self.assertTrue(Status.objects.filter(name="test_status1").exists())
+            self.assertEqual(log_successes[1].message, 'Row 3: Created record "test_status2"')
+            self.assertTrue(Status.objects.filter(name="test_status2").exists())
+            self.assertEqual(log_successes[2].message, 'Row 4: Created record "test_status3"')
+            self.assertTrue(Status.objects.filter(name="test_status3").exists())
+            self.assertEqual(log_successes[3].message, 'Row 5: Created record "test_status4"')
+            self.assertTrue(Status.objects.filter(name="test_status4").exists())
+            self.assertEqual(log_successes[4].message, "Created 4 status object(s) from 5 row(s) of data")
