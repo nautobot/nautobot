@@ -90,6 +90,7 @@ def reverse_migrate_job_data(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
+        ("contenttypes", "0002_remove_content_type_name"),
         ("extras", "0023_job_model"),
     ]
 
