@@ -1,4 +1,3 @@
-from functools import lru_cache
 import logging
 
 from django import forms
@@ -21,6 +20,7 @@ from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.templatetags.helpers import bettertitle
+from nautobot.core.utils.caching import limited_lru_cache
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
@@ -329,7 +329,7 @@ class RelationshipModel(models.Model):
 class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    @lru_cache(maxsize=128)
+    @limited_lru_cache(max_size=128)
     def get_for_model(self, model, hidden=None):
         """
         Return all Relationships assigned to the given model.
@@ -345,7 +345,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             self.get_for_model_destination(model, hidden=hidden),
         )
 
-    @lru_cache(maxsize=128)
+    @limited_lru_cache(max_size=128)
     def get_for_model_source(self, model, hidden=None):
         """
         Return all Relationships assigned to the given model for the source side only.
@@ -362,7 +362,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             result = result.filter(source_hidden=hidden)
         return result
 
-    @lru_cache(maxsize=128)
+    @limited_lru_cache(max_size=128)
     def get_for_model_destination(self, model, hidden=None):
         """
         Return all Relationships assigned to the given model for the destination side only.

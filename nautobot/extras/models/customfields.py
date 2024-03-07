@@ -1,6 +1,5 @@
 from collections import OrderedDict
 from datetime import date, datetime
-from functools import lru_cache
 import logging
 import re
 
@@ -33,6 +32,7 @@ from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import validate_regex
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.templatetags.helpers import render_markdown
+from nautobot.core.utils.caching import limited_lru_cache
 from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    @lru_cache(maxsize=128)
+    @limited_lru_cache(max_size=128)
     def get_for_model(self, model):
         """
         Return all ComputedFields assigned to the given model.
@@ -298,7 +298,7 @@ class CustomFieldModel(models.Model):
 class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    @lru_cache(maxsize=128)
+    @limited_lru_cache(max_size=128)
     def get_for_model(self, model, exclude_filter_disabled=False):
         """
         Return all CustomFields assigned to the given model.

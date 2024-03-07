@@ -1,0 +1,2 @@
+Added `nautobot.core.middleware.LRUCacheClearingMiddleware` to the default `MIDDLEWARE` setting.
+Added `limited_lru_cache` decorator function to address some bugs in core; this function is available for use by Apps as `nautobot.apps.utils.limited_lru_cache`.
