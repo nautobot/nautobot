@@ -262,7 +262,7 @@ class PrefixForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
         label="VLAN",
         query_params={
             "locations": "$locations",
-            "group_id": "$vlan_group",
+            "vlan_group": "$vlan_group",
         },
     )
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
@@ -792,7 +792,7 @@ class VLANFilterForm(
     field_order = [
         "q",
         "locations",
-        "group_id",
+        "vlan_group",
         "status",
         "role",
         "tenant_group",
@@ -806,7 +806,7 @@ class VLANFilterForm(
         null_option="None",
         query_params={"content_type": VLAN._meta.label_lower},
     )
-    group_id = DynamicModelMultipleChoiceField(
+    vlan_group = DynamicModelMultipleChoiceField(
         queryset=VLANGroup.objects.all(),
         required=False,
         label="VLAN group",

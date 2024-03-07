@@ -135,4 +135,4 @@ A `NavMenuButton` has the following attributes:
 * `permissions` - A list of permissions required to display this button (optional)
 
 !!! note
-    `NavMenuAddButton` and `NavMenuImportButton` are subclasses of `NavMenuButton` that can be used to provide the commonly used "Add" and "Import" buttons.
+    `NavMenuAddButton` and `NavMenuImportButton` are subclasses of `NavMenuButton` that can be used to provide the commonly used "Add" and "Import" buttons with appropriate defaults for `title`, `icon_class`, `button_class`, and `weight`.
