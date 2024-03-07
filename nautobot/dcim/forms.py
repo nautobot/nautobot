@@ -4115,20 +4115,10 @@ class ControllerFilterForm(
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False, label="Name")
     description = forms.CharField(required=False, label="Description")
-    location = DynamicModelMultipleChoiceField(
-        queryset=Location.objects.all(),
-        required=False,
-        label="Location",
-    )
     platform = DynamicModelMultipleChoiceField(
         queryset=Platform.objects.all(),
         required=False,
         label="Platform",
-    )
-    tenant = DynamicModelMultipleChoiceField(
-        queryset=Tenant.objects.all(),
-        required=False,
-        label="Tenant",
     )
     external_integration = DynamicModelMultipleChoiceField(
         queryset=ExternalIntegration.objects.all(),
