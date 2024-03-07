@@ -243,7 +243,7 @@ class ImportObjectsTestCase(TransactionTestCase):
             self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
             log_errors = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
             self.assertEqual(log_errors[0].message, "Row 1: `color`: `Enter a valid hexadecimal RGB color code.`")
-            self.assertFalse(Status.objects.filter(name="test_status0").exists()
+            self.assertFalse(Status.objects.filter(name="test_status0").exists())
             log_successes = JobLogEntry.objects.filter(
                 job_result=job_result, log_level=LogLevelChoices.LOG_INFO, message__icontains="created"
             )
