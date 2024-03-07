@@ -11,7 +11,7 @@ def migrate_location_into_locations(apps, schema):
         vlan.locations.add(vlan.location)
 
     for prefix in Prefix.objects.filter(location__isnull=False):
-        prefix.locations.add(vlan.location)
+        prefix.locations.add(prefix.location)
 
 
 class Migration(migrations.Migration):
