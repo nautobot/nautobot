@@ -1,4 +1,5 @@
 import collections
+from functools import lru_cache
 import hashlib
 import hmac
 import logging
@@ -101,6 +102,14 @@ class ChangeLoggedModelsQuery(FeaturedQueryMixin):
         Return a list of classes that implement the to_objectchange method
         """
         return [_class for _class in apps.get_models() if hasattr(_class, "to_objectchange")]
+
+
+@lru_cache(maxsize=None)
+def change_logged_models_queryset():
+    """
+    Cacheable function for cases where we need this queryset many times, such as when saving multiple objects.
+    """
+    return ChangeLoggedModelsQuery().as_queryset()
 
 
 @deconstructible
