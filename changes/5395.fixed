@@ -1,1 +1,1 @@
-Fixed use of incorrect permission for extras.Role in navigation.py.
+Fixed incorrect permission for "Roles" link in the navigation menu.
