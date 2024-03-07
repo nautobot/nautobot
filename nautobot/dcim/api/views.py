@@ -828,12 +828,22 @@ class DeviceTypeToSoftwareImageFileViewSet(ModelViewSet):
 
 
 class ControllerViewSet(NautobotModelViewSet):
-    queryset = Controller.objects.select_related("location", "platform", "role", "tenant", "status")
+    queryset = Controller.objects.select_related(
+        "location",
+        "platform",
+        "role",
+        "tenant",
+        "status",
+    ).prefetch_related("tags")
     serializer_class = serializers.ControllerSerializer
     filterset_class = filters.ControllerFilterSet
 
 
 class ControllerDeviceGroupViewSet(NautobotModelViewSet):
-    queryset = ControllerDeviceGroup.objects.select_related("controller").prefetch_related("tags")
+    queryset = ControllerDeviceGroup.objects.select_related(
+        "controller",
+        "parent",
+    ).prefetch_related("tags")
+
     serializer_class = serializers.ControllerDeviceGroupSerializer
     filterset_class = filters.ControllerDeviceGroupFilterSet

@@ -8,8 +8,8 @@ from .cables import CableTable
 from .devices import (
     ConsolePortTable,
     ConsoleServerPortTable,
-    ControllerTable,
     ControllerDeviceGroupTable,
+    ControllerTable,
     DeviceBayTable,
     DeviceConsolePortTable,
     DeviceConsoleServerPortTable,

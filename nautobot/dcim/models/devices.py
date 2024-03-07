@@ -1254,7 +1254,6 @@ class Controller(PrimaryModel, ConfigContextModel):
     """
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
-    _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     status = StatusField(blank=False, null=False)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     location = models.ForeignKey(
@@ -1300,16 +1299,14 @@ class Controller(PrimaryModel, ConfigContextModel):
     )
 
     class Meta:
-        ordering = ("_name",)
+        ordering = ("name",)
 
     def __str__(self):
         return self.display or super().__str__()
 
     @property
     def display(self):
-        if self.name:
-            return self.name
-        return f"{self.platform} - {self.role}"
+        return self.name
 
 
 @extras_features(
@@ -1331,7 +1328,6 @@ class ControllerDeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
         unique=True,
         help_text="Name of the controller device group",
     )
-    _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     weight = models.PositiveIntegerField(
         default=1000,
         help_text="Weight of the controller device group, used to sort the groups within its parent group",
@@ -1346,4 +1342,7 @@ class ControllerDeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
     )
 
     class Meta:
-        ordering = ("_name",)
+        ordering = (
+            "weight",
+            "name",
+        )

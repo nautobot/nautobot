@@ -42,7 +42,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
 )
-from nautobot.extras.models import Role, Status, ExternalIntegration
+from nautobot.extras.models import ExternalIntegration, Role, Status
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant

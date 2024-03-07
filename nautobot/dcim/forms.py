@@ -6,7 +6,6 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from timezone_field import TimeZoneFormField
 
-from nautobot.extras.models import ExternalIntegration
 from nautobot.circuits.models import Circuit, CircuitTermination, Provider
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
@@ -53,7 +52,7 @@ from nautobot.extras.forms import (
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
-from nautobot.extras.models import SecretsGroup, Status
+from nautobot.extras.models import ExternalIntegration, SecretsGroup, Status
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
@@ -1577,11 +1576,6 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
     software_version = DynamicModelChoiceField(
         queryset=SoftwareVersion.objects.all(),
         required=False,
-    )
-    controller_device_group = DynamicModelChoiceField(
-        queryset=ControllerDeviceGroup.objects.all(),
-        required=False,
-        query_params={"device_types": "$device_type"},
     )
     controller_device_group = DynamicModelChoiceField(
         queryset=ControllerDeviceGroup.objects.all(),
@@ -4100,7 +4094,7 @@ class SoftwareVersionForm(NautobotModelForm):
 
 
 class ControllerForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalContextModelForm):
-    """Controller credit/edit form."""
+    """Controller create/edit form."""
 
     class Meta:
         model = Controller
@@ -4116,6 +4110,7 @@ class ControllerFilterForm(
     RoleModelFilterFormMixin,
 ):
     """Controller basic filter form."""
+
     model = Controller
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False, label="Name")
@@ -4150,11 +4145,8 @@ class ControllerFilterForm(
         required=False,
         label="Deployed controller group",
     )
-
-
     tags = TagFilterField(model)
-
-    field_order = [
+    field_order = (
         "q",
         "name",
         "status",
@@ -4167,7 +4159,7 @@ class ControllerFilterForm(
         "deployed_controller_device",
         "deployed_controller_group",
         "tags",
-    ]
+    )
 
 
 class ControllerBulkEditForm(
@@ -4180,21 +4172,61 @@ class ControllerBulkEditForm(
 ):
     """Controller bulk edit form."""
 
+    pk = forms.ModelMultipleChoiceField(
+        queryset=Controller.objects.all(),
+        widget=forms.MultipleHiddenInput,
+    )
+    platform = DynamicModelChoiceField(
+        queryset=Platform.objects.all(),
+        required=False,
+    )
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+    )
+    external_integration = DynamicModelChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
+    )
+    deployed_controller_device = DynamicModelChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+    )
+    deployed_controller_group = DynamicModelChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(),
+        required=False,
+    )
+
     class Meta:
         model = Controller
-        fields = "__all__"
+        fields = (
+            "status",
+            "role",
+            "description",
+            "location",
+            "platform",
+            "tenant",
+            "external_integration",
+            "deployed_controller_device",
+            "deployed_controller_group",
+            "tags",
+        )
 
 
 class ControllerDeviceGroupForm(NautobotModelForm):
-    """ControllerDeviceGroup credit/edit form."""
+    """ControllerDeviceGroup create/edit form."""
 
     class Meta:
         model = ControllerDeviceGroup
         fields = "__all__"
 
 
-class ControllerDeviceGroupFilterForm(NautobotFilterForm):
+class ControllerDeviceGroupFilterForm(
+    LocalContextFilterForm,
+    NautobotFilterForm,
+):
     """ControllerDeviceGroup basic filter form."""
+
     model = ControllerDeviceGroup
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False, label="Name")
@@ -4208,11 +4240,40 @@ class ControllerDeviceGroupFilterForm(NautobotFilterForm):
         required=False,
         label="Parent",
     )
+    subtree = DynamicModelMultipleChoiceField(
+        queryset=ControllerDeviceGroup.objects.all(),
+        to_field_name="name",
+        required=False,
+    )
+    tags = TagFilterField(model)
+    field_order = (
+        "q",
+        "name",
+        "controller",
+        "parent",
+        "subtree",
+        "tags",
+    )
 
 
-class ControllerDeviceGroupBulkEditForm(NautobotBulkEditForm):
+class ControllerDeviceGroupBulkEditForm(
+    TagsBulkEditFormMixin,
+    NautobotBulkEditForm,
+    LocalContextModelBulkEditForm,
+):
     """ControllerDeviceGroup bulk edit form."""
+
+    pk = forms.ModelMultipleChoiceField(
+        queryset=ControllerDeviceGroup.objects.all(),
+        widget=forms.MultipleHiddenInput,
+    )
+    parent = DynamicModelChoiceField(queryset=ControllerDeviceGroup.objects.all(), required=False)
+    controller = DynamicModelChoiceField(queryset=Controller.objects.all(), required=False)
 
     class Meta:
         model = ControllerDeviceGroup
-        fields = "__all__"
+        fields = (
+            "parent",
+            "controller",
+            "tags",
+        )

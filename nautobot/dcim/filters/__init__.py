@@ -82,7 +82,7 @@ from nautobot.extras.filters import (
     RoleModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
-from nautobot.extras.models import SecretsGroup, ExternalIntegration
+from nautobot.extras.models import ExternalIntegration, SecretsGroup
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
@@ -1848,20 +1848,10 @@ class ControllerFilterSet(
             "description": "icontains",
         }
     )
-    location = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Location.objects.all(),
-        to_field_name="name",
-        label="Location (name or ID)",
-    )
     platform = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Platform.objects.all(),
         to_field_name="name",
         label="Platform (name or ID)",
-    )
-    tenant = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Tenant.objects.all(),
-        to_field_name="name",
-        label="Tenant (name or ID)",
     )
     external_integration = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ExternalIntegration.objects.all(),
@@ -1902,7 +1892,36 @@ class ControllerDeviceGroupFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Parent group (name or ID)",
     )
+    subtree = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Controller.objects.all(),
+        to_field_name="name",
+        label="Controlled device groups and descendants thereof (name or ID)",
+        method="_subtree",
+    )
 
     class Meta:
         model = ControllerDeviceGroup
         fields = "__all__"
+
+    def generate_query__subtree(self, value):
+        """Helper method used by DynamicGroups and by _subtree() method."""
+        if value:
+            max_depth = (
+                ControllerDeviceGroup.objects.with_tree_fields()
+                .extra(order_by=["-__tree.tree_depth"])
+                .first()
+                .tree_depth
+            )
+            params = Q(pk__in=[v.pk for v in value])
+            filter_name = "in"
+            for _i in range(max_depth):
+                filter_name = f"parent__{filter_name}"
+                params |= Q(**{filter_name: value})
+            return params
+        return Q()
+
+    @extend_schema_field({"type": "string"})
+    def _subtree(self, queryset, name, value):
+        """FilterSet method for getting Groups that are or are descended from a given ControllerDeviceGroup(s)."""
+        params = self.generate_query__subtree(value)
+        return queryset.filter(params)

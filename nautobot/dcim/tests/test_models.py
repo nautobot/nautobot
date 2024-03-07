@@ -23,6 +23,8 @@ from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -1882,3 +1884,21 @@ class SoftwareVersionTestCase(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(TypeError):
             qs.get_for_object(Circuit)
+
+
+class ControllerTestCase(ModelTestCases.BaseModelTestCase):
+    model = Controller
+
+    def test_queryset_get_for_object(self):
+        """
+        Test that the queryset get_for_object method returns the expected results for Device, DeviceType, InventoryItem and VirtualMachine
+        """
+
+
+class ControllerDeviceGroupTestCase(ModelTestCases.BaseModelTestCase):
+    model = ControllerDeviceGroup
+
+    def test_queryset_get_for_object(self):
+        """
+        Test that the queryset get_for_object method returns the expected results for Device, DeviceType, InventoryItem and VirtualMachine
+        """

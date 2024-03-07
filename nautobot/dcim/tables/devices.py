@@ -1176,6 +1176,7 @@ class ControllerTable(BaseTable):
             "actions",
         )
 
+
 class ControllerDeviceGroupTable(BaseTable):
     """Table for list view."""
 

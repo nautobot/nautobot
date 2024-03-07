@@ -1,65 +1,37 @@
-# Controller Models
+# Controllers
 
-Controller models enable Nautobot users to model a set of well known industry network or SDN controllers, with their relationship to the managed devices. These models should enable modeling of controllers like Cisco ACI, Juniper MIST, OpenStack, Wireless Controllers, Panorama (PA), F5 BIG-IQ etc.
+Controllers in Nautobot enable users to model a set of industry-standard network or SDN controllers, along with their relationships to the devices they manage.
 
 ## Use Cases
 
-Modeling should be tested against well known platforms:
+These models support the representation of various use cases, including, but not limited to:
 
 - Cisco ACI
 - Panorama
 - Juniper MIST
-- Arista CV
+- Arista CloudVision
 - Meraki
-- Wireless Controller (i.e. Ruckus or Cisco)
+- Wireless Controllers (e.g., Ruckus, Cisco)
 - OpenStack
 
-Should allow answering inventory questions:
+Using controllers enables answering inventory-related queries:
 
-- What is the controller for the given device group
-- What is the controller for the given device
-- What are the device groups managed by the controller
-- What are the devices managed by the controller
+- Find the controller for the given device group.
+- Find the controller for the given device.
+- List device groups managed by the controller.
+- List devices managed by the controller.
 
-## Controller Models
-
-### `Controller`
+## Controller Model
 
 Represents an entity that manages or controls one or more devices, acting as a central point of control.
 
 A Controller can be deployed to a single device or a group of devices represented by single `DeviceRedundancyGroup`.
 
-### `ControllerDeviceGroup`
+## Controller Device Group Model
 
 Represents a mapping of controlled devices to a specific controller.
 
 This model allows for the organization of controlled devices into hierarchical groups for structured representation.
-
-## Related Models
-
-### `Platform`
-
-Platform refers to the software or firmware running on a Device. For example, "Cisco IOS-XR" or "Juniper Junos".
-
-Nautobot uses Platforms to determine how to interact with devices when pulling inventory data or other information
-by specifying a network driver; `netutils` is then used to derive library-specific driver information from this.
-
-### `SoftwareVersion`
-
-A software version for a Device, Virtual Machine or Inventory Item.
-
-### `Device`
-
-A Device represents a piece of physical hardware. Each Device is assigned a `DeviceType`,
-`Role`, and (optionally) a `Platform`. Device names are not required, however if one is set it must be unique.
-
-When a new `Device` is created, console/power/interface/device bay components are created along with it as dictated
-by the component templates assigned to its `DeviceType`. Components can also be added, modified, or deleted after the
-creation of a Device.
-
-### `DeviceRedundancyGroup`
-
-A `DeviceRedundancyGroup` represents a logical grouping of physical hardware for the purposes of high-availability.
 
 ## Entity Relationship Diagram
 
@@ -150,7 +122,10 @@ erDiagram
     Device }o--|| DeviceRedundancyGroup : "can be member of"
     Platform ||--o{ SoftwareVersion : "has"
 ```
+
 ## Examples
+
+TBD: Update examples
 
 ### Cisco ACI
 
