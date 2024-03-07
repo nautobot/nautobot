@@ -1302,11 +1302,7 @@ class Controller(PrimaryModel, ConfigContextModel):
         ordering = ("name",)
 
     def __str__(self):
-        return self.display or super().__str__()
-
-    @property
-    def display(self):
-        return self.name
+        return self.name or super().__str__()
 
 
 @extras_features(
@@ -1346,3 +1342,6 @@ class ControllerDeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
             "weight",
             "name",
         )
+
+    def __str__(self):
+        return self.name or super().__str__()

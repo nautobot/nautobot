@@ -4098,7 +4098,19 @@ class ControllerForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Lo
 
     class Meta:
         model = Controller
-        fields = "__all__"
+        fields = (
+            "name",
+            "status",
+            "role",
+            "description",
+            "platform",
+            "tenant",
+            "location",
+            "external_integration",
+            "deployed_controller_device",
+            "deployed_controller_group",
+            "tags",
+        )
 
 
 class ControllerFilterForm(
@@ -4208,7 +4220,13 @@ class ControllerDeviceGroupForm(NautobotModelForm):
 
     class Meta:
         model = ControllerDeviceGroup
-        fields = "__all__"
+        fields = (
+            "name",
+            "controller",
+            "parent",
+            "weight",
+            "tags",
+        )
 
 
 class ControllerDeviceGroupFilterForm(
@@ -4230,6 +4248,7 @@ class ControllerDeviceGroupFilterForm(
         required=False,
         label="Parent",
     )
+    weight = forms.IntegerField(required=False, label="Weight")
     subtree = DynamicModelMultipleChoiceField(
         queryset=ControllerDeviceGroup.objects.all(),
         to_field_name="name",
@@ -4241,6 +4260,7 @@ class ControllerDeviceGroupFilterForm(
         "name",
         "controller",
         "parent",
+        "weight",
         "subtree",
         "tags",
     )
@@ -4257,13 +4277,15 @@ class ControllerDeviceGroupBulkEditForm(
         queryset=ControllerDeviceGroup.objects.all(),
         widget=forms.MultipleHiddenInput,
     )
-    parent = DynamicModelChoiceField(queryset=ControllerDeviceGroup.objects.all(), required=False)
     controller = DynamicModelChoiceField(queryset=Controller.objects.all(), required=False)
+    parent = DynamicModelChoiceField(queryset=ControllerDeviceGroup.objects.all(), required=False)
+    weight = forms.IntegerField(required=False)
 
     class Meta:
         model = ControllerDeviceGroup
         fields = (
-            "parent",
             "controller",
+            "parent",
+            "weight",
             "tags",
         )
