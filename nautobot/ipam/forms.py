@@ -755,6 +755,7 @@ class VLANForm(NautobotModelForm, TenancyForm):
     def save(self, *args, **kwargs):
         instance = super().save(*args, **kwargs)
         instance.locations.set(self.cleaned_data["locations"])
+        return instance
 
 
 class VLANBulkEditForm(
