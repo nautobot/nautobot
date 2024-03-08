@@ -39,6 +39,8 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.filters import (
     ConsoleConnectionFilterSet,
+    ControllerFilterSet,
+    ControllerDeviceGroupFilterSet,
     InterfaceConnectionFilterSet,
     PowerConnectionFilterSet,
     SoftwareImageFileFilterSet,
@@ -51,6 +53,8 @@ from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -2985,4 +2989,48 @@ class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "documentation_url": "https://example.com/software_version_test_case/docs2",
             "long_term_support": False,
             "pre_release": True,
+        }
+
+
+class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = Controller
+    filterset = ControllerFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        statuses = Status.objects.get_for_model(Controller)
+        roles = Role.objects.get_for_model(Controller)
+        platforms = Platform.objects.all()
+        locations = Location.objects.all()
+
+        cls.form_data = {
+            "name": "Controller 1",
+            "platform": platforms[0].pk,
+            "status": statuses[0].pk,
+            "role": roles[0].pk,
+            "location": locations[0].pk,
+        }
+
+        cls.bulk_edit_data = {
+            "platform": platforms[0].pk,
+            "status": statuses[0].pk,
+            "role": roles[0].pk,
+        }
+
+class ControllerDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = ControllerDeviceGroup
+    filterset = ControllerDeviceGroupFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        controllers = Controller.objects.all()
+
+        cls.form_data = {
+            "name": "Controller Device Group 10",
+            "controller": controllers[0].pk,
+            "weight": 100,
+        }
+
+        cls.bulk_edit_data = {
+            "weight": 300,
         }
