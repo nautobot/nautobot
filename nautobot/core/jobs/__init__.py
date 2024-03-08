@@ -1,3 +1,4 @@
+import contextlib
 from io import BytesIO
 
 from django.conf import settings
@@ -16,7 +17,7 @@ from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
 from nautobot.extras.datasources import ensure_git_repository, git_repository_dry_run, refresh_datasource_content
-from nautobot.extras.jobs import ChoiceVar, FileVar, Job, ObjectVar, RunJobTaskFailed, StringVar, TextVar
+from nautobot.extras.jobs import BooleanVar, ChoiceVar, FileVar, Job, ObjectVar, RunJobTaskFailed, StringVar, TextVar
 from nautobot.extras.models import ExportTemplate, GitRepository
 
 name = "System Jobs"
@@ -199,6 +200,12 @@ class ImportObjects(Job):
     )
     csv_data = TextVar(label="CSV Data", required=False)
     csv_file = FileVar(label="CSV File", required=False)
+    roll_back_if_error = BooleanVar(
+        label="All or nothing import",
+        required=False,
+        default=False,
+        description="Enable so that if any error occurs while importing, even successfully imported objects will be discarded. Disable if a partial import is acceptable.",
+    )
 
     template_name = "system_jobs/import_objects.html"
 
@@ -209,7 +216,45 @@ class ImportObjects(Job):
         soft_time_limit = 1800
         time_limit = 2000
 
-    def run(self, *, content_type, csv_data=None, csv_file=None):
+    def _perform_atomic_operation(self, data, serializer_class, queryset):
+        new_objs = []
+        with contextlib.suppress(AbortTransaction):
+            with transaction.atomic():
+                new_objs, validation_failed = self._perform_operation(data, serializer_class, queryset)
+                if validation_failed:
+                    raise AbortTransaction
+                return new_objs, validation_failed
+        # If validation failed return an empty list, since all objs created where rolled back
+        self.logger.warning("Rolling back all %s records.", len(new_objs))
+        return [], validation_failed
+
+    def _perform_operation(self, data, serializer_class, queryset):
+        new_objs = []
+        validation_failed = False
+        for row, entry in enumerate(data, start=1):
+            serializer = serializer_class(data=entry, context={"request": None})
+            if serializer.is_valid():
+                try:
+                    with transaction.atomic():
+                        new_obj = serializer.save()
+                        if not queryset.filter(pk=new_obj.pk).exists():
+                            raise AbortTransaction()
+                    self.logger.info('Row %d: Created record "%s"', row, new_obj, extra={"object": new_obj})
+                    new_objs.append(new_obj)
+                except AbortTransaction:
+                    self.logger.error(
+                        'Row %d: User "%s" does not have permission to create an object with these attributes',
+                        row,
+                        self.user,
+                    )
+                    validation_failed = True
+            else:
+                validation_failed = True
+                for field, err in serializer.errors.items():
+                    self.logger.error("Row %d: `%s`: `%s`", row, field, err[0])
+        return new_objs, validation_failed
+
+    def run(self, *, content_type, csv_data=None, csv_file=None, roll_back_if_error=False):
         if not self.user.has_perm(f"{content_type.app_label}.add_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to create %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have create permissions on the requested content-type")
@@ -247,28 +292,10 @@ class ImportObjects(Job):
                 parser_context={"request": None, "serializer_class": serializer_class},
             )
             self.logger.info("Processing %d rows of data", len(data))
-            validation_failed = False
-            for row, entry in enumerate(data, start=1):
-                serializer = serializer_class(data=entry, context={"request": None})
-                if serializer.is_valid():
-                    try:
-                        with transaction.atomic():
-                            new_obj = serializer.save()
-                            if not queryset.filter(pk=new_obj.pk).exists():
-                                raise AbortTransaction()
-                        self.logger.info('Row %d: Created record "%s"', row, new_obj, extra={"object": new_obj})
-                        new_objs.append(new_obj)
-                    except AbortTransaction:
-                        self.logger.error(
-                            'Row %d: User "%s" does not have permission to create an object with these attributes',
-                            row,
-                            self.user,
-                        )
-                        validation_failed = True
-                else:
-                    validation_failed = True
-                    for field, err in serializer.errors.items():
-                        self.logger.error("Row %d: `%s`: `%s`", row, field, err[0])
+            if roll_back_if_error:
+                new_objs, validation_failed = self._perform_atomic_operation(data, serializer_class, queryset)
+            else:
+                new_objs, validation_failed = self._perform_operation(data, serializer_class, queryset)
         except drf_exceptions.ParseError as exc:
             validation_failed = True
             self.logger.error("`%s`", exc)
@@ -281,6 +308,8 @@ class ImportObjects(Job):
             self.logger.warning("No %s objects were created", content_type.model)
 
         if validation_failed:
+            if roll_back_if_error:
+                raise RunJobTaskFailed("CSV import not successful, all imports were rolled back, see logs")
             raise RunJobTaskFailed("CSV import not fully successful, see logs")
 
 
