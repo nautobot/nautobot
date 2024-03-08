@@ -39,8 +39,8 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.filters import (
     ConsoleConnectionFilterSet,
-    ControllerFilterSet,
     ControllerDeviceGroupFilterSet,
+    ControllerFilterSet,
     InterfaceConnectionFilterSet,
     PowerConnectionFilterSet,
     SoftwareImageFileFilterSet,
@@ -3016,6 +3016,7 @@ class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses[0].pk,
             "role": roles[0].pk,
         }
+
 
 class ControllerDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = ControllerDeviceGroup
