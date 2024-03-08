@@ -1338,10 +1338,7 @@ class ControllerDeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
     )
 
     class Meta:
-        ordering = (
-            "weight",
-            "name",
-        )
+        ordering = ("weight",)
 
     def __str__(self):
         return self.name or super().__str__()
