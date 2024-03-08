@@ -26,6 +26,8 @@ from nautobot.dcim.filters import (
     ConsolePortTemplateFilterSet,
     ConsoleServerPortFilterSet,
     ConsoleServerPortTemplateFilterSet,
+    ControllerDeviceGroupFilterSet,
+    ControllerFilterSet,
     DeviceBayFilterSet,
     DeviceBayTemplateFilterSet,
     DeviceFilterSet,
@@ -65,6 +67,8 @@ from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -98,7 +102,7 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualChassis,
 )
-from nautobot.extras.models import Role, SecretsGroup, Status, Tag
+from nautobot.extras.models import ExternalIntegration, Role, SecretsGroup, Status, Tag
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
@@ -3329,3 +3333,107 @@ class DeviceTypeToSoftwareImageFileFilterSetTestCase(FilterTestCases.FilterTestC
         ["device_type", "device_type__id"],
         ["device_type", "device_type__model"],
     )
+
+
+class ControllerFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = Controller.objects.all()
+    filterset = ControllerFilterSet
+    generic_filter_tests = (
+        ("name",),
+        ("description",),
+        ("platform", "platform__id"),
+        ("platform", "platform__name"),
+        ("external_integration", "external_integration__id"),
+        ("external_integration", "external_integration__name"),
+        ("deployed_controller_device", "deployed_controller_device__id"),
+        ("deployed_controller_device", "deployed_controller_device__name"),
+        ("deployed_controller_group", "deployed_controller_group__id"),
+        ("deployed_controller_group", "deployed_controller_group__name"),
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        common_test_data(cls)
+
+        cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:3]
+        cls.platforms = Platform.objects.all()[:3]
+        cls.roles = Role.objects.get_for_model(Controller)
+        cls.tenants = Tenant.objects.all()[:3]
+        cls.external_integrations = ExternalIntegration.objects.all()[:3]
+        cls.device_redundancy_groups = DeviceRedundancyGroup.objects.all()[:3]
+
+        cls.controllers = (
+            Controller.objects.create(
+                name="Controller 1",
+                status=Status.objects.get_for_model(Controller).first(),
+                description="First",
+                location=cls.locations[0],
+                platform=cls.platforms[0],
+                role=cls.roles[0],
+                tenant=cls.tenants[0],
+                external_integration=cls.external_integrations[0],
+                deployed_controller_device=cls.devices[0],
+            ),
+            Controller.objects.create(
+                name="Controller 2",
+                status=Status.objects.get_for_model(Controller)[1],
+                description="Second",
+                location=cls.locations[1],
+                platform=cls.platforms[1],
+                role=cls.roles[1],
+                tenant=cls.tenants[1],
+                external_integration=cls.external_integrations[1],
+                deployed_controller_device=cls.devices[1],
+            ),
+            Controller.objects.create(
+                name="Controller 3",
+                status=Status.objects.get_for_model(Controller)[2],
+                description="Third",
+                location=cls.locations[2],
+                platform=cls.platforms[2],
+                role=cls.roles[2],
+                tenant=cls.tenants[2],
+                external_integration=cls.external_integrations[2],
+                deployed_controller_group=cls.device_redundancy_groups[0],
+            ),
+        )
+
+
+class ControllerDeviceGroupFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = ControllerDeviceGroup.objects.all()
+    filterset = ControllerDeviceGroupFilterSet
+    generic_filter_tests = (
+        ("name",),
+        ("weight",),
+        ("controller", "controller__id"),
+        ("controller", "controller__name"),
+        ("parent", "parent__id"),
+        ("parent", "parent__name"),
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        common_test_data(cls)
+
+        cls.controllers = Controller.objects.all()[:3]
+
+        group1 = ControllerDeviceGroup.objects.create(
+            name="Controller Device Group 11",
+            weight=1000,
+            controller=cls.controllers[0],
+        )
+        cls.controller_device_groups = (
+            group1,
+            ControllerDeviceGroup.objects.create(
+                name="Controller Device Group 12",
+                weight=2000,
+                controller=cls.controllers[1],
+                parent=group1,
+            ),
+            ControllerDeviceGroup.objects.create(
+                name="Controller Device Group 13",
+                weight=3000,
+                controller=cls.controllers[2],
+                parent=group1,
+            ),
+        )
