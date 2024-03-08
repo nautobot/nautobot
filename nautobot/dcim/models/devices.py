@@ -1311,6 +1311,7 @@ class Controller(PrimaryModel, ConfigContextModel):
     "dynamic_groups",
     "export_templates",
     "graphql",
+    "statuses",
     "webhooks",
 )
 class ControllerDeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
