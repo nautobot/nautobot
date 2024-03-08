@@ -61,14 +61,10 @@ def disable_for_loaddata(signal_handler):
 @receiver(post_save)
 @receiver(post_delete)
 def invalidate_max_depth_cache(sender, **kwargs):
-    """Clear the appropriate TreeManager.max_depth cache as the create/update/delete may have changed the tree."""
+    """Clear the appropriate TreeManager.max_tree_depth cache as the create/update/delete may have changed the tree."""
     from nautobot.core.models.tree_queries import TreeManager
 
     if not isinstance(sender.objects, TreeManager):
         return
 
-    # Note that we can't use `hasattr`, because this will trigger `max_depth` to be calculated if it doesn't exist
-    try:
-        del sender.objects.max_depth
-    except AttributeError:
-        pass
+    sender.objects.max_tree_depth.cache_clear()

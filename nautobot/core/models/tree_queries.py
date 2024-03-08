@@ -40,8 +40,20 @@ class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
         return model_class.objects.without_tree_fields().filter(pk__in=ancestor_pks).order_by(preserve_order)
 
     def max_tree_depth(self):
-        """
-        Get the maximum depth of any tree in this queryset.
+        r"""
+        Get the maximum tree depth of any node in this queryset.
+
+        In most cases you should use TreeManager.max_tree_depth() instead as it's cached and this is not.
+
+        root  - depth 0
+         \
+          branch  - depth 1
+            \
+            leaf  - depth 2
+
+        Note that a queryset with only root nodes will return zero, and an empty queryset will also return zero.
+        This is probably a bug, we should really return -1 in the case of an empty queryset, but this is
+        "working as implemented" and changing it would possibly be a breaking change at this point.
         """
         deepest = self.with_tree_fields().extra(order_by=["-__tree.tree_depth"]).first()
         if deepest is not None:
@@ -57,9 +69,18 @@ class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):
     _with_tree_fields = True
     use_in_migrations = True
 
-    @limited_lru_cache(max_size=16)
+    @property
     def max_depth(self):
+        """Property version of `max_tree_depth()`; inherits its cache."""
         return self.max_tree_depth()
+
+    @limited_lru_cache(max_size=16)
+    def max_tree_depth(self):
+        """Cacheable version of `TreeQuerySet.max_tree_depth()`.
+
+        Generally TreeManagers are persistent objects while TreeQuerySets are not, hence the difference in behavior.
+        """
+        return self.get_queryset().max_tree_depth()
 
 
 class TreeModel(TreeNode):
