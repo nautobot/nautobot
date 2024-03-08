@@ -4,6 +4,7 @@
 
 {% block job_form %}
     {% render_field job_form.content_type %}
+    {% render_field job_form.roll_back_if_error %}
     <div id="csv-fetch-failure" class="alert alert-danger" role="alert" style="display: none"></div>
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active"><a href="#csv-file" role="tab" data-toggle="tab">CSV File Upload</a></li>
