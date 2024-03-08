@@ -300,12 +300,12 @@ menu_items = (
             ),
             NavMenuGroup(
                 name="Controllers",
-                weight=250,
+                weight=300,
                 items=(
                     NavMenuItem(
                         link="dcim:controller_list",
                         name="Controllers",
-                        weight=200,
+                        weight=100,
                         permissions=[
                             "dcim.view_controller",
                         ],
@@ -321,7 +321,7 @@ menu_items = (
                     NavMenuItem(
                         link="dcim:controllerdevicegroup_list",
                         name="Controller Device Groups",
-                        weight=300,
+                        weight=200,
                         permissions=[
                             "dcim.view_controllerdevicegroup",
                         ],
@@ -338,7 +338,7 @@ menu_items = (
             ),
             NavMenuGroup(
                 name="Connections",
-                weight=300,
+                weight=350,
                 items=(
                     NavMenuItem(
                         link="dcim:cable_list",
