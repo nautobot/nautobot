@@ -58,7 +58,7 @@ var ready = (callback) => {
     } else {
         document.addEventListener("DOMContentLoaded", callback);
     }
-}
+};
 
 ready(() => {
     fetch("{% url 'dcim-api:device-napalm' pk=object.pk %}?method=get_lldp_neighbors_detail")
@@ -66,12 +66,12 @@ ready(() => {
         if (!response.ok) {
             throw Error(response.statusText);
         }
-        return response.json()
+        return response.json();
     })
     .then((data) => {
         const interfaces = data["get_lldp_neighbors_detail"];
-        for (iface in interfaces) {
-            const neighbor = interfaces[iface][0]
+        for (var iface of Object.keys(interfaces)) {
+            const neighbor = interfaces[iface][0];
             const row = document.querySelector('*[data-interface-name="'+ iface.split(".")[0].replace(/([\/:])/g, "\\$1") + '"]');
             // var row = $('*[data-interface-name="' + iface.split(".")[0].replace(/([\/:])/g, "\\$1") + '"]');
 
@@ -111,7 +111,11 @@ ready(() => {
         }
     })
     .catch((error) => {
-        alert(error.responseText);
+        if (error.responseText) {
+            alert(error.responseText);
+        } else {
+            throw error;
+        }
     });
 });
 </script>
