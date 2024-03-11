@@ -94,7 +94,7 @@ class BaseModel(models.Model):
 
         Necessary for use with _content_type_cached and management commands.
         """
-        return f"{cls._meta.label_lower}._content_type"
+        return f"nautobot.{cls._meta.label_lower}._content_type"
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def _content_type_cached(cls):  # pylint: disable=no-self-argument

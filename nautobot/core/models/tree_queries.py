@@ -4,7 +4,6 @@ from tree_queries.models import TreeNode
 from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as TreeQuerySet_
 
 from nautobot.core.models import BaseManager, querysets
-from nautobot.core.utils.caching import limited_lru_cache
 
 
 class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
@@ -43,7 +42,7 @@ class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
         r"""
         Get the maximum tree depth of any node in this queryset.
 
-        In most cases you should use TreeManager.max_tree_depth() instead as it's cached and this is not.
+        In most cases you should use TreeManager.max_depth instead as it's cached and this is not.
 
         root  - depth 0
          \
@@ -70,17 +69,20 @@ class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):
     use_in_migrations = True
 
     @property
-    def max_depth(self):
-        """Property version of `max_tree_depth()`; inherits its cache."""
-        return self.max_tree_depth()
+    def max_depth_cache_key(self):
+        return f"nautobot.{self.model._meta.concrete_model._meta.label_lower}.max_depth"
 
-    @limited_lru_cache(max_size=16)
-    def max_tree_depth(self):
+    @property
+    def max_depth(self):
         """Cacheable version of `TreeQuerySet.max_tree_depth()`.
 
         Generally TreeManagers are persistent objects while TreeQuerySets are not, hence the difference in behavior.
         """
-        return self.get_queryset().max_tree_depth()
+        max_depth = cache.get(self.max_depth_cache_key)
+        if max_depth is None:
+            max_depth = self.max_tree_depth()
+            cache.set(self.max_depth_cache_key, max_depth)
+        return max_depth
 
 
 class TreeModel(TreeNode):
@@ -102,7 +104,7 @@ class TreeModel(TreeNode):
         """
         if not hasattr(self, "name"):
             raise NotImplementedError("default TreeModel.display implementation requires a `name` attribute!")
-        cache_key = f"{self.__class__.__name__}.{self.id}.display"
+        cache_key = f"nautobot.{self._meta.concrete_model._meta.label_lower}.{self.id}.display"
         display_str = cache.get(cache_key, "")
         if display_str:
             return display_str

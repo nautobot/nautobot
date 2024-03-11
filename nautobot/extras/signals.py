@@ -65,8 +65,8 @@ def _get_user_if_authenticated(user, instance):
 @receiver(post_save)
 @receiver(m2m_changed)
 @receiver(post_delete)
-def invalidate_lru_cache(sender, **kwargs):
-    """Invalidate the LRU cache for ComputedFields, CustomFields and Relationships."""
+def invalidate_models_cache(sender, **kwargs):
+    """Invalidate the related-models cache for ComputedFields, CustomFields and Relationships."""
     if sender is CustomField.content_types.through:
         manager = CustomField.objects
     elif sender in (ComputedField, CustomField, Relationship):
@@ -80,9 +80,12 @@ def invalidate_lru_cache(sender, **kwargs):
         "get_for_model_destination",
     )
 
-    for method in cached_methods:
-        if hasattr(manager, method):
-            getattr(manager, method).cache_clear()
+    for method_name in cached_methods:
+        if hasattr(manager, method_name):
+            method = getattr(manager, method_name)
+            if hasattr(method, "cache_key_prefix"):
+                # TODO: *maybe* target this more narrowly, e.g. only clear the cache for specific related content-types?
+                cache.delete_pattern(f"{method.cache_key_prefix}.*")
 
 
 @receiver(post_save)
@@ -343,7 +346,7 @@ def dynamic_group_eligible_groups_changed(sender, instance, **kwargs):
         return
 
     content_type = instance.content_type
-    cache_key = f"{content_type.app_label}.{content_type.model}._get_eligible_dynamic_groups"
+    cache_key = f"nautobot.{content_type.app_label}.{content_type.model}._get_eligible_dynamic_groups"
     cache.set(
         cache_key,
         DynamicGroup.objects.filter(content_type_id=instance.content_type_id),

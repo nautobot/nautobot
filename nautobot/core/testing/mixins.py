@@ -63,10 +63,10 @@ class NautobotTestCaseMixin:
             self.client.force_login(self.user)
 
     def tearDown(self):
-        """Clear lru_cache data to avoid leakage of information between test cases when running in parallel."""
-        extras_signals.invalidate_lru_cache(extras_models.CustomField)
-        extras_signals.invalidate_lru_cache(extras_models.ComputedField)
-        extras_signals.invalidate_lru_cache(extras_models.Relationship)
+        """Clear cache data to avoid leakage of information between test cases when running in parallel."""
+        extras_signals.invalidate_models_cache(extras_models.CustomField)
+        extras_signals.invalidate_models_cache(extras_models.ComputedField)
+        extras_signals.invalidate_models_cache(extras_models.Relationship)
         super().tearDown()
 
     def prepare_instance(self, instance):

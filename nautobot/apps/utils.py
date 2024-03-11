@@ -1,7 +1,6 @@
 """Nautobot utility functions."""
 
 from nautobot.core.releases import get_latest_release
-from nautobot.core.utils.caching import limited_lru_cache
 from nautobot.core.utils.color import foreground_color, hex_to_rgb, lighten_color, rgb_to_hex
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import (
@@ -120,7 +119,6 @@ __all__ = (
     "is_url",
     "is_uuid",
     "lighten_color",
-    "limited_lru_cache",
     "merge_dicts_without_collision",
     "migrate_role_data",
     "normalize_querydict",
