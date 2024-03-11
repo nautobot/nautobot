@@ -439,6 +439,7 @@ class Prefix(PrimaryModel):
     locations = models.ManyToManyField(
         to="dcim.Location",
         related_name="prefixes",
+        through="ipam.PrefixLocationAssignment",
         blank=True,
     )
     namespace = models.ForeignKey(
@@ -960,6 +961,19 @@ class Prefix(PrimaryModel):
         return UtilizationData(numerator=numerator_set.size, denominator=denominator)
 
 
+@extras_features("graphql")
+class PrefixLocationAssignment(BaseModel):
+    prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="location_assignments")
+    location = models.ForeignKey("dcim.Location", on_delete=models.CASCADE, related_name="prefix_assignments")
+
+    class Meta:
+        unique_together = ["prefix", "location"]
+        ordering = ["prefix", "location"]
+
+    def __str__(self):
+        return f"{self.prefix}: {self.location}"
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -1331,6 +1345,7 @@ class VLAN(PrimaryModel):
     locations = models.ManyToManyField(
         to="dcim.Location",
         related_name="vlans",
+        through="ipam.VLANLocationAssignment",
         blank=True,
     )
     vlan_group = models.ForeignKey(
@@ -1422,6 +1437,19 @@ class VLAN(PrimaryModel):
     def get_vminterfaces(self):
         # Return all VM interfaces assigned to this VLAN
         return VMInterface.objects.filter(Q(untagged_vlan_id=self.pk) | Q(tagged_vlans=self.pk)).distinct()
+
+
+@extras_features("graphql")
+class VLANLocationAssignment(BaseModel):
+    vlan = models.ForeignKey("ipam.VLAN", on_delete=models.CASCADE, related_name="location_assignments")
+    location = models.ForeignKey("dcim.Location", on_delete=models.CASCADE, related_name="vlan_assignments")
+
+    class Meta:
+        unique_together = ["vlan", "location"]
+        ordering = ["vlan", "location"]
+
+    def __str__(self):
+        return f"{self.vlan}: {self.location}"
 
 
 @extras_features(

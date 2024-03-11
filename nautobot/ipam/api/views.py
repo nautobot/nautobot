@@ -18,11 +18,13 @@ from nautobot.ipam.models import (
     IPAddressToInterface,
     Namespace,
     Prefix,
+    PrefixLocationAssignment,
     RIR,
     RouteTarget,
     Service,
     VLAN,
     VLANGroup,
+    VLANLocationAssignment,
     VRF,
     VRFDeviceAssignment,
     VRFPrefixAssignment,
@@ -325,6 +327,12 @@ class PrefixViewSet(NautobotModelViewSet):
             return Response(serializer.data)
 
 
+class PrefixLocationAssignmentViewSet(NautobotModelViewSet):
+    queryset = PrefixLocationAssignment.objects.select_related("prefix", "location")
+    serializer_class = serializers.PrefixLocationAssignmentSerializer
+    filterset_class = filters.PrefixLocationAssignmentFilterSet
+
+
 #
 # IP addresses
 #
@@ -429,6 +437,12 @@ class VLANViewSet(NautobotModelViewSet):
             return super().update(request, *args, **kwargs)
         except Location.MultipleObjectsReturned as e:
             raise self.LocationIncompatibleLegacyBehavior from e
+
+
+class VLANLocationAssignmentViewSet(NautobotModelViewSet):
+    queryset = VLANLocationAssignment.objects.select_related("vlan", "location")
+    serializer_class = serializers.VLANLocationAssignmentSerializer
+    filterset_class = filters.VLANLocationAssignmentFilterSet
 
 
 #

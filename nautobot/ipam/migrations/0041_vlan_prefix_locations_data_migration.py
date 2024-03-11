@@ -5,13 +5,18 @@ from django.db import migrations
 
 def migrate_location_into_locations(apps, schema):
     VLAN = apps.get_model("ipam", "VLAN")
+    Prefix = apps.get_model("ipam", "Prefix")
+
     for vlan in VLAN.objects.filter(location__isnull=False):
         vlan.locations.add(vlan.location)
+
+    for prefix in Prefix.objects.filter(location__isnull=False):
+        prefix.locations.add(prefix.location)
 
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("ipam", "0040_vlan_locations"),
+        ("ipam", "0040_vlan_prefix_locations"),
     ]
 
     operations = [
