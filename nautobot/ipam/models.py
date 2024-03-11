@@ -963,9 +963,7 @@ class Prefix(PrimaryModel):
 
 @extras_features("graphql")
 class PrefixLocationAssignment(BaseModel):
-    # Using `related_name="+"`` because prefix is the parent of this through model and can only be accessed by Prefix from its `locations` field.
-    # i.e Prefix.objects.filter(locations__in=...), Prefix.objects.first().locations etc.
-    prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="+")
+    prefix = models.ForeignKey("ipam.Prefix", on_delete=models.CASCADE, related_name="location_assignments")
     location = models.ForeignKey("dcim.Location", on_delete=models.CASCADE, related_name="prefix_assignments")
 
     class Meta:
@@ -1443,9 +1441,7 @@ class VLAN(PrimaryModel):
 
 @extras_features("graphql")
 class VLANLocationAssignment(BaseModel):
-    # Using `related_name="+"`` because `vlan` is the parent of this through model and can only be accessed by VLAN from its `locations` field.
-    # i.e VLAN.objects.filter(locations__in=...), VLAN.objects.first().locations etc.
-    vlan = models.ForeignKey("ipam.VLAN", on_delete=models.CASCADE, related_name="+")
+    vlan = models.ForeignKey("ipam.VLAN", on_delete=models.CASCADE, related_name="location_assignments")
     location = models.ForeignKey("dcim.Location", on_delete=models.CASCADE, related_name="vlan_assignments")
 
     class Meta:

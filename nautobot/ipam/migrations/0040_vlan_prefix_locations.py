@@ -29,7 +29,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "vlan",
-                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="+", to="ipam.vlan"),
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="location_assignments", to="ipam.vlan"
+                    ),
                 ),
             ],
             options={
@@ -56,7 +58,11 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "prefix",
-                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="+", to="ipam.prefix"),
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="location_assignments",
+                        to="ipam.prefix",
+                    ),
                 ),
             ],
             options={

@@ -1200,13 +1200,19 @@ class VLANLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
         vlan_ct = ContentType.objects.get_for_model(vlan)
         vlan_vid = vlan.vid
 
+        # Exclude any locations that might cause conflicts with our FilterSet TestCase,
+        # the 'VLANLocationAssignmentFilterSet' `q` field filters
+        # based on both `vlan__vid` and `location__name`. We want to ensure that
+        # the location names do not contain the VLAN ID to avoid collisions.
         vlan_location_queryset = VLANLocationAssignment.objects.filter(vlan__vid__exact=vlan_vid).exclude(
             location__name__icontains=vlan_vid
         )
-        if vlan_location_queryset.count() < 40:
+        # If we don't have enough queryset items for testing (less than 5),
+        # add 5 VLANLocationAssignments to test on.
+        if vlan_location_queryset.count() < 5:
             locations = Location.objects.filter(location_type__content_types__in=[vlan_ct]).exclude(
                 name__icontains=vlan_vid
-            )[:10]
+            )[:5]
             vlan.locations.set(locations)
 
         params = {"q": vlan_vid}
