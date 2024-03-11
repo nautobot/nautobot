@@ -219,7 +219,6 @@ class PrefixLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
         params = {"prefix": [ipv4_prefix, ipv6_prefix]}
         prefix_queryset = Prefix.objects.net_equals(ipv4_prefix, ipv6_prefix)
 
-        # FIXME(timizuo): ValueError: Trying to compare non-ordered queryset against more than one ordered values
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(prefix__in=prefix_queryset),
