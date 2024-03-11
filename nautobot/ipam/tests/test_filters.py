@@ -1195,6 +1195,26 @@ class VLANLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
         # ["location", "location__id"],
     )
 
+    def test_q_filter_vlan__vid_predicate(self):
+        vlan = VLAN.objects.first()
+        vlan_ct = ContentType.objects.get_for_model(vlan)
+        vlan_vid = vlan.vid
+
+        vlan_location_queryset = VLANLocationAssignment.objects.filter(vlan__vid__exact=vlan_vid).exclude(
+            location__name__icontains=vlan_vid
+        )
+        if vlan_location_queryset.count() < 40:
+            locations = Location.objects.filter(location_type__content_types__in=[vlan_ct]).exclude(
+                name__icontains=vlan_vid
+            )[:10]
+            vlan.locations.set(locations)
+
+        params = {"q": vlan_vid}
+        queryset = VLANLocationAssignment.objects.exclude(location__name__icontains=vlan_vid)
+        filterset = VLANLocationAssignmentFilterSet(params, queryset).qs
+        expected_queryset = VLANLocationAssignment.objects.filter(vlan__vid__exact=vlan_vid)
+        self.assertQuerysetEqualAndNotEmpty(filterset, expected_queryset)
+
 
 class ServiceTestCase(FilterTestCases.FilterTestCase):
     queryset = Service.objects.all()
