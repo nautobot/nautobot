@@ -1339,6 +1339,8 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ("device_redundancy_group", "device_redundancy_group__id"),
         ("device_redundancy_group", "device_redundancy_group__name"),
         ("device_redundancy_group_priority",),
+        ("controller_device_group", "controller_device_group__id"),
+        ("controller_device_group", "controller_device_group__name"),
         ("device_type", "device_type__id"),
         ("device_type", "device_type__model"),
         ("front_ports", "front_ports__id"),
@@ -1413,13 +1415,21 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         Service.objects.create(device=devices[0], name="ssh", protocol="tcp", ports=[22])
         Service.objects.create(device=devices[1], name="dns", protocol="udp", ports=[53])
 
+        cls.controller_device_groups = list(ControllerDeviceGroup.objects.all()[:2])
         cls.device_redundancy_groups = list(DeviceRedundancyGroup.objects.all()[:2])
-        Device.objects.filter(pk=devices[0].pk).update(device_redundancy_group=cls.device_redundancy_groups[0])
+        Device.objects.filter(pk=devices[0].pk).update(
+            controller_device_group=cls.controller_device_groups[0],
+            device_redundancy_group=cls.device_redundancy_groups[0],
+        )
         Device.objects.filter(pk=devices[1].pk).update(
-            device_redundancy_group=cls.device_redundancy_groups[0], device_redundancy_group_priority=1
+            controller_device_group=cls.controller_device_groups[0],
+            device_redundancy_group=cls.device_redundancy_groups[0],
+            device_redundancy_group_priority=1,
         )
         Device.objects.filter(pk=devices[2].pk).update(
-            device_redundancy_group=cls.device_redundancy_groups[1], device_redundancy_group_priority=100
+            controller_device_group=cls.controller_device_groups[1],
+            device_redundancy_group=cls.device_redundancy_groups[1],
+            device_redundancy_group_priority=100,
         )
 
         # Assign primary IPs for filtering

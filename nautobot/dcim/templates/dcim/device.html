@@ -205,6 +205,12 @@
                                             {% endif %}
                                         </td>
                                     </tr>
+                                    <tr>
+                                        <td>Controller Device Group</td>
+                                        <td>
+                                            {{ object.controller_device_group|hyperlinked_object }}
+                                        </td>
+                                    </tr>
                                     {% if object.cluster %}
                                         <tr>
                                             <td>Cluster</td>

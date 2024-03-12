@@ -1423,6 +1423,9 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
+    # TBD:
+    # def test_patching_controller_device_group(self):
+
 
 class ConsolePortTest(Mixins.BasePortTestMixin):
     model = ConsolePort

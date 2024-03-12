@@ -598,6 +598,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                             "secrets_group",
                             "device_redundancy_group",
                             "device_redundancy_group_priority",
+                            "controller_device_group",
                         ]
                     },
                 },
