@@ -1578,11 +1578,6 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         queryset=SoftwareVersion.objects.all(),
         required=False,
     )
-    controller_device_group = DynamicModelChoiceField(
-        queryset=ControllerDeviceGroup.objects.all(),
-        required=False,
-        query_params={"device_types": "$device_type"},
-    )
     comments = CommentField()
 
     class Meta:
