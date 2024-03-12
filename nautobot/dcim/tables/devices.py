@@ -1,5 +1,6 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
+from .template_code import TREE_LINK
 
 from nautobot.core.tables import (
     BaseTable,
@@ -1183,7 +1184,7 @@ class ControllerDeviceGroupTable(BaseTable):
     """Table for list view."""
 
     pk = ToggleColumn()
-    name = tables.Column(linkify=True)
+    name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
     weight = tables.Column()
     controller = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:controllerdevicegroup_list")
