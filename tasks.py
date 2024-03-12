@@ -699,7 +699,8 @@ def check_schema(context, api_version=None):
         "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
-        "parallel": "Run tests in parallel.",
+        "parallel": "Run tests in parallel. (default: False)",
+        "parallel-workers": "Number of workers to use when running tests in parallel. Implies --parallel. (default: None)",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "performance_report": "Generate Performance Testing report in the terminal. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
         "performance_snapshot": "Generate a new performance testing report to report.yml. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
@@ -718,6 +719,7 @@ def unittest(
     verbose=False,
     append=False,
     parallel=False,
+    parallel_workers=None,
     skip_docs_build=False,
     performance_report=False,
     performance_snapshot=False,
@@ -730,6 +732,10 @@ def unittest(
     if not append:
         run_command(context, "coverage erase")
 
+    if parallel_workers:
+        parallel_workers = int(parallel_workers)
+        if parallel_workers > 1:
+            parallel = True
     append_arg = " --append" if append and not parallel else ""
     parallel_arg = " --parallel-mode" if parallel else ""
     command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
@@ -747,6 +753,8 @@ def unittest(
         command += " --verbosity 2"
     if parallel:
         command += " --parallel"
+        if parallel_workers:
+            command += f"={parallel_workers}"
     if performance_report or (tag and "performance" in tag):
         command += " --slowreport"
     if performance_snapshot:
