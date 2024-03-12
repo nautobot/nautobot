@@ -873,7 +873,9 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
             elif self.filterset_class is None:
                 raise NotImplementedError("filterset_class must be defined to use _all")
             else:
-                self.pk_list = list(self.filterset_class(filter_params, model.objects.only("pk")).qs.values_list("pk", flat=True))
+                self.pk_list = list(
+                    self.filterset_class(filter_params, model.objects.only("pk")).qs.values_list("pk", flat=True)
+                )
         else:
             self.pk_list = list(request.POST.getlist("pk"))
         form_class = self.get_form_class(**kwargs)
@@ -1052,7 +1054,9 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
             elif self.filterset_class is None:
                 raise NotImplementedError("filterset_class must be defined to use _all")
             else:
-                self.pk_list = list(self.filterset_class(filter_params, model.objects.only("pk")).qs.values_list("pk", flat=True))
+                self.pk_list = list(
+                    self.filterset_class(filter_params, model.objects.only("pk")).qs.values_list("pk", flat=True)
+                )
         else:
             self.pk_list = list(request.POST.getlist("pk"))
         data = {}
