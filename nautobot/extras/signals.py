@@ -1,3 +1,4 @@
+import contextlib
 import contextvars
 from datetime import timedelta
 import logging
@@ -18,6 +19,7 @@ from django.db.models.signals import m2m_changed, post_delete, post_save, pre_de
 from django.dispatch import receiver
 from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
+from redis.exceptions import ConnectionError
 
 from nautobot.core.celery import app, import_jobs_as_celery_tasks
 from nautobot.core.utils.config import get_settings_or_config
@@ -84,8 +86,9 @@ def invalidate_models_cache(sender, **kwargs):
         if hasattr(manager, method_name):
             method = getattr(manager, method_name)
             if hasattr(method, "cache_key_prefix"):
-                # TODO: *maybe* target this more narrowly, e.g. only clear the cache for specific related content-types?
-                cache.delete_pattern(f"{method.cache_key_prefix}.*")
+                with contextlib.suppress(ConnectionError):
+                    # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
+                    cache.delete_pattern(f"{method.cache_key_prefix}.*")
 
 
 @receiver(post_save)

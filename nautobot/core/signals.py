@@ -1,4 +1,5 @@
 """Custom signals and handlers for the core Nautobot application."""
+import contextlib
 from functools import wraps
 import inspect
 import logging
@@ -7,6 +8,7 @@ from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.core.cache import cache
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver, Signal
+from redis.exceptions import ConnectionError
 
 nautobot_database_ready = Signal()
 """
@@ -68,4 +70,5 @@ def invalidate_max_depth_cache(sender, **kwargs):
     if not isinstance(sender.objects, TreeManager):
         return
 
-    cache.delete(sender.objects.max_depth_cache_key)
+    with contextlib.suppress(ConnectionError):
+        cache.delete(sender.objects.max_depth_cache_key)
