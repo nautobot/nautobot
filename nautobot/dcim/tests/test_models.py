@@ -1132,32 +1132,6 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         ):
             self.device.validated_save()
 
-    # TBD:
-    # def test_controller_device_group_validation(self):
-    #     d2 = Device(
-    #         name="Test Device 2",
-    #         device_type=self.device_type,
-    #         role=self.device_role,
-    #         status=self.device_status,
-    #         location=self.location_3,
-    #     )
-    #     d2.validated_save()
-
-    #     # Validate we can set a controller device group without any priority set
-    #     self.device.controller_device_group = self.controller_device_group
-    #     self.device.validated_save()
-
-    #     # Validate two devices can be a part of the same controller device group without any priority set
-    #     d2.controller_device_group = self.controller_device_group
-    #     d2.validated_save()
-
-    #     # Validate devices cannot have an assigned priority without an assigned group
-    #     self.device.controller_device_group = None
-    #     with self.assertRaisesMessage(
-    #         ValidationError, "Must assign a controller device group when defining a controller device group priority."
-    #     ):
-    #         self.device.validated_save()
-
     def test_primary_ip_validation_logic(self):
         device = Device(
             name="Test IP Device",
