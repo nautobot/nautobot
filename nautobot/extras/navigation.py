@@ -66,7 +66,7 @@ menu_items = (
                         name="Roles",
                         weight=100,
                         permissions=[
-                            "extras.view_status",
+                            "extras.view_role",
                         ],
                         buttons=(
                             NavMenuAddButton(
@@ -120,7 +120,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="extras:secretsgroup_list",
-                        name="Secret Groups",
+                        name="Secrets Groups",
                         weight=200,
                         permissions=["extras.view_secretsgroup"],
                         buttons=(
@@ -154,6 +154,7 @@ menu_items = (
                         weight=200,
                         permissions=[
                             "extras.view_job",
+                            "extras.view_scheduledjob",
                         ],
                         buttons=(),
                     ),

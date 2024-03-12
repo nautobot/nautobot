@@ -1,13 +1,72 @@
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import tag, TestCase
+from django.urls import resolve
 
 from nautobot.core.apps import NAV_CONTEXT_NAMES, NavContext, NavGrouping, NavItem, register_new_ui_menu_items
+from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
+from nautobot.core.templatetags.helpers import bettertitle
+from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.extras.registry import registry
 
 
-# TODO(timizuo): Here might not be the best place to add this test class
+@tag("unit")
+class NavMenuTestCase(TestCase):
+    """Verify correct construction of the nav menu."""
+
+    def test_menu_item_attributes(self):
+        """Verify that menu items and buttons have the correct text and expected permissions."""
+        for tab in registry["nav_menu"]["tabs"]:
+            for group in registry["nav_menu"]["tabs"][tab]["groups"]:
+                for item_url, item_details in registry["nav_menu"]["tabs"][tab]["groups"][group]["items"].items():
+                    with self.subTest(f"{tab} > {group} > {item_url}"):
+                        view_func = resolve(item_url).func
+                        try:
+                            # NautobotUIViewSet
+                            view_class = view_func.view_class
+                        except AttributeError:
+                            # ObjectListView
+                            view_class = view_func.cls
+                        try:
+                            view_queryset = view_class.queryset
+                            view_model = view_queryset.model
+
+                            if item_details["name"] not in {
+                                "Elevations",
+                                "Interface Connections",
+                                "Console Connections",
+                                "Power Connections",
+                                "Job Approval Queue",
+                            }:
+                                expected_name = bettertitle(view_model._meta.verbose_name_plural)
+                                if expected_name == "VM Interfaces":
+                                    expected_name = "Interfaces"
+                                elif expected_name == "Object Changes":
+                                    expected_name = "Change Log"
+                                self.assertEqual(item_details["name"], expected_name)
+                            if item_url == get_route_for_model(view_model, "list"):
+                                # Not assertEqual as some menu items have additional permissions defined.
+                                self.assertIn(get_permission_for_model(view_model, "view"), item_details["permissions"])
+                        except AttributeError:
+                            # Not a model view?
+                            self.assertIn(item_details["name"], {"Installed Plugins", "Interface Connections"})
+
+                    for button, button_details in item_details["buttons"].items():
+                        with self.subTest(f"{tab} > {group} > {item_url} > {button}"):
+                            # Currently all core menu items should have just a single Add button
+                            self.assertEqual(button, "Add")
+                            self.assertEqual(
+                                button_details["permissions"], {get_permission_for_model(view_model, "add")}
+                            )
+                            self.assertEqual(button_details["link"], get_route_for_model(view_model, "add"))
+                            self.assertEqual(button_details["button_class"], ButtonActionColorChoices.ADD)
+                            self.assertEqual(button_details["icon_class"], ButtonActionIconChoices.ADD)
+
+
+@tag("unit")
 class NewUINavTest(TestCase):
-    @patch("nautobot.core.apps.registry", {"new_ui_nav_menu": {}})
+    @patch.dict(registry, values={"new_ui_nav_menu": {}}, clear=True)
     def test_build_new_ui_nav_menu(self):
         """Assert building and adding of new ui nav to registry
 
@@ -15,8 +74,6 @@ class NewUINavTest(TestCase):
         1. New UI nav is added to registry["new_ui_nav_menu"]
         2. registry["new_ui_nav_menu"] is sorted by weight
         """
-        from nautobot.core.apps import registry  # Import here cause of the mock patch
-
         # Test App 1
         navigation_1 = (
             NavContext(
@@ -32,7 +89,7 @@ class NewUINavTest(TestCase):
                     NavGrouping(
                         name="App 1 Inventory Group 2",
                         items=(
-                            NavItem(name="Menu 1", link="extras:role_list", permissions=["extras.view_status"]),
+                            NavItem(name="Menu 1", link="extras:role_list", permissions=["extras.view_role"]),
                             NavItem(name="Menu 2", link="extras:tag_list"),
                         ),
                     ),
@@ -62,7 +119,7 @@ class NewUINavTest(TestCase):
                         items=(
                             NavItem(name="Tags", link="extras:tag_list"),
                             NavItem(name="Location", link="dcim:location_list"),
-                            NavItem(name="Roles", link="extras:role_list", permissions=["extras.view_status"]),
+                            NavItem(name="Roles", link="extras:role_list", permissions=["extras.view_role"]),
                         ),
                     ),
                 ),
@@ -100,7 +157,7 @@ class NewUINavTest(TestCase):
                                 "Menu 1": {
                                     "name": "Menu 1",
                                     "weight": 1000,
-                                    "permissions": ["extras.view_status"],
+                                    "permissions": ["extras.view_role"],
                                     "data": "/extras/roles/",
                                 },
                                 "Menu 2": {
@@ -157,7 +214,7 @@ class NewUINavTest(TestCase):
                                 "Roles": {
                                     "name": "Roles",
                                     "weight": 1000,
-                                    "permissions": ["extras.view_status"],
+                                    "permissions": ["extras.view_role"],
                                     "data": "/extras/roles/",
                                 },
                             },
@@ -171,7 +228,7 @@ class NewUINavTest(TestCase):
     def test_validation_in_new_ui_navigation_classes(self):
         """Test Validation on each of the new ui navigation classes `NavItem`, `NavGrouping`, `NavContext`"""
 
-        nav_item_1 = NavItem(name="Menu 1", link="extras:role_list", permissions=["extras.view_status"])
+        nav_item_1 = NavItem(name="Menu 1", link="extras:role_list", permissions=["extras.view_role"])
         nav_item_2 = NavItem(name="Menu 2", link="invalid_url")
         self.assertEqual(
             nav_item_1.initial_dict,
