@@ -31,6 +31,10 @@ class ConfigContextQuerySet(RestrictedQuerySet):
 
         # Get the group of the assigned tenant, if any
         tenant_group = obj.tenant.group if obj.tenant else None
+        if tenant_group:
+            tenant_groups = tenant_group.get_ancestors(include_self=True)
+        else:
+            tenant_groups = []
 
         # Match against the directly assigned region as well as any parent regions.
         region = getattr(obj.site, "region", None)
@@ -56,7 +60,7 @@ class ConfigContextQuerySet(RestrictedQuerySet):
             Q(cluster_groups=cluster_group) | Q(cluster_groups=None),
             Q(clusters=cluster) | Q(clusters=None),
             Q(device_redundancy_groups=device_redundancy_group) | Q(device_redundancy_groups=None),
-            Q(tenant_groups=tenant_group) | Q(tenant_groups=None),
+            Q(tenant_groups__in=tenant_groups) | Q(tenant_groups=None),
             Q(tenants=obj.tenant) | Q(tenants=None),
             Q(tags__slug__in=obj.tags.slugs()) | Q(tags=None),
         ]
@@ -124,13 +128,12 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
             Q(platforms=OuterRef("platform")) | Q(platforms=None),
             Q(cluster_groups=OuterRef("cluster__group")) | Q(cluster_groups=None),
             Q(clusters=OuterRef("cluster")) | Q(clusters=None),
-            Q(tenant_groups=OuterRef("tenant__group")) | Q(tenant_groups=None),
             Q(tenants=OuterRef("tenant")) | Q(tenants=None),
             Q(tags__pk__in=Subquery(TaggedItem.objects.filter(**tag_query_filters).values_list("tag_id", flat=True)))
             | Q(tags=None),
             is_active=True,
         )
-
+        tenant_group_field = "tenant__group"
         if self.model._meta.model_name == "device":
             base_query.add((Q(roles=OuterRef("device_role")) | Q(roles=None)), Q.AND)
             base_query.add((Q(device_types=OuterRef("device_type")) | Q(device_types=None)), Q.AND)
@@ -155,6 +158,18 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
                     regions__rght__gte=OuterRef(f"{region_field}__rght"),
                 )
                 | Q(regions=None)
+            ),
+            Q.AND,
+        )
+        base_query.add(
+            (
+                Q(
+                    tenant_groups__tree_id=OuterRef(f"{tenant_group_field}__tree_id"),
+                    tenant_groups__level__lte=OuterRef(f"{tenant_group_field}__level"),
+                    tenant_groups__lft__lte=OuterRef(f"{tenant_group_field}__lft"),
+                    tenant_groups__rght__gte=OuterRef(f"{tenant_group_field}__rght"),
+                )
+                | Q(tenant_groups=None)
             ),
             Q.AND,
         )
