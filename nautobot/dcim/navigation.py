@@ -246,7 +246,7 @@ menu_items = (
             ),
             NavMenuGroup(
                 name="Software",
-                weight=250,
+                weight=300,
                 items=(
                     NavMenuItem(
                         link="dcim:platform_list",
@@ -300,7 +300,7 @@ menu_items = (
             ),
             NavMenuGroup(
                 name="Controllers",
-                weight=300,
+                weight=400,
                 items=(
                     NavMenuItem(
                         link="dcim:controller_list",
@@ -338,7 +338,7 @@ menu_items = (
             ),
             NavMenuGroup(
                 name="Connections",
-                weight=350,
+                weight=500,
                 items=(
                     NavMenuItem(
                         link="dcim:cable_list",
@@ -382,7 +382,7 @@ menu_items = (
             ),
             NavMenuGroup(
                 name="Device Components",
-                weight=400,
+                weight=600,
                 items=(
                     NavMenuItem(
                         link="dcim:interface_list",

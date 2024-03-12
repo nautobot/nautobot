@@ -864,7 +864,18 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         request.POST "_confirm": Function to validate the table form/BulkDestroyConfirmationForm and to perform the action of bulk destroy. Render the form with errors if exceptions are raised.
         """
         queryset = self.get_queryset()
-        self.pk_list = _get_bulk_pk_list(self, request)
+        model = queryset.model
+        # Are we deleting *all* objects in the queryset or just a selected subset?
+        if request.POST.get("_all"):
+            filter_params = self.get_filter_params(request)
+            if not filter_params:
+                self.pk_list = list(model.objects.only("pk").all().values_list("pk", flat=True))
+            elif self.filterset_class is None:
+                raise NotImplementedError("filterset_class must be defined to use _all")
+            else:
+                self.pk_list = list(self.filterset_class(filter_params, model.objects.only("pk")).qs.values_list("pk", flat=True))
+        else:
+            self.pk_list = list(request.POST.getlist("pk"))
         form_class = self.get_form_class(**kwargs)
         data = {}
         if "_confirm" in request.POST:
@@ -1031,7 +1042,19 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
         request.POST "_apply": Function to validate the table form/BulkUpdateForm and to perform the action of bulk update. Render the form with errors if exceptions are raised.
         """
         queryset = self.get_queryset()
-        self.pk_list = _get_bulk_pk_list(self, request)
+        model = queryset.model
+
+        # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
+        if request.POST.get("_all"):
+            filter_params = self.get_filter_params(request)
+            if not filter_params:
+                self.pk_list = list(model.objects.only("pk").all().values_list("pk", flat=True))
+            elif self.filterset_class is None:
+                raise NotImplementedError("filterset_class must be defined to use _all")
+            else:
+                self.pk_list = list(self.filterset_class(filter_params, model.objects.only("pk")).qs.values_list("pk", flat=True))
+        else:
+            self.pk_list = list(request.POST.getlist("pk"))
         data = {}
         form_class = self.get_form_class()
         if "_apply" in request.POST:
@@ -1082,26 +1105,3 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
             "base_template": self.base_template,
         }
         return Response(data)
-
-
-def _get_bulk_pk_list(mixin, request) -> list:
-    """Get the list of primary keys from the request."""
-
-    queryset = mixin.get_queryset()
-    model = queryset.model
-
-    if not request.POST.get("_all"):
-        # If we are NOT requesting *all* objects in the queryset, return the list of provided PKs
-        return list(request.POST.getlist("pk"))
-
-    filter_params = mixin.get_filter_params(request)
-
-    if not filter_params:
-        # Without any filter params, return all PKs for the model
-        return list(model.objects.only("pk").all().values_list("pk", flat=True))
-
-    if mixin.filterset_class is None:
-        raise NotImplementedError("filterset_class must be defined to use _all")
-
-    # Return the PKs of the filtered queryset from the request
-    return list(mixin.filterset_class(filter_params, model.objects.only("pk")).qs.values_list("pk", flat=True))

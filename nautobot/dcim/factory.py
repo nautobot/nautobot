@@ -687,7 +687,7 @@ class ControllerFactory(PrimaryModelFactory):
     status = random_instance(lambda: Status.objects.get_for_model(Controller), allow_null=False)
     role = random_instance(lambda: Role.objects.get_for_model(Controller), allow_null=False)
     platform = random_instance(Platform)
-    location = random_instance(Location)
+    location = random_instance(Location, allow_null=False)
     tenant = random_instance(Tenant)
     external_integration = random_instance(ExternalIntegration)
     deployed_controller_device = factory.Maybe("has_device", random_instance(Device), None)

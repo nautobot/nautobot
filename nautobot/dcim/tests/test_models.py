@@ -906,7 +906,6 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             location_type=self.location_type_3,
         )
         self.device_redundancy_group = DeviceRedundancyGroup.objects.first()
-        self.controller_device_group = ControllerDeviceGroup.objects.first()
 
         # Create DeviceType components
         ConsolePortTemplate(device_type=self.device_type, name="Console Port 1").save()
