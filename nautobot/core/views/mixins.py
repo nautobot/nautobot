@@ -1,5 +1,4 @@
 import logging
-from uuid import UUID
 
 from django.contrib import messages
 from django.contrib.auth.mixins import AccessMixin
@@ -1086,24 +1085,24 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
 
 
 def _get_bulk_pk_list(mixin, request) -> list:
-    """Get the list of primary keys to be updated."""
-
-    def get_pk(item):
-        if isinstance(item, (UUID, str, int)):
-            return item
-        if hasattr(item, "pk"):
-            return item.pk
-        raise NotImplementedError(f"Unable to determine the primary key for {type(item)} | {item}")
+    """Get the list of primary keys from the request."""
 
     queryset = mixin.get_queryset()
     model = queryset.model
-    # If we are editing / deleting *all* objects in the queryset, replace the PK list with all matched objects.
-    if request.POST.get("_all"):
-        filter_params = mixin.get_filter_params(request)
-        if not filter_params:
-            return [get_pk(item) for item in model.objects.only("pk").all().values_list("pk", flat=True)]
-        if mixin.filterset_class is None:
-            raise NotImplementedError("filterset_class must be defined to use _all")
-        return [get_pk(item) for item in mixin.filterset_class(filter_params, model.objects.only("pk")).qs]
 
-    return [get_pk(item) for item in request.POST.getlist("pk")]
+    if not request.POST.get("_all"):
+        # If we are NOT requesting *all* objects in the queryset, return the list of provided PKs
+        return request.POST.getlist("pk")
+
+    filter_params = mixin.get_filter_params(request)
+
+    if not filter_params:
+        # Without any filter params, return all PKs for the model
+        return model.objects.only("pk").all().values_list("pk", flat=True)
+
+    if mixin.filterset_class is None:
+        raise NotImplementedError("filterset_class must be defined to use _all")
+
+    # Return the PKs of the filtered queryset from the request
+    return mixin.filterset_class(filter_params, model.objects.only("pk")).qs.values_list("pk", flat=True)
+
