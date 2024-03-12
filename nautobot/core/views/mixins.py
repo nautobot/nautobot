@@ -1092,17 +1092,16 @@ def _get_bulk_pk_list(mixin, request) -> list:
 
     if not request.POST.get("_all"):
         # If we are NOT requesting *all* objects in the queryset, return the list of provided PKs
-        return request.POST.getlist("pk")
+        return list(request.POST.getlist("pk"))
 
     filter_params = mixin.get_filter_params(request)
 
     if not filter_params:
         # Without any filter params, return all PKs for the model
-        return model.objects.only("pk").all().values_list("pk", flat=True)
+        return list(model.objects.only("pk").all().values_list("pk", flat=True))
 
     if mixin.filterset_class is None:
         raise NotImplementedError("filterset_class must be defined to use _all")
 
     # Return the PKs of the filtered queryset from the request
-    return mixin.filterset_class(filter_params, model.objects.only("pk")).qs.values_list("pk", flat=True)
-
+    return list(mixin.filterset_class(filter_params, model.objects.only("pk")).qs.values_list("pk", flat=True))
