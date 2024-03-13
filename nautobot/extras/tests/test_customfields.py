@@ -955,7 +955,7 @@ class CustomFieldDataAPITest(APITestCase):
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
-        data = {"custom_field": self.cf_select.id, "value": self.cf_select.default.lower(), "weight": 100}
+        data = {"custom_field": self.cf_select.id, "value": "q" * len(self.cf_select.default), "weight": 100}
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
