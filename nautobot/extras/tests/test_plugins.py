@@ -716,31 +716,31 @@ class PluginTemplateExtensionsTest(TestCase):
 
     def setUp(self):
         super().setUp()
-        self.location = Location.objects.first()
+        self.site = Site.objects.first()
         self.user.is_superuser = True
         self.user.save()
 
     def test_list_view_buttons(self):
-        response = self.client.get(reverse("dcim:location_list"))
+        response = self.client.get(reverse("dcim:site_list"))
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("LOCATION CONTENT - BUTTONS LIST", response_body, msg=response_body)
+        self.assertIn("SITE CONTENT - BUTTONS LIST", response_body, msg=response_body)
 
     def test_detail_view_buttons(self):
-        response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
+        response = self.client.get(reverse("dcim:site", kwargs={"pk": self.site.slug}))
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("LOCATION CONTENT - BUTTONS", response_body, msg=response_body)
+        self.assertIn("SITE CONTENT - BUTTONS", response_body, msg=response_body)
 
     def test_detail_view_left_page(self):
-        response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
+        response = self.client.get(reverse("dcim:site", kwargs={"pk": self.site.slug}))
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("LOCATION CONTENT - LEFT PAGE", response_body, msg=response_body)
+        self.assertIn("SITE CONTENT - LEFT PAGE", response_body, msg=response_body)
 
     def test_detail_view_right_page(self):
-        response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
+        response = self.client.get(reverse("dcim:site", kwargs={"pk": self.site.slug}))
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("LOCATION CONTENT - RIGHT PAGE", response_body, msg=response_body)
+        self.assertIn("SITE CONTENT - RIGHT PAGE", response_body, msg=response_body)
 
     def test_detail_view_full_width_page(self):
-        response = self.client.get(reverse("dcim:location", kwargs={"pk": self.location.pk}))
+        response = self.client.get(reverse("dcim:site", kwargs={"pk": self.site.slug}))
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("LOCATION CONTENT - FULL WIDTH PAGE", response_body, msg=response_body)
+        self.assertIn("SITE CONTENT - FULL WIDTH PAGE", response_body, msg=response_body)

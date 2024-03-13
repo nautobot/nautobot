@@ -73,7 +73,7 @@ class SiteContent(TemplateExtension):
         return "SITE CONTENT - BUTTONS"
 
     def list_buttons(self):
-        return "LOCATION CONTENT - BUTTONS LIST"
+        return "SITE CONTENT - BUTTONS LIST"
 
 
 class ExampleModelContent(TemplateExtension):
