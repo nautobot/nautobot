@@ -4224,11 +4224,14 @@ class ControllerBulkEditForm(
 class ControllerDeviceGroupForm(NautobotModelForm):
     """ControllerDeviceGroup create/edit form."""
 
+    devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
+
     class Meta:
         model = ControllerDeviceGroup
         fields = (
             "name",
             "controller",
+            "devices",
             "parent",
             "weight",
             "tags",
