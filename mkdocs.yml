@@ -146,7 +146,7 @@ plugins:
         'core-functionality/virtualization.md': 'user-guide/core-data-model/virtualization/virtualmachine.md'
         'core-functionality/vlans.md': 'user-guide/core-data-model/ipam/vlan.md'
         'development/application-registry.md': 'development/core/application-registry.md'
-        'development/apps/api/ui-extensions/tabs.md': 'development/apps/api/ui-extensions/object-detail-views.md'
+        'development/apps/api/ui-extensions/tabs.md': 'development/apps/api/ui-extensions/object-views.md'
         'development/apps/api/views/view-overrides.md': 'development/apps/api/views/core-view-overrides.md'
         'development/best-practices.md': 'development/core/best-practices.md'
         'development/core/react-ui.md': 'development/core/index.md'
