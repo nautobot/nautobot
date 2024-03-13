@@ -1369,7 +1369,5 @@ class ControllerDeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
 
         if self.parent and self.controller and self.parent.controller and self.controller != self.parent.controller:
             raise ValidationError(
-                {
-                    "controller": "Controller device group must have the same controller as the parent group."
-                }
+                {"controller": "Controller device group must have the same controller as the parent group."}
             )
