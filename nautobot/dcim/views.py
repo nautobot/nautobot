@@ -3030,6 +3030,7 @@ class ControllerDeviceGroupUIViewSet(NautobotUIViewSet):
     queryset = ControllerDeviceGroup.objects.all().prefetch_related("devices")
     serializer_class = serializers.ControllerDeviceGroupSerializer
     table_class = tables.ControllerDeviceGroupTable
+    template_name = "dcim/controllerdevicegroup_create.html"
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
