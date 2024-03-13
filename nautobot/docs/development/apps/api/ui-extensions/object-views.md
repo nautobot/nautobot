@@ -15,7 +15,7 @@ Additionally, a `render()` method is available for convenience. This method acce
 
 When a TemplateExtension is instantiated, context data is assigned to `self.context`. Available data include:
 
-* `object` - The object being viewed (note that this will be `None` when accessed in the context of `buttons()`)
+* `object` - The object being viewed (note that this will be the model class when accessed in the context of `list_buttons()`)
 * `request` - The current request
 * `settings` - Global Nautobot settings
 * `config` - App-specific configuration parameters
