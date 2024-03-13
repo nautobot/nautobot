@@ -152,7 +152,7 @@ ENV PATH="${PATH}:/root/.local/bin"
 # https://github.com/nautobot/nautobot/issues/193
 RUN poetry config virtualenvs.create false && \
     poetry config installer.parallel ${POETRY_PARALLEL:-false} && \
-    poetry config installer.no-binary pyuwsgi
+    poetry config installer.no-binary lxml,pyuwsgi
 
 COPY pyproject.toml poetry.lock README.md /source/
 
@@ -166,6 +166,10 @@ RUN --mount=type=cache,target="/root/.cache/pip" \
     --mount=type=cache,target="/root/.cache/pypoetry" \
     poetry install --no-root --only main --no-ansi --extras all && \
     rm -rf /tmp/tmp*
+
+# Verify that pyuwsgi was installed correctly, i.e. with SSL support
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN pyuwsgi --cflags | sed 's/ /\n/g' | grep -e "^-DUWSGI_SSL$"
 
 ################################ Stage: dependencies-dev-python (intermediate build target)
 # We need dev dependencies for building the docs but don't want them in the final build image

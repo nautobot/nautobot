@@ -5,11 +5,11 @@ from django.contrib.auth.admin import UserAdmin as UserAdmin_
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldError, ValidationError
-from django.db import models
 
 from nautobot.core.admin import NautobotModelAdmin
 from nautobot.extras.admin import order_content_types
 from nautobot.users.models import AdminGroup, ObjectPermission, Token, User
+from nautobot.utilities.permissions import qs_filter_from_constraints
 
 
 #
@@ -198,7 +198,8 @@ class ObjectPermissionForm(forms.ModelForm):
             for ct in object_types:
                 model = ct.model_class()
                 try:
-                    model.objects.filter(*[models.Q(**c) for c in constraints]).exists()
+                    tokens = {"$user": None}  # setting token to null user ID
+                    model.objects.filter(qs_filter_from_constraints(constraints, tokens)).exists()
                 except FieldError as e:
                     raise ValidationError({"constraints": f"Invalid filter for {model}: {e}"})
 

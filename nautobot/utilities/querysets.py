@@ -1,6 +1,5 @@
 from django.db.models import Q, QuerySet
-
-from nautobot.utilities.permissions import permission_is_exempt
+from nautobot.utilities.permissions import permission_is_exempt, qs_filter_from_constraints
 
 
 class RestrictedQuerySet(QuerySet):
@@ -28,16 +27,11 @@ class RestrictedQuerySet(QuerySet):
         # Filter the queryset to include only objects with allowed attributes
         else:
             attrs = Q()
-            for perm_attrs in user._object_perm_cache[permission_required]:
-                if isinstance(perm_attrs, list):
-                    for p in perm_attrs:
-                        attrs |= Q(**p)
-                elif perm_attrs:
-                    attrs |= Q(**perm_attrs)
-                else:
-                    # Any permission with null constraints grants access to _all_ instances
-                    attrs = Q()
-                    break
+            tokens = {
+                "$user": user,
+            }
+
+            attrs = qs_filter_from_constraints(user._object_perm_cache[permission_required], tokens)
             qs = self.filter(attrs)
 
         return qs

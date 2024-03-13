@@ -127,7 +127,10 @@ class ConfigContextTest(TestCase):
         self.location = Location.objects.create(name="Location 1", location_type=location_type, site=self.site)
         self.platform = Platform.objects.create(name="Platform")
         self.tenantgroup = TenantGroup.objects.create(name="Tenant Group")
+        self.parent_tenantgroup = TenantGroup.objects.create(name="Parent Tenant Group")
+        self.child_tenantgroup = TenantGroup.objects.create(name="Child Tenant Group", parent=self.parent_tenantgroup)
         self.tenant = Tenant.objects.create(name="Tenant", group=self.tenantgroup)
+        self.child_tenant = Tenant.objects.create(name="Child Tenant", group=self.child_tenantgroup)
         self.tag, self.tag2 = Tag.objects.get_for_model(Device)[:2]
         self.dynamic_groups = DynamicGroup.objects.create(
             name="Dynamic Group",
@@ -297,6 +300,65 @@ class ConfigContextTest(TestCase):
             "cluster_group",
             "cluster",
             "vm_dynamic_group",
+        ]:
+            self.assertIn(key, vm_context)
+
+    def test_annotation_same_as_get_for_object_device_relations_in_child_tenant_groups(self):
+        tenant_group_context = ConfigContext.objects.create(
+            name="parent_tenant_group", weight=100, data={"parent-group-1": 1}
+        )
+        tenant_group_context.tenant_groups.add(self.parent_tenantgroup)
+        tenant_group_context = ConfigContext.objects.create(
+            name="child_tenant_group", weight=100, data={"child-group-1": 2}
+        )
+        tenant_group_context.tenant_groups.add(self.child_tenantgroup)
+        tenant_context = ConfigContext.objects.create(name="child_tenant", weight=100, data={"child-tenant-1": 3})
+        tenant_context.tenants.add(self.child_tenant)
+        device = Device.objects.create(
+            name="Child Tenant Device",
+            site=self.site,
+            location=self.location,
+            device_role=self.devicerole,
+            device_type=self.devicetype,
+            tenant=self.child_tenant,
+        )
+        device_context = device.get_config_context()
+        for key in ["parent-group-1", "child-group-1", "child-tenant-1"]:
+            self.assertIn(key, device_context)
+
+    def test_annotation_same_as_get_for_object_virtualmachine_relations_in_child_tenant_groups(self):
+        tenant_group_context = ConfigContext.objects.create(
+            name="parent_tenant_group", weight=100, data={"parent-group-1": 1}
+        )
+        tenant_group_context.tenant_groups.add(self.parent_tenantgroup)
+        tenant_group_context = ConfigContext.objects.create(
+            name="child_tenant_group", weight=200, data={"child-group-1": 2}
+        )
+        tenant_group_context.tenant_groups.add(self.child_tenantgroup)
+        tenant_context = ConfigContext.objects.create(name="child_tenant", weight=300, data={"child-tenant-1": 3})
+        tenant_context.tenants.add(self.child_tenant)
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        cluster_group = ClusterGroup.objects.create(name="Cluster Group")
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster = Cluster.objects.create(
+            name="Cluster",
+            group=cluster_group,
+            type=cluster_type,
+            location=self.location,
+            tenant=self.child_tenant,
+        )
+        virtual_machine = VirtualMachine.objects.create(
+            name="Child Location VM",
+            cluster=cluster,
+            role=self.devicerole,
+            status=vm_status,
+            tenant=self.child_tenant,
+        )
+        vm_context = virtual_machine.get_config_context()
+        for key in [
+            "parent-group-1",
+            "child-group-1",
+            "child-tenant-1",
         ]:
             self.assertIn(key, vm_context)
 

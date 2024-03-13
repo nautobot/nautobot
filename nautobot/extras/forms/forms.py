@@ -86,7 +86,6 @@ from .mixins import (
     CustomFieldModelFormMixin,
     NoteModelBulkEditFormMixin,
     NoteModelFormMixin,
-    RelationshipModelFormMixin,
 )
 
 
@@ -583,7 +582,7 @@ class PasswordInputWithPlaceholder(forms.PasswordInput):
         return super().get_context(name, value, attrs)
 
 
-class GitRepositoryForm(BootstrapMixin, RelationshipModelFormMixin):
+class GitRepositoryForm(NautobotModelForm):
     slug = SlugField(help_text="Filesystem-friendly unique shorthand")
 
     remote_url = forms.URLField(
