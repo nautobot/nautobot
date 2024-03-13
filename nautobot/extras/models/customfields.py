@@ -1,11 +1,11 @@
 from collections import OrderedDict
 from datetime import date, datetime
-from functools import lru_cache
 import logging
 import re
 
 from django import forms
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
@@ -46,13 +46,20 @@ logger = logging.getLogger(__name__)
 class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    @lru_cache(maxsize=128)
     def get_for_model(self, model):
         """
         Return all ComputedFields assigned to the given model.
         """
-        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        return self.get_queryset().filter(content_type=content_type)
+        concrete_model = model._meta.concrete_model
+        cache_key = f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}"
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            content_type = ContentType.objects.get_for_model(concrete_model)
+            queryset = self.get_queryset().filter(content_type=content_type)
+            cache.set(cache_key, queryset)
+        return queryset
+
+    get_for_model.cache_key_prefix = "nautobot.extras.computedfield.get_for_model"
 
 
 @extras_features("graphql")
@@ -298,7 +305,6 @@ class CustomFieldModel(models.Model):
 class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    @lru_cache(maxsize=128)
     def get_for_model(self, model, exclude_filter_disabled=False):
         """
         Return all CustomFields assigned to the given model.
@@ -307,11 +313,20 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             model: The django model to which custom fields are registered
             exclude_filter_disabled: Exclude any custom fields which have filter logic disabled
         """
-        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
-        qs = self.get_queryset().filter(content_types=content_type)
-        if exclude_filter_disabled:
-            qs = qs.exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
-        return qs
+        concrete_model = model._meta.concrete_model
+        cache_key = (
+            f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}.{exclude_filter_disabled}"
+        )
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            content_type = ContentType.objects.get_for_model(concrete_model)
+            queryset = self.get_queryset().filter(content_types=content_type)
+            if exclude_filter_disabled:
+                queryset = queryset.exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
+            cache.set(cache_key, queryset)
+        return queryset
+
+    get_for_model.cache_key_prefix = "nautobot.extras.customfield.get_for_model"
 
 
 @extras_features("webhooks")
