@@ -264,7 +264,7 @@ plugins:
         'user-guides/s3-django-storage.md': 'user-guide/administration/guides/s3-django-storage.md'
 
         # Post 2.x redirects
-        'development/apps/api/ui-extensions/object-detail-views.md':'development/apps/api/ui-extensions/object-views.md'
+        'development/apps/api/ui-extensions/object-detail-views.md': 'development/apps/api/ui-extensions/object-views.md'
 
 nav:
   - Overview: "index.md"
