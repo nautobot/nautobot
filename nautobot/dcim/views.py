@@ -3027,6 +3027,17 @@ class ControllerDeviceGroupUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.ControllerDeviceGroupFilterForm
     form_class = forms.ControllerDeviceGroupForm
     bulk_update_form_class = forms.ControllerDeviceGroupBulkEditForm
-    queryset = ControllerDeviceGroup.objects.all()
+    queryset = ControllerDeviceGroup.objects.all().prefetch_related("devices")
     serializer_class = serializers.ControllerDeviceGroupSerializer
     table_class = tables.ControllerDeviceGroupTable
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action == "retrieve" and instance:
+            devices = instance.devices.restrict(request.user)
+            devices_table = tables.DeviceTable(devices)
+            devices_table.columns.show("device_redundancy_group_priority")
+            context["devices_table"] = devices_table
+
+        return context
