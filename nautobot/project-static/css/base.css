@@ -42,7 +42,7 @@ body {
     transition-duration: var(--navbar-transition-duration);
     transition-timing-function: ease-in-out;
     transition-property: margin-left, width;
-    overflow: visible;
+    overflow: hidden;
     margin: 0;
 }
 .footer .row {
