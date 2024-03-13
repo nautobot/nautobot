@@ -12,6 +12,7 @@ from django.forms import (
     MultipleHiddenInput,
 )
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.functional import cached_property
 from django.utils.html import format_html
 from django.views.generic import View
@@ -616,7 +617,16 @@ class DeviceTypeListView(generic.ObjectListView):
     filterset = filters.DeviceTypeFilterSet
     filterset_form = forms.DeviceTypeFilterForm
     table = tables.DeviceTypeTable
+    template_name = "dcim/devicetype_list.html"
     use_new_ui = True
+
+    def extra_context(self):
+        return {
+            "csv_import_url": reverse(
+                "extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"}
+            )
+            + f"?content_type={ContentType.objects.get_for_model(DeviceType).pk}"
+        }
 
 
 class DeviceTypeView(generic.ObjectView):
