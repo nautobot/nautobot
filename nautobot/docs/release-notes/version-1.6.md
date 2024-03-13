@@ -72,6 +72,66 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.14 (2024-03-05)
+
+### Fixed
+
+- [#5387](https://github.com/nautobot/nautobot/issues/5387) - Fixed an error in the Dockerfile that resulted in `pyuwsgi` being installed without SSL support.
+
+## v1.6.13 (2024-03-04)
+
+### Added
+
+### Added
+
+- [#4247](https://github.com/nautobot/nautobot/issues/4247) - Added a check to the `nautobot-server pre_migrate` command to identify Interfaces and VMInterfaces with multiple VRFs through IPAddress relationships.
+
+### Fixed
+
+- [#5307](https://github.com/nautobot/nautobot/issues/5307) - Fixed Custom Field form field(s) missing from git repository edit form.
+- [#5336](https://github.com/nautobot/nautobot/issues/5336) - Fixed 'docker-compose: command not found' error when running invoke commands.
+- [#5345](https://github.com/nautobot/nautobot/issues/5345) - Fixed intermittent 405 errors when using the Docker image with SAML authentication.
+
+### Documentation
+
+- [#5345](https://github.com/nautobot/nautobot/issues/5345) - Added a note to the Nautobot installation documentation about the need to do `pip3 install --no-binary=pyuwsgi` in order to have SSL support in `pyuwsgi`.
+- [#5345](https://github.com/nautobot/nautobot/issues/5345) - Added a note to the SSO documentation about the need to do `pip3 install --no-binary=lxml` to avoid incompatibilities between `lxml` and `xmlsec` packages.
+
+## v1.6.12 (2024-02-20)
+
+### Added
+
+- [#5104](https://github.com/nautobot/nautobot/issues/5104) - Added User Token as permission constraints.
+
+### Security
+
+- [#5251](https://github.com/nautobot/nautobot/issues/5251) - Updated `Django` dependency to 3.2.24 due to CVE-2024-24680.
+
+### Changed
+
+- [#5254](https://github.com/nautobot/nautobot/issues/5254) - Changed `TreeQuerySet.ancestors` implementation to a more efficient approach for shallow trees.
+- [#5254](https://github.com/nautobot/nautobot/issues/5254) - Changed the location detail view not to annotate tree fields on its queries.
+
+### Fixed
+
+- [#5253](https://github.com/nautobot/nautobot/issues/5253) - Fixed issue with Job Button Groups displaying when Conditional Rendering should remove the button.
+- [#5261](https://github.com/nautobot/nautobot/issues/5261) - Fixed a regression introduced in v1.6.8 where Job Buttons would always run with `commit=False`.
+
+## v1.6.11 (2024-02-05)
+
+### Security
+
+- [#5151](https://github.com/nautobot/nautobot/issues/5151) - Updated `pillow` dependency to 10.2.0 due to CVE-2023-50447.
+
+### Added
+
+- [#5169](https://github.com/nautobot/nautobot/issues/5169) - Added support for user session profiling via django-silk.
+
+### Fixed
+
+- [#3664](https://github.com/nautobot/nautobot/issues/3664) - Fixed AssertionError when querying Date type custom fields in GraphQL.
+- [#5162](https://github.com/nautobot/nautobot/issues/5162) - Fixed incorrect rack group variable in device template.
+
 ## v1.6.10 (2024-01-22)
 
 ### Security
