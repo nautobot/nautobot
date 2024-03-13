@@ -4247,7 +4247,6 @@ class ControllerDeviceGroupForm(NautobotModelForm):
         return instance
 
 
-
 class ControllerDeviceGroupFilterForm(
     LocalContextFilterForm,
     NautobotFilterForm,
