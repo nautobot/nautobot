@@ -1304,6 +1304,18 @@ class Controller(PrimaryModel, ConfigContextModel):
     def __str__(self):
         return self.name or super().__str__()
 
+    def clean(self):
+        super().clean()
+
+        if self.deployed_controller_device and self.deployed_controller_group:
+            raise ValidationError(
+                {
+                    "deployed_controller_device": (
+                        "Cannot assign both a device and a device redundancy group to a controller."
+                    ),
+                },
+            )
+
 
 @extras_features(
     "custom_links",

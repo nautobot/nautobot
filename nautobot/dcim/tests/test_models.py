@@ -1889,10 +1889,22 @@ class SoftwareVersionTestCase(ModelTestCases.BaseModelTestCase):
 class ControllerTestCase(ModelTestCases.BaseModelTestCase):
     model = Controller
 
-    def test_queryset_get_for_object(self):
-        """
-        Test that the queryset get_for_object method returns the expected results for Device, DeviceType, InventoryItem and VirtualMachine
-        """
+    def test_device_or_device_redundancy_group_validation(self):
+        """Ensure a controller cannot be linked to both a device and a device redundancy group."""
+        controller = Controller(
+            name="Controller testing Device and Device Redundancy Group exclusivity",
+            status=Status.objects.get_for_model(Controller).first(),
+            role=Role.objects.get_for_model(Controller).first(),
+            location=Location.objects.first(),
+            deployed_controller_device=Device.objects.first(),
+            deployed_controller_group=DeviceRedundancyGroup.objects.first(),
+        )
+        with self.assertRaises(ValidationError) as error:
+            controller.validated_save()
+        self.assertEqual(
+            error.exception.message_dict["deployed_controller_device"][0],
+            "Cannot assign both a device and a device redundancy group to a controller.",
+        )
 
 
 class ControllerDeviceGroupTestCase(ModelTestCases.BaseModelTestCase):
