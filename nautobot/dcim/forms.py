@@ -4241,6 +4241,12 @@ class ControllerDeviceGroupForm(NautobotModelForm):
             "tags",
         )
 
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        instance.devices.set(self.cleaned_data["devices"])
+        return instance
+
+
 
 class ControllerDeviceGroupFilterForm(
     LocalContextFilterForm,
