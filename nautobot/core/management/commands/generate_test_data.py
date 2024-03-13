@@ -292,7 +292,7 @@ Type 'yes' to continue, or 'no' to cancel: """
             self.stdout.write(
                 self.style.WARNING(f'Flushing all existing data from the database "{options["database"]}"...')
             )
-            call_command("flush", "--no-input", "--database", options["database"])
+            call_command("flush", "--no-input", "--database", options["database"], inhibit_post_migrate=True)
 
         if options["cache_test_fixtures"] and os.path.exists(options["fixture_file"]):
             self.stdout.write(self.style.WARNING(f"Loading factory data from file {options['fixture_file']}"))
