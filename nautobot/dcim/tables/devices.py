@@ -1,6 +1,5 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
-from .template_code import TREE_LINK
 
 from nautobot.core.tables import (
     BaseTable,
@@ -54,6 +53,7 @@ from .template_code import (
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
     REARPORT_BUTTONS,
+    TREE_LINK,
 )
 
 __all__ = (
