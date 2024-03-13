@@ -1,1 +1,1 @@
-Apps may now register button content to be injected into object list views via the new `list_buttons()` method on `TemplateExtension` classes.
+Added `TemplateExtension.list_buttons()` API, allowing apps to register button content to be injected into object list views.

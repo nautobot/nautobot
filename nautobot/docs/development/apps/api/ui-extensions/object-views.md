@@ -11,6 +11,9 @@ Apps can inject custom content into certain areas of the detail and list views o
 * `list_buttons()` - Add buttons to the object list page. This works in the same way as `buttons()` for the object detail page.
 * `detail_tabs()` - Add extra tabs to the end of the list of tabs within the object detail page tabs navigation
 
++++ 2.1.8
+    Support for the `list_buttons()` method was added.
+
 Additionally, a `render()` method is available for convenience. This method accepts the name of a template to render, and any additional context data you want to pass. Its use is optional, however.
 
 When a TemplateExtension is instantiated, context data is assigned to `self.context`. Available data include:
