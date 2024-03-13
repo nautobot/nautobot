@@ -1524,6 +1524,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         },
     )
     device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
+    controller_device_group = DynamicModelChoiceField(queryset=ControllerDeviceGroup.objects.all(), required=False)
     position = forms.IntegerField(
         required=False,
         help_text="The lowest-numbered unit occupied by the device",
@@ -1577,11 +1578,6 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         queryset=SoftwareVersion.objects.all(),
         required=False,
     )
-    controller_device_group = DynamicModelChoiceField(
-        queryset=ControllerDeviceGroup.objects.all(),
-        required=False,
-        query_params={"device_types": "$device_type"},
-    )
     comments = CommentField()
 
     class Meta:
@@ -1598,6 +1594,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "rack",
             "device_redundancy_group",
             "device_redundancy_group_priority",
+            "controller_device_group",
             "position",
             "face",
             "status",
@@ -1618,8 +1615,9 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         help_texts = {
             "role": "The function this device serves",
             "serial": "Chassis serial number",
-            "local_config_context_data": "Local config context data overwrites all source contexts in the final rendered "
-            "config context",
+            "local_config_context_data": (
+                "Local config context data overwrites all source contexts in the final rendered config context"
+            ),
         }
         widgets = {
             "face": StaticSelect2(),
@@ -1738,6 +1736,7 @@ class DeviceBulkEditForm(
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
     device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
     device_redundancy_group_priority = forms.IntegerField(required=False, min_value=1)
+    controller_device_group = DynamicModelChoiceField(queryset=ControllerDeviceGroup.objects.all(), required=False)
     software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
     software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
 
@@ -1755,6 +1754,7 @@ class DeviceBulkEditForm(
             "secrets_group",
             "device_redundancy_group",
             "device_redundancy_group_priority",
+            "controller_device_group",
             "software_image_files",
             "software_version",
         ]
@@ -1834,6 +1834,12 @@ class DeviceFilterForm(
         null_option="None",
     )
     device_redundancy_group_priority = NumericArrayField(base_field=forms.IntegerField(min_value=1), required=False)
+    controller_device_group = DynamicModelMultipleChoiceField(
+        queryset=ControllerDeviceGroup.objects.all(),
+        to_field_name="name",
+        required=False,
+        null_option="None",
+    )
     software_version = DynamicModelMultipleChoiceField(
         queryset=SoftwareVersion.objects.all(),
         required=False,

@@ -918,6 +918,12 @@ class DeviceFilterSet(
         to_field_name="name",
         label="Device Redundancy Groups (name or ID)",
     )
+    controller_device_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="controller_device_group",
+        queryset=ControllerDeviceGroup.objects.all(),
+        to_field_name="name",
+        label="Controller Device Groups (name or ID)",
+    )
     virtual_chassis_member = is_virtual_chassis_member
     has_console_ports = RelatedMembershipBooleanFilter(
         field_name="console_ports",

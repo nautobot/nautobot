@@ -391,6 +391,7 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         "software_version",
         "virtual_chassis__master",
         "device_redundancy_group",
+        "controller_device_group",
         "secrets_group",
         "status",
     ).prefetch_related("tags", "primary_ip4__nat_outside_list", "primary_ip6__nat_outside_list", "software_image_files")

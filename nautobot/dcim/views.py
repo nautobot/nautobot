@@ -1451,7 +1451,14 @@ class DeviceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
 
 class DeviceBulkEditView(generic.BulkEditView):
     queryset = Device.objects.select_related(
-        "tenant", "location", "rack", "role", "device_type__manufacturer", "secrets_group", "device_redundancy_group"
+        "tenant",
+        "location",
+        "rack",
+        "role",
+        "device_type__manufacturer",
+        "secrets_group",
+        "device_redundancy_group",
+        "controller_device_group",
     )
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable

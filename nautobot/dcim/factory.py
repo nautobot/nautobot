@@ -167,6 +167,8 @@ class DeviceFactory(PrimaryModelFactory):
         factory.Faker("pyint", min_value=1, max_value=500),
     )
 
+    controller_device_group = random_instance(ControllerDeviceGroup)
+
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("bs"))
 
@@ -680,26 +682,26 @@ class ControllerFactory(PrimaryModelFactory):
     class Params:
         has_device = NautobotBoolIterator()
 
-    name = factory.Faker("word")
+    name = UniqueFaker("word")
     description = factory.Faker("sentence")
     status = random_instance(lambda: Status.objects.get_for_model(Controller), allow_null=False)
     role = random_instance(lambda: Role.objects.get_for_model(Controller), allow_null=False)
-    platform = random_instance(Platform, allow_null=False)
+    platform = random_instance(Platform)
     location = random_instance(Location, allow_null=False)
-    tenant = random_instance(Tenant, allow_null=True)
-    external_integration = random_instance(ExternalIntegration, allow_null=True)
+    tenant = random_instance(Tenant)
+    external_integration = random_instance(ExternalIntegration)
     deployed_controller_device = factory.Maybe("has_device", random_instance(Device), None)
-    # deployed_controller_group = factory.Maybe("has_device", random_instance(DeviceRedundancyGroup), None)
+    deployed_controller_group = factory.Maybe("has_device", None, random_instance(DeviceRedundancyGroup))
 
 
 class ControllerDeviceGroupFactory(PrimaryModelFactory):
     class Meta:
         model = ControllerDeviceGroup
 
-    name = factory.Faker("word")
+    class Params:
+        has_parent = NautobotBoolIterator()
+
+    name = UniqueFaker("word")
     controller = random_instance(Controller, allow_null=False)
+    parent = factory.Maybe("has_parent", random_instance(ControllerDeviceGroup), None)
     weight = factory.Faker("pyint", min_value=1, max_value=1000)
-    parent = factory.Maybe(
-        factory.Iterator(ControllerDeviceGroup.objects.all()),
-        None,
-    )
