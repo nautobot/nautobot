@@ -214,6 +214,7 @@ class FilterFormsTestCase(TestCase):
         )
         url = reverse("dcim:location_list") + query_param
         response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
         response_content = response.content.decode(response.charset).replace("\n", "")
         self.assertInHTML(locations[0].name, response_content)
         self.assertInHTML(locations[1].name, response_content)

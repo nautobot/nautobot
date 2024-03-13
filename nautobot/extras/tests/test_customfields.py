@@ -42,7 +42,6 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
     def test_immutable_fields(self):
         """Some fields may not be changed once set, due to the potential for complex downstream effects."""
         instance = CustomField(
-            # 2.0 TODO: #824 remove name field
             label="Custom Field",
             key="custom_field",
             type=CustomFieldTypeChoices.TYPE_TEXT,
@@ -394,35 +393,57 @@ class CustomFieldManagerTest(TestCase):
         self.assertEqual(CustomField.objects.get_for_model(Location).count(), 2)
         self.assertEqual(CustomField.objects.get_for_model(VirtualMachine).count(), 0)
 
-    def test_get_for_model_lru_cache_invalidation(self):
-        """Test that the lru cache is properly invalidated when CustomFields are created or deleted."""
-
-        qs1 = CustomField.objects.get_for_model(Location)
-
+    def test_get_for_model_caching_and_cache_invalidation(self):
+        """Test that the cache is used and is properly invalidated when CustomFields are created or deleted."""
         # Assert that the cache is used when calling get_for_model a second time
-        qs1_cached = CustomField.objects.get_for_model(Location)
-        self.assertTrue(qs1_cached is qs1)
+        CustomField.objects.get_for_model(Location)
+        with self.assertNumQueries(0):
+            CustomField.objects.get_for_model(Location)
+
+        # Assert that different values of exclude_filter_disabled are cached separately
+        with self.assertNumQueries(1):
+            CustomField.objects.get_for_model(Location, exclude_filter_disabled=True)
+        with self.assertNumQueries(0):
+            CustomField.objects.get_for_model(Location, exclude_filter_disabled=True)
+        with self.assertNumQueries(0):
+            CustomField.objects.get_for_model(Location)
+
+        # Assert that different models are cached separately
+        with self.assertNumQueries(1):
+            CustomField.objects.get_for_model(VirtualMachine)
+        with self.assertNumQueries(0):
+            CustomField.objects.get_for_model(VirtualMachine)
+        with self.assertNumQueries(0):
+            CustomField.objects.get_for_model(Location)
 
         # Assert that the cache is invalidated on object save
         custom_field = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Test CF1", default="foo")
         custom_field.save()
-        qs2 = CustomField.objects.get_for_model(Location)
-        self.assertFalse(qs2 is qs1)
+        with self.assertNumQueries(1):
+            CustomField.objects.get_for_model(Location)
+        with self.assertNumQueries(0):
+            CustomField.objects.get_for_model(Location)
 
         # Assert that the cache is invalidated when adding a CustomField.content_types m2m relationship
         custom_field.content_types.set([self.content_type])
-        qs3 = CustomField.objects.get_for_model(Location)
-        self.assertNotIn(qs3, (qs1, qs2))
+        with self.assertNumQueries(1):
+            CustomField.objects.get_for_model(Location)
+        with self.assertNumQueries(0):
+            CustomField.objects.get_for_model(Location)
 
         # Assert that the cache is invalidated when removing a CustomField.content_types m2m relationship
         custom_field.content_types.set([])
-        qs4 = CustomField.objects.get_for_model(Location)
-        self.assertNotIn(qs4, (qs1, qs2, qs3))
+        with self.assertNumQueries(1):
+            CustomField.objects.get_for_model(Location)
+        with self.assertNumQueries(0):
+            CustomField.objects.get_for_model(Location)
 
         # Assert that the cache is invalidated on object delete
         custom_field.delete()
-        qs5 = CustomField.objects.get_for_model(Location)
-        self.assertNotIn(qs5, (qs1, qs2, qs3, qs4))
+        with self.assertNumQueries(1):
+            CustomField.objects.get_for_model(Location)
+        with self.assertNumQueries(0):
+            CustomField.objects.get_for_model(Location)
 
 
 class CustomFieldDataAPITest(APITestCase):
@@ -1262,7 +1283,6 @@ class CustomFieldModelTest(TestCase):
         """Test that omitting required custom fields raises a ValidationError."""
         label = "Custom Field"
         custom_field = CustomField.objects.create(
-            # 2.0 TODO: #824 remove name field
             label=label,
             key="custom_field",
             type=CustomFieldTypeChoices.TYPE_TEXT,
@@ -1279,7 +1299,6 @@ class CustomFieldModelTest(TestCase):
         """Test that removing required custom fields and then updating an object raises a ValidationError."""
         label = "Custom Field"
         custom_field = CustomField.objects.create(
-            # 2.0 TODO: #824 remove name field
             label=label,
             key="custom_field",
             type=CustomFieldTypeChoices.TYPE_TEXT,
@@ -2158,7 +2177,7 @@ class CustomFieldTableTest(TestCase):
         for col_name, col_expected_value in custom_column_expected.items():
             internal_col_name = "cf_" + col_name
             custom_column = location_table.base_columns.get(internal_col_name)
-            self.assertIsNotNone(custom_column)
+            self.assertIsNotNone(custom_column, internal_col_name)
             self.assertIsInstance(custom_column, CustomFieldColumn)
 
             rendered_value = bound_row.get_cell(internal_col_name)
