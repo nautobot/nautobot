@@ -521,6 +521,7 @@ nav:
       - Application Registry: "development/core/application-registry.md"
       - Bootstrap UI: "development/core/bootstrap-ui.md"
       - Best Practices: "development/core/best-practices.md"
+      - Caching: "development/core/caching.md"
       - Extending Models: "development/core/extending-models.md"
       - Generic Views: "development/core/generic-views.md"
       - Home Page Panels: "development/core/homepage.md"

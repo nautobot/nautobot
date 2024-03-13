@@ -1,0 +1,2 @@
+Changed uses of `functools.lru_cache` to use django-redis cache instead.
+Standardized cache key strings used with the django-redis cache.
