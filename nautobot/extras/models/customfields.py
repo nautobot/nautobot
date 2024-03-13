@@ -531,7 +531,6 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             CustomFieldTypeChoices.TYPE_URL,
             CustomFieldTypeChoices.TYPE_TEXT,
             CustomFieldTypeChoices.TYPE_MARKDOWN,
-            CustomFieldTypeChoices.TYPE_JSON,
         ):
             if self.type == CustomFieldTypeChoices.TYPE_URL:
                 field = LaxURLField(
@@ -549,30 +548,13 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                 )
             elif self.type == CustomFieldTypeChoices.TYPE_MARKDOWN:
                 field = CommentField(
+                    required=required,
+                    initial=initial,
                     widget=SmallTextarea,
                     label=None,
                     min_length=self.validation_minimum,
                     max_length=self.validation_maximum,
                 )
-            elif self.type == CustomFieldTypeChoices.TYPE_JSON:
-                if simple_json_filter:
-                    field = JSONField(
-                        encoder=DjangoJSONEncoder,
-                        required=required,
-                        initial=None,
-                        widget=TextInput,
-                        min_length=self.validation_minimum,
-                        max_length=self.validation_maximum,
-                    )
-                else:
-                    field = JSONField(
-                        encoder=DjangoJSONEncoder,
-                        required=required,
-                        initial=initial,
-                        min_length=self.validation_minimum,
-                        max_length=self.validation_maximum,
-                    )
-
             if self.validation_regex:
                 field.validators = [
                     RegexValidator(
@@ -580,6 +562,15 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                         message=format_html("Values must match this regex: <code>{}</code>", self.validation_regex),
                     )
                 ]
+
+        # JSON
+        elif self.type == CustomFieldTypeChoices.TYPE_JSON:
+            # Unlike the above cases, we don't apply min_length/max_length to the field,
+            # nor do we add a RegexValidator to the field, as these all apply after parsing and validating the JSON
+            if simple_json_filter:
+                field = JSONField(encoder=DjangoJSONEncoder, required=required, initial=None, widget=TextInput)
+            else:
+                field = JSONField(encoder=DjangoJSONEncoder, required=required, initial=initial)
 
         # Select or Multi-select
         else:
