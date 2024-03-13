@@ -1910,7 +1910,22 @@ class ControllerTestCase(ModelTestCases.BaseModelTestCase):
 class ControllerDeviceGroupTestCase(ModelTestCases.BaseModelTestCase):
     model = ControllerDeviceGroup
 
-    def test_queryset_get_for_object(self):
-        """
-        Test that the queryset get_for_object method returns the expected results for Device, DeviceType, InventoryItem and VirtualMachine
-        """
+    def test_controller_matches_parent(self):
+        """Ensure a controller device group cannot be linked to a controller that does not match its parent."""
+        controllers = iter(Controller.objects.all())
+        parent_group = ControllerDeviceGroup(
+            name="Parent Group testing Controller match",
+            controller=next(controllers),
+        )
+        parent_group.validated_save()
+        child_group = ControllerDeviceGroup(
+            name="Child Group testing Controller match",
+            controller=next(controllers),
+            parent=parent_group,
+        )
+        with self.assertRaises(ValidationError) as error:
+            child_group.validated_save()
+        self.assertEqual(
+            error.exception.message_dict["controller"][0],
+            "Controller device group must have the same controller as the parent group.",
+        )

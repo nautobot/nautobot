@@ -1354,3 +1354,22 @@ class ControllerDeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
 
     def __str__(self):
         return self.name or super().__str__()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._original_controller = self.controller if self.present_in_database else None
+        self._original_parent = self.parent if self.present_in_database else None
+
+    def clean(self):
+        super().clean()
+
+        if self.controller == self._original_controller and self.parent == self._original_parent:
+            return
+
+        if self.parent and self.controller and self.parent.controller and self.controller != self.parent.controller:
+            raise ValidationError(
+                {
+                    "controller": "Controller device group must have the same controller as the parent group."
+                }
+            )
