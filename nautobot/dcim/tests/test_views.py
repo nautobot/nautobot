@@ -54,12 +54,12 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
-    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
@@ -536,21 +536,21 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertContains(response, total_utilization_html, html=True)
 
 
-class HardwareFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
-    model = HardwareFamily
+class DeviceFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = DeviceFamily
 
     @classmethod
     def setUpTestData(cls):
         cls.form_data = {
-            "name": "New Hardware Family",
-            "description": "A new hardware family",
+            "name": "New Device Family",
+            "description": "A new device family",
         }
         cls.bulk_edit_data = {
-            "description": "A new hardware family",
+            "description": "A new device family",
         }
-        HardwareFamily.objects.create(name="Deletable Hardware Family 1")
-        HardwareFamily.objects.create(name="Deletable Hardware Family 2", description="Delete this one")
-        HardwareFamily.objects.create(name="Deletable Hardware Family 3")
+        DeviceFamily.objects.create(name="Deletable Device Family 1")
+        DeviceFamily.objects.create(name="Deletable Device Family 2", description="Delete this one")
+        DeviceFamily.objects.create(name="Deletable Device Family 3")
 
 
 class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
@@ -597,7 +597,7 @@ class DeviceTypeTestCase(
 
         cls.form_data = {
             "manufacturer": manufacturers[1].pk,
-            "hardware_family": None,
+            "device_family": None,
             "model": "Device Type X",
             "part_number": "123ABC",
             "u_height": 2,
