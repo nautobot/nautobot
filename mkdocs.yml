@@ -115,6 +115,7 @@ plugins:
             show_root_members_full_path: true
   - "redirects":
       redirect_maps:
+        # 1.6 -> 2.x
         'additional-features/caching.md': 'user-guide/administration/guides/caching.md'
         'additional-features/change-logging.md': 'user-guide/platform-functionality/change-logging.md'
         'additional-features/config-contexts.md': 'user-guide/core-data-model/extras/configcontext.md'
@@ -145,7 +146,7 @@ plugins:
         'core-functionality/virtualization.md': 'user-guide/core-data-model/virtualization/virtualmachine.md'
         'core-functionality/vlans.md': 'user-guide/core-data-model/ipam/vlan.md'
         'development/application-registry.md': 'development/core/application-registry.md'
-        'development/apps/api/ui-extensions/tabs.md': 'development/apps/api/ui-extensions/object-detail-views.md'
+        'development/apps/api/ui-extensions/tabs.md': 'development/apps/api/ui-extensions/object-views.md'
         'development/apps/api/views/view-overrides.md': 'development/apps/api/views/core-view-overrides.md'
         'development/best-practices.md': 'development/core/best-practices.md'
         'development/core/react-ui.md': 'development/core/index.md'
@@ -262,6 +263,8 @@ plugins:
         'user-guides/relationships.md': 'user-guide/feature-guides/relationships.md'
         'user-guides/s3-django-storage.md': 'user-guide/administration/guides/s3-django-storage.md'
 
+        # Post 2.x redirects
+        'development/apps/api/ui-extensions/object-detail-views.md': 'development/apps/api/ui-extensions/object-views.md'
 
 nav:
   - Overview: "index.md"
@@ -478,7 +481,7 @@ nav:
         - Home Page: "development/apps/api/ui-extensions/home-page.md"
         - Links in the Installed Apps View: "development/apps/api/configuration-view.md"
         - Navigation: "development/apps/api/ui-extensions/navigation.md"
-        - Object Detail Views and Tabs: "development/apps/api/ui-extensions/object-detail-views.md"
+        - Object Detail & List Views: "development/apps/api/ui-extensions/object-views.md"
       - Testing: "development/apps/api/testing.md"
       - Code Reference:
         - nautobot.apps: "code-reference/nautobot/apps/__init__.md"
