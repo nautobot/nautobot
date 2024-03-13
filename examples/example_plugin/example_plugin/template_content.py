@@ -72,6 +72,9 @@ class SiteContent(TemplateExtension):
     def buttons(self):
         return "SITE CONTENT - BUTTONS"
 
+    def list_buttons(self):
+        return "LOCATION CONTENT - BUTTONS LIST"
+
 
 class ExampleModelContent(TemplateExtension):
     model = "example_plugin.examplemodel"
