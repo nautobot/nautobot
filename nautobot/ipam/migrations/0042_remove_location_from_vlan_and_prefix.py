@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
     dependencies = [
         ("dcim", "0052_fix_interface_redundancy_group_created"),
-        ("ipam", "0041_vlan_locations_data_migration"),
+        ("ipam", "0041_vlan_prefix_locations_data_migration"),
     ]
 
     operations = [
@@ -16,6 +16,10 @@ class Migration(migrations.Migration):
         ),
         migrations.RemoveField(
             model_name="vlan",
+            name="location",
+        ),
+        migrations.RemoveField(
+            model_name="prefix",
             name="location",
         ),
     ]

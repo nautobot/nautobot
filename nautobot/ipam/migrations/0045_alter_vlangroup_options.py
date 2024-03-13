@@ -5,7 +5,7 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("ipam", "0047_prefix_remove_location"),
+        ("ipam", "0044_ip_version_nonnullable"),
     ]
 
     operations = [

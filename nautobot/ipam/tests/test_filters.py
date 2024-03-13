@@ -17,11 +17,13 @@ from nautobot.ipam.filters import (
     IPAddressFilterSet,
     IPAddressToInterfaceFilterSet,
     PrefixFilterSet,
+    PrefixLocationAssignmentFilterSet,
     RIRFilterSet,
     RouteTargetFilterSet,
     ServiceFilterSet,
     VLANFilterSet,
     VLANGroupFilterSet,
+    VLANLocationAssignmentFilterSet,
     VRFFilterSet,
 )
 from nautobot.ipam.models import (
@@ -29,11 +31,13 @@ from nautobot.ipam.models import (
     IPAddressToInterface,
     Namespace,
     Prefix,
+    PrefixLocationAssignment,
     RIR,
     RouteTarget,
     Service,
     VLAN,
     VLANGroup,
+    VLANLocationAssignment,
     VRF,
 )
 from nautobot.tenancy.models import Tenant
@@ -196,6 +200,30 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         params = {"ip_version": ""}
         all_prefixes = self.queryset.all()
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, all_prefixes)
+
+
+class PrefixLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = PrefixLocationAssignment.objects.all()
+    filterset = PrefixLocationAssignmentFilterSet
+
+    # NOTE: No generic logic in place yet to test TreeNodeMultipleChoiceFilter
+    # generic_filter_tests = (
+    #     ["location", "location__name"],
+    #     ["location", "location__id"],
+    # )
+
+    def test_prefix(self):
+        ipv4_prefix = str(self.queryset.filter(prefix__ip_version=4).first().prefix)
+        ipv6_prefix = str(self.queryset.filter(prefix__ip_version=6).first().prefix)
+
+        params = {"prefix": [ipv4_prefix, ipv6_prefix]}
+        prefix_queryset = Prefix.objects.net_equals(ipv4_prefix, ipv6_prefix)
+
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(prefix__in=prefix_queryset),
+            ordered=False,
+        )
 
 
 class PrefixFilterCustomDataTestCase(TestCase):
@@ -1153,6 +1181,44 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(Q(locations__in=[device.location]) | Q(locations__isnull=True)),
         )
+
+
+class VLANLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
+    queryset = VLANLocationAssignment.objects.all()
+    filterset = VLANLocationAssignmentFilterSet
+
+    generic_filter_tests = (
+        ["vlan", "vlan__vid"],
+        # NOTE: No generic logic in place yet to test TreeNodeMultipleChoiceFilter
+        # ["location", "location__name"],
+        # ["location", "location__id"],
+    )
+
+    def test_q_filter_vlan__vid_predicate(self):
+        vlan = VLAN.objects.first()
+        vlan_ct = ContentType.objects.get_for_model(vlan)
+        vlan_vid = vlan.vid
+
+        # Exclude any locations that might cause conflicts with our FilterSet TestCase,
+        # the 'VLANLocationAssignmentFilterSet' `q` field filters
+        # based on both `vlan__vid` and `location__name`. We want to ensure that
+        # the location names do not contain the VLAN ID to avoid collisions.
+        vlan_location_queryset = VLANLocationAssignment.objects.filter(vlan__vid__exact=vlan_vid).exclude(
+            location__name__icontains=vlan_vid
+        )
+        # If we don't have enough queryset items for testing (less than 5),
+        # add 5 VLANLocationAssignments to test on.
+        if vlan_location_queryset.count() < 5:
+            locations = Location.objects.filter(location_type__content_types__in=[vlan_ct]).exclude(
+                name__icontains=vlan_vid
+            )[:5]
+            vlan.locations.set(locations)
+
+        params = {"q": vlan_vid}
+        queryset = VLANLocationAssignment.objects.exclude(location__name__icontains=vlan_vid)
+        filterset = VLANLocationAssignmentFilterSet(params, queryset).qs
+        expected_queryset = VLANLocationAssignment.objects.filter(vlan__vid__exact=vlan_vid)
+        self.assertQuerysetEqualAndNotEmpty(filterset, expected_queryset)
 
 
 class ServiceTestCase(FilterTestCases.FilterTestCase):

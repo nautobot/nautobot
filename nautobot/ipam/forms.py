@@ -328,6 +328,7 @@ class PrefixForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
     def save(self, *args, **kwargs):
         instance = super().save(*args, **kwargs)
         instance.vrfs.set(self.cleaned_data["vrfs"])
+        instance.locations.set(self.cleaned_data["locations"])
         return instance
 
 
@@ -750,6 +751,11 @@ class VLANForm(NautobotModelForm, TenancyForm):
             return super().clean()
         except ValidationError as e:
             raise forms.ValidationError(e.message_dict) from e
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        instance.locations.set(self.cleaned_data["locations"])
+        return instance
 
 
 class VLANBulkEditForm(

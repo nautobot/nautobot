@@ -28,11 +28,13 @@ from .models import (
     IPAddressToInterface,
     Namespace,
     Prefix,
+    PrefixLocationAssignment,
     RIR,
     RouteTarget,
     Service,
     VLAN,
     VLANGroup,
+    VLANLocationAssignment,
     VRF,
     VRFDeviceAssignment,
     VRFPrefixAssignment,
@@ -321,6 +323,37 @@ class PrefixFilterSet(
         return queryset.filter(params).distinct()
 
 
+class PrefixLocationAssignmentFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "location__name": "icontains",
+        },
+    )
+    prefix = MultiValueCharFilter(
+        method="filter_prefix",
+        label="Prefix",
+    )
+    location = TreeNodeMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        label="Locations (name or ID)",
+    )
+
+    def _strip_values(self, values):
+        return [value.strip() for value in values if value.strip()]
+
+    def filter_prefix(self, queryset, name, value):
+        prefixes = self._strip_values(value)
+        with contextlib.suppress(netaddr.AddrFormatError, ValueError):
+            prefixes_queryset = Prefix.objects.net_equals(*prefixes)
+            return queryset.filter(prefix__in=prefixes_queryset)
+        return queryset.none()
+
+    class Meta:
+        model = PrefixLocationAssignment
+        fields = ["id", "prefix", "location"]
+
+
 class IPAddressFilterSet(
     NautobotFilterSet,
     IPAMFilterSetMixin,
@@ -542,6 +575,29 @@ class VLANFilterSet(
             return queryset.none()
         location_ids = list(devices.values_list("location__id", flat=True))
         return queryset.filter(Q(locations__isnull=True) | Q(locations__in=location_ids))
+
+
+class VLANLocationAssignmentFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "vlan__vid": "iexact",
+            "location__name": "icontains",
+        },
+    )
+    vlan = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="vid",
+        queryset=VLAN.objects.all(),
+        label="VLAN (VID or ID)",
+    )
+    location = TreeNodeMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        label="Locations (name or ID)",
+    )
+
+    class Meta:
+        model = VLANLocationAssignment
+        fields = ["id", "vlan", "location"]
 
 
 class ServiceFilterSet(NautobotFilterSet):

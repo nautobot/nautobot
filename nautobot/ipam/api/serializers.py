@@ -21,11 +21,13 @@ from nautobot.ipam.models import (
     IPAddressToInterface,
     Namespace,
     Prefix,
+    PrefixLocationAssignment,
     RIR,
     RouteTarget,
     Service,
     VLAN,
     VLANGroup,
+    VLANLocationAssignment,
     VRF,
     VRFDeviceAssignment,
     VRFPrefixAssignment,
@@ -152,6 +154,7 @@ class VLANSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "description",
         ]
         validators = []
+        extra_kwargs = {"locations": {"read_only": True}}
 
     def validate(self, data):
         # Validate uniqueness of vid and name if a group has been assigned.
@@ -202,6 +205,12 @@ class VLANLegacySerializer(VLANSerializer):
         validators = []
 
 
+class VLANLocationAssignmentSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = VLANLocationAssignment
+        fields = "__all__"
+
+
 #
 # Prefixes
 #
@@ -238,6 +247,7 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "ip_version": {"read_only": True},
             "namespace": {"default": get_default_namespace},
             "prefix_length": {"read_only": True},
+            "locations": {"read_only": True},
         }
 
         detail_view_config = {
@@ -303,6 +313,12 @@ class PrefixLegacySerializer(PrefixSerializer):
             "notes_url",
             "custom_fields",
         ]
+
+
+class PrefixLocationAssignmentSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = PrefixLocationAssignment
+        fields = "__all__"
 
 
 class PrefixLengthSerializer(serializers.Serializer):
