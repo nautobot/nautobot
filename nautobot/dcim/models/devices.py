@@ -93,7 +93,7 @@ class DeviceFamily(PrimaryModel):
 
     class Meta:
         ordering = ["name"]
-        verbose_name_plural = "Device Families"
+        verbose_name_plural = "device families"
 
     def __str__(self):
         return self.name

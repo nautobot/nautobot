@@ -27,10 +27,10 @@ from .device_components import (
 )
 from .devices import (
     Device,
+    DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
-    DeviceFamily,
     Manufacturer,
     Platform,
     SoftwareImageFile,

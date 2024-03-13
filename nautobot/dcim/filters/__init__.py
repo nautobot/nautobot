@@ -529,7 +529,7 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         queryset=Manufacturer.objects.all(), to_field_name="name", label="Manufacturer (name or ID)"
     )
     device_family = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=DeviceFamily.objects.all(), to_field_name="name", label="Hardware family (name or ID)"
+        queryset=DeviceFamily.objects.all(), to_field_name="name", label="Device family (name or ID)"
     )
     console_ports = django_filters.BooleanFilter(
         method="_console_ports",
@@ -852,7 +852,7 @@ class DeviceFilterSet(
         field_name="device_type__device_family",
         queryset=DeviceFamily.objects.all(),
         to_field_name="name",
-        label="Hardware family (name or ID)",
+        label="Device family (name or ID)",
     )
     device_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),

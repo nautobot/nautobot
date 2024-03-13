@@ -38,7 +38,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "ordering": ["name"],
-                "verbose_name_plural": "Device Families",
+                "verbose_name_plural": "device families",
             },
             bases=(
                 models.Model,
