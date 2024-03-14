@@ -1360,12 +1360,7 @@ class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
 
     def clean_type(self):
         data = self.cleaned_data["type"]
-
-        try:
-            choices = self.Meta.model._meta.get_field("type").choices
-        except FieldDoesNotExist:
-            # Do we have a `DeviceComponent` subclass that doesn't define a `type` field?
-            return data
+        choices = self.Meta.model._meta.get_field("type").choices
 
         try:
             if data not in choices.values():
