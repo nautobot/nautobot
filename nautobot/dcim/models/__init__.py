@@ -27,10 +27,10 @@ from .device_components import (
 )
 from .devices import (
     Device,
+    DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
-    HardwareFamily,
     Manufacturer,
     Platform,
     SoftwareImageFile,
@@ -58,7 +58,7 @@ __all__ = (
     "DeviceTypeToSoftwareImageFile",
     "FrontPort",
     "FrontPortTemplate",
-    "HardwareFamily",
+    "DeviceFamily",
     "Interface",
     "InterfaceRedundancyGroup",
     "InterfaceRedundancyGroupAssociation",

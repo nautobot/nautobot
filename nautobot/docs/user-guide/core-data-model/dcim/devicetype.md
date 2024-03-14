@@ -44,7 +44,7 @@ Once component templates have been created, every new device that you create as 
     Consider also that automatically changing components of existing devices when a device-type changes would require Nautobot to make very dangerous assumptions. For example, suppose you had a device type which included a specific line card with a specific set of interfaces. After creating some devices, representing your existing deployment of this device type, your deployment for new devices of this type changed to include a different line card and hence different interfaces, so you decided to update the device-type templates accordingly. If Nautobot were to automatically propagate this change to all existing devices of this type, it would result in an incorrect reflection of the reality that all existing devices have not yet been retrofitted with the new line card.
 
 +++ 2.2.0
-    The [Hardware Family](hardwarefamily.md) model has been introduced to represent a group of related device types. A device type can be optionally assigned to a hardware family. Each hardware family must have a unique name and may have a description assigned to it.
+    The [Device Family](devicefamily.md) model has been introduced to represent a group of related device types. A device type can be optionally assigned to a device family. Each device family must have a unique name and may have a description assigned to it.
 
 +++ 2.2.0
     The [Software Image File](softwareimagefile.md) model has been introduced to represent a software image file that can be installed on a device. One or more software image files can be optionally assigned to a device type. The device type must be associated to a software image file before devices of that type can associate to that image.

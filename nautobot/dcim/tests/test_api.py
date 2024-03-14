@@ -28,12 +28,12 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
-    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceTemplate,
@@ -715,22 +715,22 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
-class HardwareFamilyTest(APIViewTestCases.APIViewTestCase):
-    model = HardwareFamily
+class DeviceFamilyTest(APIViewTestCases.APIViewTestCase):
+    model = DeviceFamily
     create_data = [
         {
-            "name": "Hardware Family 4",
-            "description": "Fourth Hardware Family",
+            "name": "Device Family 4",
+            "description": "Fourth Device Family",
         },
         {
-            "name": "Hardware Family 5",
+            "name": "Device Family 5",
         },
         {
-            "name": "Hardware Family 6",
-            "description": "Sixth Hardware Family",
+            "name": "Device Family 6",
+            "description": "Sixth Device Family",
         },
         {
-            "name": "Hardware Family 7",
+            "name": "Device Family 7",
         },
     ]
     bulk_update_data = {
@@ -739,9 +739,9 @@ class HardwareFamilyTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        HardwareFamily.objects.create(name="Deletable Hardware Family 1")
-        HardwareFamily.objects.create(name="Deletable Hardware Family 2", description="Delete this one")
-        HardwareFamily.objects.create(name="Deletable Hardware Family 3")
+        DeviceFamily.objects.create(name="Deletable Device Family 1")
+        DeviceFamily.objects.create(name="Deletable Device Family 2", description="Delete this one")
+        DeviceFamily.objects.create(name="Deletable Device Family 3")
 
 
 class ManufacturerTest(APIViewTestCases.APIViewTestCase):
@@ -784,18 +784,18 @@ class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases
     @classmethod
     def setUpTestData(cls):
         manufacturer_id = Manufacturer.objects.first().pk
-        hardware_family_id = HardwareFamily.objects.first().pk
+        device_family_id = DeviceFamily.objects.first().pk
 
         cls.create_data = [
             {
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 4",
-                "hardware_family": hardware_family_id,
+                "device_family": device_family_id,
             },
             {
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 5",
-                "hardware_family": hardware_family_id,
+                "device_family": device_family_id,
             },
             {
                 "manufacturer": manufacturer_id,

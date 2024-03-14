@@ -44,12 +44,12 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
-    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
@@ -104,7 +104,7 @@ __all__ = (
     "DeviceTypeToSoftwareImageFileFilterSet",
     "FrontPortFilterSet",
     "FrontPortTemplateFilterSet",
-    "HardwareFamilyFilterSet",
+    "DeviceFamilyFilterSet",
     "InterfaceConnectionFilterSet",
     "InterfaceFilterSet",
     "InterfaceRedundancyGroupFilterSet",
@@ -499,7 +499,7 @@ class ManufacturerFilterSet(NautobotFilterSet, NameSearchFilterSet):
         fields = ["id", "name", "description"]
 
 
-class HardwareFamilyFilterSet(NautobotFilterSet, NameSearchFilterSet):
+class DeviceFamilyFilterSet(NautobotFilterSet, NameSearchFilterSet):
     device_types = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
         to_field_name="model",
@@ -511,7 +511,7 @@ class HardwareFamilyFilterSet(NautobotFilterSet, NameSearchFilterSet):
     )
 
     class Meta:
-        model = HardwareFamily
+        model = DeviceFamily
         fields = ["id", "name", "description", "tags"]
 
 
@@ -519,7 +519,7 @@ class DeviceTypeFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "manufacturer__name": "icontains",
-            "hardware_family__name": "icontains",
+            "device_family__name": "icontains",
             "model": "icontains",
             "part_number": "icontains",
             "comments": "icontains",
@@ -528,8 +528,8 @@ class DeviceTypeFilterSet(NautobotFilterSet):
     manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Manufacturer.objects.all(), to_field_name="name", label="Manufacturer (name or ID)"
     )
-    hardware_family = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=HardwareFamily.objects.all(), to_field_name="name", label="Hardware family (name or ID)"
+    device_family = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DeviceFamily.objects.all(), to_field_name="name", label="Device family (name or ID)"
     )
     console_ports = django_filters.BooleanFilter(
         method="_console_ports",
@@ -835,7 +835,7 @@ class DeviceFilterSet(
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
-            "device_type__hardware_family__name": {
+            "device_type__device_family__name": {
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
@@ -848,11 +848,11 @@ class DeviceFilterSet(
         to_field_name="name",
         label="Manufacturer (name or ID)",
     )
-    hardware_family = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="device_type__hardware_family",
-        queryset=HardwareFamily.objects.all(),
+    device_family = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="device_type__device_family",
+        queryset=DeviceFamily.objects.all(),
         to_field_name="name",
-        label="Hardware family (name or ID)",
+        label="Device family (name or ID)",
     )
     device_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),

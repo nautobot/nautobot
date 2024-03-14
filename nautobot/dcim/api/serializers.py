@@ -57,12 +57,12 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
-    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
@@ -381,11 +381,11 @@ class ManufacturerSerializer(NautobotModelSerializer):
         list_display_fields = ["name", "device_type_count", "platform_count", "description"]
 
 
-class HardwareFamilySerializer(NautobotModelSerializer):
+class DeviceFamilySerializer(NautobotModelSerializer):
     device_type_count = serializers.IntegerField(read_only=True)
 
     class Meta:
-        model = HardwareFamily
+        model = DeviceFamily
         fields = "__all__"
         list_display_fields = ["name", "device_type_count", "description"]
 
@@ -422,7 +422,7 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "include_others": True,
         }
         extra_kwargs = {
-            "hardware_family": {
+            "device_family": {
                 "required": False,
             },
         }

@@ -28,13 +28,13 @@ from nautobot.dcim.filters import (
     ConsoleServerPortTemplateFilterSet,
     DeviceBayFilterSet,
     DeviceBayTemplateFilterSet,
+    DeviceFamilyFilterSet,
     DeviceFilterSet,
     DeviceRedundancyGroupFilterSet,
     DeviceTypeFilterSet,
     DeviceTypeToSoftwareImageFileFilterSet,
     FrontPortFilterSet,
     FrontPortTemplateFilterSet,
-    HardwareFamilyFilterSet,
     InterfaceFilterSet,
     InterfaceRedundancyGroupAssociationFilterSet,
     InterfaceRedundancyGroupFilterSet,
@@ -68,12 +68,12 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
-    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
@@ -149,7 +149,7 @@ def common_test_data(cls):
         Manufacturer.objects.filter(device_types__isnull=False, platforms__isnull=False).distinct()[:3]
     )
     cls.manufacturers = manufacturers
-    hardware_families = list(HardwareFamily.objects.all())
+    device_families = list(DeviceFamily.objects.all())
 
     platforms = Platform.objects.filter(manufacturer__in=manufacturers)[:3]
     for num, platform in enumerate(platforms):
@@ -162,7 +162,7 @@ def common_test_data(cls):
     device_types = (
         DeviceType.objects.create(
             manufacturer=manufacturers[0],
-            hardware_family=hardware_families[0],
+            device_family=device_families[0],
             comments="Device type 1",
             model="Model 1",
             part_number="Part Number 1",
@@ -171,7 +171,7 @@ def common_test_data(cls):
         ),
         DeviceType.objects.create(
             manufacturer=manufacturers[1],
-            hardware_family=hardware_families[1],
+            device_family=device_families[1],
             comments="Device type 2",
             model="Model 2",
             part_number="Part Number 2",
@@ -181,7 +181,7 @@ def common_test_data(cls):
         ),
         DeviceType.objects.create(
             manufacturer=manufacturers[2],
-            hardware_family=hardware_families[2],
+            device_family=device_families[2],
             comments="Device type 3",
             model="Model 3",
             part_number="Part Number 3",
@@ -906,9 +906,9 @@ class ManufacturerTestCase(FilterTestCases.NameOnlyFilterTestCase):
         InventoryItem.objects.create(device=devices[2], name="Inventory Item 3", manufacturer=cls.manufacturers[2])
 
 
-class HardwareFamilyTestCase(FilterTestCases.NameOnlyFilterTestCase):
-    queryset = HardwareFamily.objects.all()
-    filterset = HardwareFamilyFilterSet
+class DeviceFamilyTestCase(FilterTestCases.NameOnlyFilterTestCase):
+    queryset = DeviceFamily.objects.all()
+    filterset = DeviceFamilyFilterSet
     generic_filter_tests = [
         ("description",),
         ("device_types", "device_types__id"),
@@ -930,8 +930,8 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         ("devices", "devices__id"),
         ("front_port_templates", "front_port_templates__id"),
         ("front_port_templates", "front_port_templates__name"),
-        ("hardware_family", "hardware_family__id"),
-        ("hardware_family", "hardware_family__name"),
+        ("device_family", "device_family__id"),
+        ("device_family", "device_family__name"),
         ("interface_templates", "interface_templates__id"),
         ("interface_templates", "interface_templates__name"),
         ("manufacturer", "manufacturer__id"),
@@ -1332,14 +1332,14 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ("console_ports", "console_ports__id"),
         ("console_server_ports", "console_server_ports__id"),
         ("device_bays", "device_bays__id"),
+        ("device_family", "device_type__device_family__id"),
+        ("device_family", "device_type__device_family__name"),
         ("device_redundancy_group", "device_redundancy_group__id"),
         ("device_redundancy_group", "device_redundancy_group__name"),
         ("device_redundancy_group_priority",),
         ("device_type", "device_type__id"),
         ("device_type", "device_type__model"),
         ("front_ports", "front_ports__id"),
-        ("hardware_family", "device_type__hardware_family__id"),
-        ("hardware_family", "device_type__hardware_family__name"),
         ("interfaces", "interfaces__id"),
         ("mac_address", "interfaces__mac_address"),
         ("manufacturer", "device_type__manufacturer__id"),
