@@ -33,7 +33,10 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v3"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v2"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
+        with:
+          poetry-version: "1.8.2"
+          python-version: "3.12"
       - name: "Run check-schema"
         # REST API schema generation currently includes GraphQL schema generation, which is dependent on the DB :-(
         run: "poetry run invoke migrate check-schema"
@@ -62,8 +65,9 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v3"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v2"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
+          poetry-version: "1.8.2"
           python-version: "3.12"
       - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
         run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
@@ -98,8 +102,9 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v3"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v2"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
+          poetry-version: "1.8.2"
           python-version: "3.8"
       - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
         run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
@@ -136,8 +141,9 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v2"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
+          poetry-version: "1.8.2"
           python-version: "3.8"
       - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
         run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
@@ -173,8 +179,9 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v2"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v2"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
+          poetry-version: "1.8.2"
           python-version: "3.12"
       - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
         run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
@@ -211,7 +218,10 @@ jobs:
       - name: "Check out repository code"
         uses: "actions/checkout@v3"
       - name: "Setup environment"
-        uses: "networktocode/gh-action-setup-poetry-environment@v2"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
+        with:
+          poetry-version: "1.8.2"
+          python-version: "3.12"
       - name: "Remove Installed Nautobots (Poetry Workaround)" # Workaround for https://github.com/python-poetry/poetry/issues/2918
         run: "for i in $(ls -d1 ~/.cache/pypoetry/virtualenvs/*/lib/*/site-packages/nautobot-*.dist-info); do poetry run pip uninstall -y nautobot; done"
       - name: "Reinstall Nautobot Local"
