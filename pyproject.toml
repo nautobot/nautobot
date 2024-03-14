@@ -19,6 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 packages = [
     {include = "nautobot"}
@@ -33,7 +34,7 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.12"
+python = ">=3.8,<3.13"
 # Background task processing
 celery = "~5.3.1"
 # Fundamental web framework for Nautobot
@@ -176,9 +177,6 @@ mkdocs = "~1.5.3"
 markdown-data-tables = "~1.0.0"
 # Automatically generate some files as part of mkdocs build
 mkdocs-gen-files = "~0.5.0"
-# Allow Markdown files to include other files
-# 3.0 TODO: remove this, as we don't actually use it any more since 2.0?
-mkdocs-include-markdown-plugin = "~4.0.4"
 # Use Jinja2 templating in docs - see optional-settings.md and required-settings.md
 mkdocs-macros-plugin = "~1.0.5"
 # Material for mkdocs theme

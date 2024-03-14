@@ -12,6 +12,10 @@ This document describes all new features and changes in Nautobot 2.2.
 
 Contact and Team are models that represent an individual and a group of individuals who can be linked to an object. Contacts and teams store the necessary information (name, phone number, email, and address) to uniquely identify and contact them. They are added to track ownerships of organizational entities and to manage resources more efficiently in Nautobot. Check out the documentation for [contact](../user-guide/core-data-model/extras/contact.md) and [team](../user-guide/core-data-model/extras/team.md). There is also a [user guide](../user-guide/feature-guides/contact-and-team.md) available on how to utilize these models.
 
+#### Python 3.12 Support
+
+Nautobot 2.2.0 formally adds support for installation and operation under Python 3.12.
+
 #### Software Image File and Software Version models ([#1](https://github.com/nautobot/nautobot/issues/1))
 
 New models have been added for software image files and software versions. These models are used to track the software versions of devices, inventory items and virtual machines and their associated image files. These models have been ported from the [Device Lifecycle Management App](https://github.com/nautobot/nautobot-app-device-lifecycle-mgmt/) and a future update to that app will migrate all existing data from the `nautobot_device_lifecycle_mgmt.SoftwareImageLCM` and `nautobot_device_lifecycle_mgmt.SoftwareLCM` models to the `dcim.SoftwareImageFile` and `dcim.SoftwareVersion` models added here.
@@ -44,3 +48,7 @@ The CSV import functionality for all models has been changed from a synchronous 
 
 !!! tip
     Users now must have the `run` action permission for `extras > job` (specifically the `nautobot.core.jobs.ImportObjects` Job) in order to import objects, in addition to the normal `add` permissions for the object type being imported.
+
+#### Changed Default Python Version for Docker Images
+
+The default Python version for Nautobot Docker images has been changed from 3.11 to 3.12.

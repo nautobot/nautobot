@@ -1151,7 +1151,7 @@ name = "example-app"
 version = "1.0.0"
 description = "Nautobot example app that does a whole lot of nothing."
 optional = false
-python-versions = ">=3.8,<3.12"
+python-versions = ">=3.8,<3.13"
 files = []
 develop = true
 
@@ -1945,17 +1945,6 @@ files = [
 mkdocs = ">=1.0.3"
 
 [[package]]
-name = "mkdocs-include-markdown-plugin"
-version = "4.0.4"
-description = "Mkdocs Markdown includer plugin."
-optional = false
-python-versions = "<3.12,>=3.7"
-files = [
-    {file = "mkdocs_include_markdown_plugin-4.0.4-py3-none-any.whl", hash = "sha256:792caa91c2c46fa174ad44caa786656ac3f475f2cef5ad33ad28a106f7bc4086"},
-    {file = "mkdocs_include_markdown_plugin-4.0.4.tar.gz", hash = "sha256:a5d569a653a610cbbe5b9c0ebb257ce7f94b453e93c3ae2c503b682e77465773"},
-]
-
-[[package]]
 name = "mkdocs-macros-plugin"
 version = "1.0.5"
 description = "Unleash the power of MkDocs with macros and variables"
@@ -2679,7 +2668,8 @@ astroid = ">=3.0.1,<=3.1.0-dev0"
 colorama = {version = ">=0.4.5", markers = "sys_platform == \"win32\""}
 dill = [
     {version = ">=0.2", markers = "python_version < \"3.11\""},
-    {version = ">=0.3.6", markers = "python_version >= \"3.11\""},
+    {version = ">=0.3.7", markers = "python_version >= \"3.12\""},
+    {version = ">=0.3.6", markers = "python_version >= \"3.11\" and python_version < \"3.12\""},
 ]
 isort = ">=4.2.5,<5.13.0 || >5.13.0,<6"
 mccabe = ">=0.6,<0.8"
@@ -4011,5 +4001,5 @@ sso = ["social-auth-core"]
 
 [metadata]
 lock-version = "2.0"
-python-versions = ">=3.8,<3.12"
-content-hash = "1f5f4414356e6301b60a277e3627e600bc0457a35c375d6758efd39d8c768554"
+python-versions = ">=3.8,<3.13"
+content-hash = "2aaa45ef8e1b95916bda0fef322106c2cf2c979ac10480e3ca37afc92ef208d1"
