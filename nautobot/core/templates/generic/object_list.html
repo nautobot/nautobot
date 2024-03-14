@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load buttons %}
 {% load helpers %}
+{% load plugins %}
 {% load static %}
 
 {% block header %}
@@ -36,6 +37,7 @@
 {% block content %}
 <div class="pull-right noprint">
     {% block buttons %}{% endblock %}
+    {% plugin_buttons content_type.model_class 'list' %}
     {% if table and request.user.is_authenticated and table_config_form %}
         <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
     {% endif %}
