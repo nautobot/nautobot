@@ -98,7 +98,7 @@
 {% if not is_popup %}
     {% include 'inc/nav_menu.html' %}
 {% endif %}
-<div class="container-fluid wrapper" {% if is_popup %}style="padding-bottom: 0px;"{% endif %}>
+<div class="container-fluid wrapper banner-alert-area" {% if is_popup %}style="padding-bottom: 0px;"{% endif %}>
     {% if "BANNER_TOP"|settings_or_config %}
         <div class="alert alert-info text-center" role="alert">
             {{ "BANNER_TOP"|settings_or_config|safe }}
@@ -120,7 +120,7 @@
         </div>
     {% endfor %}
     <!-- Content -->
-    <div class="container-fluid wrapper">
+    <div class="container-fluid wrapper" id="main-content">
         {% if not is_popup %}
             <div class="row noprint">
                 {% block breadcrumbs %}

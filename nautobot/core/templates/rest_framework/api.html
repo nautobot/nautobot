@@ -12,7 +12,9 @@
 {% endblock navbar %}
 
 {% block body %}
-    {{ block.super }}
+    <div class="container-fluid" id="main-content">
+        {{ block.super }}
+    </div>
     {% include 'inc/footer.html' %}
 {% endblock body %}
 
