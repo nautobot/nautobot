@@ -42,8 +42,9 @@ body {
     transition-duration: var(--navbar-transition-duration);
     transition-timing-function: ease-in-out;
     transition-property: margin-left, width;
-    overflow: hidden;
+    overflow: visible;
     margin: 0;
+    overflow-x: hidden;
 }
 .footer .row {
     background-color: #f5f5f5;
