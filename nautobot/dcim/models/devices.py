@@ -83,9 +83,9 @@ class Manufacturer(OrganizationalModel):
     "graphql",
     "webhooks",
 )
-class HardwareFamily(PrimaryModel):
+class DeviceFamily(PrimaryModel):
     """
-    A Hardware Family is a model that represents a grouping of DeviceTypes.
+    A Device Family is a model that represents a grouping of DeviceTypes.
     """
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
@@ -93,7 +93,7 @@ class HardwareFamily(PrimaryModel):
 
     class Meta:
         ordering = ["name"]
-        verbose_name_plural = "hardware families"
+        verbose_name_plural = "device families"
 
     def __str__(self):
         return self.name
@@ -143,8 +143,8 @@ class DeviceType(PrimaryModel):
     """
 
     manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="device_types")
-    hardware_family = models.ForeignKey(
-        to="dcim.HardwareFamily",
+    device_family = models.ForeignKey(
+        to="dcim.DeviceFamily",
         on_delete=models.PROTECT,
         related_name="device_types",
         blank=True,

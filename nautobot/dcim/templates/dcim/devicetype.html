@@ -66,9 +66,9 @@
                         <td><a href="{% url 'dcim:devicetype_list' %}?manufacturer={{ object.manufacturer.name }}">{{ object.manufacturer }}</a></td>
                     </tr>
                     <tr>
-                        <td>Hardware Family</td>
+                        <td>Device Family</td>
                         <td>
-                            {{ object.hardware_family | hyperlinked_object }}
+                            {{ object.device_family | hyperlinked_object }}
                         </td>
                     </tr>
                     <tr>

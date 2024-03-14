@@ -34,7 +34,7 @@ app_name = "dcim"
 
 router = NautobotUIViewSetRouter()
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
-router.register("hardware-families", views.HardwareFamilyUIViewSet)
+router.register("device-families", views.DeviceFamilyUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)

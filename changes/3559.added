@@ -1,2 +1,2 @@
-Added `HardwareFamily` model class.
-Added `hardware_family` field to Device Type model class.
+Added `HardwareFamily` model class. (Renamed before release to `DeviceFamily`.)
+Added `device_family` field to Device Type model class.
