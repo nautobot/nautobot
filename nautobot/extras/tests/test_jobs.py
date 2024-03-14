@@ -10,6 +10,7 @@ import uuid
 from constance.test import override_config
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -34,7 +35,6 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
 from nautobot.extras.jobs import get_job
-from nautobot.extras.utils import change_logged_models_queryset
 
 
 class JobTest(TestCase):
@@ -928,7 +928,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         # We need to explicitly clear it here to have tests pass.
         # This is not a problem during normal operation of Nautobot because content-types don't normally get deleted
         # and recreated while Nautobot is running.
-        change_logged_models_queryset.cache_clear()
+        cache.delete("nautobot.extras.utils.change_logged_models_queryset")
 
         module = "job_hook_receiver"
         name = "TestJobHookReceiverLog"

@@ -105,7 +105,9 @@ class GetReleasesTestCase(SimpleTestCase):
         # Check if result is put in cache
         expected_version_str, expected_url = max(releases)
         expected_version = version.parse(expected_version_str)
-        mock_cache_set.assert_called_once_with("latest_release", (expected_version, expected_url), 160876)
+        mock_cache_set.assert_called_once_with(
+            "nautobot.core.releases.get_latest_release", (expected_version, expected_url), 160876
+        )
 
     @patch.object(requests, "get")
     @patch.object(cache, "set")
@@ -142,7 +144,9 @@ class GetReleasesTestCase(SimpleTestCase):
         # Check if result is put in cache
         expected_version_str, expected_url = max(releases)
         expected_version = version.parse(expected_version_str)
-        mock_cache_set.assert_called_once_with("latest_release", (expected_version, expected_url), 160876)
+        mock_cache_set.assert_called_once_with(
+            "nautobot.core.releases.get_latest_release", (expected_version, expected_url), 160876
+        )
 
     @patch.object(requests, "get")
     @patch.object(cache, "set")
@@ -172,7 +176,9 @@ class GetReleasesTestCase(SimpleTestCase):
         )
 
         # Check if failure is put in cache
-        mock_cache_set.assert_called_once_with("latest_release_no_retry", "https://localhost/unittest/releases", 900)
+        mock_cache_set.assert_called_once_with(
+            "nautobot.core.releases.get_releases.no_retry", "https://localhost/unittest/releases", 900
+        )
 
     @patch.object(requests, "get")
     @patch.object(cache, "set")

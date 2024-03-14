@@ -2,19 +2,23 @@
 
 ## Extending Object Detail Views
 
-Apps can inject custom content into certain areas of the detail views of applicable models. This is accomplished by subclassing `TemplateExtension`, designating a particular Nautobot model, and defining the desired methods to render custom content. Five methods are available:
+Apps can inject custom content into certain areas of the detail and list views of applicable models. This is accomplished by subclassing `TemplateExtension`, designating a particular Nautobot model, and defining the desired methods to render custom content. Six methods are available:
 
-* `left_page()` - Inject content on the left side of the page
-* `right_page()` - Inject content on the right side of the page
-* `full_width_page()` - Inject content across the entire bottom of the page
-* `buttons()` - Add buttons to the top of the page
-* `detail_tabs()` - Add extra tabs to the end of the list of tabs within the page tabs navigation
+* `left_page()` - Inject content on the left side of the object detail page
+* `right_page()` - Inject content on the right side of the object detail page
+* `full_width_page()` - Inject content across the entire bottom of the object detail page
+* `buttons()` - Add buttons to the top of the object detail page
+* `list_buttons()` - Add buttons to the object list page. This works in the same way as `buttons()` for the object detail page.
+* `detail_tabs()` - Add extra tabs to the end of the list of tabs within the object detail page tabs navigation
+
++++ 2.1.8
+    Support for the `list_buttons()` method was added.
 
 Additionally, a `render()` method is available for convenience. This method accepts the name of a template to render, and any additional context data you want to pass. Its use is optional, however.
 
 When a TemplateExtension is instantiated, context data is assigned to `self.context`. Available data include:
 
-* `object` - The object being viewed
+* `object` - The object being viewed (note that this will be the model class when accessed in the context of `list_buttons()`)
 * `request` - The current request
 * `settings` - Global Nautobot settings
 * `config` - App-specific configuration parameters
