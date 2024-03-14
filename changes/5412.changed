@@ -1,0 +1,1 @@
+Changed DeviceType YAML/JSON import to now map unrecognized port template `type` values to `"other"` instead of failing the import.
