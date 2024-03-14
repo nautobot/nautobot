@@ -13,7 +13,7 @@
     </button>
     <ul class="dropdown-menu">
         <li><a href="{% url 'dcim:devicetype_import' %}">JSON/YAML format (single record)</a></li>
-        <li><a href="{{ csv_import_url }}">CSV format (multiple records)</a></li>
+        <li><a href="{% job_import_url content_type %}">CSV format (multiple records)</a></li>
     </ul>
 </div>
 {% endblock import_button %}
