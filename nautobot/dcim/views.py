@@ -3039,12 +3039,13 @@ class ControllerDeviceGroupUIViewSet(NautobotUIViewSet):
             devices = instance.devices.restrict(request.user)
             devices_table = tables.DeviceTable(devices)
             devices_table.columns.show("device_redundancy_group_priority")
-            context["devices_table"] = devices_table
 
             paginate = {
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request),
             }
             RequestConfig(request, paginate).configure(devices_table)
+
+            context["devices_table"] = devices_table
 
         return context

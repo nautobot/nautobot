@@ -36,4 +36,5 @@
             </div>
             {% include 'responsive_table.html' with table=devices_table %}
         </div>
+        {% include 'inc/paginator.html' with paginator=devices_table.paginator page=devices_table.page %}
 {% endblock content_full_width_page %}
