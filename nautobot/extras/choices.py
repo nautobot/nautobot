@@ -64,11 +64,25 @@ class CustomFieldTypeChoices(ChoiceSet):
         (TYPE_MARKDOWN, "Markdown"),
     )
 
+    # Types that support validation_minimum/validation_maximum
+    MIN_MAX_TYPES = (
+        TYPE_TEXT,
+        TYPE_INTEGER,
+        TYPE_URL,
+        TYPE_SELECT,
+        TYPE_MULTISELECT,
+        TYPE_JSON,
+        TYPE_MARKDOWN,
+    )
+
+    # Types that support validation_regex
     REGEX_TYPES = (
         TYPE_TEXT,
         TYPE_URL,
         TYPE_SELECT,
         TYPE_MULTISELECT,
+        TYPE_JSON,
+        TYPE_MARKDOWN,
     )
 
 
