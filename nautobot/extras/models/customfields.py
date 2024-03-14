@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from datetime import date, datetime
+import json
 import logging
 import re
 
@@ -390,13 +391,13 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         blank=True,
         null=True,
         verbose_name="Minimum value",
-        help_text="Minimum allowed value (for numeric fields).",
+        help_text="Minimum allowed value (for numeric fields) or length (for text fields).",
     )
     validation_maximum = models.BigIntegerField(
         blank=True,
         null=True,
         verbose_name="Maximum value",
-        help_text="Maximum allowed value (for numeric fields).",
+        help_text="Maximum allowed value (for numeric fields) or length (for text fields).",
     )
     validation_regex = models.CharField(
         blank=True,
@@ -464,16 +465,16 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
             except ValidationError as err:
                 raise ValidationError({"default": f'Invalid default value "{self.default}": {err.message}'})
 
-        # Minimum/maximum values can be set only for numeric fields
-        if self.validation_minimum is not None and self.type != CustomFieldTypeChoices.TYPE_INTEGER:
-            raise ValidationError({"validation_minimum": "A minimum value may be set only for numeric fields"})
-        if self.validation_maximum is not None and self.type != CustomFieldTypeChoices.TYPE_INTEGER:
-            raise ValidationError({"validation_maximum": "A maximum value may be set only for numeric fields"})
+        # Minimum/maximum values can be set only for fields that support them
+        if self.validation_minimum is not None and self.type not in CustomFieldTypeChoices.MIN_MAX_TYPES:
+            raise ValidationError({"validation_minimum": "A minimum value may not be set for fields of this type"})
+        if self.validation_maximum is not None and self.type not in CustomFieldTypeChoices.MIN_MAX_TYPES:
+            raise ValidationError({"validation_maximum": "A maximum value may not be set for fields of this type"})
 
         # Regex validation can be set only for text, url, select and multi-select fields
         if self.validation_regex and self.type not in CustomFieldTypeChoices.REGEX_TYPES:
             raise ValidationError(
-                {"validation_regex": "Regular expression validation is supported only for text, URL and select fields"}
+                {"validation_regex": "Regular expression validation is not supported for fields of this type"}
             )
 
         # Choices can be set only on selection fields
@@ -540,13 +541,35 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                 widget=DatePicker(),
             )
 
-        # Text and URL
-        elif self.type in (CustomFieldTypeChoices.TYPE_URL, CustomFieldTypeChoices.TYPE_TEXT):
+        # Text-like fields
+        elif self.type in (
+            CustomFieldTypeChoices.TYPE_URL,
+            CustomFieldTypeChoices.TYPE_TEXT,
+            CustomFieldTypeChoices.TYPE_MARKDOWN,
+        ):
             if self.type == CustomFieldTypeChoices.TYPE_URL:
-                field = LaxURLField(required=required, initial=initial)
+                field = LaxURLField(
+                    required=required,
+                    initial=initial,
+                    min_length=self.validation_minimum,
+                    max_length=self.validation_maximum,
+                )
             elif self.type == CustomFieldTypeChoices.TYPE_TEXT:
-                field = forms.CharField(max_length=255, required=required, initial=initial)
-
+                field = forms.CharField(
+                    required=required,
+                    initial=initial,
+                    min_length=self.validation_minimum,
+                    max_length=self.validation_maximum,
+                )
+            elif self.type == CustomFieldTypeChoices.TYPE_MARKDOWN:
+                field = CommentField(
+                    required=required,
+                    initial=initial,
+                    widget=SmallTextarea,
+                    label=None,
+                    min_length=self.validation_minimum,
+                    max_length=self.validation_maximum,
+                )
             if self.validation_regex:
                 field.validators = [
                     RegexValidator(
@@ -555,12 +578,10 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                     )
                 ]
 
-        # Markdown
-        elif self.type == CustomFieldTypeChoices.TYPE_MARKDOWN:
-            field = CommentField(widget=SmallTextarea, label=None)
-
         # JSON
         elif self.type == CustomFieldTypeChoices.TYPE_JSON:
+            # Unlike the above cases, we don't apply min_length/max_length to the field,
+            # nor do we add a RegexValidator to the field, as these all apply after parsing and validating the JSON
             if simple_json_filter:
                 field = JSONField(encoder=DjangoJSONEncoder, required=required, initial=None, widget=TextInput)
             else:
@@ -621,15 +642,33 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         """
         if value not in [None, "", []]:
             # Validate text field
-            if self.type in (CustomFieldTypeChoices.TYPE_TEXT, CustomFieldTypeChoices.TYPE_URL):
+            if self.type in (
+                CustomFieldTypeChoices.TYPE_TEXT,
+                CustomFieldTypeChoices.TYPE_URL,
+                CustomFieldTypeChoices.TYPE_MARKDOWN,
+            ):
                 if not isinstance(value, str):
                     raise ValidationError("Value must be a string")
-
+                if self.validation_minimum is not None and len(value) < self.validation_minimum:
+                    raise ValidationError(f"Value must be at least {self.validation_minimum} characters in length")
+                if self.validation_maximum is not None and len(value) > self.validation_maximum:
+                    raise ValidationError(f"Value must not exceed {self.validation_maximum} characters in length")
                 if self.validation_regex and not re.search(self.validation_regex, value):
                     raise ValidationError(f"Value must match regex '{self.validation_regex}'")
 
+            # Validate JSON
+            elif self.type == CustomFieldTypeChoices.TYPE_JSON:
+                if self.validation_regex or self.validation_minimum is not None or self.validation_maximum is not None:
+                    json_value = json.dumps(value)
+                    if self.validation_minimum is not None and len(json_value) < self.validation_minimum:
+                        raise ValidationError(f"Value must be at least {self.validation_minimum} characters in length")
+                    if self.validation_maximum is not None and len(json_value) > self.validation_maximum:
+                        raise ValidationError(f"Value must not exceed {self.validation_maximum} characters in length")
+                    if self.validation_regex and not re.search(self.validation_regex, json_value):
+                        raise ValidationError(f"Value must match regex '{self.validation_regex}'")
+
             # Validate integer
-            if self.type == CustomFieldTypeChoices.TYPE_INTEGER:
+            elif self.type == CustomFieldTypeChoices.TYPE_INTEGER:
                 try:
                     value = int(value)
                 except ValueError:
@@ -640,14 +679,14 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                     raise ValidationError(f"Value must not exceed {self.validation_maximum}")
 
             # Validate boolean
-            if self.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
+            elif self.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
                 try:
                     value = is_truthy(value)
                 except ValueError as exc:
                     raise ValidationError("Value must be true or false.") from exc
 
             # Validate date
-            if self.type == CustomFieldTypeChoices.TYPE_DATE:
+            elif self.type == CustomFieldTypeChoices.TYPE_DATE:
                 if not isinstance(value, date):
                     try:
                         datetime.strptime(value, "%Y-%m-%d")
@@ -655,13 +694,13 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
                         raise ValidationError("Date values must be in the format YYYY-MM-DD.")
 
             # Validate selected choice
-            if self.type == CustomFieldTypeChoices.TYPE_SELECT:
+            elif self.type == CustomFieldTypeChoices.TYPE_SELECT:
                 if value not in self.custom_field_choices.values_list("value", flat=True):
                     raise ValidationError(
                         f"Invalid choice ({value}). Available choices are: {', '.join(self.custom_field_choices.values_list('value', flat=True))}"
                     )
 
-            if self.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
+            elif self.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
                 if isinstance(value, str):
                     value = value.split(",")
                 if not set(value).issubset(self.custom_field_choices.values_list("value", flat=True)):
@@ -720,6 +759,11 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
     def clean(self):
         if self.custom_field.type not in (CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT):
             raise ValidationError("Custom field choices can only be assigned to selection fields.")
+
+        if self.custom_field.validation_minimum is not None and len(self.value) < self.custom_field.validation_minimum:
+            raise ValidationError(f"Value must be at least {self.custom_field.validation_minimum} characters long.")
+        if self.custom_field.validation_maximum is not None and len(self.value) > self.custom_field.validation_maximum:
+            raise ValidationError(f"Value must not exceed {self.custom_field.validation_maximum} characters long.")
 
         if not re.search(self.custom_field.validation_regex, self.value):
             raise ValidationError(f"Value must match regex {self.custom_field.validation_regex} got {self.value}.")
