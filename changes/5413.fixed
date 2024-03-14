@@ -1,1 +1,1 @@
-Update Device lldp detail panel to handle LLDP neighbors with MAC address port-id
+Updated Device "LLDP Neighbors" detail panel to handle LLDP neighbors with MAC address as port-id.
