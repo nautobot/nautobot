@@ -252,12 +252,12 @@ class Migration(migrations.Migration):
             field=models.CharField(max_length=255),
         ),
         migrations.AlterField(
-            model_name="hardwarefamily",
+            model_name="devicefamily",
             name="description",
             field=models.CharField(blank=True, max_length=255),
         ),
         migrations.AlterField(
-            model_name="hardwarefamily",
+            model_name="devicefamily",
             name="name",
             field=models.CharField(max_length=255, unique=True),
         ),

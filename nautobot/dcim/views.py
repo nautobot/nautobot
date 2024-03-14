@@ -50,11 +50,11 @@ from .models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
-    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
@@ -2937,13 +2937,13 @@ class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDe
     lookup_field = "pk"
 
 
-class HardwareFamilyUIViewSet(NautobotUIViewSet):
-    filterset_class = filters.HardwareFamilyFilterSet
-    form_class = forms.HardwareFamilyForm
-    bulk_update_form_class = forms.HardwareFamilyBulkEditForm
-    queryset = HardwareFamily.objects.annotate(device_type_count=count_related(DeviceType, "hardware_family"))
-    serializer_class = serializers.HardwareFamilySerializer
-    table_class = tables.HardwareFamilyTable
+class DeviceFamilyUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.DeviceFamilyFilterSet
+    form_class = forms.DeviceFamilyForm
+    bulk_update_form_class = forms.DeviceFamilyBulkEditForm
+    queryset = DeviceFamily.objects.annotate(device_type_count=count_related(DeviceType, "device_family"))
+    serializer_class = serializers.DeviceFamilySerializer
+    table_class = tables.DeviceFamilyTable
     lookup_field = "pk"
 
     def get_extra_context(self, request, instance):
@@ -2952,7 +2952,7 @@ class HardwareFamilyUIViewSet(NautobotUIViewSet):
         if self.action == "retrieve":
             device_types = (
                 DeviceType.objects.restrict(request.user, "view")
-                .filter(hardware_family=instance)
+                .filter(device_family=instance)
                 .select_related("manufacturer")
                 .annotate(device_count=count_related(Device, "device_type"))
             )

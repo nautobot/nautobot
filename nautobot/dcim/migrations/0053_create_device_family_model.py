@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="HardwareFamily",
+            name="DeviceFamily",
             fields=[
                 (
                     "id",
@@ -38,7 +38,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "ordering": ["name"],
-                "verbose_name_plural": "hardware families",
+                "verbose_name_plural": "device families",
             },
             bases=(
                 models.Model,
@@ -48,13 +48,13 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="devicetype",
-            name="hardware_family",
+            name="device_family",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="device_types",
-                to="dcim.hardwarefamily",
+                to="dcim.devicefamily",
             ),
         ),
     ]
