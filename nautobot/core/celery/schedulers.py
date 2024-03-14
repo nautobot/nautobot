@@ -3,8 +3,8 @@ import logging
 from pathlib import Path
 
 from celery import current_app
-from django_celery_beat.schedulers import DatabaseScheduler, ModelEntry
 from django.conf import settings
+from django_celery_beat.schedulers import DatabaseScheduler, ModelEntry
 from kombu.utils.json import loads
 
 from nautobot.extras.models import ScheduledJob, ScheduledJobs
