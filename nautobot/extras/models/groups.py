@@ -325,7 +325,7 @@ class DynamicGroup(OrganizationalModel):
     @property
     def members_cache_key(self):
         """Return the cache key for this group's members."""
-        return f"{self.__class__.__name__}.{self.id}.members_cached"
+        return f"nautobot.extras.dynamicgroup.{self.id}.members_cached"
 
     @property
     def members_cached(self):

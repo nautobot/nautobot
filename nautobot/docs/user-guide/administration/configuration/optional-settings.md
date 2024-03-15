@@ -183,6 +183,16 @@ If a custom URL is not provided for any of the links, the default link within th
 
 ---
 
+## CELERY_BEAT_HEARTBEAT_FILE
+
+Default: `/tmp/nautobot_celery_beat_heartbeat`
+
+Environment Variable: `NAUTOBOT_CELERY_BEAT_HEARTBEAT_FILE`
+
+Path to a file that will be `touch`ed each time the Celery Beat task scheduler wakes up. Suitable for use as a health check on the Celery Beat process. Set to an empty string `""` to disable this feature.
+
+---
+
 ## CELERY_BROKER_TRANSPORT_OPTIONS
 
 Default: `{}`
