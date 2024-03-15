@@ -4263,6 +4263,12 @@ class ControllerDeviceGroupForm(NautobotModelForm):
             "tags",
         )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance.present_in_database:
+            self.initial["devices"] = self.instance.devices.values_list("id", flat=True)
+
     def save(self, *args, **kwargs):
         instance = super().save(*args, **kwargs)
         instance.devices.set(self.cleaned_data["devices"])
