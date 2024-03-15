@@ -193,7 +193,7 @@ class NautobotTestCaseMixin:
                 new_model_dict[k] = self.standardize_json(v)
             elif hasattr(v, "all") and callable(v.all):
                 # Convert related manager to list of PKs
-                new_model_dict[k] = sorted(item.pk for item in v.all())
+                new_model_dict[k] = sorted(v.all().values_list("pk", flat=True))
             else:
                 new_model_dict[k] = v
 
@@ -209,7 +209,7 @@ class NautobotTestCaseMixin:
                     relevant_data[k] = self.standardize_json(v)
                 elif hasattr(v, "all") and callable(v.all):
                     # Convert related manager to list of PKs
-                    relevant_data[k] = sorted(item.pk for item in v.all())
+                    relevant_data[k] = sorted(v.all().values_list("pk", flat=True))
                 else:
                     relevant_data[k] = v
 
