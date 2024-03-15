@@ -4248,15 +4248,31 @@ class ControllerBulkEditForm(
 class ControllerDeviceGroupForm(NautobotModelForm):
     """ControllerDeviceGroup create/edit form."""
 
+    controller = DynamicModelChoiceField(queryset=Controller.objects.all(), required=False)
+    devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
+    parent = DynamicModelChoiceField(queryset=ControllerDeviceGroup.objects.all(), required=False)
+
     class Meta:
         model = ControllerDeviceGroup
         fields = (
             "name",
             "controller",
+            "devices",
             "parent",
             "weight",
             "tags",
         )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance.present_in_database:
+            self.initial["devices"] = self.instance.devices.values_list("pk", flat=True)
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        instance.devices.set(self.cleaned_data["devices"])
+        return instance
 
 
 class ControllerDeviceGroupFilterForm(

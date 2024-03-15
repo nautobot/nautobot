@@ -125,8 +125,6 @@ erDiagram
 
 ## Examples
 
-TBD: Update examples
-
 ### Cisco ACI
 
 ```yaml
@@ -153,14 +151,14 @@ controller_device_group:
     controller: Panorama1
     tags:
       - high_security
-    member_devices:
+    devices:
       - dal-fw01
       - chi-fw01
   - name: dc
     controller: Panorama1
     tags:
       - medium_security
-    member_devices:
+    devices:
       - nyc-fw99
       - jcy-fw99
 ```

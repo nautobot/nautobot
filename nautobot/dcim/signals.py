@@ -11,6 +11,7 @@ from nautobot.core.signals import disable_for_loaddata
 from .models import (
     Cable,
     CablePath,
+    ControllerDeviceGroup,
     Device,
     DeviceRedundancyGroup,
     Interface,
@@ -286,3 +287,21 @@ def prevent_adding_tagged_vlans_with_incorrect_mode_or_site(sender, instance, ac
         return
 
     validate_interface_tagged_vlans(instance, kwargs["model"], kwargs["pk_set"])
+
+
+#
+# location/rack/device assignment
+#
+
+
+@receiver(post_save, sender=ControllerDeviceGroup)
+def handle_controller_device_group_controller_change(instance, created, raw=False, **kwargs):
+    """Update descendants when the controller changes."""
+    if raw or created:
+        return
+
+    with transaction.atomic():
+        if instance._original_controller != instance.controller:
+            for group in instance.descendants(include_self=False):
+                group.controller = instance.controller
+                group.save()

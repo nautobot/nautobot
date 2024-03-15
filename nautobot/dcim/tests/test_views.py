@@ -3128,6 +3128,7 @@ class ControllerDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "name": "Controller Device Group 10",
             "controller": controllers[0].pk,
             "weight": 100,
+            "devices": [item.pk for item in Device.objects.all()[:2]],
         }
 
         cls.bulk_edit_data = {

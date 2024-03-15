@@ -53,6 +53,7 @@ from .template_code import (
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
     REARPORT_BUTTONS,
+    TREE_LINK,
 )
 
 __all__ = (
@@ -1183,11 +1184,12 @@ class ControllerDeviceGroupTable(BaseTable):
     """Table for list view."""
 
     pk = ToggleColumn()
-    name = tables.Column(linkify=True)
+    name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
     weight = tables.Column()
     controller = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:controllerdevicegroup_list")
     actions = ButtonsColumn(ControllerDeviceGroup)
+    device_count = tables.TemplateColumn(template_code=LINKED_RECORD_COUNT, verbose_name="Devices")
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -1196,16 +1198,18 @@ class ControllerDeviceGroupTable(BaseTable):
         fields = (
             "pk",
             "name",
-            "weight",
+            "device_count",
             "controller",
+            "weight",
             "tags",
             "actions",
         )
         default_columns = (
             "pk",
             "name",
-            "weight",
+            "device_count",
             "controller",
+            "weight",
             "tags",
             "actions",
         )

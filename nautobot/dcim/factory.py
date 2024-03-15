@@ -702,6 +702,8 @@ class ControllerDeviceGroupFactory(PrimaryModelFactory):
         has_parent = NautobotBoolIterator()
 
     name = UniqueFaker("word")
-    controller = random_instance(Controller, allow_null=False)
     parent = factory.Maybe("has_parent", random_instance(ControllerDeviceGroup), None)
+    controller = factory.LazyAttribute(
+        lambda o: o.parent.controller if o.parent else Controller.objects.order_by("?").first()
+    )
     weight = factory.Faker("pyint", min_value=1, max_value=1000)
