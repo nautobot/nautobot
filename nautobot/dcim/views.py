@@ -3021,6 +3021,24 @@ class ControllerUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ControllerSerializer
     table_class = tables.ControllerTable
 
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action == "retrieve" and instance:
+            devices = Device.objects.restrict(request.user).filter(controller_device_group__controller=instance)
+            devices_table = tables.DeviceTable(devices)
+            devices_table.columns.show("device_redundancy_group_priority")
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(devices_table)
+
+            context["devices_table"] = devices_table
+
+        return context
+
 
 class ControllerDeviceGroupUIViewSet(NautobotUIViewSet):
     filterset_class = filters.ControllerDeviceGroupFilterSet
