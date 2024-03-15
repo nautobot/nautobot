@@ -48,7 +48,9 @@
         {% add_button content_type.model_class|validated_viewname:"add" %}
     {% endif %}
     {% if permissions.add and 'import' in action_buttons %}
-        {% job_import_button content_type %}
+        {% block import_button %}
+            {% job_import_button content_type %}
+        {% endblock import_button %}
     {% endif %}
     {% if 'export' in action_buttons %}
         {% block export_button %}
