@@ -14,7 +14,7 @@ import nautobot.extras.models.statuses
 class Migration(migrations.Migration):
     dependencies = [
         ("extras", "0104_contact_contactassociation_team"),
-        ("dcim", "0053_create_hardware_family_model"),
+        ("dcim", "0053_create_device_family_model"),
     ]
 
     operations = [
