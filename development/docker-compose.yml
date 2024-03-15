@@ -24,7 +24,7 @@ services:
     healthcheck:
       interval: 5s
       timeout: 5s
-      start_period: 45s
+      start_period: 5m  # it takes a WHILE to run initial migrations with an empty DB
       retries: 3
       test:
         - "CMD"
@@ -47,8 +47,10 @@ services:
         - "-c"
         - "nautobot-server celery inspect ping --destination celery@$$HOSTNAME"
     depends_on:
-      - nautobot
-      - redis
+      nautobot:
+        condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - ./dev.env
     tty: true
@@ -67,8 +69,10 @@ services:
         # find the heartbeat file and report success if it was modified less than 0.1 minutes (6 seconds) ago, else fail
         - '[ $(find /tmp/nautobot_celery_beat_heartbeat -mmin -0.1 | wc -l) -eq 1 ] || false'
     depends_on:
-      - nautobot
-      - redis
+      nautobot:
+        condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - ./dev.env
     tty: true
