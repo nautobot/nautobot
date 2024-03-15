@@ -203,6 +203,16 @@ A boolean that turns on/off health checks for the Redis server connection utiliz
 
 ---
 
+## CELERY_BEAT_HEARTBEAT_FILE
+
+Default: `/tmp/nautobot_celery_beat_heartbeat`
+
+Environment Variable: `NAUTOBOT_CELERY_BEAT_HEARTBEAT_FILE`
+
+Path to a file that will be `touch`ed each time the Celery Beat task scheduler wakes up. Suitable for use as a health check on the Celery Beat process. Set to an empty string `""` to disable this feature.
+
+---
+
 ## CELERY_BROKER_TRANSPORT_OPTIONS
 
 Default: `{}`
