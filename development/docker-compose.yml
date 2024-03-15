@@ -64,12 +64,16 @@ services:
     image: "local/nautobot-dev:local-py${PYTHON_VER}"
     entrypoint: "nautobot-server celery beat -l INFO"
     healthcheck:
-      disable: true
-    #   interval: 5s
-    #   timeout: 5s
-    #   start_period: 5s
-    #   retries: 3
-    #   test: ["CMD", "nautobot-server", "health_check"]
+      interval: 5s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+      test:
+        - "CMD"
+        - "/bin/sh"
+        - "-c"
+        # find the heartbeat file and report success if it was modified less than 0.1 minutes (6 seconds) ago, else fail
+        - '[ $(find /tmp/nautobot_celery_beat_heartbeat -mmin -0.1 | wc -l) -eq 1 ] || false'
     depends_on:
       nautobot:
         condition: service_healthy
