@@ -3027,7 +3027,11 @@ class ControllerDeviceGroupUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.ControllerDeviceGroupFilterForm
     form_class = forms.ControllerDeviceGroupForm
     bulk_update_form_class = forms.ControllerDeviceGroupBulkEditForm
-    queryset = ControllerDeviceGroup.objects.all().prefetch_related("devices")
+    queryset = (
+        ControllerDeviceGroup.objects.all()
+        .prefetch_related("devices")
+        .annotate(device_count=count_related(Device, "controller_device_group"))
+    )
     serializer_class = serializers.ControllerDeviceGroupSerializer
     table_class = tables.ControllerDeviceGroupTable
     template_name = "dcim/controllerdevicegroup_create.html"
