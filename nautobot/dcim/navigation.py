@@ -227,17 +227,17 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
-                        link="dcim:hardwarefamily_list",
-                        name="Hardware Families",
+                        link="dcim:devicefamily_list",
+                        name="Device Families",
                         weight=300,
                         permissions=[
-                            "dcim.view_hardwarefamily",
+                            "dcim.view_devicefamily",
                         ],
                         buttons=(
                             NavMenuAddButton(
-                                link="dcim:hardwarefamily_add",
+                                link="dcim:devicefamily_add",
                                 permissions=[
-                                    "dcim.add_hardwarefamily",
+                                    "dcim.add_devicefamily",
                                 ],
                             ),
                         ),

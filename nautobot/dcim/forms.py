@@ -1,3 +1,4 @@
+import logging
 import re
 
 from django import forms
@@ -98,11 +99,11 @@ from .models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
-    HardwareFamily,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
@@ -127,6 +128,8 @@ from .models import (
     SoftwareVersion,
     VirtualChassis,
 )
+
+logger = logging.getLogger(__name__)
 
 DEVICE_BY_PK_RE = r"{\d+\}"
 
@@ -671,27 +674,27 @@ class ManufacturerForm(NautobotModelForm):
 
 
 #
-# Hardware Family
+# Device Family
 #
 
 
-class HardwareFamilyForm(NautobotModelForm):
+class DeviceFamilyForm(NautobotModelForm):
     class Meta:
-        model = HardwareFamily
+        model = DeviceFamily
         fields = [
             "name",
             "description",
         ]
 
 
-class HardwareFamilyFilterForm(NautobotFilterForm):
-    model = HardwareFamily
+class DeviceFamilyFilterForm(NautobotFilterForm):
+    model = DeviceFamily
     q = forms.CharField(required=False, label="Search")
     tags = TagFilterField(model)
 
 
-class HardwareFamilyBulkEditForm(NautobotBulkEditForm, TagsBulkEditFormMixin):
-    pk = forms.ModelMultipleChoiceField(queryset=HardwareFamily.objects.all(), widget=forms.MultipleHiddenInput())
+class DeviceFamilyBulkEditForm(NautobotBulkEditForm, TagsBulkEditFormMixin):
+    pk = forms.ModelMultipleChoiceField(queryset=DeviceFamily.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(required=False)
 
     class Meta:
@@ -705,7 +708,7 @@ class HardwareFamilyBulkEditForm(NautobotBulkEditForm, TagsBulkEditFormMixin):
 
 class DeviceTypeForm(NautobotModelForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all())
-    hardware_family = DynamicModelChoiceField(queryset=HardwareFamily.objects.all(), required=False)
+    device_family = DynamicModelChoiceField(queryset=DeviceFamily.objects.all(), required=False)
     comments = CommentField()
     software_image_files = DynamicModelMultipleChoiceField(
         queryset=SoftwareImageFile.objects.all(),
@@ -717,7 +720,7 @@ class DeviceTypeForm(NautobotModelForm):
         model = DeviceType
         fields = [
             "manufacturer",
-            "hardware_family",
+            "device_family",
             "model",
             "part_number",
             "u_height",
@@ -751,15 +754,13 @@ class DeviceTypeImportForm(BootstrapMixin, forms.ModelForm):
     """
 
     manufacturer = forms.ModelChoiceField(queryset=Manufacturer.objects.all(), to_field_name="name")
-    hardware_family = forms.ModelChoiceField(
-        queryset=HardwareFamily.objects.all(), to_field_name="name", required=False
-    )
+    device_family = forms.ModelChoiceField(queryset=DeviceFamily.objects.all(), to_field_name="name", required=False)
 
     class Meta:
         model = DeviceType
         fields = [
             "manufacturer",
-            "hardware_family",
+            "device_family",
             "model",
             "part_number",
             "u_height",
@@ -772,13 +773,13 @@ class DeviceTypeImportForm(BootstrapMixin, forms.ModelForm):
 class DeviceTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceType.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
-    hardware_family = DynamicModelChoiceField(queryset=HardwareFamily.objects.all(), required=False)
+    device_family = DynamicModelChoiceField(queryset=DeviceFamily.objects.all(), required=False)
     software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
     u_height = forms.IntegerField(required=False)
     is_full_depth = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect(), label="Is full depth")
 
     class Meta:
-        nullable_fields = ["hardware_family", "software_image_files"]
+        nullable_fields = ["device_family", "software_image_files"]
 
 
 class DeviceTypeFilterForm(NautobotFilterForm):
@@ -787,8 +788,8 @@ class DeviceTypeFilterForm(NautobotFilterForm):
     manufacturer = DynamicModelMultipleChoiceField(
         queryset=Manufacturer.objects.all(), to_field_name="name", required=False
     )
-    hardware_family = DynamicModelMultipleChoiceField(
-        queryset=HardwareFamily.objects.all(), to_field_name="name", required=False
+    device_family = DynamicModelMultipleChoiceField(
+        queryset=DeviceFamily.objects.all(), to_field_name="name", required=False
     )
     subdevice_role = forms.MultipleChoiceField(
         choices=add_blank_choice(SubdeviceRoleChoices),
@@ -1342,6 +1343,11 @@ class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
 
         super().__init__(data, *args, **kwargs)
 
+        if "type" in self.fields:
+            # Since model.type has defined choices, the form field defaults to a ChoiceField which will reject unknowns.
+            # We want to instead be able to remap unknown values to "other" in clean_type() below, so we replace it:
+            self.fields["type"] = forms.CharField()
+
     def clean_device_type(self):
         data = self.cleaned_data["device_type"]
 
@@ -1349,6 +1355,29 @@ class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
         for field_name, field in self.fields.items():
             if isinstance(field, forms.ModelChoiceField) and field_name != "device_type":
                 field.queryset = field.queryset.filter(device_type=data)
+
+        return data
+
+    def clean_type(self):
+        data = self.cleaned_data["type"]
+        choices = self.Meta.model._meta.get_field("type").choices
+
+        try:
+            if data not in choices.values():
+                logger.debug(
+                    'For %s "%s", the "type" value "%s" is unrecognized and will be replaced by "%s"',
+                    self.Meta.model.__name__,
+                    self.cleaned_data["name"],
+                    data,
+                    choices.TYPE_OTHER,
+                )
+                data = choices.TYPE_OTHER
+        except AttributeError:
+            logger.warning(
+                "Either %s.type.choices is not a ChoiceSet, or %s.type.choices.TYPE_OTHER is not defined",
+                self.Meta.model.__name__,
+                self.Meta.model.__name__,
+            )
 
         return data
 
@@ -1417,8 +1446,6 @@ class PowerOutletTemplateImportForm(ComponentTemplateImportForm):
 
 
 class InterfaceTemplateImportForm(ComponentTemplateImportForm):
-    type = forms.ChoiceField(choices=InterfaceTypeChoices.CHOICES)
-
     class Meta:
         model = InterfaceTemplate
         fields = [
@@ -1431,7 +1458,6 @@ class InterfaceTemplateImportForm(ComponentTemplateImportForm):
 
 
 class FrontPortTemplateImportForm(ComponentTemplateImportForm):
-    type = forms.ChoiceField(choices=PortTypeChoices.CHOICES)
     rear_port_template = forms.ModelChoiceField(
         queryset=RearPortTemplate.objects.all(), to_field_name="name", required=False
     )
@@ -1459,8 +1485,6 @@ class FrontPortTemplateImportForm(ComponentTemplateImportForm):
 
 
 class RearPortTemplateImportForm(ComponentTemplateImportForm):
-    type = forms.ChoiceField(choices=PortTypeChoices.CHOICES)
-
     class Meta:
         model = RearPortTemplate
         fields = [
