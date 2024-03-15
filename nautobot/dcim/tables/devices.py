@@ -1189,10 +1189,7 @@ class ControllerDeviceGroupTable(BaseTable):
     controller = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:controllerdevicegroup_list")
     actions = ButtonsColumn(ControllerDeviceGroup)
-    device_count = tables.TemplateColumn(
-        template_code=LINKED_RECORD_COUNT,
-        verbose_name="Devices"
-    )
+    device_count = tables.TemplateColumn(template_code=LINKED_RECORD_COUNT, verbose_name="Devices")
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
