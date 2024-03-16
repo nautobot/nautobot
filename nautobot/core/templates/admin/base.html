@@ -98,7 +98,7 @@
 
 {% include 'inc/nav_menu.html' %}
 
-<div class="container-fluid wrapper banner-alert-area" id="main-content" {% if is_popup %}style="padding-bottom: 0px;"{% endif %}>
+<div class="container-fluid wrapper" id="main-content" {% if is_popup %}style="padding-bottom: 0px;"{% endif %}>
     {% if "BANNER_TOP"|settings_or_config %}
         <div class="alert alert-info text-center" role="alert">
             {{ "BANNER_TOP"|settings_or_config|safe }}
