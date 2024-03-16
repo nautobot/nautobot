@@ -7,15 +7,17 @@
     {% include 'inc/media.html' %}
 {% endblock bootstrap_theme %}
 
-{% block navbar %}
-    {% include 'inc/nav_menu.html' %}
-{% endblock navbar %}
-
 {% block body %}
-    <div class="container-fluid" id="main-content">
+    {% include 'inc/nav_menu.html' %}
+    <div class="container-fluid banner-aler-area" id="main-content">
         {{ block.super }}
     </div>
     {% include 'inc/footer.html' %}
+    <style>
+        #main-content {
+            height: 95%;
+        }
+    </style>
 {% endblock body %}
 
 {% block script %}
