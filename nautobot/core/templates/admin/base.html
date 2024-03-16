@@ -95,9 +95,9 @@
     </style>
 </head>
 <body {% if is_popup %}style="padding-top: 0px;"{% endif %}>
-{% if not is_popup %}
-    {% include 'inc/nav_menu.html' %}
-{% endif %}
+
+{% include 'inc/nav_menu.html' %}
+
 <div class="container-fluid wrapper banner-alert-area" id="main-content" {% if is_popup %}style="padding-bottom: 0px;"{% endif %}>
     {% if "BANNER_TOP"|settings_or_config %}
         <div class="alert alert-info text-center" role="alert">
@@ -148,8 +148,6 @@
             {% block content %}{{ content }}{% endblock %}
         </div>
     </div>
-
-    {% block footer %}<footer id="footer"></footer>{% endblock %}
     <div class="push"></div>
     {% if "BANNER_BOTTOM"|settings_or_config %}
         <div class="alert alert-info text-center banner-bottom" role="alert">
@@ -157,36 +155,7 @@
         </div>
     {% endif %}
 </div>
-{% if not is_popup %}
-    <footer class="footer">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-xs-4">
-                    <p class="text-muted">{{ settings.HOSTNAME }} (v{{ settings.VERSION }})</p>
-                </div>
-                <div class="col-xs-4 text-center">
-                    <p class="text-muted">{% now 'Y-m-d H:i:s T' %}</p>
-                </div>
-                <div class="col-xs-4 text-right noprint">
-                    <p class="text-muted">
-                        <a href="#theme_modal" data-toggle="modal" data-target="#theme_modal" id="btn-theme-modal"><i class="mdi mdi-theme-light-dark text-primary"></i>Theme</a> &middot;
-                        <i class="mdi mdi-book-open-page-variant text-primary"></i>
-                        {% if settings.BRANDING_URLS.docs %}
-                            <a href="{{ settings.BRANDING_URLS.docs }}">Docs</a>
-                        {% else %}
-                            <a href="{% static 'docs/index.html' %}">Docs</a>
-                        {% endif %}
-                        &middot;
-                        <i class="mdi mdi-cloud-braces text-primary"></i> <a href="{% url 'api_docs' %}">API</a> &middot;
-                        <i class="mdi mdi-graphql text-primary"></i> <a href="{% url 'graphql' %}">GraphQL</a> &middot;
-                        <i class="mdi mdi-xml text-primary"></i> <a href="{{ settings.BRANDING_URLS.code }}">Code</a> &middot;
-                        <i class="mdi mdi-lifebuoy text-primary"></i> <a href="{{ settings.BRANDING_URLS.help }}">Help</a>
-                    </p>
-                </div>
-            </div>
-        </div>
-    </footer>
-{% endif %}
+{% include 'inc/footer.html' %}
 {% include 'modals/modal_theme.html' with name='theme'%}
 <script src="{% versioned_static 'js/theme.js' %}"></script>
 {% block javascript %}{% endblock %}
