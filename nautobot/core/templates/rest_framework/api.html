@@ -14,8 +14,11 @@
     </div>
     {% include 'inc/footer.html' %}
     <style>
+        .navbar-static-top {
+            display: none;
+        }
         #main-content {
-            height: 95%;
+            min-height: calc(100vh - 70px);
         }
     </style>
 {% endblock body %}
