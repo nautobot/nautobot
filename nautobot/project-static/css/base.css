@@ -27,6 +27,7 @@ body {
     transition-duration: var(--navbar-transition-duration);
     transition-timing-function: ease-in-out;
     transition-property: margin-left, width;
+    min-height: calc(100vh - 20px);
 }
 #main-content > .form {
     margin-top: 20px;
@@ -44,7 +45,7 @@ body {
     transition-property: margin-left, width;
     overflow: visible;
     margin: 0;
-    /* overflow-x: hidden; */
+    padding-right: 70px;
 }
 .footer .row {
     background-color: #f5f5f5;
