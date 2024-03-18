@@ -1,0 +1,1 @@
+Fixed health check for beat container in `docker-compose.yml` under `docker-compose` v1.x.
