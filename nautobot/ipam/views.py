@@ -973,7 +973,9 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
         # Check if there are at least two IP addresses for us to merge
         # and if the skip button is pressed instead.
         if "_skip" not in request.POST and not operation_invalid:
-            with cache.lock("ipaddress_merge", blocking_timeout=15, timeout=settings.REDIS_LOCK_TIMEOUT):
+            with cache.lock(
+                "nautobot.ipam.views.ipaddress_merge", blocking_timeout=15, timeout=settings.REDIS_LOCK_TIMEOUT
+            ):
                 with transaction.atomic():
                     namespace = Namespace.objects.get(pk=merged_attributes.get("namespace"))
                     status = Status.objects.get(pk=merged_attributes.get("status"))

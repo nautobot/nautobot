@@ -3,6 +3,7 @@ from unittest import mock
 import urllib.parse
 import uuid
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -2019,10 +2020,11 @@ class JobButtonRenderingTestCase(TestCase):
 
     def setUp(self):
         super().setUp()
+        self.job = Job.objects.get(job_class_name="TestJobButtonReceiverSimple")
         self.job_button_1 = JobButton(
             name="JobButton 1",
             text="JobButton {{ obj.name }}",
-            job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+            job=self.job,
             confirmation=False,
         )
         self.job_button_1.validated_save()
@@ -2046,6 +2048,26 @@ class JobButtonRenderingTestCase(TestCase):
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn(f"JobButton {self.location_type.name}", content, content)
         self.assertIn("Click me!", content, content)
+
+    def test_task_queue_hidden_input_is_present(self):
+        """
+        Ensure that the job button respects the job class' task_queues and the job class task_queues[0]/default is passed as a hidden form input.
+        """
+        self.job.task_queues_override = True
+        self.job.task_queues = ["overriden_queue", "default", "priority"]
+        self.job.save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(f'<input type="hidden" name="_task_queue" value="{self.job.task_queues[0]}">', content, content)
+        self.job.task_queues_override = False
+        self.job.save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            f'<input type="hidden" name="_task_queue" value="{settings.CELERY_TASK_DEFAULT_QUEUE}">', content, content
+        )
 
     def test_view_object_with_unsafe_text(self):
         """Ensure that JobButton text can't be used as a vector for XSS."""
