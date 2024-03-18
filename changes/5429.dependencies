@@ -1,0 +1,2 @@
+Updated Docker build and CI to use `poetry` `1.8.2`.
+Removed development dependency on `mkdocs-include-markdown-plugin` as it's no longer used in Nautobot's documentation.

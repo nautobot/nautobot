@@ -66,7 +66,7 @@ namespace.configure(
     {
         "nautobot": {
             "project_name": "nautobot",
-            "python_ver": "3.8",
+            "python_ver": "3.12",
             "local": False,
             "compose_dir": os.path.join(BASE_DIR, "development/"),
             "compose_files": [
