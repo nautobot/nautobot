@@ -1,1 +1,0 @@
-Fixed Job buttons do not respect the `task_queues` of the job class.
