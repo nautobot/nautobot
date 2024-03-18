@@ -1,1 +1,0 @@
-Added `TemplateExtension.list_buttons()` API, allowing apps to register button content to be injected into object list views.
