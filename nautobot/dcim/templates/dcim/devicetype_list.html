@@ -1,0 +1,19 @@
+{% extends 'generic/object_list.html' %}
+{% load buttons %}
+
+{% block import_button %}
+<div class="btn-group">
+    <a id="import-button" type="button" class="btn btn-info" href="{% url 'dcim:devicetype_import' %}">
+        <span class="mdi mdi-database-import" aria-hidden="true"></span>
+        Import
+    </a>
+    <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <span class="caret"></span>
+        <span class="sr-only">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a href="{% url 'dcim:devicetype_import' %}">JSON/YAML format (single record)</a></li>
+        <li><a href="{% job_import_url content_type %}">CSV format (multiple records)</a></li>
+    </ul>
+</div>
+{% endblock import_button %}
