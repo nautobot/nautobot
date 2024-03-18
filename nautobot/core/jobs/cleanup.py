@@ -1,12 +1,12 @@
 from datetime import timedelta
 
-from django.db.models.signals import pre_delete
+from django.db.models.signals import post_delete, pre_delete
 from django.utils import timezone
 
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.jobs import IntegerVar, Job
 from nautobot.extras.models import ObjectChange
-from nautobot.extras.signals import _handle_deleted_object
+from nautobot.extras.signals import _handle_deleted_object, invalidate_lru_cache
 
 
 name = "System Jobs"
@@ -43,8 +43,9 @@ class ObjectChangeCleanup(Job):
 
         # Bulk delete goes much faster if Django doesn't have signals to process.
         # Temporarily detach the ones we *know* to be irrelevant.
-        self.logger.debug("Temporarily disconnecting the handle_deleted_object signal")
+        self.logger.debug("Temporarily disconnecting some signals for performance")
         pre_delete.disconnect(_handle_deleted_object)
+        post_delete.disconnect(invalidate_lru_cache)
 
         try:
             self.logger.info("Deleting all ObjectChange records older than %d days", max_age)
@@ -54,5 +55,6 @@ class ObjectChangeCleanup(Job):
             return deleted_count
         finally:
             # Be sure to clean up after ourselves!
-            self.logger.debug("Re-connecting the handle_deleted_object signal")
+            self.logger.debug("Re-connecting signals")
             pre_delete.connect(_handle_deleted_object)
+            post_delete.connect(invalidate_lru_cache)

@@ -1,8 +1,6 @@
 import contextvars
-from datetime import timedelta
 import logging
 import os
-import secrets
 import shutil
 import traceback
 
@@ -152,12 +150,6 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         model_inserts.labels(instance._meta.model_name).inc()
     elif action == ObjectChangeActionChoices.ACTION_UPDATE:
         model_updates.labels(instance._meta.model_name).inc()
-
-    # Housekeeping: 0.1% chance of clearing out expired ObjectChanges
-    changelog_retention = get_settings_or_config("CHANGELOG_RETENTION")
-    if changelog_retention and secrets.randbelow(1000) == 0:
-        cutoff = timezone.now() - timedelta(days=changelog_retention)
-        ObjectChange.objects.filter(time__lt=cutoff).delete()
 
 
 @receiver(pre_delete)
