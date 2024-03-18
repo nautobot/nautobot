@@ -573,10 +573,9 @@ class CustomFieldDataAPITest(APITestCase):
             self.cf_json,
         ]
 
-        if "example_plugin" in settings.PLUGINS:
-            self.cf_plugin_field = CustomField.objects.get(key="example_plugin_auto_custom_field")
+        if "example_app" in settings.PLUGINS:
+            self.cf_plugin_field = CustomField.objects.get(key="example_app_auto_custom_field")
             self.all_cfs.append(self.cf_plugin_field)
-
         self.statuses = Status.objects.get_for_model(Location)
 
         # Create some locations
