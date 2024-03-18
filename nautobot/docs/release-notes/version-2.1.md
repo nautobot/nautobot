@@ -103,6 +103,7 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 
 ### Documentation
 
+- [#5437](https://github.com/nautobot/nautobot/issues/5437) - Added release-note for version 1.6.15.
 - [#5421](https://github.com/nautobot/nautobot/issues/5421) - Added release-notes for versions 1.6.11 through 1.6.14.
 
 ### Housekeeping
