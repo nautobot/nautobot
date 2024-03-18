@@ -84,6 +84,7 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 
 - [#5247](https://github.com/nautobot/nautobot/issues/5247) - Fixed Job buttons do not respect the `task_queues` of the job class.
 - [#5354](https://github.com/nautobot/nautobot/issues/5354) - Fixed Configuration Context not applied based on nested Tenant Groups.
+- [#5434](https://github.com/nautobot/nautobot/pull/5434) - Fixed health check for beat container in `docker-compose.yml` under `docker-compose` v1.x.
 
 ## v1.6.14 (2024-03-05)
 
