@@ -201,7 +201,7 @@ class ImportObjects(Job):
     csv_data = TextVar(label="CSV Data", required=False)
     csv_file = FileVar(label="CSV File", required=False)
     roll_back_if_error = BooleanVar(
-        label="Rollback changes on Failure",
+        label="Rollback Changes on Failure",
         required=False,
         default=True,
         description="If an error is encountered when processing any row of data, rollback the entire import such that no data is imported.",
