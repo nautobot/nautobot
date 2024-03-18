@@ -76,7 +76,6 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 
 ### Added
 
-- [#1102](https://github.com/nautobot/nautobot/issues/1102) - Added health check for Celery Beat based on it touching a file (by default `/tmp/nautobot_celery_beat_heartbeat`) each time its scheduler wakes up.
 - [#1102](https://github.com/nautobot/nautobot/issues/1102) - Added `CELERY_BEAT_HEARTBEAT_FILE` settings variable.
 - [#5228](https://github.com/nautobot/nautobot/issues/5228) - Added the option to configure and enforce `validation_minimum` and `validation_maximum` as length constraints on a Custom Field of type `Text`, `URL`, `JSON`, `Markdown`, `Selection`, or `Multiple Selection`.
 - [#5228](https://github.com/nautobot/nautobot/issues/5228) - Added the option to configure and enforce `validation_regex` as a constraint on valid choice definitions for a Custom Field of type `Selection` or `Multiple Selection`.
@@ -108,7 +107,9 @@ Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specifi
 
 ### Housekeeping
 
+- [#1102](https://github.com/nautobot/nautobot/issues/1102) - Added health check for Celery Beat based on it touching a file (by default `/tmp/nautobot_celery_beat_heartbeat`) each time its scheduler wakes up.
 - [#3213](https://github.com/nautobot/nautobot/issues/3213) - Removed redundant filter tests for related boolean filters.
+- [#5434](https://github.com/nautobot/nautobot/issues/5434) - Fixed health check for beat container in `docker-compose.yml` under `docker-compose` v1.x.
 
 ## v2.1.7 (2024-03-05)
 
