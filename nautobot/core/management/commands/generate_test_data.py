@@ -72,6 +72,7 @@ class Command(BaseCommand):
             from nautobot.extras.factory import (
                 ContactFactory,
                 ExternalIntegrationFactory,
+                ObjectChangeFactory,
                 RoleFactory,
                 StatusFactory,
                 TagFactory,
@@ -212,6 +213,8 @@ class Command(BaseCommand):
         # ClusterFactory.create_batch(10)
         # VirtualMachineFactory.create_batch(10)
         # We need to remove them from there and enable them here instead, but that will require many test updates.
+        self.stdout.write("Creating ObjectChanges...")
+        ObjectChangeFactory.create_batch(100, using=db_name)
 
         self._output_hash_for_factory_models(
             factories=[
@@ -229,6 +232,7 @@ class Command(BaseCommand):
                 LocationTypeFactory,
                 ManufacturerFactory,
                 NamespaceFactory,
+                ObjectChangeFactory,
                 PlatformFactory,
                 PrefixFactory,
                 ProviderFactory,
