@@ -1,4 +1,4 @@
-from unittest import mock, skip
+from unittest import mock, skip, skipIf
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
