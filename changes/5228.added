@@ -1,2 +1,0 @@
-Added the option to configure and enforce `validation_minimum` and `validation_maximum` as length constraints on a Custom Field of type `Text`, `URL`, `JSON`, `Markdown`, `Selection`, or `Multiple Selection`.
-Added the option to configure and enforce `validation_regex` as a constraint on valid choice definitions for a Custom Field of type `Selection` or `Multiple Selection`.
