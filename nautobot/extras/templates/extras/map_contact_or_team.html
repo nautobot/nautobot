@@ -12,6 +12,7 @@
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Contact Association</strong></div>
         <div class="panel-body">
+            {% render_field form.location %}
             {% render_field form.contact %}
             {% render_field form.team %}
             {% render_field form.role %}
@@ -30,6 +31,7 @@
 
 {% block javascript %}
 <script>
+    document.getElementById("id_location").disabled=true;
     var contact = document.getElementById("id_contact");
     var team = document.getElementById("id_team");
     function disable_enable_team(){

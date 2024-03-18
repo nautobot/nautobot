@@ -1,7 +1,11 @@
+from difflib import get_close_matches
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 import django_filters
+from drf_spectacular.utils import extend_schema_field
 
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
@@ -448,9 +452,43 @@ class NautobotFilterSet(
 
 
 class ContactFilterSet(NameSearchFilterSet, NautobotFilterSet):
+    similar_contacts = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        label="Similar contacts",
+        method="_similar_contacts",
+    )
+
     class Meta:
         model = Contact
         fields = "__all__"
+
+    def generate_query__similar_contacts(self, value):
+        """Helper method used by Contacts and by _similar_to() method."""
+        query_params = Q()
+        if value:
+            location = value[0]
+            contact_name = location.contact_name
+            contact_phone = location.contact_phone
+            contact_email = location.contact_email
+            if contact_name:
+                contact_names = list(Contact.objects.all().values_list("name", flat=True))
+                name_matches = get_close_matches(contact_name, contact_names, cutoff=0.9)
+                query_params |= Q(name__in=name_matches)
+            if contact_phone:
+                contact_phones = list(Contact.objects.all().values_list("phone", flat=True))
+                phone_matches = get_close_matches(contact_phone, contact_phones, cutoff=0.9)
+                query_params |= Q(phone__in=phone_matches)
+            if contact_email:
+                contact_emails = list(Contact.objects.all().values_list("email", flat=True))
+                email_matches = get_close_matches(contact_email, contact_emails, cutoff=0.9)
+                query_params |= Q(email__in=email_matches)
+        return query_params
+
+    @extend_schema_field({"type": "string"})
+    def _similar_contacts(self, queryset, name, value):
+        """FilterSet method for getting Contacts that are similar to the contact assigned to the location"""
+        params = self.generate_query__similar_contacts(value)
+        return Contact.objects.filter(params)
 
 
 class ContactAssociationFilterSet(NautobotFilterSet):
@@ -1110,9 +1148,43 @@ class TagFilterSet(NautobotFilterSet):
 
 
 class TeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
+    similar_teams = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        label="Similar teams",
+        method="_similar_teams",
+    )
+
     class Meta:
         model = Team
         fields = "__all__"
+
+    def generate_query__similar_teams(self, value):
+        """Helper method used by Teams and by _similar_to() method."""
+        query_params = Q()
+        if value:
+            location = value[0]
+            contact_name = location.contact_name
+            contact_phone = location.contact_phone
+            contact_email = location.contact_email
+            if contact_name:
+                contact_names = list(Team.objects.all().values_list("name", flat=True))
+                name_matches = get_close_matches(contact_name, contact_names, cutoff=0.9)
+                query_params |= Q(name__in=name_matches)
+            if contact_phone:
+                contact_phones = list(Team.objects.all().values_list("phone", flat=True))
+                phone_matches = get_close_matches(contact_phone, contact_phones, cutoff=0.9)
+                query_params |= Q(phone__in=phone_matches)
+            if contact_email:
+                contact_emails = list(Team.objects.all().values_list("email", flat=True))
+                email_matches = get_close_matches(contact_email, contact_emails, cutoff=0.9)
+                query_params |= Q(email__in=email_matches)
+        return query_params
+
+    @extend_schema_field({"type": "string"})
+    def _similar_teams(self, queryset, name, value):
+        """FilterSet method for getting Teams that are similar to the contact assigned to the location"""
+        params = self.generate_query__similar_teams(value)
+        return Contact.objects.filter(params)
 
 
 #

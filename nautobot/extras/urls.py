@@ -172,8 +172,18 @@ urlpatterns = [
     # contacts
     path(
         "contact-associations/map-contact-from-location",
-        views.MapContactFromLocationView.as_view(),
+        views.MapContactorTeamFromLocationView.as_view(),
         name="map_contact_from_location",
+    ),
+    path(
+        "contact-associations/map-new-contact-from-location",
+        views.MapNewContactFromLocationView.as_view(),
+        name="map_new_contact_from_location",
+    ),
+    path(
+        "contact-associations/map-new-team-from-location",
+        views.MapNewTeamFromLocationView.as_view(),
+        name="map_new_team_from_location",
     ),
     path("contact-associations/add-new-contact/", views.ObjectNewContactView.as_view(), name="object_contact_add"),
     path("contact-associations/add-new-team/", views.ObjectNewTeamView.as_view(), name="object_team_add"),
