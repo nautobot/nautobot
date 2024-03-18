@@ -152,6 +152,22 @@ class ContactAssociationForm(NautobotModelForm):
         ]
 
 
+class MapSimilarContactAssociationForm(NautobotModelForm):
+    contact = DynamicModelChoiceField(queryset=Contact.objects.all(), required=False, label="Similar Contacts")
+    team = DynamicModelChoiceField(queryset=Team.objects.all(), required=False, label="Similar Teams")
+
+    class Meta:
+        model = ContactAssociation
+        fields = [
+            "contact",
+            "team",
+            "associated_object_type",
+            "associated_object_id",
+            "role",
+            "status",
+        ]
+
+
 class ContactAssociationBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ContactAssociation.objects.all(), widget=forms.MultipleHiddenInput())
     role = DynamicModelChoiceField(

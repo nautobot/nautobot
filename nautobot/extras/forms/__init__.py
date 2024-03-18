@@ -6,6 +6,7 @@ from .contacts import (
     ContactBulkEditForm,
     ContactFilterForm,
     ContactForm,
+    MapSimilarContactAssociationForm,
     ObjectNewContactForm,
     ObjectNewTeamForm,
     TeamBulkEditForm,

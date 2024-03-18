@@ -1,4 +1,5 @@
 from datetime import timedelta
+from difflib import get_close_matches
 import logging
 
 from celery import chain
@@ -548,6 +549,75 @@ class ObjectAssignContactOrTeamView(generic.ObjectEditView):
     queryset = ContactAssociation.objects.all()
     model_form = forms.ContactAssociationForm
     template_name = "extras/object_assign_contact_or_team.html"
+
+
+class MapContactFromLocationView(generic.ObjectEditView):
+    queryset = ContactAssociation.objects.all()
+    model_form = forms.MapSimilarContactAssociationForm
+    template_name = "extras/map_contact_or_team.html"
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        location = Location.objects.get(pk=request.GET.get("location"))
+        contact_name = location.contact_name
+        contact_phone = location.contact_phone
+        contact_email = location.contact_email
+        contact_names = list(Contact.objects.all().values_list("name", flat=True))
+        contact_phones = list(Contact.objects.all().values_list("phone", flat=True))
+        contact_emails = list(Contact.objects.all().values_list("email", flat=True))
+        name_matches = get_close_matches(contact_name, contact_names, cutoff=0.9)
+        phone_matches = get_close_matches(contact_phone, contact_phones, cutoff=0.9)
+        email_matches = get_close_matches(contact_email, contact_emails, cutoff=0.9)
+        similar_contacts = set(
+            list(Contact.objects.filter(name__in=name_matches))
+            + list(Contact.objects.filter(phone__in=phone_matches))
+            + list(Contact.objects.filter(email__in=email_matches))
+        )
+        team_names = list(Team.objects.all().values_list("name", flat=True))
+        team_phones = list(Team.objects.all().values_list("phone", flat=True))
+        team_emails = list(Team.objects.all().values_list("email", flat=True))
+        name_matches = get_close_matches(contact_name, team_names, cutoff=0.9)
+        phone_matches = get_close_matches(contact_phone, team_phones, cutoff=0.9)
+        email_matches = get_close_matches(contact_email, team_emails, cutoff=0.9)
+        similar_teams = set(
+            list(Team.objects.filter(name__in=name_matches))
+            + list(Team.objects.filter(phone__in=phone_matches))
+            + list(Team.objects.filter(email__in=email_matches))
+        )
+        context["similar_contacts"] = similar_contacts
+        context["similar_teams"] = similar_teams
+        return context
+
+    def get(self, request, *args, **kwargs):
+        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+        extra_context = self.get_extra_context(request, obj)
+        similar_contacts = extra_context.get("similar_contacts")
+        similar_teams = extra_context.get("similar_teams")
+        contact_pk_list = []
+        team_pk_list = []
+        for contact in similar_contacts:
+            contact_pk_list.append(contact.pk)
+        for team in similar_teams:
+            team_pk_list.append(team.pk)
+        initial_data = normalize_querydict(request.GET, form_class=self.model_form)
+        self.model_form.declared_fields["contact"].queryset = Contact.objects.filter(pk__in=contact_pk_list)
+        self.model_form.declared_fields["team"].queryset = Team.objects.filter(pk__in=team_pk_list)
+        form = self.model_form(instance=obj, initial=initial_data)
+        form.fields["contact"].queryset = Contact.objects.filter(pk__in=contact_pk_list)
+        form.fields["team"].queryset = Team.objects.filter(pk__in=team_pk_list)
+        restrict_form_fields(form, request.user)
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "return_url": self.get_return_url(request, obj),
+                "editing": obj.present_in_database,
+                **extra_context,
+            },
+        )
 
 
 #

@@ -170,6 +170,11 @@ urlpatterns = [
         kwargs={"model": ConfigContextSchema},
     ),
     # contacts
+    path(
+        "contact-associations/map-contact-from-location",
+        views.MapContactFromLocationView.as_view(),
+        name="map_contact_from_location",
+    ),
     path("contact-associations/add-new-contact/", views.ObjectNewContactView.as_view(), name="object_contact_add"),
     path("contact-associations/add-new-team/", views.ObjectNewTeamView.as_view(), name="object_team_add"),
     path(
