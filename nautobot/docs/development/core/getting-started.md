@@ -655,6 +655,12 @@ In general, when you first run the Nautobot tests in your local copy of the repo
 invoke unittest --cache-test-fixtures --keepdb --parallel
 ```
 
+When there are too many cores on the testing machine, you can limit the number of parallel workers:
+
+```no-highlight
+invoke unittest --cache-test-fixtures --keepdb --parallel-workers 4
+```
+
 On subsequent reruns, you can add the other performance-related options:
 
 ```no-highlight
