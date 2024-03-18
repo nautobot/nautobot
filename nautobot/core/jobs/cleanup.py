@@ -8,7 +8,6 @@ from nautobot.extras.jobs import IntegerVar, Job
 from nautobot.extras.models import ObjectChange
 from nautobot.extras.signals import _handle_deleted_object, invalidate_lru_cache
 
-
 name = "System Jobs"
 
 
