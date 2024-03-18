@@ -45,6 +45,7 @@ The base template for listing objects is `generic/object_list.html`, with the fo
 
 * `buttons`: may provide a set of buttons at the top right of the page, to the
   left of the table configuration button.
+* `import_button` and `export_button` blocks may be overridden individually if the default button behavior is not as desired.
 * `bulk_buttons`: may be a set of buttons at the bottom of the table, to the
   left of potential bulk edit or delete buttons.
 * `header_extra`: may provide extra information to display just above the table,

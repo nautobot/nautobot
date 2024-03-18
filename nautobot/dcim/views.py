@@ -616,6 +616,7 @@ class DeviceTypeListView(generic.ObjectListView):
     filterset = filters.DeviceTypeFilterSet
     filterset_form = forms.DeviceTypeFilterForm
     table = tables.DeviceTypeTable
+    template_name = "dcim/devicetype_list.html"
     use_new_ui = True
 
 

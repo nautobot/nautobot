@@ -13,6 +13,7 @@ import yaml
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from nautobot.core.templatetags.buttons import job_export_url, job_import_url
 from nautobot.core.testing import extract_page_body, ModelViewTestCase, post_data, ViewTestCases
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
 from nautobot.dcim.choices import (
@@ -613,23 +614,35 @@ class DeviceTypeTestCase(
             "is_full_depth": False,
         }
 
-    # Temporary FIXME(jathan): Literally just trying to get the tests running so
-    # we can keep moving on the fixture factories. This should be removed once
-    # we've cleaned up all the hard-coded object comparisons and are all in on
-    # factories.
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_bulk_edit_objects_with_constrained_permission(self):
-        DeviceType.objects.exclude(model__startswith="Test Device Type").delete()
-        super().test_bulk_edit_objects_with_constrained_permission()
+    def test_list_has_correct_links(self):
+        """Assert that the DeviceType list view has import/export buttons for both CSV and YAML/JSON formats."""
+        self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype")
+        response = self.client.get(reverse("dcim:devicetype_list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
 
-    # Temporary FIXME(jathan): Literally just trying to get the tests running so
-    # we can keep moving on the fixture factories. This should be removed once
-    # we've cleaned up all the hard-coded object comparisons and are all in on
-    # factories.
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_bulk_edit_objects_with_permission(self):
-        DeviceType.objects.exclude(model__startswith="Test Device Type").delete()
-        super().test_bulk_edit_objects_with_permission()
+        yaml_import_url = reverse("dcim:devicetype_import")
+        csv_import_url = job_import_url(ContentType.objects.get_for_model(DeviceType))
+        # Main import button links to YAML/JSON import
+        self.assertInHTML(
+            f'<a id="import-button" type="button" class="btn btn-info" href="{yaml_import_url}">'
+            '<span class="mdi mdi-database-import" aria-hidden="true"></span> Import</a>',
+            content,
+        )
+        # Dropdown provides both YAML/JSON and CSV import as options
+        self.assertInHTML(f'<a href="{yaml_import_url}">JSON/YAML format (single record)</a>', content)
+        self.assertInHTML(f'<a href="{csv_import_url}">CSV format (multiple records)</a>', content)
+
+        export_url = job_export_url()
+        # Export is a little trickier to check since it's done as a form submission rather than an <a> element.
+        self.assertIn(f'<form action="{export_url}" method="post">', content)
+        self.assertInHTML(
+            f'<input type="hidden" name="content_type" value="{ContentType.objects.get_for_model(DeviceType).pk}">',
+            content,
+        )
+        self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
+        self.assertInHTML('<button type="submit" class="btn btn-link">YAML format</button>', content)
+        self.assertInHTML('<button type="submit" class="btn btn-link">CSV format</button>', content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_import_objects(self):
