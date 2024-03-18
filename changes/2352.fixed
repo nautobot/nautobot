@@ -1,0 +1,1 @@
+Fixed random deadlocks in long-running Jobs resulting from the ObjectChange automatic cleanup signal.

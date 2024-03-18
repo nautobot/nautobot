@@ -1,0 +1,1 @@
+Removed automatic random cleanup of ObjectChange records when processing requests and signals.
