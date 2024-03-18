@@ -1,2 +1,0 @@
-Added health check for Celery Beat based on it touching a file (by default `/tmp/nautobot_celery_beat_heartbeat`) each time its scheduler wakes up.
-Added `CELERY_BEAT_HEARTBEAT_FILE` settings variable.
