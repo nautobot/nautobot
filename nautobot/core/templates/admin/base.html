@@ -8,7 +8,9 @@
 <html lang="en"{% if request.COOKIES|get_item:"theme" == 'dark' %} data-theme="dark"{% endif %}>
 <head>
     <title>{% block title %}Admin Home{% endblock %} - Nautobot</title>
-    {% include 'inc/media.html' %}
+    {% if not is_popup %}
+        {% include 'inc/media.html' %}
+    {% endif %}
     {% block extrahead %}{% endblock %}
     {% block extrastyle %}{% endblock %}
 
@@ -107,7 +109,9 @@
         </div>
     {% endif %}
 </div>
-{% include 'inc/footer.html' %}
+{% if not is_popup %}
+    {% include 'inc/footer.html' %}
+{% endif %}
 {% include 'modals/modal_theme.html' with name='theme'%}
 
 {% block javascript %}
