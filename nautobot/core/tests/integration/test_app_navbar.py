@@ -79,7 +79,7 @@ class AppNavBarTestCase(SeleniumTestCase):
 
         group = tab.find_by_xpath(f"{tab_xpath}/following-sibling::ul//li[normalize-space()='Example Group 1']")
 
-        item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[normalize-space()='Example Model']]"
+        item_xpath = f"{tab_xpath}/following-sibling::ul//li[.//a[normalize-space()='Example Models']]"
         group.find_by_xpath(item_xpath)
 
     def test_app_navbar_modify_circuits(self):
