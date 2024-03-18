@@ -597,7 +597,7 @@ class CustomFieldDataAPITest(APITestCase):
             self.cf_markdown.key: "### Hello world!\n\n- Item 1\n- Item 2\n- Item 3",
             self.cf_json.key: {"hello": "world"},
         }
-        if "example_plugin" in settings.PLUGINS:
+        if "example_app" in settings.PLUGINS:
             self.locations[1]._custom_field_data[self.cf_plugin_field.key] = "Custom value"
         self.locations[1].validated_save()
         self.list_url = reverse("dcim-api:location-list")
@@ -672,8 +672,8 @@ class CustomFieldDataAPITest(APITestCase):
                 self.cf_json.key: {"foo": "bar"},
             },
         }
-        if "example_plugin" in settings.PLUGINS:
-            data["custom_fields"]["example_plugin_auto_custom_field"] = "Custom value"
+        if "example_app" in settings.PLUGINS:
+            data["custom_fields"]["example_app_auto_custom_field"] = "Custom value"
         response = self.client.post(self.list_url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
@@ -745,6 +745,9 @@ class CustomFieldDataAPITest(APITestCase):
             self.cf_markdown.key: "### Heading",
             self.cf_json.key: {"dict1": {"dict2": {}}},
         }
+        if "example_app" in settings.PLUGINS:
+            self.cf_plugin_field = CustomField.objects.get(key="example_app_auto_custom_field")
+            custom_field_data[self.cf_plugin_field.key] = "Custom Value"
         data = (
             {
                 "name": "Location 3",
