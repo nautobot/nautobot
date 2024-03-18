@@ -573,10 +573,10 @@ class ObjectPermissionAPIViewTestCase(TestCase):
 
         # Check against 1st user's response
         self.assertEqual(response_user1.status_code, 200)
-        self.assertEqual(response_user1.data["count"], 1)
+        self.assertEqual(response_user1.data["count"], ObjectChange.objects.filter(user=self.user).count())
         self.assertEqual(response_user1.data["results"][0]["user"]["id"], self.user.pk)
 
         # Check against 2nd user's response
         self.assertEqual(response_user2.status_code, 200)
-        self.assertEqual(response_user2.data["count"], 1)
+        self.assertEqual(response_user2.data["count"], ObjectChange.objects.filter(user=obj_user2).count())
         self.assertEqual(response_user2.data["results"][0]["user"]["id"], obj_user2.pk)
