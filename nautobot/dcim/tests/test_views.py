@@ -95,6 +95,7 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     CustomField,
     CustomFieldChoice,
+    ExternalIntegration,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -3109,23 +3110,33 @@ class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        statuses = Status.objects.get_for_model(Controller)
-        roles = Role.objects.get_for_model(Controller)
-        platforms = Platform.objects.all()
-        locations = Location.objects.all()
+        device = Device.objects.first()
+        external_integration = ExternalIntegration.objects.first()
+        location = Location.objects.get_for_model(Controller).first()
+        platform = Platform.objects.first()
+        role = Role.objects.get_for_model(Controller).first()
+        status = Status.objects.get_for_model(Controller).first()
+        tenant = Tenant.objects.first()
 
         cls.form_data = {
+            "deployed_controller_device": device.pk,
+            "description": "Controller 1 description",
+            "external_integration": external_integration.pk,
+            "location": location.pk,
             "name": "Controller 1",
-            "platform": platforms[0].pk,
-            "status": statuses[0].pk,
-            "role": roles[0].pk,
-            "location": locations[0].pk,
+            "platform": platform.pk,
+            "role": role.pk,
+            "status": status.pk,
+            "tenant": tenant.pk,
         }
 
         cls.bulk_edit_data = {
-            "platform": platforms[0].pk,
-            "status": statuses[0].pk,
-            "role": roles[0].pk,
+            "external_integration": external_integration.pk,
+            "location": location.pk,
+            "platform": platform.pk,
+            "role": role.pk,
+            "status": status.pk,
+            "tenant": tenant.pk,
         }
 
 

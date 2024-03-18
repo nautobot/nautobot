@@ -1316,6 +1316,12 @@ class Controller(PrimaryModel, ConfigContextModel):
                 },
             )
 
+        if self.location:
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'Devices may not associate to locations of type "{self.location.location_type}".'}
+                )
+
 
 @extras_features(
     "custom_links",

@@ -1912,15 +1912,9 @@ class ControllerDeviceGroupFilterSet(NautobotFilterSet):
     def generate_query__subtree(self, value):
         """Helper method used by DynamicGroups and by _subtree() method."""
         if value:
-            max_depth = (
-                ControllerDeviceGroup.objects.with_tree_fields()
-                .extra(order_by=["-__tree.tree_depth"])
-                .first()
-                .tree_depth
-            )
             params = Q(pk__in=[v.pk for v in value])
             filter_name = "in"
-            for _i in range(max_depth):
+            for _ in range(ControllerDeviceGroup.objects.max_depth + 1):
                 filter_name = f"parent__{filter_name}"
                 params |= Q(**{filter_name: value})
             return params

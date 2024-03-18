@@ -139,7 +139,7 @@ platform: cisco_apic
 ```yaml
 name: Cisco Meraki SAAS
 deployed_controller_device: ~
-location: Cloud "Location
+location: Cloud Location
 platform: cisco_meraki
 ```
 

@@ -2781,7 +2781,7 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
         statuses = Status.objects.get_for_model(Controller)
         roles = Role.objects.get_for_model(Controller)
         platforms = Platform.objects.all()
-        locations = Location.objects.all()
+        locations = Location.objects.get_for_model(Controller).all()
 
         cls.create_data = [
             {

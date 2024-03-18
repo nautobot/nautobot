@@ -2,7 +2,9 @@
 
 A Controller in Nautobot is an abstraction meant to represent network or SDN (Software-Defined Networking) controllers. These may include, but are not limited to, wireless controllers, cloud-based network management systems, and other forms of central network control mechanisms.
 
-The Controller model is central to representing an entity that oversees one or more devices or device groups. It serves as the focal point for control and management operations within a network. A Controller can be associated with either individual devices or with groups of devices through a `DeviceRedundancyGroup`.
+The Controller model is key in representing an entity that is connected to either individual [Devices](./device.md) or to groups of devices through a [`DeviceRedundancyGroup`](./deviceredundancygroup.md).
+
+Each controller manages one or more devices using [`ControllerDeviceGroup`](./controllerdevicegroup.md) to show the connection between the controller and its managed devices.
 
 Key Features:
 

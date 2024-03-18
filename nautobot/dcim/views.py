@@ -3028,7 +3028,6 @@ class ControllerUIViewSet(NautobotUIViewSet):
         if self.action == "retrieve" and instance:
             devices = Device.objects.restrict(request.user).filter(controller_device_group__controller=instance)
             devices_table = tables.DeviceTable(devices)
-            devices_table.columns.show("device_redundancy_group_priority")
 
             paginate = {
                 "paginator_class": EnhancedPaginator,
@@ -3061,7 +3060,6 @@ class ControllerDeviceGroupUIViewSet(NautobotUIViewSet):
         if self.action == "retrieve" and instance:
             devices = instance.devices.restrict(request.user)
             devices_table = tables.DeviceTable(devices)
-            devices_table.columns.show("device_redundancy_group_priority")
 
             paginate = {
                 "paginator_class": EnhancedPaginator,
