@@ -59,15 +59,25 @@ class Command(BaseCommand):
             )
             from nautobot.dcim.factory import (
                 DeviceFactory,
+                DeviceFamilyFactory,
                 DeviceRedundancyGroupFactory,
                 DeviceTypeFactory,
                 LocationFactory,
                 LocationTypeFactory,
                 ManufacturerFactory,
                 PlatformFactory,
+                SoftwareImageFileFactory,
+                SoftwareVersionFactory,
             )
-            from nautobot.extras.factory import ExternalIntegrationFactory, RoleFactory, StatusFactory, TagFactory
-            from nautobot.extras.management import populate_status_choices
+            from nautobot.extras.factory import (
+                ContactFactory,
+                ExternalIntegrationFactory,
+                RoleFactory,
+                StatusFactory,
+                TagFactory,
+                TeamFactory,
+            )
+            from nautobot.extras.management import populate_role_choices, populate_status_choices
             from nautobot.extras.utils import TaggableClassesQuery
             from nautobot.ipam.choices import PrefixTypeChoices
             from nautobot.ipam.factory import (
@@ -90,6 +100,7 @@ class Command(BaseCommand):
         factory.random.reseed_random(seed)
 
         self.stdout.write("Creating Roles...")
+        populate_role_choices(verbosity=0, using=db_name)
         RoleFactory.create_batch(20)
         self.stdout.write("Creating Statuses...")
         populate_status_choices(verbosity=0, using=db_name)
@@ -99,6 +110,10 @@ class Command(BaseCommand):
         TagFactory.create_batch(5, content_types=TaggableClassesQuery().as_queryset(), using=db_name)
         # ...and some tags that apply to a random subset of content-types
         TagFactory.create_batch(15, using=db_name)
+        self.stdout.write("Creating Contacts...")
+        ContactFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating Teams...")
+        TeamFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating TenantGroups...")
         TenantGroupFactory.create_batch(10, has_parent=False, using=db_name)
         TenantGroupFactory.create_batch(10, has_parent=True, using=db_name)
@@ -131,12 +146,18 @@ class Command(BaseCommand):
             PrefixFactory.create(prefix=f"2001:db8:0:{i}::/64", type=PrefixTypeChoices.TYPE_CONTAINER, using=db_name)
         self.stdout.write("Creating Empty Namespaces...")
         NamespaceFactory.create_batch(5, using=db_name)
+        self.stdout.write("Creating Device Families...")
+        DeviceFamilyFactory.create_batch(20)
         self.stdout.write("Creating Manufacturers...")
         ManufacturerFactory.create_batch(8, using=db_name)  # First 8 hard-coded Manufacturers
         self.stdout.write("Creating Platforms (with manufacturers)...")
         PlatformFactory.create_batch(20, has_manufacturer=True, using=db_name)
         self.stdout.write("Creating Platforms (without manufacturers)...")
         PlatformFactory.create_batch(5, has_manufacturer=False, using=db_name)
+        self.stdout.write("Creating SoftwareVersions...")
+        SoftwareVersionFactory.create_batch(20)
+        self.stdout.write("Creating SoftwareImageFiles...")
+        SoftwareImageFileFactory.create_batch(25)
         self.stdout.write("Creating Manufacturers without Platforms...")
         ManufacturerFactory.create_batch(4, using=db_name)  # 4 more hard-coded Manufacturers
         self.stdout.write("Creating DeviceTypes...")
@@ -147,8 +168,12 @@ class Command(BaseCommand):
         DeviceRedundancyGroupFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Devices...")
         DeviceFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating SoftwareVersions with Devices, InventoryItems or VirtualMachines...")
+        SoftwareVersionFactory.create_batch(5)
+        self.stdout.write("Creating SoftwareImageFiles without DeviceTypes...")
+        SoftwareImageFileFactory.create_batch(5)
         self.stdout.write("Creating CircuitTypes...")
-        CircuitTypeFactory.create_batch(20, using=db_name)
+        CircuitTypeFactory.create_batch(40, using=db_name)
         self.stdout.write("Creating Providers...")
         ProviderFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating ProviderNetworks...")
@@ -190,30 +215,37 @@ class Command(BaseCommand):
 
         self._output_hash_for_factory_models(
             factories=[
-                RoleFactory,
-                StatusFactory,
-                TagFactory,
-                TenantGroupFactory,
-                TenantFactory,
-                LocationTypeFactory,
-                LocationFactory,
-                RIRFactory,
-                RouteTargetFactory,
-                VRFFactory,
-                VLANGroupFactory,
-                VLANFactory,
-                PrefixFactory,
+                CircuitFactory,
+                CircuitTerminationFactory,
+                CircuitTypeFactory,
+                ContactFactory,
+                DeviceFactory,
+                DeviceFamilyFactory,
+                DeviceRedundancyGroupFactory,
+                DeviceTypeFactory,
+                ExternalIntegrationFactory,
                 IPAddressFactory,
+                LocationFactory,
+                LocationTypeFactory,
+                ManufacturerFactory,
                 NamespaceFactory,
                 PlatformFactory,
-                DeviceTypeFactory,
-                ManufacturerFactory,
-                DeviceRedundancyGroupFactory,
-                CircuitTypeFactory,
-                ProviderNetworkFactory,
-                CircuitFactory,
+                PrefixFactory,
                 ProviderFactory,
-                CircuitTerminationFactory,
+                ProviderNetworkFactory,
+                RIRFactory,
+                RoleFactory,
+                RouteTargetFactory,
+                SoftwareImageFileFactory,
+                SoftwareVersionFactory,
+                StatusFactory,
+                TagFactory,
+                TeamFactory,
+                TenantFactory,
+                TenantGroupFactory,
+                VLANFactory,
+                VLANGroupFactory,
+                VRFFactory,
             ]
         )
 

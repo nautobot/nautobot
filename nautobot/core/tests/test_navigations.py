@@ -63,8 +63,30 @@ class NavMenuTestCase(TestCase):
                             self.assertEqual(button_details["button_class"], ButtonActionColorChoices.ADD)
                             self.assertEqual(button_details["icon_class"], ButtonActionIconChoices.ADD)
 
+    def test_permissions_rollup(self):
+        menus = registry["nav_menu"]
+        expected_perms = {}
+        for tab_name, tab_details in menus["tabs"].items():
+            expected_perms[tab_name] = set()
+            for group_name, group_details in tab_details["groups"].items():
+                expected_perms[f"{tab_name}:{group_name}"] = set()
+                for item_details in group_details["items"].values():
+                    item_perms = item_details["permissions"]
+                    # If any item has no permissions restriction, then the group has no permissions restriction
+                    if expected_perms[f"{tab_name}:{group_name}"] is None or not item_perms:
+                        expected_perms[f"{tab_name}:{group_name}"] = None
+                    else:
+                        expected_perms[f"{tab_name}:{group_name}"] |= item_perms
+                group_perms = group_details["permissions"]
+                self.assertEqual(expected_perms[f"{tab_name}:{group_name}"], group_perms)
+                # if any group has no permissions restriction, then the tab has no permissions restriction
+                if expected_perms[tab_name] is None or not group_perms:
+                    expected_perms[tab_name] = None
+                else:
+                    expected_perms[tab_name] |= group_perms
+            self.assertEqual(expected_perms[tab_name], tab_details["permissions"])
 
-@tag("unit")
+
 class NewUINavTest(TestCase):
     @patch.dict(registry, values={"new_ui_nav_menu": {}}, clear=True)
     def test_build_new_ui_nav_menu(self):

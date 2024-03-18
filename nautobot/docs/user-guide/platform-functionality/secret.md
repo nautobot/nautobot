@@ -4,7 +4,7 @@
 
 For security reasons, Nautobot generally does not store sensitive secrets (device access credentials, systems-integration API tokens, etc.) in its own database. There are other approaches and systems better suited to this purpose, ranging from simple solutions such as process-specific environment variables or restricted-access files on disk, all the way through to dedicated systems such as Hashicorp Vault or AWS Secrets Manager.
 
-However, any number of Nautobot features (including, but not limited to, device access via NAPALM, Git repository access, custom Jobs, and various plugins seeking to integrate with third-party systems) do need the ability to retrieve and make use of such secrets. Towards that end, Nautobot provides a `Secret` database model. This model does **not** store the secret value itself, but instead defines **how** Nautobot can retrieve the secret value as and when it is needed. By using this model as an abstraction of the underlying secrets storage implementation, this makes it possible for any Nautobot feature to make use of secret values without needing to know or care where or how the secret is actually stored.
+However, any number of Nautobot features (including, but not limited to, device access via NAPALM, Git repository access, custom Jobs, and various Apps seeking to integrate with third-party systems) do need the ability to retrieve and make use of such secrets. Towards that end, Nautobot provides a `Secret` database model. This model does **not** store the secret value itself, but instead defines **how** Nautobot can retrieve the secret value as and when it is needed. By using this model as an abstraction of the underlying secrets storage implementation, this makes it possible for any Nautobot feature to make use of secret values without needing to know or care where or how the secret is actually stored.
 
 Secrets can be grouped and assigned a specific purpose as members of a Secrets Group, which can then be attached to a Git repository, device, or other data model as needed for a given purpose.
 
@@ -21,7 +21,7 @@ When creating or editing a Secrets Group, you can assign any number of defined S
 | Git private repository    | `HTTP(S)`   | `Token`, possibly also `Username`                   |
 | Device NAPALM integration | `Generic`   | `Username`, `Password`, possibly an enable `Secret` |
 
-A Secrets Group is not limited to containing secrets of a single *access type* either - for example, a plugin that supports both NETCONF and gNMI protocols to interact with a device could be able to make use of a Secrets Group containing distinct secrets for each protocol.
+A Secrets Group is not limited to containing secrets of a single *access type* either - for example, a Nautobot App that supports both NETCONF and gNMI protocols to interact with a device could be able to make use of a Secrets Group containing distinct secrets for each protocol.
 
 ## Secrets Providers
 
@@ -36,7 +36,7 @@ Each Secret is associated with a secrets provider (not to be confused with a cir
 When defining a new Secret, you will need to select the desired secrets provider and then fill in the specific parameters required by that provider in order to have a completely specified, usable Secret record.
 
 !!! tip
-    Nautobot plugins can also implement and register additional secrets providers as desired to support other sources such as Hashicorp Vault or AWS Secrets Manager.
+    Nautobot Apps can also implement and register additional secrets providers as desired to support other sources such as Hashicorp Vault or AWS Secrets Manager.
 
 ## Templated Secret Parameters
 
@@ -66,7 +66,7 @@ However, code is power, and with power comes responsibility.
 
 What does this mean in practice?
 
-- Any [plugin](../../apps/index.md) can potentially access your Secrets, including displaying their values onscreen or even forwarding them to an external system, so only install plugins that you trust.
+- Any [App](../../apps/index.md) can potentially access your Secrets, including displaying their values onscreen or even forwarding them to an external system, so only install Apps that you trust.
 - Any [Job](./jobs/index.md) can potentially access your Secrets, and can trivially log a Secret value to its JobResult, where it may be visible to users, so only install Jobs that you trust, carefully limit which users are able to execute jobs and view job results, and be aware of the potential for privilege escalation resulting from careless or malicious logging.
 - Any [Git repository](./gitrepository.md) can add new Jobs to your system, so be careful about which users you grant the ability to create/edit `GitRepository` records.
 - Any user with access to [`nautobot-server nbshell`](../administration/tools/nautobot-shell.md) can execute arbitrary code, including accessing Secrets, and will be able to bypass any Nautobot permissions restrictions as well.

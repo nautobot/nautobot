@@ -30,12 +30,15 @@ from .devices import (
     PowerOutletTable,
     PowerPortTable,
     RearPortTable,
+    SoftwareImageFileTable,
+    SoftwareVersionTable,
     VirtualChassisTable,
 )
 from .devicetypes import (
     ConsolePortTemplateTable,
     ConsoleServerPortTemplateTable,
     DeviceBayTemplateTable,
+    DeviceFamilyTable,
     DeviceTypeTable,
     FrontPortTemplateTable,
     InterfaceTemplateTable,
@@ -65,6 +68,7 @@ __all__ = (
     "DeviceConsolePortTable",
     "DeviceConsoleServerPortTable",
     "DeviceDeviceBayTable",
+    "DeviceFamilyTable",
     "DeviceFrontPortTable",
     "DeviceImportTable",
     "DeviceInterfaceTable",
@@ -100,6 +104,8 @@ __all__ = (
     "RackTable",
     "RearPortTable",
     "RearPortTemplateTable",
+    "SoftwareImageFileTable",
+    "SoftwareVersionTable",
     "VirtualChassisTable",
 )
 

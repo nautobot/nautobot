@@ -14,12 +14,12 @@ Although Nautobot will run perfectly well with a default configuration (such as 
 
 ## Migrate Database Contents Using `nautobot-netbox-importer`
 
-Due to a number of significant infrastructural changes between the applications, you cannot simply point Nautobot at your existing NetBox PostgreSQL database and have it automatically load your data. Fortunately, Network to Code (NTC) and collaborators have developed a Nautobot plugin, `nautobot-netbox-importer`, that can be used to import a NetBox database dump file into Nautobot. For full details, refer to [the plugin's own documentation](https://github.com/nautobot/nautobot-plugin-netbox-importer/), but here is a brief overview:
+Due to a number of significant infrastructural changes between the applications, you cannot simply point Nautobot at your existing NetBox PostgreSQL database and have it automatically load your data. Fortunately, Network to Code (NTC) and collaborators have developed a Nautobot App, `nautobot-netbox-importer`, that can be used to import a NetBox database dump file into Nautobot. For full details, refer to [the App's own documentation](https://github.com/nautobot/nautobot-app-netbox-importer/), but here is a brief overview:
 
 1. Export your NetBox database to a JSON file.
-2. Install the importer plugin.
-3. Enable the importer plugin.
-4. Run the plugin's import command to import the data.
+2. Install the importer App.
+3. Enable the importer App.
+4. Run the App's import command to import the data.
 5. Connect to Nautobot and verify that your data has been successfully imported.
 
 ## Migrate Files from NetBox to Nautobot

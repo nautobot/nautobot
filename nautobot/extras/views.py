@@ -27,12 +27,19 @@ from nautobot.core.tables import ButtonsColumn
 from nautobot.core.utils.lookup import get_table_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic, viewsets
-from nautobot.core.views.mixins import ObjectPermissionRequiredMixin
+from nautobot.core.views.mixins import (
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectEditViewMixin,
+    ObjectPermissionRequiredMixin,
+)
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.models import Device, Interface, Rack
+from nautobot.dcim.models import Device, Interface, Location, Rack
 from nautobot.dcim.tables import DeviceTable, RackTable
+from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
@@ -55,6 +62,8 @@ from .models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
+    ContactAssociation,
     CustomField,
     CustomLink,
     DynamicGroup,
@@ -80,10 +89,11 @@ from .models import (
     Status,
     Tag,
     TaggedItem,
+    Team,
     Webhook,
 )
 from .registry import registry
-from .tables import RoleTable
+from .tables import AssociatedContactsTable, RoleTable
 
 logger = logging.getLogger(__name__)
 
@@ -344,6 +354,200 @@ class ConfigContextSchemaBulkDeleteView(generic.BulkDeleteView):
     queryset = ConfigContextSchema.objects.all()
     table = tables.ConfigContextSchemaTable
     filterset = filters.ConfigContextSchemaFilterSet
+
+
+#
+# Contacts
+#
+
+
+class ContactUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.ContactBulkEditForm
+    filterset_class = filters.ContactFilterSet
+    filterset_form_class = forms.ContactFilterForm
+    form_class = forms.ContactForm
+    queryset = Contact.objects.all()
+    serializer_class = serializers.ContactSerializer
+    table_class = tables.ContactTable
+    is_contact_associatable_model = False
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            teams = instance.teams.restrict(request.user, "view")
+            teams_table = tables.TeamTable(teams, orderable=False)
+            teams_table.columns.hide("actions")
+            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            RequestConfig(request, paginate).configure(teams_table)
+            context["teams_table"] = teams_table
+
+            # TODO: need some consistent ordering of contact_associations
+            associations = instance.contact_associations.restrict(request.user, "view")
+            associations_table = tables.ContactAssociationTable(associations, orderable=False)
+            RequestConfig(request, paginate).configure(associations_table)
+            context["contact_associations_table"] = associations_table
+        return context
+
+
+class ContactAssociationUIViewSet(
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectEditViewMixin,
+):
+    bulk_update_form_class = forms.ContactAssociationBulkEditForm
+    form_class = forms.ContactAssociationForm
+    filterset_class = filters.ContactAssociationFilterSet
+    queryset = ContactAssociation.objects.all()
+    serializer_class = serializers.ContactAssociationSerializer
+    table_class = AssociatedContactsTable
+    non_filter_params = ("export", "page", "per_page", "sort")
+
+
+class ObjectNewContactView(generic.ObjectEditView):
+    queryset = Contact.objects.all()
+    model_form = forms.ObjectNewContactForm
+    template_name = "extras/object_new_contact.html"
+
+    def post(self, request, *args, **kwargs):
+        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        restrict_form_fields(form, request.user)
+
+        if form.is_valid():
+            logger.debug("Form validation was successful")
+
+            try:
+                with transaction.atomic():
+                    object_created = not form.instance.present_in_database
+                    obj = form.save()
+
+                    # Check that the new object conforms with any assigned object-level permissions
+                    self.queryset.get(pk=obj.pk)
+
+                if hasattr(form, "save_note") and callable(form.save_note):
+                    form.save_note(instance=obj, user=request.user)
+
+                association = ContactAssociation(
+                    contact=obj,
+                    associated_object_type=ContentType.objects.get(id=request.POST.get("associated_object_type")),
+                    associated_object_id=request.POST.get("associated_object_id"),
+                    status=Status.objects.get(id=request.POST.get("status")),
+                    role=Role.objects.get(id=request.POST.get("role")) if request.POST.get("role") else None,
+                )
+                association.validated_save()
+                self.successful_post(request, obj, object_created, logger)
+
+                if "_addanother" in request.POST:
+                    # If the object has clone_fields, pre-populate a new instance of the form
+                    if hasattr(obj, "clone_fields"):
+                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
+                        return redirect(url)
+
+                    return redirect(request.get_full_path())
+
+                return_url = form.cleaned_data.get("return_url")
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
+                else:
+                    return redirect(self.get_return_url(request, obj))
+
+            except ObjectDoesNotExist:
+                msg = "Object save failed due to object-level permissions violation"
+                logger.debug(msg)
+                form.add_error(None, msg)
+
+        else:
+            logger.debug("Form validation failed")
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "return_url": self.get_return_url(request, obj),
+                "editing": obj.present_in_database,
+                **self.get_extra_context(request, obj),
+            },
+        )
+
+
+class ObjectNewTeamView(generic.ObjectEditView):
+    queryset = Team.objects.all()
+    model_form = forms.ObjectNewTeamForm
+    template_name = "extras/object_new_team.html"
+
+    def post(self, request, *args, **kwargs):
+        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        restrict_form_fields(form, request.user)
+
+        if form.is_valid():
+            logger.debug("Form validation was successful")
+
+            try:
+                with transaction.atomic():
+                    object_created = not form.instance.present_in_database
+                    obj = form.save()
+
+                    # Check that the new object conforms with any assigned object-level permissions
+                    self.queryset.get(pk=obj.pk)
+
+                if hasattr(form, "save_note") and callable(form.save_note):
+                    form.save_note(instance=obj, user=request.user)
+
+                association = ContactAssociation(
+                    team=obj,
+                    associated_object_type=ContentType.objects.get(id=request.POST.get("associated_object_type")),
+                    associated_object_id=request.POST.get("associated_object_id"),
+                    status=Status.objects.get(id=request.POST.get("status")),
+                    role=Role.objects.get(id=request.POST.get("role")) if request.POST.get("role") else None,
+                )
+                association.validated_save()
+                self.successful_post(request, obj, object_created, logger)
+
+                if "_addanother" in request.POST:
+                    # If the object has clone_fields, pre-populate a new instance of the form
+                    if hasattr(obj, "clone_fields"):
+                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
+                        return redirect(url)
+
+                    return redirect(request.get_full_path())
+
+                return_url = form.cleaned_data.get("return_url")
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
+                else:
+                    return redirect(self.get_return_url(request, obj))
+
+            except ObjectDoesNotExist:
+                msg = "Object save failed due to object-level permissions violation"
+                logger.debug(msg)
+                form.add_error(None, msg)
+
+        else:
+            logger.debug("Form validation failed")
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "return_url": self.get_return_url(request, obj),
+                "editing": obj.present_in_database,
+                **self.get_extra_context(request, obj),
+            },
+        )
+
+
+class ObjectAssignContactOrTeamView(generic.ObjectEditView):
+    queryset = ContactAssociation.objects.all()
+    model_form = forms.ContactAssociationForm
+    template_name = "extras/object_assign_contact_or_team.html"
 
 
 #
@@ -861,7 +1065,7 @@ class GitRepositoryDeleteView(generic.ObjectDeleteView):
     queryset = GitRepository.objects.all()
 
 
-class GitRepositoryBulkImportView(generic.BulkImportView):
+class GitRepositoryBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = GitRepository.objects.all()
     table = tables.GitRepositoryBulkTable
 
@@ -1040,6 +1244,7 @@ class JobListView(generic.ObjectListView):
     filterset = filters.JobFilterSet
     filterset_form = forms.JobFilterForm
     action_buttons = ()
+    non_filter_params = ("display",)
     template_name = "extras/job_list.html"
 
     def alter_queryset(self, request):
@@ -1052,8 +1257,19 @@ class JobListView(generic.ObjectListView):
         return queryset
 
     def extra_context(self):
+        # Determine user's preferred display
+        if self.request.GET.get("display") in ["list", "tiles"]:
+            display = self.request.GET.get("display")
+            if self.request.user.is_authenticated:
+                self.request.user.set_config("extras.job.display", display, commit=True)
+        elif self.request.user.is_authenticated:
+            display = self.request.user.get_config("extras.job.display", "list")
+        else:
+            display = "list"
+
         return {
-            "table_inc_template": "extras/inc/job_table.html",
+            "table_inc_template": "extras/inc/job_tiles.html" if display == "tiles" else "extras/inc/job_table.html",
+            "display": display,
         }
 
 
@@ -1278,8 +1494,39 @@ class JobEditView(generic.ObjectEditView):
     template_name = "extras/job_edit.html"
 
 
+class JobBulkEditView(generic.BulkEditView):
+    queryset = JobModel.objects.all()
+    filterset = filters.JobFilterSet
+    table = tables.JobTable
+    form = forms.JobBulkEditForm
+    template_name = "extras/job_bulk_edit.html"
+
+    def extra_post_save_action(self, obj, form):
+        cleaned_data = form.cleaned_data
+
+        # Handle text related fields
+        for overridable_field in JOB_OVERRIDABLE_FIELDS:
+            override_field = overridable_field + "_override"
+            clear_override_field = "clear_" + overridable_field + "_override"
+            reset_override = cleaned_data.get(clear_override_field, False)
+            override_value = cleaned_data.get(overridable_field)
+            if reset_override:
+                setattr(obj, override_field, False)
+            elif not reset_override and override_value not in [None, ""]:
+                setattr(obj, override_field, True)
+                setattr(obj, overridable_field, override_value)
+
+        obj.validated_save()
+
+
 class JobDeleteView(generic.ObjectDeleteView):
     queryset = JobModel.objects.all()
+
+
+class JobBulkDeleteView(generic.BulkDeleteView):
+    queryset = JobModel.objects.all()
+    filterset = filters.JobFilterSet
+    table = tables.JobTable
 
 
 class JobApprovalRequestView(generic.ObjectView):
@@ -1692,6 +1939,8 @@ class ObjectChangeLogView(View):
                 "table": objectchanges_table,
                 "base_template": self.base_template,
                 "active_tab": "changelog",
+                # Currently only Contact and Team models are not contact_associatable.
+                "is_contact_associatable_model": type(obj) not in [Contact, Team],
             },
         )
 
@@ -1773,6 +2022,8 @@ class ObjectNotesView(View):
                 "base_template": self.base_template,
                 "active_tab": "notes",
                 "form": notes_form,
+                # Currently only Contact and Team models are not contact_associatable.
+                "is_contact_associatable_model": type(obj) not in [Contact, Team],
             },
         )
 
@@ -1886,13 +2137,16 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 context["ipaddress_table"] = ipaddress_table
 
             if ContentType.objects.get_for_model(Prefix) in context["content_types"]:
-                prefixes = instance.prefixes.select_related(
-                    "location",
-                    "status",
-                    "tenant",
-                    "vlan",
-                    "namespace",
-                ).restrict(request.user, "view")
+                prefixes = (
+                    instance.prefixes.select_related(
+                        "status",
+                        "tenant",
+                        "vlan",
+                        "namespace",
+                    )
+                    .restrict(request.user, "view")
+                    .annotate(location_count=count_related(Location, "prefixes"))
+                )
                 prefix_table = PrefixTable(prefixes)
                 prefix_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(prefix_table)
@@ -1921,12 +2175,15 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 context["virtual_machine_table"] = virtual_machine_table
 
             if ContentType.objects.get_for_model(VLAN) in context["content_types"]:
-                vlans = instance.vlans.select_related(
-                    "vlan_group",
-                    "location",
-                    "status",
-                    "tenant",
-                ).restrict(request.user, "view")
+                vlans = (
+                    instance.vlans.annotate(location_count=count_related(Location, "vlans"))
+                    .select_related(
+                        "vlan_group",
+                        "status",
+                        "tenant",
+                    )
+                    .restrict(request.user, "view")
+                )
                 vlan_table = VLANTable(vlans)
                 vlan_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(vlan_table)
@@ -1998,7 +2255,7 @@ class SecretDeleteView(generic.ObjectDeleteView):
     queryset = Secret.objects.all()
 
 
-class SecretBulkImportView(generic.BulkImportView):
+class SecretBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Secret.objects.all()
     table = tables.SecretTable
 
@@ -2170,7 +2427,7 @@ class StatusDeleteView(generic.ObjectDeleteView):
     queryset = Status.objects.all()
 
 
-class StatusBulkImportView(generic.BulkImportView):
+class StatusBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     """Bulk CSV import of multiple `Status` objects."""
 
     queryset = Status.objects.all()
@@ -2232,7 +2489,7 @@ class TagDeleteView(generic.ObjectDeleteView):
     queryset = Tag.objects.all()
 
 
-class TagBulkImportView(generic.BulkImportView):
+class TagBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Tag.objects.all()
     table = tables.TagTable
 
@@ -2248,6 +2505,39 @@ class TagBulkDeleteView(generic.BulkDeleteView):
     queryset = Tag.objects.annotate(items=count_related(TaggedItem, "tag"))
     table = tables.TagTable
     filterset = filters.TagFilterSet
+
+
+#
+# Teams
+#
+
+
+class TeamUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.TeamBulkEditForm
+    filterset_class = filters.TeamFilterSet
+    filterset_form_class = forms.TeamFilterForm
+    form_class = forms.TeamForm
+    queryset = Team.objects.all()
+    serializer_class = serializers.TeamSerializer
+    table_class = tables.TeamTable
+    is_contact_associatable_model = False
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            contacts = instance.contacts.restrict(request.user, "view")
+            contacts_table = tables.ContactTable(contacts, orderable=False)
+            contacts_table.columns.hide("actions")
+            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            RequestConfig(request, paginate).configure(contacts_table)
+            context["contacts_table"] = contacts_table
+
+            # TODO: need some consistent ordering of contact_associations
+            associations = instance.contact_associations.restrict(request.user, "view")
+            associations_table = tables.ContactAssociationTable(associations, orderable=False)
+            RequestConfig(request, paginate).configure(associations_table)
+            context["contact_associations_table"] = associations_table
+        return context
 
 
 #

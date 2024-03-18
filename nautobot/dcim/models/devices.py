@@ -12,13 +12,19 @@ from django.utils.functional import cached_property, classproperty
 from django.utils.html import format_html
 import yaml
 
-from nautobot.core.models import BaseManager
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.models import BaseManager, RestrictedQuerySet
 from nautobot.core.models.fields import NaturalOrderingField
-from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.dcim.choices import DeviceFaceChoices, DeviceRedundancyGroupFailoverStrategyChoices, SubdeviceRoleChoices
+from nautobot.dcim.choices import (
+    DeviceFaceChoices,
+    DeviceRedundancyGroupFailoverStrategyChoices,
+    SoftwareImageFileHashingAlgorithmChoices,
+    SubdeviceRoleChoices,
+)
 from nautobot.dcim.utils import get_all_network_driver_mappings
-from nautobot.extras.models import ConfigContextModel, RoleField, StatusField
+from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
 
@@ -28,6 +34,7 @@ from .device_components import (
     DeviceBay,
     FrontPort,
     Interface,
+    InventoryItem,
     PowerOutlet,
     PowerPort,
     RearPort,
@@ -59,14 +66,57 @@ class Manufacturer(OrganizationalModel):
     A Manufacturer represents a company which produces hardware devices; for example, Juniper or Dell.
     """
 
-    name = models.CharField(max_length=100, unique=True)
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
         ordering = ["name"]
 
     def __str__(self):
         return self.name
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class DeviceFamily(PrimaryModel):
+    """
+    A Device Family is a model that represents a grouping of DeviceTypes.
+    """
+
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name_plural = "device families"
+
+    def __str__(self):
+        return self.name
+
+
+@extras_features("graphql")
+class DeviceTypeToSoftwareImageFile(BaseModel, ChangeLoggedModel):
+    device_type = models.ForeignKey(
+        "dcim.DeviceType", on_delete=models.CASCADE, related_name="software_image_file_mappings"
+    )
+    software_image_file = models.ForeignKey(
+        "dcim.SoftwareImageFile", on_delete=models.PROTECT, related_name="device_type_mappings"
+    )
+
+    class Meta:
+        unique_together = [
+            ["device_type", "software_image_file"],
+        ]
+        verbose_name = "device type to software image file mapping"
+        verbose_name_plural = "device type to software image file mappings"
+
+    def __str__(self):
+        return f"{self.device_type!s} - {self.software_image_file!s}"
 
 
 @extras_features(
@@ -93,8 +143,17 @@ class DeviceType(PrimaryModel):
     """
 
     manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="device_types")
-    model = models.CharField(max_length=100)
-    part_number = models.CharField(max_length=50, blank=True, help_text="Discrete part number (optional)")
+    device_family = models.ForeignKey(
+        to="dcim.DeviceFamily",
+        on_delete=models.PROTECT,
+        related_name="device_types",
+        blank=True,
+        null=True,
+    )
+    model = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    part_number = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Discrete part number (optional)"
+    )
     # 2.0 TODO: Profile filtering on this field if it could benefit from an index
     u_height = models.PositiveSmallIntegerField(default=1, verbose_name="Height (U)")
     # todoindex:
@@ -114,6 +173,13 @@ class DeviceType(PrimaryModel):
     )
     front_image = models.ImageField(upload_to="devicetype-images", blank=True)
     rear_image = models.ImageField(upload_to="devicetype-images", blank=True)
+    software_image_files = models.ManyToManyField(
+        to="dcim.SoftwareImageFile",
+        through=DeviceTypeToSoftwareImageFile,
+        related_name="device_types",
+        blank=True,
+        verbose_name="Software Image Files",
+    )
     comments = models.TextField(blank=True)
 
     clone_fields = [
@@ -321,7 +387,7 @@ class Platform(OrganizationalModel):
     by specifying a network driver; `netutils` is then used to derive library-specific driver information from this.
     """
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     manufacturer = models.ForeignKey(
         to="dcim.Manufacturer",
         on_delete=models.PROTECT,
@@ -331,7 +397,7 @@ class Platform(OrganizationalModel):
         help_text="Optionally limit this platform to devices of a certain manufacturer",
     )
     network_driver = models.CharField(
-        max_length=100,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         help_text=(
             "The normalized network driver to use when interacting with devices, e.g. cisco_ios, arista_eos, etc."
@@ -339,7 +405,7 @@ class Platform(OrganizationalModel):
         ),
     )
     napalm_driver = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         verbose_name="NAPALM driver",
         help_text="The name of the NAPALM driver to use when Nautobot internals interact with devices",
@@ -351,7 +417,7 @@ class Platform(OrganizationalModel):
         verbose_name="NAPALM arguments",
         help_text="Additional arguments to pass when initiating the NAPALM driver (JSON format)",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     @cached_property
     def network_driver_mappings(self):
@@ -409,15 +475,17 @@ class Device(PrimaryModel, ConfigContextModel):
         null=True,
     )
     name = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- intentional, see below
-        max_length=64,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         null=True,  # because name is part of uniqueness constraint but is optional
         db_index=True,
     )
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, null=True, db_index=True)
-    serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number", db_index=True)
+    _name = NaturalOrderingField(
+        target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True, null=True, db_index=True
+    )
+    serial = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, verbose_name="Serial number", db_index=True)
     asset_tag = models.CharField(
-        max_length=100,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         null=True,
         unique=True,
@@ -491,6 +559,14 @@ class Device(PrimaryModel, ConfigContextModel):
         verbose_name="Device Redundancy Group Priority",
         help_text="The priority the device has in the device redundancy group.",
     )
+    software_version = models.ForeignKey(
+        to="dcim.SoftwareVersion",
+        on_delete=models.PROTECT,
+        related_name="devices",
+        blank=True,
+        null=True,
+        help_text="The software version installed on this device",
+    )
     # 2.0 TODO: Profile filtering on this field if it could benefit from an index
     vc_position = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
     vc_priority = models.PositiveSmallIntegerField(blank=True, null=True, validators=[MaxValueValidator(255)])
@@ -504,6 +580,14 @@ class Device(PrimaryModel, ConfigContextModel):
         default=None,
         blank=True,
         null=True,
+    )
+
+    software_image_files = models.ManyToManyField(
+        to="dcim.SoftwareImageFile",
+        related_name="devices",
+        blank=True,
+        verbose_name="Software Image Files",
+        help_text="Override the software image files associated with the software version for this device",
     )
 
     objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
@@ -702,10 +786,27 @@ class Device(PrimaryModel, ConfigContextModel):
                     }
                 )
 
+        # Validate device is a member of a device redundancy group if it has a device redundancy group priority set
         if self.device_redundancy_group_priority is not None and self.device_redundancy_group is None:
             raise ValidationError(
                 {
                     "device_redundancy_group_priority": "Must assign a redundancy group when defining a redundancy group priority."
+                }
+            )
+
+        # Validate device software version has a software image file that matches the device's device type or is a default image
+        if self.software_version is not None and not any(
+            (
+                self.software_version.software_image_files.filter(device_types=self.device_type).exists(),
+                self.software_version.software_image_files.filter(default_image=True).exists(),
+            )
+        ):
+            raise ValidationError(
+                {
+                    "software_version": (
+                        f"No software image files for version '{self.software_version}' are "
+                        f"valid for device type {self.device_type}."
+                    )
                 }
             )
 
@@ -857,8 +958,8 @@ class VirtualChassis(PrimaryModel):
         blank=True,
         null=True,
     )
-    name = models.CharField(max_length=64, unique=True)
-    domain = models.CharField(max_length=30, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    domain = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     natural_key_field_names = ["name"]
 
@@ -912,9 +1013,9 @@ class DeviceRedundancyGroup(PrimaryModel):
     A DeviceRedundancyGroup represents a logical grouping of physical hardware for the purposes of high-availability.
     """
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     status = StatusField(blank=False, null=False)
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     failover_strategy = models.CharField(
         max_length=50,
@@ -949,3 +1050,173 @@ class DeviceRedundancyGroup(PrimaryModel):
 
     def __str__(self):
         return self.name
+
+
+#
+# Software image files
+#
+
+
+class SoftwareImageFileQuerySet(RestrictedQuerySet):
+    """Queryset for SoftwareImageFile objects."""
+
+    def get_for_object(self, obj):
+        """Return all SoftwareImageFiles assigned to the given object."""
+        from nautobot.virtualization.models import VirtualMachine
+
+        if isinstance(obj, Device):
+            if obj.software_image_files.exists():
+                return obj.software_image_files.all()
+            device_type_qs = self.filter(software_version__devices=obj, device_types=obj.device_type)
+            if device_type_qs.exists():
+                return device_type_qs
+            return self.filter(software_version__devices=obj, default_image=True)
+        elif isinstance(obj, InventoryItem):
+            if obj.software_image_files.exists():
+                return obj.software_image_files.all()
+            else:
+                return self.filter(software_version__inventory_items=obj)
+        elif isinstance(obj, DeviceType):
+            qs = self.filter(device_types=obj)
+        elif isinstance(obj, VirtualMachine):
+            if obj.software_image_files.exists():
+                return obj.software_image_files.all()
+            else:
+                qs = self.filter(software_version__virtual_machines=obj)
+        else:
+            valid_types = "Device, DeviceType, InventoryItem and VirtualMachine"
+            raise TypeError(f"{obj} is not a valid object type. Valid types are {valid_types}.")
+
+        return qs
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "statuses",
+    "webhooks",
+)
+class SoftwareImageFile(PrimaryModel):
+    """A software image file for a Device, Virtual Machine or Inventory Item."""
+
+    software_version = models.ForeignKey(
+        to="SoftwareVersion",
+        on_delete=models.CASCADE,
+        related_name="software_image_files",
+        verbose_name="Software Version",
+    )
+    image_file_name = models.CharField(blank=False, max_length=CHARFIELD_MAX_LENGTH, verbose_name="Image File Name")
+    image_file_checksum = models.CharField(blank=True, max_length=256, verbose_name="Image File Checksum")
+    hashing_algorithm = models.CharField(
+        choices=SoftwareImageFileHashingAlgorithmChoices,
+        blank=True,
+        max_length=255,
+        verbose_name="Hashing Algorithm",
+        help_text="Hashing algorithm for image file checksum",
+    )
+    image_file_size = models.PositiveBigIntegerField(
+        blank=True,
+        null=True,
+        verbose_name="Image File Size",
+        help_text="Image file size in bytes",
+    )
+    download_url = models.URLField(blank=True, verbose_name="Download URL")
+    default_image = models.BooleanField(
+        verbose_name="Default Image", help_text="Is the default image for this software version", default=False
+    )
+    status = StatusField(blank=False, null=False)
+
+    objects = BaseManager.from_queryset(SoftwareImageFileQuerySet)()
+
+    class Meta:
+        ordering = ("software_version", "image_file_name")
+        unique_together = ("image_file_name", "software_version")
+
+    def __str__(self):
+        return f"{self.software_version} - {self.image_file_name}"
+
+    def delete(self, *args, **kwargs):
+        """
+        Intercept the ProtectedError for SoftwareImageFiles that are assigned to a DeviceType and provide a better
+        error message. Instead of raising an exception on the DeviceTypeToSoftwareImageFile object, raise on the DeviceType.
+        """
+
+        try:
+            return super().delete(*args, **kwargs)
+        except models.ProtectedError as exc:
+            protected_device_types = [
+                instance.device_type
+                for instance in exc.protected_objects
+                if isinstance(instance, DeviceTypeToSoftwareImageFile)
+            ]
+            if protected_device_types:
+                raise ProtectedError(
+                    "Cannot delete some instances of model 'SoftwareImageFile' because they are "
+                    "referenced through protected foreign keys: 'DeviceType.software_image_files'.",
+                    protected_device_types,
+                ) from exc
+            raise exc
+
+
+class SoftwareVersionQuerySet(RestrictedQuerySet):
+    """Queryset for SoftwareVersion objects."""
+
+    def get_for_object(self, obj):
+        """Return all SoftwareVersions assigned to the given object."""
+        from nautobot.virtualization.models import VirtualMachine
+
+        if isinstance(obj, Device):
+            qs = self.filter(devices=obj)
+        elif isinstance(obj, InventoryItem):
+            qs = self.filter(inventory_items=obj)
+        elif isinstance(obj, DeviceType):
+            qs = self.filter(software_image_files__device_types=obj)
+        elif isinstance(obj, VirtualMachine):
+            qs = self.filter(virtual_machines=obj)
+        else:
+            valid_types = "Device, DeviceType, InventoryItem and VirtualMachine"
+            raise TypeError(f"{obj} is not a valid object type. Valid types are {valid_types}.")
+
+        return qs
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "statuses",
+    "webhooks",
+)
+class SoftwareVersion(PrimaryModel):
+    """A software version for a Device, Virtual Machine or Inventory Item."""
+
+    platform = models.ForeignKey(to="dcim.Platform", on_delete=models.CASCADE)
+    version = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    alias = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Optional alternative label for this version"
+    )
+    release_date = models.DateField(null=True, blank=True, verbose_name="Release Date")
+    end_of_support_date = models.DateField(null=True, blank=True, verbose_name="End of Support Date")
+    documentation_url = models.URLField(blank=True, verbose_name="Documentation URL")
+    long_term_support = models.BooleanField(
+        verbose_name="Long Term Support", default=False, help_text="Is a Long Term Support version"
+    )
+    pre_release = models.BooleanField(verbose_name="Pre-Release", default=False, help_text="Is a Pre-Release version")
+    status = StatusField(blank=False, null=False)
+
+    objects = BaseManager.from_queryset(SoftwareVersionQuerySet)()
+
+    class Meta:
+        ordering = ("platform", "version", "end_of_support_date", "release_date")
+        unique_together = (
+            "platform",
+            "version",
+        )
+
+    def __str__(self):
+        if self.alias:
+            return self.alias
+        return f"{self.platform} - {self.version}"

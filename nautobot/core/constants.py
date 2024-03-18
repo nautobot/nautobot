@@ -103,3 +103,5 @@ COMPOSITE_KEY_SEPARATOR = ";"
 
 # For the natural slug separator, it's much simpler and we can just go with "_".
 NATURAL_SLUG_SEPARATOR = "_"
+
+CHARFIELD_MAX_LENGTH = 255

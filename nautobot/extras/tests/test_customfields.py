@@ -1,7 +1,6 @@
 import json
 import logging
 
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
@@ -746,8 +745,6 @@ class CustomFieldDataAPITest(APITestCase):
             self.cf_markdown.key: "### Heading",
             self.cf_json.key: {"dict1": {"dict2": {}}},
         }
-        if "example_plugin" in settings.PLUGINS:
-            custom_field_data["example_plugin_auto_custom_field"] = "Custom value"
         data = (
             {
                 "name": "Location 3",
@@ -1117,6 +1114,7 @@ class CustomFieldImportTest(TestCase):
                 "cf_url",
                 "cf_select",
                 "cf_multiselect",
+                "cf_example_app_auto_custom_field",
             ],
             [
                 "Location 1",
@@ -1129,6 +1127,7 @@ class CustomFieldImportTest(TestCase):
                 "http://example.com/1",
                 "Choice A",
                 "Choice A",
+                "Custom value",
             ],
             [
                 "Location 2",
@@ -1141,14 +1140,10 @@ class CustomFieldImportTest(TestCase):
                 "http://example.com/2",
                 "Choice B",
                 '"Choice A,Choice B"',
+                "Another custom value",
             ],
-            ["Location 3", "Test Root", location_status.name, "", "", "", "", "", "", ""],
+            ["Location 3", "Test Root", location_status.name, "", "", "", "", "", "", "", ""],
         )
-        if "example_plugin" in settings.PLUGINS:
-            data[0].append("cf_example_plugin_auto_custom_field")
-            data[1].append("Custom value")
-            data[2].append("Another custom value")
-            data[3].append("")
         csv_data = "\n".join(",".join(row) for row in data)
         response = self.client.post(reverse("dcim:location_import"), {"csv_data": csv_data})
         self.assertEqual(response.status_code, 200)
@@ -1158,10 +1153,7 @@ class CustomFieldImportTest(TestCase):
             location1 = Location.objects.get(name="Location 1")
         except Location.DoesNotExist:
             self.fail(str(response.content))
-        if "example_plugin" in settings.PLUGINS:
-            self.assertEqual(len(location1.cf), 8)
-        else:
-            self.assertEqual(len(location1.cf), 7)
+        self.assertEqual(len(location1.cf), 8)
         self.assertEqual(location1.cf["text"], "ABC")
         self.assertEqual(location1.cf["integer"], 123)
         self.assertEqual(location1.cf["boolean"], True)
@@ -1169,15 +1161,11 @@ class CustomFieldImportTest(TestCase):
         self.assertEqual(location1.cf["url"], "http://example.com/1")
         self.assertEqual(location1.cf["select"], "Choice A")
         self.assertEqual(location1.cf["multiselect"], ["Choice A"])
-        if "example_plugin" in settings.PLUGINS:
-            self.assertEqual(location1.cf["example_plugin_auto_custom_field"], "Custom value")
+        self.assertEqual(location1.cf["example_app_auto_custom_field"], "Custom value")
 
         # Validate data for location 2
         location2 = Location.objects.get(name="Location 2")
-        if "example_plugin" in settings.PLUGINS:
-            self.assertEqual(len(location2.cf), 8)
-        else:
-            self.assertEqual(len(location2.cf), 7)
+        self.assertEqual(len(location2.cf), 8)
         self.assertEqual(location2.cf["text"], "DEF")
         self.assertEqual(location2.cf["integer"], 456)
         self.assertEqual(location2.cf["boolean"], False)
@@ -1185,8 +1173,7 @@ class CustomFieldImportTest(TestCase):
         self.assertEqual(location2.cf["url"], "http://example.com/2")
         self.assertEqual(location2.cf["select"], "Choice B")
         self.assertEqual(location2.cf["multiselect"], ["Choice A", "Choice B"])
-        if "example_plugin" in settings.PLUGINS:
-            self.assertEqual(location2.cf["example_plugin_auto_custom_field"], "Another custom value")
+        self.assertEqual(location2.cf["example_app_auto_custom_field"], "Another custom value")
 
         # No custom field data should be set for location 3
         location3 = Location.objects.get(name="Location 3")
@@ -1969,10 +1956,7 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
 
     def test_custom_choice_deleted_with_field(self):
         self.cf.delete()
-        if "example_plugin" in settings.PLUGINS:
-            self.assertEqual(CustomField.objects.count(), 1)  # custom field automatically added by the plugin
-        else:
-            self.assertEqual(CustomField.objects.count(), 0)
+        self.assertEqual(CustomField.objects.count(), 1)  # custom field automatically added by the Example App
         self.assertEqual(CustomFieldChoice.objects.count(), 0)
 
     def test_regex_validation(self):

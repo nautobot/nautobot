@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist
-from django.db.models import JSONField, ManyToManyField
+from django.db.models import JSONField, ManyToManyField, ManyToManyRel
 from django.forms.models import model_to_dict
 from netaddr import IPNetwork
 from rest_framework.test import APIClient, APIRequestFactory
@@ -105,12 +105,14 @@ class NautobotTestCaseMixin:
                 field = None
 
             # Handle ManyToManyFields
-            if value and isinstance(field, (ManyToManyField, core_fields.TagsField)):
+            if value and isinstance(field, (ManyToManyField, ManyToManyRel, core_fields.TagsField)):
                 # Only convert ContentType to <app_label>.<model> for API serializers/views
                 if api and field.related_model is ContentType:
                     model_dict[key] = sorted([f"{ct.app_label}.{ct.model}" for ct in value])
                 # Otherwise always convert object instances to pk
                 else:
+                    if isinstance(field, ManyToManyRel):
+                        value = value.all()
                     model_dict[key] = sorted([obj.pk for obj in value])
 
             if api:

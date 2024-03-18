@@ -5,10 +5,12 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db.models.fields import TextField
 from django.forms import inlineformset_factory, ModelMultipleChoiceField
 from django.urls.base import reverse
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     add_blank_choice,
     APISelect,
@@ -23,6 +25,7 @@ from nautobot.core.forms import (
     DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    JSONArrayFormField,
     JSONField,
     MultipleContentTypeField,
     SlugField,
@@ -120,6 +123,7 @@ __all__ = (
     "GraphQLQueryFilterForm",
     "ImageAttachmentForm",
     "JobForm",
+    "JobBulkEditForm",
     "JobButtonForm",
     "JobButtonBulkEditForm",
     "JobButtonFilterForm",
@@ -171,7 +175,7 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
     )
     key = SlugField(
         label="Key",
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         slug_source="label",
         help_text="Internal name of this field. Please use underscores rather than dashes.",
     )
@@ -275,7 +279,7 @@ class ConfigContextBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin, Bulk
     config_context_schema = DynamicModelChoiceField(queryset=ConfigContextSchema.objects.all(), required=False)
     weight = forms.IntegerField(required=False, min_value=0)
     is_active = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect())
-    description = forms.CharField(required=False, max_length=100)
+    description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
 
     class Meta:
         nullable_fields = [
@@ -335,7 +339,7 @@ class ConfigContextSchemaForm(NautobotModelForm):
 
 class ConfigContextSchemaBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ConfigContextSchema.objects.all(), widget=forms.MultipleHiddenInput)
-    description = forms.CharField(required=False, max_length=100)
+    description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
 
     class Meta:
         nullable_fields = [
@@ -374,10 +378,12 @@ class CustomFieldDescriptionField(CommentField):
 
 
 class CustomFieldForm(BootstrapMixin, forms.ModelForm):
-    label = forms.CharField(required=True, max_length=50, help_text="Name of the field as displayed to users.")
+    label = forms.CharField(
+        required=True, max_length=CHARFIELD_MAX_LENGTH, help_text="Name of the field as displayed to users."
+    )
     key = SlugField(
         label="Key",
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         slug_source="label",
         help_text="Internal name of this field. Please use underscores rather than dashes.",
     )
@@ -589,20 +595,20 @@ class ExternalIntegrationForm(NautobotModelForm):
 
         HEADERS_HELP_TEXT = """
             Optional user-defined <a href="https://json.org/">JSON</a> data for this integration. Example:
-            <pre>{
+            <pre><code class="language-json">{
                 "Accept": "application/json",
                 "Content-Type": "application/json"
-            }</pre>
+            }</code></pre>
         """
         EXTRA_CONFIG_HELP_TEXT = """
             Optional user-defined <a href="https://json.org/">JSON</a> data for this integration. Example:
-            <pre>{
+            <pre><code class="language-json">{
                 "key": "value",
                 "key2": [
                     "value1",
                     "value2"
                 ]
-            }</pre>
+            }</code></pre>
         """
         help_texts = {
             "headers": inspect.cleandoc(HEADERS_HELP_TEXT),
@@ -845,6 +851,104 @@ class JobEditForm(NautobotModelForm):
                 if not cleaned_data.get(f"{field_name}_override", False):
                     cleaned_data[field_name] = getattr(job_class, field_name)
         return cleaned_data
+
+
+class JobBulkEditForm(NautobotBulkEditForm):
+    """Bulk edit form for `Job` objects."""
+
+    pk = forms.ModelMultipleChoiceField(
+        queryset=Job.objects.all(),
+        widget=forms.MultipleHiddenInput(),
+    )
+    grouping = forms.CharField(
+        required=False,
+        help_text="Human-readable grouping that this job belongs to",
+    )
+    description = forms.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        required=False,
+        help_text="Markdown formatting and a limited subset of HTML are supported",
+    )
+    enabled = forms.NullBooleanField(
+        required=False, widget=BulkEditNullBooleanSelect, help_text="Whether this job can be executed by users"
+    )
+    has_sensitive_variables = forms.NullBooleanField(
+        required=False, widget=BulkEditNullBooleanSelect, help_text="Whether this job contains sensitive variables"
+    )
+    approval_required = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="Whether the job requires approval from another user before running",
+    )
+    hidden = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="Whether the job defaults to not being shown in the UI",
+    )
+    dryrun_default = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="Whether the job defaults to running with dryrun argument set to true",
+    )
+    soft_time_limit = forms.FloatField(
+        required=False,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum runtime in seconds before the job will receive a <code>SoftTimeLimitExceeded</code> "
+        "exception.<br>Set to 0 to use Nautobot system default",
+    )
+    time_limit = forms.FloatField(
+        required=False,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum runtime in seconds before the job will be forcibly terminated."
+        "<br>Set to 0 to use Nautobot system default",
+    )
+    task_queues = JSONArrayFormField(
+        base_field=forms.CharField(max_length=CHARFIELD_MAX_LENGTH),
+        help_text="Comma separated list of task queues that this job can run on. A blank list will use the default queue",
+        required=False,
+    )
+    # Flags to indicate whether the above properties are inherited from the source code or overridden by the database
+    # Text field overrides
+    clear_grouping_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, groupings will be reverted to the default values defined in each Job's source code",
+    )
+    clear_description_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, descriptions will be reverted to the default values defined in each Job's source code",
+    )
+    clear_soft_time_limit_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, soft time limits will be reverted to the default values defined in each Job's source code",
+    )
+    clear_time_limit_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, time limits will be reverted to the default values defined in each Job's source code",
+    )
+    clear_task_queues_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, task queue overrides will be reverted to the default values defined in each Job's source code",
+    )
+    # Boolean overrides
+    clear_approval_required_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, the values of approval required will be reverted to the default values defined in each Job's source code",
+    )
+    clear_dryrun_default_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, the values of dryrun default will be reverted to the default values defined in each Job's source code",
+    )
+    clear_hidden_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, the values of hidden will be reverted to the default values defined in each Job's source code",
+    )
+    clear_has_sensitive_variables_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, the values of has sensitive variables will be reverted to the default values defined in each Job's source code",
+    )
+
+    class Meta:
+        model = Job
 
 
 class JobFilterForm(BootstrapMixin, forms.Form):
@@ -1204,7 +1308,7 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
     key = SlugField(
         help_text="Internal name of this relationship. Please use underscores rather than dashes.",
         label="Key",
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         slug_source="label",
     )
     source_type = forms.ModelChoiceField(
@@ -1474,7 +1578,7 @@ class TagFilterForm(NautobotFilterForm):
 class TagBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), widget=forms.MultipleHiddenInput)
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())
-    description = forms.CharField(max_length=200, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         nullable_fields = ["description"]

@@ -42,7 +42,16 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 #
 # Nautobot optional settings/defaults
 #
-ALLOWED_URL_SCHEMES = (
+
+# Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
+NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
+
+# Allow users to enable request profiling via django-silk for admins to inspect.
+if "NAUTOBOT_ALLOW_REQUEST_PROFILING" in os.environ and os.environ["NAUTOBOT_ALLOW_REQUEST_PROFILING"] != "":
+    ALLOW_REQUEST_PROFILING = is_truthy(os.environ["NAUTOBOT_ALLOW_REQUEST_PROFILING"])
+
+# URL schemes that are allowed within links in Nautobot
+ALLOWED_URL_SCHEMES = [
     "file",
     "ftp",
     "ftps",
@@ -57,14 +66,41 @@ ALLOWED_URL_SCHEMES = (
     "tftp",
     "vnc",
     "xmpp",
-)
+]
 
-# Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
-NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
+# Banners to display to users. HTML is allowed.
+if "NAUTOBOT_BANNER_BOTTOM" in os.environ and os.environ["NAUTOBOT_BANNER_BOTTOM"] != "":
+    BANNER_BOTTOM = os.environ["NAUTOBOT_BANNER_BOTTOM"]
+if "NAUTOBOT_BANNER_LOGIN" in os.environ and os.environ["NAUTOBOT_BANNER_LOGIN"] != "":
+    BANNER_LOGIN = os.environ["NAUTOBOT_BANNER_LOGIN"]
+if "NAUTOBOT_BANNER_TOP" in os.environ and os.environ["NAUTOBOT_BANNER_TOP"] != "":
+    BANNER_TOP = os.environ["NAUTOBOT_BANNER_TOP"]
+
+# Number of days to retain changelog entries. Set to 0 to retain changes indefinitely. Defaults to 90 if not set here.
+if "NAUTOBOT_CHANGELOG_RETENTION" in os.environ and os.environ["NAUTOBOT_CHANGELOG_RETENTION"] != "":
+    CHANGELOG_RETENTION = int(os.environ["NAUTOBOT_CHANGELOG_RETENTION"])
 
 # Disable linking of Config Context objects via Dynamic Groups by default. This could cause performance impacts
 # when a large number of dynamic groups are present
 CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED", "False"))
+
+# UUID uniquely but anonymously identifying this Nautobot deployment.
+if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID"] != "":
+    DEPLOYMENT_ID = os.environ["NAUTOBOT_DEPLOYMENT_ID"]
+
+# Device names are not guaranteed globally-unique by Nautobot but in practice they often are.
+# Set this to True to use the device name alone as the natural key for Device objects.
+# Set this to False to use the sequence (name, tenant, location) as the natural key instead.
+#
+if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
+    DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
+
+# The number of seconds to cache the member list of dynamic groups. Set this to `0` to disable caching.
+if (
+    "NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT" in os.environ
+    and os.environ["NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"] != ""
+):
+    DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT = int(os.environ["NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"])
 
 # Exclude potentially sensitive models from wildcard view exemption. These may still be exempted
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
@@ -86,16 +122,33 @@ HTTP_PROXIES = None
 # Send anonymized installation metrics when post_upgrade or send_installation_metrics management commands are run
 INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "True"))
 
+# Maximum file size (in bytes) that as running Job can create in a call to `Job.create_file()`. Default is 10 << 20
+if "NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE" in os.environ and os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"] != "":
+    JOB_CREATE_FILE_MAX_SIZE = int(os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"])
+
 # The storage backend to use for Job input files and Job output files
 JOB_FILE_IO_STORAGE = os.getenv("NAUTOBOT_JOB_FILE_IO_STORAGE", "db_file_storage.storage.DatabaseFileStorage")
 
 # The file path to a directory where locally installed Jobs can be discovered
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 
+# `Location` names are not guaranteed globally-unique by Nautobot but in practice they often are.
+# Set this to `True` to use the location `name` alone as the natural key for `Location` objects.
+# Set this to `False` to use the sequence `(name, parent__name, parent__parent__name, ...)` as the natural key instead.
+if "NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY"] != "":
+    LOCATION_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY"])
+
+
 # Log Nautobot deprecation warnings. Note that this setting is ignored (deprecation logs always enabled) if DEBUG = True
 LOG_DEPRECATION_WARNINGS = is_truthy(os.getenv("NAUTOBOT_LOG_DEPRECATION_WARNINGS", "False"))
 
+# Setting this to True will display a "maintenance mode" banner at the top of every page.
 MAINTENANCE_MODE = is_truthy(os.getenv("NAUTOBOT_MAINTENANCE_MODE", "False"))
+
+# Maximum number of objects that the UI and API will retrieve in a single request. Default is 1000
+if "NAUTOBOT_MAX_PAGE_SIZE" in os.environ and os.environ["NAUTOBOT_MAX_PAGE_SIZE"] != "":
+    MAX_PAGE_SIZE = int(os.environ["NAUTOBOT_MAX_PAGE_SIZE"])
+
 # Metrics
 METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_METRICS_ENABLED", "False"))
 METRICS_AUTHENTICATED = is_truthy(os.getenv("NAUTOBOT_METRICS_AUTHENTICATED", "False"))
@@ -106,9 +159,41 @@ NAPALM_PASSWORD = os.getenv("NAUTOBOT_NAPALM_PASSWORD", "")
 NAPALM_TIMEOUT = int(os.getenv("NAUTOBOT_NAPALM_TIMEOUT", "30"))
 NAPALM_USERNAME = os.getenv("NAUTOBOT_NAPALM_USERNAME", "")
 
+# Default number of objects to display per page of the UI and REST API. Default is 50
+if "NAUTOBOT_PAGINATE_COUNT" in os.environ and os.environ["NAUTOBOT_PAGINATE_COUNT"] != "":
+    PAGINATE_COUNT = int(os.environ["NAUTOBOT_PAGINATE_COUNT"])
+
+# The options displayed in the web interface dropdown to limit the number of objects per page.
+# Default is [25, 50, 100, 250, 500, 1000]
+if "NAUTOBOT_PER_PAGE_DEFAULTS" in os.environ and os.environ["NAUTOBOT_PER_PAGE_DEFAULTS"] != "":
+    PER_PAGE_DEFAULTS = [int(val) for val in os.environ["NAUTOBOT_PER_PAGE_DEFAULTS"].split(",")]
+
 # Plugins
 PLUGINS = []
 PLUGINS_CONFIG = {}
+
+# Prefer IPv6 addresses or IPv4 addresses in selecting a device's primary IP address? Default False
+if "NAUTOBOT_PREFER_IPV4" in os.environ and os.environ["NAUTOBOT_PREFER_IPV4"] != "":
+    PREFER_IPV4 = is_truthy(os.environ["NAUTOBOT_PREFER_IPV4"])
+
+# Default height and width in pixels of a single rack unit in rendered rack elevations. Defaults are 22 and 220
+if (
+    "NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_HEIGHT" in os.environ
+    and os.environ["NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_HEIGHT"] != ""
+):
+    RACK_ELEVATION_DEFAULT_UNIT_HEIGHT = int(os.environ["NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_HEIGHT"])
+if (
+    "NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH" in os.environ
+    and os.environ["NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH"] != ""
+):
+    RACK_ELEVATION_DEFAULT_UNIT_WIDTH = int(os.environ["NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH"])
+
+# How frequently to check for a new Nautobot release on GitHub, and the URL to check for this information.
+# Defaults to disabled (no URL) and check every 24 hours when enabled
+if "NAUTOBOT_RELEASE_CHECK_TIMEOUT" in os.environ and os.environ["NAUTOBOT_RELEASE_CHECK_TIMEOUT"] != "":
+    RELEASE_CHECK_TIMEOUT = int(os.environ["NAUTOBOT_RELEASE_CHECK_TIMEOUT"])
+if "NAUTOBOT_RELEASE_CHECK_URL" in os.environ and os.environ["NAUTOBOT_RELEASE_CHECK_URL"] != "":
+    RELEASE_CHECK_URL = os.environ["NAUTOBOT_RELEASE_CHECK_URL"]
 
 # Global 3rd-party authentication settings
 EXTERNAL_AUTH_DEFAULT_GROUPS = []
@@ -136,6 +221,11 @@ SANITIZER_PATTERNS = [
 # Storage
 STORAGE_BACKEND = None
 STORAGE_CONFIG = {}
+
+# Custom message to display on 4xx and 5xx error pages. Markdown and HTML are supported.
+# Default message directs the user to #nautobot on NTC's Slack community.
+if "NAUTOBOT_SUPPORT_MESSAGE" in os.environ and os.environ["NAUTOBOT_SUPPORT_MESSAGE"] != "":
+    SUPPORT_MESSAGE = os.environ["NAUTOBOT_SUPPORT_MESSAGE"]
 
 # Test runner that is aware of our use of "integration" tags and only runs
 # integration tests if explicitly passed in with `nautobot-server test --tag integration`.
@@ -196,7 +286,7 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_FILTER_BACKENDS": (
         "nautobot.core.api.filter_backends.NautobotFilterBackend",
-        "rest_framework.filters.OrderingFilter",
+        "nautobot.core.api.filter_backends.NautobotOrderingFilter",
     ),
     "DEFAULT_METADATA_CLASS": "nautobot.core.api.metadata.NautobotMetadata",
     "DEFAULT_PAGINATION_CLASS": "nautobot.core.api.pagination.OptionalLimitOffsetPagination",
@@ -296,9 +386,6 @@ SPECTACULAR_SETTINGS = {
 # Databases
 #
 
-# Only PostgresSQL is supported, so database driver is hard-coded. This can
-# still be overloaded in custom settings.
-# https://docs.djangoproject.com/en/stable/ref/settings/#databases
 DATABASES = {
     "default": {
         "NAME": os.getenv("NAUTOBOT_DB_NAME", "nautobot"),
@@ -319,16 +406,19 @@ if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
     DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
 
 # The secret key is used to encrypt session keys and salt passwords.
-SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY")
+SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
 
 # Default overrides
-ALLOWED_HOSTS = os.getenv("NAUTOBOT_ALLOWED_HOSTS", "").split(" ")
+if "NAUTOBOT_ALLOWED_HOSTS" in os.environ and os.environ["NAUTOBOT_ALLOWED_HOSTS"] != "":
+    ALLOWED_HOSTS = os.environ["NAUTOBOT_ALLOWED_HOSTS"].split(" ")
+else:
+    ALLOWED_HOSTS = []
 CSRF_TRUSTED_ORIGINS = []
 CSRF_FAILURE_VIEW = "nautobot.core.views.csrf_failure"
 DATE_FORMAT = os.getenv("NAUTOBOT_DATE_FORMAT", "N j, Y")
 DATETIME_FORMAT = os.getenv("NAUTOBOT_DATETIME_FORMAT", "N j, Y g:i a")
 DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "False"))
-INTERNAL_IPS = ("127.0.0.1", "::1")
+INTERNAL_IPS = ["127.0.0.1", "::1"]
 FORCE_SCRIPT_NAME = None
 
 TESTING = "test" in sys.argv
@@ -384,7 +474,6 @@ SESSION_COOKIE_AGE = int(os.getenv("NAUTOBOT_SESSION_COOKIE_AGE", "1209600"))  #
 SESSION_FILE_PATH = os.getenv("NAUTOBOT_SESSION_FILE_PATH", None)
 SHORT_DATE_FORMAT = os.getenv("NAUTOBOT_SHORT_DATE_FORMAT", "Y-m-d")
 SHORT_DATETIME_FORMAT = os.getenv("NAUTOBOT_SHORT_DATETIME_FORMAT", "Y-m-d H:i")
-SHORT_TIME_FORMAT = os.getenv("NAUTOBOT_SHORT_TIME_FORMAT", "H:i:s")
 TIME_FORMAT = os.getenv("NAUTOBOT_TIME_FORMAT", "g:i a")
 TIME_ZONE = os.getenv("NAUTOBOT_TIME_ZONE", "UTC")
 
@@ -427,6 +516,10 @@ INSTALLED_APPS = [
     "graphene_django",
     "health_check",
     "health_check.storage",
+    # We have custom implementations of these in nautobot.extras.health_checks:
+    # "health_check.db",
+    # "health_check.contrib.migrations",
+    # "health_check.contrib.redis",
     "django_extensions",
     "constance.backends.database",
     "django_ajax_tables",
@@ -656,10 +749,10 @@ CONSTANCE_CONFIG = {
             "Extend or override default Platform.network_driver translations provided by "
             '<a href="https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/">netutils</a>. '
             "Enter a dictionary in JSON format, for example:\n"
-            "<pre>{\n"
+            '<pre><code class="language-json">{\n'
             '    "netmiko": {"my_network_driver": "cisco_ios"},\n'
             '    "pyats": {"my_network_driver": "iosxe"} \n'
-            "}</pre>",
+            "}</code></pre>",
         ),
         # Use custom field type defined above
         field_type="optional_json_field",
@@ -778,7 +871,7 @@ CELERY_BEAT_HEARTBEAT_FILE = os.getenv(
 # Celery broker URL used to tell workers where queues are located
 CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
 
-# Celery results backend URL to tell workers where to publish task results
+# Celery results backend URL to tell workers where to publish task results - DO NOT CHANGE THIS
 CELERY_RESULT_BACKEND = "nautobot.core.celery.backends.NautobotDatabaseBackend"
 
 # Enables extended task result attributes (name, args, kwargs, worker, retries, queue, delivery_info) to be written to backend.

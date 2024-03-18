@@ -91,7 +91,7 @@ An administrator or user with `extras.delete_job` permissions *may* delete such 
 It is a key concept to understand the 2 `class_path` elements:
 
 * `module_name`: which is the importable Python path to the job definition (with `.` in place of `/` in the directory path, and not including the `.py` file extension, as per Python syntax standards).
-    * For a plugin-provided job, this might be something like `my_plugin_name.jobs.my_job_filename` or `nautobot_golden_config.jobs`
+    * For an App-provided job, this might be something like `my_app_name.jobs.my_job_filename` or `nautobot_golden_config.jobs`
     * For a locally installed job, this would match the file name, such as `my_job_filename`
     * For a Git-provided job, this includes the repository's defined `slug`, such as `my_repository.jobs.my_job_filename`
 * `JobClassName`: which is the name of the class inheriting from `nautobot.extras.jobs.Job` contained in the above file.
