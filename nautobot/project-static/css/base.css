@@ -45,7 +45,6 @@ body {
     transition-property: margin-left, width;
     overflow: visible;
     margin: 0;
-    padding-right: 70px;
 }
 .footer .row {
     background-color: #f5f5f5;
