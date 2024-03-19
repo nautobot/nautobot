@@ -27,6 +27,7 @@ body {
     transition-duration: var(--navbar-transition-duration);
     transition-timing-function: ease-in-out;
     transition-property: margin-left, width;
+    min-height: calc(100vh - 20px);
 }
 #main-content > .form {
     margin-top: 20px;
