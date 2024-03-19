@@ -1,1 +1,0 @@
-Removed the hard-coded 255-character limit on custom fields of type `Text`.
