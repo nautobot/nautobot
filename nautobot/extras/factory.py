@@ -16,6 +16,7 @@ from nautobot.core.factory import (
     UniqueFaker,
 )
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices, WebhookHttpMethodChoices
+from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, CHANGELOG_MAX_OBJECT_REPR
 from nautobot.extras.models import Contact, ExternalIntegration, ObjectChange, Role, Status, Tag, Team
 from nautobot.extras.utils import change_logged_models_queryset, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 
@@ -106,12 +107,14 @@ class ObjectChangeFactory(BaseModelFactory):
             ObjectChangeActionChoices.ACTION_DELETE,
         ]
     )
-    changed_object_type = random_instance(lambda: change_logged_models_queryset(), allow_null=False)
+    changed_object_type = random_instance(change_logged_models_queryset, allow_null=False)
     change_context = factory.Iterator(ObjectChangeEventContextChoices.CHOICES, getter=lambda choice: choice[0])
-    change_context_detail = factory.Maybe("has_change_context_detail", factory.Faker("word"), "")
+    change_context_detail = factory.Maybe(
+        "has_change_context_detail", factory.Faker("text", max_nb_chars=CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL), ""
+    )
     related_object_type = factory.Maybe(
         "has_related_object_type",
-        random_instance(lambda: change_logged_models_queryset(), allow_null=False),
+        random_instance(change_logged_models_queryset, allow_null=False),
         None,
     )
     object_data = factory.Faker("pydict")
@@ -142,23 +145,17 @@ class ObjectChangeFactory(BaseModelFactory):
         return None
 
     @factory.post_generation
-    def time(self, created, extracted, **kwargs):
-        if created:
-            if extracted:
-                self.time = extracted
-            else:
-                self.time = faker.Faker().date_time(tzinfo=timezone.utc)
-
-    @factory.post_generation
-    def object_repr(self, created, extracted, **kwargs):
+    def post_generation(self, created, extracted, **kwargs):
         if created:
             if extracted:
                 self.object_repr = extracted
-            elif self.changed_object is not None:
-                self.object_repr = str(self.changed_object)
+                self.time = extracted
             else:
-                self.object_repr = faker.Faker().word()
-
+                self.time = faker.Faker().date_time(tzinfo=timezone.utc)
+                if self.changed_object is not None:
+                    self.object_repr = str(self.changed_object)
+                else:
+                    self.object_repr = faker.Faker().sentence()[:CHANGELOG_MAX_OBJECT_REPR]
 
 class RoleFactory(OrganizationalModelFactory):
     """Role model factory."""
