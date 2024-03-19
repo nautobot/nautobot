@@ -18,7 +18,7 @@ A Controller in Nautobot is an abstraction meant to represent network or SDN (So
 
 #### DeviceFamily Model ([#3559](https://github.com/nautobot/nautobot/issues/3559))
 
-A device family represents a group of related [device types](devicetype.md). A device type can be optionally assigned to a device family. Each device family must have a unique name and may have a description assigned to it.
+A device family represents a group of related [device types](../user-guide/core-data-model/dcim/devicetype.md). A device type can be optionally assigned to a device family. Each device family must have a unique name and may have a description assigned to it.
 
 #### Jobs tile view ([#5129](https://github.com/nautobot/nautobot/issues/5129))
 
