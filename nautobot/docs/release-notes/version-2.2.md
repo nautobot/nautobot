@@ -83,7 +83,7 @@ The CSV import functionality for all models has been changed from a synchronous 
 - [#5129](https://github.com/nautobot/nautobot/issues/5129) - Implemented jobs tile view.
 - [#5145](https://github.com/nautobot/nautobot/issues/5145) - Added data migration to populate default statuses and default roles for the `ContactAssociation` model.
 - [#5188](https://github.com/nautobot/nautobot/issues/5188) - Added DeviceType table to Device Family detail view.
-- [#5278](https://github.com/nautobot/nautobot/issues/5278) - Added User Token as permission constraints.
+- [#5278](https://github.com/nautobot/nautobot/issues/5278) - Added permission constraint for User Token.
 - [#5341](https://github.com/nautobot/nautobot/issues/5341) - Added `/apps/` and `/api/apps/` URL groupings, initially containing only the `installed-apps/` sub-items.
 - [#5341](https://github.com/nautobot/nautobot/issues/5341) - Added `nautobot-apps` key to the `/api/status/` REST API endpoint.
 - [#5342](https://github.com/nautobot/nautobot/issues/5342) - Added `MigrationsBackend` to health-check, which will fail if any unapplied database migrations are present.
