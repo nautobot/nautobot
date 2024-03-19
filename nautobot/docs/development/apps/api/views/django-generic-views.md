@@ -4,13 +4,14 @@ The use of `generic` Django views can aid in app development. As an example, let
 
 ```python
 # views.py
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render
 from django.views.generic import View
 
 from .models import Animal
 
 
-class RandomAnimalView(View):
+class RandomAnimalView(LoginRequiredMixin, View):
     """Display a randomly-selected Animal."""
 
     def get(self, request):

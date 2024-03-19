@@ -210,7 +210,7 @@ class SearchView(AccessMixin, View):
         )
 
 
-class StaticMediaFailureView(View):
+class StaticMediaFailureView(View):  # NOT using LoginRequiredMixin here as this may happen even on the login page
     """
     Display a user-friendly error message with troubleshooting tips when a static media file fails to load.
     """
