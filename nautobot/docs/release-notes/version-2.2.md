@@ -12,15 +12,27 @@ This document describes all new features and changes in Nautobot 2.2.
 
 Contact and Team are models that represent an individual and a group of individuals who can be linked to an object. Contacts and teams store the necessary information (name, phone number, email, and address) to uniquely identify and contact them. They are added to track ownerships of organizational entities and to manage resources more efficiently in Nautobot. Check out the documentation for [contact](../user-guide/core-data-model/extras/contact.md) and [team](../user-guide/core-data-model/extras/team.md). There is also a [user guide](../user-guide/feature-guides/contact-and-team.md) available on how to utilize these models.
 
+#### Controller Model ([#3111](https://github.com/nautobot/nautobot/issues/3111))
+
+A Controller in Nautobot is an abstraction meant to represent network or SDN (Software-Defined Networking) controllers. These may include, but are not limited to, wireless controllers, cloud-based network management systems, and other forms of central network control mechanisms. See more details in the model [documentation](../user-guide/core-data-model/dcim/controller.md) and see the remaining work outlined in this GitHub [issue](https://github.com/nautobot/nautobot/issues/5454).
+
+#### DeviceFamily Model ([#3559](https://github.com/nautobot/nautobot/issues/3559))
+
+A device family represents a group of related [device types](devicetype.md). A device type can be optionally assigned to a device family. Each device family must have a unique name and may have a description assigned to it.
+
+#### Jobs tile view ([#5129](https://github.com/nautobot/nautobot/issues/5129))
+
+Job list is now available in two display variants: list and tiles. List is a standard table view with no major changes introduced. Tiles is a new type of view displaying jobs in a two-dimensional grid.
+
+#### Prefix and VLAN Many Locations ([#4334](https://github.com/nautobot/nautobot/issues/4334), [#4412](https://github.com/nautobot/nautobot/issues/4412))
+
+The Prefix and VLAN models have replaced their single `location` foreign-key field with a many-to-many `locations` field, allowing multiple Locations to be attached to a single Prefix or VLAN. To ensure backwards compatibility with pre-2.2 code, these models now have a `location` property which can be get or set for the case of a single associated Location, but will raise a `MultipleObjectsReturned` exception if the Prefix or VLAN in question has more than one associated Location. REST API versions 2.0 and 2.1 similarly still have a `location` field, while REST API version 2.2 and later replace this with `locations`.
+
 #### Software Image File and Software Version models ([#1](https://github.com/nautobot/nautobot/issues/1))
 
 New models have been added for software image files and software versions. These models are used to track the software versions of devices, inventory items and virtual machines and their associated image files. These models have been ported from the [Device Lifecycle Management App](https://github.com/nautobot/nautobot-app-device-lifecycle-mgmt/) and a future update to that app will migrate all existing data from the `nautobot_device_lifecycle_mgmt.SoftwareImageLCM` and `nautobot_device_lifecycle_mgmt.SoftwareLCM` models to the `dcim.SoftwareImageFile` and `dcim.SoftwareVersion` models added here.
 
 Software versions must be associated to a platform. Software image files must be associated to one software version and may be associated to one or more device types. Devices, inventory items and virtual machines may be associated to one software version to track their current version. See the documentation for [software image file](../user-guide/core-data-model/dcim/softwareimagefile.md) and [software version](../user-guide/core-data-model/dcim/softwareversion.md). There is also a [user guide](../user-guide/feature-guides/software-image-files-and-versions.md) with instructions on how to create these models.
-
-#### Prefix and VLAN Many Locations ([#4334](https://github.com/nautobot/nautobot/issues/4334), [#4412](https://github.com/nautobot/nautobot/issues/4412))
-
-The Prefix and VLAN models have replaced their single `location` foreign-key field with a many-to-many `locations` field, allowing multiple Locations to be attached to a single Prefix or VLAN. To ensure backwards compatibility with pre-2.2 code, these models now have a `location` property which can be get or set for the case of a single associated Location, but will raise a `MultipleObjectsReturned` exception if the Prefix or VLAN in question has more than one associated Location. REST API versions 2.0 and 2.1 similarly still have a `location` field, while REST API version 2.2 and later replace this with `locations`.
 
 #### Syntax highlighting ([#5098](https://github.com/nautobot/nautobot/issues/5098))
 
@@ -32,10 +44,6 @@ Language syntax highlighting for GraphQL, JSON, XML and YAML is now supported in
 
 [`render_json`](../user-guide/platform-functionality/template-filters.md#render_json) and [`render_yaml`](../user-guide/platform-functionality/template-filters.md#render_yaml) template filters default to this new behavior with an optional opt-out `syntax_highlight=False` arg.
 
-#### Jobs tile view ([#5129](https://github.com/nautobot/nautobot/issues/5129))
-
-Job list is now available in two display variants: list and tiles. List is a standard table view with no major changes introduced. Tiles is a new type of view displaying jobs in a two-dimensional grid.
-
 ### Changed
 
 #### Data Imports as a System Job ([#5064](https://github.com/nautobot/nautobot/issues/5064))
@@ -44,6 +52,14 @@ The CSV import functionality for all models has been changed from a synchronous 
 
 !!! tip
     Users now must have the `run` action permission for `extras > job` (specifically the `nautobot.core.jobs.ImportObjects` Job) in order to import objects, in addition to the normal `add` permissions for the object type being imported.
+
+#### Plugin to App Renames([#5341](https://github.com/nautobot/nautobot/issues/5341))
+
+`Installed Plugins` view has been renamed to `Installed Apps`. `Plugin` terminologies in `Installed Plugins` (now `Installed Apps`) view and dependent views have been changed to `App` throughout. `Plugin` references in documentation (excluding old release-notes) have been replaced by `App`. `Plugins` navigation menu has been renamed to `Apps`. See more details about this change in [#5353](https://github.com/nautobot/nautobot/pull/5353).
+
+#### Standardization of `max_length` on all Charfields ([#2906](https://github.com/nautobot/nautobot/issues/2906))
+
+Model CharFields' `max_length` attributes have been standardized globally to have at least 255 characters except where a shorter `max_length` is explicitly justified.
 
 <!-- towncrier release notes start -->
 ## v2.2.0-beta.1 (2024-03-19)
@@ -71,17 +87,13 @@ The CSV import functionality for all models has been changed from a synchronous 
 - [#5064](https://github.com/nautobot/nautobot/issues/5064) - Added `nautobot.apps.utils.get_view_for_model` utility function.
 - [#5064](https://github.com/nautobot/nautobot/issues/5064) - Added `can_add`, `can_change`, `can_delete`, `can_view`, and `has_serializer` filters to the `/api/extras/content-types/` REST API.
 - [#5067](https://github.com/nautobot/nautobot/issues/5067) - Added `q` (SearchFilter) filter to all filterset missing it.
-- [#5067](https://github.com/nautobot/nautobot/issues/5067) - Added two generic test cases for `q` filter: `test_q_filter_exists` and `test_q_filter_valid`.
 - [#5097](https://github.com/nautobot/nautobot/issues/5097) - Added a JSON Schema for Nautobot settings in settings.json.
 - [#5097](https://github.com/nautobot/nautobot/issues/5097) - Added REST API endpoint to show the JSON Schema for authenticated users.
 - [#5098](https://github.com/nautobot/nautobot/issues/5098) - Added client-side GraphQL, JSON, XML, and YAML syntax highlighting with the `highlight.js` library.
 - [#5101](https://github.com/nautobot/nautobot/issues/5101) - Added a utility to help when writing migrations that replace database models.
-- [#5105](https://github.com/nautobot/nautobot/issues/5105) - Added Bulk Edit functionality for ContactAssociation.
-- [#5105](https://github.com/nautobot/nautobot/issues/5105) - Added Bulk Edit buttons for associated contact tables in the contacts tabs of object detail views.
 - [#5107](https://github.com/nautobot/nautobot/issues/5107) - Added `hyperlinked_email` and `hyperlinked_phone_number` template tags/filters.
 - [#5127](https://github.com/nautobot/nautobot/issues/5127) - Added bulk-edit and bulk-delete capabilities for Jobs.
 - [#5129](https://github.com/nautobot/nautobot/issues/5129) - Implemented jobs tile view.
-- [#5145](https://github.com/nautobot/nautobot/issues/5145) - Added data migration to populate default statuses and default roles for the `ContactAssociation` model.
 - [#5188](https://github.com/nautobot/nautobot/issues/5188) - Added DeviceType table to Device Family detail view.
 - [#5278](https://github.com/nautobot/nautobot/issues/5278) - Added User Token as permission constraints.
 - [#5341](https://github.com/nautobot/nautobot/issues/5341) - Added `/apps/` and `/api/apps/` URL groupings, initially containing only the `installed-apps/` sub-items.
@@ -99,18 +111,11 @@ The CSV import functionality for all models has been changed from a synchronous 
 - [#4811](https://github.com/nautobot/nautobot/issues/4811) - Changed the behavior of tree model tables: now they are sortable, and after sorting is applied, all hierarchy indentations are removed.
 - [#5064](https://github.com/nautobot/nautobot/issues/5064) - Changed CSV import functionality to run as a system Job, avoiding HTTP timeouts when importing large data sets.
 - [#5064](https://github.com/nautobot/nautobot/issues/5064) - Updated JobResult main tab to render any return value from the Job as syntax-highlighted JSON.
-- [#5099](https://github.com/nautobot/nautobot/issues/5099) - Replaced `nautobot/core/settings.json` with `nautobot/core/settings.yaml` for improved readability and maintainability.
 - [#5126](https://github.com/nautobot/nautobot/issues/5126) - Rearranged Job List table row contents.
-- [#5187](https://github.com/nautobot/nautobot/issues/5187) - Removed "Add Contact" button from the standard buttons in the detail views.
-- [#5187](https://github.com/nautobot/nautobot/issues/5187) - Renamed "Assign Contact/Team" UI buttons text from "Create", "Create and Add Another" to "Assign" and "Assign and Add Another".
-- [#5187](https://github.com/nautobot/nautobot/issues/5187) - Split out Contact/Team icons into a separate column and renamed the columns to "Type" and "Name" on AssociatedContactsTable.
-- [#5207](https://github.com/nautobot/nautobot/issues/5207) - Made `role` attribute required on `ContactAssociation` Model.
-- [#5213](https://github.com/nautobot/nautobot/issues/5213) - Made the default action when assigning a contact/team to an object to be the assignment of an existing contact/team.
 - [#5341](https://github.com/nautobot/nautobot/issues/5341) - Renamed `Plugins` navigation menu to `Apps`. Apps that add to this menu are encouraged to update their `navigation.py` to use the new name.
 - [#5341](https://github.com/nautobot/nautobot/issues/5341) - Renamed `Installed Plugins` view to `Installed Apps`.
 - [#5341](https://github.com/nautobot/nautobot/issues/5341) - Changed permissions on the `Installed Apps` views to be visible to all authenticated users, not just staff/superuser accounts.
 - [#5342](https://github.com/nautobot/nautobot/issues/5342) - Changed default Docker HEALTHCHECK to use `nautobot-server health_check` CLI command.
-- [#5352](https://github.com/nautobot/nautobot/issues/5352) - Renamed `HardwareFamily` to `DeviceFamily`.
 - [#5405](https://github.com/nautobot/nautobot/issues/5405) - Changed DeviceType list view "Import" button to include a dropdown to select between JSON/YAML or CSV import formats.
 - [#5405](https://github.com/nautobot/nautobot/issues/5405) - Changed DeviceType list view "Export" button to default to YAML format.
 - [#5412](https://github.com/nautobot/nautobot/issues/5412) - Changed DeviceType YAML/JSON import to now map unrecognized port template `type` values to `"other"` instead of failing the import.
@@ -118,6 +123,7 @@ The CSV import functionality for all models has been changed from a synchronous 
 
 ### Deprecated
 
+- [#5064](https://github.com/nautobot/nautobot/issues/5064) - Deprecated the `import_button` button template-tag.
 - [#5116](https://github.com/nautobot/nautobot/issues/5116) - Deprecated the `nautobot.apps.exceptions.ConfigurationError` class as it is no longer used in Nautobot core and is trivially reimplementable by any App if desired.
 - [#5341](https://github.com/nautobot/nautobot/issues/5341) - Deprecated the `plugins` key under the `/api/status/` REST API endpoint. Refer to `nautobot-apps` instead.
 
@@ -132,13 +138,10 @@ The CSV import functionality for all models has been changed from a synchronous 
 - [#5064](https://github.com/nautobot/nautobot/issues/5064) - Fixed an exception in `Job.after_return()` if a Job with an optional `FileVar` was executed without supplying a value for that variable.
 - [#5116](https://github.com/nautobot/nautobot/issues/5116) - Fixed inability to specify a `--config PATH` value with the `nautobot-server runserver` command.
 - [#5186](https://github.com/nautobot/nautobot/issues/5186) - Fixed `Prefix.ip_version` and `IPAddress.ip_version` fields to be non-nullable.
-- [#5214](https://github.com/nautobot/nautobot/issues/5214) - Fixed the bug causing Contact Tab disappear when the user navigates to the Notes and Changelog Tabs.
 - [#5220](https://github.com/nautobot/nautobot/issues/5220) - Fixed contacts field in "Add a new team" form not populating.
-- [#5221](https://github.com/nautobot/nautobot/issues/5221) - Fixed the return URL from adding/assigning a contact/team from ObjectDetailView to redirect to the contacts tab instead of the main tab.
 - [#5241](https://github.com/nautobot/nautobot/issues/5241) - Fixed rendering of `NavMenuItems` that do not define any specific required `permissions`.
 - [#5241](https://github.com/nautobot/nautobot/issues/5241) - Fixed incorrect construction of `NavMenuTab` and `NavMenuGroup` permissions.
 - [#5241](https://github.com/nautobot/nautobot/issues/5241) - Fixed incorrect permissions required for `Roles` navigation menu item.
-- [#5272](https://github.com/nautobot/nautobot/issues/5272) - Fixed incorrectly set return urls on the edit and delete buttons of job tile view.
 - [#5298](https://github.com/nautobot/nautobot/issues/5298) - Fixed a `ValidationError` that was being thrown when a user logged out.
 - [#5298](https://github.com/nautobot/nautobot/issues/5298) - Fixed a case where viewing a completed JobResult that was missing a `date_done` value would cause the JobResult view to repeatedly refresh.
 
@@ -155,6 +158,7 @@ The CSV import functionality for all models has been changed from a synchronous 
 
 ### Housekeeping
 
+- [#5067](https://github.com/nautobot/nautobot/issues/5067) - Added two generic test cases for `q` filter: `test_q_filter_exists` and `test_q_filter_valid`.
 - [#5099](https://github.com/nautobot/nautobot/issues/5099) - Added `mkdocs-macros-plugin` as a development/documentation-rendering dependency.
 - [#5099](https://github.com/nautobot/nautobot/issues/5099) - Refactored documentation in `optional-settings` and `required-settings` to be generated automatically from `settings.yaml` schema.
 - [#5179](https://github.com/nautobot/nautobot/issues/5179) - Renamed `example_plugin` to `example_app`.
