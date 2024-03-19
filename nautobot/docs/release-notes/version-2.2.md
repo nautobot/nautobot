@@ -70,7 +70,7 @@ The CSV import functionality for all models has been changed from a synchronous 
 - [#5064](https://github.com/nautobot/nautobot/issues/5064) - Added `job_import_button` template-tag and marked `import_button` button template-tag as deprecated.
 - [#5064](https://github.com/nautobot/nautobot/issues/5064) - Added `nautobot.apps.utils.get_view_for_model` utility function.
 - [#5064](https://github.com/nautobot/nautobot/issues/5064) - Added `can_add`, `can_change`, `can_delete`, `can_view`, and `has_serializer` filters to the `/api/extras/content-types/` REST API.
-- [#5067](https://github.com/nautobot/nautobot/issues/5067) - Added `q` (SearchFilter) filter to all filterset missing it.
+- [#5067](https://github.com/nautobot/nautobot/issues/5067) - Added `q` (SearchFilter) filter to all filtersets where it was missing.
 - [#5067](https://github.com/nautobot/nautobot/issues/5067) - Added two generic test cases for `q` filter: `test_q_filter_exists` and `test_q_filter_valid`.
 - [#5097](https://github.com/nautobot/nautobot/issues/5097) - Added a JSON Schema for Nautobot settings in settings.json.
 - [#5097](https://github.com/nautobot/nautobot/issues/5097) - Added REST API endpoint to show the JSON Schema for authenticated users.
