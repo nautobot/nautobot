@@ -6,6 +6,7 @@ import factory
 import faker
 
 from nautobot.core.choices import ColorChoices
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.factory import (
     BaseModelFactory,
     get_random_instances,
@@ -35,7 +36,7 @@ class ContactFactory(PrimaryModelFactory):
     phone = factory.Maybe("has_phone", factory.Faker("phone_number"), "")
     email = factory.Maybe("has_email", factory.Faker("email"), "")
     address = factory.Maybe("has_address", factory.Faker("address"), "")
-    comments = factory.Maybe("has_comments", factory.Faker("text", max_nb_chars=200), "")
+    comments = factory.Maybe("has_comments", factory.Faker("text"), "")
 
 
 class ExternalIntegrationFactory(PrimaryModelFactory):
@@ -152,10 +153,9 @@ class ObjectChangeFactory(BaseModelFactory):
                 self.time = extracted
             else:
                 self.time = faker.Faker().date_time(tzinfo=timezone.utc)
-                if self.changed_object is not None:
-                    self.object_repr = str(self.changed_object)
-                else:
+                if self.changed_object is None:
                     self.object_repr = faker.Faker().sentence()[:CHANGELOG_MAX_OBJECT_REPR]
+
 
 class RoleFactory(OrganizationalModelFactory):
     """Role model factory."""
@@ -175,7 +175,7 @@ class RoleFactory(OrganizationalModelFactory):
     weight = factory.Maybe("has_weight", factory.Faker("pyint"), None)
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
     @factory.post_generation
     def content_types(self, create, extracted, **kwargs):
@@ -199,7 +199,7 @@ class StatusFactory(OrganizationalModelFactory):
     color = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[0])
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
     @factory.post_generation
     def content_types(self, create, extracted, **kwargs):
@@ -228,7 +228,7 @@ class TeamFactory(PrimaryModelFactory):
     phone = factory.Maybe("has_phone", factory.Faker("phone_number"), "")
     email = factory.Maybe("has_email", factory.Faker("email"), "")
     address = factory.Maybe("has_address", factory.Faker("address"), "")
-    comments = factory.Maybe("has_comments", factory.Faker("text", max_nb_chars=200), "")
+    comments = factory.Maybe("has_comments", factory.Faker("text"), "")
 
     @factory.post_generation
     def contacts(self, create, extract, **kwargs):
@@ -247,7 +247,7 @@ class TagFactory(OrganizationalModelFactory):
     color = factory.Iterator(ColorChoices.CHOICES, getter=lambda choice: choice[0])
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
     @factory.post_generation
     def content_types(self, create, extracted, **kwargs):
