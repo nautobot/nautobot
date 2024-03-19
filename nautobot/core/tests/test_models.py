@@ -113,7 +113,7 @@ class NaturalKeyTestCase(BaseModelTest):
         """
 
         # Ensure the cache is empty from previous tests
-        cache.delete(f"{self.FakeBaseModel._meta.label_lower}._content_type")
+        cache.delete(self.FakeBaseModel._content_type_cache_key)
 
         with patch.object(self.FakeBaseModel, "_content_type", return_value=True) as mock__content_type:
             self.FakeBaseModel._content_type_cached
@@ -127,7 +127,7 @@ class NaturalKeyTestCase(BaseModelTest):
             self.assertEqual(mock__content_type.call_count, 2)
 
         # Clean-up after ourselves
-        cache.delete(f"{self.FakeBaseModel._meta.label_lower}._content_type")
+        cache.delete(self.FakeBaseModel._content_type_cache_key)
 
     @override_settings(CONTENT_TYPE_CACHE_TIMEOUT=0)
     def test__content_type_caching_disabled(self):
@@ -136,7 +136,7 @@ class NaturalKeyTestCase(BaseModelTest):
         """
 
         # Ensure the cache is empty from previous tests
-        cache.delete(f"{self.FakeBaseModel._meta.label_lower}._content_type")
+        cache.delete(self.FakeBaseModel._content_type_cache_key)
 
         with patch.object(self.FakeBaseModel, "_content_type", return_value=True) as mock__content_type:
             self.FakeBaseModel._content_type_cached
