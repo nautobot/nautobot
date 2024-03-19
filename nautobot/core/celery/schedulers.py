@@ -1,7 +1,9 @@
 from collections.abc import Mapping
 import logging
+from pathlib import Path
 
 from celery import current_app
+from django.conf import settings
 from django_celery_beat.schedulers import DatabaseScheduler, ModelEntry
 from kombu.utils.json import loads
 
@@ -94,3 +96,14 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
             entry.total_run_count = entry.model.total_run_count
             entry.model.save()
         return resp
+
+    def tick(self, *args, **kwargs):
+        """
+        Run a tick - one iteration of the scheduler.
+
+        This is an extension of `celery.beat.Scheduler.tick()` to touch the `CELERY_BEAT_HEARTBEAT_FILE` file.
+        """
+        interval = super().tick(*args, **kwargs)
+        if settings.CELERY_BEAT_HEARTBEAT_FILE:
+            Path(settings.CELERY_BEAT_HEARTBEAT_FILE).touch(exist_ok=True)
+        return interval

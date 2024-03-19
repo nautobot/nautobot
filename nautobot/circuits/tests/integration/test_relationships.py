@@ -110,10 +110,6 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
             destination_type=fake_ct,
             destination_id=uuid.uuid4(),
         )
-        # Clear the server-side cache of relationship information to make sure it gets refreshed properly
-        Relationship.objects.get_for_model.cache_clear()
-        Relationship.objects.get_for_model_source.cache_clear()
-        Relationship.objects.get_for_model_destination.cache_clear()
 
     def tearDown(self):
         self.logout()
