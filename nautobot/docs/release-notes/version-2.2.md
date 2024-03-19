@@ -82,7 +82,7 @@ The CSV import functionality for all models has been changed from a synchronous 
 - [#5127](https://github.com/nautobot/nautobot/issues/5127) - Added bulk-edit and bulk-delete capabilities for Jobs.
 - [#5129](https://github.com/nautobot/nautobot/issues/5129) - Implemented jobs tile view.
 - [#5145](https://github.com/nautobot/nautobot/issues/5145) - Added data migration to populate default statuses and default roles for the `ContactAssociation` model.
-- [#5188](https://github.com/nautobot/nautobot/issues/5188) - Added DeviceType table to Device Family detail view.
+- [#5188](https://github.com/nautobot/nautobot/issues/5188) - Added table of related Device Families to the DeviceType detail view.
 - [#5278](https://github.com/nautobot/nautobot/issues/5278) - Added permission constraint for User Token.
 - [#5341](https://github.com/nautobot/nautobot/issues/5341) - Added `/apps/` and `/api/apps/` URL groupings, initially containing only the `installed-apps/` sub-items.
 - [#5341](https://github.com/nautobot/nautobot/issues/5341) - Added `nautobot-apps` key to the `/api/status/` REST API endpoint.
