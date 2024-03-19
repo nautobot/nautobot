@@ -86,16 +86,16 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5064](https://github.com/nautobot/nautobot/issues/5064) - Added `job_import_button` template-tag and marked `import_button` button template-tag as deprecated.
 - [#5064](https://github.com/nautobot/nautobot/issues/5064) - Added `nautobot.apps.utils.get_view_for_model` utility function.
 - [#5064](https://github.com/nautobot/nautobot/issues/5064) - Added `can_add`, `can_change`, `can_delete`, `can_view`, and `has_serializer` filters to the `/api/extras/content-types/` REST API.
-- [#5067](https://github.com/nautobot/nautobot/issues/5067) - Added `q` (SearchFilter) filter to all filterset missing it.
-- [#5097](https://github.com/nautobot/nautobot/issues/5097) - Added a JSON Schema for Nautobot settings in settings.json.
+- [#5067](https://github.com/nautobot/nautobot/issues/5067) - Added `q` (SearchFilter) filter to all filtersets where it was missing.
+- [#5097](https://github.com/nautobot/nautobot/issues/5097) - Added a JSON Schema file for Nautobot settings (`nautobot/core/settings.yaml`).
 - [#5097](https://github.com/nautobot/nautobot/issues/5097) - Added REST API endpoint to show the JSON Schema for authenticated users.
 - [#5098](https://github.com/nautobot/nautobot/issues/5098) - Added client-side GraphQL, JSON, XML, and YAML syntax highlighting with the `highlight.js` library.
 - [#5101](https://github.com/nautobot/nautobot/issues/5101) - Added a utility to help when writing migrations that replace database models.
 - [#5107](https://github.com/nautobot/nautobot/issues/5107) - Added `hyperlinked_email` and `hyperlinked_phone_number` template tags/filters.
 - [#5127](https://github.com/nautobot/nautobot/issues/5127) - Added bulk-edit and bulk-delete capabilities for Jobs.
 - [#5129](https://github.com/nautobot/nautobot/issues/5129) - Implemented jobs tile view.
-- [#5188](https://github.com/nautobot/nautobot/issues/5188) - Added DeviceType table to Device Family detail view.
-- [#5278](https://github.com/nautobot/nautobot/issues/5278) - Added User Token as permission constraints.
+- [#5188](https://github.com/nautobot/nautobot/issues/5188) - Added table of related Device Families to the DeviceType detail view.
+- [#5278](https://github.com/nautobot/nautobot/issues/5278) - Added permission constraint for User Token.
 - [#5341](https://github.com/nautobot/nautobot/issues/5341) - Added `/apps/` and `/api/apps/` URL groupings, initially containing only the `installed-apps/` sub-items.
 - [#5341](https://github.com/nautobot/nautobot/issues/5341) - Added `nautobot-apps` key to the `/api/status/` REST API endpoint.
 - [#5342](https://github.com/nautobot/nautobot/issues/5342) - Added `MigrationsBackend` to health-check, which will fail if any unapplied database migrations are present.
