@@ -331,6 +331,14 @@ class TemplateExtension:
         """
         raise NotImplementedError
 
+    def list_buttons(self):
+        """
+        Buttons that will be rendered and added to the existing list of buttons on the list page view. Content
+        should be returned as an HTML string. Note that content does not need to be marked as safe because this is
+        automatically handled.
+        """
+        raise NotImplementedError
+
     def detail_tabs(self):
         """
         Tabs that will be rendered and added to the existing list of tabs on the detail page view.

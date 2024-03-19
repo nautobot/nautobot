@@ -1,5 +1,3 @@
-from functools import cached_property
-
 from django.core.cache import cache
 from django.db.models import Case, When
 from tree_queries.models import TreeNode
@@ -41,8 +39,20 @@ class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
         return model_class.objects.without_tree_fields().filter(pk__in=ancestor_pks).order_by(preserve_order)
 
     def max_tree_depth(self):
-        """
-        Get the maximum depth of any tree in this queryset.
+        r"""
+        Get the maximum tree depth of any node in this queryset.
+
+        In most cases you should use TreeManager.max_depth instead as it's cached and this is not.
+
+        root  - depth 0
+         \
+          branch  - depth 1
+            \
+            leaf  - depth 2
+
+        Note that a queryset with only root nodes will return zero, and an empty queryset will also return zero.
+        This is probably a bug, we should really return -1 in the case of an empty queryset, but this is
+        "working as implemented" and changing it would possibly be a breaking change at this point.
         """
         deepest = self.with_tree_fields().extra(order_by=["-__tree.tree_depth"]).first()
         if deepest is not None:
@@ -58,9 +68,21 @@ class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):
     _with_tree_fields = True
     use_in_migrations = True
 
-    @cached_property
+    @property
+    def max_depth_cache_key(self):
+        return f"nautobot.{self.model._meta.concrete_model._meta.label_lower}.max_depth"
+
+    @property
     def max_depth(self):
-        return self.max_tree_depth()
+        """Cacheable version of `TreeQuerySet.max_tree_depth()`.
+
+        Generally TreeManagers are persistent objects while TreeQuerySets are not, hence the difference in behavior.
+        """
+        max_depth = cache.get(self.max_depth_cache_key)
+        if max_depth is None:
+            max_depth = self.max_tree_depth()
+            cache.set(self.max_depth_cache_key, max_depth)
+        return max_depth
 
 
 class TreeModel(TreeNode):
@@ -82,7 +104,7 @@ class TreeModel(TreeNode):
         """
         if not hasattr(self, "name"):
             raise NotImplementedError("default TreeModel.display implementation requires a `name` attribute!")
-        cache_key = f"{self.__class__.__name__}.{self.id}.display"
+        cache_key = f"nautobot.{self._meta.concrete_model._meta.label_lower}.{self.id}.display"
         display_str = cache.get(cache_key, "")
         if display_str:
             return display_str
