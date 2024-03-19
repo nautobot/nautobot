@@ -1268,7 +1268,7 @@ class Controller(PrimaryModel, ConfigContextModel):
         blank=True,
         null=True,
     )
-    role = RoleField(blank=False, null=False)
+    role = RoleField(blank=True, null=True)
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,

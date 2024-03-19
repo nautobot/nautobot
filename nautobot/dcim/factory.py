@@ -689,7 +689,7 @@ class ControllerFactory(PrimaryModelFactory):
     name = UniqueFaker("word")
     description = factory.Faker("sentence")
     status = random_instance(lambda: Status.objects.get_for_model(Controller), allow_null=False)
-    role = random_instance(lambda: Role.objects.get_for_model(Controller), allow_null=False)
+    role = random_instance(lambda: Role.objects.get_for_model(Controller))
     platform = random_instance(Platform)
     location = random_instance(lambda: Location.objects.get_for_model(Controller), allow_null=False)
     tenant = random_instance(Tenant)
