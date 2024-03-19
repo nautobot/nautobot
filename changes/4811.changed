@@ -1,1 +1,0 @@
-Changed the behavior of tree model tables: now they are sortable, and after sorting is applied, all hierarchy indentations are removed.
