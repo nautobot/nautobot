@@ -306,6 +306,11 @@ properties:
     see_also:
       "Guide to Nautobot Caching, including TLS and HA configuration": "../../administration/guides/caching.md"
     type: "object"
+  CELERY_BEAT_HEARTBEAT_FILE:
+    default: "/tmp/nautobot_celery_beat_heartbeat"
+    description: "A file touched by Celery Beat during health check."
+    environment_variable: "NAUTOBOT_CELERY_BEAT_HEARTBEAT_FILE"
+    type: "string"
   CELERY_BROKER_TRANSPORT_OPTIONS:
     additionalProperties: true
     default: {}

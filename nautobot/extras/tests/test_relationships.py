@@ -428,19 +428,31 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
             str(error.exception),
         )
 
-    def test_get_for_model_lru_cache_invalidation(self):
-        """Test that the lru cache is properly invalidated when Relationships are created or deleted."""
+    def test_get_for_model_caching_and_cache_invalidation(self):
+        """Test that the cache is used and is properly invalidated when Relationships are created or deleted."""
 
         manager = Relationship.objects
-        manager_methods = (manager.get_for_model, manager.get_for_model_source, manager.get_for_model_destination)
+        manager_methods = [
+            (manager.get_for_model, 2),
+            (manager.get_for_model_source, 1),
+            (manager.get_for_model_destination, 1),
+        ]
 
-        for manager_method in manager_methods:
+        for manager_method, expected_queries in manager_methods:
             with self.subTest(manager_method=manager_method.__name__):
-                qs1 = manager_method(Location)
+                manager_method(Location)
 
                 # Assert that the cache is used when calling method a second time
-                qs1_cached = manager_method(Location)
-                self.assertTrue(qs1_cached is qs1)
+                with self.assertNumQueries(0):
+                    manager_method(Location)
+
+                # Assert that different models are cached separately
+                with self.assertNumQueries(expected_queries):
+                    manager_method(Rack)
+                with self.assertNumQueries(0):
+                    manager_method(Rack)
+                with self.assertNumQueries(0):
+                    manager_method(Location)
 
                 # Assert that the cache is invalidated on object save
                 relationship = Relationship(
@@ -453,13 +465,18 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
                     type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
                 )
                 relationship.save()
-                qs2 = manager_method(Location)
-                self.assertFalse(qs2 is qs1)
-
-                # Assert that the cache is invalidated on object delete
-                relationship.delete()
-                qs3 = manager_method(Location)
-                self.assertNotIn(qs3, (qs1, qs2))
+                try:
+                    with self.assertNumQueries(expected_queries):
+                        manager_method(Location)
+                    with self.assertNumQueries(0):
+                        manager_method(Location)
+                finally:
+                    # Assert that the cache is invalidated on object delete
+                    relationship.delete()
+                with self.assertNumQueries(expected_queries):
+                    manager_method(Location)
+                with self.assertNumQueries(0):
+                    manager_method(Location)
 
 
 class RelationshipAssociationTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):

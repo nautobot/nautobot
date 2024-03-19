@@ -72,6 +72,46 @@ Support for versions of PostgreSQL prior to 12.0 has been removed as these versi
 Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specific permissions will now always be hidden from users lacking those permissions. Additionally, users not logged in will now be automatically redirected to the login page.
 
 <!-- towncrier release notes start -->
+## v2.1.8 (2024-03-18)
+
+### Added
+
+- [#1102](https://github.com/nautobot/nautobot/issues/1102) - Added `CELERY_BEAT_HEARTBEAT_FILE` settings variable.
+- [#5228](https://github.com/nautobot/nautobot/issues/5228) - Added the option to configure and enforce `validation_minimum` and `validation_maximum` as length constraints on a Custom Field of type `Text`, `URL`, `JSON`, `Markdown`, `Selection`, or `Multiple Selection`.
+- [#5228](https://github.com/nautobot/nautobot/issues/5228) - Added the option to configure and enforce `validation_regex` as a constraint on valid choice definitions for a Custom Field of type `Selection` or `Multiple Selection`.
+- [#5400](https://github.com/nautobot/nautobot/issues/5400) - Added power-port/power-outlet types `IEC 60906-1`, `2P+T 10A (NBR 14136)`, and `2P+T 20A (NBR 14136)`.
+- [#5401](https://github.com/nautobot/nautobot/issues/5401) - Added front/rear port types `LX.5`, `LX.5/PC`, `LX.5/UPC`, and `LX.5/APC`.
+- [#5402](https://github.com/nautobot/nautobot/issues/5402) - Added interface types `CXP (100GE)`, `DSFP (100GE)`, `SFP-DD (100GE)`, `QSFP-DD (100GE)`, `QSFP-DD (200GE)`, `CFP2 (400GE)`, `OSFP-RHS (400GE)`, `CDFP (400GE)`, `CPF8 (400GE)`, `SFP+ (32GFC)`, `SFP-DD (64GFC)`, and `SFP+ (64GFC)`.
+- [#5424](https://github.com/nautobot/nautobot/issues/5424) - Added `TemplateExtension.list_buttons()` API, allowing apps to register button content to be injected into object list views.
+
+### Changed
+
+- [#5403](https://github.com/nautobot/nautobot/issues/5403) - Changed uses of `functools.lru_cache` to use django-redis cache instead.
+- [#5403](https://github.com/nautobot/nautobot/issues/5403) - Standardized cache key strings used with the django-redis cache.
+
+### Removed
+
+- [#5228](https://github.com/nautobot/nautobot/issues/5228) - Removed the hard-coded 255-character limit on custom fields of type `Text`.
+
+### Fixed
+
+- [#5247](https://github.com/nautobot/nautobot/issues/5247) - Fixed Job buttons do not respect the `task_queues` of the job class.
+- [#5380](https://github.com/nautobot/nautobot/issues/5380) - Fixed incorrect permission for "Add Tenant" button in the navigation menu.
+- [#5380](https://github.com/nautobot/nautobot/issues/5380) - Added missing `extras.view_scheduledjob` permission to the "Job Approval Queue" navigation menu item.
+- [#5395](https://github.com/nautobot/nautobot/issues/5395) - Fixed incorrect permission for "Roles" link in the navigation menu.
+- [#5403](https://github.com/nautobot/nautobot/issues/5403) - Fixed an issue with stale CustomField, ComputedField, Relationship, and TreeModel caches that caused incorrect data at times.
+
+### Documentation
+
+- [#5437](https://github.com/nautobot/nautobot/issues/5437) - Added release-note for version 1.6.15.
+- [#5421](https://github.com/nautobot/nautobot/issues/5421) - Added release-notes for versions 1.6.11 through 1.6.14.
+
+### Housekeeping
+
+- [#1102](https://github.com/nautobot/nautobot/issues/1102) - Added health check for Celery Beat based on it touching a file (by default `/tmp/nautobot_celery_beat_heartbeat`) each time its scheduler wakes up.
+- [#3213](https://github.com/nautobot/nautobot/issues/3213) - Removed redundant filter tests for related boolean filters.
+- [#5434](https://github.com/nautobot/nautobot/issues/5434) - Fixed health check for beat container in `docker-compose.yml` under `docker-compose` v1.x.
+
 ## v2.1.7 (2024-03-05)
 
 ### Fixed
