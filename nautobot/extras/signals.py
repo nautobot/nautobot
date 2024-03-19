@@ -64,31 +64,39 @@ def _get_user_if_authenticated(user, instance):
         return None
 
 
-@receiver(post_save)
-@receiver(m2m_changed)
-@receiver(post_delete)
+@receiver(post_save, sender=ComputedField)
+@receiver(post_save, sender=CustomField)
+@receiver(post_save, sender=CustomField.content_types.through)
+@receiver(m2m_changed, sender=ComputedField)
+@receiver(m2m_changed, sender=CustomField)
+@receiver(m2m_changed, sender=CustomField.content_types.through)
+@receiver(post_delete, sender=ComputedField)
+@receiver(post_delete, sender=CustomField)
+@receiver(post_delete, sender=CustomField.content_types.through)
 def invalidate_models_cache(sender, **kwargs):
-    """Invalidate the related-models cache for ComputedFields, CustomFields and Relationships."""
+    """Invalidate the related-models cache for ComputedFields and CustomFields."""
     if sender is CustomField.content_types.through:
         manager = CustomField.objects
-    elif sender in (ComputedField, CustomField, Relationship):
-        manager = sender.objects
     else:
-        return
+        manager = sender.objects
 
-    cached_methods = (
-        "get_for_model",
-        "get_for_model_source",
-        "get_for_model_destination",
-    )
+    with contextlib.suppress(redis.exceptions.ConnectionError):
+        # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
+        cache.delete_pattern(f"{manager.get_for_model.cache_key_prefix}.*")
 
-    for method_name in cached_methods:
-        if hasattr(manager, method_name):
-            method = getattr(manager, method_name)
-            if hasattr(method, "cache_key_prefix"):
-                with contextlib.suppress(redis.exceptions.ConnectionError):
-                    # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
-                    cache.delete_pattern(f"{method.cache_key_prefix}.*")
+
+@receiver(post_save, sender=Relationship)
+@receiver(m2m_changed, sender=Relationship)
+@receiver(post_delete, sender=Relationship)
+def invalidate_relationship_models_cache(sender, **kwargs):
+    """Invalidate the related-models caches for Relationships."""
+    for method in (
+        Relationship.objects.get_for_model_source,
+        Relationship.objects.get_for_model_destination,
+    ):
+        with contextlib.suppress(redis.exceptions.ConnectionError):
+            # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
+            cache.delete_pattern(f"{method.cache_key_prefix}.*")
 
 
 @receiver(post_save)
