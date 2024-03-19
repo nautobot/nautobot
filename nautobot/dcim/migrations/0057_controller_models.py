@@ -3,8 +3,9 @@
 import uuid
 
 import django.core.serializers.json
-from django.db import migrations, models
 import django.db.models.deletion
+from django.db import migrations
+from django.db import models
 
 import nautobot.core.models.fields
 import nautobot.core.models.tree_queries
@@ -16,6 +17,7 @@ import nautobot.extras.utils
 
 
 class Migration(migrations.Migration):
+
     dependencies = [
         ("extras", "0106_populate_default_statuses_and_roles_for_contact_associations"),
         ("contenttypes", "0002_remove_content_type_name"),
@@ -117,7 +119,11 @@ class Migration(migrations.Migration):
                 (
                     "role",
                     nautobot.extras.models.roles.RoleField(
-                        on_delete=django.db.models.deletion.PROTECT, related_name="controllers", to="extras.role"
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="controllers",
+                        to="extras.role",
                     ),
                 ),
                 (
