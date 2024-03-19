@@ -159,13 +159,13 @@ class MapSimilarContactAssociationForm(NautobotModelForm):
         queryset=Contact.objects.all(),
         required=False,
         label="Similar Contacts",
-        query_params={"similar_contacts": "$location"},
+        query_params={"similar_to_location_data": "$location"},
     )
     team = DynamicModelChoiceField(
         queryset=Team.objects.all(),
         required=False,
         label="Similar Teams",
-        query_params={"similar_teams": "$location"},
+        query_params={"similar_to_location_data": "$location"},
     )
 
     class Meta:

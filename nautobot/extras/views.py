@@ -1,5 +1,4 @@
 from datetime import timedelta
-from difflib import get_close_matches
 import logging
 
 from celery import chain

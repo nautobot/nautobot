@@ -452,17 +452,17 @@ class NautobotFilterSet(
 
 
 class ContactFilterSet(NameSearchFilterSet, NautobotFilterSet):
-    similar_contacts = NaturalKeyOrPKMultipleChoiceFilter(
+    similar_to_location_data = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Location.objects.all(),
         label="Similar contacts",
-        method="_similar_contacts",
+        method="_similar_to_location_data",
     )
 
     class Meta:
         model = Contact
         fields = "__all__"
 
-    def generate_query__similar_contacts(self, value):
+    def generate_query__similar_to_location_data(self, value):
         """Helper method used by Contacts and by _similar_to() method."""
         query_params = Q()
         if value:
@@ -485,9 +485,9 @@ class ContactFilterSet(NameSearchFilterSet, NautobotFilterSet):
         return query_params
 
     @extend_schema_field({"type": "string"})
-    def _similar_contacts(self, queryset, name, value):
+    def _similar_to_location_data(self, queryset, name, value):
         """FilterSet method for getting Contacts that are similar to the contact assigned to the location"""
-        params = self.generate_query__similar_contacts(value)
+        params = self.generate_query__similar_to_location_data(value)
         return Contact.objects.filter(params)
 
 
@@ -1148,17 +1148,17 @@ class TagFilterSet(NautobotFilterSet):
 
 
 class TeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
-    similar_teams = NaturalKeyOrPKMultipleChoiceFilter(
+    similar_to_location_data = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Location.objects.all(),
         label="Similar teams",
-        method="_similar_teams",
+        method="_similar_to_location_data",
     )
 
     class Meta:
         model = Team
         fields = "__all__"
 
-    def generate_query__similar_teams(self, value):
+    def generate_query__similar_to_location_data(self, value):
         """Helper method used by Teams and by _similar_to() method."""
         query_params = Q()
         if value:
@@ -1181,9 +1181,9 @@ class TeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
         return query_params
 
     @extend_schema_field({"type": "string"})
-    def _similar_teams(self, queryset, name, value):
+    def _similar_to_location_data(self, queryset, name, value):
         """FilterSet method for getting Teams that are similar to the contact assigned to the location"""
-        params = self.generate_query__similar_teams(value)
+        params = self.generate_query__similar_to_location_data(value)
         return Contact.objects.filter(params)
 
 
