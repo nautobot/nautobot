@@ -1,5 +1,4 @@
 import collections
-from functools import lru_cache
 import hashlib
 import hmac
 import logging
@@ -9,6 +8,7 @@ import sys
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.validators import ValidationError
 from django.db import transaction
 from django.db.models import Q
@@ -104,12 +104,16 @@ class ChangeLoggedModelsQuery(FeaturedQueryMixin):
         return [_class for _class in apps.get_models() if hasattr(_class, "to_objectchange")]
 
 
-@lru_cache(maxsize=None)
 def change_logged_models_queryset():
     """
     Cacheable function for cases where we need this queryset many times, such as when saving multiple objects.
     """
-    return ChangeLoggedModelsQuery().as_queryset()
+    cache_key = "nautobot.extras.utils.change_logged_models_queryset"
+    queryset = cache.get(cache_key)
+    if queryset is None:
+        queryset = ChangeLoggedModelsQuery().as_queryset()
+        cache.set(cache_key, queryset)
+    return queryset
 
 
 @deconstructible
