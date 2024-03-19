@@ -92,7 +92,11 @@ markdown_extensions:
       anchor_linenums: true
   - "pymdownx.inlinehilite"
   - "pymdownx.snippets"
-  - "pymdownx.superfences"
+  - "pymdownx.superfences":
+      custom_fences:
+        - name: "mermaid"
+          class: "mermaid"
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - "pymdownx.tabbed":
       "alternate_style": true
 
@@ -190,6 +194,8 @@ plugins:
         'models/circuits/provider.md': 'user-guide/core-data-model/circuits/provider.md'
         'models/circuits/providernetwork.md': 'user-guide/core-data-model/circuits/providernetwork.md'
         'models/dcim/cable.md': 'user-guide/core-data-model/dcim/cable.md'
+        'models/dcim/controller.md': 'user-guide/core-data-model/dcim/controller.md'
+        'models/dcim/controllerdevicegroup.md': 'user-guide/core-data-model/dcim/controllerdevicegroup.md'
         'models/dcim/consoleport.md': 'user-guide/core-data-model/dcim/consoleport.md'
         'models/dcim/consoleporttemplate.md': 'user-guide/core-data-model/dcim/consoleporttemplate.md'
         'models/dcim/consoleserverport.md': 'user-guide/core-data-model/dcim/consoleserverport.md'
@@ -392,6 +398,8 @@ nav:
         - Software Image File: "user-guide/core-data-model/dcim/softwareimagefile.md"
         - Software Version: "user-guide/core-data-model/dcim/softwareversion.md"
         - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
+        - Controller: "user-guide/core-data-model/dcim/controller.md"
+        - Controller Device Group: "user-guide/core-data-model/dcim/controllerdevicegroup.md"
       - Extras:
         - Config Context: "user-guide/core-data-model/extras/configcontext.md"
         - Config Context Schema: "user-guide/core-data-model/extras/configcontextschema.md"
@@ -544,6 +552,7 @@ nav:
       - Bootstrap UI: "development/core/bootstrap-ui.md"
       - Best Practices: "development/core/best-practices.md"
       - Caching: "development/core/caching.md"
+      - Controllers: "development/core/controllers.md"
       - Extending Models: "development/core/extending-models.md"
       - Generic Views: "development/core/generic-views.md"
       - Home Page Panels: "development/core/homepage.md"
