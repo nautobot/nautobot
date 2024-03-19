@@ -87,6 +87,7 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5064](https://github.com/nautobot/nautobot/issues/5064) - Added `nautobot.apps.utils.get_view_for_model` utility function.
 - [#5064](https://github.com/nautobot/nautobot/issues/5064) - Added `can_add`, `can_change`, `can_delete`, `can_view`, and `has_serializer` filters to the `/api/extras/content-types/` REST API.
 - [#5067](https://github.com/nautobot/nautobot/issues/5067) - Added `q` (SearchFilter) filter to all filtersets where it was missing.
+- [#5067](https://github.com/nautobot/nautobot/issues/5067) - Added two generic test cases for `q` filter: `test_q_filter_exists` and `test_q_filter_valid`.
 - [#5097](https://github.com/nautobot/nautobot/issues/5097) - Added a JSON Schema file for Nautobot settings (`nautobot/core/settings.yaml`).
 - [#5097](https://github.com/nautobot/nautobot/issues/5097) - Added REST API endpoint to show the JSON Schema for authenticated users.
 - [#5098](https://github.com/nautobot/nautobot/issues/5098) - Added client-side GraphQL, JSON, XML, and YAML syntax highlighting with the `highlight.js` library.
@@ -158,11 +159,23 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 
 ### Housekeeping
 
-- [#5067](https://github.com/nautobot/nautobot/issues/5067) - Added two generic test cases for `q` filter: `test_q_filter_exists` and `test_q_filter_valid`.
 - [#5099](https://github.com/nautobot/nautobot/issues/5099) - Added `mkdocs-macros-plugin` as a development/documentation-rendering dependency.
 - [#5099](https://github.com/nautobot/nautobot/issues/5099) - Refactored documentation in `optional-settings` and `required-settings` to be generated automatically from `settings.yaml` schema.
+- [#5099](https://github.com/nautobot/nautobot/issues/5099) - Replaced `nautobot/core/settings.json` with `nautobot/core/settings.yaml` for improved readability and maintainability.
+- [#5105](https://github.com/nautobot/nautobot/issues/5105) - Added Bulk Edit functionality for ContactAssociation.
+- [#5105](https://github.com/nautobot/nautobot/issues/5105) - Added Bulk Edit buttons for associated contact tables in the contacts tabs of object detail views.
+- [#5145](https://github.com/nautobot/nautobot/issues/5145) - Added data migration to populate default statuses and default roles for the `ContactAssociation` model.
 - [#5179](https://github.com/nautobot/nautobot/issues/5179) - Renamed `example_plugin` to `example_app`.
 - [#5179](https://github.com/nautobot/nautobot/issues/5179) - Renamed `example_plugin_with_view_override` to `example_app_with_view_override`.
 - [#5179](https://github.com/nautobot/nautobot/issues/5179) - Replaced all "plugin" terminology within the `examples` directory with "App", except in cases where the terminology is embedded in core code (`settings.PLUGINS`, `plugins:` and `plugins-api` named URLs, etc.)
 - [#5179](https://github.com/nautobot/nautobot/issues/5179) - Replaced some "plugin" terminology in docstrings, comments, and test code with "app" as appropriate.
+- [#5187](https://github.com/nautobot/nautobot/issues/5187) - Removed "Add Contact" button from the standard buttons in the detail views.
+- [#5187](https://github.com/nautobot/nautobot/issues/5187) - Renamed "Assign Contact/Team" UI buttons text from "Create", "Create and Add Another" to "Assign" and "Assign and Add Another".
+- [#5187](https://github.com/nautobot/nautobot/issues/5187) - Split out Contact/Team icons into a separate column and renamed the columns to "Type" and "Name" on AssociatedContactsTable.
+- [#5207](https://github.com/nautobot/nautobot/issues/5207) - Made `role` attribute required on `ContactAssociation` Model.
+- [#5213](https://github.com/nautobot/nautobot/issues/5213) - Made the default action when assigning a contact/team to an object to be the assignment of an existing contact/team.
+- [#5214](https://github.com/nautobot/nautobot/issues/5214) - Fixed the bug causing Contact Tab disappear when the user navigates to the Notes and Changelog Tabs.
+- [#5221](https://github.com/nautobot/nautobot/issues/5221) - Fixed the return URL from adding/assigning a contact/team from ObjectDetailView to redirect to the contacts tab instead of the main tab.
 - [#5248](https://github.com/nautobot/nautobot/issues/5248) - Updated development dependencies including `coverage`, `django-debug-toolbar`, `factory-boy`, `mkdocs-material`, `mkdocstrings`, `mkdocstrings-python`, `pylint`, `rich`, `ruff`, `selenium`, `splinter`, `towncrier`, `watchdog`, and `yamllint` to their latest available versions.
+- [#5272](https://github.com/nautobot/nautobot/issues/5272) - Fixed incorrectly set return urls on the edit and delete buttons of job tile view.
+- [#5352](https://github.com/nautobot/nautobot/issues/5352) - Renamed `HardwareFamily` to `DeviceFamily`.
