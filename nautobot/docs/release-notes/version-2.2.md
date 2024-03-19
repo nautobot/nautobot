@@ -18,7 +18,7 @@ A Controller in Nautobot is an abstraction meant to represent network or SDN (So
 
 #### DeviceFamily Model ([#3559](https://github.com/nautobot/nautobot/issues/3559))
 
-A device family represents a group of related [device types](../user-guide/core-data-model/dcim/devicetype.md). A device type can be optionally assigned to a device family. Each device family must have a unique name and may have a description assigned to it.
+A [device family](../user-guide/core-data-model/dcim/devicefamily.md) represents a group of related [device types](../user-guide/core-data-model/dcim/devicetype.md). A device type can be optionally assigned to a device family. Each device family must have a unique name and may have a description assigned to it.
 
 #### Jobs tile view ([#5129](https://github.com/nautobot/nautobot/issues/5129))
 
@@ -55,7 +55,7 @@ The CSV import functionality for all models has been changed from a synchronous 
 
 #### Plugin to App Renames([#5341](https://github.com/nautobot/nautobot/issues/5341))
 
-`Installed Plugins` view has been renamed to `Installed Apps`. `Plugin` terminologies in `Installed Plugins` (now `Installed Apps`) view and dependent views have been changed to `App` throughout. `Plugin` references in documentation (excluding old release-notes) have been replaced by `App`. `Plugins` navigation menu has been renamed to `Apps`. See more details about this change in [#5353](https://github.com/nautobot/nautobot/pull/5353).
+`Installed Plugins` view has been renamed to `Installed Apps`. `Plugin` terminologies in `Installed Plugins` (now `Installed Apps`) view and dependent views have been changed to `App` throughout. `Plugin` references in documentation (excluding old release-notes) have been replaced by `App`. `Plugins` navigation menu has been renamed to `Apps`.
 
 #### Standardization of `max_length` on all Charfields ([#2906](https://github.com/nautobot/nautobot/issues/2906))
 
