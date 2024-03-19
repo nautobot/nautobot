@@ -7,47 +7,33 @@ class AppNavBarTestCase(SeleniumTestCase):
 
     fixtures = ["user-data.json"]
     navbar = {
-        "Example Menu": {
-            "Example Group 1": {
-                "Example Model": {
-                    "permission": "example_app.view_examplemodel",
-                    "buttons": ["Add"],
-                },
-            },
-        },
         "Circuits": {
             "Circuits": {
                 "Circuits": {
-                    "permission": "circuits.view_circuit",
                     "buttons": ["Add"],
                 },
                 "Circuit Types": {
-                    "permission": "circuits.view_circuittype",
                     "buttons": ["Add"],
                 },
             },
             "Example Circuit Group": {
-                "Example Model": {
-                    "permission": "example_app.view_examplemodel",
+                "Example Models": {
                     "buttons": ["Add"],
                 },
             },
             "Providers": {
                 "Providers": {
-                    "permission": "circuits.view_provider",
                     "buttons": ["Add"],
                 },
             },
         },
         "Apps": {
             "Example Nautobot App": {
-                "Models": {
-                    "permission": "example_app.view_examplemodel",
-                    "buttons": ["Add a new example model"],
+                "Example Models": {
+                    "buttons": ["Add"],
                 },
-                "Other Models": {
-                    "permission": "example_app.view_examplemodel",
-                    "buttons": [],
+                "Another Example Models": {
+                    "buttons": ["Add"],
                 },
             },
         },
