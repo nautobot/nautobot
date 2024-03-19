@@ -72,7 +72,7 @@ The CSV import functionality for all models has been changed from a synchronous 
 - [#5064](https://github.com/nautobot/nautobot/issues/5064) - Added `can_add`, `can_change`, `can_delete`, `can_view`, and `has_serializer` filters to the `/api/extras/content-types/` REST API.
 - [#5067](https://github.com/nautobot/nautobot/issues/5067) - Added `q` (SearchFilter) filter to all filtersets where it was missing.
 - [#5067](https://github.com/nautobot/nautobot/issues/5067) - Added two generic test cases for `q` filter: `test_q_filter_exists` and `test_q_filter_valid`.
-- [#5097](https://github.com/nautobot/nautobot/issues/5097) - Added a JSON Schema for Nautobot settings in settings.json.
+- [#5097](https://github.com/nautobot/nautobot/issues/5097) - Added a JSON Schema file for Nautobot settings (`nautobot/core/settings.yaml`).
 - [#5097](https://github.com/nautobot/nautobot/issues/5097) - Added REST API endpoint to show the JSON Schema for authenticated users.
 - [#5098](https://github.com/nautobot/nautobot/issues/5098) - Added client-side GraphQL, JSON, XML, and YAML syntax highlighting with the `highlight.js` library.
 - [#5101](https://github.com/nautobot/nautobot/issues/5101) - Added a utility to help when writing migrations that replace database models.
