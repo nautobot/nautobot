@@ -11,15 +11,21 @@
     const controllerUrl = '{% url 'dcim-api:controllerdevicegroup-list' %}';
 
     const updateControllerFromParent = (parentUuid) => {
+        const url = `${controllerUrl}${parentUuid}/`
+
         $.ajax({
-            url: `${controllerUrl}${parentUuid}/`,
+            url,
             method: "GET",
             success: (data) => {
                 if (data.controller) {
                     controllerInput.val(data.controller.id);
                 }
             },
-            error: (error) => console.log("ERROR", error),
+            error: (error) => {
+                const message = `Error fetching controller device group from ${url}`
+                console.error(message, error),
+                alert(message);
+            },
         });
     };
 
