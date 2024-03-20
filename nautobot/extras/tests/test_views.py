@@ -622,10 +622,9 @@ class DynamicGroupTestCase(
     def test_get_object_dynamic_groups_anonymous(self):
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
         self.client.logout()
-        response = self.client.get(url)
+        response = self.client.get(url, follow=True)
         self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
-        self.assertIn("/login/?next=" + url, response_body, msg=response_body)
+        self.assertRedirects(response, f"/login/?next={url}")
 
     def test_get_object_dynamic_groups_without_permission(self):
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
@@ -835,10 +834,9 @@ class GitRepositoryTestCase(
     def test_post_sync_repo_anonymous(self):
         self.client.logout()
         url = reverse("extras:gitrepository_sync", kwargs={"pk": self._get_queryset().first().pk})
-        response = self.client.post(url)
+        response = self.client.post(url, follow=True)
         self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
-        self.assertIn("/login/?next=" + url, response_body, msg=response_body)
+        self.assertRedirects(response, f"/login/?next={url}")
 
     def test_post_sync_repo_without_permission(self):
         url = reverse("extras:gitrepository_sync", kwargs={"pk": self._get_queryset().first().pk})
@@ -850,10 +848,9 @@ class GitRepositoryTestCase(
     def test_post_dryrun_repo_anonymous(self):
         self.client.logout()
         url = reverse("extras:gitrepository_dryrun", kwargs={"pk": self._get_queryset().first().pk})
-        response = self.client.post(url)
+        response = self.client.post(url, follow=True)
         self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
-        self.assertIn("/login/?next=" + url, response_body, msg=response_body)
+        self.assertRedirects(response, f"/login/?next={url}")
 
     def test_post_dryrun_repo_without_permission(self):
         url = reverse("extras:gitrepository_dryrun", kwargs={"pk": self._get_queryset().first().pk})
@@ -1589,10 +1586,9 @@ class JobResultTestCase(
     def test_get_joblogentrytable_anonymous(self):
         url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
         self.client.logout()
-        response = self.client.get(url)
+        response = self.client.get(url, follow=True)
         self.assertHttpStatus(response, 200)
-        response_body = response.content.decode(response.charset)
-        self.assertIn("/login/?next=" + url, response_body, msg=response_body)
+        self.assertRedirects(response, f"/login/?next={url}")
 
     def test_get_joblogentrytable_without_permission(self):
         url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
