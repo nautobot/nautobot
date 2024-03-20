@@ -1,2 +1,0 @@
-Fixed incorrect permission for "Add Tenant" button in the navigation menu.
-Added missing `extras.view_scheduledjob` permission to the "Job Approval Queue" navigation menu item.
