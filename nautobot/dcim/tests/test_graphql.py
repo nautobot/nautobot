@@ -10,6 +10,7 @@ from nautobot.extras.models import DynamicGroup, Role, Status
 
 class GraphQLTestCase(TestCase):
     def setUp(self):
+        Controller.objects.all().delete()
         Device.objects.all().delete()
         self.user = create_test_user("graphql_testuser")
         self.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
