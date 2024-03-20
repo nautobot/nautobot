@@ -25,7 +25,7 @@ class PrefixTableTestCase(TestCase):
         # Each of the table has at-least two sortable field_names in the field_names
         table_avail_fields = ["prefix", "tenant", "namespace", "vlan", "rir"]
 
-        # Assets model names
+        # Assert model names
         table_avail_fields = ["tenant", "vlan", "namespace"]
         for table_field_name in table_avail_fields:
             self._validate_sorted_queryset_same_with_table_queryset(queryset, PrefixTable, table_field_name)
