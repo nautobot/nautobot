@@ -8,7 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.db.models import ProtectedError, Q
 from django.forms.utils import pretty_name
-from django.http import Http404, HttpResponse, HttpResponseForbidden
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.urls import reverse
@@ -720,6 +720,7 @@ class ObjectDynamicGroupsView(ObjectPermissionRequiredMixin, View):
     """
 
     base_template = None
+    queryset = DynamicGroup.objects.all()
 
     def get_required_permission(self):
         return "extras.view_dynamicgroup"
@@ -919,6 +920,8 @@ def check_and_call_git_repository_function(request, pk, func):
 
 
 class GitRepositorySyncView(ObjectPermissionRequiredMixin, View):
+    queryset = GitRepository.objects.all()
+
     def get_required_permission(self):
         return "extras.change_gitrepository"
 
@@ -927,6 +930,8 @@ class GitRepositorySyncView(ObjectPermissionRequiredMixin, View):
 
 
 class GitRepositoryDryRunView(ObjectPermissionRequiredMixin, View):
+    queryset = GitRepository.objects.all()
+
     def get_required_permission(self):
         return "extras.change_gitrepository"
 
@@ -1662,6 +1667,7 @@ class ObjectChangeLogView(ObjectPermissionRequiredMixin, View):
     """
 
     base_template = None
+    queryset = ObjectChange.objects.all()
 
     def get_required_permission(self):
         return "extras.view_objectchange"
@@ -1749,6 +1755,7 @@ class ObjectNotesView(ObjectPermissionRequiredMixin, View):
     """
 
     base_template = None
+    queryset = Note.objects.all()
 
     def get_required_permission(self):
         return "extras.view_note"
@@ -1991,6 +1998,8 @@ class SecretProviderParametersFormView(ObjectPermissionRequiredMixin, View):
     """
     Helper view to SecretView; retrieve the HTML form appropriate for entering parameters for a given SecretsProvider.
     """
+
+    queryset = Secret.objects.all()
 
     def get_required_permission(self):
         return "extras.change_secret"

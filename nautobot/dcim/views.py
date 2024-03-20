@@ -11,7 +11,7 @@ from django.forms import (
     ModelMultipleChoiceField,
     MultipleHiddenInput,
 )
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
 from django.utils.functional import cached_property
 from django.utils.html import format_html
 from django.views.generic import View
@@ -2316,7 +2316,7 @@ class CableCreateView(generic.ObjectEditView):
             "rear-port": forms.ConnectCableToRearPortForm,
             "power-feed": forms.ConnectCableToPowerFeedForm,
             "circuit-termination": forms.ConnectCableToCircuitTerminationForm,
-        }[kwargs.get("termination_b_type")]
+        }.get(kwargs.get("termination_b_type"), None)
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -2333,6 +2333,9 @@ class CableCreateView(generic.ObjectEditView):
         return obj
 
     def get(self, request, *args, **kwargs):
+        if self.model_form is None:
+            return HttpResponse(status_code=400)
+
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
 
         # Parse initial data manually to avoid setting field values as lists

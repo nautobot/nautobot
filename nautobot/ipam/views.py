@@ -775,7 +775,7 @@ class IPAddressEditView(generic.ObjectEditView):
             _, error_msg = retrieve_interface_or_vminterface_from_request(request)
             if error_msg:
                 messages.warning(request, error_msg)
-                return redirect(self.get_return_url(request), default_return_url="ipam:ipaddress_add")
+                return redirect(self.get_return_url(request, default_return_url="ipam:ipaddress_add"))
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -858,17 +858,17 @@ class IPAddressAssignView(view_mixins.GetReturnURLMixin, generic.ObjectView):
     """
 
     queryset = IPAddress.objects.all()
-    default_return_url = "ipam:ipaddress_add"
 
     def dispatch(self, request, *args, **kwargs):
-        # Redirect user if an interface has not been provided
-        if "interface" not in request.GET and "vminterface" not in request.GET:
-            return redirect(self.get_return_url(request))
+        if request.user.is_authenticated:
+            # Redirect user if an interface has not been provided
+            if "interface" not in request.GET and "vminterface" not in request.GET:
+                return redirect(self.get_return_url(request, default_return_url="ipam:ipaddress_add"))
 
-        _, error_msg = retrieve_interface_or_vminterface_from_request(request)
-        if error_msg:
-            messages.warning(request, error_msg)
-            return redirect(self.get_return_url(request))
+            _, error_msg = retrieve_interface_or_vminterface_from_request(request)
+            if error_msg:
+                messages.warning(request, error_msg)
+                return redirect(self.get_return_url(request, default_return_url="ipam:ipaddress_add"))
 
         return super().dispatch(request, *args, **kwargs)
 

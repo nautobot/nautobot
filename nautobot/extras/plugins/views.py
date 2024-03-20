@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 
-from nautobot.core.api.views import NautobotAPIVersionMixin
+from nautobot.core.api.views import AuthenticatedAPIRootView, NautobotAPIVersionMixin
 from nautobot.core.forms import TableConfigForm
 from nautobot.core.views.mixins import AdminRequiredMixin
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -92,7 +92,6 @@ class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
     """
 
     permission_classes = [permissions.IsAdminUser]
-    _ignore_model_permissions = True
 
     def get_view_name(self):
         return "Installed Plugins"
@@ -128,11 +127,9 @@ class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
         return Response([self._get_plugin_data(apps.get_app_config(plugin)) for plugin in settings.PLUGINS])
 
 
-class PluginsAPIRootView(NautobotAPIVersionMixin, APIView):
-    _ignore_model_permissions = True
-
-    def get_view_name(self):
-        return "Plugins"
+class PluginsAPIRootView(AuthenticatedAPIRootView):
+    name = "Apps"
+    description = "API extension point for installed Nautobot Apps"
 
     @staticmethod
     def _get_plugin_entry(plugin, app_config, request, format_):
