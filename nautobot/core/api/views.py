@@ -11,13 +11,13 @@ from django.db import transaction
 from django.db.models import ProtectedError
 from django.shortcuts import redirect
 from django_rq.queues import get_connection as get_rq_connection
-from rest_framework import status
+from rest_framework import routers, status
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet as ModelViewSet_
 from rest_framework.viewsets import ReadOnlyModelViewSet as ReadOnlyModelViewSet_
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ParseError
 from drf_spectacular.plumbing import get_relative_url, set_query_parameters
 from drf_spectacular.renderers import OpenApiJsonRenderer
@@ -323,15 +323,25 @@ class ReadOnlyModelViewSet(NautobotAPIVersionMixin, ModelViewSetMixin, ReadOnlyM
 #
 
 
-class APIRootView(NautobotAPIVersionMixin, APIView):
+class AuthenticatedAPIRootView(NautobotAPIVersionMixin, routers.APIRootView):
     """
-    This is the root of the REST API. API endpoints are arranged by app and model name; e.g. `/api/dcim/sites/`.
+    Extends DRF's base APIRootView class to enforce user authentication.
     """
 
-    _ignore_model_permissions = True
+    permission_classes = [IsAuthenticated]
 
-    def get_view_name(self):
-        return "API Root"
+    name = None
+    description = None
+
+
+class APIRootView(AuthenticatedAPIRootView):
+    """
+    This is the root of the REST API.
+
+    API endpoints are arranged by app and model name; e.g. `/api/dcim/locations/`.
+    """
+
+    name = "API Root"
 
     @extend_schema(exclude=True)
     def get(self, request, format=None):  # pylint: disable=redefined-builtin
@@ -511,11 +521,12 @@ class NautobotSpectacularRedocView(APIVersioningGetSchemaURLMixin, SpectacularRe
 class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
     """
     API View for GraphQL to integrate properly with DRF authentication mechanism.
-    The code is a stripped down version of graphene-django default View
-    https://github.com/graphql-python/graphene-django/blob/main/graphene_django/views.py#L57
     """
 
-    permission_classes = [AllowAny]
+    # The code is a stripped down version of graphene-django default View
+    # https://github.com/graphql-python/graphene-django/blob/main/graphene_django/views.py#L57
+
+    permission_classes = [IsAuthenticated]
     graphql_schema = None
     executor = None
     backend = None

@@ -656,7 +656,9 @@ class DynamicGroupTestCase(
     def test_get_object_dynamic_groups_with_constrained_permission(self):
         self.add_permissions("extras.view_dynamicgroup")
         obj_perm = ObjectPermission(
-            name="View a device", constraints={"pk": Device.objects.first().pk}, actions=["view"],
+            name="View a device",
+            constraints={"pk": Device.objects.first().pk},
+            actions=["view"],
         )
         obj_perm.save()
         obj_perm.users.add(self.user)

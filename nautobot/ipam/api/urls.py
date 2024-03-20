@@ -2,8 +2,7 @@ from nautobot.core.api import OrderedDefaultRouter
 from . import views
 
 
-router = OrderedDefaultRouter()
-router.APIRootView = views.IPAMRootView
+router = OrderedDefaultRouter(view_name="IPAM")
 
 # VRFs
 router.register("vrfs", views.VRFViewSet)

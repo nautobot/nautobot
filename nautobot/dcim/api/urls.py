@@ -2,8 +2,7 @@ from nautobot.core.api import OrderedDefaultRouter
 from . import views
 
 
-router = OrderedDefaultRouter()
-router.APIRootView = views.DCIMRootView
+router = OrderedDefaultRouter(view_name="DCIM")
 
 # Sites
 router.register("regions", views.RegionViewSet)

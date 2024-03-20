@@ -1,21 +1,9 @@
-from rest_framework.routers import APIRootView
-
 from nautobot.circuits import filters
 from nautobot.circuits.models import Provider, CircuitTermination, CircuitType, Circuit, ProviderNetwork
 from nautobot.dcim.api.views import PathEndpointMixin
 from nautobot.extras.api.views import NautobotModelViewSet, StatusViewSetMixin
 from nautobot.utilities.utils import count_related
 from . import serializers
-
-
-class CircuitsRootView(APIRootView):
-    """
-    Circuits API root view
-    """
-
-    def get_view_name(self):
-        return "Circuits"
-
 
 #
 # Providers

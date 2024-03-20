@@ -9,7 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import ProtectedError, Q
 from django.forms.utils import pretty_name
-from django.http import Http404, HttpResponse, HttpResponseForbidden
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -713,6 +713,7 @@ class ObjectDynamicGroupsView(View):
     """
 
     base_template = None
+    queryset = DynamicGroup.objects.all()
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -900,12 +901,22 @@ def check_and_call_git_repository_function(request, slug, func):
     return redirect("extras:gitrepository_result", slug=slug)
 
 
-class GitRepositorySyncView(View):
+class GitRepositorySyncView(ObjectPermissionRequiredMixin, View):
+    queryset = GitRepository.objects.all()
+
+    def get_required_permission(self):
+        return "extras.change_gitrepository"
+
     def post(self, request, slug):
         return check_and_call_git_repository_function(request, slug, enqueue_pull_git_repository_and_refresh_data)
 
 
-class GitRepositoryDryRunView(View):
+class GitRepositoryDryRunView(ObjectPermissionRequiredMixin, View):
+    queryset = GitRepository.objects.all()
+
+    def get_required_permission(self):
+        return "extras.change_gitrepository"
+
     def post(self, request, slug):
         return check_and_call_git_repository_function(request, slug, enqueue_git_repository_diff_origin_and_local)
 
@@ -1670,6 +1681,7 @@ class ObjectChangeLogView(View):
     """
 
     base_template = None
+    queryset = ObjectChange.objects.all()
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -1742,6 +1754,7 @@ class ObjectNotesView(View):
     """
 
     base_template = None
+    queryset = Note.objects.all()
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -1873,6 +1886,11 @@ class SecretProviderParametersFormView(View):
     """
     Helper view to SecretView; retrieve the HTML form appropriate for entering parameters for a given SecretsProvider.
     """
+
+    queryset = Secret.objects.all()
+
+    def get_required_permission(self):
+        return "extras.change_secret"
 
     def get(self, request, provider_slug):
         provider = registry["secrets_providers"].get(provider_slug)

@@ -6,7 +6,6 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
 from rest_framework.response import Response
-from rest_framework.routers import APIRootView
 
 from nautobot.extras.api.views import NautobotModelViewSet, StatusViewSetMixin
 from nautobot.ipam import filters
@@ -29,16 +28,6 @@ from nautobot.utilities.utils import (
     versioned_serializer_selector,
 )
 from . import serializers
-
-
-class IPAMRootView(APIRootView):
-    """
-    IPAM API root view
-    """
-
-    def get_view_name(self):
-        return "IPAM"
-
 
 #
 # VRFs
