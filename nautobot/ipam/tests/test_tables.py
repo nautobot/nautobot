@@ -16,7 +16,10 @@ class PrefixTableTestCase(TestCase):
 
     def test_prefix_table_sort(self):
         """Assert TreeNode model table are orderable."""
-        pk_list = Prefix.objects.all().values_list("pk")[:20]
+        # Due to MySQL's lack of support for combining 'LIMIT' and 'ORDER BY' in a single query,
+        # hence this approach.
+        pk_list = Prefix.objects.all().values_list("pk", flat=True)[:20]
+        pk_list = [str(pk) for pk in pk_list]
         queryset = Prefix.objects.filter(pk__in=pk_list)
 
         # Each of the table has at-least two sortable field_names in the field_names
