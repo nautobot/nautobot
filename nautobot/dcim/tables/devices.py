@@ -1173,9 +1173,6 @@ class ControllerTable(BaseTable):
             "platform",
             "role",
             "tenant",
-            "external_integration",
-            "deployed_controller_device",
-            "deployed_controller_group",
             "actions",
         )
 
