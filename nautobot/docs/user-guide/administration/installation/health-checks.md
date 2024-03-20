@@ -14,7 +14,7 @@ An HTTP `GET` request to `<server>/health/` should return an HTTP `200 OK` respo
 
 - the server is running
 - and the server can connect to the database
-- and all Django migrations have been applied
+- and all Django migrations have been applied (check added in Nautobot 2.2)
 - and the server can connect to Redis
 - and the server can write to an appropriate location on the filesystem
 - and the server is not too busy handling other requests to respond to this request.
@@ -22,7 +22,7 @@ An HTTP `GET` request to `<server>/health/` should return an HTTP `200 OK` respo
 Similarly, but not identically, the CLI command `nautobot-server health_check` should run and return an exit code of `0` (success) so long as:
 
 - the command can connect to the database
-- and all Django migrations have been applied
+- and all Django migrations have been applied (check added in Nautobot 2.2)
 - and the command can connect to Redis
 - and the command can write to an appropriate location on the filesystem
 
@@ -32,9 +32,12 @@ Note the differences between these two. In some situations you'll want to use bo
 
 In addition to monitoring the existence of a given Celery worker process ID, you can use the fact that Celery provides a [`celery inspect ping` CLI command](https://docs.celeryq.dev/en/stable/reference/cli.html#celery-inspect) that sends a short message to a given Celery worker(s) and reports back on whether it receives a response(s). Nautobot wraps this with the `nautobot-server` CLI command, so in general you can run `nautobot-server celery inspect ping --destination <worker name>` to confirm whether a given worker is able to receive and respond to Celery control messages.
 
+!!! tip
+    A Celery worker's name defaults to `celery@$HOSTNAME`, but you can override it by starting the worker with the `-n <name>` argument if needed.
+
 ### Nautobot Celery Beat
 
-In addition to monitoring the Celery Beat process ID, you can use the fact that Nautobot's custom Celery Beat scheduler respects the [`CELERY_BEAT_HEARTBEAT_FILE`](../configuration/optional-settings.md#celery_beat_heartbeat_file) configuration setting, which specifies a filesystem path that will be repeatedly `touch`ed to update its last-modified timestamp so long as the scheduler is running. You can check this timestamp against the current system time to detect whether the Celery Beat scheduler is firing as expected. One way is using the `find` command with it's `-mmin` parameter, and checking whether it finds the expected file with a recent enough modification time (here, 0.1 minutes, or 6 seconds) or not:
+In addition to monitoring the Celery Beat process ID, you can use the fact that Nautobot's custom Celery Beat scheduler respects the [`CELERY_BEAT_HEARTBEAT_FILE`](../configuration/optional-settings.md#celery_beat_heartbeat_file) configuration setting, which specifies a filesystem path that will be repeatedly [`touch`ed](https://en.wikipedia.org/wiki/Touch_(command)) to update its last-modified timestamp so long as the scheduler is running. You can check this timestamp against the current system time to detect whether the Celery Beat scheduler is firing as expected. One way is using the `find` command with it's `-mmin` parameter, and checking whether it finds the expected file with a recent enough modification time (here, 0.1 minutes, or 6 seconds) or not:
 
 ```shell
 [ $(find $NAUTOBOT_CELERY_BEAT_HEARTBEAT_FILE -mmin -0.1 | wc -l) -eq 1 ] || false
@@ -53,6 +56,9 @@ While MySQL provides the [`mysqladmin ping` CLI command](https://dev.mysql.com/d
 ### Redis
 
 Redis provides the [`redis-cli ping` CLI command](https://redis.io/commands/ping/) for detecting whether the Redis server is alive. It will output `PONG` on success and exit with return code `0`. Note though that it may also exit with code `0` in cases where the server has started but is not yet ready to receive or serve data.
+
+!!! tip
+    If you have the Redis server configured to require a password, you will need to set the `REDISCLI_AUTH` environment variable to this password before `redis-cli ping` will be successful.
 
 ## Deployments with systemd
 
@@ -141,6 +147,30 @@ livenessProbe:
   failureThreshold: 3
 ```
 
+### Redis Container in k8s
+
+```yaml
+readinessProbe:
+  exec:
+    command:
+      - "/bin/bash"
+      - "-c"
+      - "redis-cli -h localhost ping | grep PONG"
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+livenessProbe:
+  exec:
+    command:
+      - "/bin/bash"
+      - "-c"
+      - "redis-cli -h localhost ping"
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+```
+
 ### PostgreSQL Container in k8s
 
 ```yaml
@@ -193,30 +223,6 @@ livenessProbe:
   failureThreshold: 3
 ```
 
-### Redis Container in k8s
-
-```yaml
-readinessProbe:
-  exec:
-    command:
-      - "/bin/bash"
-      - "-c"
-      - "redis-cli -h localhost ping | grep PONG"
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 3
-
-livenessProbe:
-  exec:
-    command:
-      - "/bin/bash"
-      - "-c"
-      - "redis-cli -h localhost ping"
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 3
-```
-
 ## Docker Compose Deployments
 
 Docker Compose supports a single `healthcheck` for each container.
@@ -229,12 +235,9 @@ We recommend the CLI-based health-check rather than the HTTP health-check here b
 healthcheck:
   interval: 10s
   timeout: 10s
-  start_period: 5m
+  start_period: 5m  # in Nautobot 2.2 and later, this won't report success until all migrations have run
   retries: 3
-  test:
-    - "CMD"
-    - "nautobot-server"
-    - "health_check"
+  test: "nautobot-server health_check"
 ```
 
 ### Celery Worker Container in Docker Compose
@@ -245,11 +248,7 @@ healthcheck:
   timeout: 10s
   start_period: 30s
   retries: 3
-  test:
-    - "CMD"
-    - "/bin/bash"
-    - "-c"
-    - "nautobot-server celery inspect ping --destination celery@$$HOSTNAME"
+  test: "nautobot-server celery inspect ping --destination celery@$$HOSTNAME"
 ```
 
 ### Celery Beat Container in Docker Compose
@@ -260,12 +259,21 @@ healthcheck:
   timeout: 5s
   start_period: 30s
   retries: 3
-  test:
-    - "CMD"
-    - "/bin/bash"
-    - "-c"
-    - "[ $$(find /tmp/nautobot_celery_beat_heartbeat -mmin -0.1 | wc -l) -eq 1 ] || false"
+  test: '[ "$$(find /tmp/nautobot_celery_beat_heartbeat -mmin -0.1 | wc -l)" != "" ] || false'
 ```
+
+### Redis Container in Docker Compose
+
+```yaml
+healthcheck:
+  interval: 10s
+  timeout: 5s
+  retries: 3
+  test: "redis-cli -h localhost ping | grep PONG"
+```
+
+!!! tip
+    If you have the Redis server configured to require a password, you will need to set the `REDISCLI_AUTH` environment variable to this password before `redis-cli ping` will be successful.
 
 ### PostgreSQL Container in Docker Compose
 
@@ -275,9 +283,7 @@ healthcheck:
   timeout: 5s
   start_period: 30s
   retries: 3
-  test:
-    - "CMD-SHELL"
-    - "pg_isready -d $$POSTGRES_DB -U $$POSTGRES_USER"
+  test: "pg_isready -d $$POSTGRES_DB -U $$POSTGRES_USER"
 ```
 
 ### MySQL Container in Docker Compose
@@ -288,20 +294,5 @@ healthcheck:
   timeout: 5s
   start_period: 30s
   retries: 3
-  test:
-    - "CMD-SHELL"
-    - 'mysql -h localhost -u $$MYSQL_USER --password=$$MYSQL_PASSWORD --execute "SHOW DATABASES;"'
-```
-
-### Redis Container in Docker Compose
-
-```yaml
-healthcheck:
-  interval: 10s
-  timeout: 5s
-  retries: 3
-  test:
-    - "/bin/bash"
-    - "-c"
-    - "redis-cli -h localhost ping | grep PONG"
+  test: 'mysql -h localhost -u $$MYSQL_USER --password=$$MYSQL_PASSWORD --execute "SHOW DATABASES;"'
 ```
