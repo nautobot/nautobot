@@ -552,7 +552,7 @@ def build_example_app_docs(context):
         print_command(local_command)
         context.run(local_command, pty=True)
     else:
-        docker_command = f"run --workdir='/source/examples/example_app' --entrypoint '{command}' nautobot"
+        docker_command = f"run --rm --workdir='/source/examples/example_app' --entrypoint '{command}' nautobot"
         docker_compose(context, docker_command, pty=True)
 
 
