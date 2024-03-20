@@ -1,6 +1,6 @@
 # Nautobot Health Checks
 
-In a production deployment of Nautobot, you'll want health checks (also termed liveness checks, readiness checks, etc.) for each distinct component of the Nautobot system, so as to be able to detect if any component fails and ideally respond automatically. While this topic can be (and is) the subject of multiple books, this document attempts to provide some basic "best practices" guidelines. If you're deploying Nautobot as part of a larger enterprise system, of course you'll want to follow your organization's experts and their guidance, but if you're "on your own", you can do worse than starting here.
+In a production deployment of Nautobot, you'll want health checks (also termed liveness checks, readiness checks, etc.) for each distinct component of the Nautobot system, to be able to detect if any component fails and ideally respond automatically. While this topic can be (and is) the subject of multiple books, this document attempts to provide some basic "best practices" guidelines. If you're deploying Nautobot as part of a larger enterprise system, of course you'll want to follow your organization's experts and their guidance, but if you're "on your own", you can do worse than starting here.
 
 ## Health Check Approaches
 
@@ -48,7 +48,7 @@ PostgreSQL provides the [`pg_isready` CLI command](https://www.postgresql.org/do
 
 #### MySQL
 
-While MySQL provides the [`mysqladmin ping` CLI command](https://dev.mysql.com/doc/refman/8.0/en/mysqladmin.html), it's important to note that this command only checks whether the database server is running - it still exits with return code `0` if the server is running but not accepting connections. Therefore you might in some cases wish to run a command that actually connects to the database, such as `mysql --execute "SHOW DATABASES;`.
+While MySQL provides the [`mysqladmin ping` CLI command](https://dev.mysql.com/doc/refman/8.0/en/mysqladmin.html), it's important to note that this command only checks whether the database server is running - it still exits with return code `0` if the server is running but not accepting connections. Therefore you might in some cases wish to run a command that actually connects to the database, such as `mysql --execute "SHOW DATABASES;"`.
 
 ### Redis
 
@@ -66,7 +66,7 @@ Kubernetes (k8s) distinguishes between "startup", "readiness", and "liveness" pr
 - Readiness probes detect whether a container is ready to accept traffic.
 - Liveness probes detect whether a container needs to be restarted.
 
-For more details, refer to the [Kubernetes documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). A worked example can be found in the [Nautobot Helm charts](https://github.com/nautobot/helm-charts) repository.
+For more details, refer to the [Kubernetes documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/). A working example can be found in the [Nautobot Helm charts](https://github.com/nautobot/helm-charts) repository.
 
 ### Nautobot Server Container in k8s
 
