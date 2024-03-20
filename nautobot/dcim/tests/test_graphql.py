@@ -4,7 +4,16 @@ from django.test import override_settings
 from nautobot.core.graphql import execute_query
 from nautobot.core.testing import create_test_user, TestCase
 from nautobot.dcim.choices import InterfaceTypeChoices
-from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer, Platform
+from nautobot.dcim.models import (
+    Controller,
+    Device,
+    DeviceType,
+    Interface,
+    Location,
+    LocationType,
+    Manufacturer,
+    Platform,
+)
 from nautobot.extras.models import DynamicGroup, Role, Status
 
 
