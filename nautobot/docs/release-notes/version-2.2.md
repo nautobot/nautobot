@@ -18,6 +18,12 @@ New models have been added for software image files and software versions. These
 
 Software versions must be associated to a platform. Software image files must be associated to one software version and may be associated to one or more device types. Devices, inventory items and virtual machines may be associated to one software version to track their current version. See the documentation for [software image file](../user-guide/core-data-model/dcim/softwareimagefile.md) and [software version](../user-guide/core-data-model/dcim/softwareversion.md). There is also a [user guide](../user-guide/feature-guides/software-image-files-and-versions.md) with instructions on how to create these models.
 
+#### Controller models
+
+Controller models have been added to the `dcim` app. A Controller in Nautobot is an abstraction meant to represent network or SDN (Software-Defined Networking) controllers. These may include, but are not limited to, wireless controllers, cloud-based network management systems, and other forms of central network control mechanisms.
+
+For more details, refer to the user guide for a [`Controller` model](../user-guide/core-data-model/dcim/controller.md), a [`ControllerDeviceGroup` model](../user-guide/core-data-model/dcim/controllerdevicegroup.md), or developer documentation for [controllers](../development/core/controllers.md).
+
 #### Prefix and VLAN Many Locations ([#4334](https://github.com/nautobot/nautobot/issues/4334), [#4412](https://github.com/nautobot/nautobot/issues/4412))
 
 The Prefix and VLAN models have replaced their single `location` foreign-key field with a many-to-many `locations` field, allowing multiple Locations to be attached to a single Prefix or VLAN. To ensure backwards compatibility with pre-2.2 code, these models now have a `location` property which can be get or set for the case of a single associated Location, but will raise a `MultipleObjectsReturned` exception if the Prefix or VLAN in question has more than one associated Location. REST API versions 2.0 and 2.1 similarly still have a `location` field, while REST API version 2.2 and later replace this with `locations`.
