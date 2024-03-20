@@ -47,6 +47,8 @@ from .models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -1450,7 +1452,14 @@ class DeviceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
 
 class DeviceBulkEditView(generic.BulkEditView):
     queryset = Device.objects.select_related(
-        "tenant", "location", "rack", "role", "device_type__manufacturer", "secrets_group", "device_redundancy_group"
+        "tenant",
+        "location",
+        "rack",
+        "role",
+        "device_type__manufacturer",
+        "secrets_group",
+        "device_redundancy_group",
+        "controller_device_group",
     )
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
@@ -2997,3 +3006,67 @@ class SoftwareVersionUIViewSet(NautobotUIViewSet):
     )
     serializer_class = serializers.SoftwareVersionSerializer
     table_class = tables.SoftwareVersionTable
+
+
+#
+# Controllers
+#
+
+
+class ControllerUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.ControllerFilterSet
+    filterset_form_class = forms.ControllerFilterForm
+    form_class = forms.ControllerForm
+    bulk_update_form_class = forms.ControllerBulkEditForm
+    queryset = Controller.objects.all()
+    serializer_class = serializers.ControllerSerializer
+    table_class = tables.ControllerTable
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action == "retrieve" and instance:
+            devices = Device.objects.restrict(request.user).filter(controller_device_group__controller=instance)
+            devices_table = tables.DeviceTable(devices)
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(devices_table)
+
+            context["devices_table"] = devices_table
+
+        return context
+
+
+class ControllerDeviceGroupUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.ControllerDeviceGroupFilterSet
+    filterset_form_class = forms.ControllerDeviceGroupFilterForm
+    form_class = forms.ControllerDeviceGroupForm
+    bulk_update_form_class = forms.ControllerDeviceGroupBulkEditForm
+    queryset = (
+        ControllerDeviceGroup.objects.all()
+        .prefetch_related("devices")
+        .annotate(device_count=count_related(Device, "controller_device_group"))
+    )
+    serializer_class = serializers.ControllerDeviceGroupSerializer
+    table_class = tables.ControllerDeviceGroupTable
+    template_name = "dcim/controllerdevicegroup_create.html"
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action == "retrieve" and instance:
+            devices = instance.devices.restrict(request.user)
+            devices_table = tables.DeviceTable(devices)
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(devices_table)
+
+            context["devices_table"] = devices_table
+
+        return context

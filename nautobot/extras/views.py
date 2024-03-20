@@ -37,8 +37,8 @@ from nautobot.core.views.mixins import (
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.models import Device, Interface, Location, Rack
-from nautobot.dcim.tables import DeviceTable, RackTable
+from nautobot.dcim.models import Controller, Device, Interface, Location, Rack
+from nautobot.dcim.tables import ControllerTable, DeviceTable, RackTable
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_worker_count
@@ -2117,6 +2117,18 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 device_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(device_table)
                 context["device_table"] = device_table
+
+            if ContentType.objects.get_for_model(Controller) in context["content_types"]:
+                controllers = instance.controllers.select_related(
+                    "status",
+                    "location",
+                    "tenant",
+                    "role",
+                ).restrict(request.user, "view")
+                controller_table = ControllerTable(controllers)
+                controller_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(controller_table)
+                context["controller_table"] = controller_table
 
             if ContentType.objects.get_for_model(IPAddress) in context["content_types"]:
                 ipaddress = (
