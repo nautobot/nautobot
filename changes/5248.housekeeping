@@ -1,1 +1,0 @@
-Updated development dependencies including `coverage`, `django-debug-toolbar`, `factory-boy`, `mkdocs-material`, `mkdocstrings`, `mkdocstrings-python`, `pylint`, `rich`, `ruff`, `selenium`, `splinter`, `towncrier`, `watchdog`, and `yamllint` to their latest available versions.
