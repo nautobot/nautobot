@@ -42,6 +42,18 @@
                             <td>Tenant</td>
                             <td>{{ object.tenant|hyperlinked_object }}</td>
                         </tr>
+                    </table>
+                </div>
+            </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Integration</strong>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover panel-body attr-table">
                         <tr>
                             <td>External Integration</td>
                             <td>{{ object.external_integration|hyperlinked_object }}</td>
@@ -57,7 +69,7 @@
                     </table>
                 </div>
             </div>
-{% endblock content_left_page %}
+{% endblock content_right_page %}
 
 {% block content_full_width_page %}
         <div class="panel panel-default">
