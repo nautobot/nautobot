@@ -1278,21 +1278,21 @@ class Controller(PrimaryModel, ConfigContextModel):
     )
     external_integration = models.ForeignKey(
         to="extras.ExternalIntegration",
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name="controllers",
         blank=True,
         null=True,
     )
     deployed_controller_device = models.ForeignKey(
         to="dcim.Device",
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name="controllers",
         blank=True,
         null=True,
     )
     deployed_controller_group = models.ForeignKey(
         to="dcim.DeviceRedundancyGroup",
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name="controllers",
         blank=True,
         null=True,
