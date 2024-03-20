@@ -40,6 +40,8 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.filters import (
     ConsoleConnectionFilterSet,
+    ControllerDeviceGroupFilterSet,
+    ControllerFilterSet,
     InterfaceConnectionFilterSet,
     PowerConnectionFilterSet,
     SoftwareImageFileFilterSet,
@@ -52,6 +54,8 @@ from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -91,6 +95,7 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     CustomField,
     CustomFieldChoice,
+    ExternalIntegration,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -1440,6 +1445,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "face": DeviceFaceChoices.FACE_FRONT,
             "secrets_group": secrets_groups[1].pk,
             "software_version": software_versions[1].pk,
+            "controller_device_group": ControllerDeviceGroup.objects.first().pk,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -3095,4 +3101,60 @@ class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "documentation_url": "https://example.com/software_version_test_case/docs2",
             "long_term_support": False,
             "pre_release": True,
+        }
+
+
+class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = Controller
+    filterset = ControllerFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        device = Device.objects.first()
+        external_integration = ExternalIntegration.objects.first()
+        location = Location.objects.get_for_model(Controller).first()
+        platform = Platform.objects.first()
+        role = Role.objects.get_for_model(Controller).first()
+        status = Status.objects.get_for_model(Controller).first()
+        tenant = Tenant.objects.first()
+
+        cls.form_data = {
+            "deployed_controller_device": device.pk,
+            "description": "Controller 1 description",
+            "external_integration": external_integration.pk,
+            "location": location.pk,
+            "name": "Controller 1",
+            "platform": platform.pk,
+            "role": role.pk,
+            "status": status.pk,
+            "tenant": tenant.pk,
+        }
+
+        cls.bulk_edit_data = {
+            "external_integration": external_integration.pk,
+            "location": location.pk,
+            "platform": platform.pk,
+            "role": role.pk,
+            "status": status.pk,
+            "tenant": tenant.pk,
+        }
+
+
+class ControllerDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = ControllerDeviceGroup
+    filterset = ControllerDeviceGroupFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        controllers = Controller.objects.all()
+
+        cls.form_data = {
+            "name": "Controller Device Group 10",
+            "controller": controllers[0].pk,
+            "weight": 100,
+            "devices": [item.pk for item in Device.objects.all()[:2]],
+        }
+
+        cls.bulk_edit_data = {
+            "weight": 300,
         }

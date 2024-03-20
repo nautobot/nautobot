@@ -25,6 +25,8 @@ from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -2769,3 +2771,72 @@ class DeviceTypeToSoftwareImageFileTestCase(
                 "device_type": device_types[3].pk,
             },
         ]
+
+
+class ControllerTestCase(APIViewTestCases.APIViewTestCase):
+    model = Controller
+
+    @classmethod
+    def setUpTestData(cls):
+        statuses = Status.objects.get_for_model(Controller)
+        roles = Role.objects.get_for_model(Controller)
+        platforms = Platform.objects.all()
+        locations = Location.objects.get_for_model(Controller).all()
+
+        cls.create_data = [
+            {
+                "name": "Controller 1",
+                "platform": platforms[0].pk,
+                "status": statuses[0].pk,
+                "role": roles[0].pk,
+                "location": locations[0].pk,
+            },
+            {
+                "name": "Controller 2",
+                "platform": platforms[1].pk,
+                "status": statuses[1].pk,
+                "role": roles[1].pk,
+                "location": locations[1].pk,
+            },
+            {
+                "name": "Controller 3",
+                "platform": platforms[2].pk,
+                "status": statuses[2].pk,
+                "role": roles[2].pk,
+                "location": locations[2].pk,
+            },
+        ]
+        cls.bulk_update_data = {
+            "platform": platforms[0].pk,
+            "status": statuses[0].pk,
+            "role": roles[0].pk,
+        }
+
+
+class ControllerDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
+    model = ControllerDeviceGroup
+
+    @classmethod
+    def setUpTestData(cls):
+        controllers = Controller.objects.all()
+
+        cls.create_data = [
+            {
+                "name": "ControllerDeviceGroup 1",
+                "controller": controllers[0].pk,
+                "weight": 100,
+            },
+            {
+                "name": "ControllerDeviceGroup 2",
+                "controller": controllers[1].pk,
+                "weight": 150,
+            },
+            {
+                "name": "ControllerDeviceGroup 3",
+                "controller": controllers[2].pk,
+                "weight": 200,
+            },
+        ]
+        cls.bulk_update_data = {
+            "weight": 300,
+        }
