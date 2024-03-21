@@ -37,7 +37,7 @@ python = ">=3.8,<3.12"
 # Background task processing
 celery = "~5.3.1"
 # Fundamental web framework for Nautobot
-Django = "~3.2.24"
+Django = "~3.2.25"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
