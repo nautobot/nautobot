@@ -1,1 +1,1 @@
-Changed one-to-many links from Controller to `PROTECT` against deleting (WARNING: migrations has been changed, DB needs to be recreated).
+Changed one-to-many links from Controller to `PROTECT` against deleting (WARNING: migrations have been changed, DB needs to be recreated if 2.0.0b1 was previously installed).
