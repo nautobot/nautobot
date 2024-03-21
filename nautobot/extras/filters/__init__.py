@@ -469,18 +469,19 @@ class ContactTeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
             contact_email = location.contact_email
             address = location.physical_address or location.shipping_address
             if contact_name:
-                contact_names = list(queryset.values_list("name", flat=True))
+                contact_names = list(queryset.values_list("name", flat=True).distinct())
                 name_matches = get_close_matches(contact_name, contact_names, cutoff=0.9)
                 if name_matches:
                     query_params |= Q(name__in=name_matches)
             if contact_phone:
-                contact_phones = list(queryset.values_list("phone", flat=True))
+                contact_phones = list(queryset.values_list("phone", flat=True).distinct())
                 phone_matches = get_close_matches(contact_phone, contact_phones, cutoff=0.9)
                 if phone_matches:
                     query_params |= Q(phone__in=phone_matches)
             if contact_email:
-                contact_emails = list(queryset.values_list("email", flat=True))
-                email_matches = get_close_matches(contact_email, contact_emails, cutoff=0.9)
+                contact_emails = list(queryset.values_list("email", flat=True).distinct())
+                # fuzzy matching for emails doesn't make sense, use case insensitive match here
+                email_matches = [e for e in contact_emails if e.casefold() == contact_email.casefold()]
                 if email_matches:
                     query_params |= Q(email__in=email_matches)
             if address:
