@@ -1,4 +1,3 @@
-from collections import OrderedDict
 import logging
 
 from rest_framework.routers import DefaultRouter
@@ -32,7 +31,7 @@ class OrderedDefaultRouter(DefaultRouter):
         """
         Wrap DRF's DefaultRouter to return an alphabetized list of endpoints.
         """
-        api_root_dict = OrderedDict()
+        api_root_dict = {}
         list_name = self.routes[0].name
 
         for prefix, _viewset, basename in sorted(self.registry, key=lambda x: x[0]):
