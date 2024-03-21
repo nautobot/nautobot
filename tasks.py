@@ -552,7 +552,7 @@ def build_example_plugin_docs(context):
         print_command(local_command)
         context.run(local_command, pty=True)
     else:
-        docker_command = f"run --workdir='/source/examples/example_plugin' --entrypoint '{command}' nautobot"
+        docker_command = f"run --rm --workdir='/source/examples/example_plugin' --entrypoint '{command}' nautobot"
         docker_compose(context, docker_command, pty=True)
 
 
@@ -693,24 +693,27 @@ def check_schema(context, api_version=None):
         "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
+        "pattern": "Only run tests which match the given substring. Can be used multiple times.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
         "buffer": "Discard output from passing tests.",
         "tag": "Run only tests with the specified tag. Can be used multiple times.",
         "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
-        "parallel": "Run tests in parallel.",
+        "parallel": "Run tests in parallel; auto-detects the number of workers if not specified with `--parallel-workers`. (default: False)",
+        "parallel-workers": "Specify the number of workers to use when running tests in parallel. Implies `--parallel`. (default: None)",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "performance_report": "Generate Performance Testing report in the terminal. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
         "performance_snapshot": "Generate a new performance testing report to report.yml. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
     },
-    iterable=["tag", "exclude_tag"],
+    iterable=["tag", "exclude_tag", "pattern"],
 )
 def unittest(
     context,
     cache_test_fixtures=False,
     keepdb=False,
     label="nautobot",
+    pattern=None,
     failfast=False,
     buffer=True,
     exclude_tag=None,
@@ -718,6 +721,7 @@ def unittest(
     verbose=False,
     append=False,
     parallel=False,
+    parallel_workers=None,
     skip_docs_build=False,
     performance_report=False,
     performance_snapshot=False,
@@ -730,6 +734,10 @@ def unittest(
     if not append:
         run_command(context, "coverage erase")
 
+    if parallel_workers:
+        parallel_workers = int(parallel_workers)
+        if parallel_workers > 1:
+            parallel = True
     append_arg = " --append" if append and not parallel else ""
     parallel_arg = " --parallel-mode" if parallel else ""
     command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
@@ -747,6 +755,8 @@ def unittest(
         command += " --verbosity 2"
     if parallel:
         command += " --parallel"
+        if parallel_workers:
+            command += f"={parallel_workers}"
     if performance_report or (tag and "performance" in tag):
         command += " --slowreport"
     if performance_snapshot:
@@ -761,6 +771,8 @@ def unittest(
     if exclude_tag:
         for individual_exclude_tag in exclude_tag:
             command += f" --tag {individual_exclude_tag}"
+    for item in pattern or []:
+        command += f" -k='{item}'"
 
     run_command(context, command)
 

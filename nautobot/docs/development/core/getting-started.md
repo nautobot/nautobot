@@ -641,7 +641,9 @@ The `invoke unittest` command supports a number of optional parameters to influe
 * `--keepdb` - Save and reuse the initialized test database between test runs. Can significantly improve the initial startup time of the test suite after your first test run. **Do not use if you're actively making changes to model definitions or migrations.**
 * `--label <module.path>` - Only run the specific subset of tests. Can be broad (`--label nautobot.core.tests`) or specific (`--label nautobot.core.tests.test_graphql.GraphQLQueryTestCase`).
 * `--no-buffer` - Allow stdout/stderr output from the test to be seen in your terminal, instead of being hidden. **If you're debugging code with `breakpoint()`, you should use this option, as otherwise you'll never see the breakpoint happen.**
-* `--parallel` - Split the tests across multiple parallel subprocesses. Can greatly reduce the runtime of the entire test suite when used.
+* `--parallel` - Split the tests across multiple parallel subprocesses. Can greatly reduce the runtime of the entire test suite when used. Auto-detects the number of workers if not specified with `--parallel-workers`.
+* `--parallel-workers` - Specify the number of workers to use when running tests in parallel. Implies `--parallel`.
+* `--pattern` - Only run tests which match the given substring. Can be used multiple times.
 * `--skip-docs-build` - Skip building/rebuilding the static Nautobot documentation before running the test. Saves some time on reruns when you haven't changed the documentation source files.
 * `--verbose` - Run tests more verbosely, including describing each test case as it is run.
 
@@ -651,6 +653,12 @@ In general, when you first run the Nautobot tests in your local copy of the repo
 
 ```no-highlight
 invoke unittest --cache-test-fixtures --keepdb --parallel
+```
+
+When there are too many cores on the testing machine, you can limit the number of parallel workers:
+
+```no-highlight
+invoke unittest --cache-test-fixtures --keepdb --parallel-workers 4
 ```
 
 On subsequent reruns, you can add the other performance-related options:
@@ -665,6 +673,13 @@ When switching between significantly different branches of the code base (e.g. `
 ```no-highlight
 rm development/factory_dump.json
 invoke unittest --cache-test-fixtures --parallel
+```
+
+To limit the test to a specific pattern or label, you can use the `--label` and `--pattern` options:
+
+```no-highlight
+invoke unittest --cache-test-fixtures --keepdb --verbose --skip-docs-build --label nautobot.core.tests.dcim.test_views.DeviceTestCase
+invoke unittest --cache-test-fixtures --keepdb --verbose --skip-docs-build --pattern Controller
 ```
 
 #### Integration Tests
