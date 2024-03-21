@@ -1,4 +1,3 @@
-
 from django.test import tag
 
 from nautobot.core.testing import TestCase
