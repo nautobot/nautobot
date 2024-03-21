@@ -8,7 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.db.models import ProtectedError, Q
 from django.forms.utils import pretty_name
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.urls import reverse
@@ -905,9 +905,12 @@ def check_and_call_git_repository_function(request, pk, func):
         pk (UUID): GitRepository pk value.
         func (function): Enqueue git repo function.
     Returns:
-        redirect: Redirect back to the originating view if no Celery worker is available,
+        (Union[HttpResponseForbidden,redirect]): HttpResponseForbidden if user does not have permission to run the job,
             otherwise redirect to the job result page.
     """
+    if not request.user.has_perm("extras.change_gitrepository"):
+        return HttpResponseForbidden()
+
     # Allow execution only if a worker process is running.
     if not get_worker_count():
         messages.error(request, "Unable to run job: Celery worker process not running.")
