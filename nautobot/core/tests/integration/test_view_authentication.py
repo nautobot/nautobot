@@ -86,11 +86,13 @@ class AuthenticationEnforcedTestCase(TestCase):
                     # UI views generally should redirect unauthenticated users to the appropriate login page
                     if url.startswith("/admin"):
                         if "logout" in url:
+                            # /admin/logout/ sets next=/admin/ because having login redirect to logout would be silly
                             redirect_url = "/admin/login/?next=/admin/"
                         else:
                             redirect_url = f"/admin/login/?next={url}"
                     else:
                         if "logout" in url:
+                            # /logout/ sets next=/ because having login redirect back to logout would be silly
                             redirect_url = "/login/?next=/"
                         else:
                             redirect_url = f"/login/?next={url}"
