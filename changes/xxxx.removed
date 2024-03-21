@@ -1,1 +1,0 @@
-Removed the URL endpoints `/api/users/users/my-profile/`, `/api/users/users/session/`, `/api/users/tokens/authenticate/`, and `/api/users/tokens/logout/` as they are unused at this time.

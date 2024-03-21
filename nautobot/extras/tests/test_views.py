@@ -805,29 +805,15 @@ class GitRepositoryTestCase(
         cls.slug_source = "name"
         cls.slug_test_object = "Repo 4"
 
-    def test_edit_object_with_permission(self):
-        instance = self._get_queryset().first()
-        form_data = self.form_data.copy()
-        form_data["slug"] = instance.slug  # Slug is not editable
-        self.form_data = form_data
-        super().test_edit_object_with_permission()
-
-    def test_edit_object_with_constrained_permission(self):
-        instance = self._get_queryset().first()
-        form_data = self.form_data.copy()
-        form_data["slug"] = instance.slug  # Slug is not editable
-        self.form_data = form_data
-        super().test_edit_object_with_constrained_permission()
-
     def test_post_sync_repo_anonymous(self):
         self.client.logout()
-        url = reverse("extras:gitrepository_sync", kwargs={"pk": self._get_queryset().first().pk})
+        url = reverse("extras:gitrepository_sync", kwargs={"slug": self._get_queryset().first().slug})
         response = self.client.post(url, follow=True)
         self.assertHttpStatus(response, 200)
         self.assertRedirects(response, f"/login/?next={url}")
 
     def test_post_sync_repo_without_permission(self):
-        url = reverse("extras:gitrepository_sync", kwargs={"pk": self._get_queryset().first().pk})
+        url = reverse("extras:gitrepository_sync", kwargs={"slug": self._get_queryset().first().slug})
         response = self.client.post(url)
         self.assertHttpStatus(response, [403, 404])
 
@@ -835,13 +821,13 @@ class GitRepositoryTestCase(
 
     def test_post_dryrun_repo_anonymous(self):
         self.client.logout()
-        url = reverse("extras:gitrepository_dryrun", kwargs={"pk": self._get_queryset().first().pk})
+        url = reverse("extras:gitrepository_dryrun", kwargs={"slug": self._get_queryset().first().slug})
         response = self.client.post(url, follow=True)
         self.assertHttpStatus(response, 200)
         self.assertRedirects(response, f"/login/?next={url}")
 
     def test_post_dryrun_repo_without_permission(self):
-        url = reverse("extras:gitrepository_dryrun", kwargs={"pk": self._get_queryset().first().pk})
+        url = reverse("extras:gitrepository_dryrun", kwargs={"slug": self._get_queryset().first().slug})
         response = self.client.post(url)
         self.assertHttpStatus(response, [403, 404])
 

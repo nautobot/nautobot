@@ -1199,13 +1199,14 @@ The use of `generic` Django views can aid in app development. As an example, let
 
 ```python
 # views.py
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render
 from django.views.generic import View
 
 from .models import Animal
 
 
-class RandomAnimalView(View):
+class RandomAnimalView(LoginRequiredMixin, View):
     """Display a randomly-selected Animal."""
 
     def get(self, request):
@@ -1386,8 +1387,13 @@ A simple example to override the device detail view:
 from django.shortcuts import HttpResponse
 from django.views import generic
 
+from nautobot.utilities.views import ObjectPermissionRequiredMixin
 
-class DeviceViewOverride(generic.View):
+
+class DeviceViewOverride(ObjectPermissionRequiredMixin, generic.View):
+    def get_required_permission(self):
+        return "dcim.view_device"
+
     def get(self, request, *args, **kwargs):
         return HttpResponse(("Hello world! I'm a view which "
                              "overrides the device object detail view."))

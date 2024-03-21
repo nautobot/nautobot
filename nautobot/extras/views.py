@@ -1757,7 +1757,7 @@ class ObjectNotesView(LoginRequiredMixin, View):
                 "assigned_object_id": obj.pk,
             }
         )
-        notes_table = tables.NoteTable(obj.notes)
+        notes_table = tables.NoteTable(obj.notes.restrict(request.user, "view"))
 
         # Apply the request context
         paginate = {

@@ -20,6 +20,7 @@ from django.db.models import Count, Model, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from django.http import QueryDict
 from django.template import engines
+from django.urls import get_resolver, URLPattern, URLResolver
 from django.utils.functional import SimpleLazyObject
 from django.utils.module_loading import import_string
 from django.utils.text import slugify

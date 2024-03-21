@@ -1,10 +1,11 @@
 """Views for plugin_with_view_override."""
 
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import HttpResponse
 from django.views import generic
 
 
-class ViewOverride(generic.View):
+class ViewOverride(LoginRequiredMixin, generic.View):
     def get(self, request, *args, **kwargs):
         return HttpResponse("Hello world! I'm an overridden view.")
 

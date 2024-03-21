@@ -15,7 +15,6 @@ class TestPrefix(APITestCase):
         self.prefixv6 = Prefix.objects.ip_family(6).first()
         self.add_permissions("ipam.view_prefix")
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_prefix_family(self):
         """Test family is available for a Prefix via GraphQL."""
         get_prefixes_query = """
