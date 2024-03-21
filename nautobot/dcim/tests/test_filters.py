@@ -620,6 +620,59 @@ def common_test_data(cls):
     cls.devices[0].tags.set(Tag.objects.get_for_model(Device))
     cls.devices[1].tags.set(Tag.objects.get_for_model(Device)[:3])
 
+    controller_statuses = iter(Status.objects.get_for_model(Controller))
+    external_integrations = iter(ExternalIntegration.objects.all())
+    device_redundancy_groups = iter(DeviceRedundancyGroup.objects.all())
+
+    cls.controllers = (
+        Controller.objects.create(
+            name="Controller 1",
+            status=next(controller_statuses),
+            description="First",
+            location=loc0,
+            platform=platforms[0],
+            role=cls.device_roles[0],
+            tenant=tenants[0],
+            external_integration=next(external_integrations),
+            deployed_controller_device=cls.devices[0],
+        ),
+        Controller.objects.create(
+            name="Controller 2",
+            status=next(controller_statuses),
+            description="Second",
+            location=loc1,
+            platform=platforms[1],
+            role=cls.device_roles[1],
+            tenant=tenants[1],
+            external_integration=next(external_integrations),
+            deployed_controller_device=cls.devices[1],
+        ),
+        Controller.objects.create(
+            name="Controller 3",
+            status=next(controller_statuses),
+            description="Third",
+            location=loc2,
+            platform=platforms[2],
+            role=cls.device_roles[2],
+            tenant=tenants[2],
+            external_integration=next(external_integrations),
+            deployed_controller_group=next(device_redundancy_groups),
+        ),
+        Controller.objects.create(
+            name="Controller 4",
+            status=next(controller_statuses),
+            description="Forth",
+            location=loc2,
+            platform=platforms[2],
+            role=cls.device_roles[2],
+            tenant=tenants[2],
+            external_integration=next(external_integrations),
+            deployed_controller_group=next(device_redundancy_groups),
+        ),
+    )
+    cls.controllers[0].tags.set(Tag.objects.get_for_model(Controller))
+    cls.controllers[1].tags.set(Tag.objects.get_for_model(Controller)[:3])
+
 
 class LocationTypeFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = LocationType.objects.all()
@@ -3366,49 +3419,6 @@ class ControllerFilterSetTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         common_test_data(cls)
 
-        external_integrations = iter(ExternalIntegration.objects.all())
-        locations = iter(Location.objects.filter(location_type__name="Campus"))
-        platforms = iter(Platform.objects.all())
-        roles = iter(Role.objects.get_for_model(Controller))
-        statuses = iter(Status.objects.get_for_model(Controller))
-        tenants = iter(Tenant.objects.all())
-
-        cls.controllers = (
-            Controller.objects.create(
-                name="Controller 1",
-                status=next(statuses),
-                description="First",
-                location=next(locations),
-                platform=next(platforms),
-                role=next(roles),
-                tenant=next(tenants),
-                external_integration=next(external_integrations),
-                deployed_controller_device=cls.devices[0],
-            ),
-            Controller.objects.create(
-                name="Controller 2",
-                status=next(statuses),
-                description="Second",
-                location=next(locations),
-                platform=next(platforms),
-                role=next(roles),
-                tenant=next(tenants),
-                external_integration=next(external_integrations),
-                deployed_controller_device=cls.devices[1],
-            ),
-            Controller.objects.create(
-                name="Controller 3",
-                status=next(statuses),
-                description="Third",
-                location=next(locations),
-                platform=next(platforms),
-                role=next(roles),
-                tenant=next(tenants),
-                external_integration=next(external_integrations),
-                deployed_controller_group=DeviceRedundancyGroup.objects.first(),
-            ),
-        )
-
 
 class ControllerDeviceGroupFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = ControllerDeviceGroup.objects.all()
@@ -3448,3 +3458,5 @@ class ControllerDeviceGroupFilterSetTestCase(FilterTestCases.FilterTestCase):
                 parent=group1,
             ),
         )
+        group1.tags.set(Tag.objects.get_for_model(ControllerDeviceGroup))
+        cls.controller_device_groups[1].tags.set(Tag.objects.get_for_model(ControllerDeviceGroup)[:3])
