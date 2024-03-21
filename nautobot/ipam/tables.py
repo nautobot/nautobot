@@ -42,28 +42,10 @@ UTILIZATION_GRAPH = """
 {% if record.present_in_database %}{% utilization_graph record.get_utilization %}{% else %}&mdash;{% endif %}
 """
 
-PREFIX_LINK = """
-{% load helpers %}
-{% for i in record.ancestors.count|as_range %}
-    <i class="mdi mdi-circle-small"></i>
-{% endfor %}
-    <a href="\
-{% if record.present_in_database %}\
-{% url 'ipam:prefix' pk=record.pk %}\
-{% else %}\
-{% url 'ipam:prefix_add' %}\
-?prefix={{ record }}&namespace={{ object.namespace.pk }}\
-{% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}\
-{% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
-{% endif %}\
-">{{ record.prefix }}</a>
-"""
 
 PREFIX_COPY_LINK = """
 {% load helpers %}
-{% for i in record.ancestors.count|as_range %}
-    <i class="mdi mdi-circle-small"></i>
-{% endfor %}
+{% tree_hierarchy_ui_representation record.ancestors.count|as_range table.order_by %}
 <span class="hover_copy">
   <a href="\
 {% if record.present_in_database %}\
@@ -369,7 +351,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     namespace = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
     rir = tables.Column(linkify=True)
-    children = tables.Column(accessor="descendants_count")
+    children = tables.Column(accessor="descendants_count", orderable=False)
     date_allocated = tables.DateTimeColumn()
     location_count = LinkedCountColumn(
         viewname="dcim:location_list", url_params={"prefixes": "pk"}, verbose_name="Locations"
@@ -377,7 +359,6 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Prefix
-        orderable = False
         fields = (
             "pk",
             "prefix",
