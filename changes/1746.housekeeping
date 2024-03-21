@@ -1,2 +1,1 @@
-Replaced `OrderedDict` instance in `nautobot/models/racks.py#275` with a plain
-`dict` instance.
+Replaced `OrderedDict` instance in `nautobot/models/racks.py#275` with a plain `dict` instance.
