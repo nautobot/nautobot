@@ -673,6 +673,29 @@ def common_test_data(cls):
     cls.controllers[0].tags.set(Tag.objects.get_for_model(Controller))
     cls.controllers[1].tags.set(Tag.objects.get_for_model(Controller)[:3])
 
+    parent_controller_device_group = ControllerDeviceGroup.objects.create(
+        name="Controller Device Group 11",
+        weight=1000,
+        controller=cls.controllers[0],
+    )
+    cls.controller_device_groups = (
+        parent_controller_device_group,
+        ControllerDeviceGroup.objects.create(
+            name="Controller Device Group 12",
+            weight=2000,
+            controller=cls.controllers[1],
+            parent=parent_controller_device_group,
+        ),
+        ControllerDeviceGroup.objects.create(
+            name="Controller Device Group 13",
+            weight=3000,
+            controller=cls.controllers[2],
+            parent=parent_controller_device_group,
+        ),
+    )
+    parent_controller_device_group.tags.set(Tag.objects.get_for_model(ControllerDeviceGroup))
+    cls.controller_device_groups[1].tags.set(Tag.objects.get_for_model(ControllerDeviceGroup)[:3])
+
 
 class LocationTypeFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = LocationType.objects.all()
@@ -3435,28 +3458,3 @@ class ControllerDeviceGroupFilterSetTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
         common_test_data(cls)
-
-        cls.controllers = Controller.objects.all()[:3]
-
-        group1 = ControllerDeviceGroup.objects.create(
-            name="Controller Device Group 11",
-            weight=1000,
-            controller=cls.controllers[0],
-        )
-        cls.controller_device_groups = (
-            group1,
-            ControllerDeviceGroup.objects.create(
-                name="Controller Device Group 12",
-                weight=2000,
-                controller=cls.controllers[1],
-                parent=group1,
-            ),
-            ControllerDeviceGroup.objects.create(
-                name="Controller Device Group 13",
-                weight=3000,
-                controller=cls.controllers[2],
-                parent=group1,
-            ),
-        )
-        group1.tags.set(Tag.objects.get_for_model(ControllerDeviceGroup))
-        cls.controller_device_groups[1].tags.set(Tag.objects.get_for_model(ControllerDeviceGroup)[:3])
