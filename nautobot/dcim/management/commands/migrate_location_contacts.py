@@ -1,3 +1,5 @@
+from textwrap import indent
+
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -12,8 +14,15 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         try:
             with transaction.atomic():
-                self.migrate_location_contacts()
-        # TODO: on keyboardinterrupt, ask the user if they want to roll back
+                try:
+                    self.migrate_location_contacts()
+                except KeyboardInterrupt:
+                    while True:
+                        rollback = input("\nRoll back changes? [y/n]: ").strip().lower()
+                        if rollback == "y":
+                            raise
+                        elif rollback == "n":
+                            break
         except KeyboardInterrupt:
             self.stdout.write(self.style.ERROR("\nMigration cancelled, all changes rolled back."))
         except:
@@ -28,90 +37,150 @@ class Command(BaseCommand):
             contact_name__isnull=True,
             contact_phone__isnull=True,
             contact_email__isnull=True,
-        )
+        ).filter(associated_contacts__isnull=True)
+
         for location in locations_with_contact_data:
-            self.stdout.write(f"Finding existing Contacts or Teams for location {location}...")
+            self.stdout.write(f"Finding existing Contacts or Teams for location {location.display}...")
+            selected_contact = None
             similar_contacts = list(ContactFilterSet(data={"similar_to_location_data": [location]}).qs)
             similar_teams = list(TeamFilterSet(data={"similar_to_location_data": [location]}).qs)
+            similar_contacts_and_teams = similar_contacts + similar_teams
 
-            if not any([similar_contacts, similar_teams]):
-                continue
-
-            # Found similar contacts or teams, prompt user for action
-            self.stdout.write("")
-            self.stdout.write(self.style.WARNING(f"Found similar contacts/teams for location {location.display}:"))
-            self.stdout.write(f"    current contact name: {location.contact_name!r}")
-            self.stdout.write(f"    current contact phone: {location.contact_phone!r}")
-            self.stdout.write(f"    current contact email: {location.contact_email!r}")
-            self.stdout.write(f"    current physical address: {location.physical_address!r}")
-            self.stdout.write(f"    current shipping address: {location.shipping_address!r}")
-            self.stdout.write("")
-
-            # Output menu of choices of valid contacts/teams
-            for i, contact in enumerate(similar_contacts):
-                self.stdout.write(self.style.WARNING(f"c{i}") + f": {contact}")
-            for i, team in enumerate(similar_teams):
-                self.stdout.write(self.style.WARNING(f"t{i}") + f": {team}")
-            self.stdout.write(self.style.WARNING("n") + ": Create a new Contact or Team")
-            self.stdout.write(self.style.WARNING("s") + ": Skip this location")
-
-            # Retrieve desired contact/team from user input
-            selected_contact = None
-            while True:
-                choice = input("Select a choice from the list of items: ")
-                if choice == "s":
-                    self.stdout.write(f"Skipping location {location}")
-                    break
-                elif choice == "n":
-                    self.stdout.write("TODO: Creating a new Contact or Team...")
-                    break
-                elif choice.lower().startswith("c") and int(choice[1:]) < len(similar_contacts):
-                    selected_contact = similar_contacts[int(choice[1:])]
-                    break
-                elif choice.lower().startswith("t") and int(choice[1:]) < len(similar_teams):
-                    selected_contact = similar_teams[int(choice[1:])]
-                    break
-
-            if selected_contact is None:
-                continue
-
-            # Prompt for role
-            self.stdout.write("\nValid roles for this association:")
-            valid_roles = list(Role.objects.get_for_model(ContactAssociation))
-            for i, role in enumerate(valid_roles):
-                self.stdout.write(self.style.WARNING(f"{i}") + f": {role}")
-            while True:
-                selected_role = input("Select a role for this association: ")
-                if int(selected_role) < len(valid_roles):
-                    role = valid_roles[int(selected_role)]
-                    break
-
-            # Prompt for status
-            self.stdout.write("\nValid statuses for this association:")
-            valid_statuses = list(Status.objects.get_for_model(ContactAssociation))
-            for i, status in enumerate(valid_statuses):
-                self.stdout.write(self.style.WARNING(f"{i}") + f": {status}")
-            while True:
-                selected_status = input("Select a status for this association: ")
-                if int(selected_status) < len(valid_statuses):
-                    status = valid_statuses[int(selected_status)]
-                    break
-
-            # Create the association
-            # TODO: clear out existing contact data
-            # TODO: email match should be exact (case insensitive?)
-            try:
-                contact_association = ContactAssociation(
-                    contact=selected_contact if isinstance(selected_contact, Contact) else None,
-                    team=selected_contact if isinstance(selected_contact, Team) else None,
-                    associated_object=location,
-                    role=role,
-                    status=status,
-                )
-                contact_association.validated_save()
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f"Failed to create association: {e}"))
-            else:
+            if not similar_contacts_and_teams:
                 self.stdout.write(
-                    self.style.SUCCESS(f"Associated contact/team {selected_contact} to location {location}")
+                    self.style.WARNING(f"No similar contacts/teams found for location {location.display}.")
+                )
+                self.stdout.write(self.style.WARNING("c") + ": Create a new Contact")
+                self.stdout.write(self.style.WARNING("t") + ": Create a new Team")
+                self.stdout.write(self.style.WARNING("s") + ": Skip this location")
+                while True:
+                    choice = input("Select a choice from the list of items: ")
+                    if choice == "s":
+                        self.stdout.write(f"Skipping location {location.display}")
+                        break
+                    elif choice.lower() == "c":
+                        selected_contact = self.create_new_contact_from_location(location, Contact)
+                        break
+                    elif choice.lower() == "t":
+                        selected_contact = self.create_new_contact_from_location(location, Team)
+                        break
+
+            else:
+                # Found similar contacts or teams, prompt user for action
+                self.stdout.write("")
+                self.stdout.write(self.style.WARNING(f"Found similar contacts/teams for location {location.display}:"))
+                self.stdout.write(f"    current contact name: {location.contact_name!r}")
+                self.stdout.write(f"    current contact phone: {location.contact_phone!r}")
+                self.stdout.write(f"    current contact email: {location.contact_email!r}")
+                self.stdout.write(f"    current physical address: {location.physical_address!r}")
+                self.stdout.write(f"    current shipping address: {location.shipping_address!r}")
+                self.stdout.write("")
+
+                # Output menu of choices of valid contacts/teams
+                for i, contact in enumerate(similar_contacts_and_teams, start=1):
+                    self.stdout.write(f"{self.style.WARNING(i)}: {contact._meta.model_name.title()}: {contact.name}")
+                    self.print_contact_fields(contact, rjust=len(str(i)) + len(contact._meta.model_name) + 2)
+                    self.stdout.write("")
+                self.stdout.write(self.style.WARNING("c") + ": Create a new Contact")
+                self.stdout.write(self.style.WARNING("t") + ": Create a new Team")
+                self.stdout.write(self.style.WARNING("s") + ": Skip this location")
+
+                # Retrieve desired contact/team from user input
+                while True:
+                    choice = input("Select a choice from the list of items: ")
+                    if choice == "s":
+                        self.stdout.write(f"Skipping location {location.display}")
+                        break
+                    elif choice == "c":
+                        selected_contact = self.create_new_contact_from_location(location, model=Contact)
+                        break
+                    elif choice == "t":
+                        selected_contact = self.create_new_contact_from_location(location, model=Team)
+                        break
+                    elif choice.isdigit() and 0 < int(choice) <= len(similar_contacts_and_teams):
+                        selected_contact = similar_contacts_and_teams[int(choice) - 1]
+                        break
+
+            if selected_contact is not None:
+                self.associate_contact_to_location(selected_contact, location)
+
+    def associate_contact_to_location(self, contact, location):
+        role, status = self.prompt_for_role_and_status()
+
+        try:
+            contact_association = ContactAssociation(
+                contact=contact if isinstance(contact, Contact) else None,
+                team=contact if isinstance(contact, Team) else None,
+                associated_object=location,
+                role=role,
+                status=status,
+            )
+            contact_association.validated_save()
+            location.contact_name = ""
+            location.contact_email = ""
+            location.contact_phone = ""
+            location.validated_save()
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"Failed to create association: {e}"))
+        else:
+            self.stdout.write(self.style.SUCCESS(f"Associated contact/team {contact} to location {location.display}"))
+
+    def prompt_for_role_and_status(self):
+        # Prompt for role
+        self.stdout.write("\nValid roles for this association:")
+        valid_roles = list(Role.objects.get_for_model(ContactAssociation))
+        for i, role in enumerate(valid_roles, start=1):
+            self.stdout.write(self.style.WARNING(f"{i}") + f": {role}")
+        while True:
+            selected_role = input("Select a role for this association: ")
+            if selected_role.isdigit() and 0 < int(selected_role) <= len(valid_roles):
+                role = valid_roles[int(selected_role) - 1]
+                break
+
+        # Prompt for status
+        self.stdout.write("\nValid statuses for this association:")
+        valid_statuses = list(Status.objects.get_for_model(ContactAssociation))
+        for i, status in enumerate(valid_statuses, start=1):
+            self.stdout.write(self.style.WARNING(f"{i}") + f": {status}")
+        while True:
+            selected_status = input("Select a status for this association: ")
+            if selected_status.isdigit() and 0 < int(selected_status) <= len(valid_statuses):
+                status = valid_statuses[int(selected_status)]
+                break
+
+        return role, status
+
+    def create_new_contact_from_location(self, location, model):
+        """Create a new Contact or Team from the location's contact data."""
+
+        self.stdout.write(f"Creating new {model._meta.model_name.title()} for location {location.display}...")
+        name = location.contact_name
+        phone = location.contact_phone
+        email = location.contact_email
+        address = location.shipping_address or location.physical_address
+        self.stdout.write(f"    contact name: {name!r}")
+        self.stdout.write(f"    contact phone: {phone!r}")
+        self.stdout.write(f"    contact email: {email!r}")
+        self.stdout.write(f"    address: {address!r}")
+
+        try:
+            contact = model(
+                name=name,
+                phone=phone,
+                email=email,
+                address=address,
+            )
+            contact.validated_save()
+            return contact
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"Failed to create {model._meta.model_name.title()}: {e}"))
+            return None
+
+    def print_contact_fields(self, contact, rjust=0):
+        for field_name in ["phone", "email", "address"]:
+            if getattr(contact, field_name):
+                self.stdout.write(
+                    field_name.title().rjust(rjust)
+                    + ": "
+                    + indent(getattr(contact, field_name), " " * (rjust + 2)).lstrip()
                 )

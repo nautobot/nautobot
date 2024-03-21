@@ -470,12 +470,12 @@ class ContactTeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
             address = location.physical_address or location.shipping_address
             if contact_name:
                 contact_names = list(queryset.values_list("name", flat=True).distinct())
-                name_matches = get_close_matches(contact_name, contact_names, cutoff=0.9)
+                name_matches = get_close_matches(contact_name, contact_names, cutoff=0.8)
                 if name_matches:
                     query_params |= Q(name__in=name_matches)
             if contact_phone:
                 contact_phones = list(queryset.values_list("phone", flat=True).distinct())
-                phone_matches = get_close_matches(contact_phone, contact_phones, cutoff=0.9)
+                phone_matches = get_close_matches(contact_phone, contact_phones, cutoff=0.8)
                 if phone_matches:
                     query_params |= Q(phone__in=phone_matches)
             if contact_email:
@@ -486,7 +486,7 @@ class ContactTeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
                     query_params |= Q(email__in=email_matches)
             if address:
                 contact_addresses = list(queryset.values_list("address", flat=True))
-                address_matches = get_close_matches(address, contact_addresses, cutoff=0.9)
+                address_matches = get_close_matches(address, contact_addresses, cutoff=0.8)
                 if address_matches:
                     query_params |= Q(address__in=address_matches)
 
