@@ -905,7 +905,7 @@ def check_and_call_git_repository_function(request, pk, func):
         pk (UUID): GitRepository pk value.
         func (function): Enqueue git repo function.
     Returns:
-        (Union[HttpResponseForbidden,redirect]): HttpResponseForbidden if user does not have permission to run the job,
+        redirect: Redirect back to the originating view if no Celery worker is available,
             otherwise redirect to the job result page.
     """
     # Allow execution only if a worker process is running.

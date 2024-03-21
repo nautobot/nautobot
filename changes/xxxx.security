@@ -1,0 +1,5 @@
+The `/api/graphql` REST API endpoint now requires user authentication to execute GraphQL queries, even when `EXEMPT_VIEW_PERMISSIONS` is configured.
+The `/api/dcim/connected-device/?peer_device=...&?peer_interface=...` REST API endpoint now requires the requesting user to have `view` permission on the specified `peer_interface`.
+The endpoints `/dcim/racks/<uuid>/dynamic-groups/`, `/dcim/devices/<uuid>/dynamic-groups/`, `/ipam/prefixes/<uuid>/dynamic-groups/`, `/ipam/ip-addresses/<uuid>/dynamic-groups/`, `/virtualization/clusters/<uuid>/dynamic-groups/`, and `/virtualization/virtual-machines/<uuid>/dynamic-groups/` now require `extras.view_dynamicgroup` permissions in addition to view permissions on the model in question.
+The endpoint `/extras/job-results/<uuid:pk>/log-table/` now requires user authentication to access.
+The endpoint `/extras/secrets/provider/<str:provider_slug>/form/` now requires user authentication to access.
