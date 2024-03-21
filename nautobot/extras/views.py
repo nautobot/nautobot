@@ -3,6 +3,7 @@ import logging
 
 from celery import chain
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
@@ -713,17 +714,13 @@ class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
     filterset = filters.DynamicGroupFilterSet
 
 
-class ObjectDynamicGroupsView(ObjectPermissionRequiredMixin, View):
+class ObjectDynamicGroupsView(LoginRequiredMixin, View):
     """
     Present a list of dynamic groups associated to a particular object.
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
     """
 
     base_template = None
-    queryset = DynamicGroup.objects.all()
-
-    def get_required_permission(self):
-        return "extras.view_dynamicgroup"
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -916,28 +913,18 @@ def check_and_call_git_repository_function(request, pk, func):
         messages.error(request, "Unable to run job: Celery worker process not running.")
         return redirect(request.get_full_path(), permanent=False)
     else:
-        repository = get_object_or_404(GitRepository, pk=pk)
+        repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
         job_result = func(repository, request.user)
 
     return redirect(job_result.get_absolute_url())
 
 
-class GitRepositorySyncView(ObjectPermissionRequiredMixin, View):
-    queryset = GitRepository.objects.all()
-
-    def get_required_permission(self):
-        return "extras.change_gitrepository"
-
+class GitRepositorySyncView(LoginRequiredMixin, View):
     def post(self, request, pk):
         return check_and_call_git_repository_function(request, pk, enqueue_pull_git_repository_and_refresh_data)
 
 
-class GitRepositoryDryRunView(ObjectPermissionRequiredMixin, View):
-    queryset = GitRepository.objects.all()
-
-    def get_required_permission(self):
-        return "extras.change_gitrepository"
-
+class GitRepositoryDryRunView(LoginRequiredMixin, View):
     def post(self, request, pk):
         return check_and_call_git_repository_function(request, pk, enqueue_git_repository_diff_origin_and_local)
 
@@ -1573,18 +1560,15 @@ class JobResultView(generic.ObjectView):
         }
 
 
-class JobLogEntryTableView(ObjectPermissionRequiredMixin, View):
+class JobLogEntryTableView(LoginRequiredMixin, View):
     """
     Display a table of `JobLogEntry` objects for a given `JobResult` instance.
     """
 
     queryset = JobResult.objects.all()
 
-    def get_required_permission(self):
-        return "extras.view_joblogentry"
-
     def get(self, request, pk=None):
-        instance = self.queryset.get(pk=pk)
+        instance = get_object_or_404(self.queryset.restrict(request.user, "view"), pk=pk)
         filter_q = request.GET.get("q")
         if filter_q:
             queryset = instance.job_log_entries.filter(
@@ -1663,17 +1647,13 @@ class ObjectChangeView(generic.ObjectView):
         }
 
 
-class ObjectChangeLogView(ObjectPermissionRequiredMixin, View):
+class ObjectChangeLogView(LoginRequiredMixin, View):
     """
     Present a history of changes made to a particular object.
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
     """
 
     base_template = None
-    queryset = ObjectChange.objects.all()
-
-    def get_required_permission(self):
-        return "extras.view_objectchange"
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -1751,17 +1731,13 @@ class NoteDeleteView(generic.ObjectDeleteView):
     queryset = Note.objects.all()
 
 
-class ObjectNotesView(ObjectPermissionRequiredMixin, View):
+class ObjectNotesView(LoginRequiredMixin, View):
     """
     Present a list of notes associated to a particular object.
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
     """
 
     base_template = None
-    queryset = Note.objects.all()
-
-    def get_required_permission(self):
-        return "extras.view_note"
 
     def get(self, request, model, **kwargs):
         # Handle QuerySet restriction of parent object if needed
@@ -1997,15 +1973,10 @@ class SecretView(generic.ObjectView):
         }
 
 
-class SecretProviderParametersFormView(ObjectPermissionRequiredMixin, View):
+class SecretProviderParametersFormView(LoginRequiredMixin, View):
     """
     Helper view to SecretView; retrieve the HTML form appropriate for entering parameters for a given SecretsProvider.
     """
-
-    queryset = Secret.objects.all()
-
-    def get_required_permission(self):
-        return "extras.change_secret"
 
     def get(self, request, provider_slug):
         provider = registry["secrets_providers"].get(provider_slug)
