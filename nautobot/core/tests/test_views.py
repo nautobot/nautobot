@@ -315,20 +315,19 @@ class LoginUI(TestCase):
                 self.assertNotIn("Hello, Banner Bottom", response_content)
 
     @override_settings(HIDE_RESTRICTED_UI=False, BANNER_TOP="Hello, Banner Top", BANNER_BOTTOM="Hello, Banner Bottom")
-    def test_routes_no_redirect_back_to_login_if_hide_restricted_ui_false(self):
-        """Assert that api docs and graphql do not redirects to login page if user is unauthenticated and HIDE_RESTRICTED_UI=False."""
+    def test_routes_redirect_back_to_login_if_hide_restricted_ui_false(self):
+        """API docs and GraphQL do redirect to login page if user is unauthenticated and HIDE_RESTRICTED_UI=False."""
         self.client.logout()
         headers = {"HTTP_ACCEPT": "text/html"}
         urls = [reverse("api_docs"), reverse("graphql")]
         for url in urls:
-            response = self.client.get(url, **headers)
+            response = self.client.get(url, follow=True, **headers)
             self.assertHttpStatus(response, 200)
-            self.assertEqual(response.request["PATH_INFO"], url)
+            self.assertRedirects(response, f"/login/?next={url}")
             response_content = response.content.decode(response.charset).replace("\n", "")
             # Assert Footer items(`self.footer_elements`), Banner and Banner Top is not hidden
             for footer_text in self.footer_elements:
                 self.assertInHTML(footer_text, response_content)
-
             # Only API Docs implements BANNERS
             if url == urls[0]:
                 self.assertInHTML("Hello, Banner Top", response_content)

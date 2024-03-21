@@ -35,6 +35,7 @@ from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 from nautobot.core.celery import app as celery_app
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.routers import AuthenticatedAPIRootView
 from nautobot.utilities.api import get_serializer_for_model
 from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.utils import (
@@ -323,18 +324,7 @@ class ReadOnlyModelViewSet(NautobotAPIVersionMixin, ModelViewSetMixin, ReadOnlyM
 #
 
 
-class AuthenticatedAPIRootView(NautobotAPIVersionMixin, routers.APIRootView):
-    """
-    Extends DRF's base APIRootView class to enforce user authentication.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    name = None
-    description = None
-
-
-class APIRootView(AuthenticatedAPIRootView):
+class APIRootView(NautobotAPIVersionMixin, AuthenticatedAPIRootView):
     """
     This is the root of the REST API.
 
@@ -488,7 +478,7 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
     @extend_schema(exclude=True)
     def get(self, request, *args, **kwargs):
         """Fix up the rendering of the Swagger UI to work with Nautobot's UI."""
-        if not request.user.is_authenticated and get_settings_or_config("HIDE_RESTRICTED_UI"):
+        if not request.user.is_authenticated:
             doc_url = reverse("api_docs")
             login_url = reverse(settings.LOGIN_URL)
             return redirect(f"{login_url}?next={doc_url}")

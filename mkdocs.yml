@@ -297,6 +297,7 @@ nav:
           - nautobot.apps.testing: "code-reference/nautobot/apps/testing.md"
           - nautobot.apps.ui: "code-reference/nautobot/apps/ui.md"
           - nautobot.apps.urls: "code-reference/nautobot/apps/urls.md"
+          - nautobot.apps.utils: "code-reference/nautobot/apps/utils.md"
           - nautobot.apps.views: "code-reference/nautobot/apps/views.md"
   - Core Developer Guide:
       - Introduction: "development/index.md"

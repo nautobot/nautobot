@@ -94,8 +94,6 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         permissions = []
         for action in actions:
-            if action not in ("view", "add", "change", "delete"):
-                raise ValueError(f"Unsupported action: {action}")
             permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
         return permissions
 
@@ -105,7 +103,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         queryset = self.get_queryset()
         try:
-            permissions = [PERMISSIONS_ACTION_MAP[self.action]]
+            permissions = [self.get_action()]
         except KeyError:
             messages.error(
                 self.request,
@@ -326,7 +324,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         Override the original `get_queryset()` to apply permission specific to the user and action.
         """
         queryset = super().get_queryset()
-        return queryset.restrict(self.request.user, PERMISSIONS_ACTION_MAP[self.action])
+        return queryset.restrict(self.request.user, self.get_action())
+
+    def get_action(self):
+        """Helper method for retrieving action and if action not set defaulting to action name."""
+        return PERMISSIONS_ACTION_MAP.get(self.action, self.action)
 
     def get_extra_context(self, request, instance=None):
         """

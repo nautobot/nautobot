@@ -1,8 +1,9 @@
+import re
 
-from django.test import tag
+from django.test import override_settings, tag
 
-from nautobot.core.testing import TestCase
-from nautobot.core.utils.lookup import get_url_for_url_pattern, get_url_patterns
+from nautobot.utilities.testing import TestCase
+from nautobot.utilities.utils import get_url_for_url_pattern, get_url_patterns
 
 
 @tag("integration")
@@ -13,6 +14,7 @@ class AuthenticationEnforcedTestCase(TestCase):
     \* with a very small number of known exceptions such as login and logout views.
     """
 
+    @override_settings(HIDE_RESTRICTED_UI=True)
     def test_all_views_require_authentication(self):
         self.client.logout()
         url_patterns = get_url_patterns()
@@ -36,12 +38,15 @@ class AuthenticationEnforcedTestCase(TestCase):
                     "/health/",
                     "/login/",
                     "/media-failure/",
+                    "/metrics/",
                     "/template.css",
                 ]:
                     self.assertHttpStatus(response, 200, msg=url)
                 elif response.status_code == 200:
                     # UI views generally should redirect unauthenticated users to the appropriate login page
-                    if url.startswith("/admin"):
+                    if url.startswith("/extras/jobs/results/"):
+                        redirect_url = f"/login/?next={re.sub('jobs/results', 'job-results', url)}"
+                    elif url.startswith("/admin"):
                         if "logout" in url:
                             # /admin/logout/ sets next=/admin/ because having login redirect to logout would be silly
                             redirect_url = "/admin/login/?next=/admin/"

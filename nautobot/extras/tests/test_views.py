@@ -618,6 +618,13 @@ class DynamicGroupTestCase(
         DynamicGroup.objects.create(name="DG 2", slug="dg-2", content_type=content_type)
         DynamicGroup.objects.create(name="DG 3", slug="dg-3", content_type=content_type)
 
+        manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
+        devicerole = DeviceRole.objects.create(name="Device Role 1", slug="device-role-1")
+        site = Site.objects.first()
+        Device.objects.create(name="Device 1", device_type=devicetype, device_role=devicerole, site=site)
+        Device.objects.create(name="Device 2", device_type=devicetype, device_role=devicerole, site=site)
+
         cls.form_data = {
             "name": "new_dynamic_group",
             "slug": "new-dynamic-group",

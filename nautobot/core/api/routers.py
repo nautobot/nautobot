@@ -1,11 +1,21 @@
 from collections import OrderedDict
 import logging
 
-from rest_framework.routers import DefaultRouter
-
-from nautobot.core.api.views import AuthenticatedAPIRootView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.routers import APIRootView, DefaultRouter
 
 logger = logging.getLogger(__name__)
+
+
+class AuthenticatedAPIRootView(APIRootView):
+    """
+    Extends DRF's base APIRootView class to enforce user authentication.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    name = None
+    description = None
 
 
 class OrderedDefaultRouter(DefaultRouter):
