@@ -22,9 +22,6 @@ class PrefixTableTestCase(TestCase):
         pk_list = [str(pk) for pk in pk_list]
         queryset = Prefix.objects.filter(pk__in=pk_list)
 
-        # Each of the table has at-least two sortable field_names in the field_names
-        table_avail_fields = ["prefix", "tenant", "namespace", "vlan", "rir"]
-
         # Assets model names
         table_avail_fields = ["tenant", "vlan", "namespace"]
         for table_field_name in table_avail_fields:
