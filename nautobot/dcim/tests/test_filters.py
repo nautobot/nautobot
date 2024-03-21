@@ -112,7 +112,7 @@ User = get_user_model()
 
 
 def common_test_data(cls):
-    Controller.objects.all().delete()
+    Controller.objects.filter(deployed_controller_device__isnull=False).delete()
     Device.objects.all().delete()
     tenants = Tenant.objects.filter(tenant_group__isnull=False)
     cls.tenants = tenants

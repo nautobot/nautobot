@@ -722,7 +722,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
 
         # Remove random IPAddress and Device fixtures for this custom test
         IPAddress.objects.all().delete()
-        Controller.objects.all().delete()
+        Controller.objects.filter(deployed_controller_device__isnull=False).delete()
         Device.objects.all().delete()
 
         # Initialize fake request that will be required to execute GraphQL query

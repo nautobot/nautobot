@@ -2852,7 +2852,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         vlan_groups = VLANGroup.objects.all()[:2]
 
         # Try deleting all devices and then creating 2 VLANs (fails):
-        Controller.objects.all().delete()
+        Controller.objects.filter(deployed_controller_device__isnull=False).delete()
         Device.objects.all().delete()
         response = send_bulk_data(
             "post",

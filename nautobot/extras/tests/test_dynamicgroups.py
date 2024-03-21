@@ -49,7 +49,7 @@ from nautobot.tenancy.models import Tenant
 class DynamicGroupTestBase(TestCase):
     @classmethod
     def setUpTestData(cls):
-        Controller.objects.all().delete()
+        Controller.objects.filter(deployed_controller_device__isnull=False).delete()
         Device.objects.all().delete()
         cls.device_ct = ContentType.objects.get_for_model(Device)
         cls.dynamicgroup_ct = ContentType.objects.get_for_model(DynamicGroup)
