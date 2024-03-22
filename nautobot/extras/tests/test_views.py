@@ -2497,7 +2497,7 @@ class RelationshipTestCase(
         )
 
         # Try deleting all devices and then editing the 6 VLANs (fails):
-        Controller.objects.filter(deployed_controller_device__isnull=False).delete()
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         response = self.client.post(
             reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans], "_apply": [""]}

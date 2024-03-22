@@ -95,7 +95,7 @@ from .models import (
     ConsoleServerPort,
     ConsoleServerPortTemplate,
     Controller,
-    ControllerDeviceGroup,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -1548,7 +1548,9 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         },
     )
     device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
-    controller_device_group = DynamicModelChoiceField(queryset=ControllerDeviceGroup.objects.all(), required=False)
+    controller_managed_device_group = DynamicModelChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(), required=False
+    )
     position = forms.IntegerField(
         required=False,
         help_text="The lowest-numbered unit occupied by the device",
@@ -1618,7 +1620,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "rack",
             "device_redundancy_group",
             "device_redundancy_group_priority",
-            "controller_device_group",
+            "controller_managed_device_group",
             "position",
             "face",
             "status",
@@ -1760,7 +1762,9 @@ class DeviceBulkEditForm(
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
     device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
     device_redundancy_group_priority = forms.IntegerField(required=False, min_value=1)
-    controller_device_group = DynamicModelChoiceField(queryset=ControllerDeviceGroup.objects.all(), required=False)
+    controller_managed_device_group = DynamicModelChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(), required=False
+    )
     software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
     software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
 
@@ -1778,7 +1782,7 @@ class DeviceBulkEditForm(
             "secrets_group",
             "device_redundancy_group",
             "device_redundancy_group_priority",
-            "controller_device_group",
+            "controller_managed_device_group",
             "software_image_files",
             "software_version",
         ]
@@ -1858,8 +1862,8 @@ class DeviceFilterForm(
         null_option="None",
     )
     device_redundancy_group_priority = NumericArrayField(base_field=forms.IntegerField(min_value=1), required=False)
-    controller_device_group = DynamicModelMultipleChoiceField(
-        queryset=ControllerDeviceGroup.objects.all(),
+    controller_managed_device_group = DynamicModelMultipleChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
         required=False,
         null_option="None",
@@ -4137,8 +4141,8 @@ class ControllerForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Lo
             "tenant",
             "location",
             "external_integration",
-            "deployed_controller_device",
-            "deployed_controller_group",
+            "controller_device",
+            "controller_device_redundancy_group",
             "tags",
         )
 
@@ -4167,12 +4171,12 @@ class ControllerFilterForm(
         required=False,
         label="External integration",
     )
-    deployed_controller_device = DynamicModelMultipleChoiceField(
+    controller_device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
         label="Deployed controller device",
     )
-    deployed_controller_group = DynamicModelMultipleChoiceField(
+    controller_device_redundancy_group = DynamicModelMultipleChoiceField(
         queryset=DeviceRedundancyGroup.objects.all(),
         required=False,
         label="Deployed controller group",
@@ -4188,8 +4192,8 @@ class ControllerFilterForm(
         "platform",
         "tenant",
         "external_integration",
-        "deployed_controller_device",
-        "deployed_controller_group",
+        "controller_device",
+        "controller_device_redundancy_group",
         "tags",
     )
 
@@ -4220,11 +4224,11 @@ class ControllerBulkEditForm(
         queryset=ExternalIntegration.objects.all(),
         required=False,
     )
-    deployed_controller_device = DynamicModelChoiceField(
+    controller_device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
     )
-    deployed_controller_group = DynamicModelChoiceField(
+    controller_device_redundancy_group = DynamicModelChoiceField(
         queryset=DeviceRedundancyGroup.objects.all(),
         required=False,
     )
@@ -4239,21 +4243,21 @@ class ControllerBulkEditForm(
             "platform",
             "tenant",
             "external_integration",
-            "deployed_controller_device",
-            "deployed_controller_group",
+            "controller_device",
+            "controller_device_redundancy_group",
             "tags",
         )
 
 
-class ControllerDeviceGroupForm(NautobotModelForm):
-    """ControllerDeviceGroup create/edit form."""
+class ControllerManagedDeviceGroupForm(NautobotModelForm):
+    """ControllerManagedDeviceGroup create/edit form."""
 
     controller = DynamicModelChoiceField(queryset=Controller.objects.all(), required=True)
     devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
-    parent = DynamicModelChoiceField(queryset=ControllerDeviceGroup.objects.all(), required=False)
+    parent = DynamicModelChoiceField(queryset=ControllerManagedDeviceGroup.objects.all(), required=False)
 
     class Meta:
-        model = ControllerDeviceGroup
+        model = ControllerManagedDeviceGroup
         fields = (
             "name",
             "controller",
@@ -4275,13 +4279,13 @@ class ControllerDeviceGroupForm(NautobotModelForm):
         return instance
 
 
-class ControllerDeviceGroupFilterForm(
+class ControllerManagedDeviceGroupFilterForm(
     LocalContextFilterForm,
     NautobotFilterForm,
 ):
-    """ControllerDeviceGroup basic filter form."""
+    """ControllerManagedDeviceGroup basic filter form."""
 
-    model = ControllerDeviceGroup
+    model = ControllerManagedDeviceGroup
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False, label="Name")
     controller = DynamicModelChoiceField(
@@ -4290,13 +4294,13 @@ class ControllerDeviceGroupFilterForm(
         label="Controller",
     )
     parent = DynamicModelChoiceField(
-        queryset=ControllerDeviceGroup.objects.all(),
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         required=False,
         label="Parent",
     )
     weight = forms.IntegerField(required=False, label="Weight")
     subtree = DynamicModelMultipleChoiceField(
-        queryset=ControllerDeviceGroup.objects.all(),
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
         required=False,
     )
@@ -4312,23 +4316,23 @@ class ControllerDeviceGroupFilterForm(
     )
 
 
-class ControllerDeviceGroupBulkEditForm(
+class ControllerManagedDeviceGroupBulkEditForm(
     TagsBulkEditFormMixin,
     NautobotBulkEditForm,
     LocalContextModelBulkEditForm,
 ):
-    """ControllerDeviceGroup bulk edit form."""
+    """ControllerManagedDeviceGroup bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(
-        queryset=ControllerDeviceGroup.objects.all(),
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         widget=forms.MultipleHiddenInput,
     )
     controller = DynamicModelChoiceField(queryset=Controller.objects.all(), required=False)
-    parent = DynamicModelChoiceField(queryset=ControllerDeviceGroup.objects.all(), required=False)
+    parent = DynamicModelChoiceField(queryset=ControllerManagedDeviceGroup.objects.all(), required=False)
     weight = forms.IntegerField(required=False)
 
     class Meta:
-        model = ControllerDeviceGroup
+        model = ControllerManagedDeviceGroup
         fields = (
             "controller",
             "parent",

@@ -25,22 +25,22 @@ These models support the representation of various use cases, including, but not
 Find the controller for the given device group:
 
 ```python
-controller_device_group_name = "DC-East-APIC"
-controller = ControllerDeviceGroup.objects.get(name=controller_device_group_name).controller
+controller_managed_device_group_name = "DC-East-APIC"
+controller = ControllerManagedDeviceGroup.objects.get(name=controller_managed_device_group_name).controller
 ```
 
 Find the controller for the given device:
 
 ```python
 device_name = "DC-East-APIC-1"
-controller = Device.objects.get(name=device_name).controller_device_group.controller
+controller = Device.objects.get(name=device_name).controller_managed_device_group.controller
 ```
 
 List device groups managed by the controller:
 
 ```python
 controller_name = "Cisco ACI APIC - east"
-device_groups = ControllerDeviceGroup.objects.filter(controller__name=controller_name)
+device_groups = ControllerManagedDeviceGroup.objects.filter(controller__name=controller_name)
 device_groups.count()
 ```
 
@@ -48,7 +48,7 @@ List devices managed by the controller:
 
 ```python
 controller_name = "Cisco ACI APIC - east"
-devices = Device.objects.filter(controller_device_group__controller__name=controller_name)
+devices = Device.objects.filter(controller_managed_device_group__controller__name=controller_name)
 devices.count()
 ```
 
@@ -58,7 +58,7 @@ A controller is identified by a unique `name` and can include a `description`.
 
 ## Related Models
 
-A controller can be deployed to either an individual [Device](./device.md) or to a group of devices defined as a [Device Redundancy Group](./deviceredundancygroup.md) via `deployed_controller_device` or `deployed_controller_group` fields. These fields are mutually exclusive.
+A controller can be deployed to either an individual [Device](./device.md) or to a group of devices defined as a [Device Redundancy Group](./deviceredundancygroup.md) via `controller_device` or `controller_device_redundancy_group` fields. These fields are mutually exclusive.
 
 Each controller can also be connected to a [Platform](./platform.md) and a specific [External Integration](../../platform-functionality/externalintegration.md) to define its connection to an external system.
 
@@ -66,7 +66,7 @@ A specific [Status](../../platform-functionality/status.md) and [Location](./loc
 
 For better organization and categorization, a [Role](../../platform-functionality/role.md), [Tenant](../tenancy/tenant.md) or [tags](../../platform-functionality/tag.md) can be assigned to the controller.
 
-[Controller Device Group](./controllerdevicegroup.md) represents the connection between the controller and devices it manages. It allows for the organization of controlled devices into hierarchical groups for structured representation.
+[Controller Managed Device Group](./controllermanageddevicegroup.md) represents the connection between the controller and devices it manages. It allows for the organization of controlled devices into hierarchical groups for structured representation.
 
 For more detailed information about model relations, please refer to the [developer documentation](../../../development/core/controllers.md).
 
@@ -77,7 +77,7 @@ For more detailed information about model relations, please refer to the [develo
 ```yaml
 name: Cisco ACI APIC - east
 status: Active
-deployed_controller_device: DC-East-APIC-1
+controller_device: DC-East-APIC-1
 location: DC-East
 platform: cisco_apic
 ```
@@ -87,7 +87,7 @@ platform: cisco_apic
 ```yaml
 name: Cisco Meraki SAAS
 status: Active
-deployed_controller_device: ~
+controller_device: ~
 location: Cloud Location
 platform: cisco_meraki
 ```

@@ -25,7 +25,7 @@ class CSVParsingRelatedTestCase(TestCase):
         devicerole = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).first()
         tags = Tag.objects.get_for_model(Device).all()[:3]
-        Controller.objects.filter(deployed_controller_device__isnull=False).delete()
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         self.device = Device.objects.create(
             device_type=devicetype,
@@ -93,7 +93,7 @@ class CSVParsingRelatedTestCase(TestCase):
                 "primary_ip6__host",
                 "cluster__name",
                 "virtual_chassis__name",
-                "controller_device_group__name",
+                "controller_managed_device_group__name",
                 "device_redundancy_group__name",
                 "software_version__platform__name",
                 "software_version__version",
@@ -120,7 +120,7 @@ class CSVParsingRelatedTestCase(TestCase):
                 "primary_ip6",
                 "cluster",
                 "virtual_chassis",
-                "controller_device_group",
+                "controller_managed_device_group",
                 "device_redundancy_group",
                 "secrets_group",
             ]
@@ -225,7 +225,7 @@ class CSVParsingRelatedTestCase(TestCase):
                 "primary_ip6__host": CSV_NO_OBJECT,
                 "cluster__name": CSV_NO_OBJECT,
                 "virtual_chassis__name": CSV_NO_OBJECT,
-                "controller_device_group__name": CSV_NO_OBJECT,
+                "controller_managed_device_group__name": CSV_NO_OBJECT,
                 "device_redundancy_group__name": CSV_NO_OBJECT,
                 "software_version__platform__name": CSV_NO_OBJECT,
                 "software_version__version": CSV_NO_OBJECT,

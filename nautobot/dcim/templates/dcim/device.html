@@ -206,16 +206,16 @@
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td>Controller Device Group</td>
+                                        <td>Managed Device Group</td>
                                         <td>
-                                            {{ object.controller_device_group|hyperlinked_object }}
+                                            {{ object.controller_managed_device_group|hyperlinked_object }}
                                         </td>
                                     </tr>
-                                    {% if object.controller_device_group %}
+                                    {% if object.controller_managed_device_group %}
                                         <tr>
                                             <td>Controller</td>
                                             <td>
-                                                {{ object.controller_device_group.controller|hyperlinked_object }}
+                                                {{ object.controller_managed_device_group.controller|hyperlinked_object }}
                                             </td>
                                         </tr>
                                     {% endif %}

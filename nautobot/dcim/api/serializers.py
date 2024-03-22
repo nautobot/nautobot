@@ -55,7 +55,7 @@ from nautobot.dcim.models import (
     ConsoleServerPort,
     ConsoleServerPortTemplate,
     Controller,
-    ControllerDeviceGroup,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -598,7 +598,7 @@ class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
                             "secrets_group",
                             "device_redundancy_group",
                             "device_redundancy_group_priority",
-                            "controller_device_group",
+                            "controller_managed_device_group",
                         ]
                     },
                 },
@@ -1049,7 +1049,7 @@ class ControllerSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         fields = "__all__"
 
 
-class ControllerDeviceGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+class ControllerManagedDeviceGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
-        model = ControllerDeviceGroup
+        model = ControllerManagedDeviceGroup
         fields = "__all__"

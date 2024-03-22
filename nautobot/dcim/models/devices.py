@@ -43,7 +43,7 @@ from .device_components import (
 
 __all__ = (
     "Controller",
-    "ControllerDeviceGroup",
+    "ControllerManagedDeviceGroup",
     "Device",
     "DeviceRedundancyGroup",
     "DeviceType",
@@ -592,8 +592,8 @@ class Device(PrimaryModel, ConfigContextModel):
         verbose_name="Software Image Files",
         help_text="Override the software image files associated with the software version for this device",
     )
-    controller_device_group = models.ForeignKey(
-        to="dcim.ControllerDeviceGroup",
+    controller_managed_device_group = models.ForeignKey(
+        to="dcim.ControllerManagedDeviceGroup",
         on_delete=models.SET_NULL,
         related_name="devices",
         blank=True,
@@ -1283,14 +1283,14 @@ class Controller(PrimaryModel, ConfigContextModel):
         blank=True,
         null=True,
     )
-    deployed_controller_device = models.ForeignKey(
+    controller_device = models.ForeignKey(
         to="dcim.Device",
         on_delete=models.PROTECT,
         related_name="controllers",
         blank=True,
         null=True,
     )
-    deployed_controller_group = models.ForeignKey(
+    controller_device_redundancy_group = models.ForeignKey(
         to="dcim.DeviceRedundancyGroup",
         on_delete=models.PROTECT,
         related_name="controllers",
@@ -1307,12 +1307,10 @@ class Controller(PrimaryModel, ConfigContextModel):
     def clean(self):
         super().clean()
 
-        if self.deployed_controller_device and self.deployed_controller_group:
+        if self.controller_device and self.controller_device_redundancy_group:
             raise ValidationError(
                 {
-                    "deployed_controller_device": (
-                        "Cannot assign both a device and a device redundancy group to a controller."
-                    ),
+                    "controller_device": ("Cannot assign both a device and a device redundancy group to a controller."),
                 },
             )
 
@@ -1331,7 +1329,7 @@ class Controller(PrimaryModel, ConfigContextModel):
     "graphql",
     "webhooks",
 )
-class ControllerDeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
+class ControllerManagedDeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
     """Represents a mapping of controlled devices to a specific controller.
 
     This model allows for the organization of controlled devices into hierarchical groups for structured representation.
@@ -1349,7 +1347,7 @@ class ControllerDeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
     controller = models.ForeignKey(
         to="dcim.Controller",
         on_delete=models.CASCADE,
-        related_name="controller_device_groups",
+        related_name="controller_managed_device_groups",
         blank=False,
         null=False,
         help_text="Controller that manages the devices in this group",

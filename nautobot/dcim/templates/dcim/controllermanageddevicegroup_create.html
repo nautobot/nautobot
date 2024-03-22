@@ -8,7 +8,7 @@
     const parentInput = $('select#id_parent');
     const controllerInput = $('select#id_controller');
 
-    const controllerUrl = '{% url 'dcim-api:controllerdevicegroup-list' %}';
+    const controllerUrl = '{% url 'dcim-api:controllermanageddevicegroup-list' %}';
 
     const updateControllerFromParent = (parentUuid) => {
         const url = `${controllerUrl}${parentUuid}/`

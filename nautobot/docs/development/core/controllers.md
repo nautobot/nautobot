@@ -2,7 +2,7 @@
 
 A Controller in Nautobot is an abstraction meant to represent network or SDN (Software-Defined Networking) controllers. These may include, but are not limited to, wireless controllers, cloud-based network management systems, and other forms of central network control mechanisms.
 
-For more details, refer to the user guide for a [Controller model](../../user-guide/core-data-model/dcim/controller.md) or a [Controller Device Group model](../../user-guide/core-data-model/dcim/controllerdevicegroup.md).
+For more details, refer to the user guide for a [`Controller` model](../../user-guide/core-data-model/dcim/controller.md) or a [`ControllerManagedDeviceGroup` model](../../user-guide/core-data-model/dcim/controllermanageddevicegroup.md).
 
 ## Entity Relationship Diagram
 
@@ -37,7 +37,7 @@ erDiagram
 
     Device {
         DeviceType device_type FK
-        ControllerDeviceGroup controller_device_group FK
+        ControllerManagedDeviceGroup controller_managed_device_group FK
         DeviceRedundancyGroup device_redundancy_group FK
 
         string name UK
@@ -64,8 +64,8 @@ erDiagram
     }
 
     Controller {
-        Device deployed_controller_device FK "Nullable"
-        DeviceRedundancyGroup deployed_controller_group FK "Nullable"
+        Device controller_device FK "Nullable"
+        DeviceRedundancyGroup controller_device_redundancy_group FK "Nullable"
 
         string name UK
         Status status FK
@@ -77,21 +77,21 @@ erDiagram
         Location location FK
     }
 
-    ControllerDeviceGroup {
-        ControllerDeviceGroup parent FK "Nullable"
+    ControllerManagedDeviceGroup {
+        ControllerManagedDeviceGroup parent FK "Nullable"
         Controller controller FK
 
         string name UK
         int weight
     }
 
-    ControllerDeviceGroup ||--o{ ControllerDeviceGroup : "contains children"
-    Controller }o--|| ControllerDeviceGroup : "controls Devices in"
+    ControllerManagedDeviceGroup ||--o{ ControllerManagedDeviceGroup : "contains children"
+    Controller }o--|| ControllerManagedDeviceGroup : "controls Devices in"
     Controller }o--|| DeviceRedundancyGroup : "can be deployed to"
     Device }o--|| SoftwareVersion : "runs"
     Controller }o--|| Platform : "runs"
     Controller }o--|| Device : "can be deployed to"
-    Device }o--|| ControllerDeviceGroup : "can be member of"
+    Device }o--|| ControllerManagedDeviceGroup : "can be member of"
     Device }o--|| DeviceRedundancyGroup : "can be member of"
     Platform ||--o{ SoftwareVersion : "has"
 ```

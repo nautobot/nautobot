@@ -80,7 +80,7 @@ router.register("connected-device", views.ConnectedDeviceViewSet, basename="conn
 
 # Controllers
 router.register("controllers", views.ControllerViewSet)
-router.register("controller-device-groups", views.ControllerDeviceGroupViewSet)
+router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupViewSet)
 
 app_name = "dcim-api"
 urlpatterns = router.urls

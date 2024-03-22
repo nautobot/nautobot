@@ -47,7 +47,7 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=255, unique=True)),
                 ("description", models.CharField(blank=True, max_length=255)),
                 (
-                    "deployed_controller_device",
+                    "controller_device",
                     models.ForeignKey(
                         blank=True,
                         null=True,
@@ -57,7 +57,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
-                    "deployed_controller_group",
+                    "controller_device_redundancy_group",
                     models.ForeignKey(
                         blank=True,
                         null=True,
@@ -153,7 +153,7 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.CreateModel(
-            name="ControllerDeviceGroup",
+            name="ControllerManagedDeviceGroup",
             fields=[
                 (
                     "id",
@@ -178,7 +178,7 @@ class Migration(migrations.Migration):
                     "controller",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="controller_device_groups",
+                        related_name="controller_managed_device_groups",
                         to="dcim.controller",
                     ),
                 ),
@@ -190,7 +190,7 @@ class Migration(migrations.Migration):
                         limit_choices_to=nautobot.extras.utils.FeatureQuery("config_context_owners"),
                         null=True,
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="controller_device_groups",
+                        related_name="controller_managed_device_groups",
                         to="contenttypes.contenttype",
                     ),
                 ),
@@ -200,7 +200,7 @@ class Migration(migrations.Migration):
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name="controller_device_groups",
+                        related_name="controller_managed_device_groups",
                         to="extras.configcontextschema",
                     ),
                 ),
@@ -211,7 +211,7 @@ class Migration(migrations.Migration):
                         null=True,
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="children",
-                        to="dcim.controllerdevicegroup",
+                        to="dcim.controllermanageddevicegroup",
                     ),
                 ),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
@@ -231,13 +231,13 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="device",
-            name="controller_device_group",
+            name="controller_managed_device_group",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="devices",
-                to="dcim.controllerdevicegroup",
+                to="dcim.controllermanageddevicegroup",
             ),
         ),
     ]

@@ -27,7 +27,7 @@ from .device_components import (
 )
 from .devices import (
     Controller,
-    ControllerDeviceGroup,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceFamily,
     DeviceRedundancyGroup,
@@ -53,7 +53,7 @@ __all__ = (
     "ConsoleServerPort",
     "ConsoleServerPortTemplate",
     "Controller",
-    "ControllerDeviceGroup",
+    "ControllerManagedDeviceGroup",
     "Device",
     "DeviceBay",
     "DeviceBayTemplate",
