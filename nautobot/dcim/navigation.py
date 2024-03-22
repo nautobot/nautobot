@@ -320,7 +320,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:controllermanageddevicegroup_list",
-                        name="Controller Managed Device Groups",
+                        name="Managed Device Groups",
                         weight=200,
                         permissions=[
                             "dcim.view_controllermanageddevicegroup",
