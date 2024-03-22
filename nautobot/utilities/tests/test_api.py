@@ -1,5 +1,4 @@
 from django.contrib.contenttypes.models import ContentType
-from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 
@@ -122,10 +121,9 @@ class WritableNestedSerializerTest(APITestCase):
         self.assertEqual(VLAN.objects.filter(name="Test VLAN 100").count(), 0)
 
 
-class APIDocsTestCase(TestCase):
-    client_class = NautobotTestClient
-
+class APIDocsTestCase(APITestCase):
     def setUp(self):
+        super().setUp()
         # Populate a CustomField to activate CustomFieldSerializer
         content_type = ContentType.objects.get_for_model(Site)
         self.cf_text = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, name="test")
@@ -135,10 +133,11 @@ class APIDocsTestCase(TestCase):
 
     def test_api_docs(self):
         url = reverse("api_docs")
-        response = self.client.get(url)
+        response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, 200)
 
         headers = {
+            **self.header,
             "HTTP_ACCEPT": "application/vnd.oai.openapi",
         }
         url = reverse("schema")
