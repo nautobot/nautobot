@@ -28,10 +28,6 @@ class AuthenticationEnforcedTestCase(TestCase):
                 if url in [
                     "/admin/login/",
                     "/api/plugins/example-plugin/webhook/",
-                    "/api/redoc/",
-                    "/api/swagger/",
-                    "/api/swagger.json",
-                    "/api/swagger.yaml",
                     "/health/",
                     "/login/",
                     "/media-failure/",
