@@ -48,7 +48,7 @@ class Command(BaseCommand):
 
             if not similar_contacts_and_teams:
                 self.stdout.write(
-                    self.style.WARNING(f"No similar contacts/teams found for location {location.display}.")
+                    self.style.WARNING(f"No similar Contacts or Teams found for location {location.display}.")
                 )
                 self.stdout.write(self.style.WARNING("c") + ": Create a new Contact")
                 self.stdout.write(self.style.WARNING("t") + ": Create a new Team")
