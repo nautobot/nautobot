@@ -922,7 +922,7 @@ class DeviceFilterSet(
         field_name="controller_managed_device_group",
         queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
-        label="Managed Device Groups (name or ID)",
+        label="Controller Managed Device Groups (name or ID)",
     )
     virtual_chassis_member = is_virtual_chassis_member
     has_console_ports = RelatedMembershipBooleanFilter(
@@ -1867,12 +1867,12 @@ class ControllerFilterSet(
     controller_device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
         to_field_name="name",
-        label="Deployed controller device (name or ID)",
+        label="Controller device (name or ID)",
     )
     controller_device_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceRedundancyGroup.objects.all(),
         to_field_name="name",
-        label="Deployed controller group (name or ID)",
+        label="Controller device redundancy group (name or ID)",
     )
 
     class Meta:

@@ -4174,12 +4174,12 @@ class ControllerFilterForm(
     controller_device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
         required=False,
-        label="Deployed controller device",
+        label="Controller device",
     )
     controller_device_redundancy_group = DynamicModelMultipleChoiceField(
         queryset=DeviceRedundancyGroup.objects.all(),
         required=False,
-        label="Deployed controller group",
+        label="Controller device redundancy group",
     )
     tags = TagFilterField(model)
     field_order = (
