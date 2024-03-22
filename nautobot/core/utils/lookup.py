@@ -312,6 +312,8 @@ def get_url_for_url_pattern(url_pattern):
     url = re.sub(r"<int:\w+>", "1", url)
     # "/admin/admin/logentry/<path:object_id>/"
     url = re.sub(r"<path:\w+>", "1", url)
+    # "/dcim/sites/<slug:slug>/"
+    url = re.sub(r"<slug:\w+>", "slug", url)
     # "/apps/installed-apps/<str:app>/"
     url = re.sub(r"<str:\w+>", "string", url)
     # "/dcim/locations/<uuid:pk>/"
@@ -323,10 +325,14 @@ def get_url_for_url_pattern(url_pattern):
     url = re.sub(r"[$^]", "", url)
     url = re.sub(r"/\?", "/", url)
     url = re.sub(r"\(\?P<app_label>[^)]+\)", "users", url)
+    url = re.sub(r"\(\?P<class_path>[^)]+\)", "foo/bar/baz", url)
     url = re.sub(r"\(\?P<format>[^)]+\)", "json", url)
     url = re.sub(r"\(\?P<name>[^)]+\)", "string", url)
     url = re.sub(r"\(\?P<pk>[^)]+\)", "00000000-0000-0000-0000-000000000000", url)
+    url = re.sub(r"\(\?P<slug>[^)]+\)", "string", url)
     url = re.sub(r"\(\?P<url>[^)]+\)", "any", url)
+    # Fallthru for generic URL parameters
+    url = re.sub(r"\(\?P<\w+>[^)]+\)\??", "unknown", url)
     url = re.sub(r"\\", "", url)
 
     if any(char in url for char in "<>[]()?+^$"):
