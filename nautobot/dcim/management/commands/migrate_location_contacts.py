@@ -1,5 +1,6 @@
 from textwrap import indent
 
+from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -24,16 +25,14 @@ class Command(BaseCommand):
                         elif rollback == "n":
                             break
         except KeyboardInterrupt:
-            self.stdout.write(self.style.ERROR("\nMigration cancelled, all changes rolled back."))
+            self.stdout.write(self.style.ERROR("\nOperation cancelled, all changes rolled back."))
         except:
-            self.stdout.write(self.style.ERROR("\nMigration failed, all changes rolled back."))
+            self.stdout.write(self.style.ERROR("\nOperation failed, all changes rolled back."))
             raise
 
     def migrate_location_contacts(self):
         """Iterate through Locations with contact information and try to match to existing Contact or Team."""
         locations_with_contact_data = Location.objects.exclude(
-            physical_address__isnull=True,
-            shipping_address__isnull=True,
             contact_name__isnull=True,
             contact_phone__isnull=True,
             contact_email__isnull=True,
@@ -72,8 +71,6 @@ class Command(BaseCommand):
                 self.stdout.write(f"    current contact name: {location.contact_name!r}")
                 self.stdout.write(f"    current contact phone: {location.contact_phone!r}")
                 self.stdout.write(f"    current contact email: {location.contact_email!r}")
-                self.stdout.write(f"    current physical address: {location.physical_address!r}")
-                self.stdout.write(f"    current shipping address: {location.shipping_address!r}")
                 self.stdout.write("")
 
                 # Output menu of choices of valid contacts/teams
@@ -107,6 +104,28 @@ class Command(BaseCommand):
     def associate_contact_to_location(self, contact, location):
         role, status = self.prompt_for_role_and_status()
 
+        # If email or phone fields are present in the location but not the contact, update the contact fields
+        updated_fields = {}
+        if location.contact_phone and not contact.phone:
+            contact.phone = location.contact_phone
+            updated_fields["phone"] = location.contact_phone
+        if location.contact_email and not contact.email:
+            contact.email = location.contact_email
+            updated_fields["email"] = location.contact_email
+        if updated_fields:
+            try:
+                contact.validated_save()
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"Updated {contact._meta.model_name.title()} {contact.name} field(s): {updated_fields!r}"
+                    )
+                )
+            except ValidationError as e:
+                contact.refresh_from_db()
+                self.stdout.write(
+                    self.style.ERROR(f"Attempted to update {contact!r} field(s) but failed: {updated_fields!r}: {e}")
+                )
+
         try:
             contact_association = ContactAssociation(
                 contact=contact if isinstance(contact, Contact) else None,
@@ -123,7 +142,7 @@ class Command(BaseCommand):
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"Failed to create association: {e}"))
         else:
-            self.stdout.write(self.style.SUCCESS(f"Associated contact/team {contact} to location {location.display}"))
+            self.stdout.write(self.style.SUCCESS(f"Associated {contact!r} to location {location.display}"))
 
     def prompt_for_role_and_status(self):
         # Prompt for role
@@ -157,18 +176,18 @@ class Command(BaseCommand):
         name = location.contact_name
         phone = location.contact_phone
         email = location.contact_email
-        address = location.shipping_address or location.physical_address
         self.stdout.write(f"    contact name: {name!r}")
         self.stdout.write(f"    contact phone: {phone!r}")
         self.stdout.write(f"    contact email: {email!r}")
-        self.stdout.write(f"    address: {address!r}")
+
+        while not name:
+            name = input(f"Name is required. Enter a name for the new {model._meta.model_name.title()}: ")
 
         try:
             contact = model(
                 name=name,
                 phone=phone,
                 email=email,
-                address=address,
             )
             contact.validated_save()
             return contact
@@ -177,7 +196,7 @@ class Command(BaseCommand):
             return None
 
     def print_contact_fields(self, contact, rjust=0):
-        for field_name in ["phone", "email", "address"]:
+        for field_name in ["phone", "email"]:
             if getattr(contact, field_name):
                 self.stdout.write(
                     field_name.title().rjust(rjust)

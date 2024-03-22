@@ -467,7 +467,6 @@ class ContactTeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
             contact_name = location.contact_name
             contact_phone = location.contact_phone
             contact_email = location.contact_email
-            address = location.physical_address or location.shipping_address
             if contact_name:
                 contact_names = list(queryset.order_by().values_list("name", flat=True).distinct())
                 name_matches = get_close_matches(contact_name, contact_names, cutoff=0.8)
@@ -484,11 +483,6 @@ class ContactTeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
                 email_matches = [e for e in contact_emails if e.casefold() == contact_email.casefold()]
                 if email_matches:
                     query_params |= Q(email__in=email_matches)
-            if address:
-                contact_addresses = list(queryset.order_by().values_list("address", flat=True))
-                address_matches = get_close_matches(address, contact_addresses, cutoff=0.8)
-                if address_matches:
-                    query_params |= Q(address__in=address_matches)
 
         return query_params
 
