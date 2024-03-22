@@ -179,7 +179,6 @@ VLAN_LINK = """
 {% url 'ipam:vlan_add' %}\
 ?vid={{ record.vid }}&vlan_group={{ vlan_group.pk }}\
 {% if vlan_group.location %}&location={{ vlan_group.location.pk }}{% endif %}\
-{% if vlan_group.location %}&location={{ vlan_group.location.pk }}{% endif %}\
 " class="btn btn-xs btn-success">{{ record.available }} VLAN{{ record.available|pluralize }} available</a>\
 {% else %}
     {{ record.available }} VLAN{{ record.available|pluralize }} available
