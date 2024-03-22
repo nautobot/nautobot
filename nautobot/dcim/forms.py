@@ -4259,8 +4259,8 @@ class ControllerManagedDeviceGroupForm(NautobotModelForm):
     class Meta:
         model = ControllerManagedDeviceGroup
         fields = (
-            "name",
             "controller",
+            "name",
             "devices",
             "parent",
             "weight",

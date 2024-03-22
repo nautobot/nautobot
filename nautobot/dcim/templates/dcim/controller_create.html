@@ -1,0 +1,34 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Controller</strong></div>
+        <div class="panel-body">
+            {% render_field form.name %}
+            {% render_field form.status %}
+            {% render_field form.role %}
+            {% render_field form.location %}
+            {% render_field form.platform %}
+            {% render_field form.description %}
+            {% render_field form.local_config_context_schema %}
+            {% render_field form.local_config_context_data %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Integration</strong></div>
+        <div class="panel-body">
+            {% render_field form.external_integration %}
+            {% render_field form.controller_device %}
+            {% render_field form.controller_device_redundancy_group %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Tenancy</strong></div>
+        <div class="panel-body">
+            {% render_field form.tenant_group %}
+            {% render_field form.tenant %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock form %}

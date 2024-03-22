@@ -23,10 +23,6 @@
                             <td>{{ object.role|hyperlinked_object }}</td>
                         </tr>
                         <tr>
-                            <td>Description</td>
-                            <td>{{ object.description|placeholder }}</td>
-                        </tr>
-                        <tr>
                             <td>Location</td>
                             <td>{{ object.location|hyperlinked_object }}</td>
                         </tr>
@@ -35,12 +31,17 @@
                             <td>{{ object.platform|hyperlinked_object }}</td>
                         </tr>
                         <tr>
-                            <td>Role</td>
-                            <td>{{ object.role|hyperlinked_object }}</td>
+                            <td>Tenant</td>
+                            <td>
+                                {% if object.tenant and object.tenant.tenant_group %}
+                                    {{ object.tenant.tenant_group|hyperlinked_object }} /
+                                {% endif %}
+                                {{ object.tenant|hyperlinked_object }}
+                            </td>
                         </tr>
                         <tr>
-                            <td>Tenant</td>
-                            <td>{{ object.tenant|hyperlinked_object }}</td>
+                            <td>Description</td>
+                            <td>{{ object.description|placeholder }}</td>
                         </tr>
                     </table>
                 </div>
@@ -78,7 +79,7 @@
 {% block content_full_width_page %}
         <div class="panel panel-default">
             <div class="panel-heading">
-                <strong>Devices</strong>
+                <strong>Managed Devices</strong>
             </div>
             {% include 'responsive_table.html' with table=devices_table %}
         </div>

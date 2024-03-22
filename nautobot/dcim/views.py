@@ -3021,6 +3021,7 @@ class ControllerUIViewSet(NautobotUIViewSet):
     queryset = Controller.objects.all()
     serializer_class = serializers.ControllerSerializer
     table_class = tables.ControllerTable
+    template_name = "dcim/controller_create.html"
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
