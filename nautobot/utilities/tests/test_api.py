@@ -6,7 +6,7 @@ from nautobot.dcim.models import Region, Site
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField
 from nautobot.ipam.models import VLAN
-from nautobot.utilities.testing import APITestCase, NautobotTestClient, disable_warnings
+from nautobot.utilities.testing import APITestCase, disable_warnings
 
 
 class WritableNestedSerializerTest(APITestCase):
