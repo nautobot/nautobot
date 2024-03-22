@@ -294,44 +294,50 @@ class LoginUI(TestCase):
         sso_login_search_result = self.make_request()
         self.assertIsNotNone(sso_login_search_result)
 
-    @override_settings(HIDE_RESTRICTED_UI=True, BANNER_TOP="Hello, Banner Top", BANNER_BOTTOM="Hello, Banner Bottom")
-    def test_routes_redirect_back_to_login_if_hide_restricted_ui_true(self):
-        """Assert that api docs and graphql redirects to login page if user is unauthenticated and HIDE_RESTRICTED_UI=True."""
+    @override_settings(HIDE_RESTRICTED_UI=True)
+    def test_graphql_redirects_back_to_login_if_hide_restricted_ui_true(self):
+        """Assert that graphql redirects to login page if user is unauthenticated."""
         self.client.logout()
         headers = {"HTTP_ACCEPT": "text/html"}
-        urls = [reverse("api_docs"), reverse("graphql")]
-        for url in urls:
-            response = self.client.get(url, follow=True, **headers)
-            self.assertHttpStatus(response, 200)
-            redirect_chain = [(f"/login/?next={url}", 302)]
-            self.assertEqual(response.redirect_chain, redirect_chain)
-            response_content = response.content.decode(response.charset).replace("\n", "")
-            # Assert Footer items(`self.footer_elements`), Banner and Banner Top is hidden
-            for footer_text in self.footer_elements:
-                self.assertNotIn(footer_text, response_content)
-            # Only API Docs implements BANNERS
-            if url == urls[0]:
-                self.assertNotIn("Hello, Banner Top", response_content)
-                self.assertNotIn("Hello, Banner Bottom", response_content)
+        url = reverse("graphql")
+        response = self.client.get(url, follow=True, **headers)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={url}")
+        response_content = response.content.decode(response.charset).replace("\n", "")
+        for footer_text in self.footer_elements:
+            self.assertNotIn(footer_text, response_content)
 
-    @override_settings(HIDE_RESTRICTED_UI=False, BANNER_TOP="Hello, Banner Top", BANNER_BOTTOM="Hello, Banner Bottom")
+    @override_settings(HIDE_RESTRICTED_UI=False)
     def test_routes_redirect_back_to_login_if_hide_restricted_ui_false(self):
-        """API docs and GraphQL do redirect to login page if user is unauthenticated and HIDE_RESTRICTED_UI=False."""
+        """Assert that GraphQL redirects to login page if user is unauthenticated and HIDE_RESTRICTED_UI=False."""
         self.client.logout()
         headers = {"HTTP_ACCEPT": "text/html"}
-        urls = [reverse("api_docs"), reverse("graphql")]
+        url = reverse("graphql")
+        response = self.client.get(url, follow=True, **headers)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={url}")
+        response_content = response.content.decode(response.charset).replace("\n", "")
+        # Assert Footer items(`self.footer_elements`), Banner and Banner Top is not hidden
+        for footer_text in self.footer_elements:
+            self.assertInHTML(footer_text, response_content)
+
+    def test_api_docs_403_unauthenticated(self):
+        """Assert that api docs return a 403 Forbidden if user is unauthenticated."""
+        self.client.logout()
+        urls = [
+            reverse("api_docs"),
+            reverse("api_redocs"),
+            reverse("schema"),
+            reverse("schema_json"),
+            reverse("schema_yaml"),
+        ]
         for url in urls:
-            response = self.client.get(url, follow=True, **headers)
-            self.assertHttpStatus(response, 200)
-            self.assertRedirects(response, f"/login/?next={url}")
-            response_content = response.content.decode(response.charset).replace("\n", "")
-            # Assert Footer items(`self.footer_elements`), Banner and Banner Top is not hidden
-            for footer_text in self.footer_elements:
-                self.assertInHTML(footer_text, response_content)
-            # Only API Docs implements BANNERS
-            if url == urls[0]:
-                self.assertInHTML("Hello, Banner Top", response_content)
-                self.assertInHTML("Hello, Banner Bottom", response_content)
+            with override_settings(HIDE_RESTRICTED_UI=True):
+                response = self.client.get(url)
+                self.assertHttpStatus(response, 403)
+            with override_settings(HIDE_RESTRICTED_UI=False):
+                response = self.client.get(url)
+                self.assertHttpStatus(response, 403)
 
 
 class MetricsViewTestCase(TestCase):
