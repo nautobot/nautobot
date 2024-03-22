@@ -11,7 +11,7 @@ from django.db import transaction
 from django.db.models import ProtectedError
 from django.shortcuts import redirect
 from django_rq.queues import get_connection as get_rq_connection
-from rest_framework import routers, status
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
@@ -37,7 +37,6 @@ from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.routers import AuthenticatedAPIRootView
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.utils import (
     get_all_lookup_expr_for_field,
     get_filterset_parameter_form_field,
