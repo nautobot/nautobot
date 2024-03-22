@@ -228,8 +228,11 @@ def get_url_patterns(urlconf=None, patterns_list=None, base_path="/"):
 
     Args:
         urlconf (URLConf): Python module such as `nautobot.core.urls`.
-        patterns_list (list): Used in recursion
+            Default if unspecified is the value of `settings.ROOT_URLCONF`, i.e. the `nautobot.core.urls` module.
+        patterns_list (list): Used in recursion. Generally can be omitted on initial call.
+            Default if unspecified is the `url_patterns` attribute of the given `urlconf` module.
         base_path (str): String to prepend to all URL patterns yielded.
+            Default if unspecified is the string `"/"`.
 
     Yields:
         (str): Each URL pattern defined in the given urlconf and its descendants
