@@ -7,7 +7,6 @@ from django.contrib.auth import (
     logout as auth_logout,
     update_session_auth_hash,
 )
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -18,6 +17,7 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
 from nautobot.core.forms import ConfirmationForm
+from nautobot.core.views.generic import GenericView
 
 from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, TokenForm
 from .models import Token
@@ -118,7 +118,7 @@ def is_django_auth_user(request):
     return request.session.get(BACKEND_SESSION_KEY, None) == "nautobot.core.authentication.ObjectPermissionBackend"
 
 
-class ProfileView(LoginRequiredMixin, View):
+class ProfileView(GenericView):
     template_name = "users/profile.html"
 
     def get(self, request):
@@ -132,7 +132,7 @@ class ProfileView(LoginRequiredMixin, View):
         )
 
 
-class UserConfigView(LoginRequiredMixin, View):
+class UserConfigView(GenericView):
     template_name = "users/preferences.html"
 
     def get(self, request):
@@ -160,7 +160,7 @@ class UserConfigView(LoginRequiredMixin, View):
         return redirect("user:preferences")
 
 
-class ChangePasswordView(LoginRequiredMixin, View):
+class ChangePasswordView(GenericView):
     template_name = "users/change_password.html"
 
     RESTRICTED_NOTICE = "Remotely authenticated user credentials cannot be changed within Nautobot."
@@ -218,7 +218,7 @@ class ChangePasswordView(LoginRequiredMixin, View):
 #
 
 
-class TokenListView(LoginRequiredMixin, View):
+class TokenListView(GenericView):
     def get(self, request):
         tokens = Token.objects.filter(user=request.user)
 
@@ -233,7 +233,7 @@ class TokenListView(LoginRequiredMixin, View):
         )
 
 
-class TokenEditView(LoginRequiredMixin, View):
+class TokenEditView(GenericView):
     def get(self, request, pk=None):
         if pk is not None:
             if not request.user.has_perm("users.change_token"):
@@ -292,7 +292,7 @@ class TokenEditView(LoginRequiredMixin, View):
         )
 
 
-class TokenDeleteView(LoginRequiredMixin, View):
+class TokenDeleteView(GenericView):
     def get(self, request, pk):
         token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
         initial_data = {
@@ -336,7 +336,7 @@ class TokenDeleteView(LoginRequiredMixin, View):
 #
 
 
-class AdvancedProfileSettingsEditView(LoginRequiredMixin, View):
+class AdvancedProfileSettingsEditView(GenericView):
     template_name = "users/advanced_settings_edit.html"
 
     def get(self, request):

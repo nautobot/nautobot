@@ -1,6 +1,4 @@
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import HttpResponse, render
-from django.views.generic import View
 from rest_framework.decorators import action
 
 from nautobot.apps import views
@@ -47,12 +45,12 @@ class DeviceDetailPluginTabTwoView(views.ObjectView):
     template_name = "example_plugin/tab_device_detail_2.html"
 
 
-class ExamplePluginHomeView(LoginRequiredMixin, View):
+class ExamplePluginHomeView(views.GenericView):
     def get(self, request):
         return render(request, "example_plugin/home.html")
 
 
-class ExamplePluginConfigView(LoginRequiredMixin, View):
+class ExamplePluginConfigView(views.GenericView):
     def get(self, request):
         """Render the configuration page for this plugin.
 
@@ -115,6 +113,6 @@ class AnotherExampleModelUIViewSet(
     table_class = tables.AnotherExampleModelTable
 
 
-class ViewToBeOverridden(LoginRequiredMixin, View):
+class ViewToBeOverridden(views.GenericView):
     def get(self, request, *args, **kwargs):
         return HttpResponse("I am a view in the example plugin which will be overridden by another plugin.")
