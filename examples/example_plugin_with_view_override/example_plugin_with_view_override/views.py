@@ -1,11 +1,11 @@
 """Views for plugin_with_view_override."""
 
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import HttpResponse
-from django.views import generic
+
+from nautobot.apps.views import GenericView
 
 
-class ViewOverride(LoginRequiredMixin, generic.View):
+class ViewOverride(GenericView):
     def get(self, request, *args, **kwargs):
         return HttpResponse("Hello world! I'm an overridden view.")
 
