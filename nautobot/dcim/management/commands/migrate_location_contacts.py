@@ -13,6 +13,14 @@ class Command(BaseCommand):
     help = "Migrate Location contact fields to Contact and Team objects."
 
     def handle(self, *args, **kwargs):
+        status_role_err_msg = "No {0} found for the ContactAssociation content type. Please ensure {0} are created before running this command."
+        if not Status.objects.get_for_model(ContactAssociation).exists():
+            self.stdout.write(self.style.ERROR(status_role_err_msg.format("statuses")))
+            return
+        if not Role.objects.get_for_model(ContactAssociation).exists():
+            self.stdout.write(self.style.ERROR(status_role_err_msg.format("roles")))
+            return
+
         try:
             with transaction.atomic():
                 try:
@@ -33,9 +41,9 @@ class Command(BaseCommand):
     def migrate_location_contacts(self):
         """Iterate through Locations with contact information and try to match to existing Contact or Team."""
         locations_with_contact_data = Location.objects.exclude(
-            contact_name__isnull=True,
-            contact_phone__isnull=True,
-            contact_email__isnull=True,
+            contact_name="",
+            contact_phone="",
+            contact_email="",
         ).filter(associated_contacts__isnull=True)
 
         for location in locations_with_contact_data:
@@ -49,20 +57,6 @@ class Command(BaseCommand):
                 self.stdout.write(
                     self.style.WARNING(f"No similar Contacts or Teams found for location {location.display}.")
                 )
-                self.stdout.write(self.style.WARNING("c") + ": Create a new Contact")
-                self.stdout.write(self.style.WARNING("t") + ": Create a new Team")
-                self.stdout.write(self.style.WARNING("s") + ": Skip this location")
-                while True:
-                    choice = input("Select a choice from the list of items: ")
-                    if choice == "s":
-                        self.stdout.write(f"Skipping location {location.display}")
-                        break
-                    elif choice.lower() == "c":
-                        selected_contact = self.create_new_contact_from_location(location, Contact)
-                        break
-                    elif choice.lower() == "t":
-                        selected_contact = self.create_new_contact_from_location(location, Team)
-                        break
 
             else:
                 # Found similar contacts or teams, prompt user for action
@@ -78,25 +72,28 @@ class Command(BaseCommand):
                     self.stdout.write(f"{self.style.WARNING(i)}: {contact._meta.model_name.title()}: {contact.name}")
                     self.print_contact_fields(contact, rjust=len(str(i)) + len(contact._meta.model_name) + 2)
                     self.stdout.write("")
-                self.stdout.write(self.style.WARNING("c") + ": Create a new Contact")
-                self.stdout.write(self.style.WARNING("t") + ": Create a new Team")
-                self.stdout.write(self.style.WARNING("s") + ": Skip this location")
 
-                # Retrieve desired contact/team from user input
-                while True:
-                    choice = input("Select a choice from the list of items: ")
-                    if choice == "s":
-                        self.stdout.write(f"Skipping location {location.display}")
-                        break
-                    elif choice == "c":
-                        selected_contact = self.create_new_contact_from_location(location, model=Contact)
-                        break
-                    elif choice == "t":
-                        selected_contact = self.create_new_contact_from_location(location, model=Team)
-                        break
-                    elif choice.isdigit() and 0 < int(choice) <= len(similar_contacts_and_teams):
-                        selected_contact = similar_contacts_and_teams[int(choice) - 1]
-                        break
+            self.stdout.write(self.style.WARNING("c") + ": Create a new Contact")
+            self.stdout.write(self.style.WARNING("t") + ": Create a new Team")
+            self.stdout.write(self.style.WARNING("s") + ": Skip this location")
+
+            # Retrieve desired contact/team from user input
+            while True:
+                choice = input("Select a choice from the list of items: ")
+                if choice == "s":
+                    self.stdout.write(f"Skipping location {location.display}")
+                    break
+                elif choice == "c":
+                    selected_contact = self.create_new_contact_from_location(location, model=Contact)
+                    break
+                elif choice == "t":
+                    selected_contact = self.create_new_contact_from_location(location, model=Team)
+                    break
+                elif choice.lower() == "q":
+                    raise KeyboardInterrupt
+                elif choice.isdigit() and 0 < int(choice) <= len(similar_contacts_and_teams):
+                    selected_contact = similar_contacts_and_teams[int(choice) - 1]
+                    break
 
             if selected_contact is not None:
                 self.associate_contact_to_location(selected_contact, location)
@@ -164,7 +161,7 @@ class Command(BaseCommand):
         while True:
             selected_status = input("Select a status for this association: ")
             if selected_status.isdigit() and 0 < int(selected_status) <= len(valid_statuses):
-                status = valid_statuses[int(selected_status)]
+                status = valid_statuses[int(selected_status) - 1]
                 break
 
         return role, status
