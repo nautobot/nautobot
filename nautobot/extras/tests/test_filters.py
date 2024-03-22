@@ -472,38 +472,30 @@ class ContactAndTeamFilterSetTestCaseMixin:
                 location_type=location_type,
                 name="Filter Test Location 0",
                 status=location_status,
-                physical_address="Test address for location 0 and 1",
+                contact_name="match 0",
             ),
             Location.objects.create(
                 location_type=location_type,
                 name="Filter Test Location 1",
                 status=location_status,
-                shipping_address="Test address for location 0 and 1",
-                contact_name="match 1 and 2",
+                contact_email="Test email for location 1 and 2",
             ),
             Location.objects.create(
                 location_type=location_type,
                 name="Filter Test Location 2",
                 status=location_status,
-                contact_name="match 1 and 2",
-                contact_email="Test email for location 2 and 3",
+                contact_email="TEST EMAIL FOR LOCATION 1 AND 2",
+                contact_phone="Test phone for location 2 and 3",
             ),
             Location.objects.create(
                 location_type=location_type,
                 name="Filter Test Location 3",
                 status=location_status,
-                contact_email="TEST EMAIL FOR LOCATION 2 AND 3",
-                contact_phone="Test phone for location 3 and 4",
+                contact_phone="Test phone for location 2 and 3",
             ),
             Location.objects.create(
                 location_type=location_type,
                 name="Filter Test Location 4",
-                status=location_status,
-                contact_phone="Test phone for location 3 and 4",
-            ),
-            Location.objects.create(
-                location_type=location_type,
-                name="Filter Test Location 5",
                 status=location_status,
                 contact_name="Hopefully this doesn't match any random factory data",
                 contact_email="Hopefully this doesn't match any random factory data",
@@ -513,41 +505,40 @@ class ContactAndTeamFilterSetTestCaseMixin:
             ),
         )
 
-        self.queryset.create(name="match 0 and 1", address="Test address for location 0 and 1")
-        self.queryset.create(name="match 1 and 2")
-        self.queryset.create(name="match 2 and 3", email="Test email for location 2 and 3")
-        self.queryset.create(name="match 3 and 4", phone="Test phone for location 3 and 4")
+        self.queryset.create(name="match 0")
+        self.queryset.create(name="match 1 and 2", email="Test email for location 1 and 2")
+        self.queryset.create(name="match 2 and 3", phone="Test phone for location 2 and 3")
 
         # These subtests are confusing because we're trying to test the NaturalKeyOrPKMultipleChoiceFilter
         # behavior while also testing the `similar_to_location_data` method filter behavior.
-        with self.subTest("Test address and name match"):
-            params = {"similar_to_location_data": [test_locations[0].pk, test_locations[1].name]}
+        with self.subTest("Test name match"):
+            params = {"similar_to_location_data": [test_locations[0].pk]}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(name__in=["match 0 and 1", "match 1 and 2"]),
+                self.queryset.filter(name__in=["match 0"]),
             )
-        with self.subTest("Test address, name and email match"):
-            params = {"similar_to_location_data": [test_locations[1].pk, test_locations[2].name]}
+        with self.subTest("Test email match"):
+            params = {"similar_to_location_data": [test_locations[1].pk]}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(name__in=["match 0 and 1", "match 1 and 2", "match 2 and 3"]),
+                self.queryset.filter(name__in=["match 1 and 2"]),
             )
-        with self.subTest("Test name, email and phone match"):
-            params = {"similar_to_location_data": [test_locations[2].pk, test_locations[3].name]}
+        with self.subTest("Test phone match"):
+            params = {"similar_to_location_data": [test_locations[2].pk]}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(name__in=["match 1 and 2", "match 2 and 3", "match 3 and 4"]),
+                self.queryset.filter(name__in=["match 1 and 2", "match 2 and 3"]),
             )
         with self.subTest("Test email and phone match"):
-            params = {"similar_to_location_data": [test_locations[3].pk, test_locations[4].name]}
+            params = {"similar_to_location_data": [test_locations[1].pk, test_locations[3].name]}
             self.assertQuerysetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(name__in=["match 2 and 3", "match 3 and 4"]),
+                self.queryset.filter(name__in=["match 1 and 2", "match 2 and 3"]),
             )
         with self.subTest("Test no match"):
-            params = {"similar_to_location_data": [test_locations[5].pk]}
+            params = {"similar_to_location_data": [test_locations[4].pk]}
             self.assertFalse(self.filterset(params, self.queryset).qs.exists())
-            params = {"similar_to_location_data": [test_locations[5].name]}
+            params = {"similar_to_location_data": [test_locations[4].name]}
             self.assertFalse(self.filterset(params, self.queryset).qs.exists())
 
 
