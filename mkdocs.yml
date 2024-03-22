@@ -280,6 +280,7 @@ nav:
         - External Authentication (Optional): "user-guide/administration/installation/external-authentication.md"
         - Installing and Using Plugins: "user-guide/administration/installation/app-install.md"
         - Nautobot Docker Images: "user-guide/administration/installation/docker.md"
+        - Health Checks: "user-guide/administration/installation/health-checks.md"
         - SELinux Troubleshooting: "user-guide/administration/installation/selinux-troubleshooting.md"
       - Upgrading:
         - Database Backup: "user-guide/administration/upgrading/database-backup.md"

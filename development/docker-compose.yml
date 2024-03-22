@@ -26,15 +26,11 @@ services:
       - dev.env
     tty: true
     healthcheck:
-      interval: 5s
-      timeout: 5s
+      interval: 10s
+      timeout: 10s
       start_period: 5m  # it takes a WHILE to run initial migrations with an empty DB
       retries: 3
-      test:
-        - "CMD"
-        - "curl"
-        - "-f"
-        - "http://localhost:8080/health/"
+      test: "nautobot-server health_check"
   celery_worker:
     image: "local/nautobot-dev:local-py${PYTHON_VER}"
     ports:
@@ -44,14 +40,10 @@ services:
     entrypoint: "watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events"
     healthcheck:
       interval: 60s
-      timeout: 30s
+      timeout: 10s
       start_period: 30s
       retries: 3
-      test:
-        - "CMD"
-        - "bash"
-        - "-c"
-        - "nautobot-server celery inspect ping --destination celery@$$HOSTNAME"
+      test: "nautobot-server celery inspect ping --destination celery@$$HOSTNAME"
     depends_on:
       nautobot:
         condition: service_healthy
@@ -68,12 +60,8 @@ services:
       timeout: 5s
       start_period: 30s
       retries: 3
-      test:
-        - "CMD"
-        - "/bin/sh"
-        - "-c"
-        # find the heartbeat file and report success if it was modified less than 0.1 minutes (6 seconds) ago, else fail
-        - '[ $$(find /tmp/nautobot_celery_beat_heartbeat -mmin -0.1 | wc -l) -eq 1 ] || false'
+      # find the heartbeat file and report success if it was modified less than 0.1 minutes (6 seconds) ago, else fail
+      test: "[ $$(find /tmp/nautobot_celery_beat_heartbeat -mmin -0.1 | wc -l) -eq 1 ] || false"
     depends_on:
       nautobot:
         condition: service_healthy
@@ -88,8 +76,13 @@ services:
       - sh
       - -c # this is to evaluate the $REDIS_PASSWORD from the env
       - redis-server --appendonly yes --requirepass $$REDIS_PASSWORD ## $$ because of docker-compose
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      test: "redis-cli -h localhost ping | grep PONG"
     env_file:
-      - dev.env
+      - ./dev.env
   selenium:
     image: selenium/standalone-firefox:4.9.1
     ports:
