@@ -1,2 +1,0 @@
-Changed DeviceType list view "Import" button to include a dropdown to select between JSON/YAML or CSV import formats.
-Changed DeviceType list view "Export" button to default to YAML format.

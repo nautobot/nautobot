@@ -210,7 +210,7 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
         Return the cache key for the queryset of `DynamicGroup` objects that are eligible to potentially contain the
         given object.
         """
-        return f"{obj._meta.label_lower}._get_eligible_dynamic_groups"
+        return f"nautobot.{obj._meta.label_lower}._get_eligible_dynamic_groups"
 
     def _get_eligible_dynamic_groups(self, obj, use_cache=False):
         """
