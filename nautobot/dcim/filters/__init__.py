@@ -1842,7 +1842,6 @@ class ControllerFilterSet(
     NautobotFilterSet,
     LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
-    LocalContextModelFilterSetMixin,
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
 ):

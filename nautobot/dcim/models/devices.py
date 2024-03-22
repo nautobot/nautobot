@@ -1247,7 +1247,7 @@ class SoftwareVersion(PrimaryModel):
     "statuses",
     "webhooks",
 )
-class Controller(PrimaryModel, ConfigContextModel):
+class Controller(PrimaryModel):
     """Represents an entity that manages or controls one or more devices, acting as a central point of control.
 
     A Controller can be deployed to a single device or a group of devices represented by a DeviceRedundancyGroup.
@@ -1329,7 +1329,7 @@ class Controller(PrimaryModel, ConfigContextModel):
     "graphql",
     "webhooks",
 )
-class ControllerManagedDeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
+class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
     """Represents a mapping of controlled devices to a specific controller.
 
     This model allows for the organization of controlled devices into hierarchical groups for structured representation.

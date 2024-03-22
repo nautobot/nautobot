@@ -45,19 +45,26 @@
 
 {% block javascript %}
 <script type="text/javascript">
-    const controllerDevice = document.getElementById('id_controller_device');
-    const controllerDeviceRedundancyGroup = document.getElementById('id_controller_device_redundancy_group');
+    const controllerDevice = $('#id_controller_device');
+    const controllerDeviceRedundancyGroup = $('#id_controller_device_redundancy_group');
 
-    controllerDevice.addEventListener('change', function() {
-        if (controllerDevice.value) {
-            controllerDeviceRedundancyGroup.value = '';
+    const controllerUpdated = function() {
+        if (controllerDevice.val()) {
+            controllerDeviceRedundancyGroup.val('');
+            controllerDeviceRedundancyGroup.trigger('change');
         }
-    });
+    };
 
-    controllerDeviceRedundancyGroup.addEventListener('change', function() {
-        if (controllerDeviceRedundancyGroup.value) {
-            controllerDevice.value = '';
+    const controllerDeviceRedundancyGroupUpdated = function() {
+        if (controllerDeviceRedundancyGroup.val()) {
+            controllerDevice.val('');
+            controllerDevice.trigger('change');
         }
-    });
+    };
+
+    controllerDevice.on('select2:select', controllerUpdated);
+    controllerDevice.on('select2:unselect', controllerUpdated);
+    controllerDeviceRedundancyGroup.on('select2:select', controllerDeviceRedundancyGroupUpdated);
+    controllerDeviceRedundancyGroup.on('select2:unselect', controllerDeviceRedundancyGroupUpdated);
 </script>
 {% endblock %}

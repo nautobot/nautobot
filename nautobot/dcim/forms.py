@@ -4127,8 +4127,29 @@ class SoftwareVersionForm(NautobotModelForm):
         fields = "__all__"
 
 
-class ControllerForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalContextModelForm):
+class ControllerForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     """Controller create/edit form."""
+
+    platform = DynamicModelChoiceField(
+        queryset=Platform.objects.all(),
+        required=False,
+    )
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+    )
+    external_integration = DynamicModelChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
+    )
+    controller_device = DynamicModelChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+    )
+    controller_device_redundancy_group = DynamicModelChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(),
+        required=False,
+    )
 
     class Meta:
         model = Controller
@@ -4149,7 +4170,6 @@ class ControllerForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, Lo
 
 class ControllerFilterForm(
     NautobotFilterForm,
-    LocalContextFilterForm,
     LocatableModelFilterFormMixin,
     TenancyFilterForm,
     StatusModelFilterFormMixin,
@@ -4204,7 +4224,6 @@ class ControllerBulkEditForm(
     StatusModelBulkEditFormMixin,
     RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
-    LocalContextModelBulkEditForm,
 ):
     """Controller bulk edit form."""
 
@@ -4279,10 +4298,7 @@ class ControllerManagedDeviceGroupForm(NautobotModelForm):
         return instance
 
 
-class ControllerManagedDeviceGroupFilterForm(
-    LocalContextFilterForm,
-    NautobotFilterForm,
-):
+class ControllerManagedDeviceGroupFilterForm(NautobotFilterForm):
     """ControllerManagedDeviceGroup basic filter form."""
 
     model = ControllerManagedDeviceGroup
@@ -4316,11 +4332,7 @@ class ControllerManagedDeviceGroupFilterForm(
     )
 
 
-class ControllerManagedDeviceGroupBulkEditForm(
-    TagsBulkEditFormMixin,
-    NautobotBulkEditForm,
-    LocalContextModelBulkEditForm,
-):
+class ControllerManagedDeviceGroupBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     """ControllerManagedDeviceGroup bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(
