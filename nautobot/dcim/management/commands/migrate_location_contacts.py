@@ -40,11 +40,15 @@ class Command(BaseCommand):
 
     def migrate_location_contacts(self):
         """Iterate through Locations with contact information and try to match to existing Contact or Team."""
-        locations_with_contact_data = Location.objects.exclude(
-            contact_name="",
-            contact_phone="",
-            contact_email="",
-        ).filter(associated_contacts__isnull=True)
+        locations_with_contact_data = (
+            Location.objects.without_tree_fields()
+            .exclude(
+                contact_name="",
+                contact_phone="",
+                contact_email="",
+            )
+            .filter(associated_contacts__isnull=True)
+        )
 
         for location in locations_with_contact_data:
             self.stdout.write(f"Finding existing Contacts or Teams for location {location.display}...")
