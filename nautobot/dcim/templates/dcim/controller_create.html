@@ -16,9 +16,21 @@
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Integration</strong></div>
         <div class="panel-body">
-            {% render_field form.external_integration %}
-            {% render_field form.controller_device %}
-            {% render_field form.controller_device_redundancy_group %}
+        {% render_field form.external_integration %}
+        {% with controllerdevice_tab_active=form.initial.controller_device %}
+            <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation"{% if controllerdevice_tab_active %} class="active"{% endif %}><a href="#controllerdevice" role="tab" data-toggle="tab">Controller Device</a></li>
+                <li role="presentation"{% if not controllerdevice_tab_active %} class="active"{% endif %}><a href="#controller_device_redundancy_group" role="tab" data-toggle="tab">Controller Device Redundancy Group</a></li>
+            </ul>
+            <div class="tab-content">
+                <div class="tab-pane{% if not controllerdevice_tab_active %} active{% endif %}" id="controller_device_redundancy_group">
+                    {% render_field form.controller_device_redundancy_group %}
+                </div>
+                <div class="tab-pane{% if controllerdevice_tab_active %} active{% endif %}" id="controllerdevice">
+                    {% render_field form.controller_device %}
+                </div>
+            </div>
+        {% endwith %}
         </div>
     </div>
     <div class="panel panel-default">
@@ -30,3 +42,22 @@
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}
 {% endblock form %}
+
+{% block javascript %}
+<script type="text/javascript">
+    const controllerDevice = document.getElementById('id_controller_device');
+    const controllerDeviceRedundancyGroup = document.getElementById('id_controller_device_redundancy_group');
+
+    controllerDevice.addEventListener('change', function() {
+        if (controllerDevice.value) {
+            controllerDeviceRedundancyGroup.value = '';
+        }
+    });
+
+    controllerDeviceRedundancyGroup.addEventListener('change', function() {
+        if (controllerDeviceRedundancyGroup.value) {
+            controllerDevice.value = '';
+        }
+    });
+</script>
+{% endblock %}
