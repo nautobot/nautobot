@@ -1,0 +1,1 @@
+Fixed inconsistent use of super causing `active_tab` context to be missing from several views.
