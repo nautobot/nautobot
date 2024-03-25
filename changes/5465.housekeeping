@@ -1,1 +1,0 @@
-Updated custom views in the `example_plugin` to use the new `GenericView` base class as a best practice.

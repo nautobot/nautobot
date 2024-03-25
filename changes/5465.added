@@ -1,2 +1,0 @@
-Added `nautobot.apps.utils.get_url_for_url_pattern` and `nautobot.apps.utils.get_url_patterns` lookup functions.
-Added `nautobot.apps.views.GenericView` base class.

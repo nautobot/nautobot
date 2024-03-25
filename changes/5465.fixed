@@ -1,1 +1,0 @@
-Fixed a 500 error when accessing any of the `/dcim/<port-type>/<uuid>/connect/<termination_b_type>/` view endpoints with an invalid/nonexistent `termination_b_type` string.
