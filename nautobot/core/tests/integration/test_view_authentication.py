@@ -35,7 +35,6 @@ class AuthenticationEnforcedTestCase(TestCase):
                     "/login/",
                     "/media-failure/",
                     "/metrics/",
-                    "/template.css",
                 ]:
                     self.assertHttpStatus(response, 200, msg=url)
                 elif response.status_code == 200:
