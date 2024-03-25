@@ -115,8 +115,8 @@ class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
 
 
 class PluginsAPIRootView(AuthenticatedAPIRootView):
-    name = "Apps"
-    description = "API extension point for installed Nautobot Apps"
+    name = "Plugins"
+    description = "API extension point for installed Nautobot Plugins"
 
     @staticmethod
     def _get_plugin_entry(plugin, app_config, request, format_):
