@@ -467,28 +467,22 @@ class ContactTeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
             contact_name = location.contact_name
             contact_phone = location.contact_phone
             contact_email = location.contact_email
-            address = location.physical_address or location.shipping_address
             if contact_name:
-                contact_names = list(queryset.values_list("name", flat=True).distinct())
-                name_matches = get_close_matches(contact_name, contact_names, cutoff=0.9)
+                contact_names = list(queryset.order_by().values_list("name", flat=True).distinct())
+                name_matches = get_close_matches(contact_name, contact_names, cutoff=0.8)
                 if name_matches:
                     query_params |= Q(name__in=name_matches)
             if contact_phone:
-                contact_phones = list(queryset.values_list("phone", flat=True).distinct())
-                phone_matches = get_close_matches(contact_phone, contact_phones, cutoff=0.9)
+                contact_phones = list(queryset.order_by().values_list("phone", flat=True).distinct())
+                phone_matches = get_close_matches(contact_phone, contact_phones, cutoff=0.8)
                 if phone_matches:
                     query_params |= Q(phone__in=phone_matches)
             if contact_email:
-                contact_emails = list(queryset.values_list("email", flat=True).distinct())
+                contact_emails = list(queryset.order_by().values_list("email", flat=True).distinct())
                 # fuzzy matching for emails doesn't make sense, use case insensitive match here
                 email_matches = [e for e in contact_emails if e.casefold() == contact_email.casefold()]
                 if email_matches:
                     query_params |= Q(email__in=email_matches)
-            if address:
-                contact_addresses = list(queryset.values_list("address", flat=True))
-                address_matches = get_close_matches(address, contact_addresses, cutoff=0.9)
-                if address_matches:
-                    query_params |= Q(address__in=address_matches)
 
         return query_params
 
