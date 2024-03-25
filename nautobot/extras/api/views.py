@@ -15,7 +15,6 @@ from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, Valida
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.routers import APIRootView
 from rest_framework import mixins, viewsets
 
 from nautobot.core.api.authentication import TokenPermissions
@@ -73,15 +72,6 @@ from nautobot.utilities.utils import (
     versioned_serializer_selector,
 )
 from . import nested_serializers, serializers
-
-
-class ExtrasRootView(APIRootView):
-    """
-    Extras API root view
-    """
-
-    def get_view_name(self):
-        return "Extras"
 
 
 class NotesViewSetMixin:

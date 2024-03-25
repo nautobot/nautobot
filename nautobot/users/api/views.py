@@ -5,7 +5,6 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiType
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.routers import APIRootView
 from rest_framework.viewsets import ViewSet
 
 from nautobot.core.api.serializers import BulkOperationIntegerIDSerializer
@@ -15,16 +14,6 @@ from nautobot.users.models import ObjectPermission, Token
 from nautobot.utilities.querysets import RestrictedQuerySet
 from nautobot.utilities.utils import deepmerge
 from . import serializers
-
-
-class UsersRootView(APIRootView):
-    """
-    Users API root view
-    """
-
-    def get_view_name(self):
-        return "Users"
-
 
 #
 # Users and groups

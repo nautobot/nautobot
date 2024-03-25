@@ -2,7 +2,6 @@ from collections import OrderedDict
 
 from django.apps import apps
 from django.conf import settings
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404
 from django.shortcuts import render
 from django.urls.exceptions import NoReverseMatch
@@ -15,7 +14,8 @@ from rest_framework.views import APIView
 
 from django_tables2 import RequestConfig
 
-from nautobot.core.api.views import NautobotAPIVersionMixin
+from nautobot.core.api.views import AuthenticatedAPIRootView, NautobotAPIVersionMixin
+from nautobot.core.views.generic import GenericView
 from nautobot.utilities.forms import TableConfigForm
 from nautobot.utilities.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.plugins.tables import InstalledPluginsTable
@@ -67,7 +67,7 @@ class InstalledPluginsView(AdminRequiredMixin, View):
         )
 
 
-class InstalledPluginDetailView(LoginRequiredMixin, View):
+class InstalledPluginDetailView(GenericView):
     """
     View for showing details of an installed plugin.
     """
@@ -92,7 +92,6 @@ class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
     """
 
     permission_classes = [permissions.IsAdminUser]
-    _ignore_model_permissions = True
 
     def get_view_name(self):
         return "Installed Plugins"
@@ -115,11 +114,9 @@ class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
         return Response([self._get_plugin_data(apps.get_app_config(plugin)) for plugin in settings.PLUGINS])
 
 
-class PluginsAPIRootView(NautobotAPIVersionMixin, APIView):
-    _ignore_model_permissions = True
-
-    def get_view_name(self):
-        return "Plugins"
+class PluginsAPIRootView(AuthenticatedAPIRootView):
+    name = "Plugins"
+    description = "API extension point for installed Nautobot Plugins"
 
     @staticmethod
     def _get_plugin_entry(plugin, app_config, request, format_):
@@ -141,7 +138,7 @@ class PluginsAPIRootView(NautobotAPIVersionMixin, APIView):
         return entry
 
     @extend_schema(exclude=True)
-    def get(self, request, format=None):  # pylint: disable=redefined-builtin
+    def get(self, request, *args, format=None, **kwargs):  # pylint: disable=redefined-builtin
         entries = []
         for plugin in settings.PLUGINS:
             app_config = apps.get_app_config(plugin)

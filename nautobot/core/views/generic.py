@@ -4,6 +4,7 @@ import re
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
@@ -51,6 +52,14 @@ from nautobot.utilities.utils import (
     prepare_cloned_fields,
 )
 from nautobot.utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
+
+
+class GenericView(LoginRequiredMixin, View):
+    """
+    Base class for non-object-related views.
+
+    Enforces authentication, which Django's base View does not by default.
+    """
 
 
 class ObjectView(ObjectPermissionRequiredMixin, View):

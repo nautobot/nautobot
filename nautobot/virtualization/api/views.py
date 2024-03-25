@@ -1,5 +1,4 @@
 from drf_spectacular.utils import extend_schema, extend_schema_view
-from rest_framework.routers import APIRootView
 
 from nautobot.dcim.models import Device
 from nautobot.extras.api.views import (
@@ -19,16 +18,6 @@ from nautobot.virtualization.models import (
     VMInterface,
 )
 from . import serializers
-
-
-class VirtualizationRootView(APIRootView):
-    """
-    Virtualization API root view
-    """
-
-    def get_view_name(self):
-        return "Virtualization"
-
 
 #
 # Clusters

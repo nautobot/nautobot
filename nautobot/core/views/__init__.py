@@ -7,9 +7,9 @@ from db_file_storage.views import get_file
 import prometheus_client
 from django.conf import settings
 from django.contrib.auth.decorators import permission_required
-from django.contrib.auth.mixins import AccessMixin
+from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin
 from django.http import HttpResponseServerError, JsonResponse, HttpResponseForbidden, HttpResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import reverse
@@ -168,7 +168,7 @@ class SearchView(AccessMixin, View):
         )
 
 
-class StaticMediaFailureView(View):
+class StaticMediaFailureView(View):  # NOT using LoginRequiredMixin here as this may happen even on the login page
     """
     Display a user-friendly error message with troubleshooting tips when a static media file fails to load.
     """
@@ -226,13 +226,8 @@ def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
     return HttpResponseForbidden(t.render(context), content_type="text/html")
 
 
-class CustomGraphQLView(GraphQLView):
+class CustomGraphQLView(LoginRequiredMixin, GraphQLView):
     def render_graphiql(self, request, **data):
-        if not request.user.is_authenticated and get_settings_or_config("HIDE_RESTRICTED_UI"):
-            graphql_url = reverse("graphql")
-            login_url = reverse(settings.LOGIN_URL)
-            return redirect(f"{login_url}?next={graphql_url}")
-
         query_slug = request.GET.get("slug")
         if query_slug:
             data["obj"] = GraphQLQuery.objects.get(slug=query_slug)

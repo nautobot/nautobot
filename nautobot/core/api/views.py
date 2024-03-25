@@ -17,7 +17,7 @@ from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet as ModelViewSet_
 from rest_framework.viewsets import ReadOnlyModelViewSet as ReadOnlyModelViewSet_
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ParseError
 from drf_spectacular.plumbing import get_relative_url, set_query_parameters
 from drf_spectacular.renderers import OpenApiJsonRenderer
@@ -35,8 +35,8 @@ from graphene_django.views import GraphQLView, instantiate_middleware, HttpError
 from nautobot.core.celery import app as celery_app
 from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.routers import AuthenticatedAPIRootView
 from nautobot.utilities.api import get_serializer_for_model
-from nautobot.utilities.config import get_settings_or_config
 from nautobot.utilities.utils import (
     get_all_lookup_expr_for_field,
     get_filterset_parameter_form_field,
@@ -323,18 +323,17 @@ class ReadOnlyModelViewSet(NautobotAPIVersionMixin, ModelViewSetMixin, ReadOnlyM
 #
 
 
-class APIRootView(NautobotAPIVersionMixin, APIView):
+class APIRootView(NautobotAPIVersionMixin, AuthenticatedAPIRootView):
     """
-    This is the root of the REST API. API endpoints are arranged by app and model name; e.g. `/api/dcim/sites/`.
+    This is the root of the REST API.
+
+    API endpoints are arranged by app and model name; e.g. `/api/dcim/locations/`.
     """
 
-    _ignore_model_permissions = True
-
-    def get_view_name(self):
-        return "API Root"
+    name = "API Root"
 
     @extend_schema(exclude=True)
-    def get(self, request, format=None):  # pylint: disable=redefined-builtin
+    def get(self, request, *args, format=None, **kwargs):  # pylint: disable=redefined-builtin
         return Response(
             OrderedDict(
                 (
@@ -478,11 +477,6 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
     @extend_schema(exclude=True)
     def get(self, request, *args, **kwargs):
         """Fix up the rendering of the Swagger UI to work with Nautobot's UI."""
-        if not request.user.is_authenticated and get_settings_or_config("HIDE_RESTRICTED_UI"):
-            doc_url = reverse("api_docs")
-            login_url = reverse(settings.LOGIN_URL)
-            return redirect(f"{login_url}?next={doc_url}")
-
         # For backward compatibility wtih drf-yasg, `/api/docs/?format=openapi` is a redirect to the JSON schema.
         if request.GET.get("format") == "openapi":
             return redirect("schema_json", permanent=True)
@@ -511,11 +505,12 @@ class NautobotSpectacularRedocView(APIVersioningGetSchemaURLMixin, SpectacularRe
 class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
     """
     API View for GraphQL to integrate properly with DRF authentication mechanism.
-    The code is a stripped down version of graphene-django default View
-    https://github.com/graphql-python/graphene-django/blob/main/graphene_django/views.py#L57
     """
 
-    permission_classes = [AllowAny]
+    # The code is a stripped down version of graphene-django default View
+    # https://github.com/graphql-python/graphene-django/blob/main/graphene_django/views.py#L57
+
+    permission_classes = [IsAuthenticated]
     graphql_schema = None
     executor = None
     backend = None

@@ -1,0 +1,1 @@
+Updated example views in the App developer documentation to include `ObjectPermissionRequiredMixin` or `LoginRequiredMixin` as appropriate best practices.
