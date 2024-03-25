@@ -499,7 +499,10 @@ class ObjectAssignContactOrTeamView(generic.ObjectEditView):
     template_name = "extras/object_assign_contact_or_team.html"
 
 
-class MapContactorTeamFromLocationView(generic.ObjectEditView):
+# <a href="{% url 'extras:map_contact_from_location' %}?return_url={{return_url}}&location={{ object.pk }}&name={{object.contact_name}}&phone={{object.contact_phone}}&email={{object.contact_email}}&address={{object.physical_address}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" class="btn btn-primary btn-xs">
+
+
+class MapContactOrTeamFromLocationView(generic.ObjectEditView):
     queryset = ContactAssociation.objects.all()
     model_form = forms.MapSimilarContactAssociationForm
     template_name = "extras/map_contact_or_team.html"

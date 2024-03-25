@@ -3,10 +3,12 @@
 {% load helpers %}
 
 {% block tabs %}
-    {% if not editing and not map %}
-        {% include 'extras/inc/object_contact_header.html' with active_tab='team' %}
-    {% else %}
-        {% include 'extras/inc/map_contact_header.html' with active_tab='team' %}
+    {% if not editing %}
+        {% if not map %}
+            {% include 'extras/inc/object_contact_header.html' with active_tab='team' %}
+        {% else %}
+            {% include 'extras/inc/map_contact_header.html' with active_tab='team' %}
+        {% endif %}
     {% endif %}
 {% endblock %}
 

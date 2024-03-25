@@ -171,17 +171,17 @@ urlpatterns = [
     ),
     # contacts
     path(
-        "contact-associations/map-contact-from-location",
-        views.MapContactorTeamFromLocationView.as_view(),
+        "contact-associations/map-contact-from-location/",
+        views.MapContactOrTeamFromLocationView.as_view(),
         name="map_contact_from_location",
     ),
     path(
-        "contact-associations/map-new-contact-from-location",
+        "contact-associations/map-new-contact-from-location/",
         views.MapNewContactFromLocationView.as_view(),
         name="map_new_contact_from_location",
     ),
     path(
-        "contact-associations/map-new-team-from-location",
+        "contact-associations/map-new-team-from-location/",
         views.MapNewTeamFromLocationView.as_view(),
         name="map_new_team_from_location",
     ),
