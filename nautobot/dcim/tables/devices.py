@@ -14,7 +14,7 @@ from nautobot.dcim.models import (
     ConsolePort,
     ConsoleServerPort,
     Controller,
-    ControllerDeviceGroup,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceRedundancyGroup,
@@ -60,7 +60,7 @@ __all__ = (
     "ConsolePortTable",
     "ConsoleServerPortTable",
     "ControllerTable",
-    "ControllerDeviceGroupTable",
+    "ControllerManagedDeviceGroupTable",
     "DeviceBayTable",
     "DeviceConsolePortTable",
     "DeviceConsoleServerPortTable",
@@ -164,7 +164,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     device_redundancy_group_priority = tables.TemplateColumn(
         template_code="""{% if record.device_redundancy_group %}<span class="badge badge-default">{{ record.device_redundancy_group_priority|default:'None' }}</span>{% else %}—{% endif %}"""
     )
-    controller_device_group = tables.Column(linkify=True)
+    controller_managed_device_group = tables.Column(linkify=True)
     secrets_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:device_list")
 
@@ -193,7 +193,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "vc_priority",
             "device_redundancy_group",
             "device_redundancy_group_priority",
-            "controller_device_group",
+            "controller_managed_device_group",
             "secrets_group",
             "tags",
         )
@@ -1142,8 +1142,8 @@ class ControllerTable(BaseTable):
     role = tables.Column(linkify=True)
     tenant = TenantColumn()
     external_integration = tables.Column(linkify=True)
-    deployed_controller_device = tables.Column(linkify=True)
-    deployed_controller_group = tables.Column(linkify=True)
+    controller_device = tables.Column(linkify=True)
+    controller_device_redundancy_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:controller_list")
     actions = ButtonsColumn(Controller)
 
@@ -1160,8 +1160,8 @@ class ControllerTable(BaseTable):
             "role",
             "tenant",
             "external_integration",
-            "deployed_controller_device",
-            "deployed_controller_group",
+            "controller_device",
+            "controller_device_redundancy_group",
             "tags",
             "actions",
         )
@@ -1173,28 +1173,25 @@ class ControllerTable(BaseTable):
             "platform",
             "role",
             "tenant",
-            "external_integration",
-            "deployed_controller_device",
-            "deployed_controller_group",
             "actions",
         )
 
 
-class ControllerDeviceGroupTable(BaseTable):
+class ControllerManagedDeviceGroupTable(BaseTable):
     """Table for list view."""
 
     pk = ToggleColumn()
     name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
     weight = tables.Column()
     controller = tables.Column(linkify=True)
-    tags = TagColumn(url_name="dcim:controllerdevicegroup_list")
-    actions = ButtonsColumn(ControllerDeviceGroup)
+    tags = TagColumn(url_name="dcim:controllermanageddevicegroup_list")
+    actions = ButtonsColumn(ControllerManagedDeviceGroup)
     device_count = tables.TemplateColumn(template_code=LINKED_RECORD_COUNT, verbose_name="Devices")
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
 
-        model = ControllerDeviceGroup
+        model = ControllerManagedDeviceGroup
         fields = (
             "pk",
             "name",

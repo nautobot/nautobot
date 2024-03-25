@@ -18,6 +18,7 @@ from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.core.testing.utils import disable_warnings
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.models import (
+    Controller,
     Device,
     DeviceType,
     Location,
@@ -2851,6 +2852,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         vlan_groups = VLANGroup.objects.all()[:2]
 
         # Try deleting all devices and then creating 2 VLANs (fails):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         response = send_bulk_data(
             "post",

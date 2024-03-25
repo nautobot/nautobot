@@ -14,7 +14,9 @@ Contact and Team are models that represent an individual and a group of individu
 
 #### Controller Model ([#3111](https://github.com/nautobot/nautobot/issues/3111))
 
-A Controller in Nautobot is an abstraction meant to represent network or SDN (Software-Defined Networking) controllers. These may include, but are not limited to, wireless controllers, cloud-based network management systems, and other forms of central network control mechanisms. See more details in the model [documentation](../user-guide/core-data-model/dcim/controller.md).
+Controller models have been added to the `dcim` app. A Controller in Nautobot is an abstraction meant to represent network or SDN (Software-Defined Networking) controllers. These may include, but are not limited to, wireless controllers, cloud-based network management systems, and other forms of central network control mechanisms.
+
+For more details, refer to the user guide for a [`Controller` model](../user-guide/core-data-model/dcim/controller.md), a [`ControllerManagedDeviceGroup` model](../user-guide/core-data-model/dcim/controllermanageddevicegroup.md), or developer documentation for [controllers](../development/core/controllers.md).
 
 #### DeviceFamily Model ([#3559](https://github.com/nautobot/nautobot/issues/3559))
 

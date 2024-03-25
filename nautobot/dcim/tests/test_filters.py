@@ -26,8 +26,8 @@ from nautobot.dcim.filters import (
     ConsolePortTemplateFilterSet,
     ConsoleServerPortFilterSet,
     ConsoleServerPortTemplateFilterSet,
-    ControllerDeviceGroupFilterSet,
     ControllerFilterSet,
+    ControllerManagedDeviceGroupFilterSet,
     DeviceBayFilterSet,
     DeviceBayTemplateFilterSet,
     DeviceFamilyFilterSet,
@@ -68,7 +68,7 @@ from nautobot.dcim.models import (
     ConsoleServerPort,
     ConsoleServerPortTemplate,
     Controller,
-    ControllerDeviceGroup,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -112,6 +112,7 @@ User = get_user_model()
 
 
 def common_test_data(cls):
+    Controller.objects.filter(controller_device__isnull=False).delete()
     Device.objects.all().delete()
     tenants = Tenant.objects.filter(tenant_group__isnull=False)
     cls.tenants = tenants
@@ -618,6 +619,82 @@ def common_test_data(cls):
     )
     cls.devices[0].tags.set(Tag.objects.get_for_model(Device))
     cls.devices[1].tags.set(Tag.objects.get_for_model(Device)[:3])
+
+    controller_statuses = iter(Status.objects.get_for_model(Controller))
+    external_integrations = iter(ExternalIntegration.objects.all())
+    device_redundancy_groups = iter(DeviceRedundancyGroup.objects.all())
+
+    cls.controllers = (
+        Controller.objects.create(
+            name="Controller 1",
+            status=next(controller_statuses),
+            description="First",
+            location=loc0,
+            platform=platforms[0],
+            role=cls.device_roles[0],
+            tenant=tenants[0],
+            external_integration=next(external_integrations),
+            controller_device=cls.devices[0],
+        ),
+        Controller.objects.create(
+            name="Controller 2",
+            status=next(controller_statuses),
+            description="Second",
+            location=loc1,
+            platform=platforms[1],
+            role=cls.device_roles[1],
+            tenant=tenants[1],
+            external_integration=next(external_integrations),
+            controller_device=cls.devices[1],
+        ),
+        Controller.objects.create(
+            name="Controller 3",
+            status=next(controller_statuses),
+            description="Third",
+            location=loc2,
+            platform=platforms[2],
+            role=cls.device_roles[2],
+            tenant=tenants[2],
+            external_integration=next(external_integrations),
+            controller_device_redundancy_group=next(device_redundancy_groups),
+        ),
+        Controller.objects.create(
+            name="Controller 4",
+            status=next(controller_statuses),
+            description="Forth",
+            location=loc2,
+            platform=platforms[2],
+            role=cls.device_roles[2],
+            tenant=tenants[2],
+            external_integration=next(external_integrations),
+            controller_device_redundancy_group=next(device_redundancy_groups),
+        ),
+    )
+    cls.controllers[0].tags.set(Tag.objects.get_for_model(Controller))
+    cls.controllers[1].tags.set(Tag.objects.get_for_model(Controller)[:3])
+
+    parent_controller_managed_device_group = ControllerManagedDeviceGroup.objects.create(
+        name="Managed Device Group 11",
+        weight=1000,
+        controller=cls.controllers[0],
+    )
+    cls.controller_managed_device_groups = (
+        parent_controller_managed_device_group,
+        ControllerManagedDeviceGroup.objects.create(
+            name="Managed Device Group 12",
+            weight=2000,
+            controller=cls.controllers[1],
+            parent=parent_controller_managed_device_group,
+        ),
+        ControllerManagedDeviceGroup.objects.create(
+            name="Managed Device Group 13",
+            weight=3000,
+            controller=cls.controllers[2],
+            parent=parent_controller_managed_device_group,
+        ),
+    )
+    parent_controller_managed_device_group.tags.set(Tag.objects.get_for_model(ControllerManagedDeviceGroup))
+    cls.controller_managed_device_groups[1].tags.set(Tag.objects.get_for_model(ControllerManagedDeviceGroup)[:3])
 
 
 class LocationTypeFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
@@ -1341,8 +1418,8 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ("device_redundancy_group", "device_redundancy_group__id"),
         ("device_redundancy_group", "device_redundancy_group__name"),
         ("device_redundancy_group_priority",),
-        ("controller_device_group", "controller_device_group__id"),
-        ("controller_device_group", "controller_device_group__name"),
+        ("controller_managed_device_group", "controller_managed_device_group__id"),
+        ("controller_managed_device_group", "controller_managed_device_group__name"),
         ("device_type", "device_type__id"),
         ("device_type", "device_type__model"),
         ("front_ports", "front_ports__id"),
@@ -1415,19 +1492,19 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         Service.objects.create(device=devices[0], name="ssh", protocol="tcp", ports=[22])
         Service.objects.create(device=devices[1], name="dns", protocol="udp", ports=[53])
 
-        cls.controller_device_groups = list(ControllerDeviceGroup.objects.all()[:2])
+        cls.controller_managed_device_groups = list(ControllerManagedDeviceGroup.objects.all()[:2])
         cls.device_redundancy_groups = list(DeviceRedundancyGroup.objects.all()[:2])
         Device.objects.filter(pk=devices[0].pk).update(
-            controller_device_group=cls.controller_device_groups[0],
+            controller_managed_device_group=cls.controller_managed_device_groups[0],
             device_redundancy_group=cls.device_redundancy_groups[0],
         )
         Device.objects.filter(pk=devices[1].pk).update(
-            controller_device_group=cls.controller_device_groups[0],
+            controller_managed_device_group=cls.controller_managed_device_groups[0],
             device_redundancy_group=cls.device_redundancy_groups[0],
             device_redundancy_group_priority=1,
         )
         Device.objects.filter(pk=devices[2].pk).update(
-            controller_device_group=cls.controller_device_groups[1],
+            controller_managed_device_group=cls.controller_managed_device_groups[1],
             device_redundancy_group=cls.device_redundancy_groups[1],
             device_redundancy_group_priority=100,
         )
@@ -3355,63 +3432,20 @@ class ControllerFilterSetTestCase(FilterTestCases.FilterTestCase):
         ("platform", "platform__name"),
         ("external_integration", "external_integration__id"),
         ("external_integration", "external_integration__name"),
-        ("deployed_controller_device", "deployed_controller_device__id"),
-        ("deployed_controller_device", "deployed_controller_device__name"),
-        ("deployed_controller_group", "deployed_controller_group__id"),
-        ("deployed_controller_group", "deployed_controller_group__name"),
+        ("controller_device", "controller_device__id"),
+        ("controller_device", "controller_device__name"),
+        ("controller_device_redundancy_group", "controller_device_redundancy_group__id"),
+        ("controller_device_redundancy_group", "controller_device_redundancy_group__name"),
     )
 
     @classmethod
     def setUpTestData(cls):
         common_test_data(cls)
 
-        external_integrations = iter(ExternalIntegration.objects.all())
-        locations = iter(Location.objects.filter(location_type__name="Campus"))
-        platforms = iter(Platform.objects.all())
-        roles = iter(Role.objects.get_for_model(Controller))
-        statuses = iter(Status.objects.get_for_model(Controller))
-        tenants = iter(Tenant.objects.all())
 
-        cls.controllers = (
-            Controller.objects.create(
-                name="Controller 1",
-                status=next(statuses),
-                description="First",
-                location=next(locations),
-                platform=next(platforms),
-                role=next(roles),
-                tenant=next(tenants),
-                external_integration=next(external_integrations),
-                deployed_controller_device=cls.devices[0],
-            ),
-            Controller.objects.create(
-                name="Controller 2",
-                status=next(statuses),
-                description="Second",
-                location=next(locations),
-                platform=next(platforms),
-                role=next(roles),
-                tenant=next(tenants),
-                external_integration=next(external_integrations),
-                deployed_controller_device=cls.devices[1],
-            ),
-            Controller.objects.create(
-                name="Controller 3",
-                status=next(statuses),
-                description="Third",
-                location=next(locations),
-                platform=next(platforms),
-                role=next(roles),
-                tenant=next(tenants),
-                external_integration=next(external_integrations),
-                deployed_controller_group=DeviceRedundancyGroup.objects.first(),
-            ),
-        )
-
-
-class ControllerDeviceGroupFilterSetTestCase(FilterTestCases.FilterTestCase):
-    queryset = ControllerDeviceGroup.objects.all()
-    filterset = ControllerDeviceGroupFilterSet
+class ControllerManagedDeviceGroupFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = ControllerManagedDeviceGroup.objects.all()
+    filterset = ControllerManagedDeviceGroupFilterSet
     generic_filter_tests = (
         ("name",),
         ("weight",),
@@ -3424,26 +3458,3 @@ class ControllerDeviceGroupFilterSetTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
         common_test_data(cls)
-
-        cls.controllers = Controller.objects.all()[:3]
-
-        group1 = ControllerDeviceGroup.objects.create(
-            name="Controller Device Group 11",
-            weight=1000,
-            controller=cls.controllers[0],
-        )
-        cls.controller_device_groups = (
-            group1,
-            ControllerDeviceGroup.objects.create(
-                name="Controller Device Group 12",
-                weight=2000,
-                controller=cls.controllers[1],
-                parent=group1,
-            ),
-            ControllerDeviceGroup.objects.create(
-                name="Controller Device Group 13",
-                weight=3000,
-                controller=cls.controllers[2],
-                parent=group1,
-            ),
-        )
