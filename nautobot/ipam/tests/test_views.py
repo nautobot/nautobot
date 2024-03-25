@@ -167,6 +167,25 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             "remove_locations": [cls.locations[1].pk],
         }
 
+    def test_indentation_is_removed_on_filter_or_sort(self):
+        self.user.is_superuser = True
+        self.user.save()
+
+        with self.subTest("Assert indentation is present"):
+            response = self.client.get(f"{self._get_url('list')}")
+            response_body = response.content.decode(response.charset)
+            self.assertInHTML('<i class="mdi mdi-circle-small"></i>', response_body)
+
+        with self.subTest("Assert indentation is removed on filter"):
+            response = self.client.get(f"{self._get_url('list')}?ip_version=4")
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn('<i class="mdi mdi-circle-small"></i>', response_body)
+
+        with self.subTest("Assert indentation is removed on sort"):
+            response = self.client.get(f"{self._get_url('list')}?sort=namespace")
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn('<i class="mdi mdi-circle-small"></i>', response_body)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_empty_queryset(self):
         """

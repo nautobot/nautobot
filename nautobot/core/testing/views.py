@@ -17,6 +17,7 @@ from tree_queries.models import TreeNode
 
 from nautobot.core import testing
 from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags import helpers
 from nautobot.core.testing import mixins
 from nautobot.core.utils import lookup
@@ -736,6 +737,28 @@ class ViewTestCases:
 
         def get_list_view(self):
             return lookup.get_view_for_model(self.model, view_type="List")
+
+        def test_table_with_indentation_is_removed_on_filter_or_sort(self):
+            self.user.is_superuser = True
+            self.user.save()
+
+            if not issubclass(self.model, TreeModel):
+                self.skipTest("Skipping Non TreeModels")
+            with self.subTest("Assert indentation is present"):
+                response = self.client.get(f"{self._get_url('list')}")
+                response_body = response.content.decode(response.charset)
+                self.assertInHTML('<i class="mdi mdi-circle-small"></i>', response_body)
+
+            with self.subTest("Assert indentation is removed on filter"):
+                instance = self._get_queryset().filter(children__isnull=False).first()
+                response = self.client.get(f"{self._get_url('list')}?subtree={instance.pk}")
+                response_body = response.content.decode(response.charset)
+                self.assertNotIn('<i class="mdi mdi-circle-small"></i>', response_body)
+
+            with self.subTest("Assert indentation is removed on sort"):
+                response = self.client.get(f"{self._get_url('list')}?sort=tags")
+                response_body = response.content.decode(response.charset)
+                self.assertNotIn('<i class="mdi mdi-circle-small"></i>', response_body)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):

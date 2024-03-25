@@ -34,7 +34,7 @@ class BaseTable(django_tables2.Table):
             "class": "table table-hover table-headings",
         }
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, user=None, is_filter_applied=False, **kwargs):
         # Add custom field columns
         model = self._meta.model
 
@@ -64,6 +64,8 @@ class BaseTable(django_tables2.Table):
 
         # Init table
         super().__init__(*args, **kwargs)
+
+        self.is_filter_applied = is_filter_applied
 
         # Set default empty_text if none was provided
         if self.empty_text is None:
