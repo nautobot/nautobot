@@ -242,6 +242,7 @@ SPECTACULAR_SETTINGS = {
     # trim it from all of the individual paths correspondingly.
     # See also https://github.com/nautobot/nautobot-ansible/pull/135 for an example of why this is desirable.
     "SERVERS": [{"url": "/api"}],
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.IsAuthenticated"],
     "SCHEMA_PATH_PREFIX": "/api",
     "SCHEMA_PATH_PREFIX_TRIM": True,
     # use sidecar - locally packaged UI files, not CDN

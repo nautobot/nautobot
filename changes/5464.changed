@@ -1,0 +1,2 @@
+Added support for `view_name` and `view_description` optional parameters when instantiating a `nautobot.apps.api.OrderedDefaultRouter`. Specifying these parameters is to be preferred over defining a custom `APIRootView` subclass when defining App API URLs.
+Added requirement for user authentication by default on the `nautobot.apps.api.APIRootView` class. As a consequence, viewing the browsable REST API root endpoints (e.g. `/api/`, `/api/circuits/`, `/api/dcim/`, etc.) now requires user authentication.

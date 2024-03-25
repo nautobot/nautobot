@@ -713,7 +713,7 @@ class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
     filterset = filters.DynamicGroupFilterSet
 
 
-class ObjectDynamicGroupsView(View):
+class ObjectDynamicGroupsView(generic.GenericView):
     """
     Present a list of dynamic groups associated to a particular object.
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
@@ -912,18 +912,18 @@ def check_and_call_git_repository_function(request, pk, func):
         messages.error(request, "Unable to run job: Celery worker process not running.")
         return redirect(request.get_full_path(), permanent=False)
     else:
-        repository = get_object_or_404(GitRepository, pk=pk)
+        repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
         job_result = func(repository, request.user)
 
     return redirect(job_result.get_absolute_url())
 
 
-class GitRepositorySyncView(View):
+class GitRepositorySyncView(generic.GenericView):
     def post(self, request, pk):
         return check_and_call_git_repository_function(request, pk, enqueue_pull_git_repository_and_refresh_data)
 
 
-class GitRepositoryDryRunView(View):
+class GitRepositoryDryRunView(generic.GenericView):
     def post(self, request, pk):
         return check_and_call_git_repository_function(request, pk, enqueue_git_repository_diff_origin_and_local)
 
@@ -1559,7 +1559,7 @@ class JobResultView(generic.ObjectView):
         }
 
 
-class JobLogEntryTableView(View):
+class JobLogEntryTableView(generic.GenericView):
     """
     Display a table of `JobLogEntry` objects for a given `JobResult` instance.
     """
@@ -1567,7 +1567,7 @@ class JobLogEntryTableView(View):
     queryset = JobResult.objects.all()
 
     def get(self, request, pk=None):
-        instance = self.queryset.get(pk=pk)
+        instance = get_object_or_404(self.queryset.restrict(request.user, "view"), pk=pk)
         filter_q = request.GET.get("q")
         if filter_q:
             queryset = instance.job_log_entries.filter(
@@ -1646,7 +1646,7 @@ class ObjectChangeView(generic.ObjectView):
         }
 
 
-class ObjectChangeLogView(View):
+class ObjectChangeLogView(generic.GenericView):
     """
     Present a history of changes made to a particular object.
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
@@ -1730,7 +1730,7 @@ class NoteDeleteView(generic.ObjectDeleteView):
     queryset = Note.objects.all()
 
 
-class ObjectNotesView(View):
+class ObjectNotesView(generic.GenericView):
     """
     Present a list of notes associated to a particular object.
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
@@ -1751,7 +1751,7 @@ class ObjectNotesView(View):
                 "assigned_object_id": obj.pk,
             }
         )
-        notes_table = tables.NoteTable(obj.notes)
+        notes_table = tables.NoteTable(obj.notes.restrict(request.user, "view"))
 
         # Apply the request context
         paginate = {
@@ -1972,7 +1972,7 @@ class SecretView(generic.ObjectView):
         }
 
 
-class SecretProviderParametersFormView(View):
+class SecretProviderParametersFormView(generic.GenericView):
     """
     Helper view to SecretView; retrieve the HTML form appropriate for entering parameters for a given SecretsProvider.
     """
