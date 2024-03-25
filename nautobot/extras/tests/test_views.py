@@ -21,6 +21,7 @@ from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     JobExecutionType,
+    LogLevelChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
@@ -40,6 +41,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     Job,
     JobButton,
+    JobLogEntry,
     JobResult,
     Note,
     ObjectChange,
@@ -617,6 +619,49 @@ class DynamicGroupTestCase(
             "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
         }
 
+    def test_get_object_dynamic_groups_anonymous(self):
+        url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
+        self.client.logout()
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={url}")
+
+    def test_get_object_dynamic_groups_without_permission(self):
+        url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, [403, 404])
+
+    def test_get_object_dynamic_groups_with_permission(self):
+        url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
+        self.add_permissions("dcim.view_device", "extras.view_dynamicgroup")
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        self.assertIn("DG 1", response_body, msg=response_body)
+        self.assertIn("DG 2", response_body, msg=response_body)
+        self.assertIn("DG 3", response_body, msg=response_body)
+
+    def test_get_object_dynamic_groups_with_constrained_permission(self):
+        self.add_permissions("extras.view_dynamicgroup")
+        obj_perm = ObjectPermission(
+            name="View a device",
+            constraints={"pk": Device.objects.first().pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Device))
+
+        url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        self.assertIn("DG 1", response_body, msg=response_body)
+
+        url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.last().pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 404)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_edit_saved_filter(self):
         """Test that editing a filter works using the edit view."""
@@ -785,6 +830,34 @@ class GitRepositoryTestCase(
         form_data["slug"] = instance.slug  # Slug is not editable
         self.form_data = form_data
         super().test_edit_object_with_constrained_permission()
+
+    def test_post_sync_repo_anonymous(self):
+        self.client.logout()
+        url = reverse("extras:gitrepository_sync", kwargs={"pk": self._get_queryset().first().pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={url}")
+
+    def test_post_sync_repo_without_permission(self):
+        url = reverse("extras:gitrepository_sync", kwargs={"pk": self._get_queryset().first().pk})
+        response = self.client.post(url)
+        self.assertHttpStatus(response, [403, 404])
+
+    # TODO: mock/stub out `enqueue_pull_git_repository_and_refresh_data` and test successful POST with permissions
+
+    def test_post_dryrun_repo_anonymous(self):
+        self.client.logout()
+        url = reverse("extras:gitrepository_dryrun", kwargs={"pk": self._get_queryset().first().pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={url}")
+
+    def test_post_dryrun_repo_without_permission(self):
+        url = reverse("extras:gitrepository_dryrun", kwargs={"pk": self._get_queryset().first().pk})
+        response = self.client.post(url)
+        self.assertHttpStatus(response, [403, 404])
+
+    # TODO: mock/stub out `enqueue_git_repository_diff_origin_and_local` and test successful POST with permissions
 
 
 class NoteTestCase(
@@ -1503,6 +1576,34 @@ class JobResultTestCase(
     def setUpTestData(cls):
         JobResult.objects.create(name="pass.TestPass")
         JobResult.objects.create(name="fail.TestFail")
+        JobLogEntry.objects.create(
+            log_level=LogLevelChoices.LOG_INFO,
+            job_result=JobResult.objects.first(),
+            grouping="run",
+            message="This is a test",
+        )
+
+    def test_get_joblogentrytable_anonymous(self):
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
+        self.client.logout()
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={url}")
+
+    def test_get_joblogentrytable_without_permission(self):
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, [403, 404])
+
+    def test_get_joblogentrytable_with_permission(self):
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        self.assertIn("This is a test", response_body)
+
+    # TODO test with constrained permissions on both JobResult and JobLogEntry records
 
 
 class JobTestCase(

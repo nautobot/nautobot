@@ -8,9 +8,10 @@ services:
     volumes:
       - pgdata_nautobot:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d $$POSTGRES_DB -U $$POSTGRES_USER"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
-      retries: 50
+      start_period: 30s
+      retries: 3
+      test: "pg_isready -d $$POSTGRES_DB -U $$POSTGRES_USER"
 volumes:
   pgdata_nautobot:

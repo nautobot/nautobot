@@ -121,9 +121,6 @@
     document.addEventListener('DOMContentLoaded', function() {
         const navbar = document.querySelector('.navbar-fixed-left');
         const navbarHeader = document.querySelector('.navbar-header');
-        const breadcrumb = document.querySelector('.breadcrumb');
-        const bannerAlertArea = document.querySelector('.banner-alert-area');
-        const bannerAlert = document.querySelector('.plugin-banner') !== null;
         const mainContent = document.querySelector('#main-content');
         const footer = document.querySelector('#footer');
         const dropdownToggles = document.querySelectorAll('.navbar-fixed-left .navbar-nav > .dropdown > a[data-toggle="collapse"]');
@@ -180,10 +177,6 @@
         function adjustElementsForNavbarState(isCollapsed) {
             const marginLeftValue = isCollapsed ? '-240px' : '0px';
             mainContent.style.marginLeft = marginLeftValue;
-            bannerAlertArea.classList.toggle('collapsed', isCollapsed);
-            if(!bannerAlert && breadcrumb) {
-                breadcrumb.classList.toggle('collapsed', isCollapsed);
-            };
             if(footer) footer.style.marginLeft = marginLeftValue;
             toggler.style.left = isCollapsed ? '-5px' : '225px';
         }
