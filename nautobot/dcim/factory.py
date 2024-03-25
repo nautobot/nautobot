@@ -25,6 +25,8 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.models import (
+    Controller,
+    ControllerDeviceGroup,
     Device,
     DeviceFamily,
     DeviceRedundancyGroup,
@@ -40,7 +42,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
 )
-from nautobot.extras.models import Role, Status
+from nautobot.extras.models import ExternalIntegration, Role, Status
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
@@ -164,6 +166,8 @@ class DeviceFactory(PrimaryModelFactory):
         "has_device_redundancy_group",
         factory.Faker("pyint", min_value=1, max_value=500),
     )
+
+    controller_device_group = random_instance(ControllerDeviceGroup)
 
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("bs"))
@@ -401,6 +405,7 @@ class LocationTypeFactory(OrganizationalModelFactory):
         elif self.name in ["Floor"]:
             self.content_types.set(
                 [
+                    ContentType.objects.get_for_model(Controller),
                     ContentType.objects.get_for_model(Prefix),
                     ContentType.objects.get_for_model(Rack),
                     ContentType.objects.get_for_model(RackGroup),
@@ -410,6 +415,7 @@ class LocationTypeFactory(OrganizationalModelFactory):
         elif self.name in ["Room"]:
             self.content_types.set(
                 [
+                    ContentType.objects.get_for_model(Controller),
                     ContentType.objects.get_for_model(Cluster),
                     ContentType.objects.get_for_model(PowerPanel),
                     ContentType.objects.get_for_model(Rack),
@@ -420,6 +426,7 @@ class LocationTypeFactory(OrganizationalModelFactory):
         elif self.name in ["Elevator"]:
             self.content_types.set(
                 [
+                    ContentType.objects.get_for_model(Controller),
                     ContentType.objects.get_for_model(Cluster),
                     ContentType.objects.get_for_model(PowerPanel),
                     ContentType.objects.get_for_model(VLAN),
@@ -428,6 +435,7 @@ class LocationTypeFactory(OrganizationalModelFactory):
         elif self.name in ["Aisle"]:
             self.content_types.set(
                 [
+                    ContentType.objects.get_for_model(Controller),
                     ContentType.objects.get_for_model(CircuitTermination),
                     ContentType.objects.get_for_model(Device),
                     ContentType.objects.get_for_model(PowerPanel),
@@ -669,3 +677,37 @@ class SoftwareVersionFactory(PrimaryModelFactory):
     documentation_url = factory.Maybe("has_documentation_url", factory.Faker("uri"), "")
     long_term_support = NautobotBoolIterator()
     pre_release = NautobotBoolIterator()
+
+
+class ControllerFactory(PrimaryModelFactory):
+    class Meta:
+        model = Controller
+
+    class Params:
+        has_device = NautobotBoolIterator()
+
+    name = UniqueFaker("word")
+    description = factory.Faker("sentence")
+    status = random_instance(lambda: Status.objects.get_for_model(Controller), allow_null=False)
+    role = random_instance(lambda: Role.objects.get_for_model(Controller))
+    platform = random_instance(Platform)
+    location = random_instance(lambda: Location.objects.get_for_model(Controller), allow_null=False)
+    tenant = random_instance(Tenant)
+    external_integration = random_instance(ExternalIntegration)
+    deployed_controller_device = factory.Maybe("has_device", random_instance(Device), None)
+    deployed_controller_group = factory.Maybe("has_device", None, random_instance(DeviceRedundancyGroup))
+
+
+class ControllerDeviceGroupFactory(PrimaryModelFactory):
+    class Meta:
+        model = ControllerDeviceGroup
+
+    class Params:
+        has_parent = NautobotBoolIterator()
+
+    name = UniqueFaker("word")
+    parent = factory.Maybe("has_parent", random_instance(ControllerDeviceGroup), None)
+    controller = factory.LazyAttribute(
+        lambda o: o.parent.controller if o.parent else Controller.objects.order_by("?").first()
+    )
+    weight = factory.Faker("pyint", min_value=1, max_value=1000)

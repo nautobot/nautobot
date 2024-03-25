@@ -16,6 +16,7 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, RestrictedQuerySet
 from nautobot.core.models.fields import NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
+from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import (
     DeviceFaceChoices,
@@ -41,6 +42,8 @@ from .device_components import (
 )
 
 __all__ = (
+    "Controller",
+    "ControllerDeviceGroup",
     "Device",
     "DeviceRedundancyGroup",
     "DeviceType",
@@ -588,6 +591,13 @@ class Device(PrimaryModel, ConfigContextModel):
         blank=True,
         verbose_name="Software Image Files",
         help_text="Override the software image files associated with the software version for this device",
+    )
+    controller_device_group = models.ForeignKey(
+        to="dcim.ControllerDeviceGroup",
+        on_delete=models.SET_NULL,
+        related_name="devices",
+        blank=True,
+        null=True,
     )
 
     objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
@@ -1220,3 +1230,150 @@ class SoftwareVersion(PrimaryModel):
         if self.alias:
             return self.alias
         return f"{self.platform} - {self.version}"
+
+
+#
+# Controller
+#
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "dynamic_groups",
+    "export_templates",
+    "graphql",
+    "locations",
+    "statuses",
+    "webhooks",
+)
+class Controller(PrimaryModel, ConfigContextModel):
+    """Represents an entity that manages or controls one or more devices, acting as a central point of control.
+
+    A Controller can be deployed to a single device or a group of devices represented by a DeviceRedundancyGroup.
+    """
+
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    status = StatusField(blank=False, null=False)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="controllers",
+    )
+    platform = models.ForeignKey(
+        to="dcim.Platform",
+        on_delete=models.SET_NULL,
+        related_name="controllers",
+        blank=True,
+        null=True,
+    )
+    role = RoleField(blank=True, null=True)
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="controllers",
+        blank=True,
+        null=True,
+    )
+    external_integration = models.ForeignKey(
+        to="extras.ExternalIntegration",
+        on_delete=models.SET_NULL,
+        related_name="controllers",
+        blank=True,
+        null=True,
+    )
+    deployed_controller_device = models.ForeignKey(
+        to="dcim.Device",
+        on_delete=models.SET_NULL,
+        related_name="controllers",
+        blank=True,
+        null=True,
+    )
+    deployed_controller_group = models.ForeignKey(
+        to="dcim.DeviceRedundancyGroup",
+        on_delete=models.SET_NULL,
+        related_name="controllers",
+        blank=True,
+        null=True,
+    )
+
+    class Meta:
+        ordering = ("name",)
+
+    def __str__(self):
+        return self.name or super().__str__()
+
+    def clean(self):
+        super().clean()
+
+        if self.deployed_controller_device and self.deployed_controller_group:
+            raise ValidationError(
+                {
+                    "deployed_controller_device": (
+                        "Cannot assign both a device and a device redundancy group to a controller."
+                    ),
+                },
+            )
+
+        if self.location:
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'Devices may not associate to locations of type "{self.location.location_type}".'}
+                )
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "dynamic_groups",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class ControllerDeviceGroup(TreeModel, PrimaryModel, ConfigContextModel):
+    """Represents a mapping of controlled devices to a specific controller.
+
+    This model allows for the organization of controlled devices into hierarchical groups for structured representation.
+    """
+
+    name = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        unique=True,
+        help_text="Name of the controller device group",
+    )
+    weight = models.PositiveIntegerField(
+        default=1000,
+        help_text="Weight of the controller device group, used to sort the groups within its parent group",
+    )
+    controller = models.ForeignKey(
+        to="dcim.Controller",
+        on_delete=models.CASCADE,
+        related_name="controller_device_groups",
+        blank=False,
+        null=False,
+        help_text="Controller that manages the devices in this group",
+    )
+
+    class Meta:
+        ordering = ("weight",)
+
+    def __str__(self):
+        return self.name or super().__str__()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._original_controller = self.controller if self.present_in_database else None
+        self._original_parent = self.parent if self.present_in_database else None
+
+    def clean(self):
+        super().clean()
+
+        if self.controller == self._original_controller and self.parent == self._original_parent:
+            return
+
+        if self.parent and self.controller and self.parent.controller and self.controller != self.parent.controller:
+            raise ValidationError(
+                {"controller": "Controller device group must have the same controller as the parent group."}
+            )

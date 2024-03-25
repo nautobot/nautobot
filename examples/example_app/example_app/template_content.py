@@ -84,6 +84,9 @@ class LocationContent(TemplateExtension):
     def buttons(self):
         return "APP INJECTED LOCATION CONTENT - BUTTONS"
 
+    def list_buttons(self):
+        return "LOCATION CONTENT - BUTTONS LIST"
+
 
 class ExampleModelContent(TemplateExtension):
     model = "example_app.examplemodel"

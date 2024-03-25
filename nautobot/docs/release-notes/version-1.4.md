@@ -28,7 +28,7 @@ For technical reasons of backwards-compatibility, the database (ORM) and GraphQL
 
 A plugin may now define extra tabs which will be appended to the object view's list of tabs.
 
-You can refer to the [plugin development guide](../development/apps/api/ui-extensions/object-detail-views.md) on how to add tabs to existing object detail views.
+You can refer to the [plugin development guide](../development/apps/api/ui-extensions/object-views.md) on how to add tabs to existing object detail views.
 
 #### Custom Template (CSS, HTML, JavaScript) on Job Forms ([#1865](https://github.com/nautobot/nautobot/issues/1865))
 

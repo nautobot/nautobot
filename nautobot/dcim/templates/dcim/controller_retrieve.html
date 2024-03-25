@@ -1,0 +1,70 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Controller</strong>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover panel-body attr-table">
+                        <tr>
+                            <td>Name</td>
+                            <td>{{ object.name|placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <td>Status</td>
+                            <td>
+                                {{ object.status|hyperlinked_object_with_color }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Role</td>
+                            <td>{{ object.role|hyperlinked_object }}</td>
+                        </tr>
+                        <tr>
+                            <td>Description</td>
+                            <td>{{ object.description|placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <td>Location</td>
+                            <td>{{ object.location|hyperlinked_object }}</td>
+                        </tr>
+                        <tr>
+                            <td>Platform</td>
+                            <td>{{ object.platform|hyperlinked_object }}</td>
+                        </tr>
+                        <tr>
+                            <td>Role</td>
+                            <td>{{ object.role|hyperlinked_object }}</td>
+                        </tr>
+                        <tr>
+                            <td>Tenant</td>
+                            <td>{{ object.tenant|hyperlinked_object }}</td>
+                        </tr>
+                        <tr>
+                            <td>External Integration</td>
+                            <td>{{ object.external_integration|hyperlinked_object }}</td>
+                        </tr>
+                        <tr>
+                            <td>Deployed Controller Device</td>
+                            <td>{{ object.deployed_controller_device|hyperlinked_object }}</td>
+                        </tr>
+                        <tr>
+                            <td>Deployed Controller Group</td>
+                            <td>{{ object.deployed_controller_group|hyperlinked_object }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+{% endblock content_left_page %}
+
+{% block content_full_width_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Devices</strong>
+            </div>
+            {% include 'responsive_table.html' with table=devices_table %}
+        </div>
+        {% include 'inc/paginator.html' with paginator=devices_table.paginator page=devices_table.page %}
+{% endblock content_full_width_page %}

@@ -89,15 +89,15 @@ Validation rules are used for constraining custom fields to specific values.
 
 #### Minimum value
 
-Minimum allowed value for `Integer` fields.
+Minimum allowed value for `Integer` fields. Minimum allowed length for `Text`, `URL`, `JSON`, and `Markdown` fields. Minimum allowed length of each defined choice for a `Select` or `Multiple Selection` field.
 
 #### Maximum value
 
-Maximum allowed value for `Integer` fields.
+Maximum allowed value for `Integer` fields. Maximum allowed length for `Text`, `URL`, `JSON`, and `Markdown` fields. Maximum allowed length of each defined choice for a `Select` or `Multiple Selection` field.
 
 #### Validation Regex
 
-Regular expression to enforce on `Text`, `URL`, `Selection` and `Multiple selection` field values. Regex validation is handled by the [python re engine](https://docs.python.org/3/library/re.html) which uses a PCRE or perl-like regular expression syntax. Examples of common regex validations:
+Regular expression to enforce on `Text`, `URL`, `JSON`, `Markdown`, `Selection` and `Multiple selection` field values. Regex validation is handled by the [python re engine](https://docs.python.org/3/library/re.html) which uses a PCRE or perl-like regular expression syntax. Examples of common regex validations:
 
 Must start with companyname
 

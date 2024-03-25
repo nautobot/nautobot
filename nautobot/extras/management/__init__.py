@@ -17,6 +17,7 @@ from nautobot.virtualization import choices as vm_choices
 STATUS_CHOICESET_MAP = {
     "circuits.Circuit": circuit_choices.CircuitStatusChoices,
     "dcim.Cable": dcim_choices.CableStatusChoices,
+    "dcim.Controller": dcim_choices.DeviceStatusChoices,
     "dcim.Device": dcim_choices.DeviceStatusChoices,
     "dcim.Interface": dcim_choices.InterfaceStatusChoices,
     "dcim.Location": dcim_choices.LocationStatusChoices,

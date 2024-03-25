@@ -1,1 +1,0 @@
-Fixed `Prefix.ip_version` and `IPAddress.ip_version` fields to be non-nullable.

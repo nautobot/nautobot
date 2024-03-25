@@ -58,6 +58,8 @@ class Command(BaseCommand):
                 ProviderNetworkFactory,
             )
             from nautobot.dcim.factory import (
+                ControllerDeviceGroupFactory,
+                ControllerFactory,
                 DeviceFactory,
                 DeviceFamilyFactory,
                 DeviceRedundancyGroupFactory,
@@ -127,6 +129,9 @@ class Command(BaseCommand):
         LocationFactory.create_batch(7, has_parent=True, using=db_name)
         LocationFactory.create_batch(40, using=db_name)
         LocationFactory.create_batch(10, has_parent=False, using=db_name)
+        self.stdout.write("Creating Controller with Groups...")
+        ControllerFactory.create_batch(1)
+        ControllerDeviceGroupFactory.create_batch(5)
         self.stdout.write("Creating RIRs...")
         RIRFactory.create_batch(9, using=db_name)  # only 9 unique RIR names are hard-coded presently
         self.stdout.write("Creating RouteTargets...")
@@ -200,6 +205,9 @@ class Command(BaseCommand):
         )
         self.stdout.write("Creating ExternalIntegrations...")
         ExternalIntegrationFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating Controllers with Device or DeviceRedundancyGroups...")
+        ControllerFactory.create_batch(10)
+        ControllerDeviceGroupFactory.create_batch(30)
         # make sure we have some tenants that have null relationships to make filter tests happy
         self.stdout.write("Creating Tenants without Circuits, Locations, IPAddresses, or Prefixes...")
         TenantFactory.create_batch(10, using=db_name)
@@ -219,6 +227,8 @@ class Command(BaseCommand):
                 CircuitTerminationFactory,
                 CircuitTypeFactory,
                 ContactFactory,
+                ControllerDeviceGroupFactory,
+                ControllerFactory,
                 DeviceFactory,
                 DeviceFamilyFactory,
                 DeviceRedundancyGroupFactory,

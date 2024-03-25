@@ -78,5 +78,9 @@ router.register("device-types-to-software-image-files", views.DeviceTypeToSoftwa
 # Miscellaneous
 router.register("connected-device", views.ConnectedDeviceViewSet, basename="connected-device")
 
+# Controllers
+router.register("controllers", views.ControllerViewSet)
+router.register("controller-device-groups", views.ControllerDeviceGroupViewSet)
+
 app_name = "dcim-api"
 urlpatterns = router.urls

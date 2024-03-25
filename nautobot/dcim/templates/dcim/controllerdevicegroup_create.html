@@ -1,0 +1,43 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+{% load helpers %}
+{% load static %}
+
+{% block javascript %}
+<script type="text/javascript">
+    const parentInput = $('select#id_parent');
+    const controllerInput = $('select#id_controller');
+
+    const controllerUrl = '{% url 'dcim-api:controllerdevicegroup-list' %}';
+
+    const updateControllerFromParent = (parentUuid) => {
+        $.ajax({
+            url: `${controllerUrl}${parentUuid}/`,
+            method: "GET",
+            success: (data) => {
+                if (data.controller) {
+                    controllerInput.val(data.controller.id);
+                }
+            },
+            error: (error) => console.log("ERROR", error),
+        });
+    };
+
+    const onParentInput = (event) => {
+        const parentUuid = parentInput.val();
+        if (parentUuid) {
+            controllerInput.prop("disabled", true);
+            if (event) {
+                updateControllerFromParent(parentUuid);
+            }
+        } else {
+            controllerInput.prop("disabled", false);
+        }
+    }
+
+    parentInput.on('select2:select', onParentInput);
+    parentInput.on('select2:unselect', onParentInput);
+
+    onParentInput();
+</script>
+{% endblock %}

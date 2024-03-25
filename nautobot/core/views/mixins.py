@@ -869,13 +869,15 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         if request.POST.get("_all"):
             filter_params = self.get_filter_params(request)
             if not filter_params:
-                self.pk_list = model.objects.only("pk").all().values_list("pk", flat=True)
+                self.pk_list = list(model.objects.only("pk").all().values_list("pk", flat=True))
             elif self.filterset_class is None:
                 raise NotImplementedError("filterset_class must be defined to use _all")
             else:
-                self.pk_list = self.filterset_class(filter_params, model.objects.only("pk")).qs
+                self.pk_list = list(
+                    self.filterset_class(filter_params, model.objects.only("pk")).qs.values_list("pk", flat=True)
+                )
         else:
-            self.pk_list = request.POST.getlist("pk")
+            self.pk_list = list(request.POST.getlist("pk"))
         form_class = self.get_form_class(**kwargs)
         data = {}
         if "_confirm" in request.POST:
@@ -1048,18 +1050,20 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
         if request.POST.get("_all"):
             filter_params = self.get_filter_params(request)
             if not filter_params:
-                self.pk_list = model.objects.only("pk").all().values_list("pk", flat=True)
+                self.pk_list = list(model.objects.only("pk").all().values_list("pk", flat=True))
             elif self.filterset_class is None:
                 raise NotImplementedError("filterset_class must be defined to use _all")
             else:
-                self.pk_list = self.filterset_class(filter_params, model.objects.only("pk")).qs
+                self.pk_list = list(
+                    self.filterset_class(filter_params, model.objects.only("pk")).qs.values_list("pk", flat=True)
+                )
         else:
-            self.pk_list = request.POST.getlist("pk")
+            self.pk_list = list(request.POST.getlist("pk"))
         data = {}
         form_class = self.get_form_class()
         if "_apply" in request.POST:
             self.kwargs = kwargs
-            form = form_class(model, request.POST)
+            form = form_class(queryset.model, request.POST)
             restrict_form_fields(form, request.user)
             if form.is_valid():
                 return self.form_valid(form)
