@@ -195,7 +195,7 @@ plugins:
         'models/circuits/providernetwork.md': 'user-guide/core-data-model/circuits/providernetwork.md'
         'models/dcim/cable.md': 'user-guide/core-data-model/dcim/cable.md'
         'models/dcim/controller.md': 'user-guide/core-data-model/dcim/controller.md'
-        'models/dcim/controllerdevicegroup.md': 'user-guide/core-data-model/dcim/controllerdevicegroup.md'
+        'models/dcim/controllermanageddevicegroup.md': 'user-guide/core-data-model/dcim/controllermanageddevicegroup.md'
         'models/dcim/consoleport.md': 'user-guide/core-data-model/dcim/consoleport.md'
         'models/dcim/consoleporttemplate.md': 'user-guide/core-data-model/dcim/consoleporttemplate.md'
         'models/dcim/consoleserverport.md': 'user-guide/core-data-model/dcim/consoleserverport.md'
@@ -399,7 +399,7 @@ nav:
         - Software Version: "user-guide/core-data-model/dcim/softwareversion.md"
         - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
         - Controller: "user-guide/core-data-model/dcim/controller.md"
-        - Controller Device Group: "user-guide/core-data-model/dcim/controllerdevicegroup.md"
+        - Controller Managed Device Group: "user-guide/core-data-model/dcim/controllermanageddevicegroup.md"
       - Extras:
         - Config Context: "user-guide/core-data-model/extras/configcontext.md"
         - Config Context Schema: "user-guide/core-data-model/extras/configcontextschema.md"

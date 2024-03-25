@@ -44,6 +44,8 @@ class NavMenuTestCase(TestCase):
                                     expected_name = "Interfaces"
                                 elif expected_name == "Object Changes":
                                     expected_name = "Change Log"
+                                elif expected_name == "Controller Managed Device Groups":
+                                    expected_name = "Managed Device Groups"
                                 self.assertEqual(item_details["name"], expected_name)
                             if item_url == get_route_for_model(view_model, "list"):
                                 # Not assertEqual as some menu items have additional permissions defined.

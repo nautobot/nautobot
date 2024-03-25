@@ -40,8 +40,8 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.filters import (
     ConsoleConnectionFilterSet,
-    ControllerDeviceGroupFilterSet,
     ControllerFilterSet,
+    ControllerManagedDeviceGroupFilterSet,
     InterfaceConnectionFilterSet,
     PowerConnectionFilterSet,
     SoftwareImageFileFilterSet,
@@ -55,7 +55,7 @@ from nautobot.dcim.models import (
     ConsoleServerPort,
     ConsoleServerPortTemplate,
     Controller,
-    ControllerDeviceGroup,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -567,6 +567,7 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         DeviceType.objects.all().delete()
         Platform.objects.all().delete()
@@ -593,6 +594,7 @@ class DeviceTypeTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         manufacturers = Manufacturer.objects.all()[:2]
 
@@ -1278,6 +1280,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
@@ -1445,7 +1448,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "face": DeviceFaceChoices.FACE_FRONT,
             "secrets_group": secrets_groups[1].pk,
             "software_version": software_versions[1].pk,
-            "controller_device_group": ControllerDeviceGroup.objects.first().pk,
+            "controller_managed_device_group": ControllerManagedDeviceGroup.objects.first().pk,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -3119,7 +3122,7 @@ class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         tenant = Tenant.objects.first()
 
         cls.form_data = {
-            "deployed_controller_device": device.pk,
+            "controller_device": device.pk,
             "description": "Controller 1 description",
             "external_integration": external_integration.pk,
             "location": location.pk,
@@ -3140,16 +3143,16 @@ class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
 
-class ControllerDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
-    model = ControllerDeviceGroup
-    filterset = ControllerDeviceGroupFilterSet
+class ControllerManagedDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = ControllerManagedDeviceGroup
+    filterset = ControllerManagedDeviceGroupFilterSet
 
     @classmethod
     def setUpTestData(cls):
         controllers = Controller.objects.all()
 
         cls.form_data = {
-            "name": "Controller Device Group 10",
+            "name": "Managed Device Group 10",
             "controller": controllers[0].pk,
             "weight": 100,
             "devices": [item.pk for item in Device.objects.all()[:2]],
