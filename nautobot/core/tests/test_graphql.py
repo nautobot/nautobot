@@ -875,6 +875,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         ]
 
         interface_status = Status.objects.get_for_model(Interface).first()
+        interface_role = Role.objects.get_for_model(Interface).first()
         cls.interface11 = Interface.objects.create(
             name="Int1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
@@ -883,12 +884,14 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
             mode=InterfaceModeChoices.MODE_ACCESS,
             untagged_vlan=cls.vlan1,
             status=interface_status,
+            role=interface_role,
         )
         cls.interface12 = Interface.objects.create(
             name="Int2",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=cls.device1,
             status=interface_status,
+            role=interface_role,
         )
         cls.namespace = Namespace.objects.first()
         cls.intr_group_status = Status.objects.get_for_model(InterfaceRedundancyGroup).first()
@@ -969,6 +972,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
             untagged_vlan=cls.vlan2,
             mode=InterfaceModeChoices.MODE_ACCESS,
             status=interface_status,
+            role=interface_role,
         )
         cls.interface22 = Interface.objects.create(
             name="Int2",
@@ -994,7 +998,11 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         )
 
         cls.interface31 = Interface.objects.create(
-            name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=cls.device3, status=interface_status
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=cls.device3,
+            status=interface_status,
+            role=interface_role,
         )
         cls.interface31 = Interface.objects.create(
             name="Mgmt1",
@@ -1003,6 +1011,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
             mgmt_only=True,
             enabled=False,
             status=interface_status,
+            role=interface_role,
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -1047,10 +1056,12 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
             status=Status.objects.get_for_model(VirtualMachine)[0],
         )
         vmintf_status = Status.objects.get_for_model(VMInterface).first()
+        vmintf_role = Role.objects.get_for_model(VMInterface).first()
         cls.vminterface = VMInterface.objects.create(
             virtual_machine=cls.virtualmachine,
             name="eth0",
             status=vmintf_status,
+            role=vmintf_role,
         )
         cls.vmprefix = Prefix.objects.create(
             prefix="1.1.1.0/24", namespace=cls.namespace, status=cls.prefix_statuses[0]

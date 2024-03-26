@@ -13,7 +13,7 @@ from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
-from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Status, Tag
+from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Role, Status, Tag
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
@@ -479,10 +479,12 @@ class ChangeLogAPITest(APITestCase):
             status=vm_statuses[0],
         )
         vminterface_statuses = Status.objects.get_for_model(VirtualMachine)
+        vminterface_role = Role.objects.get_for_model(VMInterface)
         vm_interface = VMInterface.objects.create(
             name="vm interface 1",
             virtual_machine=vm,
             status=vminterface_statuses[0],
+            role=vminterface_role,
             mode=InterfaceModeChoices.MODE_TAGGED,
         )
         vlan_statuses = Status.objects.get_for_model(VLAN)

@@ -265,11 +265,15 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         statuses = Status.objects.get_for_model(VMInterface)
         status = statuses.first()
-
+        role = Role.objects.get_for_model(VMInterface)
         interfaces = (
-            VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 1", status=status),
+            VMInterface.objects.create(
+                virtual_machine=virtualmachines[0], name="Interface 1", status=status, role=role
+            ),
             VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 2", status=status),
-            VMInterface.objects.create(virtual_machine=virtualmachines[0], name="Interface 3", status=status),
+            VMInterface.objects.create(
+                virtual_machine=virtualmachines[0], name="Interface 3", status=status, role=role
+            ),
             VMInterface.objects.create(virtual_machine=virtualmachines[1], name="BRIDGE", status=status),
         )
         # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename

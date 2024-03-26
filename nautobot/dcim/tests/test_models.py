@@ -92,7 +92,10 @@ class CableLengthTestCase(TestCase):
 
     def test_cable_validated_save(self):
         interfacestatus = Status.objects.get_for_model(Interface).first()
-        interface1 = Interface.objects.create(device=self.device1, name="eth0", status=interfacestatus)
+        interfacerole = Role.objects.get_for_model(Interface).first()
+        interface1 = Interface.objects.create(
+            device=self.device1, name="eth0", status=interfacestatus, role=interfacerole
+        )
         interface2 = Interface.objects.create(device=self.device2, name="eth0", status=interfacestatus)
         cable = Cable(
             termination_a=interface1,
@@ -106,7 +109,10 @@ class CableLengthTestCase(TestCase):
 
     def test_cable_full_clean(self):
         interfacestatus = Status.objects.get_for_model(Interface).first()
-        interface3 = Interface.objects.create(device=self.device1, name="eth1", status=interfacestatus)
+        interfacerole = Role.objects.get_for_model(Interface).first()
+        interface3 = Interface.objects.create(
+            device=self.device1, name="eth1", status=interfacestatus, role=interfacerole
+        )
         interface4 = Interface.objects.create(device=self.device2, name="eth1", status=interfacestatus)
         cable = Cable(
             termination_a=interface3,
@@ -273,10 +279,12 @@ class InterfaceRedundancyGroupTestCase(ModelTestCases.BaseModelTestCase):
             status=cls.device_status,
         )
         non_default_status = Status.objects.get_for_model(Interface).exclude(name="Active").first()
+        intf_role = Role.obejcts.get_for_model(Interface).first()
         cls.interfaces = (
             Interface.objects.create(
                 device=cls.device,
                 name="Interface 1",
+                role=intf_role,
                 type="1000base-t",
                 status=non_default_status,
             ),
@@ -289,12 +297,14 @@ class InterfaceRedundancyGroupTestCase(ModelTestCases.BaseModelTestCase):
             Interface.objects.create(
                 device=cls.device,
                 name="Interface 3",
+                role=intf_role,
                 type=InterfaceTypeChoices.TYPE_BRIDGE,
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.device,
                 name="Interface 4",
+                role=intf_role,
                 type=InterfaceTypeChoices.TYPE_1GE_GBIC,
                 status=non_default_status,
             ),
@@ -889,6 +899,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         )
         self.device_role = Role.objects.get_for_model(Device).first()
         self.device_status = Status.objects.get_for_model(Device).first()
+        self.intf_role = Role.obejcts.get_for_model(Interface).first()
         self.location_type_1 = LocationType.objects.get(name="Building")
         self.location_type_2 = LocationType.objects.get(name="Floor")
         self.location_type_3 = LocationType.objects.get(name="Campus")
@@ -1140,7 +1151,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             location=self.location_3,
         )
         device.validated_save()
-        interface = Interface.objects.create(name="Int1", device=device, status=self.device_status)
+        interface = Interface.objects.create(name="Int1", device=device, status=self.device_status, role=self.intf_role)
         ips = list(IPAddress.objects.filter(ip_version=4)[:5]) + list(IPAddress.objects.filter(ip_version=6)[:5])
         interface.add_ip_addresses(ips)
         device.primary_ip4 = interface.ip_addresses.all().filter(ip_version=6).first()
@@ -1225,9 +1236,14 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             status=devicestatus,
         )
         interfacestatus = Status.objects.get_for_model(Interface).first()
-        cls.interface1 = Interface.objects.create(device=cls.device1, name="eth0", status=interfacestatus)
+        interfacerole = Role.objects.get_for_model(Interface).first()
+        cls.interface1 = Interface.objects.create(
+            device=cls.device1, name="eth0", status=interfacestatus, role=interfacerole
+        )
         cls.interface2 = Interface.objects.create(device=cls.device2, name="eth0", status=interfacestatus)
-        cls.interface3 = Interface.objects.create(device=cls.device2, name="eth1", status=interfacestatus)
+        cls.interface3 = Interface.objects.create(
+            device=cls.device2, name="eth1", status=interfacestatus, role=interfacerole
+        )
         cls.status = Status.objects.get_for_model(Cable).get(name="Connected")
         cls.cable = Cable(
             termination_a=cls.interface1,
@@ -1452,12 +1468,14 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         device = Device.objects.first()
 
         interface_status = Status.objects.get_for_model(Interface).first()
+        interface_role = Role.objects.get_for_model(Interface).first()
         interfaces = (
             Interface.objects.create(
                 device=device,
                 name="eth-0",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
+                role=interface_role,
             ),
             Interface.objects.create(
                 device=device,
@@ -1485,8 +1503,11 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
 
         Cable.objects.all().delete()
         interface_status = Status.objects.get_for_model(Interface).first()
+        interface_role = Role.objects.get_for_model(Interface).first()
         Interface.objects.all().update(status=interface_status)
-        self.interface4 = Interface.objects.create(device=self.device2, name="eth4", status=interface_status)
+        self.interface4 = Interface.objects.create(
+            device=self.device2, name="eth4", status=interface_status, role=interface_role
+        )
         device1_power_ports = [
             PowerPort.objects.create(device=self.device1, name="Power Port 1"),
             PowerPort.objects.create(device=self.device1, name="Power Port 2"),
@@ -1609,6 +1630,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=self.device,
             status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
         )
         with self.assertRaises(ValidationError) as err:
             interface.tagged_vlans.add(self.vlan)
@@ -1623,6 +1645,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 device=self.device,
                 status=Status.objects.get_for_model(Interface).first(),
+                role=Role.objects.get_for_model(Interface).first(),
             )
             interface.tagged_vlans.add(self.other_location_vlan)
         self.assertEqual(
@@ -1638,6 +1661,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=self.device,
             status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
         )
         ips = list(IPAddress.objects.filter(parent__namespace=self.namespace))
 
@@ -1663,6 +1687,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=self.device,
             status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
         )
         ips = list(IPAddress.objects.filter(parent__namespace=self.namespace))
 

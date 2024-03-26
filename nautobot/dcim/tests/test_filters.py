@@ -1976,6 +1976,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         vlans = VLAN.objects.all()[:3]
 
         interface_statuses = Status.objects.get_for_model(Interface)
+        interface_roles = Role.objects.get_for_model(Interface)
 
         # Cabled interfaces
         cabled_interfaces = (
@@ -1985,6 +1986,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
             Interface.objects.create(
                 device=devices[2],
                 name="Parent Interface 1",
+                role=interface_roles[0],
                 type=InterfaceTypeChoices.TYPE_OTHER,
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 enabled=True,
@@ -2004,6 +2006,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
             Interface.objects.create(
                 device=devices[2],
                 name="Parent Interface 3",
+                role=interface_roles[1],
                 type=InterfaceTypeChoices.TYPE_OTHER,
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 enabled=False,
@@ -2069,6 +2072,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         Interface.objects.create(
             device=cabled_interfaces[3].device,
             name="Child 1",
+            role=interface_roles[2],
             parent_interface=cabled_interfaces[3],
             status=interface_statuses[3],
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
@@ -2083,6 +2087,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         Interface.objects.create(
             device=cabled_interfaces[5].device,
             name="Child 3",
+            role=interface_roles[0],
             parent_interface=cabled_interfaces[5],
             status=interface_statuses[3],
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
@@ -2099,12 +2104,14 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
             Interface.objects.create(
                 device=devices[2],
                 name="Bridge 2",
+                role=interface_roles[1],
                 status=interface_statuses[3],
                 type=InterfaceTypeChoices.TYPE_BRIDGE,
             ),
             Interface.objects.create(
                 device=devices[2],
                 name="Bridge 3",
+                role=interface_roles[2],
                 status=interface_statuses[3],
                 type=InterfaceTypeChoices.TYPE_BRIDGE,
             ),
@@ -2112,6 +2119,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         Interface.objects.create(
             device=bridge_interfaces[0].device,
             name="Bridged 1",
+            role=interface_roles[0],
             bridge=bridge_interfaces[0],
             status=interface_statuses[3],
             type=InterfaceTypeChoices.TYPE_1GE_SFP,
@@ -2126,6 +2134,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         Interface.objects.create(
             device=bridge_interfaces[2].device,
             name="Bridged 3",
+            role=interface_roles[1],
             bridge=bridge_interfaces[2],
             status=interface_statuses[3],
             type=InterfaceTypeChoices.TYPE_1GE_SFP,
@@ -2136,6 +2145,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
             Interface.objects.create(
                 device=devices[2],
                 name="LAG 1",
+                role=interface_roles[0],
                 type=InterfaceTypeChoices.TYPE_LAG,
                 status=interface_statuses[3],
             ),
@@ -2148,6 +2158,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
             Interface.objects.create(
                 device=devices[2],
                 name="LAG 3",
+                role=interface_roles[1],
                 type=InterfaceTypeChoices.TYPE_LAG,
                 status=interface_statuses[3],
             ),
@@ -2163,6 +2174,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
             device=devices[2],
             name="Member 2",
             lag=lag_interfaces[1],
+            role=interface_roles[2],
             type=InterfaceTypeChoices.TYPE_1GE_SFP,
             status=interface_statuses[3],
         )
@@ -2241,8 +2253,9 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         Device.objects.filter(pk=devices[1].pk).update(virtual_chassis=virtual_chassis, vc_position=2, vc_priority=2)
 
         interface_status = Status.objects.get_for_model(Interface).first()
-        Interface.objects.create(device=devices[0], name="int1", status=interface_status)
-        Interface.objects.create(device=devices[0], name="int2", status=interface_status)
+        interface_role = Role.objects.get_for_model(Interface).first()
+        Interface.objects.create(device=devices[0], name="int1", status=interface_status, role=interface_role)
+        Interface.objects.create(device=devices[0], name="int2", status=interface_status, role=interface_role)
         Interface.objects.create(device=devices[1], name="int3", status=interface_status)
         Interface.objects.create(device=devices[2], name="int4", status=interface_status)
 
@@ -2788,6 +2801,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         )
 
         interface_status = Status.objects.get_for_model(Interface).first()
+        interface_role = Role.objects.get_for_model(Interface).first()
         interfaces = (
             Interface.objects.get(device__name="Device 1"),
             Interface.objects.get(device__name="Device 2"),
@@ -2798,6 +2812,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             Interface.objects.create(
                 device=devices[0],
                 name="Interface 7",
+                role=interface_role,
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
@@ -2810,6 +2825,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             Interface.objects.create(
                 device=devices[2],
                 name="Interface 9",
+                role=interface_role,
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
@@ -2822,6 +2838,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             Interface.objects.create(
                 device=devices[4],
                 name="Interface 11",
+                role=interface_role,
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),

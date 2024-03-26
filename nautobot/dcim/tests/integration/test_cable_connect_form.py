@@ -6,7 +6,7 @@ from splinter.exceptions import ElementDoesNotExist
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Interface
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.extras.models import Status
+from nautobot.extras.models import Role, Status
 
 
 class CableConnectFormTestCase(SeleniumTestCase):
@@ -36,9 +36,12 @@ class CableConnectFormTestCase(SeleniumTestCase):
         device1 = create_test_device("Device 1")
         create_test_device("Device 2")
         interface_status = Status.objects.get_for_model(Interface).first()
-        interface1 = Interface.objects.create(device=device1, name="Interface 1", status=interface_status)
+        interface_role = Role.objects.get_for_model(Interface).first()
+        interface1 = Interface.objects.create(
+            device=device1, name="Interface 1", status=interface_status, role=interface_role
+        )
         Interface.objects.create(device=device1, name="Interface 2", status=interface_status)
-        Interface.objects.create(device=device1, name="Interface 3", status=interface_status)
+        Interface.objects.create(device=device1, name="Interface 3", status=interface_status, role=interface_role)
         cable_connect_form_url = reverse(
             "dcim:interface_connect", kwargs={"termination_a_id": interface1.pk, "termination_b_type": "interface"}
         )
