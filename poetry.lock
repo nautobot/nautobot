@@ -27,13 +27,13 @@ files = [
 
 [[package]]
 name = "asgiref"
-version = "3.8.0"
+version = "3.8.1"
 description = "ASGI specs, helper code, and adapters"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "asgiref-3.8.0-py3-none-any.whl", hash = "sha256:30fc07797ad71a0abb8fe34aa03c8043308a8389abc7942d797ea9911540bc28"},
-    {file = "asgiref-3.8.0.tar.gz", hash = "sha256:ec75d9d0f04e2dbfedef1f20ee73a6594af80c333df47cdd31f37e6701f7c53a"},
+    {file = "asgiref-3.8.1-py3-none-any.whl", hash = "sha256:3e1e3ecc849832fe52ccf2cb6686b7a55f82bb1d6aee72a58826471390335e47"},
+    {file = "asgiref-3.8.1.tar.gz", hash = "sha256:c343bd80a0bec947a9860adb4c432ffa7db769836c64238fc34bdc3fec84d590"},
 ]
 
 [package.dependencies]
@@ -451,13 +451,13 @@ test = ["pytest"]
 
 [[package]]
 name = "click-didyoumean"
-version = "0.3.0"
+version = "0.3.1"
 description = "Enables git-like *did-you-mean* feature in click"
 optional = false
-python-versions = ">=3.6.2,<4.0.0"
+python-versions = ">=3.6.2"
 files = [
-    {file = "click-didyoumean-0.3.0.tar.gz", hash = "sha256:f184f0d851d96b6d29297354ed981b7dd71df7ff500d82fa6d11f0856bee8035"},
-    {file = "click_didyoumean-0.3.0-py3-none-any.whl", hash = "sha256:a0713dc7a1de3f06bc0df5a9567ad19ead2d3d5689b434768a6145bff77c0667"},
+    {file = "click_didyoumean-0.3.1-py3-none-any.whl", hash = "sha256:5c4bb6007cfea5f2fd6583a2fb6701a22a41eb98957e63d0fac41c10e7c3117c"},
+    {file = "click_didyoumean-0.3.1.tar.gz", hash = "sha256:4f82fdff0dbe64ef8ab2279bd6aa3f6a99c3b28c05aa09cbfc07c9d7fbb5a463"},
 ]
 
 [package.dependencies]
@@ -3229,13 +3229,13 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
 name = "requests-oauthlib"
-version = "1.4.0"
+version = "2.0.0"
 description = "OAuthlib authentication support for Requests."
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+python-versions = ">=3.4"
 files = [
-    {file = "requests-oauthlib-1.4.0.tar.gz", hash = "sha256:acee623221e4a39abcbb919312c8ff04bd44e7e417087fb4bd5e2a2f53d5e79a"},
-    {file = "requests_oauthlib-1.4.0-py2.py3-none-any.whl", hash = "sha256:7a3130d94a17520169e38db6c8d75f2c974643788465ecc2e4b36d288bf13033"},
+    {file = "requests-oauthlib-2.0.0.tar.gz", hash = "sha256:b3dffaebd884d8cd778494369603a9e7b58d29111bf6b41bdc2dcd87203af4e9"},
+    {file = "requests_oauthlib-2.0.0-py2.py3-none-any.whl", hash = "sha256:7dd8a5c40426b779b0868c404bdef9768deccf22749cde15852df527e6269b36"},
 ]
 
 [package.dependencies]

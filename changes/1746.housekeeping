@@ -1,2 +1,0 @@
-Replaced `OrderedDict` instance in `nautobot/core/api/routers.py#21` with with a plain `dict` instance.
-Replaced `OrderedDict` instance in `nautobot/dcim/models/racks.py#275` with a plain `dict` instance.

@@ -1,4 +1,0 @@
-Fixed collapsable navbar for GraphiQL page `/graphql`.
-Fixed collapsable navbar for Admin page `/admin`.
-Fixed collapsable navbar for Django Rest Framework (DRF) page `/api/`.
-Improved footer responsiveness for certain media sizes.
