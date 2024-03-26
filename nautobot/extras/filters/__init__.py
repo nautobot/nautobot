@@ -1062,6 +1062,9 @@ class RoleFilterSet(NautobotFilterSet):
         conjoined=False,
     )
 
+    def filter_queryset(self, queryset):
+        return super().filter_queryset(queryset).distinct()
+
     class Meta:
         model = Role
         fields = [
