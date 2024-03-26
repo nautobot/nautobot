@@ -48,7 +48,7 @@ from .models import (
     ConsoleServerPort,
     ConsoleServerPortTemplate,
     Controller,
-    ControllerDeviceGroup,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -1459,7 +1459,7 @@ class DeviceBulkEditView(generic.BulkEditView):
         "device_type__manufacturer",
         "secrets_group",
         "device_redundancy_group",
-        "controller_device_group",
+        "controller_managed_device_group",
     )
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
@@ -3021,12 +3021,13 @@ class ControllerUIViewSet(NautobotUIViewSet):
     queryset = Controller.objects.all()
     serializer_class = serializers.ControllerSerializer
     table_class = tables.ControllerTable
+    template_name = "dcim/controller_create.html"
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
         if self.action == "retrieve" and instance:
-            devices = Device.objects.restrict(request.user).filter(controller_device_group__controller=instance)
+            devices = Device.objects.restrict(request.user).filter(controller_managed_device_group__controller=instance)
             devices_table = tables.DeviceTable(devices)
 
             paginate = {
@@ -3040,19 +3041,19 @@ class ControllerUIViewSet(NautobotUIViewSet):
         return context
 
 
-class ControllerDeviceGroupUIViewSet(NautobotUIViewSet):
-    filterset_class = filters.ControllerDeviceGroupFilterSet
-    filterset_form_class = forms.ControllerDeviceGroupFilterForm
-    form_class = forms.ControllerDeviceGroupForm
-    bulk_update_form_class = forms.ControllerDeviceGroupBulkEditForm
+class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.ControllerManagedDeviceGroupFilterSet
+    filterset_form_class = forms.ControllerManagedDeviceGroupFilterForm
+    form_class = forms.ControllerManagedDeviceGroupForm
+    bulk_update_form_class = forms.ControllerManagedDeviceGroupBulkEditForm
     queryset = (
-        ControllerDeviceGroup.objects.all()
+        ControllerManagedDeviceGroup.objects.all()
         .prefetch_related("devices")
-        .annotate(device_count=count_related(Device, "controller_device_group"))
+        .annotate(device_count=count_related(Device, "controller_managed_device_group"))
     )
-    serializer_class = serializers.ControllerDeviceGroupSerializer
-    table_class = tables.ControllerDeviceGroupTable
-    template_name = "dcim/controllerdevicegroup_create.html"
+    serializer_class = serializers.ControllerManagedDeviceGroupSerializer
+    table_class = tables.ControllerManagedDeviceGroupTable
+    template_name = "dcim/controllermanageddevicegroup_create.html"
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

@@ -17,7 +17,16 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.testing import extract_form_failures, extract_page_body, TestCase, ViewTestCases
 from nautobot.core.testing.utils import disable_warnings, post_data
-from nautobot.dcim.models import ConsolePort, Device, DeviceType, Interface, Location, LocationType, Manufacturer
+from nautobot.dcim.models import (
+    ConsolePort,
+    Controller,
+    Device,
+    DeviceType,
+    Interface,
+    Location,
+    LocationType,
+    Manufacturer,
+)
 from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
@@ -2488,6 +2497,7 @@ class RelationshipTestCase(
         )
 
         # Try deleting all devices and then editing the 6 VLANs (fails):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         response = self.client.post(
             reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans], "_apply": [""]}

@@ -40,7 +40,7 @@ router.register("interface-redundancy-groups-associations", views.InterfaceRedun
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
 router.register("controllers", views.ControllerUIViewSet)
-router.register("controller-device-groups", views.ControllerDeviceGroupUIViewSet)
+router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
 
 urlpatterns = [
     # Location types
