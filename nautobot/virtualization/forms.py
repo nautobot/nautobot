@@ -41,7 +41,7 @@ from nautobot.extras.forms import (
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
-from nautobot.extras.models import Status
+from nautobot.extras.models import Role, Status
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
@@ -450,6 +450,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         fields = [
             "virtual_machine",
             "name",
+            "role",
             "enabled",
             "parent_interface",
             "bridge",
@@ -562,7 +563,9 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
             self.fields["tagged_vlans"].widget.add_query_param("location", location.pk)
 
 
-class VMInterfaceBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
+class VMInterfaceBulkEditForm(
+    TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, RoleModelBulkEditFormMixin, NautobotBulkEditForm
+):
     pk = forms.ModelMultipleChoiceField(queryset=VMInterface.objects.all(), widget=forms.MultipleHiddenInput())
     virtual_machine = forms.ModelChoiceField(
         queryset=VirtualMachine.objects.all(),
@@ -641,7 +644,7 @@ class VMInterfaceBulkRenameForm(BulkRenameForm):
     pk = forms.ModelMultipleChoiceField(queryset=VMInterface.objects.all(), widget=forms.MultipleHiddenInput())
 
 
-class VMInterfaceFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
+class VMInterfaceFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, StatusModelFilterFormMixin):
     model = VMInterface
     cluster_id = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), required=False, label="Cluster")
     virtual_machine_id = DynamicModelMultipleChoiceField(
@@ -675,10 +678,15 @@ class VMInterfaceBulkCreateForm(
         queryset=Status.objects.all(),
         query_params={"content_types": VMInterface._meta.label_lower},
     )
+    role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        query_params={"content_types": VMInterface._meta.label_lower},
+    )
 
     field_order = (
         "name_pattern",
         "status",
+        "role",
         "enabled",
         "mtu",
         "description",

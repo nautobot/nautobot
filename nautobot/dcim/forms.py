@@ -53,7 +53,7 @@ from nautobot.extras.forms import (
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
-from nautobot.extras.models import ExternalIntegration, SecretsGroup, Status
+from nautobot.extras.models import ExternalIntegration, Role, SecretsGroup, Status
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
@@ -2247,7 +2247,7 @@ class PowerOutletBulkEditForm(
 #
 
 
-class InterfaceFilterForm(DeviceComponentFilterForm, StatusModelFilterFormMixin):
+class InterfaceFilterForm(DeviceComponentFilterForm, RoleModelFilterFormMixin, StatusModelFilterFormMixin):
     model = Interface
     type = forms.MultipleChoiceField(choices=InterfaceTypeChoices, required=False, widget=StaticSelect2Multiple())
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -2316,6 +2316,7 @@ class InterfaceForm(InterfaceCommonForm, ComponentEditForm):
         fields = [
             "device",
             "name",
+            "role",
             "label",
             "type",
             "enabled",
@@ -2463,11 +2464,17 @@ class InterfaceBulkCreateForm(
         queryset=Status.objects.all(),
         query_params={"content_types": Interface._meta.label_lower},
     )
+    role = DynamicModelChoiceField(
+        required=True,
+        queryset=Role.objects.all(),
+        query_params={"content_types": Interface._meta.label_lower},
+    )
 
     field_order = (
         "name_pattern",
         "label_pattern",
         "status",
+        "role",
         "type",
         "enabled",
         "mtu",
@@ -2485,6 +2492,7 @@ class InterfaceBulkEditForm(
     ),
     TagsBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
+    RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Interface.objects.all(), widget=forms.MultipleHiddenInput())
