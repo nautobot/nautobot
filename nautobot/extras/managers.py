@@ -8,6 +8,25 @@ from nautobot.core.models.querysets import RestrictedQuerySet
 
 
 class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResultManager):
+    def get_task(self, task_id):
+        """Get result for task by ``task_id``.
+
+        Keyword Arguments:
+        -----------------
+            exception_retry_count (int): How many times to retry by
+                transaction rollback on exception.  This could
+                happen in a race condition if another worker is trying to
+                create the same task.  The default is to retry once.
+
+        """
+        try:
+            return self.get(id=task_id)
+        except self.model.DoesNotExist:
+            if self._last_id == task_id:
+                self.warn_if_repeatable_read()
+            self._last_id = task_id
+            return self.model(id=task_id)
+
     @transaction_retry(max_retries=2)
     def store_result(
         self,
