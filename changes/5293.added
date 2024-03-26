@@ -1,0 +1,1 @@
+Added a method to the base manager that allows for a `bulk_create` operation with change logging.
