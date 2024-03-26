@@ -1955,6 +1955,8 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         ("name",),
         ("parent_interface", "parent_interface__id"),
         ("parent_interface", "parent_interface__name"),
+        ("role", "role__id"),
+        ("role", "role__name"),
         ("status", "status__id"),
         ("status", "status__name"),
         ("type",),

@@ -597,6 +597,8 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         ["mac_address"],
         ["mtu"],
         ["name"],
+        ("role", "role__id"),
+        ("role", "role__name"),
         ["parent_interface"],
         ["tagged_vlans", "tagged_vlans__pk"],
         ["tagged_vlans", "tagged_vlans__vid"],
