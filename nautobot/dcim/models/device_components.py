@@ -35,6 +35,7 @@ from nautobot.dcim.constants import (
 from nautobot.extras.models import (
     ChangeLoggedModel,
     RelationshipModel,
+    RoleField,
     Status,
     StatusField,
 )
@@ -509,6 +510,7 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         blank=True,
         db_index=True,
     )
+    role = RoleField(blank=True, null=True)
     lag = models.ForeignKey(
         to="self",
         on_delete=models.SET_NULL,
