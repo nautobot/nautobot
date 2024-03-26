@@ -279,7 +279,7 @@ class InterfaceRedundancyGroupTestCase(ModelTestCases.BaseModelTestCase):
             status=cls.device_status,
         )
         non_default_status = Status.objects.get_for_model(Interface).exclude(name="Active").first()
-        intf_role = Role.obejcts.get_for_model(Interface).first()
+        intf_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
             Interface.objects.create(
                 device=cls.device,
@@ -899,7 +899,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         )
         self.device_role = Role.objects.get_for_model(Device).first()
         self.device_status = Status.objects.get_for_model(Device).first()
-        self.intf_role = Role.obejcts.get_for_model(Interface).first()
+        self.intf_role = Role.objects.get_for_model(Interface).first()
         self.location_type_1 = LocationType.objects.get(name="Building")
         self.location_type_2 = LocationType.objects.get(name="Floor")
         self.location_type_3 = LocationType.objects.get(name="Campus")

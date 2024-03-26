@@ -628,7 +628,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         )
 
         statuses = Status.objects.get_for_model(VMInterface)
-        roles = Status.objects.get_for_model(VMInterface)
+        roles = Role.objects.get_for_model(VMInterface)
 
         vlans = VLAN.objects.filter()[:2]
         vlans[0].locations.clear()

@@ -113,6 +113,7 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
         vm_status = Status.objects.get_for_model(VirtualMachine).first()
         cls.virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1", status=vm_status)
         cls.int_status = Status.objects.get_for_model(VMInterface).first()
+        cls.int_role = Role.objects.get_for_model(VMInterface).first()
 
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
         interface = VMInterface.objects.create(
