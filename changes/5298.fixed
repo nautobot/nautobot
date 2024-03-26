@@ -1,2 +1,0 @@
-Fixed a `ValidationError` that was being thrown when a user logged out.
-Fixed a case where viewing a completed JobResult that was missing a `date_done` value would cause the JobResult view to repeatedly refresh.

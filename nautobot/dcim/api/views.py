@@ -29,6 +29,8 @@ from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -389,6 +391,7 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         "software_version",
         "virtual_chassis__master",
         "device_redundancy_group",
+        "controller_managed_device_group",
         "secrets_group",
         "status",
     ).prefetch_related("tags", "primary_ip4__nat_outside_list", "primary_ip6__nat_outside_list", "software_image_files")
@@ -818,3 +821,30 @@ class DeviceTypeToSoftwareImageFileViewSet(ModelViewSet):
     queryset = DeviceTypeToSoftwareImageFile.objects.select_related("device_type", "software_image_file")
     serializer_class = serializers.DeviceTypeToSoftwareImageFileSerializer
     filterset_class = filters.DeviceTypeToSoftwareImageFileFilterSet
+
+
+#
+# Controllers
+#
+
+
+class ControllerViewSet(NautobotModelViewSet):
+    queryset = Controller.objects.select_related(
+        "location",
+        "platform",
+        "role",
+        "tenant",
+        "status",
+    ).prefetch_related("tags")
+    serializer_class = serializers.ControllerSerializer
+    filterset_class = filters.ControllerFilterSet
+
+
+class ControllerManagedDeviceGroupViewSet(NautobotModelViewSet):
+    queryset = ControllerManagedDeviceGroup.objects.select_related(
+        "controller",
+        "parent",
+    ).prefetch_related("tags")
+
+    serializer_class = serializers.ControllerManagedDeviceGroupSerializer
+    filterset_class = filters.ControllerManagedDeviceGroupFilterSet

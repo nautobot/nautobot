@@ -733,7 +733,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                             field_name,
                             related_object_form,
                         ) in self.related_object_forms.items():
-                            logger.debug("Processing form for related objects: {related_object_form}")
+                            logger.debug(f"Processing form for related objects: {related_object_form}")
 
                             related_obj_pks = []
                             for i, rel_obj_data in enumerate(data.get(field_name, [])):
@@ -765,7 +765,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 except ObjectDoesNotExist:
                     msg = "Object creation failed due to object-level permissions violation"
                     logger.debug(msg)
-                    form.add_error(None, msg)
+                    model_form.add_error(None, msg)
 
             if not model_form.errors:
                 logger.info(f"Import object {obj} (PK: {obj.pk})")

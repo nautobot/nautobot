@@ -1,0 +1,40 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Controller</strong>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover panel-body attr-table">
+                        <tr>
+                            <td>Name</td>
+                            <td>{{ object.name|placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <td>Controller</td>
+                            <td>{{ object.controller|hyperlinked_object }}</td>
+                        </tr>
+                        <tr>
+                            <td>Parent</td>
+                            <td>{{ object.parent|hyperlinked_object }}</td>
+                        </tr>
+                        <tr>
+                            <td>Weight</td>
+                            <td>{{ object.weight }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+{% endblock content_left_page %}
+
+{% block content_full_width_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Devices</strong>
+            </div>
+            {% include 'responsive_table.html' with table=devices_table %}
+        </div>
+        {% include 'inc/paginator.html' with paginator=devices_table.paginator page=devices_table.page %}
+{% endblock content_full_width_page %}

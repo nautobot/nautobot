@@ -89,7 +89,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="dcim:rackreservation_list",
-                        name="Reservations",
+                        name="Rack Reservations",
                         weight=400,
                         permissions=[
                             "dcim.view_rackreservation",
@@ -246,7 +246,7 @@ menu_items = (
             ),
             NavMenuGroup(
                 name="Software",
-                weight=250,
+                weight=300,
                 items=(
                     NavMenuItem(
                         link="dcim:platform_list",
@@ -299,8 +299,38 @@ menu_items = (
                 ),
             ),
             NavMenuGroup(
+                name="Controllers",
+                weight=400,
+                items=(
+                    NavMenuItem(
+                        link="dcim:controller_list",
+                        name="Controllers",
+                        weight=100,
+                        permissions=[
+                            "dcim.view_controller",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:controller_add",
+                                permissions=[
+                                    "dcim.add_controller",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:controllermanageddevicegroup_list",
+                        name="Managed Device Groups",
+                        weight=200,
+                        permissions=[
+                            "dcim.view_controllermanageddevicegroup",
+                        ],
+                    ),
+                ),
+            ),
+            NavMenuGroup(
                 name="Connections",
-                weight=300,
+                weight=500,
                 items=(
                     NavMenuItem(
                         link="dcim:cable_list",
@@ -344,7 +374,7 @@ menu_items = (
             ),
             NavMenuGroup(
                 name="Device Components",
-                weight=400,
+                weight=600,
                 items=(
                     NavMenuItem(
                         link="dcim:interface_list",

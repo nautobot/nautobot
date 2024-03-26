@@ -13,6 +13,7 @@ import yaml
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from nautobot.core.templatetags.buttons import job_export_url, job_import_url
 from nautobot.core.testing import extract_page_body, ModelViewTestCase, post_data, ViewTestCases
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
 from nautobot.dcim.choices import (
@@ -39,6 +40,8 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.filters import (
     ConsoleConnectionFilterSet,
+    ControllerFilterSet,
+    ControllerManagedDeviceGroupFilterSet,
     InterfaceConnectionFilterSet,
     PowerConnectionFilterSet,
     SoftwareImageFileFilterSet,
@@ -51,6 +54,8 @@ from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -90,6 +95,7 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     CustomField,
     CustomFieldChoice,
+    ExternalIntegration,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -561,6 +567,7 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         DeviceType.objects.all().delete()
         Platform.objects.all().delete()
@@ -587,6 +594,7 @@ class DeviceTypeTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         manufacturers = Manufacturer.objects.all()[:2]
 
@@ -613,23 +621,35 @@ class DeviceTypeTestCase(
             "is_full_depth": False,
         }
 
-    # Temporary FIXME(jathan): Literally just trying to get the tests running so
-    # we can keep moving on the fixture factories. This should be removed once
-    # we've cleaned up all the hard-coded object comparisons and are all in on
-    # factories.
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_bulk_edit_objects_with_constrained_permission(self):
-        DeviceType.objects.exclude(model__startswith="Test Device Type").delete()
-        super().test_bulk_edit_objects_with_constrained_permission()
+    def test_list_has_correct_links(self):
+        """Assert that the DeviceType list view has import/export buttons for both CSV and YAML/JSON formats."""
+        self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype")
+        response = self.client.get(reverse("dcim:devicetype_list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
 
-    # Temporary FIXME(jathan): Literally just trying to get the tests running so
-    # we can keep moving on the fixture factories. This should be removed once
-    # we've cleaned up all the hard-coded object comparisons and are all in on
-    # factories.
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_bulk_edit_objects_with_permission(self):
-        DeviceType.objects.exclude(model__startswith="Test Device Type").delete()
-        super().test_bulk_edit_objects_with_permission()
+        yaml_import_url = reverse("dcim:devicetype_import")
+        csv_import_url = job_import_url(ContentType.objects.get_for_model(DeviceType))
+        # Main import button links to YAML/JSON import
+        self.assertInHTML(
+            f'<a id="import-button" type="button" class="btn btn-info" href="{yaml_import_url}">'
+            '<span class="mdi mdi-database-import" aria-hidden="true"></span> Import</a>',
+            content,
+        )
+        # Dropdown provides both YAML/JSON and CSV import as options
+        self.assertInHTML(f'<a href="{yaml_import_url}">JSON/YAML format (single record)</a>', content)
+        self.assertInHTML(f'<a href="{csv_import_url}">CSV format (multiple records)</a>', content)
+
+        export_url = job_export_url()
+        # Export is a little trickier to check since it's done as a form submission rather than an <a> element.
+        self.assertIn(f'<form action="{export_url}" method="post">', content)
+        self.assertInHTML(
+            f'<input type="hidden" name="content_type" value="{ContentType.objects.get_for_model(DeviceType).pk}">',
+            content,
+        )
+        self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
+        self.assertInHTML('<button type="submit" class="btn btn-link">YAML format</button>', content)
+        self.assertInHTML('<button type="submit" class="btn btn-link">CSV format</button>', content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_import_objects(self):
@@ -712,9 +732,6 @@ device-bays:
   - name: Device Bay 3
 """
 
-        # Create the manufacturer
-        Manufacturer.objects.first()
-
         # Add all required permissions to the test user
         self.add_permissions(
             "dcim.view_devicetype",
@@ -777,6 +794,106 @@ device-bays:
         self.assertEqual(dt.device_bay_templates.count(), 3)
         db1 = DeviceBayTemplate.objects.first()
         self.assertEqual(db1.name, "Device Bay 1")
+
+    def test_import_objects_unknown_type_enums(self):
+        """
+        YAML import of data with `type` values that we don't recognize should remap those to "other" rather than fail.
+        """
+        manufacturer = Manufacturer.objects.first()
+        IMPORT_DATA = f"""
+manufacturer: {manufacturer.name}
+model: TEST-2000
+u_height: 0
+subdevice_role: parent
+comments: "test comment"
+console-ports:
+  - name: Console Port Alpha-Beta
+    type: alpha-beta
+console-server-ports:
+  - name: Console Server Port Pineapple
+    type: pineapple
+power-ports:
+  - name: Power Port Fred
+    type: frederick
+power-outlets:
+  - name: Power Outlet Rick
+    type: frederick
+    power_port_template: Power Port Fred
+interfaces:
+  - name: Interface North
+    type: northern
+rear-ports:
+  - name: Rear Port Foosball
+    type: foosball
+front-ports:
+  - name: Front Port Pickleball
+    type: pickleball
+    rear_port_template: Rear Port Foosball
+device-bays:
+  - name: Device Bay of Uncertain Type
+    type: unknown  # should be ignored
+  - name: Device Bay of Unspecified Type
+"""
+        # Add all required permissions to the test user
+        self.add_permissions(
+            "dcim.view_devicetype",
+            "dcim.view_manufacturer",
+            "dcim.add_devicetype",
+            "dcim.add_consoleporttemplate",
+            "dcim.add_consoleserverporttemplate",
+            "dcim.add_powerporttemplate",
+            "dcim.add_poweroutlettemplate",
+            "dcim.add_interfacetemplate",
+            "dcim.add_frontporttemplate",
+            "dcim.add_rearporttemplate",
+            "dcim.add_devicebaytemplate",
+        )
+
+        form_data = {"data": IMPORT_DATA, "format": "yaml"}
+        response = self.client.post(reverse("dcim:devicetype_import"), data=form_data, follow=True)
+        self.assertHttpStatus(response, 200)
+        dt = DeviceType.objects.get(model="TEST-2000")
+        self.assertEqual(dt.comments, "test comment")
+
+        # Verify all of the components were created with appropriate "other" types
+        self.assertEqual(dt.console_port_templates.count(), 1)
+        cpt = ConsolePortTemplate.objects.filter(device_type=dt).first()
+        self.assertEqual(cpt.name, "Console Port Alpha-Beta")
+        self.assertEqual(cpt.type, ConsolePortTypeChoices.TYPE_OTHER)
+
+        self.assertEqual(dt.console_server_port_templates.count(), 1)
+        cspt = ConsoleServerPortTemplate.objects.filter(device_type=dt).first()
+        self.assertEqual(cspt.name, "Console Server Port Pineapple")
+        self.assertEqual(cspt.type, ConsolePortTypeChoices.TYPE_OTHER)
+
+        self.assertEqual(dt.power_port_templates.count(), 1)
+        ppt = PowerPortTemplate.objects.filter(device_type=dt).first()
+        self.assertEqual(ppt.name, "Power Port Fred")
+        self.assertEqual(ppt.type, PowerPortTypeChoices.TYPE_OTHER)
+
+        self.assertEqual(dt.power_outlet_templates.count(), 1)
+        pot = PowerOutletTemplate.objects.filter(device_type=dt).first()
+        self.assertEqual(pot.name, "Power Outlet Rick")
+        self.assertEqual(pot.type, PowerOutletTypeChoices.TYPE_OTHER)
+        self.assertEqual(pot.power_port_template, ppt)
+
+        self.assertEqual(dt.interface_templates.count(), 1)
+        it = InterfaceTemplate.objects.filter(device_type=dt).first()
+        self.assertEqual(it.name, "Interface North")
+        self.assertEqual(it.type, InterfaceTypeChoices.TYPE_OTHER)
+
+        self.assertEqual(dt.rear_port_templates.count(), 1)
+        rpt = RearPortTemplate.objects.filter(device_type=dt).first()
+        self.assertEqual(rpt.name, "Rear Port Foosball")
+        self.assertEqual(rpt.type, PortTypeChoices.TYPE_OTHER)
+
+        self.assertEqual(dt.front_port_templates.count(), 1)
+        fpt = FrontPortTemplate.objects.filter(device_type=dt).first()
+        self.assertEqual(fpt.name, "Front Port Pickleball")
+        self.assertEqual(fpt.type, PortTypeChoices.TYPE_OTHER)
+
+        self.assertEqual(dt.device_bay_templates.count(), 2)
+        # DeviceBayTemplate doesn't have a type field.
 
     def test_devicetype_export(self):
         url = reverse("dcim:devicetype_list")
@@ -1163,6 +1280,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
@@ -1330,6 +1448,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "face": DeviceFaceChoices.FACE_FRONT,
             "secrets_group": secrets_groups[1].pk,
             "software_version": software_versions[1].pk,
+            "controller_managed_device_group": ControllerManagedDeviceGroup.objects.first().pk,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -2985,4 +3104,60 @@ class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "documentation_url": "https://example.com/software_version_test_case/docs2",
             "long_term_support": False,
             "pre_release": True,
+        }
+
+
+class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = Controller
+    filterset = ControllerFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        device = Device.objects.first()
+        external_integration = ExternalIntegration.objects.first()
+        location = Location.objects.get_for_model(Controller).first()
+        platform = Platform.objects.first()
+        role = Role.objects.get_for_model(Controller).first()
+        status = Status.objects.get_for_model(Controller).first()
+        tenant = Tenant.objects.first()
+
+        cls.form_data = {
+            "controller_device": device.pk,
+            "description": "Controller 1 description",
+            "external_integration": external_integration.pk,
+            "location": location.pk,
+            "name": "Controller 1",
+            "platform": platform.pk,
+            "role": role.pk,
+            "status": status.pk,
+            "tenant": tenant.pk,
+        }
+
+        cls.bulk_edit_data = {
+            "external_integration": external_integration.pk,
+            "location": location.pk,
+            "platform": platform.pk,
+            "role": role.pk,
+            "status": status.pk,
+            "tenant": tenant.pk,
+        }
+
+
+class ControllerManagedDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = ControllerManagedDeviceGroup
+    filterset = ControllerManagedDeviceGroupFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        controllers = Controller.objects.all()
+
+        cls.form_data = {
+            "name": "Managed Device Group 10",
+            "controller": controllers[0].pk,
+            "weight": 100,
+            "devices": [item.pk for item in Device.objects.all()[:2]],
+        }
+
+        cls.bulk_edit_data = {
+            "weight": 300,
         }
