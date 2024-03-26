@@ -8,6 +8,7 @@ from nautobot.core.views.generic import (
     BulkImportView,  # 3.0 TODO: deprecated, will be removed in 3.0
     BulkRenameView,
     ComponentCreateView,
+    GenericView,
     ObjectDeleteView,
     ObjectEditView,
     ObjectImportView,
@@ -57,6 +58,7 @@ __all__ = (
     "csv_format",
     "EnhancedPage",
     "EnhancedPaginator",
+    "GenericView",
     "get_csv_form_fields_from_serializer_class",
     "get_paginate_count",
     "GetReturnURLMixin",
