@@ -723,6 +723,8 @@ class ViewTestCases:
         """
 
         filterset = None
+        filter_on_field = "subtree"
+        sort_on_field = "tags"
 
         def get_filterset(self):
             return self.filterset or lookup.get_filterset_for_model(self.model)
@@ -751,12 +753,12 @@ class ViewTestCases:
 
             with self.subTest("Assert indentation is removed on filter"):
                 instance = self._get_queryset().filter(children__isnull=False).first()
-                response = self.client.get(f"{self._get_url('list')}?subtree={instance.pk}")
+                response = self.client.get(f"{self._get_url('list')}?{self.filter_on_field}={instance.pk}")
                 response_body = response.content.decode(response.charset)
                 self.assertNotIn('<i class="mdi mdi-circle-small"></i>', response_body)
 
             with self.subTest("Assert indentation is removed on sort"):
-                response = self.client.get(f"{self._get_url('list')}?sort=tags")
+                response = self.client.get(f"{self._get_url('list')}?sort={self.sort_on_field}")
                 response_body = response.content.decode(response.charset)
                 self.assertNotIn('<i class="mdi mdi-circle-small"></i>', response_body)
 
