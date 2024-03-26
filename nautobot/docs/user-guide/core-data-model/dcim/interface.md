@@ -32,3 +32,6 @@ IP addresses can be assigned to interfaces. VLANs can also be assigned to each i
 
 +++ 1.6.0
     Interfaces can now be assigned to an [Interface Redundancy Group](./interfaceredundancygroup.md) to represent redundancy protocols such as HSRP or VRRP.
+
++++ 2.2.0
+    Interfaces now have a `role` field and can be assigned [Role](../../platform-functionality/role.md) instances to track common configurations.
