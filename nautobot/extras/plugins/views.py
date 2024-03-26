@@ -5,7 +5,6 @@ from django.conf import settings
 from django.http import Http404
 from django.shortcuts import render
 from django.urls.exceptions import NoReverseMatch
-from django.views.generic import View
 from django_tables2 import RequestConfig
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
@@ -66,7 +65,7 @@ class InstalledAppsView(GenericView):
         )
 
 
-class InstalledPluginDetailView(GenericView):
+class InstalledAppDetailView(GenericView):
     """
     View for showing details of an installed App.
     """

@@ -265,38 +265,38 @@ def get_url_patterns(urlconf=None, patterns_list=None, base_path="/"):
         '/circuits/circuits/<uuid:pk>/terminations/swap/'
 
         >>> import example_plugin.urls as example_urls
-        >>> for url_pattern in get_url_patterns(example_urls, base_path="/plugins/example-plugin/"):
+        >>> for url_pattern in get_url_patterns(example_urls, base_path="/plugins/example-app/"):
         ...     print(url_pattern)
         ...
-        /plugins/example-plugin/
-        /plugins/example-plugin/config/
-        /plugins/example-plugin/models/<uuid:pk>/dynamic-groups/
-        /plugins/example-plugin/other-models/<uuid:pk>/dynamic-groups/
-        /plugins/example-plugin/docs/
-        /plugins/example-plugin/circuits/<uuid:pk>/example-plugin-tab/
-        /plugins/example-plugin/devices/<uuid:pk>/example-plugin-tab-1/
-        /plugins/example-plugin/devices/<uuid:pk>/example-plugin-tab-2/
-        /plugins/example-plugin/override-target/
-        /plugins/example-plugin/^models/$
-        /plugins/example-plugin/^models/add/$
-        /plugins/example-plugin/^models/import/$
-        /plugins/example-plugin/^models/edit/$
-        /plugins/example-plugin/^models/delete/$
-        /plugins/example-plugin/^models/all-names/$
-        /plugins/example-plugin/^models/(?P<pk>[^/.]+)/$
-        /plugins/example-plugin/^models/(?P<pk>[^/.]+)/delete/$
-        /plugins/example-plugin/^models/(?P<pk>[^/.]+)/edit/$
-        /plugins/example-plugin/^models/(?P<pk>[^/.]+)/changelog/$
-        /plugins/example-plugin/^models/(?P<pk>[^/.]+)/notes/$
-        /plugins/example-plugin/^other-models/$
-        /plugins/example-plugin/^other-models/add/$
-        /plugins/example-plugin/^other-models/edit/$
-        /plugins/example-plugin/^other-models/delete/$
-        /plugins/example-plugin/^other-models/(?P<pk>[^/.]+)/$
-        /plugins/example-plugin/^other-models/(?P<pk>[^/.]+)/delete/$
-        /plugins/example-plugin/^other-models/(?P<pk>[^/.]+)/edit/$
-        /plugins/example-plugin/^other-models/(?P<pk>[^/.]+)/changelog/$
-        /plugins/example-plugin/^other-models/(?P<pk>[^/.]+)/notes/$
+        /plugins/example-app/
+        /plugins/example-app/config/
+        /plugins/example-app/models/<uuid:pk>/dynamic-groups/
+        /plugins/example-app/other-models/<uuid:pk>/dynamic-groups/
+        /plugins/example-app/docs/
+        /plugins/example-app/circuits/<uuid:pk>/example-app-tab/
+        /plugins/example-app/devices/<uuid:pk>/example-app-tab-1/
+        /plugins/example-app/devices/<uuid:pk>/example-app-tab-2/
+        /plugins/example-app/override-target/
+        /plugins/example-app/^models/$
+        /plugins/example-app/^models/add/$
+        /plugins/example-app/^models/import/$
+        /plugins/example-app/^models/edit/$
+        /plugins/example-app/^models/delete/$
+        /plugins/example-app/^models/all-names/$
+        /plugins/example-app/^models/(?P<pk>[^/.]+)/$
+        /plugins/example-app/^models/(?P<pk>[^/.]+)/delete/$
+        /plugins/example-app/^models/(?P<pk>[^/.]+)/edit/$
+        /plugins/example-app/^models/(?P<pk>[^/.]+)/changelog/$
+        /plugins/example-app/^models/(?P<pk>[^/.]+)/notes/$
+        /plugins/example-app/^other-models/$
+        /plugins/example-app/^other-models/add/$
+        /plugins/example-app/^other-models/edit/$
+        /plugins/example-app/^other-models/delete/$
+        /plugins/example-app/^other-models/(?P<pk>[^/.]+)/$
+        /plugins/example-app/^other-models/(?P<pk>[^/.]+)/delete/$
+        /plugins/example-app/^other-models/(?P<pk>[^/.]+)/edit/$
+        /plugins/example-app/^other-models/(?P<pk>[^/.]+)/changelog/$
+        /plugins/example-app/^other-models/(?P<pk>[^/.]+)/notes/$
     """
     if urlconf is None:
         urlconf = settings.ROOT_URLCONF
@@ -316,8 +316,8 @@ def get_url_for_url_pattern(url_pattern):
     Given a URL pattern, construct a URL string that would match that pattern.
 
     Examples:
-        >>> get_url_for_url_pattern("/plugins/example-plugin/^models/(?P<pk>[^/.]+)/$")
-        '/plugins/example-plugin/models/00000000-0000-0000-0000-000000000000/'
+        >>> get_url_for_url_pattern("/plugins/example-app/^models/(?P<pk>[^/.]+)/$")
+        '/plugins/example-app/models/00000000-0000-0000-0000-000000000000/'
         >>> get_url_for_url_pattern("/circuits/circuit-terminations/<uuid:termination_a_id>/connect/<str:termination_b_type>/")
         '/circuits/circuit-terminations/00000000-0000-0000-0000-000000000000/connect/string/'
     """
