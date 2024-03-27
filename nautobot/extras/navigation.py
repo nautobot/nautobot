@@ -20,14 +20,14 @@ menu_items = (
                     NavMenuItem(
                         link="extras:contact_list",
                         name="Contacts",
-                        weight=400,
+                        weight=100,
                         permissions=["extras.view_contact"],
                         buttons=[NavMenuAddButton(link="extras:contact_add", permissions=["extras.add_contact"])],
                     ),
                     NavMenuItem(
                         link="extras:team_list",
                         name="Teams",
-                        weight=500,
+                        weight=200,
                         permissions=["extras.view_team"],
                         buttons=[NavMenuAddButton(link="extras:team_add", permissions=["extras.add_team"])],
                     ),
