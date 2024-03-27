@@ -2358,6 +2358,12 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
             "content_types": Interface._meta.label_lower,
         },
     )
+    role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        query_params={
+            "content_types": Interface._meta.label_lower,
+        },
+    )
     enabled = forms.BooleanField(required=False, initial=True)
     parent_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
@@ -2433,6 +2439,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         "name_pattern",
         "label_pattern",
         "status",
+        "role",
         "type",
         "enabled",
         "parent_interface",

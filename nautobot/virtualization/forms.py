@@ -543,6 +543,12 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
             "content_types": VMInterface._meta.label_lower,
         },
     )
+    role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        query_params={
+            "content_types": VMInterface._meta.label_lower,
+        },
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
