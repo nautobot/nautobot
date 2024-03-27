@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponseForbidden, HttpResponseServerError, JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import resolve, reverse
@@ -210,7 +210,7 @@ class SearchView(AccessMixin, View):
         )
 
 
-class StaticMediaFailureView(View):
+class StaticMediaFailureView(View):  # NOT using LoginRequiredMixin here as this may happen even on the login page
     """
     Display a user-friendly error message with troubleshooting tips when a static media file fails to load.
     """
@@ -265,12 +265,8 @@ def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
     return HttpResponseForbidden(t.render(context), content_type="text/html")
 
 
-class CustomGraphQLView(GraphQLView):
+class CustomGraphQLView(LoginRequiredMixin, GraphQLView):
     def render_graphiql(self, request, **data):
-        if not request.user.is_authenticated:
-            graphql_url = reverse("graphql")
-            login_url = reverse(settings.LOGIN_URL)
-            return redirect(f"{login_url}?next={graphql_url}")
         query_name = request.GET.get("name")
         if query_name:
             data["obj"] = GraphQLQuery.objects.get(name=query_name)

@@ -72,6 +72,61 @@ Support for versions of PostgreSQL prior to 12.0 has been removed as these versi
 Support for `HIDE_RESTRICTED_UI` has been removed. UI elements requiring specific permissions will now always be hidden from users lacking those permissions. Additionally, users not logged in will now be automatically redirected to the login page.
 
 <!-- towncrier release notes start -->
+## v2.1.9 (2024-03-25)
+
+### Security
+
+- [#5450](https://github.com/nautobot/nautobot/issues/5450) - Updated `django` to `~3.2.25` due to `CVE-2024-27351`.
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added requirement for user authentication to access the endpoint `/extras/job-results/<uuid:pk>/log-table/`; furthermore it will not allow an authenticated user to view log entries for a JobResult they don't otherwise have permission to view. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added narrower permissions enforcement on the endpoints `/extras/git-repositories/<uuid:pk>/sync/` and `/extras/git-repositories/<uuid:pk>/dry-run/`; a user who has `change` permissions for a subset of Git repositories is no longer permitted to sync or dry-run other repositories for which they lack the appropriate permissions. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added narrower permissions enforcement on the `/api/dcim/connected-device/?peer_device=...&?peer_interface=...` REST API endpoint; a user who has `view` permissions for a subset of interfaces is no longer permitted to query other interfaces for which they lack permissions. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added narrower permissions enforcement on all `<app>/<model>/<uuid>/notes/` UI endpoints; a user must now have the appropriate `extras.view_note` permissions to view existing notes. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added requirement for user authentication to access the REST API endpoints `/api/redoc/`, `/api/swagger/`, `/api/swagger.json`, and `/api/swagger.yaml`. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added requirement for user authentication to access the `/api/graphql` REST API endpoint, even when `EXEMPT_VIEW_PERMISSIONS` is configured. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added requirement for user authentication to access the endpoints `/dcim/racks/<uuid>/dynamic-groups/`, `/dcim/devices/<uuid>/dynamic-groups/`, `/ipam/prefixes/<uuid>/dynamic-groups/`, `/ipam/ip-addresses/<uuid>/dynamic-groups/`, `/virtualization/clusters/<uuid>/dynamic-groups/`, and `/virtualization/virtual-machines/<uuid>/dynamic-groups/`, even when `EXEMPT_VIEW_PERMISSIONS` is configured. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added requirement for user authentication to access the endpoint `/extras/secrets/provider/<str:provider_slug>/form/`. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+
+### Added
+
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added `nautobot.apps.utils.get_url_for_url_pattern` and `nautobot.apps.utils.get_url_patterns` lookup functions.
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added `nautobot.apps.views.GenericView` base class.
+
+### Changed
+
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added support for `view_name` and `view_description` optional parameters when instantiating a `nautobot.apps.api.OrderedDefaultRouter`. Specifying these parameters is to be preferred over defining a custom `APIRootView` subclass when defining App API URLs.
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Added requirement for user authentication by default on the `nautobot.apps.api.APIRootView` class. As a consequence, viewing the browsable REST API root endpoints (e.g. `/api/`, `/api/circuits/`, `/api/dcim/`, etc.) now requires user authentication.
+
+### Removed
+
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Removed the URL endpoints `/api/users/users/my-profile/`, `/api/users/users/session/`, `/api/users/tokens/authenticate/`, and `/api/users/tokens/logout/` as they are unused at this time.
+
+### Fixed
+
+- [#5413](https://github.com/nautobot/nautobot/issues/5413) - Updated Device "LLDP Neighbors" detail panel to handle LLDP neighbors with MAC address as port-id.
+- [#5423](https://github.com/nautobot/nautobot/issues/5423) - Fixed collapsable navbar for GraphiQL page `/graphql`.
+- [#5423](https://github.com/nautobot/nautobot/issues/5423) - Fixed collapsable navbar for Admin page `/admin`.
+- [#5423](https://github.com/nautobot/nautobot/issues/5423) - Fixed collapsable navbar for Django Rest Framework (DRF) page `/api/`.
+- [#5423](https://github.com/nautobot/nautobot/issues/5423) - Improved footer responsiveness for certain media sizes.
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Fixed a 500 error when accessing any of the `/dcim/<port-type>/<uuid>/connect/<termination_b_type>/` view endpoints with an invalid/nonexistent `termination_b_type` string.
+- [#5466](https://github.com/nautobot/nautobot/issues/5466) - Remove duplicated location param in vlan table.
+
+### Dependencies
+
+- [#5296](https://github.com/nautobot/nautobot/issues/5296) - Fixed bug in pyproject.toml that added `coverage` as a nautobot dependency instead of a development dependency.
+
+### Documentation
+
+- [#5340](https://github.com/nautobot/nautobot/issues/5340) - Added installation documentation about recommended health-checks for Docker Compose and Kubernetes.
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Updated example views in the App developer documentation to include `ObjectPermissionRequiredMixin` or `LoginRequiredMixin` as appropriate best practices.
+
+### Housekeeping
+
+- [#1746](https://github.com/nautobot/nautobot/issues/1746) - Replaced `OrderedDict` instance in `nautobot/core/api/routers.py#21` with with a plain `dict` instance.
+- [#1746](https://github.com/nautobot/nautobot/issues/1746) - Replaced `OrderedDict` instance in `nautobot/dcim/models/racks.py#275` with a plain `dict` instance.
+- [#5435](https://github.com/nautobot/nautobot/issues/5435) - Added `--pattern` argument to `invoke unittest`.
+- [#5435](https://github.com/nautobot/nautobot/issues/5435) - Added `--parallel-workers` argument to `invoke unittest`.
+- [#5464](https://github.com/nautobot/nautobot/issues/5464) - Updated custom views in the `example_plugin` to use the new `GenericView` base class as a best practice.
+
 ## v2.1.8 (2024-03-18)
 
 ### Added

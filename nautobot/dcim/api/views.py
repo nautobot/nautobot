@@ -13,7 +13,6 @@ from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.routers import APIRootView
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from nautobot.circuits.models import Circuit
@@ -75,16 +74,6 @@ from nautobot.virtualization.models import VirtualMachine
 
 from . import serializers
 from .exceptions import MissingFilterException
-
-
-class DCIMRootView(APIRootView):
-    """
-    DCIM API root view
-    """
-
-    def get_view_name(self):
-        return "DCIM"
-
 
 # Mixins
 
@@ -786,7 +775,7 @@ class ConnectedDeviceViewSet(ViewSet):
 
         # Determine local interface from peer interface's connection
         peer_interface = get_object_or_404(
-            Interface.objects.all(),
+            Interface.objects.restrict(request.user, "view"),
             device__name=peer_device_name,
             name=peer_interface_name,
         )
