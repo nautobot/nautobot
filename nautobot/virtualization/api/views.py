@@ -1,5 +1,3 @@
-from rest_framework.routers import APIRootView
-
 from nautobot.core.models.querysets import count_related
 from nautobot.dcim.models import Device
 from nautobot.extras.api.views import (
@@ -18,16 +16,6 @@ from nautobot.virtualization.models import (
 )
 
 from . import serializers
-
-
-class VirtualizationRootView(APIRootView):
-    """
-    Virtualization API root view
-    """
-
-    def get_view_name(self):
-        return "Virtualization"
-
 
 #
 # Clusters

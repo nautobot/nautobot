@@ -2,8 +2,7 @@ from nautobot.core.api.routers import OrderedDefaultRouter
 
 from . import views
 
-router = OrderedDefaultRouter()
-router.APIRootView = views.IPAMRootView
+router = OrderedDefaultRouter(view_name="IPAM")
 
 # Namespaces
 router.register("namespaces", views.NamespaceViewSet)
