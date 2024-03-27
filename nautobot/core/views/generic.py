@@ -220,7 +220,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         display_filter_params = []
         dynamic_filter_form = None
         filter_form = None
-        is_filter_applied = "q" in request.GET
+        hide_hierarchy_ui = "q" in request.GET
 
         if self.filterset:
             filter_params = self.get_filter_params(request)
@@ -234,7 +234,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 self.queryset = self.queryset.none()
 
             if filterset.is_valid() and filterset.data:
-                is_filter_applied = True
+                hide_hierarchy_ui = True
 
             display_filter_params = [
                 check_filter_for_display(filterset.filters, field_name, values)
@@ -289,7 +289,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             # Construct the objects table
             # Order By is needed in the table `__init__` method
             order_by = self.request.GET.getlist("sort")
-            table = self.table(self.queryset, user=request.user, order_by=order_by, is_filter_applied=is_filter_applied)
+            table = self.table(self.queryset, user=request.user, order_by=order_by, hide_hierarchy_ui=hide_hierarchy_ui)
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
 
