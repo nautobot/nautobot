@@ -387,11 +387,6 @@ class NautobotFilterSet(
     are needed.
     """
 
-    def filter_queryset(self, queryset):
-        # Ensure the filtered result is distinct, particularly when filtering on a
-        # many-to-many field with `conjoined` set to False to avoid duplicate entries.
-        return super().filter_queryset(queryset).distinct()
-
 
 #
 # Custom Links
