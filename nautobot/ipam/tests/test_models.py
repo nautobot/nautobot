@@ -44,25 +44,30 @@ class IPAddressToInterfaceTest(TestCase):
             status=Status.objects.get_for_model(Device).first(),
         )
         int_status = Status.objects.get_for_model(Interface).first()
+        int_role = Role.objects.get_for_model(Interface).first()
         cls.test_int1 = Interface.objects.create(
             device=cls.test_device,
             name="int1",
             status=int_status,
+            role=int_role,
             type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
         )
         cls.test_int2 = Interface.objects.create(
             device=cls.test_device,
             name="int2",
             status=int_status,
+            role=int_role,
             type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
         )
         cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="cluster1", cluster_type=cluster_type)
         vmint_status = Status.objects.get_for_model(VMInterface).first()
+        vmint_role = Role.objects.get_for_model(VMInterface).first()
         cls.test_vm = VirtualMachine.objects.create(
             name="vm1",
             cluster=cluster,
             status=Status.objects.get_for_model(VirtualMachine).first(),
+            role=vmint_role,
         )
         cls.test_vmint1 = VMInterface.objects.create(
             name="vmint1",
@@ -73,6 +78,7 @@ class IPAddressToInterfaceTest(TestCase):
             name="vmint2",
             virtual_machine=cls.test_vm,
             status=vmint_status,
+            role=vmint_role,
         )
 
     def test_removing_ip_addresses_containing_host_device_primary_ip_nullifies_host_device_primary_ip(self):

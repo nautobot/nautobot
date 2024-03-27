@@ -511,11 +511,13 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         )
 
         interface_status = Status.objects.get_for_model(Interface).first()
+        interface_role = Role.objects.get_for_model(Interface).first()
         interfaces = (
             Interface.objects.create(
                 device=devices[0],
                 name="Interface 1",
                 status=interface_status,
+                role=interface_role,
             ),
             Interface.objects.create(
                 device=devices[1],
@@ -526,6 +528,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
                 device=devices[2],
                 name="Interface 3",
                 status=interface_status,
+                role=interface_role,
             ),
         )
 
@@ -540,9 +543,14 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         )
 
         vmint_status = Status.objects.get_for_model(VMInterface).first()
+        vmint_role = Role.objects.get_for_model(VMInterface).first()
         vminterfaces = (
-            VMInterface.objects.create(virtual_machine=virtual_machines[0], name="Interface 1", status=vmint_status),
-            VMInterface.objects.create(virtual_machine=virtual_machines[1], name="Interface 2", status=vmint_status),
+            VMInterface.objects.create(
+                virtual_machine=virtual_machines[0], name="Interface 1", status=vmint_status, role=vmint_role
+            ),
+            VMInterface.objects.create(
+                virtual_machine=virtual_machines[1], name="Interface 2", status=vmint_status, role=vmint_role
+            ),
             VMInterface.objects.create(virtual_machine=virtual_machines[2], name="Interface 3", status=vmint_status),
         )
 
@@ -939,9 +947,14 @@ class IPAddressToInterfaceTestCase(FilterTestCases.FilterTestCase):
         vm_status = Status.objects.get_for_model(VirtualMachine).first()
         virtual_machine = (VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, status=vm_status),)
         vm_int_status = Status.objects.get_for_model(VMInterface).first()
+        vm_int_role = Role.objects.get_for_model(VMInterface).first()
         vm_interfaces = [
-            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status),
-            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth1", status=vm_int_status),
+            VMInterface.objects.create(
+                virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status, role=vm_int_role
+            ),
+            VMInterface.objects.create(
+                virtual_machine=virtual_machine[0], name="veth1", status=vm_int_status, role=vm_int_role
+            ),
         ]
 
         IPAddressToInterface.objects.create(ip_address=ip_addresses[0], interface=interfaces[0], vm_interface=None)

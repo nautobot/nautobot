@@ -354,6 +354,7 @@ class VMInterface(PrimaryModel, BaseInterface):
         blank=True,
         db_index=True,
     )
+    role = RoleField(blank=True, null=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     untagged_vlan = models.ForeignKey(
         to="ipam.VLAN",

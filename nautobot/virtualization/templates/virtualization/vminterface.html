@@ -20,7 +20,13 @@
                         <td>
                             {{ object.status| hyperlinked_object_with_color }}
                         </td>
-                    </tr>
+                </tr>
+                <tr>
+                    <td>Role</td>
+                    <td>
+                        {{ object.role| hyperlinked_object_with_color }}
+                    </td>
+                </tr>
                 <tr>
                     <td>Enabled</td>
                     <td>{{ object.enabled | render_boolean }}</td>

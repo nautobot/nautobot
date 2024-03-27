@@ -17,3 +17,6 @@ The following operational statuses are available by default:
 
 +/- 2.0.0
     The relationship to IP addresses has been changed to a many-to-many relationship. This allows an IP address to be assigned to multiple VM interfaces, and a VM interface to have multiple IP addresses assigned to it.
+
++++ 2.2.0
+    VMInterfaces now have a `role` field and can be assigned [Role](../../platform-functionality/role.md) instances to track common configurations.

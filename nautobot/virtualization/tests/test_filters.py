@@ -376,18 +376,21 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         vms[1].software_image_files.set(cls.software_versions[0].software_image_files.all())
 
         int_status = Status.objects.get_for_model(VMInterface).first()
+        int_role = Role.objects.get_for_model(VMInterface).first()
         cls.interfaces = (
             VMInterface.objects.create(
                 virtual_machine=vms[0],
                 name="Interface 1",
                 mac_address="00-00-00-00-00-01",
                 status=int_status,
+                role=int_role,
             ),
             VMInterface.objects.create(
                 virtual_machine=vms[1],
                 name="Interface 2",
                 mac_address="00-00-00-00-00-02",
                 status=int_status,
+                role=int_role,
             ),
             VMInterface.objects.create(
                 virtual_machine=vms[2],
@@ -594,6 +597,8 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         ["mac_address"],
         ["mtu"],
         ["name"],
+        ("role", "role__id"),
+        ("role", "role__name"),
         ["parent_interface"],
         ["tagged_vlans", "tagged_vlans__pk"],
         ["tagged_vlans", "tagged_vlans__vid"],
@@ -625,6 +630,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
         )
 
         statuses = Status.objects.get_for_model(VMInterface)
+        roles = Role.objects.get_for_model(VMInterface)
 
         vlans = VLAN.objects.filter()[:2]
         vlans[0].locations.clear()
@@ -640,6 +646,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
                 enabled=True,
                 mtu=100,
                 mac_address="00-00-00-00-00-01",
+                role=roles[0],
                 status=statuses[0],
                 description="This is a description of Interface1",
                 mode=InterfaceModeChoices.MODE_ACCESS,
@@ -651,6 +658,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
                 enabled=True,
                 mtu=200,
                 mac_address="00-00-00-00-00-02",
+                role=roles[1],
                 status=statuses[0],
                 description="This is a description of Interface2",
                 mode=InterfaceModeChoices.MODE_ACCESS,
@@ -676,6 +684,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
                 enabled=False,
                 mtu=300,
                 mac_address="00-00-00-00-00-04",
+                role=roles[0],
                 status=statuses[1],
                 description="This is a description of Interface4",
                 mode=InterfaceModeChoices.MODE_TAGGED,
@@ -688,6 +697,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
                 enabled=False,
                 mtu=300,
                 mac_address="00-00-00-00-00-05",
+                role=roles[1],
                 status=statuses[2],
                 description="This is a description of Interface5",
                 mode=InterfaceModeChoices.MODE_TAGGED_ALL,
