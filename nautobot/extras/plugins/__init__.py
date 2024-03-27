@@ -4,6 +4,7 @@ from importlib import import_module
 import inspect
 from logging import getLogger
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.template.loader import get_template
 from django.urls import get_resolver, URLPattern
@@ -147,7 +148,7 @@ class NautobotAppConfig(NautobotConfig):
 
         # Import metrics (if present)
         metrics = import_object(f"{self.__module__}.{self.metrics}")
-        if metrics is not None:
+        if metrics is not None and self.name not in settings.METRICS_DISABLED_APPS:
             register_metrics(metrics)
             self.features["metrics"] = []  # Initialize as empty, to be filled by the signal handler
             # Inject the metrics to discover into the signal handler.

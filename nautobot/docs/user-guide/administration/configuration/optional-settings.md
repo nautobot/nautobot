@@ -701,6 +701,14 @@ Toggle requiring authentication to view `/metrics`. See the [Prometheus Metrics]
 
 ---
 
+## METRICS_DISABLED_APPS
+
+Default: `""`
+
+Environment Variable: `NAUTOBOT_METRICS_DISABLED_APPS`
+
+Disables app metrics by app name. Example value: `nautobot_ssot nautobot_device_device_lifecycle_mgmt`.
+
 ## NAPALM_USERNAME
 
 ## NAPALM_PASSWORD
