@@ -2,8 +2,7 @@ from nautobot.core.api.routers import OrderedDefaultRouter
 
 from . import views
 
-router = OrderedDefaultRouter()
-router.APIRootView = views.ExtrasRootView
+router = OrderedDefaultRouter(view_name="Extras")
 
 # Computed Fields
 router.register("computed-fields", views.ComputedFieldViewSet)
