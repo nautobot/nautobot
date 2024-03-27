@@ -98,7 +98,7 @@ graphene-django-optimizer = "~0.8.0"
 # Template rendering engine
 Jinja2 = "~3.1.3"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
-jsonschema = ">=4.7.0"
+jsonschema = ">=4.7.0,<5.0"
 # Rendering of markdown files to HTML
 # NOTE: Markdown 3.4.x is available but mkdocs 1.4.3 isn't yet compatible with it.
 Markdown = "~3.3.7"
