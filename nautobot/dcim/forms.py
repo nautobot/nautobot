@@ -2360,6 +2360,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
     )
     role = DynamicModelChoiceField(
         queryset=Role.objects.all(),
+        required=False,
         query_params={
             "content_types": Interface._meta.label_lower,
         },
