@@ -479,7 +479,7 @@ class ChangeLogAPITest(APITestCase):
             status=vm_statuses[0],
         )
         vminterface_statuses = Status.objects.get_for_model(VirtualMachine)
-        vminterface_role = Role.objects.get_for_model(VMInterface)
+        vminterface_role = Role.objects.get_for_model(VMInterface).first()
         vm_interface = VMInterface.objects.create(
             name="vm interface 1",
             virtual_machine=vm,
