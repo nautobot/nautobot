@@ -387,6 +387,11 @@ class NautobotFilterSet(
     are needed.
     """
 
+    def filter_queryset(self, queryset):
+        # Ensure the filtered result is distinct, particularly when filtering on a
+        # many-to-many field with `conjoined` set to False to avoid duplicate entries.
+        return super().filter_queryset(queryset).distinct()
+
 
 #
 # Custom Links
@@ -1061,9 +1066,6 @@ class RoleFilterSet(NautobotFilterSet):
         # such as 'Device or VirtualMachine' but not 'Device and VirtualMachine'.
         conjoined=False,
     )
-
-    def filter_queryset(self, queryset):
-        return super().filter_queryset(queryset).distinct()
 
     class Meta:
         model = Role
