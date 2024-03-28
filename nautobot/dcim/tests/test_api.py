@@ -26,7 +26,7 @@ from nautobot.dcim.models import (
     ConsoleServerPort,
     ConsoleServerPortTemplate,
     Controller,
-    ControllerDeviceGroup,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -771,6 +771,7 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
         # FIXME: This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         DeviceType.objects.all().delete()
         Platform.objects.all().delete()
@@ -1166,6 +1167,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
@@ -2168,7 +2170,10 @@ class ConnectedDeviceTest(APITestCase):
     def test_get_connected_device(self):
         url = reverse("dcim-api:connected-device-list")
         response = self.client.get(url + "?peer_device=TestDevice2&peer_interface=eth0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
+        self.add_permissions("dcim.view_interface")
+        response = self.client.get(url + "?peer_device=TestDevice2&peer_interface=eth0", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["name"], self.device1.name)
 
@@ -2813,8 +2818,8 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
         }
 
 
-class ControllerDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
-    model = ControllerDeviceGroup
+class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
+    model = ControllerManagedDeviceGroup
 
     @classmethod
     def setUpTestData(cls):
@@ -2822,17 +2827,17 @@ class ControllerDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
 
         cls.create_data = [
             {
-                "name": "ControllerDeviceGroup 1",
+                "name": "ControllerManagedDeviceGroup 1",
                 "controller": controllers[0].pk,
                 "weight": 100,
             },
             {
-                "name": "ControllerDeviceGroup 2",
+                "name": "ControllerManagedDeviceGroup 2",
                 "controller": controllers[1].pk,
                 "weight": 150,
             },
             {
-                "name": "ControllerDeviceGroup 3",
+                "name": "ControllerManagedDeviceGroup 3",
                 "controller": controllers[2].pk,
                 "weight": 200,
             },

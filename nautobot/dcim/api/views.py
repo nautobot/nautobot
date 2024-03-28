@@ -13,7 +13,6 @@ from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.routers import APIRootView
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from nautobot.circuits.models import Circuit
@@ -30,7 +29,7 @@ from nautobot.dcim.models import (
     ConsoleServerPort,
     ConsoleServerPortTemplate,
     Controller,
-    ControllerDeviceGroup,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -75,16 +74,6 @@ from nautobot.virtualization.models import VirtualMachine
 
 from . import serializers
 from .exceptions import MissingFilterException
-
-
-class DCIMRootView(APIRootView):
-    """
-    DCIM API root view
-    """
-
-    def get_view_name(self):
-        return "DCIM"
-
 
 # Mixins
 
@@ -391,7 +380,7 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         "software_version",
         "virtual_chassis__master",
         "device_redundancy_group",
-        "controller_device_group",
+        "controller_managed_device_group",
         "secrets_group",
         "status",
     ).prefetch_related("tags", "primary_ip4__nat_outside_list", "primary_ip6__nat_outside_list", "software_image_files")
@@ -786,7 +775,7 @@ class ConnectedDeviceViewSet(ViewSet):
 
         # Determine local interface from peer interface's connection
         peer_interface = get_object_or_404(
-            Interface.objects.all(),
+            Interface.objects.restrict(request.user, "view"),
             device__name=peer_device_name,
             name=peer_interface_name,
         )
@@ -840,11 +829,11 @@ class ControllerViewSet(NautobotModelViewSet):
     filterset_class = filters.ControllerFilterSet
 
 
-class ControllerDeviceGroupViewSet(NautobotModelViewSet):
-    queryset = ControllerDeviceGroup.objects.select_related(
+class ControllerManagedDeviceGroupViewSet(NautobotModelViewSet):
+    queryset = ControllerManagedDeviceGroup.objects.select_related(
         "controller",
         "parent",
     ).prefetch_related("tags")
 
-    serializer_class = serializers.ControllerDeviceGroupSerializer
-    filterset_class = filters.ControllerDeviceGroupFilterSet
+    serializer_class = serializers.ControllerManagedDeviceGroupSerializer
+    filterset_class = filters.ControllerManagedDeviceGroupFilterSet

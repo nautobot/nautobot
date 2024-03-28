@@ -24,7 +24,7 @@ from nautobot.dcim.models import (
     ConsoleServerPort,
     ConsoleServerPortTemplate,
     Controller,
-    ControllerDeviceGroup,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -1896,13 +1896,13 @@ class ControllerTestCase(ModelTestCases.BaseModelTestCase):
             status=Status.objects.get_for_model(Controller).first(),
             role=Role.objects.get_for_model(Controller).first(),
             location=Location.objects.first(),
-            deployed_controller_device=Device.objects.first(),
-            deployed_controller_group=DeviceRedundancyGroup.objects.first(),
+            controller_device=Device.objects.first(),
+            controller_device_redundancy_group=DeviceRedundancyGroup.objects.first(),
         )
         with self.assertRaises(ValidationError) as error:
             controller.validated_save()
         self.assertEqual(
-            error.exception.message_dict["deployed_controller_device"][0],
+            error.exception.message_dict["controller_device"][0],
             "Cannot assign both a device and a device redundancy group to a controller.",
         )
 
@@ -1924,19 +1924,19 @@ class ControllerTestCase(ModelTestCases.BaseModelTestCase):
         )
 
 
-class ControllerDeviceGroupTestCase(ModelTestCases.BaseModelTestCase):
-    model = ControllerDeviceGroup
+class ControllerManagedDeviceGroupTestCase(ModelTestCases.BaseModelTestCase):
+    model = ControllerManagedDeviceGroup
 
     def test_controller_matches_parent(self):
         """Ensure a controller device group cannot be linked to a controller that does not match its parent."""
         controllers = iter(Controller.objects.all())
-        parent_group = ControllerDeviceGroup(
+        parent_group = ControllerManagedDeviceGroup(
             name="Parent Group testing Controller match",
             controller=next(controllers),
         )
         parent_group.validated_save()
 
-        child_group = ControllerDeviceGroup(
+        child_group = ControllerManagedDeviceGroup(
             name="Child Group testing Controller match",
             controller=next(controllers),
             parent=parent_group,
@@ -1955,37 +1955,37 @@ class ControllerDeviceGroupTestCase(ModelTestCases.BaseModelTestCase):
         controller1, controller2 = Controller.objects.all()[:2]
         self.assertNotEqual(controller1, controller2, "Controllers should be different")
 
-        parent_group = ControllerDeviceGroup.objects.create(
+        parent_group = ControllerManagedDeviceGroup.objects.create(
             name="Parent Group testing Controller match",
             controller=controller1,
         )
-        child_group1 = ControllerDeviceGroup.objects.create(
+        child_group1 = ControllerManagedDeviceGroup.objects.create(
             name="Child Group 1 testing Controller match",
             controller=controller1,
             parent=parent_group,
         )
-        child_group2 = ControllerDeviceGroup.objects.create(
+        child_group2 = ControllerManagedDeviceGroup.objects.create(
             name="Child Group 2 testing Controller match",
             controller=controller1,
             parent=child_group1,
         )
 
-        parent_group = ControllerDeviceGroup.objects.get(pk=parent_group.pk)
+        parent_group = ControllerManagedDeviceGroup.objects.get(pk=parent_group.pk)
         parent_group.controller = controller2
         parent_group.save()
 
         self.assertEqual(
-            ControllerDeviceGroup.objects.get(pk=parent_group.pk).controller,
+            ControllerManagedDeviceGroup.objects.get(pk=parent_group.pk).controller,
             controller2,
             "Parent group controller should have been updated",
         )
         self.assertEqual(
-            ControllerDeviceGroup.objects.get(pk=child_group1.pk).controller,
+            ControllerManagedDeviceGroup.objects.get(pk=child_group1.pk).controller,
             controller2,
             "Child group 1 controller should have been updated",
         )
         self.assertEqual(
-            ControllerDeviceGroup.objects.get(pk=child_group2.pk).controller,
+            ControllerManagedDeviceGroup.objects.get(pk=child_group2.pk).controller,
             controller2,
             "Child group 2 controller should have been updated",
         )

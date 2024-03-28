@@ -42,7 +42,7 @@ from nautobot.dcim.models import (
     ConsoleServerPort,
     ConsoleServerPortTemplate,
     Controller,
-    ControllerDeviceGroup,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -99,7 +99,7 @@ __all__ = (
     "ConsoleServerPortFilterSet",
     "ConsoleServerPortTemplateFilterSet",
     "ControllerFilterSet",
-    "ControllerDeviceGroupFilterSet",
+    "ControllerManagedDeviceGroupFilterSet",
     "DeviceBayFilterSet",
     "DeviceBayTemplateFilterSet",
     "DeviceFilterSet",
@@ -918,11 +918,11 @@ class DeviceFilterSet(
         to_field_name="name",
         label="Device Redundancy Groups (name or ID)",
     )
-    controller_device_group = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="controller_device_group",
-        queryset=ControllerDeviceGroup.objects.all(),
+    controller_managed_device_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="controller_managed_device_group",
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
-        label="Controller Device Groups (name or ID)",
+        label="Controller Managed Device Groups (name or ID)",
     )
     virtual_chassis_member = is_virtual_chassis_member
     has_console_ports = RelatedMembershipBooleanFilter(
@@ -1842,7 +1842,6 @@ class ControllerFilterSet(
     NautobotFilterSet,
     LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
-    LocalContextModelFilterSetMixin,
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
 ):
@@ -1864,15 +1863,15 @@ class ControllerFilterSet(
         to_field_name="name",
         label="External integration (name or ID)",
     )
-    deployed_controller_device = NaturalKeyOrPKMultipleChoiceFilter(
+    controller_device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
         to_field_name="name",
-        label="Deployed controller device (name or ID)",
+        label="Controller device (name or ID)",
     )
-    deployed_controller_group = NaturalKeyOrPKMultipleChoiceFilter(
+    controller_device_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceRedundancyGroup.objects.all(),
         to_field_name="name",
-        label="Deployed controller group (name or ID)",
+        label="Controller device redundancy group (name or ID)",
     )
 
     class Meta:
@@ -1880,8 +1879,8 @@ class ControllerFilterSet(
         fields = "__all__"
 
 
-class ControllerDeviceGroupFilterSet(NautobotFilterSet):
-    """Filters for ControllerDeviceGroup model."""
+class ControllerManagedDeviceGroupFilterSet(NautobotFilterSet):
+    """Filters for ControllerManagedDeviceGroup model."""
 
     q = SearchFilter(
         filter_predicates={
@@ -1894,7 +1893,7 @@ class ControllerDeviceGroupFilterSet(NautobotFilterSet):
         label="Controller (name or ID)",
     )
     parent = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=ControllerDeviceGroup.objects.all(),
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
         label="Parent group (name or ID)",
     )
@@ -1906,7 +1905,7 @@ class ControllerDeviceGroupFilterSet(NautobotFilterSet):
     )
 
     class Meta:
-        model = ControllerDeviceGroup
+        model = ControllerManagedDeviceGroup
         fields = "__all__"
 
     def generate_query__subtree(self, value):
@@ -1914,7 +1913,7 @@ class ControllerDeviceGroupFilterSet(NautobotFilterSet):
         if value:
             params = Q(pk__in=[v.pk for v in value])
             filter_name = "in"
-            for _ in range(ControllerDeviceGroup.objects.max_depth + 1):
+            for _ in range(ControllerManagedDeviceGroup.objects.max_depth + 1):
                 filter_name = f"parent__{filter_name}"
                 params |= Q(**{filter_name: value})
             return params
@@ -1922,6 +1921,6 @@ class ControllerDeviceGroupFilterSet(NautobotFilterSet):
 
     @extend_schema_field({"type": "string"})
     def _subtree(self, queryset, name, value):
-        """FilterSet method for getting Groups that are or are descended from a given ControllerDeviceGroup(s)."""
+        """FilterSet method for getting Groups that are or are descended from a given ControllerManagedDeviceGroup(s)."""
         params = self.generate_query__subtree(value)
         return queryset.filter(params)
