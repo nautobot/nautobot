@@ -64,7 +64,7 @@ class BaseTable(django_tables2.Table):
 
         # Init table
         super().__init__(*args, **kwargs)
-        self.hide_hierarchy_ui = hide_hierarchy_ui or bool(self.order_by)
+        self.hide_hierarchy_ui = hide_hierarchy_ui
 
         # Set default empty_text if none was provided
         if self.empty_text is None:

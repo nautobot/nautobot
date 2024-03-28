@@ -299,9 +299,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         table_config_form = None
         if self.table:
             # Construct the objects table
-            # Order By is needed in the table `__init__` method
-            order_by = self.request.GET.getlist("sort")
-            table = self.table(self.queryset, user=request.user, order_by=order_by, hide_hierarchy_ui=hide_hierarchy_ui)
+            if self.request.GET.getlist("sort"):
+                hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
+            table = self.table(self.queryset, user=request.user, hide_hierarchy_ui=hide_hierarchy_ui)
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
 
