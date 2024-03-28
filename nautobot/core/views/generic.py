@@ -220,7 +220,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         display_filter_params = []
         dynamic_filter_form = None
         filter_form = None
-        hide_hierarchy_ui = "q" in request.GET
+        hide_hierarchy_ui = False
 
         if self.filterset:
             filter_params = self.get_filter_params(request)
@@ -233,6 +233,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 )
                 self.queryset = self.queryset.none()
 
+            # If a valid filterset is applied, we have to hide the hierarchy indentation in the UI for tables that support hierarchy indentation.
+            # NOTE: An empty filterset query-param is also valid filterset and we dont want to hide hierarchy indentation if no filter query-param is provided
+            #      hence `filterset.data`.
             if filterset.is_valid() and filterset.data:
                 hide_hierarchy_ui = True
 
