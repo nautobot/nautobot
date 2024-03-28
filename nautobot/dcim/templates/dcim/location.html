@@ -131,34 +131,15 @@
         {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
             <div class="panel-footer text-right noprint">
                 {% url 'extras:map_contact_from_location' as map_url %}
-                {% with object.pk|urlencode as pk %}
-                {% with object.contact_name|urlencode as name %}
-                {% with object.contact_phone|urlencode as phone %}
-                {% with object.contact_email|urlencode as email %}
-                {% with content_type.id|urlencode as contenttypeid %}
-                {% if object.shipping_address %}
-                    {% with object.shipping_address|urlencode as address %}
-                        {% with map_url|add:"?return_url"|add:return_url|add:"&associated_object_id="|add:pk|add:"&associated_object_type="|add:contenttypeid|add:"&location="|add:pk|add:"&name="|add:name|add:"&phone="|add:phone|add:"&email="|add:email|add:"&address="|add:address as new_map_url %}
-                            <a href="{{new_map_url}}" class="btn btn-primary btn-xs">
-                                <span class="mdi mdi-account-edit" aria-hidden="true"></span>
-                                Convert to contact/team
-                            </a>
-                        {% endwith %}
-                    {% endwith %}
-                {% else %}
-                    {% with object.physical_address|urlencode as address %}
-                        {% with map_url|add:"?return_url"|add:return_url|add:"&associated_object_id="|add:pk|add:"&associated_object_type="|add:contenttypeid|add:"&location="|add:pk|add:"&name="|add:name|add:"&phone="|add:phone|add:"&email="|add:email|add:"&address="|add:address as new_map_url %}
-                            <a href="{{new_map_url}}" class="btn btn-primary btn-xs">
-                                <span class="mdi mdi-account-edit" aria-hidden="true"></span>
-                                Convert to contact/team
-                            </a>
-                        {% endwith %}
+                {% with pk=object.pk|urlencode name=object.contact_name|urlencode phone=object.contact_phone|urlencode email=object.contact_email|urlencode contenttypeid=content_type.id|urlencode %}
+                {% if name or phone or email %}
+                    {% with map_url|add:"?return_url="|add:return_url|add:"&associated_object_id="|add:pk|add:"&associated_object_type="|add:contenttypeid|add:"&location="|add:pk|add:"&name="|add:name|add:"&phone="|add:phone|add:"&email="|add:email as new_map_url %}
+                        <a href="{{new_map_url}}" class="btn btn-primary btn-xs">
+                            <span class="mdi mdi-account-edit" aria-hidden="true"></span>
+                            Convert to contact/team
+                        </a>
                     {% endwith %}
                 {% endif %}
-                {% endwith %}
-                {% endwith %}
-                {% endwith %}
-                {% endwith %}
                 {% endwith %}
             </div>
         {% endwith %}
