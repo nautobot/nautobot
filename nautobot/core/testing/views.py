@@ -17,7 +17,6 @@ from tree_queries.models import TreeNode
 
 from nautobot.core import testing
 from nautobot.core.models.generics import PrimaryModel
-from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags import helpers
 from nautobot.core.testing import mixins
 from nautobot.core.utils import lookup
@@ -25,7 +24,6 @@ from nautobot.extras import choices as extras_choices, models as extras_models, 
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
 from nautobot.extras.models import CustomFieldModel, RelationshipModel
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.ipam.models import Prefix
 from nautobot.users import models as users_models
 
 __all__ = (
