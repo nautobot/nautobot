@@ -1,0 +1,1 @@
+Added a configuration setting `METRICS_DISABLED_APPS` to disable app metrics for specific apps.
