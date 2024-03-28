@@ -4,23 +4,19 @@
 
 {% block tabs %}
     {% if not editing %}
-        {% if not map %}
-            {% include 'extras/inc/object_contact_header.html' with active_tab='contact' %}
-        {% else %}
-            {% include 'extras/inc/map_contact_header.html' with active_tab='contact' %}
-        {% endif %}
+        {% include 'extras/inc/object_contact_header.html' with active_tab='team' %}
     {% endif %}
 {% endblock %}
 
 {% block form %}
     <div class="panel panel-default">
-        <div class="panel-heading"><strong>Contact</strong></div>
+        <div class="panel-heading"><strong>Team</strong></div>
         <div class="panel-body">
             {% render_field form.name %}
             {% render_field form.phone %}
             {% render_field form.email %}
             {% render_field form.address %}
-            {% render_field form.teams %}
+            {% render_field form.contacts %}
             {% render_field form.comments %}
         </div>
     </div>

@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceField
+from nautobot.dcim.models import Location
 from nautobot.extras.models import Role, Status
 from nautobot.extras.models.contacts import Contact, ContactAssociation, Team
 
@@ -143,6 +144,34 @@ class ContactAssociationForm(NautobotModelForm):
     class Meta:
         model = ContactAssociation
         fields = [
+            "contact",
+            "team",
+            "associated_object_type",
+            "associated_object_id",
+            "role",
+            "status",
+        ]
+
+
+class LocationSimilarContactAssociationForm(NautobotModelForm):
+    location = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
+    contact = DynamicModelChoiceField(
+        queryset=Contact.objects.all(),
+        required=False,
+        label="Similar Contacts",
+        query_params={"similar_to_location_data": "$location"},
+    )
+    team = DynamicModelChoiceField(
+        queryset=Team.objects.all(),
+        required=False,
+        label="Similar Teams",
+        query_params={"similar_to_location_data": "$location"},
+    )
+
+    class Meta:
+        model = ContactAssociation
+        fields = [
+            "location",
             "contact",
             "team",
             "associated_object_type",

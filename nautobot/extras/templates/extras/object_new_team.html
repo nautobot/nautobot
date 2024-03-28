@@ -4,7 +4,11 @@
 
 {% block tabs %}
     {% if not editing %}
-        {% include 'extras/inc/object_contact_header.html' with active_tab='team' %}
+        {% if not map %}
+            {% include 'extras/inc/object_contact_header.html' with active_tab='team' %}
+        {% else %}
+            {% include 'extras/inc/map_contact_header.html' with active_tab='team' %}
+        {% endif %}
     {% endif %}
 {% endblock %}
 
