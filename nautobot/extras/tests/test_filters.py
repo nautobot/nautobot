@@ -61,6 +61,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     Contact,
+    ContactAssociation,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -457,7 +458,91 @@ class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
         )
 
 
-class ContactFilterSetTestCase(FilterTestCases.FilterTestCase):
+class ContactAndTeamFilterSetTestCaseMixin:
+    """Mixin class to test common filters to both Contact and Team filter sets."""
+
+    def test_similar_to_location_data(self):
+        """Complex test to test the complex `similar_to_location_data` method filter."""
+        ContactAssociation.objects.all().delete()
+        self.queryset.delete()
+        location_type = LocationType.objects.filter(parent__isnull=True).first()
+        location_status = Status.objects.get_for_model(Location).first()
+        test_locations = (
+            Location.objects.create(
+                location_type=location_type,
+                name="Filter Test Location 0",
+                status=location_status,
+                contact_name="match 0",
+            ),
+            Location.objects.create(
+                location_type=location_type,
+                name="Filter Test Location 1",
+                status=location_status,
+                contact_email="Test email for location 1 and 2",
+            ),
+            Location.objects.create(
+                location_type=location_type,
+                name="Filter Test Location 2",
+                status=location_status,
+                contact_email="TEST EMAIL FOR LOCATION 1 AND 2",
+                contact_phone="Test phone for location 2 and 3",
+            ),
+            Location.objects.create(
+                location_type=location_type,
+                name="Filter Test Location 3",
+                status=location_status,
+                contact_phone="Test phone for location 2 and 3",
+            ),
+            Location.objects.create(
+                location_type=location_type,
+                name="Filter Test Location 4",
+                status=location_status,
+                contact_name="Hopefully this doesn't match any random factory data",
+                contact_email="Hopefully this doesn't match any random factory data",
+                contact_phone="Hopefully this doesn't match any random factory data",
+                physical_address="Hopefully this doesn't match any random factory data",
+                shipping_address="Hopefully this doesn't match any random factory data",
+            ),
+        )
+
+        self.queryset.create(name="match 0")
+        self.queryset.create(name="match 1 and 2", email="Test email for location 1 and 2")
+        self.queryset.create(name="match 2 and 3", phone="Test phone for location 2 and 3")
+
+        # These subtests are confusing because we're trying to test the NaturalKeyOrPKMultipleChoiceFilter
+        # behavior while also testing the `similar_to_location_data` method filter behavior.
+        with self.subTest("Test name match"):
+            params = {"similar_to_location_data": [test_locations[0].pk]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(name__in=["match 0"]),
+            )
+        with self.subTest("Test email match"):
+            params = {"similar_to_location_data": [test_locations[1].pk]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(name__in=["match 1 and 2"]),
+            )
+        with self.subTest("Test phone match"):
+            params = {"similar_to_location_data": [test_locations[2].pk]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(name__in=["match 1 and 2", "match 2 and 3"]),
+            )
+        with self.subTest("Test email and phone match"):
+            params = {"similar_to_location_data": [test_locations[1].pk, test_locations[3].name]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(name__in=["match 1 and 2", "match 2 and 3"]),
+            )
+        with self.subTest("Test no match"):
+            params = {"similar_to_location_data": [test_locations[4].pk]}
+            self.assertFalse(self.filterset(params, self.queryset).qs.exists())
+            params = {"similar_to_location_data": [test_locations[4].name]}
+            self.assertFalse(self.filterset(params, self.queryset).qs.exists())
+
+
+class ContactFilterSetTestCase(ContactAndTeamFilterSetTestCaseMixin, FilterTestCases.FilterTestCase):
     queryset = Contact.objects.all()
     filterset = ContactFilterSet
 
@@ -1756,7 +1841,7 @@ class TagTestCase(FilterTestCases.NameOnlyFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class TeamFilterSetTestCase(FilterTestCases.FilterTestCase):
+class TeamFilterSetTestCase(ContactAndTeamFilterSetTestCaseMixin, FilterTestCases.FilterTestCase):
     queryset = Team.objects.all()
     filterset = TeamFilterSet
 
