@@ -842,7 +842,6 @@ class APIViewTestCases:
             # This may change (hah) at some point -- see https://github.com/nautobot/nautobot/issues/3321
             if hasattr(self.model, "to_objectchange"):
                 objectchanges = lookup.get_changes_for_model(instance)
-                self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
                 objectchanges.delete()
 
@@ -859,7 +858,6 @@ class APIViewTestCases:
             # Verify ObjectChange creation
             if hasattr(self.model, "to_objectchange"):
                 objectchanges = lookup.get_changes_for_model(instance)
-                self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
 
         def test_get_put_round_trip(self):
@@ -1031,7 +1029,6 @@ class APIViewTestCases:
             # Verify ObjectChange creation
             if hasattr(self.model, "to_objectchange"):
                 objectchanges = lookup.get_changes_for_model(instance)
-                self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
 
         def test_bulk_delete_objects(self):

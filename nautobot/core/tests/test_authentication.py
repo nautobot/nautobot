@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from django.test.utils import override_settings
 from django.urls import reverse
 from netaddr import IPNetwork
@@ -573,10 +574,14 @@ class ObjectPermissionAPIViewTestCase(TestCase):
 
         # Check against 1st user's response
         self.assertEqual(response_user1.status_code, 200)
-        self.assertEqual(response_user1.data["count"], 1)
+        self.assertEqual(
+            response_user1.data["count"], ObjectChange.objects.filter(Q(user=self.user) | Q(action="delete")).count()
+        )
         self.assertEqual(response_user1.data["results"][0]["user"]["id"], self.user.pk)
 
         # Check against 2nd user's response
         self.assertEqual(response_user2.status_code, 200)
-        self.assertEqual(response_user2.data["count"], 1)
+        self.assertEqual(
+            response_user2.data["count"], ObjectChange.objects.filter(Q(user=obj_user2) | Q(action="delete")).count()
+        )
         self.assertEqual(response_user2.data["results"][0]["user"]["id"], obj_user2.pk)

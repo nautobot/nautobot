@@ -1252,11 +1252,17 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
 
     def test_changed_object_type(self):
         params = {"changed_object_type": "dcim.location"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(changed_object_type=ContentType.objects.get_for_model(Location)),
+        )
 
     def test_changed_object_type_id(self):
         params = {"changed_object_type_id": ContentType.objects.get(app_label="dcim", model="location").pk}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(changed_object_type=ContentType.objects.get_for_model(Location)),
+        )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]

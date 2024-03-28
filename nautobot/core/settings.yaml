@@ -432,6 +432,12 @@ properties:
       !!! warning
           If enabling indefinite changelog retention, it is recommended to periodically delete old entries.
           Otherwise, the database may eventually exceed capacity.
+
+      +/- 2.2.0
+          As of Nautobot 2.2.0, changelog cleanup does not run automatically. Use the `Cleanup of ObjectChange records`
+          system Job to handle changelog cleanup; you may schedule this to run automatically like any other Job if
+          desired. The `CHANGELOG_RETENTION` setting provides a default age cutoff for the Job but may be overridden
+          at runtime if desired.
     environment_variable: "NAUTOBOT_CHANGELOG_RETENTION"
     is_constance_config: true
     type: "integer"
