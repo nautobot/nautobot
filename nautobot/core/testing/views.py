@@ -745,7 +745,7 @@ class ViewTestCases:
             self.user.is_superuser = True
             self.user.save()
 
-            if not issubclass(self.model, (TreeModel)) or self.model is not Prefix:
+            if not hasattr(self.model, "ancestors"):
                 self.skipTest("Skipping Non TreeModels")
 
             with self.subTest("Assert indentation is present"):
