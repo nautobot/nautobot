@@ -773,21 +773,23 @@ class APIOrderingTestCase(testing.APITestCase):
             "TextField": "admin_contact",
             "DateTimeField": "created",
         }
+        cls.maxDiff = None
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_ascending_sort(self):
         """Tests that results are returned in the expected ascending order."""
 
         for field_type, field_name in self.field_type_map.items():
-            with self.subTest(f"Testing {field_type}"):
-                response = self.client.get(f"{self.url}?sort={field_name}&limit=10", **self.header)
+            with self.subTest(f"Testing {field_type} {field_name}"):
+                # Use `name` as a secondary sort as fields like `asn` and `admin_contact` may be null
+                response = self.client.get(f"{self.url}?sort={field_name},name&limit=10", **self.header)
                 self.assertHttpStatus(response, 200)
                 self.assertEqual(
                     list(map(lambda p: p["id"], response.data["results"])),
                     list(
                         map(
-                            lambda p: str(p),  # pylint: disable=unnecessary-lambda
-                            Provider.objects.order_by(field_name).values_list("id", flat=True)[:10],
+                            str,
+                            Provider.objects.order_by(field_name, "name").values_list("id", flat=True)[:10],
                         )
                     ),
                 )
@@ -797,15 +799,16 @@ class APIOrderingTestCase(testing.APITestCase):
         """Tests that results are returned in the expected descending order."""
 
         for field_type, field_name in self.field_type_map.items():
-            with self.subTest(f"Testing {field_type}"):
-                response = self.client.get(f"{self.url}?sort=-{field_name}&limit=10", **self.header)
+            with self.subTest(f"Testing {field_type} {field_name}"):
+                # Use `name` as a secondary sort as fields like `asn` and `admin_contact` may be null
+                response = self.client.get(f"{self.url}?sort=-{field_name},name&limit=10", **self.header)
                 self.assertHttpStatus(response, 200)
                 self.assertEqual(
                     list(map(lambda p: p["id"], response.data["results"])),
                     list(
                         map(
-                            lambda p: str(p),  # pylint: disable=unnecessary-lambda
-                            Provider.objects.order_by(f"-{field_name}").values_list("id", flat=True)[:10],
+                            str,
+                            Provider.objects.order_by(f"-{field_name}", "name").values_list("id", flat=True)[:10],
                         )
                     ),
                 )

@@ -1811,8 +1811,8 @@ class RoleTestCase(FilterTestCases.NameOnlyFilterTestCase):
     def test_content_types(self):
         device_ct = ContentType.objects.get_for_model(Device)
         rack_ct = ContentType.objects.get_for_model(Rack)
-        device_roles = self.queryset.filter(content_types=device_ct)
-        params = {"content_types": ["dcim.device"]}
+        device_roles = self.queryset.filter(content_types__in=[device_ct, rack_ct]).distinct()
+        params = {"content_types": ["dcim.device", "dcim.rack"]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, device_roles)
 
         rack_roles = self.queryset.filter(content_types=rack_ct)
