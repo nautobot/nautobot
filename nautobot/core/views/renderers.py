@@ -22,7 +22,6 @@ from nautobot.core.utils.requests import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import check_filter_for_display, get_csv_form_fields_from_serializer_class
-from nautobot.extras.models import Contact
 from nautobot.extras.models.change_logging import ObjectChange
 from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import get_base_template
@@ -185,9 +184,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
                 initial_data = normalize_querydict(request.GET, form_class=form_class)
-                # Manually populate the reverse side of the manytomany relationship in ContactForm
-                if isinstance(instance, Contact):
-                    initial_data["teams"] = instance.teams.all()
                 form = form_class(instance=instance, initial=initial_data)
                 restrict_form_fields(form, request.user)
             elif view.action == "bulk_destroy":
