@@ -1,0 +1,1 @@
+Updated pinned version of social-auth-core to remove dependency on python-jose & it's dependency on ecdsa.
