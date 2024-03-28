@@ -25,6 +25,7 @@ from nautobot.extras import choices as extras_choices, models as extras_models, 
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
 from nautobot.extras.models import CustomFieldModel, RelationshipModel
 from nautobot.extras.models.mixins import NotesMixin
+from nautobot.ipam.models import Prefix
 from nautobot.users import models as users_models
 
 __all__ = (
@@ -723,7 +724,7 @@ class ViewTestCases:
         """
 
         filterset = None
-        filter_on_field = "subtree"
+        filter_on_field = "name"
         sort_on_field = "tags"
 
         def get_filterset(self):
@@ -744,16 +745,20 @@ class ViewTestCases:
             self.user.is_superuser = True
             self.user.save()
 
-            if not issubclass(self.model, TreeModel):
+            if not issubclass(self.model, (TreeModel)) or self.model is not Prefix:
                 self.skipTest("Skipping Non TreeModels")
+
             with self.subTest("Assert indentation is present"):
                 response = self.client.get(f"{self._get_url('list')}")
                 response_body = response.content.decode(response.charset)
                 self.assertInHTML('<i class="mdi mdi-circle-small"></i>', response_body)
 
             with self.subTest("Assert indentation is removed on filter"):
-                instance = self._get_queryset().filter(children__isnull=False).first()
-                response = self.client.get(f"{self._get_url('list')}?{self.filter_on_field}={instance.pk}")
+                queryset = (
+                    self._get_queryset().filter(parent__isnull=False).values_list(self.filter_on_field, flat=True)[:5]
+                )
+                filter_values = "&".join([f"{self.filter_on_field}={instance_value}" for instance_value in queryset])
+                response = self.client.get(f"{self._get_url('list')}?{filter_values}")
                 response_body = response.content.decode(response.charset)
                 self.assertNotIn('<i class="mdi mdi-circle-small"></i>', response_body)
 

@@ -255,7 +255,6 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = RackGroup
-    filter_on_field = "location"
     sort_on_field = "name"
 
     @classmethod
