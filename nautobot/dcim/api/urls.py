@@ -2,8 +2,7 @@ from nautobot.core.api.routers import OrderedDefaultRouter
 
 from . import views
 
-router = OrderedDefaultRouter()
-router.APIRootView = views.DCIMRootView
+router = OrderedDefaultRouter(view_name="DCIM")
 
 # Locations
 router.register("location-types", views.LocationTypeViewSet)
