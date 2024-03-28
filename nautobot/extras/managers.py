@@ -9,7 +9,11 @@ from nautobot.core.models.querysets import RestrictedQuerySet
 
 class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResultManager):
     def get_task(self, task_id):
-        """Get result for task by ``task_id``."""
+        """Get result for task by ``task_id``.
+
+        This overloads `TaskResultManager.get_task` provided by `django-celery-results` to manage custom
+        behaviors for integration with Nautobot.
+        """
         try:
             return self.get(id=task_id)
         except self.model.DoesNotExist:
