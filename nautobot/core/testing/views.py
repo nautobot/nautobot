@@ -17,6 +17,7 @@ from tree_queries.models import TreeNode
 
 from nautobot.core import testing
 from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags import helpers
 from nautobot.core.testing import mixins
 from nautobot.core.utils import lookup
@@ -24,6 +25,7 @@ from nautobot.extras import choices as extras_choices, models as extras_models, 
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
 from nautobot.extras.models import CustomFieldModel, RelationshipModel
 from nautobot.extras.models.mixins import NotesMixin
+from nautobot.ipam.models import Prefix
 from nautobot.users import models as users_models
 
 __all__ = (
@@ -743,7 +745,7 @@ class ViewTestCases:
             self.user.is_superuser = True
             self.user.save()
 
-            if not hasattr(self.model, "ancestors"):
+            if not issubclass(self.model, (TreeModel)) and self.model is not Prefix:
                 self.skipTest("Skipping Non TreeModels")
 
             with self.subTest("Assert indentation is present"):
