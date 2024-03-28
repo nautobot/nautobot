@@ -57,7 +57,7 @@ class ProviderTestCase(FilterTestCases.NameOnlyFilterTestCase):
     def test_location(self):
         expected = self.queryset.filter(
             circuits__circuit_terminations__location__in=[self.locations[0].pk, self.locations[1].pk]
-        )
+        ).distinct()
         params = {"location": [self.locations[0].pk, self.locations[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
         params = {"location": [self.locations[0].name, self.locations[1].name]}
