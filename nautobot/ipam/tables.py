@@ -45,7 +45,7 @@ UTILIZATION_GRAPH = """
 
 PREFIX_COPY_LINK = """
 {% load helpers %}
-{% tree_hierarchy_ui_representation record.ancestors.count|as_range table.order_by %}
+{% tree_hierarchy_ui_representation record.ancestors.count|as_range table.hide_hierarchy_ui%}
 <span class="hover_copy">
   <a href="\
 {% if record.present_in_database %}\

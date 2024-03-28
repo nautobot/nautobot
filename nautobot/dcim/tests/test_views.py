@@ -136,6 +136,7 @@ def create_test_device(name):
 
 class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = LocationType
+    sort_on_field = "nestable"
 
     @classmethod
     def setUpTestData(cls):
@@ -254,15 +255,20 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = RackGroup
+    sort_on_field = "name"
 
     @classmethod
     def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
-        RackGroup.objects.create(name="Rack Group 1", location=location)
-        RackGroup.objects.create(name="Rack Group 2", location=location)
-        RackGroup.objects.create(name="Rack Group 3", location=location)
-        RackGroup.objects.create(name="Rack Group 8", location=location)
+        rack_groups = (
+            RackGroup.objects.create(name="Rack Group 1", location=location),
+            RackGroup.objects.create(name="Rack Group 2", location=location),
+            RackGroup.objects.create(name="Rack Group 3", location=location),
+            RackGroup.objects.create(name="Rack Group 8", location=location),
+        )
+        RackGroup.objects.create(name="Rack Group Child 1", location=location, parent=rack_groups[0])
+        RackGroup.objects.create(name="Rack Group Child 2", location=location, parent=rack_groups[0])
 
         cls.form_data = {
             "name": "Rack Group X",
@@ -2229,6 +2235,9 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "New description",
             "software_version": software_versions[2].pk,
         }
+
+    def test_table_with_indentation_is_removed_on_filter_or_sort(self):
+        self.skipTest("InventoryItem table has no implementation of indentation.")
 
 
 # TODO: Change base class to PrimaryObjectViewTestCase

@@ -65,10 +65,14 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         table_class = view.get_table_class()
         request = kwargs.get("request", view.request)
         queryset = view.alter_queryset(request)
+
         if view.action in ["list", "notes", "changelog"]:
             if view.action == "list":
                 permissions = kwargs.get("permissions", {})
-                table = table_class(queryset, user=request.user)
+                order_by = view.request.GET.getlist("sort")
+                table = table_class(
+                    queryset, user=request.user, order_by=order_by, hide_hierarchy_ui=view.hide_hierarchy_ui
+                )
                 if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                     table.columns.show("pk")
             elif view.action == "notes":
