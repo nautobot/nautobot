@@ -80,12 +80,20 @@ layout = (
                 weight=400,
             ),
             HomePageItem(
+                name="Controllers",
+                link="dcim:controller_list",
+                model=models.Controller,
+                permissions=["dcim.view_controller"],
+                description="Represents a network or SDN (Software-Defined Networking) controllers",
+                weight=500,
+            ),
+            HomePageItem(
                 name="Device Redundancy Groups",
                 link="dcim:deviceredundancygroup_list",
                 model=models.DeviceRedundancyGroup,
                 permissions=["dcim.view_deviceredundancygroup"],
                 description="Represents a set of devices which operate in a failover/HA group",
-                weight=500,
+                weight=600,
             ),
             HomePageItem(
                 name="Interface Redundancy Groups",
@@ -93,11 +101,11 @@ layout = (
                 model=models.InterfaceRedundancyGroup,
                 permissions=["dcim.view_interfaceredundancygroup"],
                 description="Represents a set of interfaces which operate in a failover/HA group",
-                weight=550,
+                weight=700,
             ),
             HomePageGroup(
                 name="Connections",
-                weight=600,
+                weight=800,
                 items=(
                     HomePageItem(
                         name="Cables",

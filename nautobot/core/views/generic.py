@@ -4,6 +4,7 @@ import re
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
@@ -56,6 +57,14 @@ from nautobot.core.views.utils import (
 from nautobot.extras.models import ContactAssociation, ExportTemplate
 from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import remove_prefix_from_cf_key
+
+
+class GenericView(LoginRequiredMixin, View):
+    """
+    Base class for non-object-related views.
+
+    Enforces authentication, which Django's base View does not by default.
+    """
 
 
 class ObjectView(ObjectPermissionRequiredMixin, View):
@@ -351,7 +360,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     queryset = None
     model_form = None
-    template_name = "generic/object_edit.html"
+    template_name = "generic/object_create.html"
 
     def get_required_permission(self):
         # self._permission_action is set by dispatch() to either "add" or "change" depending on whether
@@ -733,7 +742,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                             field_name,
                             related_object_form,
                         ) in self.related_object_forms.items():
-                            logger.debug("Processing form for related objects: {related_object_form}")
+                            logger.debug(f"Processing form for related objects: {related_object_form}")
 
                             related_obj_pks = []
                             for i, rel_obj_data in enumerate(data.get(field_name, [])):
@@ -765,7 +774,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 except ObjectDoesNotExist:
                     msg = "Object creation failed due to object-level permissions violation"
                     logger.debug(msg)
-                    form.add_error(None, msg)
+                    model_form.add_error(None, msg)
 
             if not model_form.errors:
                 logger.info(f"Import object {obj} (PK: {obj.pk})")
@@ -808,9 +817,11 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
 
-class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
+class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  # 3.0 TODO: remove as it's no longer used
     """
     Import objects in bulk (CSV format).
+
+    Deprecated - replaced by ImportObjects system Job.
 
     queryset: Base queryset for the model
     table: The django-tables2 Table used to render the list of imported objects
@@ -940,6 +951,9 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         # For example, a parent object can be defined given some parameter from the request URL.
         return obj
 
+    def extra_post_save_action(self, obj, form):
+        """Extra actions after a form is saved"""
+
     def post(self, request, **kwargs):
         logger = logging.getLogger(__name__ + ".BulkEditView")
         model = self.queryset.model
@@ -1022,6 +1036,8 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                             if hasattr(form, "save_note") and callable(form.save_note):
                                 form.save_note(instance=obj, user=request.user)
 
+                            self.extra_post_save_action(obj, form)
+
                         # Enforce object-level permissions
                         if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(
                             updated_objects
@@ -1066,6 +1082,9 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         if not table.rows:
             messages.warning(request, f"No {model._meta.verbose_name_plural} were selected.")
             return redirect(self.get_return_url(request))
+        # Hide actions column if present
+        if "actions" in table.columns:
+            table.columns.hide("actions")
 
         context = {
             "form": form,
@@ -1259,6 +1278,9 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 f"No {model._meta.verbose_name_plural} were selected for deletion.",
             )
             return redirect(self.get_return_url(request))
+        # Hide actions column if present
+        if "actions" in table.columns:
+            table.columns.hide("actions")
 
         context = {
             "form": form,
@@ -1303,7 +1325,7 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
     queryset = None
     form = None
     model_form = None
-    template_name = None
+    template_name = "dcim/device_component_add.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "add")

@@ -53,9 +53,7 @@ The top level is the project root. Immediately within the root should exist seve
 The app source directory contains all of the actual Python code and other resources used by your app. Its structure is left to the author's discretion, however it is recommended to follow best practices as outlined in the [Django documentation](https://docs.djangoproject.com/en/stable/intro/reusable-apps/). At a minimum, this directory **must** contain an `__init__.py` file containing an instance of Nautobot's `NautobotAppConfig` class.
 
 !!! note
-    Nautobot includes a command to help create the app directory:
-    `nautobot-server startplugin [app_name]`
-    Please see the [Nautobot Server Guide](../../../user-guide/administration/tools/nautobot-server.md#startplugin) for more information.
+    The Nautobot organization provides a Python [CookieCutter](https://cookiecutter.readthedocs.io/en/stable/) to help get started with your applications. Get started at [https://github.com/nautobot/cookiecutter-nautobot-app](https://github.com/nautobot/cookiecutter-nautobot-app).
 
 ## Create pyproject.toml
 
@@ -129,4 +127,4 @@ PLUGINS = ["animal_sounds"]
 
 ## Verify that the App is Installed
 
-After restarting the Nautobot server, the newly installed app should appear in **Plugins -> Installed Plugins** if everything is configured correctly. You can also click on the app's name in this table to view more detailed information about this app based on its NautobotAppConfig and other contents.
+After restarting the Nautobot server, the newly installed app should appear in **Apps -> Installed Apps** if everything is configured correctly. You can also click on the app's name in this table to view more detailed information about this app based on its NautobotAppConfig and other contents.

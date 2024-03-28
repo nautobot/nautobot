@@ -92,7 +92,11 @@ markdown_extensions:
       anchor_linenums: true
   - "pymdownx.inlinehilite"
   - "pymdownx.snippets"
-  - "pymdownx.superfences"
+  - "pymdownx.superfences":
+      custom_fences:
+        - name: "mermaid"
+          class: "mermaid"
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - "pymdownx.tabbed":
       "alternate_style": true
 
@@ -101,7 +105,11 @@ plugins:
   - "gen-files":
       scripts:
         - docs/generate_code_reference_pages.py
-  - "include-markdown"
+  - "macros":
+      module_name: "docs/macros"
+      on_error_fail: true
+      on_undefined: "strict"
+      render_by_default: false  # Only enable macros and Jinja2 rendering on specific pages
   - "mkdocs-version-annotations"
   - "section-index"
   - "mkdocstrings":
@@ -113,8 +121,10 @@ plugins:
             heading_level: 1
             show_root_heading: true
             show_root_members_full_path: true
+            show_source: false
   - "redirects":
       redirect_maps:
+        # 1.6 -> 2.x
         'additional-features/caching.md': 'user-guide/administration/guides/caching.md'
         'additional-features/change-logging.md': 'user-guide/platform-functionality/change-logging.md'
         'additional-features/config-contexts.md': 'user-guide/core-data-model/extras/configcontext.md'
@@ -145,7 +155,7 @@ plugins:
         'core-functionality/virtualization.md': 'user-guide/core-data-model/virtualization/virtualmachine.md'
         'core-functionality/vlans.md': 'user-guide/core-data-model/ipam/vlan.md'
         'development/application-registry.md': 'development/core/application-registry.md'
-        'development/apps/api/ui-extensions/tabs.md': 'development/apps/api/ui-extensions/object-detail-views.md'
+        'development/apps/api/ui-extensions/tabs.md': 'development/apps/api/ui-extensions/object-views.md'
         'development/apps/api/views/view-overrides.md': 'development/apps/api/views/core-view-overrides.md'
         'development/best-practices.md': 'development/core/best-practices.md'
         'development/core/react-ui.md': 'development/core/index.md'
@@ -184,6 +194,8 @@ plugins:
         'models/circuits/provider.md': 'user-guide/core-data-model/circuits/provider.md'
         'models/circuits/providernetwork.md': 'user-guide/core-data-model/circuits/providernetwork.md'
         'models/dcim/cable.md': 'user-guide/core-data-model/dcim/cable.md'
+        'models/dcim/controller.md': 'user-guide/core-data-model/dcim/controller.md'
+        'models/dcim/controllermanageddevicegroup.md': 'user-guide/core-data-model/dcim/controllermanageddevicegroup.md'
         'models/dcim/consoleport.md': 'user-guide/core-data-model/dcim/consoleport.md'
         'models/dcim/consoleporttemplate.md': 'user-guide/core-data-model/dcim/consoleporttemplate.md'
         'models/dcim/consoleserverport.md': 'user-guide/core-data-model/dcim/consoleserverport.md'
@@ -195,7 +207,7 @@ plugins:
         'models/dcim/devicetype.md': 'user-guide/core-data-model/dcim/devicetype.md'
         'models/dcim/frontport.md': 'user-guide/core-data-model/dcim/frontport.md'
         'models/dcim/frontporttemplate.md': 'user-guide/core-data-model/dcim/frontporttemplate.md'
-        'models/dcim/hardwarefamily.md': 'user-guide/core-data-model/dcim/hardwarefamily.md'
+        'models/dcim/devicefamily.md': 'user-guide/core-data-model/dcim/devicefamily.md'
         'models/dcim/interface.md': 'user-guide/core-data-model/dcim/interface.md'
         'models/dcim/interfacetemplate.md': 'user-guide/core-data-model/dcim/interfacetemplate.md'
         'models/dcim/inventoryitem.md': 'user-guide/core-data-model/dcim/inventoryitem.md'
@@ -214,6 +226,8 @@ plugins:
         'models/dcim/rackreservation.md': 'user-guide/core-data-model/dcim/rackreservation.md'
         'models/dcim/rearport.md': 'user-guide/core-data-model/dcim/rearport.md'
         'models/dcim/rearporttemplate.md': 'user-guide/core-data-model/dcim/rearporttemplate.md'
+        'models/dcim/softwareimagefile.md': 'user-guide/core-data-model/dcim/softwareimagefile.md'
+        'models/dcim/softwareversion.md': 'user-guide/core-data-model/dcim/softwareversion.md'
         'models/dcim/virtualchassis.md': 'user-guide/core-data-model/dcim/virtualchassis.md'
         'models/extras/computedfield.md': 'user-guide/platform-functionality/computedfield.md'
         'models/extras/contact.md': 'user-guide/core-data-model/extras/contact.md'
@@ -265,6 +279,8 @@ plugins:
         'user-guides/relationships.md': 'user-guide/feature-guides/relationships.md'
         'user-guides/s3-django-storage.md': 'user-guide/administration/guides/s3-django-storage.md'
 
+        # Post 2.x redirects
+        'development/apps/api/ui-extensions/object-detail-views.md': 'development/apps/api/ui-extensions/object-views.md'
 
 nav:
   - Overview: "index.md"
@@ -280,6 +296,7 @@ nav:
         - External Authentication (Optional): "user-guide/administration/installation/external-authentication.md"
         - Installing and Using Plugins: "user-guide/administration/installation/app-install.md"
         - Nautobot Docker Images: "user-guide/administration/installation/docker.md"
+        - Health Checks: "user-guide/administration/installation/health-checks.md"
         - SELinux Troubleshooting: "user-guide/administration/installation/selinux-troubleshooting.md"
       - Upgrading:
         - Database Backup: "user-guide/administration/upgrading/database-backup.md"
@@ -300,6 +317,7 @@ nav:
         - "user-guide/administration/configuration/index.md"
         - Required Settings: "user-guide/administration/configuration/required-settings.md"
         - Optional Settings: "user-guide/administration/configuration/optional-settings.md"
+        - Time Zones: "user-guide/administration/configuration/time-zones.md"
         - External Authentication:
           - LDAP: "user-guide/administration/configuration/authentication/ldap.md"
           - SSO: "user-guide/administration/configuration/authentication/sso.md"
@@ -313,6 +331,7 @@ nav:
         - Permissions: "user-guide/administration/guides/permissions.md"
         - Prometheus Metrics: "user-guide/administration/guides/prometheus-metrics.md"
         - Replicating Nautobot: "user-guide/administration/guides/replicating-nautobot.md"
+        - Request Profiling: "user-guide/administration/guides/request-profiling.md"
         - Django Storages with S3: "user-guide/administration/guides/s3-django-storage.md"
         - Task Queues: "user-guide/administration/guides/celery-queues.md"
     - Feature Guides:
@@ -332,7 +351,10 @@ nav:
       - GraphQL: "user-guide/feature-guides/graphql.md"
       - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
       - Relationships: "user-guide/feature-guides/relationships.md"
+      - Software Image Files and Versions: "user-guide/feature-guides/software-image-files-and-versions.md"
     - Core Data Model:
+      - Overview:
+        - Introduction: "user-guide/core-data-model/overview/introduction.md"
       - Circuits:
         - Circuit: "user-guide/core-data-model/circuits/circuit.md"
         - Circuit Termination: "user-guide/core-data-model/circuits/circuittermination.md"
@@ -345,7 +367,7 @@ nav:
         - Rack Group: "user-guide/core-data-model/dcim/rackgroup.md"
         - Rack: "user-guide/core-data-model/dcim/rack.md"
         - Manufacturer: "user-guide/core-data-model/dcim/manufacturer.md"
-        - Hardware Family: "user-guide/core-data-model/dcim/hardwarefamily.md"
+        - Device Family: "user-guide/core-data-model/dcim/devicefamily.md"
         - Platform: "user-guide/core-data-model/dcim/platform.md"
         - Device Type:
           - "user-guide/core-data-model/dcim/devicetype.md"
@@ -374,7 +396,11 @@ nav:
         - Power Panel : "user-guide/core-data-model/dcim/powerpanel.md"
         - Power Feed: "user-guide/core-data-model/dcim/powerfeed.md"
         - Rack Reservation: "user-guide/core-data-model/dcim/rackreservation.md"
+        - Software Image File: "user-guide/core-data-model/dcim/softwareimagefile.md"
+        - Software Version: "user-guide/core-data-model/dcim/softwareversion.md"
         - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
+        - Controller: "user-guide/core-data-model/dcim/controller.md"
+        - Controller Managed Device Group: "user-guide/core-data-model/dcim/controllermanageddevicegroup.md"
       - Extras:
         - Config Context: "user-guide/core-data-model/extras/configcontext.md"
         - Config Context Schema: "user-guide/core-data-model/extras/configcontextschema.md"
@@ -481,7 +507,7 @@ nav:
         - Home Page: "development/apps/api/ui-extensions/home-page.md"
         - Links in the Installed Apps View: "development/apps/api/configuration-view.md"
         - Navigation: "development/apps/api/ui-extensions/navigation.md"
-        - Object Detail Views and Tabs: "development/apps/api/ui-extensions/object-detail-views.md"
+        - Object Detail & List Views: "development/apps/api/ui-extensions/object-views.md"
       - Testing: "development/apps/api/testing.md"
       - Code Reference:
         - nautobot.apps: "code-reference/nautobot/apps/__init__.md"
@@ -490,6 +516,7 @@ nav:
         - nautobot.apps.change_logging: "code-reference/nautobot/apps/change_logging.md"
         - nautobot.apps.choices: "code-reference/nautobot/apps/choices.md"
         - nautobot.apps.config: "code-reference/nautobot/apps/config.md"
+        - nautobot.apps.constants: "code-reference/nautobot/apps/constants.md"
         - nautobot.apps.datasources: "code-reference/nautobot/apps/datasources.md"
         - nautobot.apps.exceptions: "code-reference/nautobot/apps/exceptions.md"
         - nautobot.apps.factory: "code-reference/nautobot/apps/factory.md"
@@ -520,10 +547,13 @@ nav:
     - Core Developer Guide:
       - "development/core/index.md"
       - Getting Started: "development/core/getting-started.md"
+      - Adding and Updating Nautobot Settings: "development/core/settings.md"
       - Advanced Docker Compose Usage: "development/core/docker-compose-advanced-use-cases.md"
       - Application Registry: "development/core/application-registry.md"
       - Bootstrap UI: "development/core/bootstrap-ui.md"
       - Best Practices: "development/core/best-practices.md"
+      - Caching: "development/core/caching.md"
+      - Controllers: "development/core/controllers.md"
       - Extending Models: "development/core/extending-models.md"
       - Generic Views: "development/core/generic-views.md"
       - Home Page Panels: "development/core/homepage.md"
@@ -556,7 +586,7 @@ nav:
       - Nautobot Data Validation Engine: "https://docs.nautobot.com/projects/data-validation/en/latest/"
       - Nautobot Device LifeCycle Management: "https://docs.nautobot.com/projects/device-lifecycle/en/latest/"
       - Nautobot Device Onboarding: "https://docs.nautobot.com/projects/device-onboarding/en/latest/"
-      - Nautobot Firewall Models: "https://nautobot-plugin-firewall-models.readthedocs.io/en/latest/"
+      - Nautobot Firewall Models: "https://docs.nautobot.com/projects/firewall-models/en/latest/"
       - Nautobot Golden Configuration: "https://docs.nautobot.com/projects/golden-config/"
       - Nautobot Plugin Nornir: "https://docs.nautobot.com/projects/plugin-nornir/en/latest/"
       - Nautobot Single Source of Truth: "https://docs.nautobot.com/projects/ssot/en/latest/"

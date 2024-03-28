@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
-from django.db.models import Count, ProtectedError, Q
+from django.db.models import ProtectedError, Q
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -29,6 +29,7 @@ from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.mixins import (
     ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
     ObjectDestroyViewMixin,
     ObjectEditViewMixin,
     ObjectPermissionRequiredMixin,
@@ -36,18 +37,19 @@ from nautobot.core.views.mixins import (
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.models import Device, Rack
-from nautobot.dcim.tables import DeviceTable, RackTable
+from nautobot.dcim.models import Controller, Device, Interface, Location, Rack
+from nautobot.dcim.tables import ControllerTable, DeviceTable, RackTable
+from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
-from nautobot.virtualization.models import VirtualMachine
+from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable
 
 from . import filters, forms, tables
 from .api import serializers
-from .choices import JobExecutionType, JobResultStatusChoices
+from .choices import JobExecutionType, JobResultStatusChoices, LogLevelChoices
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
     enqueue_pull_git_repository_and_refresh_data,
@@ -73,6 +75,7 @@ from .models import (
     Job as JobModel,
     JobButton,
     JobHook,
+    JobLogEntry,
     JobResult,
     Note,
     ObjectChange,
@@ -284,13 +287,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Device table
         device_table = DeviceTable(
-            data=instance.devices.select_related(
-                "tenant",
-                "location",
-                "rack",
-                "device_type",
-                "role",
-            ).prefetch_related("primary_ip"),
+            data=instance.devices.all(),
             orderable=False,
             extra_columns=[
                 (
@@ -310,11 +307,7 @@ class ConfigContextSchemaObjectValidationView(generic.ObjectView):
 
         # Virtual machine table
         virtual_machine_table = VirtualMachineTable(
-            data=instance.virtual_machines.select_related(
-                "cluster",
-                "role",
-                "tenant",
-            ).prefetch_related("primary_ip"),
+            data=instance.virtual_machines.all(),
             orderable=False,
             extra_columns=[
                 (
@@ -396,7 +389,13 @@ class ContactUIViewSet(NautobotUIViewSet):
         return context
 
 
-class ContactAssociationUIViewSet(ObjectBulkDestroyViewMixin, ObjectDestroyViewMixin, ObjectEditViewMixin):
+class ContactAssociationUIViewSet(
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectEditViewMixin,
+):
+    bulk_update_form_class = forms.ContactAssociationBulkEditForm
     form_class = forms.ContactAssociationForm
     filterset_class = filters.ContactAssociationFilterSet
     queryset = ContactAssociation.objects.all()
@@ -918,7 +917,7 @@ class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
     filterset = filters.DynamicGroupFilterSet
 
 
-class ObjectDynamicGroupsView(View):
+class ObjectDynamicGroupsView(generic.GenericView):
     """
     Present a list of dynamic groups associated to a particular object.
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
@@ -1066,7 +1065,7 @@ class GitRepositoryDeleteView(generic.ObjectDeleteView):
     queryset = GitRepository.objects.all()
 
 
-class GitRepositoryBulkImportView(generic.BulkImportView):
+class GitRepositoryBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = GitRepository.objects.all()
     table = tables.GitRepositoryBulkTable
 
@@ -1117,18 +1116,18 @@ def check_and_call_git_repository_function(request, pk, func):
         messages.error(request, "Unable to run job: Celery worker process not running.")
         return redirect(request.get_full_path(), permanent=False)
     else:
-        repository = get_object_or_404(GitRepository, pk=pk)
+        repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
         job_result = func(repository, request.user)
 
     return redirect(job_result.get_absolute_url())
 
 
-class GitRepositorySyncView(View):
+class GitRepositorySyncView(generic.GenericView):
     def post(self, request, pk):
         return check_and_call_git_repository_function(request, pk, enqueue_pull_git_repository_and_refresh_data)
 
 
-class GitRepositoryDryRunView(View):
+class GitRepositoryDryRunView(generic.GenericView):
     def post(self, request, pk):
         return check_and_call_git_repository_function(request, pk, enqueue_git_repository_diff_origin_and_local)
 
@@ -1245,25 +1244,32 @@ class JobListView(generic.ObjectListView):
     filterset = filters.JobFilterSet
     filterset_form = forms.JobFilterForm
     action_buttons = ()
+    non_filter_params = ("display",)
     template_name = "extras/job_list.html"
 
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
-        # Default to hiding "hidden", non-installed jobs and job hook receivers
+        # Default to hiding "hidden" and non-installed jobs
         if "hidden" not in request.GET:
             queryset = queryset.filter(hidden=False)
         if "installed" not in request.GET:
             queryset = queryset.filter(installed=True)
-        if "is_job_hook_receiver" not in request.GET:
-            queryset = queryset.filter(is_job_hook_receiver=False)
-        if "is_job_button_receiver" not in request.GET:
-            queryset = queryset.filter(is_job_button_receiver=False)
-        queryset = queryset.prefetch_related("results")
         return queryset
 
     def extra_context(self):
+        # Determine user's preferred display
+        if self.request.GET.get("display") in ["list", "tiles"]:
+            display = self.request.GET.get("display")
+            if self.request.user.is_authenticated:
+                self.request.user.set_config("extras.job.display", display, commit=True)
+        elif self.request.user.is_authenticated:
+            display = self.request.user.get_config("extras.job.display", "list")
+        else:
+            display = "list"
+
         return {
-            "table_inc_template": "extras/inc/job_table.html",
+            "table_inc_template": "extras/inc/job_tiles.html" if display == "tiles" else "extras/inc/job_table.html",
+            "display": display,
         }
 
 
@@ -1488,8 +1494,39 @@ class JobEditView(generic.ObjectEditView):
     template_name = "extras/job_edit.html"
 
 
+class JobBulkEditView(generic.BulkEditView):
+    queryset = JobModel.objects.all()
+    filterset = filters.JobFilterSet
+    table = tables.JobTable
+    form = forms.JobBulkEditForm
+    template_name = "extras/job_bulk_edit.html"
+
+    def extra_post_save_action(self, obj, form):
+        cleaned_data = form.cleaned_data
+
+        # Handle text related fields
+        for overridable_field in JOB_OVERRIDABLE_FIELDS:
+            override_field = overridable_field + "_override"
+            clear_override_field = "clear_" + overridable_field + "_override"
+            reset_override = cleaned_data.get(clear_override_field, False)
+            override_value = cleaned_data.get(overridable_field)
+            if reset_override:
+                setattr(obj, override_field, False)
+            elif not reset_override and override_value not in [None, ""]:
+                setattr(obj, override_field, True)
+                setattr(obj, overridable_field, override_value)
+
+        obj.validated_save()
+
+
 class JobDeleteView(generic.ObjectDeleteView):
     queryset = JobModel.objects.all()
+
+
+class JobBulkDeleteView(generic.BulkDeleteView):
+    queryset = JobModel.objects.all()
+    filterset = filters.JobFilterSet
+    table = tables.JobTable
 
 
 class JobApprovalRequestView(generic.ObjectView):
@@ -1703,12 +1740,35 @@ class JobHookBulkDeleteView(generic.BulkDeleteView):
 #
 
 
+def get_annotated_jobresult_queryset():
+    return (
+        JobResult.objects.defer("result")
+        .select_related("job_model", "user")
+        .annotate(
+            debug_log_count=count_related(
+                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_DEBUG}
+            ),
+            info_log_count=count_related(
+                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_INFO}
+            ),
+            warning_log_count=count_related(
+                JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_WARNING}
+            ),
+            error_log_count=count_related(
+                JobLogEntry,
+                "job_result",
+                filter_dict={"log_level__in": [LogLevelChoices.LOG_ERROR, LogLevelChoices.LOG_CRITICAL]},
+            ),
+        )
+    )
+
+
 class JobResultListView(generic.ObjectListView):
     """
     List JobResults
     """
 
-    queryset = JobResult.objects.defer("result").select_related("job_model", "user").prefetch_related("logs")
+    queryset = get_annotated_jobresult_queryset()
     filterset = filters.JobResultFilterSet
     filterset_form = forms.JobResultFilterForm
     table = tables.JobResultTable
@@ -1720,7 +1780,7 @@ class JobResultDeleteView(generic.ObjectDeleteView):
 
 
 class JobResultBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobResult.objects.defer("result").all()
+    queryset = get_annotated_jobresult_queryset()
     table = tables.JobResultTable
     filterset = filters.JobResultFilterSet
 
@@ -1746,7 +1806,7 @@ class JobResultView(generic.ObjectView):
         }
 
 
-class JobLogEntryTableView(View):
+class JobLogEntryTableView(generic.GenericView):
     """
     Display a table of `JobLogEntry` objects for a given `JobResult` instance.
     """
@@ -1754,8 +1814,15 @@ class JobLogEntryTableView(View):
     queryset = JobResult.objects.all()
 
     def get(self, request, pk=None):
-        instance = self.queryset.get(pk=pk)
-        log_table = tables.JobLogEntryTable(data=instance.job_log_entries.all(), user=request.user)
+        instance = get_object_or_404(self.queryset.restrict(request.user, "view"), pk=pk)
+        filter_q = request.GET.get("q")
+        if filter_q:
+            queryset = instance.job_log_entries.filter(
+                Q(message__icontains=filter_q) | Q(log_level__icontains=filter_q)
+            )
+        else:
+            queryset = instance.job_log_entries.all()
+        log_table = tables.JobLogEntryTable(data=queryset, user=request.user)
         RequestConfig(request).configure(log_table)
         return HttpResponse(log_table.as_html(request))
 
@@ -1826,7 +1893,7 @@ class ObjectChangeView(generic.ObjectView):
         }
 
 
-class ObjectChangeLogView(View):
+class ObjectChangeLogView(generic.GenericView):
     """
     Present a history of changes made to a particular object.
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
@@ -1872,6 +1939,8 @@ class ObjectChangeLogView(View):
                 "table": objectchanges_table,
                 "base_template": self.base_template,
                 "active_tab": "changelog",
+                # Currently only Contact and Team models are not contact_associatable.
+                "is_contact_associatable_model": type(obj) not in [Contact, Team],
             },
         )
 
@@ -1910,7 +1979,7 @@ class NoteDeleteView(generic.ObjectDeleteView):
     queryset = Note.objects.all()
 
 
-class ObjectNotesView(View):
+class ObjectNotesView(generic.GenericView):
     """
     Present a list of notes associated to a particular object.
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
@@ -1931,7 +2000,7 @@ class ObjectNotesView(View):
                 "assigned_object_id": obj.pk,
             }
         )
-        notes_table = tables.NoteTable(obj.notes)
+        notes_table = tables.NoteTable(obj.notes.restrict(request.user, "view"))
 
         # Apply the request context
         paginate = {
@@ -1953,6 +2022,8 @@ class ObjectNotesView(View):
                 "base_template": self.base_template,
                 "active_tab": "notes",
                 "form": notes_form,
+                # Currently only Contact and Team models are not contact_associatable.
+                "is_contact_associatable_model": type(obj) not in [Contact, Team],
             },
         )
 
@@ -2047,16 +2118,29 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 RequestConfig(request, paginate).configure(device_table)
                 context["device_table"] = device_table
 
+            if ContentType.objects.get_for_model(Controller) in context["content_types"]:
+                controllers = instance.controllers.select_related(
+                    "status",
+                    "location",
+                    "tenant",
+                    "role",
+                ).restrict(request.user, "view")
+                controller_table = ControllerTable(controllers)
+                controller_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(controller_table)
+                context["controller_table"] = controller_table
+
             if ContentType.objects.get_for_model(IPAddress) in context["content_types"]:
                 ipaddress = (
                     instance.ip_addresses.select_related("status", "tenant")
                     .restrict(request.user, "view")
                     .annotate(
-                        interface_count=Count("interfaces"),
-                        interface_parent_count=(Count("interfaces__device", distinct=True)),
-                        vm_interface_count=Count("vm_interfaces"),
-                        vm_interface_parent_count=(Count("vm_interfaces__virtual_machine", distinct=True)),
-                        assigned_count=Count("interfaces") + Count("vm_interfaces"),
+                        interface_count=count_related(Interface, "ip_addresses"),
+                        interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
+                        vm_interface_count=count_related(VMInterface, "ip_addresses"),
+                        vm_interface_parent_count=count_related(
+                            VirtualMachine, "interfaces__ip_addresses", distinct=True
+                        ),
                     )
                 )
                 ipaddress_table = IPAddressTable(ipaddress)
@@ -2065,13 +2149,16 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 context["ipaddress_table"] = ipaddress_table
 
             if ContentType.objects.get_for_model(Prefix) in context["content_types"]:
-                prefixes = instance.prefixes.select_related(
-                    "location",
-                    "status",
-                    "tenant",
-                    "vlan",
-                    "namespace",
-                ).restrict(request.user, "view")
+                prefixes = (
+                    instance.prefixes.select_related(
+                        "status",
+                        "tenant",
+                        "vlan",
+                        "namespace",
+                    )
+                    .restrict(request.user, "view")
+                    .annotate(location_count=count_related(Location, "prefixes"))
+                )
                 prefix_table = PrefixTable(prefixes)
                 prefix_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(prefix_table)
@@ -2100,12 +2187,15 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 context["virtual_machine_table"] = virtual_machine_table
 
             if ContentType.objects.get_for_model(VLAN) in context["content_types"]:
-                vlans = instance.vlans.select_related(
-                    "vlan_group",
-                    "location",
-                    "status",
-                    "tenant",
-                ).restrict(request.user, "view")
+                vlans = (
+                    instance.vlans.annotate(location_count=count_related(Location, "vlans"))
+                    .select_related(
+                        "vlan_group",
+                        "status",
+                        "tenant",
+                    )
+                    .restrict(request.user, "view")
+                )
                 vlan_table = VLANTable(vlans)
                 vlan_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(vlan_table)
@@ -2151,7 +2241,7 @@ class SecretView(generic.ObjectView):
         }
 
 
-class SecretProviderParametersFormView(View):
+class SecretProviderParametersFormView(generic.GenericView):
     """
     Helper view to SecretView; retrieve the HTML form appropriate for entering parameters for a given SecretsProvider.
     """
@@ -2177,7 +2267,7 @@ class SecretDeleteView(generic.ObjectDeleteView):
     queryset = Secret.objects.all()
 
 
-class SecretBulkImportView(generic.BulkImportView):
+class SecretBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Secret.objects.all()
     table = tables.SecretTable
 
@@ -2349,7 +2439,7 @@ class StatusDeleteView(generic.ObjectDeleteView):
     queryset = Status.objects.all()
 
 
-class StatusBulkImportView(generic.BulkImportView):
+class StatusBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     """Bulk CSV import of multiple `Status` objects."""
 
     queryset = Status.objects.all()
@@ -2411,7 +2501,7 @@ class TagDeleteView(generic.ObjectDeleteView):
     queryset = Tag.objects.all()
 
 
-class TagBulkImportView(generic.BulkImportView):
+class TagBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Tag.objects.all()
     table = tables.TagTable
 

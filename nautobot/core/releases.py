@@ -18,7 +18,7 @@ def get_latest_release(pre_releases=False):
     """
     if get_settings_or_config("RELEASE_CHECK_URL"):
         logger.debug("Checking for most recent release")
-        latest_release = cache.get("latest_release")
+        latest_release = cache.get("nautobot.core.releases.get_latest_release")
         if latest_release is not None:
             logger.debug(f"Found cached release: {latest_release}")
             return latest_release

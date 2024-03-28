@@ -1,6 +1,7 @@
+import datetime
 import random
 import types
-from unittest import skip
+from unittest import skip, TestCase as UnitTestTestCase
 import uuid
 
 from django.apps import apps
@@ -32,7 +33,7 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_relationships,
     extend_schema_type_tags,
 )
-from nautobot.core.graphql.types import OptimizedNautobotObjectType
+from nautobot.core.graphql.types import DateType, OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import str_to_var_name
 from nautobot.core.testing import create_test_user, NautobotTestClient
 from nautobot.dcim.choices import ConsolePortTypeChoices, InterfaceModeChoices, InterfaceTypeChoices, PortTypeChoices
@@ -42,6 +43,7 @@ from nautobot.dcim.models import (
     Cable,
     ConsolePort,
     ConsoleServerPort,
+    Controller,
     Device,
     DeviceType,
     FrontPort,
@@ -70,13 +72,13 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.registry import registry
-from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
     Namespace,
     Prefix,
     VLAN,
+    VLANGroup,
     VRF,
     VRFDeviceAssignment,
     VRFPrefixAssignment,
@@ -90,7 +92,15 @@ from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 User = get_user_model()
 
 
-class GraphQLTestCase(TestCase):
+class GraphQLTestCaseBase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        # TODO: the below *shouldn't* be needed, but without it, when run with --parallel test flag,
+        # these tests consistently fail with schema construction errors
+        cls.SCHEMA = graphene_settings.SCHEMA  # not a no-op; this causes the schema to be built
+
+
+class GraphQLTestCase(GraphQLTestCaseBase):
     def setUp(self):
         self.user = create_test_user("graphql_testuser")
         GraphQLQuery.objects.create(name="GQL 1", query="{ query: locations {name} }")
@@ -109,6 +119,22 @@ class GraphQLTestCase(TestCase):
         resp = execute_query(query, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
         self.assertEqual(len(resp["data"]["query"]), Location.objects.all().count())
+
+    @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_execute_query_with_custom_field_type_date(self):
+        """Test Custom Field with Date type returns valid Date object and not string. Fix for bug #3664"""
+        custom_field = CustomField(
+            type=CustomFieldTypeChoices.TYPE_DATE, label="custom_date_field", key="custom_date_field"
+        )
+        custom_field.validated_save()
+        custom_field.content_types.set([ContentType.objects.get_for_model(Location)])
+        custom_field_data = {"custom_date_field": "2023-01-23"}
+        self.locations[0]._custom_field_data = custom_field_data
+        self.locations[0].save()
+        query = "query ($name: [String!]) { locations(name:$name) {name, _custom_field_data, cf_custom_date_field} }"
+        resp = execute_query(query, user=self.user, variables={"name": "Location-1"}).to_dict()
+        self.assertEqual(resp["data"]["locations"]["cf_custom_date_field"], custom_field_data)
 
     @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -157,13 +183,13 @@ class GraphQLTestCase(TestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_graphql_url_field(self):
         """Test the url field for all graphql types."""
-        schema = graphene_settings.SCHEMA.introspect()
+        schema = self.SCHEMA.introspect()
         graphql_fields = schema["__schema"]["types"][0]["fields"]
         for graphql_field in graphql_fields:
             if graphql_field["type"]["kind"] == "LIST" or graphql_field["name"] == "content_type":
                 continue
             with self.subTest(f"Testing graphql url field for {graphql_field['name']}"):
-                graphene_object_type_definition = graphene_settings.SCHEMA.get_type(graphql_field["type"]["name"])
+                graphene_object_type_definition = self.SCHEMA.get_type(graphql_field["type"]["name"])
 
                 # simple check for url field in type definition
                 self.assertIn(
@@ -189,14 +215,14 @@ class GraphQLTestCase(TestCase):
                     )
 
 
-class GraphQLUtilsTestCase(TestCase):
+class GraphQLUtilsTestCase(GraphQLTestCaseBase):
     def test_str_to_var_name(self):
         self.assertEqual(str_to_var_name("IP Addresses"), "ip_addresses")
         self.assertEqual(str_to_var_name("My New VAR"), "my_new_var")
         self.assertEqual(str_to_var_name("My-VAR"), "my_var")
 
 
-class GraphQLGenerateSchemaTypeTestCase(TestCase):
+class GraphQLGenerateSchemaTypeTestCase(GraphQLTestCaseBase):
     def test_model_w_filterset(self):
         schema = generate_schema_type(app_name="dcim", model=Device)
         self.assertEqual(schema.__bases__[0], OptimizedNautobotObjectType)
@@ -210,7 +236,7 @@ class GraphQLGenerateSchemaTypeTestCase(TestCase):
         self.assertIsNone(schema._meta.filterset_class)
 
 
-class GraphQLExtendSchemaType(TestCase):
+class GraphQLExtendSchemaType(GraphQLTestCaseBase):
     def setUp(self):
         self.datas = (
             {"field_name": "my_text", "field_type": CustomFieldTypeChoices.TYPE_TEXT},
@@ -301,7 +327,7 @@ class GraphQLExtendSchemaType(TestCase):
         self.assertIsInstance(getattr(schema, "resolve_mode"), types.FunctionType)
 
 
-class GraphQLExtendSchemaRelationship(TestCase):
+class GraphQLExtendSchemaRelationship(GraphQLTestCaseBase):
     def setUp(self):
         location_ct = ContentType.objects.get_for_model(Location)
         rack_ct = ContentType.objects.get_for_model(Rack)
@@ -427,7 +453,7 @@ class GraphQLExtendSchemaRelationship(TestCase):
             self.assertNotIn(field_name, schema._meta.fields.keys())
 
 
-class GraphQLSearchParameters(TestCase):
+class GraphQLSearchParameters(GraphQLTestCaseBase):
     def setUp(self):
         self.schema = generate_schema_type(app_name="dcim", model=Location)
 
@@ -444,12 +470,14 @@ class GraphQLSearchParameters(TestCase):
                 self.assertNotIn(field, params.keys())
 
 
-class GraphQLAPIPermissionTest(TestCase):
+class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
     client_class = NautobotTestClient
 
     @classmethod
     def setUpTestData(cls):
         """Initialize the Database with some datas and multiple users associated with different permissions."""
+        super().setUpTestData()
+
         cls.groups = (
             Group.objects.create(name="Group 1"),
             Group.objects.create(name="Group 2"),
@@ -603,21 +631,9 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertEqual(names, ["Rack 1-1", "Rack 1-2", "Rack 2-1", "Rack 2-2"])
 
     def test_graphql_api_no_token(self):
-        """Validate unauthenticated users are not able to query anything by default."""
+        """Validate unauthenticated users are not able to query anything."""
         response = self.client.post(self.api_url, {"query": self.get_racks_query}, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.data["data"]["racks"], list)
-        names = [item["name"] for item in response.data["data"]["racks"]]
-        self.assertEqual(names, [])
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_graphql_api_no_token_exempt(self):
-        """Validate unauthenticated users are able to query based on the exempt permissions."""
-        response = self.client.post(self.api_url, {"query": self.get_racks_query}, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.data["data"]["racks"], list)
-        names = [item["name"] for item in response.data["data"]["racks"]]
-        self.assertEqual(names, ["Rack 1-1", "Rack 1-2", "Rack 2-1", "Rack 2-2"])
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_graphql_api_wrong_token(self):
         """Validate a wrong token return 403."""
@@ -683,7 +699,7 @@ class GraphQLAPIPermissionTest(TestCase):
         self.assertEqual(location_names, location_list)
 
 
-class GraphQLQueryTest(TestCase):
+class GraphQLQueryTest(GraphQLTestCaseBase):
     """Execute various GraphQL queries and verify their correct responses."""
 
     @classmethod
@@ -694,6 +710,7 @@ class GraphQLQueryTest(TestCase):
 
         # Remove random IPAddress and Device fixtures for this custom test
         IPAddress.objects.all().delete()
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
 
         # Initialize fake request that will be required to execute GraphQL query
@@ -726,8 +743,8 @@ class GraphQLQueryTest(TestCase):
 
         vlan_statuses = Status.objects.get_for_model(VLAN)
         vlan_groups = (
-            VLANGroupFactory.create(location=cls.location1),
-            VLANGroupFactory.create(location=cls.location2),
+            VLANGroup.objects.create(name="VLANGroup 1", location=cls.location1),
+            VLANGroup.objects.create(name="VLANGroup 2", location=cls.location2),
         )
         cls.vlan1 = VLAN.objects.create(
             name="VLAN 1", vid=100, location=cls.location1, status=vlan_statuses[0], vlan_group=vlan_groups[0]
@@ -1078,7 +1095,7 @@ class GraphQLQueryTest(TestCase):
         cls.backend = get_default_backend()
 
     def execute_query(self, query, variables=None):
-        document = self.backend.document_from_string(graphene_settings.SCHEMA, query)
+        document = self.backend.document_from_string(self.SCHEMA, query)
         if variables:
             return document.execute(context_value=self.request, variable_values=variables)
         else:
@@ -2358,3 +2375,17 @@ query {
         self.assertNotIn("error", str(result))
         expected_interfaces_first = {"ip_addresses": [{"primary_ip4_for": [{"id": str(self.device1.id)}]}]}
         self.assertEqual(result.data["device"]["interfaces"][0], expected_interfaces_first)
+
+
+class GraphQLTypeTestCase(UnitTestTestCase):
+    def test_date_type(self):
+        date_obj = datetime.date.today()
+        date_time_obj = datetime.datetime.today()
+        str_obj = date_obj.isoformat()
+        obj_not_accepted = False
+        self.assertEqual(DateType.serialize(date_obj), str_obj)
+        self.assertEqual(DateType.serialize(date_time_obj), str_obj)
+        self.assertEqual(DateType.serialize(str_obj), str_obj)
+        with self.assertRaises(GraphQLError) as cm:
+            DateType.serialize(obj_not_accepted)
+        self.assertIn("Received not compatible date", str(cm.exception))

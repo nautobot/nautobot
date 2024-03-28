@@ -27,22 +27,22 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         circuit_status = Status.objects.get_for_model(Circuit).first()
         location_status = Status.objects.get_for_model(Location).first()
         provider1 = Provider.objects.create(
-            name="Test Provider 1",
+            name="A Test Provider 1",
         )
         provider2 = Provider.objects.create(
-            name="Test Provider 2",
+            name="A Test Provider 2",
         )
         circuit_type = CircuitType.objects.create(
-            name="Test Circuit Type",
+            name="A Test Circuit Type",
         )
         circuit = Circuit.objects.create(
             provider=provider1,
-            cid="1234",
+            cid="123456789",
             circuit_type=circuit_type,
             status=circuit_status,
         )
         location = Location.objects.create(
-            name="Test Location",
+            name="A Test Location",
             status=location_status,
             location_type=location_type,
         )
@@ -128,10 +128,10 @@ class CircuitRelationshipsTestCase(SeleniumTestCase):
         self.browser.links.find_by_partial_text("Circuits")[1].click()
 
         # Click on the circuit link (circuit created in setUp)
-        self.browser.links.find_by_partial_text("1234").click()
+        self.browser.links.find_by_partial_text("123456789").click()
 
         # Verify custom relationships are visible
-        self.assertTrue(self.browser.is_text_present("Power Panel"))
+        self.assertTrue(self.browser.is_text_present("Test Power Panel"))
         self.assertTrue(self.browser.is_text_present("2 providers"))
         self.assertTrue(self.browser.is_text_present("1 location"))
         self.assertTrue(self.browser.is_text_present("1 nonexistentmodel(s)"))

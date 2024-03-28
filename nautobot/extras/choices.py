@@ -25,6 +25,41 @@ class BannerClassChoices(ChoiceSet):
 
 
 #
+# Contact Association
+#
+
+
+class ContactAssociationRoleChoices(ChoiceSet):
+    """Role choices for contact association instances"""
+
+    ROLE_ADMINISTRATIVE = "administrative"
+    ROLE_BILLING = "billing"
+    ROLE_SUPPORT = "support"
+    ROLE_ON_SITE = "on site"
+
+    CHOICES = (
+        (ROLE_ADMINISTRATIVE, "Administrative"),
+        (ROLE_BILLING, "Billing"),
+        (ROLE_SUPPORT, "Support"),
+        (ROLE_ON_SITE, "On Site"),
+    )
+
+
+class ContactAssociationStatusChoices(ChoiceSet):
+    """Status choices for contact association instances"""
+
+    STATUS_PRIMARY = "primary"
+    STATUS_SECONDARY = "secondary"
+    STATUS_ACTIVE = "active"
+
+    CHOICES = (
+        (STATUS_PRIMARY, "Primary"),
+        (STATUS_SECONDARY, "Secondary"),
+        (STATUS_ACTIVE, "Active"),
+    )
+
+
+#
 # CustomFields
 #
 
@@ -64,11 +99,25 @@ class CustomFieldTypeChoices(ChoiceSet):
         (TYPE_MARKDOWN, "Markdown"),
     )
 
+    # Types that support validation_minimum/validation_maximum
+    MIN_MAX_TYPES = (
+        TYPE_TEXT,
+        TYPE_INTEGER,
+        TYPE_URL,
+        TYPE_SELECT,
+        TYPE_MULTISELECT,
+        TYPE_JSON,
+        TYPE_MARKDOWN,
+    )
+
+    # Types that support validation_regex
     REGEX_TYPES = (
         TYPE_TEXT,
         TYPE_URL,
         TYPE_SELECT,
         TYPE_MULTISELECT,
+        TYPE_JSON,
+        TYPE_MARKDOWN,
     )
 
 

@@ -18,6 +18,7 @@ from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.core.testing.utils import disable_warnings
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.models import (
+    Controller,
     Device,
     DeviceType,
     Location,
@@ -425,68 +426,76 @@ class ContactAssociationTestCase(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        roles = Role.objects.get_for_model(ContactAssociation)
+        statuses = Status.objects.get_for_model(ContactAssociation)
+        ip_addresses = IPAddress.objects.all()
+        devices = Device.objects.all()
         ContactAssociation.objects.create(
             contact=Contact.objects.first(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
-            associated_object_id=IPAddress.objects.first().pk,
-            role=None,
-            status=Status.objects.get_for_model(ContactAssociation).first(),
+            associated_object_id=ip_addresses[0].pk,
+            role=roles[0],
+            status=statuses[0],
         )
         ContactAssociation.objects.create(
             contact=Contact.objects.last(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
-            associated_object_id=IPAddress.objects.first().pk,
-            role=None,
-            status=Status.objects.get_for_model(ContactAssociation).first(),
+            associated_object_id=ip_addresses[1].pk,
+            role=roles[1],
+            status=statuses[1],
         )
         ContactAssociation.objects.create(
             team=Team.objects.first(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
-            associated_object_id=IPAddress.objects.first().pk,
-            role=Role.objects.get_for_model(ContactAssociation).last(),
-            status=Status.objects.get_for_model(ContactAssociation).first(),
+            associated_object_id=ip_addresses[2].pk,
+            role=roles[1],
+            status=statuses[0],
         )
         ContactAssociation.objects.create(
             team=Team.objects.last(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
-            associated_object_id=IPAddress.objects.first().pk,
-            role=Role.objects.get_for_model(ContactAssociation).last(),
-            status=Status.objects.get_for_model(ContactAssociation).first(),
+            associated_object_id=ip_addresses[3].pk,
+            role=roles[2],
+            status=statuses[1],
         )
         cls.create_data = [
             {
                 "contact": Contact.objects.first().pk,
                 "team": None,
                 "associated_object_type": "ipam.ipaddress",
-                "associated_object_id": IPAddress.objects.first().pk,
-                "role": None,
-                "status": Status.objects.get_for_model(ContactAssociation).first().pk,
+                "associated_object_id": ip_addresses[4].pk,
+                "role": roles[3].pk,
+                "status": statuses[0].pk,
             },
             {
                 "contact": Contact.objects.last().pk,
                 "team": None,
                 "associated_object_type": "dcim.device",
-                "associated_object_id": Device.objects.first().pk,
-                "role": Role.objects.get_for_model(ContactAssociation).first().pk,
-                "status": Status.objects.get_for_model(ContactAssociation).first().pk,
+                "associated_object_id": devices[0].pk,
+                "role": roles[3].pk,
+                "status": statuses[0].pk,
             },
             {
                 "contact": None,
                 "team": Team.objects.first().pk,
                 "associated_object_type": "ipam.ipaddress",
-                "associated_object_id": IPAddress.objects.first().pk,
-                "role": Role.objects.get_for_model(ContactAssociation).first().pk,
-                "status": Status.objects.get_for_model(ContactAssociation).first().pk,
+                "associated_object_id": ip_addresses[5].pk,
+                "role": roles[3].pk,
+                "status": statuses[2].pk,
             },
             {
                 "contact": None,
                 "team": Team.objects.last().pk,
                 "associated_object_type": "dcim.device",
-                "associated_object_id": Device.objects.first().pk,
-                "role": Role.objects.get_for_model(ContactAssociation).first().pk,
-                "status": Status.objects.get_for_model(ContactAssociation).first().pk,
+                "associated_object_id": devices[1].pk,
+                "role": roles[3].pk,
+                "status": statuses[0].pk,
             },
         ]
+        cls.bulk_update_data = {
+            "role": roles[4].pk,
+            "status": statuses[1].pk,
+        }
 
 
 class CreatedUpdatedFilterTest(APITestCase):
@@ -1097,7 +1106,6 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     def test_run_git_sync_no_celery_worker(self, mock_get_worker_count):
         """Git sync cannot be triggered if Celery is not running."""
         mock_get_worker_count.return_value = 0
-        self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
@@ -1111,7 +1119,6 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     def test_run_git_sync_nonexistent_repo(self, mock_get_worker_count):
         """Git sync request handles case of a nonexistent repository."""
         mock_get_worker_count.return_value = 1
-        self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": "11111111-1111-1111-1111-111111111111"})
         response = self.client.post(url, format="json", **self.header)
@@ -1130,22 +1137,21 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
     def test_run_git_sync_with_permissions(self, _):
         """Git sync request can be submitted successfully."""
-        self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
-    def test_create_with_plugin_provided_contents(self):
-        """Test that `provided_contents` published by a plugin works."""
+    def test_create_with_app_provided_contents(self):
+        """Test that `provided_contents` published by an App works."""
         self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = self._get_list_url()
         data = {
-            "name": "plugin_test",
-            "slug": "plugin_test",
-            "remote_url": "https://localhost/plugin-test",
-            "provided_contents": ["example_plugin.textfile"],
+            "name": "app_test",
+            "slug": "app_test",
+            "remote_url": "https://localhost/app-test",
+            "provided_contents": ["example_app.textfile"],
         }
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
@@ -2846,6 +2852,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         vlan_groups = VLANGroup.objects.all()[:2]
 
         # Try deleting all devices and then creating 2 VLANs (fails):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         response = send_bulk_data(
             "post",

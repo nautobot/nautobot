@@ -102,6 +102,10 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         else:
             pk_list = kwargs.get("pk_list", [])
             table = table_class(queryset.filter(pk__in=pk_list), orderable=False)
+            if view.action in ["bulk_destroy", "bulk_update"]:
+                # Hide actions column if present
+                if "actions" in table.columns:
+                    table.columns.hide("actions")
             return table
 
     def validate_action_buttons(self, view, request):
@@ -191,7 +195,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     }
                     form = form_class(initial=initial)
                 table = self.construct_table(view, pk_list=pk_list)
-            elif view.action == "bulk_create":
+            elif view.action == "bulk_create":  # 3.0 TODO: remove, replaced by ImportObjects system Job
                 form = view.get_form()
                 if request.data:
                     table = data.get("table")
@@ -260,7 +264,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                         "editing": instance.present_in_database,
                     }
                 )
-            elif view.action == "bulk_create":
+            elif view.action == "bulk_create":  # 3.0 TODO: remove, replaced by ImportObjects system Job
                 context.update(
                     {
                         "active_tab": view.bulk_create_active_tab if view.bulk_create_active_tab else "csv-data",

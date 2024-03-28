@@ -3,6 +3,7 @@ from unittest import mock
 import urllib.parse
 import uuid
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -16,17 +17,27 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.testing import extract_form_failures, extract_page_body, TestCase, ViewTestCases
 from nautobot.core.testing.utils import disable_warnings, post_data
-from nautobot.dcim.models import ConsolePort, Device, DeviceType, Interface, Location, LocationType, Manufacturer
+from nautobot.dcim.models import (
+    ConsolePort,
+    Controller,
+    Device,
+    DeviceType,
+    Interface,
+    Location,
+    LocationType,
+    Manufacturer,
+)
 from nautobot.dcim.tests import test_views
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     JobExecutionType,
+    LogLevelChoices,
     ObjectChangeActionChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
     WebhookHttpMethodChoices,
 )
-from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
+from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON, JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -42,6 +53,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     Job,
     JobButton,
+    JobLogEntry,
     JobResult,
     Note,
     ObjectChange,
@@ -317,18 +329,7 @@ class ConfigContextTestCase(
         self.assertEqual(self._get_queryset().filter(name="Config Context with schema").count(), 0)
 
 
-# This OrganizationalObjectViewTestCase less BulkImportObjectsViewTestCase
-# because it doesn't make sense to support CSV for schemas.
-class ConfigContextSchemaTestCase(
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-    ViewTestCases.BulkEditObjectsViewTestCase,
-):
+class ConfigContextSchemaTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = ConfigContextSchema
 
     @classmethod
@@ -368,13 +369,7 @@ class ContactTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "email": "new-contact@example.com",
             "address": "Rainbow Road, Ramus NJ",
         }
-        cls.csv_data = (
-            "name,phone,email,address",
-            'new contact 2,555-0122,,"Rainbow Road, NJ, USA"',
-            "new contact 3,555-0123,newcontact2@example.com,",
-            "new contact 4,555-0124,,",
-        )
-        cls.bulk_edit_data = {"address": "Carnegie Hall, New York, NY"}
+        cls.bulk_edit_data = {"address": "Carnegie Hall, New York, NY", "phone": "555-0125"}
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_new_contact_and_assign_contact_to_object(self):
@@ -414,6 +409,7 @@ class ContactTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class ContactAssociationTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
@@ -422,37 +418,48 @@ class ContactAssociationTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        roles = Role.objects.get_for_model(ContactAssociation)
+        statuses = Status.objects.get_for_model(ContactAssociation)
+        ip_addresses = IPAddress.objects.all()
         cls.form_data = {
             "contact": Contact.objects.first().pk,
             "team": None,
             "associated_object_type": ContentType.objects.get_for_model(Circuit).pk,
             "associated_object_id": Circuit.objects.first().pk,
-            "role": Role.objects.get_for_model(ContactAssociation).first().pk,
-            "status": Status.objects.get_for_model(ContactAssociation).first().pk,
+            "role": roles[0].pk,
+            "status": statuses[0].pk,
+        }
+        cls.bulk_edit_data = {
+            "role": roles[1].pk,
+            "status": statuses[1].pk,
         }
         ContactAssociation.objects.create(
             contact=Contact.objects.first(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
-            associated_object_id=IPAddress.objects.first().pk,
-            status=Status.objects.get_for_model(ContactAssociation).first(),
+            associated_object_id=ip_addresses[0].pk,
+            role=roles[2],
+            status=statuses[1],
         )
         ContactAssociation.objects.create(
             contact=Contact.objects.last(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
-            associated_object_id=IPAddress.objects.first().pk,
-            status=Status.objects.get_for_model(ContactAssociation).first(),
+            associated_object_id=ip_addresses[1].pk,
+            role=roles[1],
+            status=statuses[2],
         )
         ContactAssociation.objects.create(
             team=Team.objects.first(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
-            associated_object_id=IPAddress.objects.first().pk,
-            status=Status.objects.get_for_model(ContactAssociation).first(),
+            associated_object_id=ip_addresses[2].pk,
+            role=roles[0],
+            status=statuses[0],
         )
         ContactAssociation.objects.create(
             team=Team.objects.last(),
             associated_object_type=ContentType.objects.get_for_model(IPAddress),
-            associated_object_id=IPAddress.objects.first().pk,
-            status=Status.objects.get_for_model(ContactAssociation).first(),
+            associated_object_id=ip_addresses[3].pk,
+            role=roles[0],
+            status=statuses[1],
         )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -581,7 +588,7 @@ class CustomLinkTestCase(
 
 
 class CustomFieldTestCase(
-    # No NotesViewTestCase or BulkImportObjectsViewTestCase, at least for now
+    # No NotesViewTestCase, at least for now
     ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
@@ -785,6 +792,49 @@ class DynamicGroupTestCase(
             "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
         }
 
+    def test_get_object_dynamic_groups_anonymous(self):
+        url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
+        self.client.logout()
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={url}")
+
+    def test_get_object_dynamic_groups_without_permission(self):
+        url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, [403, 404])
+
+    def test_get_object_dynamic_groups_with_permission(self):
+        url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
+        self.add_permissions("dcim.view_device", "extras.view_dynamicgroup")
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        self.assertIn("DG 1", response_body, msg=response_body)
+        self.assertIn("DG 2", response_body, msg=response_body)
+        self.assertIn("DG 3", response_body, msg=response_body)
+
+    def test_get_object_dynamic_groups_with_constrained_permission(self):
+        self.add_permissions("extras.view_dynamicgroup")
+        obj_perm = ObjectPermission(
+            name="View a device",
+            constraints={"pk": Device.objects.first().pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Device))
+
+        url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        self.assertIn("DG 1", response_body, msg=response_body)
+
+        url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.last().pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 404)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_edit_saved_filter(self):
         """Test that editing a filter works using the edit view."""
@@ -867,12 +917,6 @@ class ExportTemplateTestCase(
 class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = ExternalIntegration
     bulk_edit_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}", "headers": r"{}"}
-    csv_data = (
-        "name,remote_url,verify_ssl,timeout,http_method",
-        "Test External Integration 1,https://example.com/test1/,False,10,POST",
-        "Test External Integration 2,https://example.com/test2/,True,20,DELETE",
-        "Test External Integration 3,https://example.com/test3/,False,30,PATCH",
-    )
     form_data = {
         "name": "Test External Integration",
         "remote_url": "https://example.com/test1/",
@@ -888,7 +932,6 @@ class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class GitRepositoryTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
-    ViewTestCases.BulkImportObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
@@ -930,13 +973,6 @@ class GitRepositoryTestCase(
             ],
         }
 
-        cls.csv_data = (
-            "name,slug,remote_url,branch,secrets_group,provided_contents",
-            "Git Repository 5,git_repo_5,https://example.com,main,,extras.configcontext",
-            "Git Repository 6,git_repo_6,https://example.com,develop,Secrets Group 2,",
-            'Git Repository 7,git_repo_7,https://example.com,next,Secrets Group 2,"extras.job,extras.exporttemplate"',
-        )
-
         cls.slug_source = "name"
         cls.slug_test_object = "Repo 4"
 
@@ -953,6 +989,34 @@ class GitRepositoryTestCase(
         form_data["slug"] = instance.slug  # Slug is not editable
         self.form_data = form_data
         super().test_edit_object_with_constrained_permission()
+
+    def test_post_sync_repo_anonymous(self):
+        self.client.logout()
+        url = reverse("extras:gitrepository_sync", kwargs={"pk": self._get_queryset().first().pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={url}")
+
+    def test_post_sync_repo_without_permission(self):
+        url = reverse("extras:gitrepository_sync", kwargs={"pk": self._get_queryset().first().pk})
+        response = self.client.post(url)
+        self.assertHttpStatus(response, [403, 404])
+
+    # TODO: mock/stub out `enqueue_pull_git_repository_and_refresh_data` and test successful POST with permissions
+
+    def test_post_dryrun_repo_anonymous(self):
+        self.client.logout()
+        url = reverse("extras:gitrepository_dryrun", kwargs={"pk": self._get_queryset().first().pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={url}")
+
+    def test_post_dryrun_repo_without_permission(self):
+        url = reverse("extras:gitrepository_dryrun", kwargs={"pk": self._get_queryset().first().pk})
+        response = self.client.post(url)
+        self.assertHttpStatus(response, [403, 404])
+
+    # TODO: mock/stub out `enqueue_git_repository_diff_origin_and_local` and test successful POST with permissions
 
 
 class NoteTestCase(
@@ -1025,7 +1089,6 @@ class SecretTestCase(
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkImportObjectsViewTestCase,
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = Secret
@@ -1060,24 +1123,8 @@ class SecretTestCase(
             "parameters": '{"variable": "VIEW_TEST_4"}',
         }
 
-        cls.csv_data = (
-            "name,provider,parameters",
-            'View Test 5,environment-variable,{"variable": "VIEW_TEST_5"}',
-            'View Test 6,environment-variable,{"variable": "VIEW_TEST_6"}',
-            'View Test 7,environment-variable,{"variable": "VIEW_TEST_7"}',
-        )
 
-
-# Not a full-fledged OrganizationalObjectViewTestCase as there's no BulkImportView for SecretsGroups
-class SecretsGroupTestCase(
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-):
+class SecretsGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = SecretsGroup
 
     @classmethod
@@ -1671,10 +1718,40 @@ class JobResultTestCase(
     def setUpTestData(cls):
         JobResult.objects.create(name="pass.TestPass")
         JobResult.objects.create(name="fail.TestFail")
+        JobLogEntry.objects.create(
+            log_level=LogLevelChoices.LOG_INFO,
+            job_result=JobResult.objects.first(),
+            grouping="run",
+            message="This is a test",
+        )
+
+    def test_get_joblogentrytable_anonymous(self):
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
+        self.client.logout()
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={url}")
+
+    def test_get_joblogentrytable_without_permission(self):
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, [403, 404])
+
+    def test_get_joblogentrytable_with_permission(self):
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        self.assertIn("This is a test", response_body)
+
+    # TODO test with constrained permissions on both JobResult and JobLogEntry records
 
 
 class JobTestCase(
     # note no CreateObjectViewTestCase - we do not support user creation of Job records
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.GetObjectViewTestCase,
@@ -1758,6 +1835,72 @@ class JobTestCase(
             "task_queues": "overridden,priority",
             "task_queues_override": True,
         }
+        # This form is emulating the non-conventional JobBulkEditForm
+        cls.bulk_edit_data = {
+            "enabled": True,
+            "clear_grouping_override": True,
+            "grouping": "",
+            "clear_description_override": False,
+            "description": "Overridden Description",
+            "clear_dryrun_default_override": False,
+            "dryrun_default": "",
+            "clear_hidden_override": True,
+            "hidden": False,
+            "clear_approval_required_override": True,
+            "approval_required": True,
+            "clear_soft_time_limit_override": False,
+            "soft_time_limit": 350,
+            "clear_time_limit_override": True,
+            "time_limit": "",
+            "has_sensitive_variables": False,
+            "clear_has_sensitive_variables_override": False,
+            "task_queues": "overridden,priority",
+            "clear_task_queues_override": False,
+        }
+
+    def validate_job_data_after_bulk_edit(self, pk_list, old_data):
+        # Name is bulk-editable
+        overridable_fields = [field for field in JOB_OVERRIDABLE_FIELDS if field != "name"]
+        for instance in self._get_queryset().filter(pk__in=pk_list):
+            self.assertEqual(instance.enabled, True)
+            job_class = instance.job_class
+            if job_class is not None:
+                for overridable_field in overridable_fields:
+                    # clear_override_field is obtained from adding "clear_" to the front and "_override" to the back of overridable_field
+                    # e.g grouping -> clear_grouping_override
+                    clear_override_field = "clear_" + overridable_field + "_override"
+                    # override_field is obtained from adding "_override" to the back of overridable_field
+                    # e.g grouping -> grouping_override
+                    override_field = overridable_field + "_override"
+                    reset_override = self.bulk_edit_data.get(clear_override_field, False)
+                    if overridable_field == "task_queues":
+                        override_value = self.bulk_edit_data.get(overridable_field).split(",")
+                    else:
+                        override_value = self.bulk_edit_data.get(overridable_field)
+                    # if clear_override is true, assert that values are reverted back to default values
+                    if reset_override is True:
+                        self.assertEqual(getattr(instance, overridable_field), getattr(job_class, overridable_field))
+                        self.assertEqual(getattr(instance, override_field), False)
+                    # if clear_override is false, assert that job attribute is set to the new value from the form
+                    elif reset_override is False and (override_value is False or override_value):
+                        self.assertEqual(getattr(instance, overridable_field), override_value)
+                        self.assertEqual(getattr(instance, override_field), True)
+                    # if clear_override is false and no new value is entered, assert that value of the job is unchanged
+                    else:
+                        self.assertEqual(getattr(instance, overridable_field), old_data[instance.pk][overridable_field])
+                        self.assertEqual(getattr(instance, override_field), old_data[instance.pk][overridable_field])
+
+    def validate_object_data_after_bulk_edit(self, pk_list):
+        instances = self._get_queryset().filter(pk__in=pk_list)
+        overridable_fields = [field for field in JOB_OVERRIDABLE_FIELDS if field != "name"]
+        old_data = {}
+        for instance in instances:
+            old_data[instance.pk] = {}
+            job_class = instance.job_class
+            if job_class is not None:
+                for field in overridable_fields:
+                    old_data[instance.pk][field] = getattr(job_class, field)
+        self.validate_job_data_after_bulk_edit(pk_list, old_data)
 
     #
     # Additional test cases for the "job" (legacy run) and "job_run" (updated run) views follow
@@ -2188,10 +2331,11 @@ class JobButtonRenderingTestCase(TestCase):
 
     def setUp(self):
         super().setUp()
+        self.job = Job.objects.get(job_class_name="TestJobButtonReceiverSimple")
         self.job_button_1 = JobButton(
             name="JobButton 1",
             text="JobButton {{ obj.name }}",
-            job=Job.objects.get(job_class_name="TestJobButtonReceiverSimple"),
+            job=self.job,
             confirmation=False,
         )
         self.job_button_1.validated_save()
@@ -2215,6 +2359,26 @@ class JobButtonRenderingTestCase(TestCase):
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn(f"JobButton {self.location_type.name}", content, content)
         self.assertIn("Click me!", content, content)
+
+    def test_task_queue_hidden_input_is_present(self):
+        """
+        Ensure that the job button respects the job class' task_queues and the job class task_queues[0]/default is passed as a hidden form input.
+        """
+        self.job.task_queues_override = True
+        self.job.task_queues = ["overriden_queue", "default", "priority"]
+        self.job.save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(f'<input type="hidden" name="_task_queue" value="{self.job.task_queues[0]}">', content, content)
+        self.job.task_queues_override = False
+        self.job.save()
+        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            f'<input type="hidden" name="_task_queue" value="{settings.CELERY_TASK_DEFAULT_QUEUE}">', content, content
+        )
 
     def test_view_object_with_unsafe_text(self):
         """Ensure that JobButton text can't be used as a vector for XSS."""
@@ -2434,6 +2598,7 @@ class RelationshipTestCase(
         )
 
         # Try deleting all devices and then editing the 6 VLANs (fails):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         response = self.client.post(
             reverse("ipam:vlan_bulk_edit"), data={"pk": [str(vlan.id) for vlan in vlans], "_apply": [""]}
@@ -2624,14 +2789,6 @@ class StatusTestCase(
             "content_types": [content_type.pk],
         }
 
-        cls.csv_data = (
-            "name,color,content_types"
-            "test_status1,ffffff,dcim.device"
-            'test_status2,ffffff,"dcim.device,dcim.location"'
-            "test_status3,ffffff,dcim.device"
-            "test_status4,ffffff,dcim.device"
-        )
-
         cls.bulk_edit_data = {
             "color": "000000",
         }
@@ -2648,12 +2805,6 @@ class TeamTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "email": "new-team@example.com",
             "address": "Rainbow Road, Ramus NJ",
         }
-        cls.csv_data = (
-            "name,phone,email,address",
-            'new team 2,555-0122,,"rainbow road, NJ, USA"',
-            "new team 3,555-0123,newteam2@example.com,",
-            "new team 4,555-0124,,",
-        )
         cls.bulk_edit_data = {"address": "Carnegie Hall, New York, NY"}
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -2703,13 +2854,6 @@ class TagTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "comments": "Some comments",
             "content_types": [ct.id for ct in TaggableClassesQuery().as_queryset()],
         }
-
-        cls.csv_data = (
-            "name,color,description,content_types",
-            "Tag 4,ff0000,Fourth tag,dcim.device",
-            'Tag 5,00ff00,Fifth tag,"dcim.device,dcim.location"',
-            "Tag 6,0000ff,Sixth tag,dcim.location",
-        )
 
         cls.bulk_edit_data = {
             "color": "00ff00",
@@ -2845,15 +2989,6 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "color": ColorChoices.COLOR_GREY,
             "content_types": [content_type.pk],
         }
-
-        cls.csv_data = (
-            "name,weight,color,content_types,description",
-            "test_role1,1000,ffffff,dcim.device,A Role",
-            'test_role2,200,ffffff,"dcim.device,dcim.rack",A Role',
-            'test_role3,100,ffffff,"dcim.device,ipam.prefix",A Role',
-            'test_role4,50,ffffff,"ipam.ipaddress,ipam.vlan",A Role',
-            'test_role5,25,ffffff,"virtualization.virtualmachine",A Role',
-        )
 
         cls.bulk_edit_data = {
             "color": "000000",

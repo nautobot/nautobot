@@ -23,6 +23,7 @@ from nautobot.core.celery import (
     setup_nautobot_job_logging,
 )
 from nautobot.core.celery.control import refresh_git_repository
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -37,7 +38,6 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
     JOB_LOG_MAX_GROUPING_LENGTH,
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
-    JOB_MAX_GROUPING_LENGTH,
     JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
@@ -99,7 +99,7 @@ class Job(PrimaryModel):
     # Human-readable information, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
     grouping = models.CharField(
-        max_length=JOB_MAX_GROUPING_LENGTH,
+        max_length=CHARFIELD_MAX_LENGTH,
         help_text="Human-readable grouping that this job belongs to",
         db_index=True,
     )
@@ -108,7 +108,10 @@ class Job(PrimaryModel):
         help_text="Human-readable name of this job",
         unique=True,
     )
-    description = models.TextField(blank=True, help_text="Markdown formatting is supported")
+    description = models.TextField(
+        blank=True,
+        help_text="Markdown formatting and a limited subset of HTML are supported",
+    )
 
     # Control flags
     installed = models.BooleanField(
@@ -161,7 +164,7 @@ class Job(PrimaryModel):
         "<br>Set to 0 to use Nautobot system default",
     )
     task_queues = JSONArrayField(
-        base_field=models.CharField(max_length=100, blank=True),
+        base_field=models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True),
         default=list,
         blank=True,
         help_text="Comma separated list of task queues that this job can run on. A blank list will use the default queue",
@@ -295,8 +298,8 @@ class Job(PrimaryModel):
             raise ValidationError(f"Module name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
         if len(self.job_class_name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Job class name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
-        if len(self.grouping) > JOB_MAX_GROUPING_LENGTH:
-            raise ValidationError(f"Grouping may not exceed {JOB_MAX_GROUPING_LENGTH} characters in length")
+        if len(self.grouping) > CHARFIELD_MAX_LENGTH:
+            raise ValidationError(f"Grouping may not exceed {CHARFIELD_MAX_LENGTH} characters in length")
         if len(self.name) > JOB_MAX_NAME_LENGTH:
             raise ValidationError(f"Name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
 
@@ -330,7 +333,7 @@ class JobHook(OrganizationalModel):
         on_delete=models.CASCADE,
         limit_choices_to={"is_job_hook_receiver": True},
     )
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     type_create = models.BooleanField(default=False, help_text="Call this job hook when a matching object is created.")
     type_delete = models.BooleanField(default=False, help_text="Call this job hook when a matching object is deleted.")
     type_update = models.BooleanField(default=False, help_text="Call this job hook when a matching object is updated.")
@@ -451,9 +454,9 @@ class JobResult(BaseModel, CustomFieldModel):
     job_model = models.ForeignKey(
         to="extras.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="job_results"
     )
-    name = models.CharField(max_length=255, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     task_name = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field
-        max_length=255,
+        max_length=CHARFIELD_MAX_LENGTH,
         null=True,  # TODO: should this be blank=True instead?
         db_index=True,
         help_text="Registered name of the Celery task for this job. Internal use only.",
@@ -663,12 +666,22 @@ class JobResult(BaseModel, CustomFieldModel):
             redirect_logger = get_logger("celery.redirected")
             proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
             with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
-                job_model.job_task.apply(
+                eager_result = job_model.job_task.apply(
                     args=job_args, kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs
                 )
 
             # copy fields from eager result to job result
             job_result.refresh_from_db()
+            # Emulate prepare_exception() behavior
+            if isinstance(eager_result.result, Exception):
+                job_result.result = {
+                    "exc_type": type(eager_result.result).__name__,
+                    "exc_message": sanitize(str(eager_result.result)),
+                }
+            else:
+                job_result.result = sanitize(eager_result.result)
+            job_result.status = eager_result.status
+            job_result.traceback = sanitize(eager_result.traceback)
             job_result.date_done = timezone.now()
             job_result.save()
         else:
@@ -751,7 +764,7 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
         verbose_name="Object types",
         help_text="The object type(s) to which this job button applies.",
     )
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     text = models.CharField(
         max_length=500,
         help_text="Jinja2 template code for button text. Reference the object as <code>{{ obj }}</code> such as <code>{{ obj.platform.name }}</code>. Buttons which render as empty text will not be displayed.",
@@ -764,7 +777,7 @@ class JobButton(BaseModel, ChangeLoggedModel, NotesMixin):
     )
     weight = models.PositiveSmallIntegerField(default=100)
     group_name = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         help_text="Buttons with the same group will appear as a dropdown menu. Group dropdown buttons will inherit the button class from the button with the lowest weight in the group.",
     )
@@ -831,7 +844,10 @@ class ScheduledJob(BaseModel):
     """Model representing a periodic task."""
 
     name = models.CharField(
-        max_length=200, verbose_name="Name", help_text="Human-readable description of this scheduled task", unique=True
+        max_length=CHARFIELD_MAX_LENGTH,
+        verbose_name="Name",
+        help_text="Human-readable description of this scheduled task",
+        unique=True,
     )
     task = models.CharField(
         # JOB_MAX_NAME_LENGTH is the longest permitted module name as well as the longest permitted class name,
@@ -852,7 +868,7 @@ class ScheduledJob(BaseModel):
     kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
     celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
     queue = models.CharField(
-        max_length=200,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         default="",
         verbose_name="Queue Override",
@@ -924,7 +940,7 @@ class ScheduledJob(BaseModel):
         help_text="Datetime that the schedule was approved",
     )
     crontab = models.CharField(
-        max_length=255,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         verbose_name="Custom cronjob",
         help_text="Cronjob syntax string for custom scheduling",

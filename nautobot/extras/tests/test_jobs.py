@@ -10,6 +10,7 @@ import uuid
 from constance.test import override_config
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -299,10 +300,9 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 3)
+        self.assertEqual(len(job_logs), 2)
         self.assertIn("Running job", job_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
-        self.assertIn("Job completed", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
 
     def test_atomic_transaction_context_manager_job_fail(self):
@@ -317,10 +317,9 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 3)
+        self.assertEqual(len(job_logs), 2)
         self.assertIn("Running job", job_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
-        self.assertIn("Job completed", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
 
     def test_ip_address_vars(self):
@@ -653,6 +652,11 @@ class JobFileOutputTest(TransactionTestCase):
 class RunJobManagementCommandTest(TransactionTestCase):
     """Test cases for the `nautobot-server runjob` management command."""
 
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+
     def run_command(self, *args):
         out = StringIO()
         err = StringIO()
@@ -919,6 +923,12 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
 
     def setUp(self):
         super().setUp()
+        # Because of TransactionTestCase, and its clearing and repopulation of the database between tests,
+        # the `change_logged_models_queryset` cache of ContentTypes becomes invalid.
+        # We need to explicitly clear it here to have tests pass.
+        # This is not a problem during normal operation of Nautobot because content-types don't normally get deleted
+        # and recreated while Nautobot is running.
+        cache.delete("nautobot.extras.utils.change_logged_models_queryset")
 
         module = "job_hook_receiver"
         name = "TestJobHookReceiverLog"

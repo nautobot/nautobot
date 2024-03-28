@@ -16,7 +16,6 @@ from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, Valida
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.routers import APIRootView
 
 from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.utils import get_serializer_for_model
@@ -75,15 +74,6 @@ from nautobot.extras.secrets.exceptions import SecretError
 from nautobot.extras.utils import get_worker_count
 
 from . import serializers
-
-
-class ExtrasRootView(APIRootView):
-    """
-    Extras API root view
-    """
-
-    def get_view_name(self):
-        return "Extras"
 
 
 class NotesViewSetMixin:
@@ -395,7 +385,10 @@ class GitRepositoryViewSet(NautobotModelViewSet):
     filterset_class = filters.GitRepositoryFilterSet
 
     @extend_schema(methods=["post"], request=serializers.GitRepositorySerializer)
-    @action(detail=True, methods=["post"])
+    # Since we are explicitly checking for `extras:change_gitrepository` in the API sync() method
+    # We explicitly set the permission_classes to IsAuthenticated in the @action decorator
+    # bypassing the default DRF permission check for `extras:add_gitrepository` and the permission check fall through to the function itself.
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def sync(self, request, pk):
         """
         Enqueue pull git repository and refresh data.

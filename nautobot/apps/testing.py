@@ -8,6 +8,7 @@ from nautobot.core.testing import (
 )
 from nautobot.core.testing.api import APITestCase, APITransactionTestCase, APIViewTestCases
 from nautobot.core.testing.filters import FilterTestCases
+from nautobot.core.testing.forms import FormTestCases
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.core.testing.migrations import NautobotDataMigrationTest
 from nautobot.core.testing.mixins import NautobotTestCaseMixin, NautobotTestClient
@@ -34,6 +35,7 @@ __all__ = (
     "extract_form_failures",
     "extract_page_body",
     "FilterTestCases",
+    "FormTestCases",
     "generate_random_device_asset_tag_of_specified_size",
     "get_deletable_objects",
     "get_job_class_and_model",

@@ -8,6 +8,7 @@ import sys
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.validators import ValidationError
 from django.db import transaction
 from django.db.models import Q
@@ -15,11 +16,11 @@ from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
 
 from nautobot.core.choices import ColorChoices
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
 from nautobot.extras.constants import (
     EXTRAS_FEATURES,
-    JOB_MAX_GROUPING_LENGTH,
     JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
@@ -101,6 +102,18 @@ class ChangeLoggedModelsQuery(FeaturedQueryMixin):
         Return a list of classes that implement the to_objectchange method
         """
         return [_class for _class in apps.get_models() if hasattr(_class, "to_objectchange")]
+
+
+def change_logged_models_queryset():
+    """
+    Cacheable function for cases where we need this queryset many times, such as when saving multiple objects.
+    """
+    cache_key = "nautobot.extras.utils.change_logged_models_queryset"
+    queryset = cache.get(cache_key)
+    if queryset is None:
+        queryset = ChangeLoggedModelsQuery().as_queryset()
+        cache.set(cache_key, queryset)
+    return queryset
 
 
 @deconstructible
@@ -364,12 +377,12 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
         return (None, False)
 
     # Recoverable errors
-    if len(job_class.grouping) > JOB_MAX_GROUPING_LENGTH:
+    if len(job_class.grouping) > CHARFIELD_MAX_LENGTH:
         logger.warning(
             'Job class "%s" grouping "%s" exceeds %d characters in length, it will be truncated in the database.',
             job_class.__name__,
             job_class.grouping,
-            JOB_MAX_GROUPING_LENGTH,
+            CHARFIELD_MAX_LENGTH,
         )
     if len(job_class.name) > JOB_MAX_NAME_LENGTH:
         logger.warning(
@@ -410,7 +423,7 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
                 module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
                 job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
                 defaults={
-                    "grouping": job_class.grouping[:JOB_MAX_GROUPING_LENGTH],
+                    "grouping": job_class.grouping[:CHARFIELD_MAX_LENGTH],
                     "name": job_name,
                     "is_job_hook_receiver": issubclass(job_class, JobHookReceiver),
                     "is_job_button_receiver": issubclass(job_class, JobButtonReceiver),

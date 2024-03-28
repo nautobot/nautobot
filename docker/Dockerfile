@@ -48,7 +48,7 @@ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
     --mount=type=cache,target="/var/lib/apt/lists",sharing=locked \
     apt-get update && \
     apt-get upgrade -y && \
-    apt-get install --no-install-recommends -y curl git mime-support libxml2 libmariadb3 openssl && \
+    apt-get install --no-install-recommends -y curl git mime-support libxml2 libxmlsec1-dev libxmlsec1-openssl libmariadb3 openssl && \
     apt-get autoremove -y
 
 # DL3013 - pin all Python package versions
@@ -58,7 +58,9 @@ RUN --mount=type=cache,target="/root/.cache/pip",sharing=locked \
     --mount=type=cache,target="/tmp",sharing=locked \
     pip install --upgrade pip wheel
 
-HEALTHCHECK --interval=5s --timeout=5s --start-period=5s --retries=1 CMD curl --fail http://localhost:8080/health/ || exit 1
+# timeout/interval=10s because `nautobot-server` can be slow to start - https://github.com/nautobot/nautobot/issues/4292
+# start-period=5m because initial migrations can take several minutes to run on a fresh DB
+HEALTHCHECK --interval=10s --timeout=10s --start-period=5m --retries=3 CMD nautobot-server health_check
 
 # Generate nautobot user and its required dirs for later consumption
 RUN mkdir /opt/nautobot /opt/nautobot/.cache /prom_cache /source && \
@@ -77,7 +79,7 @@ FROM system-dependencies AS system-dev-dependencies
 # Install development/install-time OS dependencies
 # hadolint ignore=DL3008
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y build-essential libssl-dev libxmlsec1-dev libxmlsec1-openssl pkg-config libldap-dev libsasl2-dev libmariadb-dev nodejs npm && \
+    apt-get install --no-install-recommends -y build-essential libssl-dev pkg-config libldap-dev libsasl2-dev libmariadb-dev nodejs npm && \
     apt-get autoremove -y && \
     apt-get clean all && \
     rm -rf /var/lib/apt/lists/*
@@ -123,7 +125,7 @@ ENV PATH="${POETRY_HOME}/bin:${PATH}"
 
 RUN poetry config virtualenvs.create ${POETRY_VIRTUALENVS_CREATE} && \
     poetry config installer.parallel "${POETRY_INSTALLER_PARALLEL}" && \
-    poetry config installer.no-binary pyuwsgi
+    poetry config installer.no-binary lxml,pyuwsgi
 
 ################################ Stage: python-dependencies (intermediate build target)
 
@@ -135,7 +137,7 @@ COPY --from=poetry ${POETRY_HOME} ${POETRY_HOME}
 COPY --from=poetry /root/.config/pypoetry /root/.config/pypoetry
 ENV PATH="${POETRY_HOME}/bin:${PATH}"
 
-# The example_plugin is only a dev dependency, but Poetry fails to install non-dev dependencies if its source is missing
+# The example_app is only a dev dependency, but Poetry fails to install non-dev dependencies if its source is missing
 COPY --chown=nautobot:nautobot pyproject.toml poetry.lock README.md /source/
 COPY --chown=nautobot:nautobot examples /source/examples
 
@@ -145,6 +147,10 @@ WORKDIR /source
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     poetry install --no-root --only main --no-ansi --extras all && \
     rm -rf /tmp/tmp*
+
+# Verify that pyuwsgi was installed correctly, i.e. with SSL support
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN pyuwsgi --cflags | sed 's/ /\n/g' | grep -e "^-DUWSGI_SSL$"
 
 ################################ Stage: python-dev-dependencies (intermediate build target)
 
@@ -200,7 +206,7 @@ COPY --from=build-nautobot --chown=nautobot:nautobot /source/dist /source/dist
 # hadolint ignore=DL3042
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     pip install --no-deps /source/dist/*.whl && \
-    pip uninstall -y example-plugin example-plugin-with-view-override && \
+    pip uninstall -y example-app example-app-with-view-override && \
     rm -rf /source/*
 
 USER nautobot

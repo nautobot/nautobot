@@ -26,7 +26,6 @@ from nautobot.extras.models import (
 from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
     IPAddress,
-    IPAddressToInterface,
     Namespace,
     Prefix,
     RIR,
@@ -38,7 +37,7 @@ from nautobot.ipam.models import (
 )
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
 class NamespaceTestCase(
@@ -49,7 +48,6 @@ class NamespaceTestCase(
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkImportObjectsViewTestCase,
     ViewTestCases.BulkEditObjectsViewTestCase,
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
@@ -60,13 +58,6 @@ class NamespaceTestCase(
         locations = Location.objects.get_for_model(Namespace)
 
         cls.form_data = {"name": "Namespace X", "location": locations[0].pk, "description": "A new Namespace"}
-
-        cls.csv_data = (
-            "name,location",
-            f"Namespace 4,{locations[1].pk}",
-            f"Namespace 5,{locations[2].pk}",
-            "Namespace 6,",
-        )
 
         cls.bulk_edit_data = {
             "description": "New description",
@@ -91,13 +82,6 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tags": [t.pk for t in Tag.objects.get_for_model(VRF)],
         }
 
-        cls.csv_data = (
-            "name,rd,namespace",
-            f"VRF 4,abc123,{namespace.name}",
-            f"VRF 5,xyz246,{namespace.name}",
-            f"VRF 6,,{namespace.name}",
-        )
-
         cls.bulk_edit_data = {
             "tenant": tenants[1].pk,
             "description": "New description",
@@ -117,13 +101,6 @@ class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tags": [t.pk for t in Tag.objects.get_for_model(RouteTarget)],
         }
 
-        cls.csv_data = (
-            "name,tenant,description",
-            f'65000:1004,"{tenants[0].name}",Foo',
-            f'65000:1005,"{tenants[1].name}",Bar',
-            "65000:1006,,No tenant",
-        )
-
         cls.bulk_edit_data = {
             "tenant": tenants[1].pk,
             "description": "New description",
@@ -140,14 +117,6 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "is_private": True,
             "description": "A new RIR",
         }
-
-        cls.csv_data = (
-            "name,description",
-            "RIR 4,Fourth RIR",
-            "RIR 5,Fifth RIR",
-            "RIR 6,Sixth RIR",
-            "RIR 7,Seventh RIR",
-        )
 
     def setUp(self):
         super().setUp()
@@ -173,7 +142,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         cls.form_data = {
             "prefix": IPNetwork("192.0.2.0/24"),
             "namespace": cls.namespace.pk,
-            "location": cls.locations[1].pk,
+            "locations": [cls.locations[1].pk],
             "vrf": vrfs[1].pk,
             "tenant": None,
             "vlan": None,
@@ -186,22 +155,16 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             "tags": [t.pk for t in Tag.objects.get_for_model(Prefix)],
         }
 
-        cls.csv_data = (
-            "vrf,prefix,status,rir,namespace",
-            f"{vrfs[0].name},10.4.0.0/16,{cls.statuses[0].name},{rir.name},{cls.namespace.name}",
-            f"{vrfs[0].name},10.5.0.0/16,{cls.statuses[0].name},{rir.name},{cls.namespace.name}",
-            f"{vrfs[0].name},10.6.0.0/16,{cls.statuses[1].name},{rir.name},{cls.namespace.name}",
-        )
-
         cls.bulk_edit_data = {
-            "location": None,
-            "vrf": vrfs[1].pk,
             "tenant": None,
+            # TODO "vrf": vrfs[1].pk,
             "status": cls.statuses[1].pk,
             "role": cls.roles[1].pk,
             "rir": RIR.objects.last().pk,
             "date_allocated": make_aware(datetime.datetime(2020, 1, 1, 0, 0, 0, 0)),
             "description": "New description",
+            "add_locations": [cls.locations[0].pk],
+            "remove_locations": [cls.locations[1].pk],
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -364,7 +327,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.statuses = Status.objects.get_for_model(IPAddress)
         cls.prefix_status = Status.objects.get_for_model(Prefix).first()
         roles = Role.objects.get_for_model(IPAddress)
-        parent, _ = Prefix.objects.get_or_create(
+        Prefix.objects.get_or_create(
             prefix="192.0.2.0/24",
             defaults={"namespace": cls.namespace, "status": cls.prefix_status, "type": "network"},
         )
@@ -381,13 +344,6 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "A new IP address",
             "tags": [t.pk for t in Tag.objects.get_for_model(IPAddress)],
         }
-
-        cls.csv_data = (
-            "address,status,parent",
-            f"192.0.2.4/24,{cls.statuses[0].name},{parent.composite_key}",
-            f"192.0.2.5/24,{cls.statuses[0].name},{parent.composite_key}",
-            f"192.0.2.6/24,{cls.statuses[0].name},{parent.composite_key}",
-        )
 
         cls.bulk_edit_data = {
             "tenant": None,
@@ -1014,113 +970,6 @@ class IPAddressMergeTestCase(ModelViewTestCase):
                     self.assertEqual(set(associations), set(correct_associations))
 
 
-class IPAddressToInterfaceTestCase(ViewTestCases.BulkImportObjectsViewTestCase):
-    model = IPAddressToInterface
-
-    @classmethod
-    def setUpTestData(cls):
-        # Device/Interface
-        prefix_status = Status.objects.get_for_model(Prefix).first()
-        location = Location.objects.filter(parent__isnull=False, parent__parent__isnull=False).first()
-        manufacturer = Manufacturer.objects.first()
-        tenant = Tenant.objects.first()
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
-        devicerole = Role.objects.get_for_model(Device).first()
-        devicestatus = Status.objects.get_for_model(Device).first()
-        device = Device.objects.create(
-            name="Device 1",
-            location=location,
-            device_type=devicetype,
-            role=devicerole,
-            tenant=tenant,
-            status=devicestatus,
-        )
-        intf_status = Status.objects.get_for_model(Interface).first()
-        interface = Interface.objects.create(device=device, name="Interface 1", status=intf_status)
-
-        # Namespace, Prefix, IPAddress
-        namespace = Namespace.objects.create(name="ip2interface_namespace")
-        ip_status = Status.objects.get_for_model(IPAddress).first()
-        prefix_status = Status.objects.get_for_model(Prefix).first()
-        Prefix.objects.get_or_create(
-            prefix="192.0.2.0/24",
-            defaults={"namespace": namespace, "status": prefix_status, "type": "network"},
-        )
-        ip_addresses = [
-            IPAddress.objects.create(
-                address="192.0.2.1/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
-            ),
-            IPAddress.objects.create(
-                address="192.0.2.2/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
-            ),
-            IPAddress.objects.create(
-                address="192.0.2.3/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
-            ),
-        ]
-        ip1, ip2, ip3 = ip_addresses
-
-        cls.csv_data = (
-            "ip_address__host,ip_address__parent__namespace__name,interface__name,interface__device__name,interface__device__tenant__name,interface__device__location__name,interface__device__location__parent__name,interface__device__location__parent__parent__name",
-            f'{ip1.host},{ip1.parent.namespace.name},{interface.name},{interface.device.name},"{interface.device.tenant.name}",{interface.device.location.name},{interface.device.location.parent.name},{interface.device.location.parent.parent.name}',
-            f'{ip2.host},{ip2.parent.namespace.name},{interface.name},{interface.device.name},"{interface.device.tenant.name}",{interface.device.location.name},{interface.device.location.parent.name},{interface.device.location.parent.parent.name}',
-            f'{ip3.host},{ip3.parent.namespace.name},{interface.name},{interface.device.name},"{interface.device.tenant.name}",{interface.device.location.name},{interface.device.location.parent.name},{interface.device.location.parent.parent.name}',
-        )
-
-    def test_vminterface_import(self):
-        """Explicitly tests that bulk import of VMInterface assignments also works."""
-        # Initialize any pre-existing assignments. There is no mercy in this dojo!!
-        self._get_queryset().all().delete()
-
-        # Namespace, Prefix, IPAddress
-        namespace = Namespace.objects.create(name="ip2vminterface_namespace")
-        ip_status = Status.objects.get_for_model(IPAddress).first()
-        prefix_status = Status.objects.get_for_model(Prefix).first()
-        Prefix.objects.get_or_create(
-            prefix="192.0.3.0/24",
-            defaults={"namespace": namespace, "status": prefix_status, "type": "network"},
-        )
-        ip_addresses = [
-            IPAddress.objects.create(
-                address="192.0.3.1/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
-            ),
-            IPAddress.objects.create(
-                address="192.0.3.2/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
-            ),
-            IPAddress.objects.create(
-                address="192.0.3.3/32", status=ip_status, type=IPAddressTypeChoices.TYPE_DHCP, namespace=namespace
-            ),
-        ]
-        ip1, ip2, ip3 = ip_addresses
-
-        # VirtualMachine/VMInterface
-        location = Location.objects.filter(parent__isnull=False, parent__parent__isnull=False).first()
-        cluster_type = ClusterType.objects.create(name="Cluster Type 2")
-        cluster = Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type, location=location)
-        vm_status = Status.objects.get_for_model(VirtualMachine).first()
-        tenant = Tenant.objects.first()
-        virtual_machine = VirtualMachine.objects.create(cluster=cluster, name="VM 1", status=vm_status, tenant=tenant)
-        vm_intf_status = Status.objects.get_for_model(VMInterface).first()
-        vm_interface = VMInterface.objects.create(
-            virtual_machine=virtual_machine, name="VMInterface 1", status=vm_intf_status
-        )
-
-        csv_data = (
-            "ip_address__host,ip_address__parent__namespace__name,vm_interface__virtual_machine__cluster__name,vm_interface__virtual_machine__tenant__name,vm_interface__virtual_machine__name,vm_interface__name",
-            f'{ip1.host},{ip1.parent.namespace.name},{vm_interface.virtual_machine.cluster.name},"{vm_interface.virtual_machine.tenant.name}",{vm_interface.virtual_machine.name},{vm_interface.name}',
-            f'{ip2.host},{ip2.parent.namespace.name},{vm_interface.virtual_machine.cluster.name},"{vm_interface.virtual_machine.tenant.name}",{vm_interface.virtual_machine.name},{vm_interface.name}',
-            f'{ip3.host},{ip3.parent.namespace.name},{vm_interface.virtual_machine.cluster.name},"{vm_interface.virtual_machine.tenant.name}",{vm_interface.virtual_machine.name},{vm_interface.name}',
-        )
-
-        initial_count = self._get_queryset().count()
-        data = {
-            "csv_data": "\n".join(csv_data),
-        }
-
-        self.add_permissions("ipam.add_ipaddresstointerface")
-        self.assertHttpStatus(self.client.post(self._get_url("import"), data), 200)
-        self.assertEqual(self._get_queryset().count(), initial_count + len(csv_data) - 1)
-
-
 class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = VLANGroup
 
@@ -1134,13 +983,8 @@ class VLANGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "description": "A new VLAN group",
         }
 
-        cls.csv_data = (
-            "name,description",
-            "VLAN Group 4,Fourth VLAN group",
-            "VLAN Group 5,Fifth VLAN group",
-            "VLAN Group 6,Sixth VLAN group",
-            "VLAN Group 7,Seventh VLAN group",
-        )
+    def get_deletable_object(self):
+        return VLANGroup.objects.create(name="TEST DELETE ME")
 
 
 class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -1162,33 +1006,35 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         status_1 = statuses[0]
         status_2 = statuses[1]
 
-        VLAN.objects.create(
-            vlan_group=vlangroups[0],
-            vid=101,
-            name="VLAN101",
-            location=location_1,
-            role=roles[0],
-            status=status_1,
-            _custom_field_data={"custom_field": "Value"},
+        vlans = (
+            VLAN.objects.create(
+                vlan_group=vlangroups[0],
+                vid=101,
+                name="VLAN101",
+                role=roles[0],
+                status=status_1,
+                _custom_field_data={"custom_field": "Value"},
+            ),
+            VLAN.objects.create(
+                vlan_group=vlangroups[0],
+                vid=102,
+                name="VLAN102",
+                role=roles[0],
+                status=status_1,
+                _custom_field_data={"custom_field": "Value"},
+            ),
+            VLAN.objects.create(
+                vlan_group=vlangroups[0],
+                vid=103,
+                name="VLAN103",
+                role=roles[0],
+                status=status_1,
+                _custom_field_data={"custom_field": "Value"},
+            ),
         )
-        VLAN.objects.create(
-            vlan_group=vlangroups[0],
-            vid=102,
-            name="VLAN102",
-            location=location_1,
-            role=roles[0],
-            status=status_1,
-            _custom_field_data={"custom_field": "Value"},
-        )
-        VLAN.objects.create(
-            vlan_group=vlangroups[0],
-            vid=103,
-            name="VLAN103",
-            location=location_1,
-            role=roles[0],
-            status=status_1,
-            _custom_field_data={"custom_field": "Value"},
-        )
+        vlans[0].locations.add(location_1)
+        vlans[1].locations.add(location_1)
+        vlans[2].locations.add(location_1)
 
         custom_field = CustomField.objects.create(
             type=CustomFieldTypeChoices.TYPE_TEXT, label="Custom Field", default=""
@@ -1196,26 +1042,18 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         custom_field.content_types.set([ContentType.objects.get_for_model(VLAN)])
 
         cls.form_data = {
-            "location": cls.locations.last().pk,
             "vlan_group": vlangroups[1].pk,
             "vid": 999,
             "name": "VLAN999 with an unwieldy long name since we increased the limit to more than 64 characters",
             "tenant": None,
             "status": status_2.pk,
             "role": roles[1].pk,
+            "locations": list(cls.locations.values_list("pk", flat=True)[:2]),
             "description": "A new VLAN",
             "tags": [t.pk for t in Tag.objects.get_for_model(VLAN)],
         }
 
-        cls.csv_data = (
-            "vid,name,status,vlan_group",
-            f"104,VLAN104,{status_1.name},{vlangroups[0].composite_key}",
-            f"105,VLAN105,{status_1.name},{vlangroups[0].composite_key}",
-            f"106,VLAN106,{status_1.name},{vlangroups[0].composite_key}",
-        )
-
         cls.bulk_edit_data = {
-            "location": cls.locations.first().pk,
             "vlan_group": vlangroups[0].pk,
             "tenant": Tenant.objects.first().pk,
             "status": status_2.pk,
@@ -1274,13 +1112,6 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "A new service",
             "tags": [t.pk for t in Tag.objects.get_for_model(Service)],
         }
-
-        cls.csv_data = (
-            "device,name,protocol,ports,description",
-            f"{cls.device.composite_key},Service 4,tcp,1,First service",
-            f"{cls.device.composite_key},Service 5,tcp,2,Second service",
-            f'{cls.device.composite_key},Service 6,udp,"3,4,5",Third service',
-        )
 
         cls.bulk_edit_data = {
             "protocol": ServiceProtocolChoices.PROTOCOL_UDP,

@@ -535,7 +535,7 @@ def loaddata(context, filepath="db_output.json"):
 def build_and_check_docs(context):
     """Build docs for use within Nautobot."""
     build_nautobot_docs(context)
-    build_example_plugin_docs(context)
+    build_example_app_docs(context)
 
 
 def build_nautobot_docs(context):
@@ -544,15 +544,15 @@ def build_nautobot_docs(context):
     run_command(context, command)
 
 
-def build_example_plugin_docs(context):
-    """Build Example Plugin docs."""
+def build_example_app_docs(context):
+    """Build Example App docs."""
     command = "mkdocs build --no-directory-urls --strict"
     if is_truthy(context.nautobot.local):
-        local_command = f"cd examples/example_plugin && {command}"
+        local_command = f"cd examples/example_app && {command}"
         print_command(local_command)
         context.run(local_command, pty=True)
     else:
-        docker_command = f"run --workdir='/source/examples/example_plugin' --entrypoint '{command}' nautobot"
+        docker_command = f"run --rm --workdir='/source/examples/example_app' --entrypoint '{command}' nautobot"
         docker_compose(context, docker_command, pty=True)
 
 
@@ -594,7 +594,7 @@ def pylint(context, target=None, recursive=False):
     },
     iterable=["target"],
 )
-def ruff(context, fix=False, target=None, output_format="text"):
+def ruff(context, fix=False, target=None, output_format="concise"):
     """Run ruff to perform code formatting and linting."""
     if not target:
         target = ["development", "examples", "nautobot", "tasks.py"]
@@ -623,7 +623,7 @@ def ruff(context, fix=False, target=None, output_format="text"):
 def yamllint(context):
     """Run yamllint to validate formatting applies to YAML standards."""
     # TODO: enable for directories other than nautobot/docs and fix all warnings
-    command = "yamllint nautobot/docs --format standard"
+    command = "yamllint nautobot/docs nautobot/core/settings.yaml --format standard"
     run_command(context, command)
 
 
@@ -693,29 +693,35 @@ def check_schema(context, api_version=None):
         "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
+        "pattern": "Only run tests which match the given substring. Can be used multiple times.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
         "buffer": "Discard output from passing tests.",
         "tag": "Run only tests with the specified tag. Can be used multiple times.",
         "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
+        "parallel": "Run tests in parallel; auto-detects the number of workers if not specified with `--parallel-workers`. (default: False)",
+        "parallel-workers": "Specify the number of workers to use when running tests in parallel. Implies `--parallel`. (default: None)",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "performance_report": "Generate Performance Testing report in the terminal. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
         "performance_snapshot": "Generate a new performance testing report to report.yml. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
     },
-    iterable=["tag", "exclude_tag"],
+    iterable=["tag", "exclude_tag", "pattern"],
 )
 def unittest(
     context,
     cache_test_fixtures=False,
     keepdb=False,
     label="nautobot",
+    pattern=None,
     failfast=False,
     buffer=True,
     exclude_tag=None,
     tag=None,
     verbose=False,
     append=False,
+    parallel=False,
+    parallel_workers=None,
     skip_docs_build=False,
     performance_report=False,
     performance_snapshot=False,
@@ -725,8 +731,16 @@ def unittest(
         # First build the docs so they are available.
         build_and_check_docs(context)
 
-    append_arg = " --append" if append else ""
-    command = f"coverage run{append_arg} --module nautobot.core.cli test {label}"
+    if not append:
+        run_command(context, "coverage erase")
+
+    if parallel_workers:
+        parallel_workers = int(parallel_workers)
+        if parallel_workers > 1:
+            parallel = True
+    append_arg = " --append" if append and not parallel else ""
+    parallel_arg = " --parallel-mode" if parallel else ""
+    command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
     command += " --config=nautobot/core/tests/nautobot_config.py"
     # booleans
     if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
@@ -735,10 +749,14 @@ def unittest(
         command += " --keepdb"
     if failfast:
         command += " --failfast"
-    if buffer:
+    if buffer and not parallel:  # Django 3.x doesn't support '--parallel --buffer'; can remove this after Django 4.x
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
+    if parallel:
+        command += " --parallel"
+        if parallel_workers:
+            command += f"={parallel_workers}"
     if performance_report or (tag and "performance" in tag):
         command += " --slowreport"
     if performance_snapshot:
@@ -753,14 +771,20 @@ def unittest(
     if exclude_tag:
         for individual_exclude_tag in exclude_tag:
             command += f" --tag {individual_exclude_tag}"
+    for item in pattern or []:
+        command += f" -k='{item}'"
 
     run_command(context, command)
+
+    unittest_coverage(context)
 
 
 @task
 def unittest_coverage(context):
     """Report on code test coverage as measured by 'invoke unittest'."""
-    command = "coverage report --skip-covered --include 'nautobot/*' --omit *migrations*"
+    run_command(context, "coverage combine")
+
+    command = "coverage report --skip-covered --include 'nautobot/*'"
 
     run_command(context, command)
 

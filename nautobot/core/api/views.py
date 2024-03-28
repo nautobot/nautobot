@@ -1,11 +1,13 @@
 from collections import OrderedDict
 import itertools
 import logging
+import os
 import platform
 
 from django import __version__ as DJANGO_VERSION, forms
 from django.apps import apps
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.db.models import ProtectedError
@@ -22,15 +24,18 @@ from graphql import get_default_backend
 from graphql.execution import ExecutionResult
 from graphql.execution.middleware import MiddlewareManager
 from graphql.type.schema import GraphQLSchema
-from rest_framework import status
+from rest_framework import routers, status
 from rest_framework.exceptions import ParseError, PermissionDenied
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet as ModelViewSet_, ReadOnlyModelViewSet as ReadOnlyModelViewSet_
+import yaml
 
 from nautobot.core.api import BulkOperationSerializer
+from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.utils.data import is_uuid
@@ -38,6 +43,7 @@ from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_fil
 from nautobot.core.utils.lookup import get_form_for_model, get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import ensure_content_type_and_field_name_in_query_params
+from nautobot.core.views.utils import get_csv_form_fields_from_serializer_class
 from nautobot.extras.registry import registry
 
 from . import serializers
@@ -341,21 +347,35 @@ class ReadOnlyModelViewSet(NautobotAPIVersionMixin, ModelViewSetMixin, ReadOnlyM
 #
 
 
-class APIRootView(NautobotAPIVersionMixin, APIView):
+class AuthenticatedAPIRootView(NautobotAPIVersionMixin, routers.APIRootView):
     """
-    This is the root of the REST API. API endpoints are arranged by app and model name; e.g. `/api/dcim/locations/`.
+    Extends DRF's base APIRootView class to enforce user authentication.
     """
 
-    _ignore_model_permissions = True
+    permission_classes = [IsAuthenticated]
 
-    def get_view_name(self):
-        return "API Root"
+    name = None
+    description = None
+
+
+class APIRootView(AuthenticatedAPIRootView):
+    """
+    This is the root of the REST API.
+
+    API endpoints are arranged by app and model name; e.g. `/api/dcim/locations/`.
+    """
+
+    name = "API Root"
 
     @extend_schema(exclude=True)
     def get(self, request, format=None):  # pylint: disable=redefined-builtin
         return Response(
             OrderedDict(
                 (
+                    (
+                        "apps",
+                        reverse("apps-api:api-root", request=request, format=format),
+                    ),
                     (
                         "circuits",
                         reverse("circuits-api:api-root", request=request, format=format),
@@ -414,7 +434,8 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                     "django-version": {"type": "string"},
                     "installed-apps": {"type": "object"},
                     "nautobot-version": {"type": "string"},
-                    "plugins": {"type": "object"},
+                    "nautobot-apps": {"type": "object"},
+                    "plugins": {"type": "object"},  # 3.0 TODO: remove this
                     "python-version": {"type": "string"},
                     "celery-workers-running": {"type": "integer"},
                 },
@@ -433,13 +454,13 @@ class StatusView(NautobotAPIVersionMixin, APIView):
             installed_apps[app_config.name] = version
         installed_apps = dict(sorted(installed_apps.items()))
 
-        # Gather installed plugins
-        plugins = {}
-        for plugin_name in settings.PLUGINS:
-            plugin_name = plugin_name.rsplit(".", 1)[-1]
-            plugin_config = apps.get_app_config(plugin_name)
-            plugins[plugin_name] = getattr(plugin_config, "version", None)
-        plugins = dict(sorted(plugins.items()))
+        # Gather installed Apps
+        nautobot_apps = {}
+        for app_name in settings.PLUGINS:
+            app_name = app_name.rsplit(".", 1)[-1]
+            app_config = apps.get_app_config(app_name)
+            nautobot_apps[app_name] = getattr(app_config, "version", None)
+        nautobot_apps = dict(sorted(nautobot_apps.items()))
 
         # Gather Celery workers
         workers = celery_app.control.inspect().active()  # list or None
@@ -450,7 +471,8 @@ class StatusView(NautobotAPIVersionMixin, APIView):
                 "django-version": DJANGO_VERSION,
                 "installed-apps": installed_apps,
                 "nautobot-version": settings.VERSION,
-                "plugins": plugins,
+                "nautobot-apps": nautobot_apps,
+                "plugins": nautobot_apps,  # 3.0 TODO: remove this
                 "python-version": platform.python_version(),
                 "celery-workers-running": worker_count,
             }
@@ -492,11 +514,6 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
     @extend_schema(exclude=True)
     def get(self, request, *args, **kwargs):
         """Fix up the rendering of the Swagger UI to work with Nautobot's UI."""
-        if not request.user.is_authenticated:
-            doc_url = reverse("api_docs")
-            login_url = reverse(settings.LOGIN_URL)
-            return redirect(f"{login_url}?next={doc_url}")
-
         # For backward compatibility wtih drf-yasg, `/api/docs/?format=openapi` is a redirect to the JSON schema.
         if request.GET.get("format") == "openapi":
             return redirect("schema_json", permanent=True)
@@ -525,11 +542,12 @@ class NautobotSpectacularRedocView(APIVersioningGetSchemaURLMixin, SpectacularRe
 class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
     """
     API View for GraphQL to integrate properly with DRF authentication mechanism.
-    The code is a stripped down version of graphene-django default View
-    https://github.com/graphql-python/graphene-django/blob/main/graphene_django/views.py#L57
     """
 
-    permission_classes = [AllowAny]
+    # The code is a stripped down version of graphene-django default View
+    # https://github.com/graphql-python/graphene-django/blob/main/graphene_django/views.py#L57
+
+    permission_classes = [IsAuthenticated]
     graphql_schema = None
     executor = None
     backend = None
@@ -748,7 +766,9 @@ class GetMenuAPIView(NautobotAPIVersionMixin, APIView):
         for name, value in data.items():
             if "permissions" in value:
                 permissions = value["permissions"]
-                user_has_permission = any(request.user.has_perm(permission) for permission in permissions)
+                user_has_permission = (
+                    any(request.user.has_perm(permission) for permission in permissions) or not permissions
+                )
                 if user_has_permission:
                     return_value[name] = value["data"]
             else:
@@ -862,6 +882,40 @@ class GetObjectCountsView(NautobotAPIVersionMixin, APIView):
         return Response(object_counts)
 
 
+class CSVImportFieldsForContentTypeAPIView(NautobotAPIVersionMixin, APIView):
+    """Get information about CSV import fields for a given ContentType."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        content_type_id = request.GET.get("content-type-id")
+        try:
+            content_type = ContentType.objects.get(pk=content_type_id)
+        except ContentType.DoesNotExist:
+            return Response({"detail": "Invalid content-type-id."}, status=404)
+        model = content_type.model_class()
+        if model is None:
+            return Response(
+                {
+                    "detail": (
+                        f"Model not found for {content_type.app_label}.{content_type.model}. Perhaps an app is missing?"
+                    ),
+                },
+                status=404,
+            )
+        try:
+            serializer_class = get_serializer_for_model(model)
+        except SerializerNotFound:
+            return Response(
+                {"detail": f"Serializer not found for {content_type.app_label}.{content_type.model}."},
+                status=404,
+            )
+        fields = get_csv_form_fields_from_serializer_class(serializer_class)
+        fields.sort(key=lambda field: (not field["required"], field["name"]))
+        return Response({"fields": fields})
+
+
 #
 # Lookup Expr
 #
@@ -940,3 +994,16 @@ class GetFilterSetFieldDOMElementAPIView(NautobotAPIVersionMixin, APIView):
         else:
             data = bound_field.as_widget()
         return Response(data)
+
+
+class SettingsJSONSchemaView(NautobotAPIVersionMixin, APIView):
+    """View that exposes the JSON Schema of the settings.yaml file in the REST API"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(exclude=True)
+    def get(self, request):
+        file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/settings.yaml"
+        with open(file_path, "r") as yamlfile:
+            schema_data = yaml.safe_load(yamlfile)
+        return Response(schema_data)

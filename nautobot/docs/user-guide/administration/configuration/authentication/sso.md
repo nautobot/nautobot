@@ -17,38 +17,22 @@ This module supports several [authentication backends](https://python-social-aut
 
     Hint: Use `sudo -iu nautobot`
 
-### Install Dependencies
+### Install Dependencies for OIDC or SAML
 
-If you are using OpenID Connect or SAML you will also need to install the extra dependencies for those.
+If you are using OpenID Connect or SAML you will also need to install the extra dependencies for those. These are grouped together under the `sso` Python extra for Nautobot and so can be easily installed with a single `pip3` command.
 
-#### OpenID Connect Dependencies
+!!! tip
+    You may find that additional system-level dependencies must be installed first so that the specialized Python libraries for XML can be built and compiled for your system. Specifics will vary by your OS, but for example, on Ubuntu, you may need to run:
 
-For OpenID connect, you'll need to install the `sso` Python extra.
+    ```no-highlight
+    sudo apt install -y libxmlsec1-dev libxmlsec1-openssl pkg-config
+    ```
 
-```no-highlight
-pip3 install "nautobot[sso]"
-```
-
-#### SAML Dependencies
-
-For SAML, additional system-level dependencies are required so that the specialized XML libraries can be built and compiled for your system.
-
-!!! note
-    These instructions have only been certified on Ubuntu 20.04 at this time.
-
-Install the system dependencies as `root`:
+Furthermore, due to potential incompatibilities between the precompiled binaries for the `lxml` and `xmlsec` Python packages that this installation will bring in, you need to tell Pip to not install the precompiled binary for `lxml`. Run the following command as the `nautobot` user:
 
 ```no-highlight
-sudo apt install -y libxmlsec1-dev libxmlsec1-openssl pkg-config
+pip3 install --no-binary=lxml "nautobot[sso]"
 ```
-
-Install the `sso` Python extra as the `nautobot` user.
-
-```no-highlight
-pip3 install "nautobot[sso]"
-```
-
-Please see the SAML configuration guide below for an example of how to configure Nautobot to authenticate using SAML with Google as the identity provider.
 
 ## Configuration
 
@@ -245,7 +229,7 @@ OKTA_SSO_URL = "<Sign On URL from Okta>"
 OKTA_CERTIFICATE = "<Signing Certificate from Okta>"
 
 # The most important setting. List the Entity ID (Issuer), SSO URL (Sign On URL), and x.509 public key certificate
-# for each provider that you app wants to support. 
+# for each provider that you app wants to support.
 SOCIAL_AUTH_SAML_ENABLED_IDPS = {
     "okta": {
         'force_authn': "true",
@@ -468,6 +452,45 @@ This should be the URL that is mapped to the "Log in" button on the top right of
 ---
 
 Be sure to configure [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/optional-settings.md#external_auth_default_groups) and [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/optional-settings.md#external_auth_default_permissions) next.
+
+---
+
+#### SAML Metadata
+
+If you need to collect SAML metadata from your Nautobot host to provide to the IDP, you can add a simple view to gather and display metadata.
+
+```python
+from django.http import HttpResponse
+from django.urls import reverse
+from django.views.generic import View
+from onelogin.saml2.errors import OneLogin_Saml2_Error
+from social_django.utils import load_backend, load_strategy
+
+
+class MetadataView(View):
+    """Simple metadata view to display metadata on a nautobot page.
+    Import this view into your url file then add a uri path:
+    path("metadata/", MetadataView.as_view(), name="metadata"),
+    """
+
+    def get(self, request):
+        complete_url = reverse("social:complete", args=("saml",))
+        saml_backend = load_backend(
+            load_strategy(request),
+            "saml",
+            redirect_uri=complete_url,
+        )
+        try:
+            metadata, errors = saml_backend.generate_metadata_xml()
+            if not errors:
+                return HttpResponse(content=metadata, content_type="text/xml")
+        except OneLogin_Saml2_Error as saml_error:
+            config = saml_backend.generate_saml_config()
+            return HttpResponse(
+                content=f"ERROR: {saml_error}, SAML backend config is {config}",
+                content_type="text/plain"
+            )
+```
 
 ### Azure AD
 

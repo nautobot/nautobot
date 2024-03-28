@@ -2,7 +2,7 @@
 
 +++ 2.0.0
 
-Apps can define settings that will be stored in the Database Backend through [Django Constance](https://django-constance.readthedocs.io/en/latest/#). All of the standard Django Constance types are supported. A Constance Fieldset will automatically be created for your plugin. We have added the `ConstanceConfigItem` `namedtuple` to assist in the configurations.
+Apps can define settings that will be stored in the Database Backend through [Django Constance](https://django-constance.readthedocs.io/en/latest/#). All of the standard Django Constance types are supported. A Constance Fieldset will automatically be created for your App. We have added the `ConstanceConfigItem` `namedtuple` to assist in the configurations.
 
 ```python
 # __init__.py
@@ -20,7 +20,7 @@ class AnimalSoundsConfig(NautobotAppConfig):
 !!! note
     If moving an existing variable to a Database Backed variable, you should keep the variable name as previously defined.
 
-![Nautobot app in the admin config](../../../media/plugins/plugin_admin_config.png)
+![Nautobot app in the admin config](../../../media/apps/app_admin_config.png)
 
 !!! warning
-    Do not store secrets in the constance_config, instead use Nautobot [Secrets](../../../user-guide/platform-functionality/secret.md).
+    Do not store secrets in the `constance_config`; instead use Nautobot [Secrets](../../../user-guide/platform-functionality/secret.md).

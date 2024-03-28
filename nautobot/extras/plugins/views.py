@@ -2,11 +2,9 @@ from collections import OrderedDict
 
 from django.apps import apps
 from django.conf import settings
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404
 from django.shortcuts import render
 from django.urls.exceptions import NoReverseMatch
-from django.views.generic import View
 from django_tables2 import RequestConfig
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
@@ -14,37 +12,37 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 
-from nautobot.core.api.views import NautobotAPIVersionMixin
+from nautobot.core.api.views import AuthenticatedAPIRootView, NautobotAPIVersionMixin
 from nautobot.core.forms import TableConfigForm
-from nautobot.core.views.mixins import AdminRequiredMixin
+from nautobot.core.views.generic import GenericView
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.extras.plugins.tables import InstalledPluginsTable
+from nautobot.extras.plugins.tables import InstalledAppsTable
 
 
-class InstalledPluginsView(AdminRequiredMixin, View):
+class InstalledAppsView(GenericView):
     """
-    View for listing all installed plugins.
+    View for listing all installed Apps.
     """
 
-    table = InstalledPluginsTable
+    table = InstalledAppsTable
 
     def get(self, request):
         data = []
-        for plugin in apps.get_app_configs():
-            if plugin.name in settings.PLUGINS:
+        for app in apps.get_app_configs():
+            if app.name in settings.PLUGINS:
                 data.append(
                     {
-                        "name": plugin.verbose_name,
-                        "package_name": plugin.name,
-                        "app_label": plugin.label,
-                        "author": plugin.author,
-                        "author_email": plugin.author_email,
-                        "description": plugin.description,
-                        "version": plugin.version,
+                        "name": app.verbose_name,
+                        "package_name": app.name,
+                        "app_label": app.label,
+                        "author": app.author,
+                        "author_email": app.author_email,
+                        "description": app.description,
+                        "version": app.version,
                         "actions": {
-                            "home": plugin.home_view_name,
-                            "configure": plugin.config_view_name,
-                            "docs": plugin.docs_view_name,
+                            "home": app.home_view_name,
+                            "configure": app.config_view_name,
+                            "docs": app.docs_view_name,
                         },
                     }
                 )
@@ -67,57 +65,58 @@ class InstalledPluginsView(AdminRequiredMixin, View):
         )
 
 
-class InstalledPluginDetailView(LoginRequiredMixin, View):
+class InstalledAppDetailView(GenericView):
     """
-    View for showing details of an installed plugin.
+    View for showing details of an installed App.
     """
 
-    def get(self, request, plugin):
-        plugin_config = apps.get_app_config(plugin)
-        if plugin_config.name not in settings.PLUGINS:
+    def get(self, request, app=None, plugin=None):
+        if plugin and not app:
+            app = plugin
+        app_config = apps.get_app_config(app)
+        if app_config.name not in settings.PLUGINS:
             raise Http404
 
         return render(
             request,
             "extras/plugin_detail.html",
             {
-                "object": plugin_config,
+                "object": app_config,
             },
         )
 
 
-class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
+class InstalledAppsAPIView(NautobotAPIVersionMixin, APIView):
     """
     API view for listing all installed non-core Apps.
     """
 
     permission_classes = [permissions.IsAdminUser]
-    _ignore_model_permissions = True
 
     def get_view_name(self):
-        return "Installed Plugins"
+        return "Installed Apps"
 
     @staticmethod
-    def _get_plugin_data(plugin_app_config):
+    def _get_app_data(app_config):
         try:
-            home_url = reverse(plugin_app_config.home_view_name)
+            home_url = reverse(app_config.home_view_name)
         except NoReverseMatch:
             home_url = None
         try:
-            config_url = reverse(plugin_app_config.config_view_name)
+            config_url = reverse(app_config.config_view_name)
         except NoReverseMatch:
             config_url = None
         try:
-            docs_url = reverse(plugin_app_config.docs_view_name)
+            docs_url = reverse(app_config.docs_view_name)
         except NoReverseMatch:
             docs_url = None
         return {
-            "name": plugin_app_config.verbose_name,
-            "package": plugin_app_config.name,
-            "author": plugin_app_config.author,
-            "author_email": plugin_app_config.author_email,
-            "description": plugin_app_config.description,
-            "version": plugin_app_config.version,
+            "name": app_config.verbose_name,
+            "package": app_config.name,
+            "author": app_config.author,
+            "author_email": app_config.author_email,
+            "description": app_config.description,
+            "version": app_config.version,
             "home_url": home_url,
             "config_url": config_url,
             "docs_url": docs_url,
@@ -125,18 +124,16 @@ class InstalledPluginsAPIView(NautobotAPIVersionMixin, APIView):
 
     @extend_schema(exclude=True)
     def get(self, request, format=None):  # pylint: disable=redefined-builtin
-        return Response([self._get_plugin_data(apps.get_app_config(plugin)) for plugin in settings.PLUGINS])
+        return Response([self._get_app_data(apps.get_app_config(app)) for app in settings.PLUGINS])
 
 
-class PluginsAPIRootView(NautobotAPIVersionMixin, APIView):
-    _ignore_model_permissions = True
-
-    def get_view_name(self):
-        return "Plugins"
+class AppsAPIRootView(AuthenticatedAPIRootView):
+    name = "Apps"
+    description = "API extension point for installed Nautobot Apps"
 
     @staticmethod
-    def _get_plugin_entry(plugin, app_config, request, format_):
-        # Check if the plugin specifies any API URLs
+    def _get_app_entry(app_config, request, format_):
+        # Check if the App specifies any API URLs
         api_app_name = f"{app_config.name}-api"
         try:
             entry = (
@@ -148,7 +145,7 @@ class PluginsAPIRootView(NautobotAPIVersionMixin, APIView):
                 ),
             )
         except NoReverseMatch:
-            # The plugin does not include an api-root url
+            # The App does not include an api-root url
             entry = None
 
         return entry
@@ -156,11 +153,24 @@ class PluginsAPIRootView(NautobotAPIVersionMixin, APIView):
     @extend_schema(exclude=True)
     def get(self, request, format=None):  # pylint: disable=redefined-builtin
         entries = []
-        for plugin in settings.PLUGINS:
-            app_config = apps.get_app_config(plugin)
-            entry = self._get_plugin_entry(plugin, app_config, request, format)
+        for app_name in settings.PLUGINS:
+            app_config = apps.get_app_config(app_name)
+            entry = self._get_app_entry(app_config, request, format)
             if entry is not None:
                 entries.append(entry)
+
+        if "apps" in request.path:
+            return Response(
+                OrderedDict(
+                    (
+                        (
+                            "installed-apps",
+                            reverse("apps-api:apps-list", request=request, format=format),
+                        ),
+                        *entries,
+                    )
+                )
+            )
 
         return Response(
             OrderedDict(

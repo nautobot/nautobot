@@ -52,19 +52,6 @@ class TenantGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
             TenantGroup.objects.filter(children__in=[child_groups[0], child_groups[1]]).distinct(),
         )
 
-    def test_has_children(self):
-        """Test the `has_children` filter."""
-        params = {"has_children": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            TenantGroup.objects.filter(children__isnull=False).distinct(),
-        )
-        params = {"has_children": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            TenantGroup.objects.filter(children__isnull=True).distinct(),
-        )
-
     def test_tenants(self):
         """Test the `tenants` filter."""
         tenants = Tenant.objects.filter(tenant_group__isnull=False)
@@ -72,19 +59,6 @@ class TenantGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             TenantGroup.objects.filter(tenants__in=[tenants[0], tenants[1]]).distinct(),
-        )
-
-    def test_has_tenants(self):
-        """Test the `has_tenants` filter."""
-        params = {"has_tenants": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            TenantGroup.objects.filter(tenants__isnull=False).distinct(),
-        )
-        params = {"has_tenants": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            TenantGroup.objects.filter(tenants__isnull=True).distinct(),
         )
 
 
@@ -160,19 +134,6 @@ class TenantTestCase(FilterTestCases.NameOnlyFilterTestCase):
             self.queryset.filter(circuits__in=circuits).distinct(),
         )
 
-    def test_has_circuits(self):
-        """Test the `has_circuits` filter."""
-        params = {"has_circuits": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(circuits__isnull=False).distinct(),
-        )
-        params = {"has_circuits": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(circuits__isnull=True).distinct(),
-        )
-
     def test_clusters(self):
         """Test the `clusters` filter."""
         clusters = list(Cluster.objects.filter(tenant__isnull=False))[:2]
@@ -182,38 +143,12 @@ class TenantTestCase(FilterTestCases.NameOnlyFilterTestCase):
             self.queryset.filter(clusters__in=clusters).distinct(),
         )
 
-    def test_has_clusters(self):
-        """Test the `has_clusters` filter."""
-        params = {"has_clusters": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(clusters__isnull=False).distinct(),
-        )
-        params = {"has_clusters": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(clusters__isnull=True).distinct(),
-        )
-
     def test_devices(self):
         """Test the `devices` filter."""
         params = {"devices": [self.devices[0].pk, self.devices[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(devices__in=self.devices).distinct(),
-        )
-
-    def test_has_devices(self):
-        """Test the `has_devices` filter."""
-        params = {"has_devices": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(devices__isnull=False).distinct(),
-        )
-        params = {"has_devices": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(devices__isnull=True).distinct(),
         )
 
     def test_tenant_group(self):
@@ -241,36 +176,11 @@ class TenantTestCase(FilterTestCases.NameOnlyFilterTestCase):
             self.queryset.filter(ip_addresses__in=ip_addresses).distinct(),
         )
 
-    def test_has_ip_addresses(self):
-        """Test the `has_ip_addresses` filter."""
-        params = {"has_ip_addresses": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(ip_addresses__isnull=False).distinct(),
-        )
-        params = {"has_ip_addresses": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(ip_addresses__isnull=True).distinct(),
-        )
-
     def test_locations(self):
         params = {"locations": [self.locations[0].pk, self.locations[1].name]}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(locations__in=[self.locations[0], self.locations[1]]).distinct(),
-        )
-
-    def test_has_locations(self):
-        params = {"has_locations": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(locations__isnull=False).distinct(),
-        )
-        params = {"has_locations": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(locations__isnull=True).distinct(),
         )
 
     def test_prefixes(self):
@@ -282,19 +192,6 @@ class TenantTestCase(FilterTestCases.NameOnlyFilterTestCase):
             self.queryset.filter(prefixes__in=prefixes).distinct(),
         )
 
-    def test_has_prefixes(self):
-        """Test the `has_prefixes` filter."""
-        params = {"has_prefixes": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(prefixes__isnull=False).distinct(),
-        )
-        params = {"has_prefixes": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(prefixes__isnull=True).distinct(),
-        )
-
     def test_rack_reservations(self):
         """Test the `rack_reservations` filter."""
         rack_reservations = list(RackReservation.objects.filter(tenant__isnull=False))[:2]
@@ -302,19 +199,6 @@ class TenantTestCase(FilterTestCases.NameOnlyFilterTestCase):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(rack_reservations__in=rack_reservations).distinct(),
-        )
-
-    def test_has_rack_reservations(self):
-        """Test the `has_rack_reservations` filter."""
-        params = {"has_rack_reservations": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(rack_reservations__isnull=False).distinct(),
-        )
-        params = {"has_rack_reservations": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(rack_reservations__isnull=True).distinct(),
         )
 
     def test_racks(self):
@@ -326,19 +210,6 @@ class TenantTestCase(FilterTestCases.NameOnlyFilterTestCase):
             self.queryset.filter(racks__in=racks).distinct(),
         )
 
-    def test_has_racks(self):
-        """Test the `has_racks` filter."""
-        params = {"has_racks": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(racks__isnull=False).distinct(),
-        )
-        params = {"has_racks": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(racks__isnull=True).distinct(),
-        )
-
     def test_route_targets(self):
         """Test the `route_targets` filter."""
         route_targets = list(RouteTarget.objects.filter(tenant__isnull=False))[:2]
@@ -346,19 +217,6 @@ class TenantTestCase(FilterTestCases.NameOnlyFilterTestCase):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(route_targets__in=route_targets).distinct(),
-        )
-
-    def test_has_route_targets(self):
-        """Test the `has_route_targets` filter."""
-        params = {"has_route_targets": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(route_targets__isnull=False).distinct(),
-        )
-        params = {"has_route_targets": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(route_targets__isnull=True).distinct(),
         )
 
     def test_virtual_machines(self):
@@ -370,19 +228,6 @@ class TenantTestCase(FilterTestCases.NameOnlyFilterTestCase):
             self.queryset.filter(virtual_machines__in=virtual_machines).distinct(),
         )
 
-    def test_has_virtual_machines(self):
-        """Test the `has_virtual_machines` filter."""
-        params = {"has_virtual_machines": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(virtual_machines__isnull=False).distinct(),
-        )
-        params = {"has_virtual_machines": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(virtual_machines__isnull=True).distinct(),
-        )
-
     def test_vlans(self):
         """Test the `vlans` filter."""
         vlans = list(VLAN.objects.filter(tenant__isnull=False))[:2]
@@ -390,19 +235,6 @@ class TenantTestCase(FilterTestCases.NameOnlyFilterTestCase):
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(vlans__in=vlans).distinct(),
-        )
-
-    def test_has_vlans(self):
-        """Test the `has_vlans` filter."""
-        params = {"has_vlans": True}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(vlans__isnull=False).distinct(),
-        )
-        params = {"has_vlans": False}
-        self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(vlans__isnull=True).distinct(),
         )
 
     def test_vrfs(self):

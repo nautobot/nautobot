@@ -8,6 +8,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import URLValidator
 from django.db import models
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features
@@ -23,7 +24,7 @@ class GitRepository(PrimaryModel):
     """Representation of a Git repository used as an external data source."""
 
     name = models.CharField(
-        max_length=100,
+        max_length=CHARFIELD_MAX_LENGTH,
         unique=True,
     )
     slug = AutoSlugField(
@@ -33,13 +34,13 @@ class GitRepository(PrimaryModel):
     )
 
     remote_url = models.URLField(
-        max_length=255,
+        max_length=CHARFIELD_MAX_LENGTH,
         # For the moment we don't support ssh:// and git:// URLs
         help_text="Only HTTP and HTTPS URLs are presently supported",
         validators=[URLValidator(schemes=["http", "https"])],
     )
     branch = models.CharField(
-        max_length=64,
+        max_length=CHARFIELD_MAX_LENGTH,
         default="main",
     )
 

@@ -13,14 +13,6 @@ class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "description": "A new tenant group",
         }
 
-        cls.csv_data = (
-            "name,description",
-            "Tenant Group 4,Fourth tenant group",
-            "Tenant Group 5,Fifth tenant group",
-            "Tenant Group 6,Sixth tenant group",
-            "Tenant Group 7,Seventh tenant group",
-        )
-
 
 class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Tenant
@@ -37,14 +29,6 @@ class TenantTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "comments": "Some comments",
             "tags": [t.pk for t in Tag.objects.get_for_model(Tenant)],
         }
-
-        cls.csv_data = (
-            "name,description",
-            "Tenant 4,A tenant",
-            "Tenant 5,A tenant",
-            "Tenant 6,A tenant",
-            "Tenant 7,A tenant",
-        )
 
         cls.bulk_edit_data = {
             "tenant_group": tenant_groups[1].pk,

@@ -25,6 +25,7 @@ from nautobot.core.api.utils import (
     nested_serializers_for_models,
     return_nested_serializer_data_based_on_depth,
 )
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.dcim.api.serializers import (
     DeviceSerializer,
@@ -558,9 +559,9 @@ class JobClassSerializer(serializers.Serializer):
     )
     id = serializers.CharField(read_only=True, source="class_path")
     pk = serializers.SerializerMethodField(read_only=True)
-    name = serializers.CharField(max_length=255, read_only=True)
-    description = serializers.CharField(max_length=255, required=False, read_only=True)
-    test_methods = serializers.ListField(child=serializers.CharField(max_length=255))
+    name = serializers.CharField(max_length=CHARFIELD_MAX_LENGTH, read_only=True)
+    description = serializers.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, read_only=True)
+    test_methods = serializers.ListField(child=serializers.CharField(max_length=CHARFIELD_MAX_LENGTH))
     vars = serializers.SerializerMethodField(read_only=True)
 
     @extend_schema_field(serializers.DictField)
@@ -620,7 +621,7 @@ class JobCreationSerializer(BaseModelSerializer):
     """
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:scheduledjob-detail")
-    name = serializers.CharField(max_length=255, required=False)
+    name = serializers.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     start_time = serializers.DateTimeField(format=None, required=False)
 
     class Meta:
@@ -663,7 +664,7 @@ class JobInputSerializer(serializers.Serializer):
 class JobMultiPartInputSerializer(serializers.Serializer):
     """JobMultiPartInputSerializer is a "flattened" version of JobInputSerializer for use with multipart/form-data submissions which only accept key-value pairs"""
 
-    _schedule_name = serializers.CharField(max_length=255, required=False)
+    _schedule_name = serializers.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     _schedule_start_time = serializers.DateTimeField(format=None, required=False)
     _schedule_interval = ChoiceField(choices=JobExecutionType, required=False)
     _schedule_crontab = serializers.CharField(required=False, allow_blank=True)

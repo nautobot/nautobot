@@ -1,9 +1,11 @@
+import contextlib
 import contextvars
 from datetime import timedelta
 import logging
 import os
 import secrets
 import shutil
+import traceback
 
 from db_file_storage.model_utils import delete_file
 from db_file_storage.storage import DatabaseFileStorage
@@ -17,12 +19,16 @@ from django.db.models.signals import m2m_changed, post_delete, post_save, pre_de
 from django.dispatch import receiver
 from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
+import redis.exceptions
 
 from nautobot.core.celery import app, import_jobs_as_celery_tasks
+from nautobot.core.models import BaseModel
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import (
+    ComputedField,
     ContactAssociation,
     CustomField,
     DynamicGroup,
@@ -30,6 +36,7 @@ from nautobot.extras.models import (
     GitRepository,
     JobResult,
     ObjectChange,
+    Relationship,
 )
 from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
@@ -57,6 +64,33 @@ def _get_user_if_authenticated(user, instance):
     else:
         logger.warning(f"Unable to retrieve the user while creating the changelog for {instance}")
         return None
+
+
+@receiver(post_save)
+@receiver(m2m_changed)
+@receiver(post_delete)
+def invalidate_models_cache(sender, **kwargs):
+    """Invalidate the related-models cache for ComputedFields, CustomFields and Relationships."""
+    if sender is CustomField.content_types.through:
+        manager = CustomField.objects
+    elif sender in (ComputedField, CustomField, Relationship):
+        manager = sender.objects
+    else:
+        return
+
+    cached_methods = (
+        "get_for_model",
+        "get_for_model_source",
+        "get_for_model_destination",
+    )
+
+    for method_name in cached_methods:
+        if hasattr(manager, method_name):
+            method = getattr(manager, method_name)
+            if hasattr(method, "cache_key_prefix"):
+                with contextlib.suppress(redis.exceptions.ConnectionError):
+                    # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
+                    cache.delete_pattern(f"{method.cache_key_prefix}.*")
 
 
 @receiver(post_save)
@@ -140,10 +174,12 @@ def _handle_deleted_object(sender, instance, **kwargs):
     if change_context_state.get() is None:
         return
 
-    associations = ContactAssociation.objects.filter(
-        associated_object_type=ContentType.objects.get_for_model(type(instance)), associated_object_id=instance.pk
-    )
-    associations.delete()
+    if isinstance(instance, BaseModel):
+        associations = ContactAssociation.objects.filter(
+            associated_object_type=ContentType.objects.get_for_model(type(instance)), associated_object_id=instance.pk
+        )
+        associations.delete()
+
     if hasattr(instance, "notes") and isinstance(instance.notes, NotesQuerySet):
         notes = instance.notes
         notes.delete()
@@ -244,18 +280,31 @@ def git_repository_pre_delete(instance, **kwargs):
     # In fact, attempting to do so would cause database IntegrityErrors!
     job_result.use_job_logs_db = False
 
-    refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
+    try:
+        refresh_datasource_content("extras.gitrepository", instance, None, job_result, delete=True)
 
-    # In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
-    # of this repository; we need some way to ensure that all such clones are deleted.
-    # In the Celery worker case, we can broadcast a control message to all workers to do so:
-    app.control.broadcast("discard_git_repository", repository_slug=instance.slug)
-    # But we don't have an equivalent way to broadcast to any other Django instances.
-    # For now we just delete the one that we have locally and rely on other methods,
-    # such as the import_jobs_as_celery_tasks() signal that runs on server startup,
-    # to clean up other clones as they're encountered.
-    if os.path.isdir(instance.filesystem_path):
-        shutil.rmtree(instance.filesystem_path)
+        # In a distributed Nautobot deployment, each Django instance and/or worker instance may have its own clone
+        # of this repository; we need some way to ensure that all such clones are deleted.
+        # In the Celery worker case, we can broadcast a control message to all workers to do so:
+        app.control.broadcast("discard_git_repository", repository_slug=instance.slug)
+        # But we don't have an equivalent way to broadcast to any other Django instances.
+        # For now we just delete the one that we have locally and rely on other methods,
+        # such as the import_jobs_as_celery_tasks() signal that runs on server startup,
+        # to clean up other clones as they're encountered.
+        if os.path.isdir(instance.filesystem_path):
+            shutil.rmtree(instance.filesystem_path)
+    except Exception as exc:
+        job_result.result = {
+            "exc_type": type(exc).__name__,
+            "exc_message": sanitize(str(exc)),
+        }
+        job_result.status = JobResultStatusChoices.STATUS_FAILURE
+        job_result.traceback = sanitize("".join(traceback.format_exception(type(exc), exc, exc.__traceback__)))
+    else:
+        job_result.status = JobResultStatusChoices.STATUS_SUCCESS
+    finally:
+        job_result.date_done = timezone.now()
+        job_result.save()
 
 
 #
@@ -308,7 +357,7 @@ def dynamic_group_eligible_groups_changed(sender, instance, **kwargs):
         return
 
     content_type = instance.content_type
-    cache_key = f"{content_type.app_label}.{content_type.model}._get_eligible_dynamic_groups"
+    cache_key = f"nautobot.{content_type.app_label}.{content_type.model}._get_eligible_dynamic_groups"
     cache.set(
         cache_key,
         DynamicGroup.objects.filter(content_type_id=instance.content_type_id),

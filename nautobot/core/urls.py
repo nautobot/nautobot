@@ -7,12 +7,14 @@ from nautobot.core.views import (
     CustomGraphQLView,
     get_file_with_authorization,
     HomeView,
-    nautobot_metrics_view,
+    NautobotMetricsView,
+    NautobotMetricsViewAuth,
     SearchView,
     StaticMediaFailureView,
     ThemePreviewView,
 )
 from nautobot.extras.plugins.urls import (
+    apps_patterns,
     plugin_admin_patterns,
     plugin_patterns,
 )
@@ -45,7 +47,8 @@ urlpatterns = [
     path("admin/", admin_site.urls),
     # Errors
     path("media-failure/", StaticMediaFailureView.as_view(), name="media_failure"),
-    # Plugins
+    # Apps
+    path("apps/", include((apps_patterns, "apps"))),
     path("plugins/", include((plugin_patterns, "plugins"))),
     path("admin/plugins/", include(plugin_admin_patterns)),
     # Social auth/SSO
@@ -58,12 +61,6 @@ urlpatterns = [
         get_file_with_authorization,
         {"add_attachment_headers": True},
         name="db_file_storage.download_file",
-    ),
-    path(
-        "files/get/",
-        get_file_with_authorization,
-        {"add_attachment_headers": False},
-        name="db_file_storage.get_file",
     ),
     # Templated css file
     path(
@@ -84,9 +81,16 @@ if settings.DEBUG:
         pass
 
 if settings.METRICS_ENABLED:
-    urlpatterns += [
-        path("metrics/", nautobot_metrics_view, name="metrics"),
-    ]
+    if settings.METRICS_AUTHENTICATED:
+        urlpatterns += [
+            path("metrics/", NautobotMetricsViewAuth.as_view(), name="metrics"),
+        ]
+    else:
+        urlpatterns += [
+            path("metrics/", NautobotMetricsView.as_view(), name="metrics"),
+        ]
 
 handler404 = "nautobot.core.views.resource_not_found"
 handler500 = "nautobot.core.views.server_error"
+
+urlpatterns += [path("silk/", include("silk.urls", namespace="silk"))]

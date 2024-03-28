@@ -1,4 +1,4 @@
-{% extends 'generic/object_edit.html' %}
+{% extends 'generic/object_create.html' %}
 {% load form_helpers %}
 {% load helpers %}
 
@@ -20,6 +20,12 @@
             {% render_field form.associated_object_id.as_hidden %}
         </div>
     </div>
+{% endblock %}
+
+{% block buttons %}
+    <button type="submit" name="_create" class="btn btn-primary">Assign</button>
+    <button type="submit" name="_addanother" class="btn btn-primary">Assign and Add Another</button>
+    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
 {% endblock %}
 
 {% block javascript %}
