@@ -34,7 +34,7 @@ class BaseTable(django_tables2.Table):
             "class": "table table-hover table-headings",
         }
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, user=None, hide_hierarchy_ui=False, **kwargs):
         # Add custom field columns
         model = self._meta.model
 
@@ -64,6 +64,7 @@ class BaseTable(django_tables2.Table):
 
         # Init table
         super().__init__(*args, **kwargs)
+        self.hide_hierarchy_ui = hide_hierarchy_ui
 
         # Set default empty_text if none was provided
         if self.empty_text is None:
