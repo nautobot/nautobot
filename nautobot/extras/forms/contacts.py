@@ -153,7 +153,7 @@ class ContactAssociationForm(NautobotModelForm):
         ]
 
 
-class MapSimilarContactAssociationForm(NautobotModelForm):
+class LocationSimilarContactAssociationForm(NautobotModelForm):
     location = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
     contact = DynamicModelChoiceField(
         queryset=Contact.objects.all(),

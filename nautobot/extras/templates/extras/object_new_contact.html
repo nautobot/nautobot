@@ -5,9 +5,9 @@
 {% block tabs %}
     {% if not editing %}
         {% if not map %}
-            {% include 'extras/inc/object_contact_header.html' with active_tab='team' %}
+            {% include 'extras/inc/object_contact_header.html' with active_tab='contact' %}
         {% else %}
-            {% include 'extras/inc/map_contact_header.html' with active_tab='team' %}
+            {% include 'extras/inc/map_contact_header.html' with active_tab='contact' %}
         {% endif %}
     {% endif %}
 {% endblock %}
