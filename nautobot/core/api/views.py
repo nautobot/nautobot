@@ -24,9 +24,9 @@ from graphql import get_default_backend
 from graphql.execution import ExecutionResult
 from graphql.execution.middleware import MiddlewareManager
 from graphql.type.schema import GraphQLSchema
-from rest_framework import status
+from rest_framework import routers, status
 from rest_framework.exceptions import ParseError, PermissionDenied
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
@@ -347,15 +347,25 @@ class ReadOnlyModelViewSet(NautobotAPIVersionMixin, ModelViewSetMixin, ReadOnlyM
 #
 
 
-class APIRootView(NautobotAPIVersionMixin, APIView):
+class AuthenticatedAPIRootView(NautobotAPIVersionMixin, routers.APIRootView):
     """
-    This is the root of the REST API. API endpoints are arranged by app and model name; e.g. `/api/dcim/locations/`.
+    Extends DRF's base APIRootView class to enforce user authentication.
     """
 
-    _ignore_model_permissions = True
+    permission_classes = [IsAuthenticated]
 
-    def get_view_name(self):
-        return "API Root"
+    name = None
+    description = None
+
+
+class APIRootView(AuthenticatedAPIRootView):
+    """
+    This is the root of the REST API.
+
+    API endpoints are arranged by app and model name; e.g. `/api/dcim/locations/`.
+    """
+
+    name = "API Root"
 
     @extend_schema(exclude=True)
     def get(self, request, format=None):  # pylint: disable=redefined-builtin
@@ -504,11 +514,6 @@ class NautobotSpectacularSwaggerView(APIVersioningGetSchemaURLMixin, Spectacular
     @extend_schema(exclude=True)
     def get(self, request, *args, **kwargs):
         """Fix up the rendering of the Swagger UI to work with Nautobot's UI."""
-        if not request.user.is_authenticated:
-            doc_url = reverse("api_docs")
-            login_url = reverse(settings.LOGIN_URL)
-            return redirect(f"{login_url}?next={doc_url}")
-
         # For backward compatibility wtih drf-yasg, `/api/docs/?format=openapi` is a redirect to the JSON schema.
         if request.GET.get("format") == "openapi":
             return redirect("schema_json", permanent=True)
@@ -537,11 +542,12 @@ class NautobotSpectacularRedocView(APIVersioningGetSchemaURLMixin, SpectacularRe
 class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
     """
     API View for GraphQL to integrate properly with DRF authentication mechanism.
-    The code is a stripped down version of graphene-django default View
-    https://github.com/graphql-python/graphene-django/blob/main/graphene_django/views.py#L57
     """
 
-    permission_classes = [AllowAny]
+    # The code is a stripped down version of graphene-django default View
+    # https://github.com/graphql-python/graphene-django/blob/main/graphene_django/views.py#L57
+
+    permission_classes = [IsAuthenticated]
     graphql_schema = None
     executor = None
     backend = None

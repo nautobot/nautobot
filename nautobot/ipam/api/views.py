@@ -6,7 +6,6 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
 from rest_framework.response import Response
-from rest_framework.routers import APIRootView
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.config import get_settings_or_config
@@ -31,16 +30,6 @@ from nautobot.ipam.models import (
 )
 
 from . import serializers
-
-
-class IPAMRootView(APIRootView):
-    """
-    IPAM API root view
-    """
-
-    def get_view_name(self):
-        return "IPAM"
-
 
 #
 # Namespace

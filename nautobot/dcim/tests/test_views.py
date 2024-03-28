@@ -2238,7 +2238,7 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
         }
 
     def test_table_with_indentation_is_removed_on_filter_or_sort(self):
-        self.skipTest("InventroyItem table has no implementation of indentation.")
+        self.skipTest("InventoryItem table has no implementation of indentation.")
 
 
 # TODO: Change base class to PrimaryObjectViewTestCase

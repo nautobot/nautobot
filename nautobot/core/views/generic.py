@@ -4,6 +4,7 @@ import re
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
@@ -56,6 +57,14 @@ from nautobot.core.views.utils import (
 from nautobot.extras.models import ContactAssociation, ExportTemplate
 from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import remove_prefix_from_cf_key
+
+
+class GenericView(LoginRequiredMixin, View):
+    """
+    Base class for non-object-related views.
+
+    Enforces authentication, which Django's base View does not by default.
+    """
 
 
 class ObjectView(ObjectPermissionRequiredMixin, View):

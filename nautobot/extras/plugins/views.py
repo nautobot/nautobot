@@ -2,11 +2,9 @@ from collections import OrderedDict
 
 from django.apps import apps
 from django.conf import settings
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404
 from django.shortcuts import render
 from django.urls.exceptions import NoReverseMatch
-from django.views.generic import View
 from django_tables2 import RequestConfig
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions
@@ -14,13 +12,14 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 
-from nautobot.core.api.views import NautobotAPIVersionMixin
+from nautobot.core.api.views import AuthenticatedAPIRootView, NautobotAPIVersionMixin
 from nautobot.core.forms import TableConfigForm
+from nautobot.core.views.generic import GenericView
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.plugins.tables import InstalledAppsTable
 
 
-class InstalledAppsView(LoginRequiredMixin, View):
+class InstalledAppsView(GenericView):
     """
     View for listing all installed Apps.
     """
@@ -66,7 +65,7 @@ class InstalledAppsView(LoginRequiredMixin, View):
         )
 
 
-class InstalledAppDetailView(LoginRequiredMixin, View):
+class InstalledAppDetailView(GenericView):
     """
     View for showing details of an installed App.
     """
@@ -93,7 +92,6 @@ class InstalledAppsAPIView(NautobotAPIVersionMixin, APIView):
     """
 
     permission_classes = [permissions.IsAdminUser]
-    _ignore_model_permissions = True
 
     def get_view_name(self):
         return "Installed Apps"
@@ -129,11 +127,9 @@ class InstalledAppsAPIView(NautobotAPIVersionMixin, APIView):
         return Response([self._get_app_data(apps.get_app_config(app)) for app in settings.PLUGINS])
 
 
-class AppsAPIRootView(NautobotAPIVersionMixin, APIView):
-    _ignore_model_permissions = True
-
-    def get_view_name(self):
-        return "Apps"
+class AppsAPIRootView(AuthenticatedAPIRootView):
+    name = "Apps"
+    description = "API extension point for installed Nautobot Apps"
 
     @staticmethod
     def _get_app_entry(app_config, request, format_):
