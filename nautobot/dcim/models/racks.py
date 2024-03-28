@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
@@ -275,7 +273,7 @@ class Rack(PrimaryModel):
             contains a height attribute for the device
         """
 
-        elevation = OrderedDict()
+        elevation = {}
         for u in self.units:
             elevation[u] = {
                 "id": u,
