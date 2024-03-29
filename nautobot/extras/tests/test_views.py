@@ -3012,6 +3012,8 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
                     result = "IP Addresses"
                 elif result == "Vlans":
                     result = "VLANs"
+                elif result == "Vm Interfaces":
+                    result = "VM Interfaces"
                 # Assert tables are correctly rendered
                 if content_type not in role_content_types:
                     if result == "Contact Associations":
