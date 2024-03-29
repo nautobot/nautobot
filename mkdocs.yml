@@ -92,7 +92,11 @@ markdown_extensions:
       anchor_linenums: true
   - "pymdownx.inlinehilite"
   - "pymdownx.snippets"
-  - "pymdownx.superfences"
+  - "pymdownx.superfences":
+      custom_fences:
+        - name: "mermaid"
+          class: "mermaid"
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - "pymdownx.tabbed":
       "alternate_style": true
 
@@ -101,7 +105,11 @@ plugins:
   - "gen-files":
       scripts:
         - docs/generate_code_reference_pages.py
-  - "include-markdown"
+  - "macros":
+      module_name: "docs/macros"
+      on_error_fail: true
+      on_undefined: "strict"
+      render_by_default: false  # Only enable macros and Jinja2 rendering on specific pages
   - "mkdocs-version-annotations"
   - "section-index"
   - "mkdocstrings":
@@ -113,6 +121,7 @@ plugins:
             heading_level: 1
             show_root_heading: true
             show_root_members_full_path: true
+            show_source: false
   - "redirects":
       redirect_maps:
         # 1.6 -> 2.x
@@ -185,6 +194,8 @@ plugins:
         'models/circuits/provider.md': 'user-guide/core-data-model/circuits/provider.md'
         'models/circuits/providernetwork.md': 'user-guide/core-data-model/circuits/providernetwork.md'
         'models/dcim/cable.md': 'user-guide/core-data-model/dcim/cable.md'
+        'models/dcim/controller.md': 'user-guide/core-data-model/dcim/controller.md'
+        'models/dcim/controllermanageddevicegroup.md': 'user-guide/core-data-model/dcim/controllermanageddevicegroup.md'
         'models/dcim/consoleport.md': 'user-guide/core-data-model/dcim/consoleport.md'
         'models/dcim/consoleporttemplate.md': 'user-guide/core-data-model/dcim/consoleporttemplate.md'
         'models/dcim/consoleserverport.md': 'user-guide/core-data-model/dcim/consoleserverport.md'
@@ -192,6 +203,7 @@ plugins:
         'models/dcim/device.md': 'user-guide/core-data-model/dcim/device.md'
         'models/dcim/devicebay.md': 'user-guide/core-data-model/dcim/devicebay.md'
         'models/dcim/devicebaytemplate.md': 'user-guide/core-data-model/dcim/devicebaytemplate.md'
+        'models/dcim/devicefamily.md': 'user-guide/core-data-model/dcim/devicefamily.md'
         'models/dcim/deviceredundancygroup.md': 'user-guide/core-data-model/dcim/deviceredundancygroup.md'
         'models/dcim/devicetype.md': 'user-guide/core-data-model/dcim/devicetype.md'
         'models/dcim/frontport.md': 'user-guide/core-data-model/dcim/frontport.md'
@@ -214,8 +226,11 @@ plugins:
         'models/dcim/rackreservation.md': 'user-guide/core-data-model/dcim/rackreservation.md'
         'models/dcim/rearport.md': 'user-guide/core-data-model/dcim/rearport.md'
         'models/dcim/rearporttemplate.md': 'user-guide/core-data-model/dcim/rearporttemplate.md'
+        'models/dcim/softwareimagefile.md': 'user-guide/core-data-model/dcim/softwareimagefile.md'
+        'models/dcim/softwareversion.md': 'user-guide/core-data-model/dcim/softwareversion.md'
         'models/dcim/virtualchassis.md': 'user-guide/core-data-model/dcim/virtualchassis.md'
         'models/extras/computedfield.md': 'user-guide/platform-functionality/computedfield.md'
+        'models/extras/contact.md': 'user-guide/core-data-model/extras/contact.md'
         'models/extras/configcontext.md': 'user-guide/core-data-model/extras/configcontext.md'
         'models/extras/configcontextschema.md': 'user-guide/core-data-model/extras/configcontextschema.md'
         'models/extras/customfield.md': 'user-guide/platform-functionality/customfield.md'
@@ -228,6 +243,7 @@ plugins:
         'models/extras/jobresult.md': 'user-guide/platform-functionality/jobs/models.md'
         'models/extras/secret.md': 'user-guide/platform-functionality/secret.md'
         'models/extras/secretsgroup.md': 'user-guide/platform-functionality/secret.md'
+        'models/extras/team.md': 'user-guide/core-data-model/extras/team.md'
         'models/ipam/ipaddress.md': 'user-guide/core-data-model/ipam/ipaddress.md'
         'models/ipam/prefix.md': 'user-guide/core-data-model/ipam/prefix.md'
         'models/ipam/rir.md': 'user-guide/core-data-model/ipam/rir.md'
@@ -329,11 +345,13 @@ nav:
         - VLANS and VLAN Groups: "user-guide/feature-guides/getting-started/vlans-and-vlan-groups.md"
         - IP Address Management: "user-guide/feature-guides/getting-started/ipam.md"
         - The Search Bar: "user-guide/feature-guides/getting-started/search-bar.md"
+      - Contacts and Teams: "user-guide/feature-guides/contacts-and-teams.md"
       - Custom Fields: "user-guide/feature-guides/custom-fields.md"
       - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"
       - GraphQL: "user-guide/feature-guides/graphql.md"
       - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
       - Relationships: "user-guide/feature-guides/relationships.md"
+      - Software Image Files and Versions: "user-guide/feature-guides/software-image-files-and-versions.md"
     - Core Data Model:
       - Overview:
         - Introduction: "user-guide/core-data-model/overview/introduction.md"
@@ -349,6 +367,7 @@ nav:
         - Rack Group: "user-guide/core-data-model/dcim/rackgroup.md"
         - Rack: "user-guide/core-data-model/dcim/rack.md"
         - Manufacturer: "user-guide/core-data-model/dcim/manufacturer.md"
+        - Device Family: "user-guide/core-data-model/dcim/devicefamily.md"
         - Platform: "user-guide/core-data-model/dcim/platform.md"
         - Device Type:
           - "user-guide/core-data-model/dcim/devicetype.md"
@@ -377,10 +396,16 @@ nav:
         - Power Panel : "user-guide/core-data-model/dcim/powerpanel.md"
         - Power Feed: "user-guide/core-data-model/dcim/powerfeed.md"
         - Rack Reservation: "user-guide/core-data-model/dcim/rackreservation.md"
+        - Software Image File: "user-guide/core-data-model/dcim/softwareimagefile.md"
+        - Software Version: "user-guide/core-data-model/dcim/softwareversion.md"
         - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
+        - Controller: "user-guide/core-data-model/dcim/controller.md"
+        - Controller Managed Device Group: "user-guide/core-data-model/dcim/controllermanageddevicegroup.md"
       - Extras:
         - Config Context: "user-guide/core-data-model/extras/configcontext.md"
         - Config Context Schema: "user-guide/core-data-model/extras/configcontextschema.md"
+        - Contact: "user-guide/core-data-model/extras/contact.md"
+        - Team: "user-guide/core-data-model/extras/team.md"
       - IPAM:
         - IP Address: "user-guide/core-data-model/ipam/ipaddress.md"
         - Namespace: "user-guide/core-data-model/ipam/namespace.md"
@@ -491,6 +516,7 @@ nav:
         - nautobot.apps.change_logging: "code-reference/nautobot/apps/change_logging.md"
         - nautobot.apps.choices: "code-reference/nautobot/apps/choices.md"
         - nautobot.apps.config: "code-reference/nautobot/apps/config.md"
+        - nautobot.apps.constants: "code-reference/nautobot/apps/constants.md"
         - nautobot.apps.datasources: "code-reference/nautobot/apps/datasources.md"
         - nautobot.apps.exceptions: "code-reference/nautobot/apps/exceptions.md"
         - nautobot.apps.factory: "code-reference/nautobot/apps/factory.md"
@@ -521,11 +547,13 @@ nav:
     - Core Developer Guide:
       - "development/core/index.md"
       - Getting Started: "development/core/getting-started.md"
+      - Adding and Updating Nautobot Settings: "development/core/settings.md"
       - Advanced Docker Compose Usage: "development/core/docker-compose-advanced-use-cases.md"
       - Application Registry: "development/core/application-registry.md"
       - Bootstrap UI: "development/core/bootstrap-ui.md"
       - Best Practices: "development/core/best-practices.md"
       - Caching: "development/core/caching.md"
+      - Controllers: "development/core/controllers.md"
       - Extending Models: "development/core/extending-models.md"
       - Generic Views: "development/core/generic-views.md"
       - Home Page Panels: "development/core/homepage.md"
@@ -540,6 +568,7 @@ nav:
       - Release Checklist: "development/core/release-checklist.md"
   - Release Notes:
     - "release-notes/index.md"
+    - Version 2.2: "release-notes/version-2.2.md"
     - Version 2.1: "release-notes/version-2.1.md"
     - Version 2.0: "release-notes/version-2.0.md"
     - Version 1.6: "release-notes/version-1.6.md"
@@ -557,7 +586,7 @@ nav:
       - Nautobot Data Validation Engine: "https://docs.nautobot.com/projects/data-validation/en/latest/"
       - Nautobot Device LifeCycle Management: "https://docs.nautobot.com/projects/device-lifecycle/en/latest/"
       - Nautobot Device Onboarding: "https://docs.nautobot.com/projects/device-onboarding/en/latest/"
-      - Nautobot Firewall Models: "https://nautobot-plugin-firewall-models.readthedocs.io/en/latest/"
+      - Nautobot Firewall Models: "https://docs.nautobot.com/projects/firewall-models/en/latest/"
       - Nautobot Golden Configuration: "https://docs.nautobot.com/projects/golden-config/"
       - Nautobot Plugin Nornir: "https://docs.nautobot.com/projects/plugin-nornir/en/latest/"
       - Nautobot Single Source of Truth: "https://docs.nautobot.com/projects/ssot/en/latest/"

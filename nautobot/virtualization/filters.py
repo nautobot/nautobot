@@ -13,7 +13,7 @@ from nautobot.core.filters import (
 )
 from nautobot.core.utils.data import is_uuid
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
-from nautobot.dcim.models import Device, Location, Platform
+from nautobot.dcim.models import Device, Location, Platform, SoftwareImageFile, SoftwareVersion
 from nautobot.extras.filters import (
     CustomFieldModelFilterSetMixin,
     LocalContextModelFilterSetMixin,
@@ -200,10 +200,41 @@ class VirtualMachineFilterSet(
         field_name="interfaces",
         label="Has interfaces",
     )
+    has_software_image_files = RelatedMembershipBooleanFilter(
+        field_name="software_image_files",
+        label="Has software image files",
+    )
+    software_image_files = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareImageFile.objects.all(),
+        to_field_name="image_file_name",
+        label="Software image files (image file name or ID)",
+    )
+    has_software_version = RelatedMembershipBooleanFilter(
+        field_name="software_version",
+        label="Has software version",
+    )
+    software_version = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=SoftwareVersion.objects.all(),
+        to_field_name="version",
+        label="Software version (version or ID)",
+    )
 
     class Meta:
         model = VirtualMachine
-        fields = ["id", "name", "cluster", "vcpus", "memory", "disk", "comments", "tags"]
+        fields = [
+            "id",
+            "name",
+            "cluster",
+            "vcpus",
+            "memory",
+            "disk",
+            "comments",
+            "has_software_image_files",
+            "software_image_files",
+            "has_software_version",
+            "software_version",
+            "tags",
+        ]
 
     def generate_query__has_primary_ip(self, value):
         query = Q(primary_ip4__isnull=False) | Q(primary_ip6__isnull=False)

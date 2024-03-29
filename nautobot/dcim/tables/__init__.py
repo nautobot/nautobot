@@ -8,6 +8,8 @@ from .cables import CableTable
 from .devices import (
     ConsolePortTable,
     ConsoleServerPortTable,
+    ControllerManagedDeviceGroupTable,
+    ControllerTable,
     DeviceBayTable,
     DeviceConsolePortTable,
     DeviceConsoleServerPortTable,
@@ -30,12 +32,15 @@ from .devices import (
     PowerOutletTable,
     PowerPortTable,
     RearPortTable,
+    SoftwareImageFileTable,
+    SoftwareVersionTable,
     VirtualChassisTable,
 )
 from .devicetypes import (
     ConsolePortTemplateTable,
     ConsoleServerPortTemplateTable,
     DeviceBayTemplateTable,
+    DeviceFamilyTable,
     DeviceTypeTable,
     FrontPortTemplateTable,
     InterfaceTemplateTable,
@@ -60,11 +65,14 @@ __all__ = (
     "ConsolePortTemplateTable",
     "ConsoleServerPortTable",
     "ConsoleServerPortTemplateTable",
+    "ControllerTable",
+    "ControllerManagedDeviceGroupTable",
     "DeviceBayTable",
     "DeviceBayTemplateTable",
     "DeviceConsolePortTable",
     "DeviceConsoleServerPortTable",
     "DeviceDeviceBayTable",
+    "DeviceFamilyTable",
     "DeviceFrontPortTable",
     "DeviceImportTable",
     "DeviceInterfaceTable",
@@ -100,6 +108,8 @@ __all__ = (
     "RackTable",
     "RearPortTable",
     "RearPortTemplateTable",
+    "SoftwareImageFileTable",
+    "SoftwareVersionTable",
     "VirtualChassisTable",
 )
 

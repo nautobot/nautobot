@@ -54,7 +54,7 @@ class TenantGroupDeleteView(generic.ObjectDeleteView):
     queryset = TenantGroup.objects.all()
 
 
-class TenantGroupBulkImportView(generic.BulkImportView):
+class TenantGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = TenantGroup.objects.all()
     table = tables.TenantGroupTable
 
@@ -115,7 +115,7 @@ class TenantDeleteView(generic.ObjectDeleteView):
     queryset = Tenant.objects.all()
 
 
-class TenantBulkImportView(generic.BulkImportView):
+class TenantBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Tenant.objects.all()
     table = tables.TenantTable
 

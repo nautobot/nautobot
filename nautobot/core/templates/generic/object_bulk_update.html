@@ -36,17 +36,19 @@
             <div class="panel panel-default">
                 <div class="panel-heading"><strong>{% block form_title %}Attributes{% endblock %}</strong></div>
                 <div class="panel-body">
-                    {% for field in form.visible_fields %}
-                        {% if field.name in form.nullable_fields %}
-                            {% render_field field bulk_nullable=True %}
-                        {% elif field.name == "object_note" %}
-                            {% if perms.extras.add_note %}
+                    {% block form_fields %}
+                        {% for field in form.visible_fields %}
+                            {% if field.name in form.nullable_fields %}
+                                {% render_field field bulk_nullable=True %}
+                            {% elif field.name == "object_note" %}
+                                {% if perms.extras.add_note %}
+                                    {% render_field field %}
+                                {% endif %}
+                            {% else%}
                                 {% render_field field %}
                             {% endif %}
-                        {% else%}
-                            {% render_field field %}
-                        {% endif %}
-                    {% endfor %}
+                        {% endfor %}
+                    {% endblock %}
                 </div>
             </div>
 		    <div class="form-group text-right">

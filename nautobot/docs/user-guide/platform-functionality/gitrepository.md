@@ -5,7 +5,7 @@ Some text-based content is more conveniently stored in a separate Git repository
 * Job source files and associated data files,
 * Configuration context data
 * Export templates
-* Additional data types as registered by any installed plugins
+* Additional data types as registered by any installed Apps
 
 !!! important
     Nautobot's Git integration depends on the availability of the `git` program. If `git` is not installed, Nautobot will be unable to pull data from Git repositories.

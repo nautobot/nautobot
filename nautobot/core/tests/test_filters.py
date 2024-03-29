@@ -13,10 +13,11 @@ from tree_queries.models import TreeNodeForeignKey
 from nautobot.circuits.filters import CircuitFilterSet
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core import filters, testing
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import fields as core_fields
 from nautobot.core.utils import lookup
 from nautobot.dcim import choices as dcim_choices, filters as dcim_filters, models as dcim_models
-from nautobot.dcim.models import Device
+from nautobot.dcim.models import Controller, Device
 from nautobot.extras import models as extras_models
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam import models as ipam_models
@@ -409,7 +410,7 @@ class BaseFilterSetTest(TestCase):
     Ensure that a BaseFilterSet automatically creates the expected set of filters for each filter type.
     """
 
-    class TestFilterSet(filters.BaseFilterSet):
+    class TestFilterSet(filters.BaseFilterSet):  # pylint: disable=used-before-assignment  # appears to be a pylint bug
         """Filterset for testing various fields."""
 
         class TestModel(django_models.Model):  # noqa: DJ008  # django-model-without-dunder-str -- fine since this isn't a "real" model
@@ -417,7 +418,7 @@ class BaseFilterSetTest(TestCase):
             Test model used by BaseFilterSetTest for filter validation. Should never appear in a schema migration.
             """
 
-            charfield = django_models.CharField(max_length=10)
+            charfield = django_models.CharField(max_length=CHARFIELD_MAX_LENGTH)
             choicefield = django_models.IntegerField(choices=(("A", 1), ("B", 2), ("C", 3)))
             charchoicefield = django_models.CharField(
                 choices=(("1", "Option 1"), ("2", "Option 2"), ("3", "Option 3")), max_length=10
@@ -829,6 +830,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         manufacturers = dcim_models.Manufacturer.objects.all()[:3]
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
 
         device_types = (
