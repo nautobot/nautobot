@@ -1,4 +1,4 @@
-from textwrap import indent
+from textwrap import dedent, indent
 
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand
@@ -11,6 +11,16 @@ from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Te
 
 class Command(BaseCommand):
     help = "Migrate Location contact fields to Contact and Team objects."
+    verbose_help = """
+    This command will present a series of prompts to guide you through migrating Locations that
+    have data in the `contact_name`, `contact_phone`, or `contact_email` fields which are not
+    already associated to a Contact or Team. This command will give you the option to create new
+    Contacts or Teams or, if a similar Contact or Team already exists, to link the Location to the
+    existing Contact or Team. Note that when assigning a Location to an existing Contact or Team
+    that has a blank `phone` or `email` field, the value from the Location will be copied to the
+    Contact/Team. After a Location has been associated to a Contact or Team, the `contact_name`,
+    `contact_phone`, and `contact_email` fields will be cleared from the Location.
+    """
 
     def handle(self, *args, **kwargs):
         status_role_err_msg = "No {0} found for the ContactAssociation content type. Please ensure {0} are created before running this command."
@@ -20,6 +30,8 @@ class Command(BaseCommand):
         if not Role.objects.get_for_model(ContactAssociation).exists():
             self.stdout.write(self.style.ERROR(status_role_err_msg.format("roles")))
             return
+
+        self.stdout.write(self.style.NOTICE(" ".join(dedent(self.verbose_help).split("\n"))))
 
         try:
             with transaction.atomic():
