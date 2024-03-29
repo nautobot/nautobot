@@ -8,6 +8,7 @@ from django.db import models
 from django.db.models import Sum
 from django.utils.functional import classproperty
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import ColorField
 from nautobot.core.utils.data import to_meters
 from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices
@@ -74,7 +75,7 @@ class Cable(PrimaryModel):
     termination_b = GenericForeignKey(ct_field="termination_b_type", fk_field="termination_b_id")
     type = models.CharField(max_length=50, choices=CableTypeChoices, blank=True)
     status = StatusField(blank=False, null=False)
-    label = models.CharField(max_length=100, blank=True)
+    label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     color = ColorField(blank=True)
     length = models.PositiveSmallIntegerField(blank=True, null=True)
     length_unit = models.CharField(

@@ -1,9 +1,12 @@
 import random
+import string
 
-from django.db.models import Count
+from django.db.models import Count, Q
+from django.db.models.fields.related import ManyToManyField
+from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.test import tag
 
-from nautobot.core.filters import RelatedMembershipBooleanFilter
+from nautobot.core.filters import RelatedMembershipBooleanFilter, SearchFilter
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
 from nautobot.tenancy import models
@@ -41,7 +44,7 @@ class FilterTestCases:
                 # randomly break out of loop after 2 values have been selected
                 if len(test_values) > 1 and random.choice([True, False]):  # noqa: S311  # suspicious-non-cryptographic-random-usage
                     break
-                if value[field_name] and value["count"] < qs_count:
+                if value[field_name] and value["count"] <= qs_count:
                     qs_count -= value["count"]
                     test_values.append(str(value[field_name]))
 
@@ -58,6 +61,9 @@ class FilterTestCases:
         queryset = None
         filterset = None
 
+        # filter predicate fields that should be excluded from q test case
+        exclude_q_filter_predicates = []
+
         # list of filters to be tested by `test_filters_generic`
         # list of iterables with filter name and optional field name
         # example:
@@ -66,6 +72,10 @@ class FilterTestCases:
         #       ["filter2", "field2__name"],
         #   ]
         generic_filter_tests = []
+
+        def get_q_filter(self):
+            """Helper method to return q filter."""
+            return self.filterset.declared_filters["q"].filter_predicates
 
         def test_id(self):
             """Verify that the filterset supports filtering by id."""
@@ -154,6 +164,127 @@ class FilterTestCases:
             # Tags is an AND filter not an OR filter
             qs_result = self.queryset.filter(tags=tags[0]).filter(tags=tags[1]).distinct()
             self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+
+        def test_q_filter_exists(self):
+            """Test the `q` filter exists on a filterset, does not validate the filter works as expected."""
+            self.assertIn("q", self.filterset.declared_filters)
+
+        def _assert_valid_filter_predicates(self, obj, field_name):
+            self.assertTrue(
+                hasattr(obj, field_name),
+                f"`{field_name}` is an Invalid `q` filter predicate for `{self.filterset.__name__}`",
+            )
+
+        def _get_nested_related_obj_and_its_field_name(self, obj, model_field_name):
+            """
+            Get the nested related object and its field name.
+
+            Args:
+                obj: The object to extract the related object from.
+                model_field_name: The field name containing the related object.
+
+            Examples:
+                >>> _get_nested_related_obj_and_its_field_name(<RelationshipAssociation: One>, "relationship__label")
+                (<Relationship: RelationshipExample>, "label")
+                >>> _get_nested_related_obj_and_its_field_name(<Device: DeviceOne>, "rack__rack_group__name")
+                (<RackGroup: RackGroupExample>, "name")
+
+            Returns:
+                Tuple: A tuple containing the related object and its field name.
+            """
+            rel_obj = obj
+            rel_obj_field_name = model_field_name
+            while "__" in rel_obj_field_name:
+                filter_field_name, rel_obj_field_name = rel_obj_field_name.split("__", 1)
+                field = rel_obj._meta.get_field(filter_field_name)
+                if isinstance(field, (ManyToOneRel, ManyToManyRel, ManyToManyField)):
+                    rel_obj = getattr(rel_obj, filter_field_name).first()
+                else:
+                    rel_obj = getattr(rel_obj, filter_field_name)
+            return rel_obj, rel_obj_field_name
+
+        def _assert_q_filter_predicate_validity(self, obj, obj_field_name, filter_field_name, lookup_method):
+            """
+            Assert the validity of a `q` filter predicate.
+
+            Args:
+                obj: The object to filter.
+                obj_field_name: The field name of the object to filter.
+                filter_field_name: The field name of the FilterSet q filter predicate to test.
+                lookup_method: The method used for the lookup e.g icontains.
+            """
+            self._assert_valid_filter_predicates(obj, obj_field_name)
+
+            # Create random 5 char string to append to attribute, used for icontains partial lookup
+            lookup = "".join(random.choices(string.ascii_lowercase, k=5))  # noqa: S311 # pseudo-random generator
+            obj_field_value = getattr(obj, obj_field_name)
+
+            if isinstance(obj_field_value, str):
+                updated_attr = obj_field_value + lookup
+                setattr(obj, obj_field_name, updated_attr)
+            else:
+                # Skip the test if the field is not a CharField, as we currently only support generic testing for CharField
+                self.skipTest("Not a CharField")
+            obj.save()
+            # if lookup_method is iexact use the full updated attr
+            if lookup_method == "iexact":
+                lookup = updated_attr
+                model_queryset = self.queryset.filter(**{f"{filter_field_name}": lookup})
+            else:
+                model_queryset = self.queryset.filter(**{f"{filter_field_name}__icontains": lookup})
+            params = {"q": lookup}
+            filterset_result = self.filterset(params, self.queryset)
+
+            self.assertTrue(filterset_result.is_valid())
+            self.assertQuerysetEqualAndNotEmpty(
+                filterset_result.qs,
+                model_queryset,
+                ordered=False,
+            )
+
+        def _get_relevant_filterset_queryset(self, queryset, *filter_params):
+            """Gets the relevant queryset based on filter parameters."""
+
+            q_query = Q()
+            for param in filter_params:
+                q_query &= Q(**{f"{param}__isnull": False})
+            queryset = queryset.filter(q_query)
+
+            if not queryset.count():
+                raise ValueError(
+                    f"Cannot find valid test data for {queryset.model.__name__} with params {filter_params}"
+                )
+            return queryset
+
+        def test_q_filter_valid(self):
+            """Test the `q` filter based on attributes in `filter_predicates`."""
+            if not self.filterset.declared_filters.get("q"):
+                raise ValueError("`q` filter not implemented")
+
+            if not isinstance(self.filterset.declared_filters.get("q"), SearchFilter):
+                # Some FilterSets like IPAddress,Prefix etc might implement a custom `q` filtering
+                self.skipTest("`q` filter is not a SearchFilter")
+
+            for filter_field_name, lookup_method in self.get_q_filter().items():
+                should_skip_test = (
+                    (lookup_method not in ["icontains", "iexact"])  # only testing icontains and iexact filter lookups
+                    or (
+                        filter_field_name == "id"
+                    )  # Ignore `id` because `SearchFilter` always dynamically includes `id: exact` predicate, only testing on user input `filter_predicates`
+                    or (filter_field_name in self.exclude_q_filter_predicates)
+                )
+                if should_skip_test:
+                    continue
+                with self.subTest(f"Asserting '{filter_field_name}' `q` filter predicates"):
+                    queryset = self._get_relevant_filterset_queryset(self.queryset, filter_field_name)
+                    obj = queryset.first()
+                    obj_field_name = filter_field_name
+
+                    is_nested_filter_name = "__" in filter_field_name
+
+                    if is_nested_filter_name:
+                        obj, obj_field_name = self._get_nested_related_obj_and_its_field_name(obj, obj_field_name)
+                    self._assert_q_filter_predicate_validity(obj, obj_field_name, filter_field_name, lookup_method)
 
     class NameOnlyFilterTestCase(FilterTestCase):
         """Add simple tests for filtering by name."""

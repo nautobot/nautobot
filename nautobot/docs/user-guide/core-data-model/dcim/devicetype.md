@@ -2,7 +2,7 @@
 
 A device type represents a particular make and model of hardware that exists in the real world. Device types define the physical attributes of a device (rack height and depth) and its individual components (console, power, network interfaces, and so on).
 
-Device types are instantiated as devices installed within locations and/or equipment racks. For example, you might define a device type to represent a Juniper EX4300-48T network switch with 48 Ethernet interfaces. You can then create multiple _instances_ of this type named "switch1," "switch2," and so on. Each device will automatically inherit the components (such as interfaces) of its device type at the time of creation. However, changes made to a device type will **not** apply to instances of that device type retroactively.
+Device types are instantiated as devices installed within locations and/or equipment racks. For example, you might define a device type to represent a Juniper EX4300-48T network switch with 48 Ethernet interfaces. You can then create multiple _instances_ of this type named "switch1", "switch2", and so on. Each device will automatically inherit the components (such as interfaces) of its device type at the time of creation. However, changes made to a device type will **not** apply to instances of that device type retroactively.
 
 Some devices house child devices which share physical resources, like space and power, but which functional independently from one another. A common example of this is blade server chassis. Each device type is designated as one of the following:
 
@@ -42,3 +42,9 @@ Once component templates have been created, every new device that you create as 
     Assignment of components from templates occurs only at the time of device creation. If you modify the templates of a device type, it will not affect devices which have already been created. This is intentional and by design as device type templates may evolve over time in your organization. However, you always have the option of adding, modifying, or deleting components on existing devices.
 
     Consider also that automatically changing components of existing devices when a device-type changes would require Nautobot to make very dangerous assumptions. For example, suppose you had a device type which included a specific line card with a specific set of interfaces. After creating some devices, representing your existing deployment of this device type, your deployment for new devices of this type changed to include a different line card and hence different interfaces, so you decided to update the device-type templates accordingly. If Nautobot were to automatically propagate this change to all existing devices of this type, it would result in an incorrect reflection of the reality that all existing devices have not yet been retrofitted with the new line card.
+
++++ 2.2.0
+    The [Device Family](devicefamily.md) model has been introduced to represent a group of related device types. A device type can be optionally assigned to a device family. Each device family must have a unique name and may have a description assigned to it.
+
++++ 2.2.0
+    The [Software Image File](softwareimagefile.md) model has been introduced to represent a software image file that can be installed on a device. One or more software image files can be optionally assigned to a device type. The device type must be associated to a software image file before devices of that type can associate to that image.

@@ -1,13 +1,20 @@
+from difflib import get_close_matches
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 import django_filters
+from drf_spectacular.utils import extend_schema_field
 
+from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.filters import (
     BaseFilterSet,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
     MultiValueUUIDFilter,
+    NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
@@ -47,6 +54,8 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
+    ContactAssociation,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -74,6 +83,7 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
 from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
@@ -83,6 +93,7 @@ from nautobot.virtualization.models import Cluster, ClusterGroup
 __all__ = (
     "ComputedFieldFilterSet",
     "ConfigContextFilterSet",
+    "ContactFilterSet",
     "ContentTypeFilterSet",
     "ContentTypeMultipleChoiceFilter",
     "CreatedUpdatedFilterSet",
@@ -128,6 +139,7 @@ __all__ = (
     "StatusFilterSet",
     "StatusModelFilterSetMixin",
     "TagFilterSet",
+    "TeamFilterSet",
     "WebhookFilterSet",
 )
 
@@ -329,10 +341,56 @@ class ContentTypeFilterSet(BaseFilterSet):
             "model": "icontains",
         },
     )
+    can_add = django_filters.BooleanFilter(method="_can_add", label="User can add objects of this type")
+    can_change = django_filters.BooleanFilter(method="_can_change", label="User can change objects of this type")
+    can_delete = django_filters.BooleanFilter(method="_can_delete", label="User can delete objects of this type")
+    can_view = django_filters.BooleanFilter(method="_can_view", label="User can view objects of this type")
+    has_serializer = django_filters.BooleanFilter(
+        method="_has_serializer", label="A REST API serializer exists for this type"
+    )
 
     class Meta:
         model = ContentType
         fields = ["id", "app_label", "model"]
+
+    def _can_action(self, queryset, name, value, action):
+        if not self.request or not self.request.user:
+            if value:
+                return queryset.none()
+            else:
+                return queryset
+        ct_pks = [
+            ct.pk for ct in queryset if value == self.request.user.has_perm(f"{ct.app_label}.{action}_{ct.model}")
+        ]
+        return queryset.filter(pk__in=ct_pks)
+
+    def _can_add(self, queryset, name, value):
+        return self._can_action(queryset, name, value, action="add")
+
+    def _can_change(self, queryset, name, value):
+        return self._can_action(queryset, name, value, action="change")
+
+    def _can_delete(self, queryset, name, value):
+        return self._can_action(queryset, name, value, action="delete")
+
+    def _can_view(self, queryset, name, value):
+        return self._can_action(queryset, name, value, action="view")
+
+    def _has_serializer(self, queryset, name, value):
+        ct_pks = []
+        for ct in queryset:
+            model = ct.model_class()
+            if not model:
+                continue
+            try:
+                get_serializer_for_model(model)
+            except SerializerNotFound:
+                continue
+            ct_pks.append(ct.pk)
+        if value:
+            return queryset.filter(pk__in=ct_pks)
+        else:
+            return queryset.exclude(pk__in=ct_pks)
 
 
 # TODO: remove in 2.2
@@ -386,6 +444,77 @@ class NautobotFilterSet(
     BaseFilterSet, CreatedUpdatedModelFilterSetMixin, RelationshipModelFilterSetMixin and CustomFieldModelFilterSetMixin
     are needed.
     """
+
+
+#
+# Contacts
+#
+
+
+class ContactTeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
+    """Base filter set for Contacts and Teams."""
+
+    similar_to_location_data = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        label="Similar to location contact data",
+        method="_similar_to_location_data",
+    )
+
+    def generate_query__similar_to_location_data(self, queryset, locations):
+        """Helper method used by _similar_to_location_data() method."""
+        query_params = Q()
+        for location in locations:
+            contact_name = location.contact_name
+            contact_phone = location.contact_phone
+            contact_email = location.contact_email
+            if contact_name:
+                contact_names = list(queryset.order_by().values_list("name", flat=True).distinct())
+                name_matches = get_close_matches(contact_name, contact_names, cutoff=0.8)
+                if name_matches:
+                    query_params |= Q(name__in=name_matches)
+            if contact_phone:
+                contact_phones = list(queryset.order_by().values_list("phone", flat=True).distinct())
+                phone_matches = get_close_matches(contact_phone, contact_phones, cutoff=0.8)
+                if phone_matches:
+                    query_params |= Q(phone__in=phone_matches)
+            if contact_email:
+                contact_emails = list(queryset.order_by().values_list("email", flat=True).distinct())
+                # fuzzy matching for emails doesn't make sense, use case insensitive match here
+                email_matches = [e for e in contact_emails if e.casefold() == contact_email.casefold()]
+                if email_matches:
+                    query_params |= Q(email__in=email_matches)
+
+        return query_params
+
+    @extend_schema_field({"type": "string"})
+    def _similar_to_location_data(self, queryset, name, value):
+        """FilterSet method for getting Contacts or Teams that are similar to the explicit contact fields of a location"""
+        if value:
+            params = self.generate_query__similar_to_location_data(queryset, value)
+            if len(params) > 0:
+                return queryset.filter(params)
+            else:
+                return queryset.none()
+        return queryset
+
+
+class ContactFilterSet(ContactTeamFilterSet):
+    class Meta:
+        model = Contact
+        fields = "__all__"
+
+
+class ContactAssociationFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "contact__name": "icontains",
+            "team__name": "icontains",
+        },
+    )
+
+    class Meta:
+        model = ContactAssociation
+        fields = "__all__"
 
 
 #
@@ -595,7 +724,7 @@ class GraphQLQueryFilterSet(BaseFilterSet):
 #
 
 
-class ImageAttachmentFilterSet(BaseFilterSet):
+class ImageAttachmentFilterSet(BaseFilterSet, NameSearchFilterSet):
     content_type = ContentTypeFilter()
 
     class Meta:
@@ -863,6 +992,13 @@ class RelationshipFilterSet(BaseFilterSet):
 
 
 class RelationshipAssociationFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "relationship__label": "icontains",
+            "relationship__key": "icontains",
+        }
+    )
+
     relationship = django_filters.ModelMultipleChoiceFilter(
         field_name="relationship__key",
         queryset=Relationship.objects.all(),
@@ -939,6 +1075,13 @@ class SecretsGroupFilterSet(
 class SecretsGroupAssociationFilterSet(BaseFilterSet):
     """Filterset for the SecretsGroupAssociation through model."""
 
+    q = SearchFilter(
+        filter_predicates={
+            "secrets_group__name": "icontains",
+            "secret__name": "icontains",
+        },
+    )
+
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
         label="Secrets Group (ID or name)",
@@ -1010,6 +1153,17 @@ class TagFilterSet(NautobotFilterSet):
     class Meta:
         model = Tag
         fields = ["id", "name", "color", "content_types"]
+
+
+#
+# Teams
+#
+
+
+class TeamFilterSet(ContactTeamFilterSet):
+    class Meta:
+        model = Team
+        fields = "__all__"
 
 
 #

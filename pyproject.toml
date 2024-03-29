@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.1.10b1"
+version = "2.2.0b1"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -100,8 +100,7 @@ Jinja2 = "~3.1.3"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
 jsonschema = ">=4.7.0,<4.19.0"
 # Rendering of markdown files to HTML
-# NOTE: Markdown 3.4.x is available but mkdocs 1.4.3 isn't yet compatible with it.
-Markdown = "~3.3.7"
+Markdown = ">=3.3.7,<3.6.0"
 # Escape text to use HTML and XML
 MarkupSafe = "~2.1.5"
 # MySQL database adapter
@@ -152,23 +151,23 @@ sso = ["social-auth-core"]
 
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
-django-debug-toolbar = "~4.1.0"
+django-debug-toolbar = "~4.3.0"
 # DiscoverSlowestTestsRunner for running CI performance tests and benchmarking.
 django-slowtests = "^1.1.1"
-# Nautobot example plugin used for testing
-example-plugin = {path = "examples/example_plugin", develop = true}
-# Nautobot test plugin used for testing core view overrides
-example-plugin-with-view-override = { path = "examples/example_plugin_with_view_override", develop = true }
+# Nautobot example App used for testing
+example-app = {path = "examples/example_app", develop = true}
+# Nautobot test App used for testing core view overrides
+example-app-with-view-override = {path = "examples/example_app_with_view_override", develop = true}
 # Random data generation
-factory-boy = "~3.2.1"
+factory-boy = "~3.3.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.0"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
-rich = "~13.4.2"
+rich = "~13.7.0"
 # Change log management and generation
-towncrier = "~23.6.0"
+towncrier = "~23.11.0"
 # Watch files for celery and mkdocs reload
-watchdog = "~3.0.0"
+watchdog = "~4.0.0"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
@@ -178,9 +177,12 @@ markdown-data-tables = "~1.0.0"
 # Automatically generate some files as part of mkdocs build
 mkdocs-gen-files = "~0.5.0"
 # Allow Markdown files to include other files
+# 3.0 TODO: remove this, as we don't actually use it any more since 2.0?
 mkdocs-include-markdown-plugin = "~4.0.4"
+# Use Jinja2 templating in docs - see optional-settings.md and required-settings.md
+mkdocs-macros-plugin = "~1.0.5"
 # Material for mkdocs theme
-mkdocs-material = "~9.1.18"
+mkdocs-material = "~9.5.8"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.1"
 # Automatically handle index pages for docs sections
@@ -188,19 +190,19 @@ mkdocs-section-index = "~0.3.8"
 # Render custom markdown for version added/changed/remove notes
 mkdocs-version-annotations = "~1.0.0"
 # Automatic documentation from sources, for MkDocs
-mkdocstrings = "~0.22.0"
+mkdocstrings = "~0.24.0"
 # Python-specific extension to mkdocstrings
-mkdocstrings-python = "~1.3.0"
+mkdocstrings-python = "~1.8.0"
 
 [tool.poetry.group.linting.dependencies]
 # Code static analysis
-pylint = "~2.17.7"
+pylint = "~3.0.3"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
 # Combination linter and code formatter
-ruff = "~0.1.15"
+ruff = "~0.2.1"
 # YAML linting
-yamllint = "~1.30.0"
+yamllint = "~1.34.0"
 
 [tool.poetry.group.testing.dependencies]
 # Test code coverage measurement - pinned to 6.4.0 to resolve https://github.com/nedbat/coveragepy/issues/1420
@@ -210,9 +212,9 @@ django-slowtests = "^1.1.1"
 # Integration Tests
 requests = ">=2.28.0,<2.32.0"
 # Selenium web drivers for live integration testing
-selenium = "~4.9.1"
+selenium = "~4.17.2"
 # Abstraction layer for working with Selenium
-splinter = "~0.18.1"
+splinter = "~0.21.0"
 # Serialization of tracebacks - used when running unittest with --parallel flag
 tblib = "~3.0.0"
 
@@ -277,6 +279,7 @@ disable=""",
     missing-function-docstring,
     missing-module-docstring,
     modelform-uses-exclude,
+    no-else-break,
     no-else-raise,
     no-else-return,
     no-member,
@@ -349,13 +352,13 @@ ignore = [
 [tool.ruff.lint.isort]
 combine-as-imports = true
 force-sort-within-sections = true
-known-local-folder = ["example_plugin"]
+known-local-folder = ["example_app"]
 order-by-type = false
 
 [tool.towncrier]
 package = "nautobot"
 directory = "changes"
-filename = "nautobot/docs/release-notes/version-2.1.md"
+filename = "nautobot/docs/release-notes/version-2.2.md"
 template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"

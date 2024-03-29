@@ -140,7 +140,9 @@ def validate_interface_tagged_vlans(instance, model, pk_set):
     # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to add a VLAN
     # belongs to the parent Location or the child location of the parent device to the `tagged_vlan` field of the interface?
     tagged_vlans = (
-        model.objects.filter(pk__in=pk_set).exclude(location__isnull=True).exclude(location=instance.parent.location)
+        model.objects.filter(pk__in=pk_set)
+        .exclude(locations__isnull=True)
+        .exclude(locations__in=[instance.parent.location])
     )
 
     if tagged_vlans.count():

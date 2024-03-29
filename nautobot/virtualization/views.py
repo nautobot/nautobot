@@ -67,7 +67,7 @@ class ClusterTypeDeleteView(generic.ObjectDeleteView):
     queryset = ClusterType.objects.all()
 
 
-class ClusterTypeBulkImportView(generic.BulkImportView):
+class ClusterTypeBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = ClusterType.objects.all()
     table = tables.ClusterTypeTable
 
@@ -126,7 +126,7 @@ class ClusterGroupDeleteView(generic.ObjectDeleteView):
     queryset = ClusterGroup.objects.all()
 
 
-class ClusterGroupBulkImportView(generic.BulkImportView):
+class ClusterGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = ClusterGroup.objects.all()
     table = tables.ClusterGroupTable
 
@@ -181,7 +181,7 @@ class ClusterDeleteView(generic.ObjectDeleteView):
     queryset = Cluster.objects.all()
 
 
-class ClusterBulkImportView(generic.BulkImportView):
+class ClusterBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Cluster.objects.all()
     table = tables.ClusterTable
 
@@ -304,7 +304,7 @@ class VirtualMachineListView(generic.ObjectListView):
 
 
 class VirtualMachineView(generic.ObjectView):
-    queryset = VirtualMachine.objects.select_related("tenant__tenant_group")
+    queryset = VirtualMachine.objects.select_related("software_version", "tenant__tenant_group")
 
     def get_extra_context(self, request, instance):
         # Interfaces
@@ -331,9 +331,16 @@ class VirtualMachineView(generic.ObjectView):
         vrf_table = VRFDeviceAssignmentTable(vrf_assignments)
         vrf_table.exclude = ("device", "virtual_machine")
 
+        # Software images
+        if instance.software_version is not None:
+            software_version_images = instance.software_version.software_image_files.restrict(request.user, "view")
+        else:
+            software_version_images = []
+
         return {
             "vminterface_table": vminterface_table,
             "services": services,
+            "software_version_images": software_version_images,
             "vrf_table": vrf_table,
         }
 
@@ -359,7 +366,7 @@ class VirtualMachineDeleteView(generic.ObjectDeleteView):
     queryset = VirtualMachine.objects.all()
 
 
-class VirtualMachineBulkImportView(generic.BulkImportView):
+class VirtualMachineBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = VirtualMachine.objects.all()
     table = tables.VirtualMachineTable
 
@@ -412,9 +419,7 @@ class VMInterfaceView(generic.ObjectView):
             vlans.append(instance.untagged_vlan)
             vlans[0].tagged = False
 
-        for vlan in instance.tagged_vlans.restrict(request.user).select_related(
-            "location", "vlan_group", "tenant", "role"
-        ):
+        for vlan in instance.tagged_vlans.restrict(request.user).select_related("vlan_group", "tenant", "role"):
             vlan.tagged = True
             vlans.append(vlan)
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
@@ -426,7 +431,6 @@ class VMInterfaceView(generic.ObjectView):
         }
 
 
-# 2.0 TODO: This will be collapsed into `InterfaceCreateView` and will go away.
 class VMInterfaceCreateView(generic.ComponentCreateView):
     queryset = VMInterface.objects.all()
     form = forms.VMInterfaceCreateForm
@@ -445,7 +449,7 @@ class VMInterfaceDeleteView(generic.ObjectDeleteView):
     template_name = "virtualization/virtual_machine_vminterface_delete.html"
 
 
-class VMInterfaceBulkImportView(generic.BulkImportView):
+class VMInterfaceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = VMInterface.objects.all()
     table = tables.VMInterfaceTable
 

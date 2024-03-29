@@ -15,10 +15,10 @@ JOBS_ROOT = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "extras", "test_jobs"
 )
 
-# Enable both example plugins
+# Enable both example apps
 PLUGINS = [
-    "example_plugin",
-    "example_plugin_with_view_override",
+    "example_app",
+    "example_app_with_view_override",
 ]
 
 # Hard-code the SECRET_KEY for simplicity

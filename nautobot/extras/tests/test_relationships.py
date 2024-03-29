@@ -15,7 +15,15 @@ from nautobot.core.tables import RelationshipColumn
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.utils.lookup import get_route_for_model
-from nautobot.dcim.models import Device, Location, LocationType, Platform, Rack
+from nautobot.dcim.models import (
+    Controller,
+    Device,
+    DeviceTypeToSoftwareImageFile,
+    Location,
+    LocationType,
+    Platform,
+    Rack,
+)
 from nautobot.dcim.tables import LocationTable
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
@@ -126,8 +134,8 @@ class RelationshipBaseTest:
         cls.m2ms_1.validated_save()
 
         # Relationships involving a content type that doesn't actually have a backing model.
-        # This can occur in practice if, for example, a relationship is defined for a plugin-defined model,
-        # then the plugin is subsequently uninstalled or deactivated.
+        # This can occur in practice if, for example, a relationship is defined for an App-defined model,
+        # then the App is subsequently uninstalled or deactivated.
         cls.invalid_ct = ContentType.objects.create(app_label="nonexistent", model="nosuchmodel")
 
         # Don't use validated_save() on these as it will fail due to the invalid content-type
@@ -1162,6 +1170,11 @@ class RequiredRelationshipTestMixin:
            =================================================================
 
         """
+        # Protected FK to SoftwareImageFile prevents deletion
+        DeviceTypeToSoftwareImageFile.objects.all().delete()
+        # Protected FK to SoftwareVersion prevents deletion
+        Controller.objects.all().delete()
+        Device.objects.all().update(software_version=None)
 
         # Create required relationships:
         device_ct = ContentType.objects.get_for_model(Device)

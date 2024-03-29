@@ -1,3 +1,4 @@
+import datetime
 import json
 from unittest import skip
 
@@ -15,6 +16,7 @@ from nautobot.dcim.choices import (
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedTypeChoices,
+    SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.models import (
@@ -23,11 +25,15 @@ from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
     Interface,
@@ -49,6 +55,8 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
+    SoftwareImageFile,
+    SoftwareVersion,
     VirtualChassis,
 )
 from nautobot.extras.models import ConfigContextSchema, Role, SecretsGroup, Status
@@ -142,6 +150,22 @@ class Mixins:
 
     class BasePortTemplateTestMixin(BaseComponentTestMixin):
         """Mixin class for all `FooPortTemplate` tests."""
+
+    class SoftwareImageFileRelatedModelMixin:
+        """
+        The SoftwareImageFile hashing_algorithm field includes some values (md5, sha1, etc.) that are
+        considered indicators of sensitive data which cause APITestCase.assert_no_verboten_content() to fail.
+        We remove those values from the VERBOTEN_STRINGS property to allow the test to pass for any models
+        that could return a SoftwareImageFile representation in a depth > 0 API call.
+        """
+
+        VERBOTEN_STRINGS = tuple(
+            [
+                o
+                for o in APITestCase.VERBOTEN_STRINGS
+                if o not in SoftwareImageFileHashingAlgorithmChoices.as_dict().keys()
+            ]
+        )
 
 
 class LocationTypeTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
@@ -693,6 +717,35 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
+class DeviceFamilyTest(APIViewTestCases.APIViewTestCase):
+    model = DeviceFamily
+    create_data = [
+        {
+            "name": "Device Family 4",
+            "description": "Fourth Device Family",
+        },
+        {
+            "name": "Device Family 5",
+        },
+        {
+            "name": "Device Family 6",
+            "description": "Sixth Device Family",
+        },
+        {
+            "name": "Device Family 7",
+        },
+    ]
+    bulk_update_data = {
+        "description": "New description",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        DeviceFamily.objects.create(name="Deletable Device Family 1")
+        DeviceFamily.objects.create(name="Deletable Device Family 2", description="Delete this one")
+        DeviceFamily.objects.create(name="Deletable Device Family 3")
+
+
 class ManufacturerTest(APIViewTestCases.APIViewTestCase):
     model = Manufacturer
     create_data = [
@@ -715,15 +768,16 @@ class ManufacturerTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
+        # FIXME: This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         DeviceType.objects.all().delete()
         Platform.objects.all().delete()
 
 
-class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
+class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases.APIViewTestCase):
     model = DeviceType
     bulk_update_data = {
         "part_number": "ABC123",
@@ -733,15 +787,18 @@ class DeviceTypeTest(APIViewTestCases.APIViewTestCase):
     @classmethod
     def setUpTestData(cls):
         manufacturer_id = Manufacturer.objects.first().pk
+        device_family_id = DeviceFamily.objects.first().pk
 
         cls.create_data = [
             {
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 4",
+                "device_family": device_family_id,
             },
             {
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 5",
+                "device_family": device_family_id,
             },
             {
                 "manufacturer": manufacturer_id,
@@ -1070,6 +1127,13 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
         "network_driver": "cisco_xe",
     }
 
+    @classmethod
+    def setUpTestData(cls):
+        # Protected FK to SoftwareImageFile prevents deletion
+        DeviceTypeToSoftwareImageFile.objects.all().delete()
+        # Protected FK to SoftwareVersion prevents deletion
+        Device.objects.all().update(software_version=None)
+
     @override_settings(
         NETWORK_DRIVERS={
             "netmiko": {"cisco_ios": "custom_cisco_netmiko"},
@@ -1103,6 +1167,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
@@ -1126,8 +1191,11 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             SecretsGroup.objects.create(name="Secrets Group 2"),
         )
 
-        device_type = DeviceType.objects.first()
+        device_type = DeviceType.objects.filter(software_image_files__isnull=False).first()
         device_role = Role.objects.get_for_model(Device).first()
+
+        software_version = SoftwareVersion.objects.filter(software_image_files__device_types=device_type).first()
+        software_image_files = SoftwareImageFile.objects.exclude(software_version=software_version)[:2]
 
         Device.objects.create(
             device_type=device_type,
@@ -1139,6 +1207,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
             local_config_context_data={"A": 1},
+            software_version=software_version,
         )
         Device.objects.create(
             device_type=device_type,
@@ -1150,6 +1219,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             cluster=clusters[0],
             secrets_group=secrets_groups[0],
             local_config_context_data={"B": 2},
+            software_version=software_version,
         )
         Device.objects.create(
             device_type=device_type,
@@ -1174,6 +1244,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "rack": racks[1].pk,
                 "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
+                "software_version": software_version.pk,
+                "software_image_files": [software_image_files[0].pk, software_image_files[1].pk],
             },
             {
                 "device_type": device_type.pk,
@@ -1185,6 +1257,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "rack": racks[1].pk,
                 "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
+                "software_version": software_version.pk,
+                "software_image_files": [software_image_files[0].pk],
             },
             {
                 "device_type": device_type.pk,
@@ -1932,6 +2006,8 @@ class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeMode
     def setUpTestData(cls):
         super().setUpTestData()
 
+        software_versions = SoftwareVersion.objects.all()[:3]
+
         InventoryItem.objects.create(device=cls.device, name="Inventory Item 1", manufacturer=cls.manufacturer)
         InventoryItem.objects.create(device=cls.device, name="Inventory Item 2", manufacturer=cls.manufacturer)
         InventoryItem.objects.create(device=cls.device, name="Inventory Item 3", manufacturer=cls.manufacturer)
@@ -1941,11 +2017,13 @@ class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeMode
                 "device": cls.device.pk,
                 "name": "Inventory Item 4",
                 "manufacturer": cls.manufacturer.pk,
+                "software_version": software_versions[0].pk,
             },
             {
                 "device": cls.device.pk,
                 "name": "Inventory Item 5",
                 "manufacturer": cls.manufacturer.pk,
+                "software_version": software_versions[1].pk,
             },
             {
                 "device": cls.device.pk,
@@ -2583,3 +2661,187 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
         )
         for i, interface in enumerate(cls.interfaces):
             interface_redundancy_groups[0].add_interface(interface, i * 100)
+
+
+class SoftwareImageFileTestCase(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases.APIViewTestCase):
+    model = SoftwareImageFile
+    choices_fields = ["hashing_algorithm"]
+
+    @classmethod
+    def setUpTestData(cls):
+        statuses = Status.objects.get_for_model(SoftwareImageFile)
+        software_versions = SoftwareVersion.objects.all()
+
+        cls.create_data = [
+            {
+                "software_version": software_versions[0].pk,
+                "status": statuses[0].pk,
+                "image_file_name": "software_image_file_test_case_1.bin",
+            },
+            {
+                "software_version": software_versions[1].pk,
+                "status": statuses[1].pk,
+                "image_file_name": "software_image_file_test_case_2.bin",
+            },
+            {
+                "software_version": software_versions[2].pk,
+                "status": statuses[2].pk,
+                "image_file_name": "software_image_file_test_case_3.bin",
+            },
+        ]
+        cls.bulk_update_data = {
+            "software_version": software_versions[0].pk,
+            "status": statuses[0].pk,
+            "image_file_checksum": "abcdef1234567890",
+            "hashing_algorithm": SoftwareImageFileHashingAlgorithmChoices.SHA512,
+            "image_file_size": 1234567890,
+            "download_url": "https://example.com/software_image_file_test_case.bin",
+        }
+
+
+class SoftwareVersionTestCase(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases.APIViewTestCase):
+    model = SoftwareVersion
+
+    @classmethod
+    def setUpTestData(cls):
+        DeviceTypeToSoftwareImageFile.objects.all().delete()  # Protected FK to SoftwareImageFile prevents deletion
+        statuses = Status.objects.get_for_model(SoftwareVersion)
+        platforms = Platform.objects.all()
+
+        cls.create_data = [
+            {
+                "platform": platforms[0].pk,
+                "status": statuses[0].pk,
+                "version": "version 1.1.0",
+            },
+            {
+                "platform": platforms[1].pk,
+                "status": statuses[1].pk,
+                "version": "version 1.2.0",
+            },
+            {
+                "platform": platforms[2].pk,
+                "status": statuses[2].pk,
+                "version": "version 1.3.0",
+            },
+        ]
+        cls.bulk_update_data = {
+            "platform": platforms[0].pk,
+            "status": statuses[0].pk,
+            "alias": "Version x.y.z",
+            "release_date": datetime.date(2001, 12, 31),
+            "end_of_support_date": datetime.date(2005, 12, 31),
+            "documentation_url": "https://example.com/software_version_test_case/docs2",
+            "long_term_support": False,
+            "pre_release": True,
+        }
+
+
+class DeviceTypeToSoftwareImageFileTestCase(
+    Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases.APIViewTestCase
+):
+    model = DeviceTypeToSoftwareImageFile
+
+    @classmethod
+    def setUpTestData(cls):
+        DeviceTypeToSoftwareImageFile.objects.all().delete()
+        device_types = DeviceType.objects.all()[:4]
+        software_image_files = SoftwareImageFile.objects.all()[:3]
+
+        # deletable objects
+        DeviceTypeToSoftwareImageFile.objects.create(
+            device_type=device_types[0],
+            software_image_file=software_image_files[0],
+        )
+        DeviceTypeToSoftwareImageFile.objects.create(
+            device_type=device_types[0],
+            software_image_file=software_image_files[1],
+        )
+        DeviceTypeToSoftwareImageFile.objects.create(
+            device_type=device_types[0],
+            software_image_file=software_image_files[2],
+        )
+
+        cls.create_data = [
+            {
+                "software_image_file": software_image_files[0].pk,
+                "device_type": device_types[1].pk,
+            },
+            {
+                "software_image_file": software_image_files[1].pk,
+                "device_type": device_types[2].pk,
+            },
+            {
+                "software_image_file": software_image_files[2].pk,
+                "device_type": device_types[3].pk,
+            },
+        ]
+
+
+class ControllerTestCase(APIViewTestCases.APIViewTestCase):
+    model = Controller
+
+    @classmethod
+    def setUpTestData(cls):
+        statuses = Status.objects.get_for_model(Controller)
+        roles = Role.objects.get_for_model(Controller)
+        platforms = Platform.objects.all()
+        locations = Location.objects.get_for_model(Controller).all()
+
+        cls.create_data = [
+            {
+                "name": "Controller 1",
+                "platform": platforms[0].pk,
+                "status": statuses[0].pk,
+                "role": roles[0].pk,
+                "location": locations[0].pk,
+            },
+            {
+                "name": "Controller 2",
+                "platform": platforms[1].pk,
+                "status": statuses[1].pk,
+                "role": roles[1].pk,
+                "location": locations[1].pk,
+            },
+            {
+                "name": "Controller 3",
+                "platform": platforms[2].pk,
+                "status": statuses[2].pk,
+                "role": roles[2].pk,
+                "location": locations[2].pk,
+            },
+        ]
+        cls.bulk_update_data = {
+            "platform": platforms[0].pk,
+            "status": statuses[0].pk,
+            "role": roles[0].pk,
+        }
+
+
+class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
+    model = ControllerManagedDeviceGroup
+
+    @classmethod
+    def setUpTestData(cls):
+        controllers = Controller.objects.all()
+
+        cls.create_data = [
+            {
+                "name": "ControllerManagedDeviceGroup 1",
+                "controller": controllers[0].pk,
+                "weight": 100,
+            },
+            {
+                "name": "ControllerManagedDeviceGroup 2",
+                "controller": controllers[1].pk,
+                "weight": 150,
+            },
+            {
+                "name": "ControllerManagedDeviceGroup 3",
+                "controller": controllers[2].pk,
+                "weight": 200,
+            },
+        ]
+        cls.bulk_update_data = {
+            "weight": 300,
+        }

@@ -6,6 +6,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Count, Q, Sum
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import JSONArrayField, NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
@@ -45,13 +46,13 @@ class RackGroup(TreeModel, OrganizationalModel):
     Racks can be grouped as subsets within a Location.
     """
 
-    name = models.CharField(max_length=100, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     location = models.ForeignKey(
         to="dcim.Location",
         on_delete=models.CASCADE,
         related_name="rack_groups",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
         ordering = ("name",)
@@ -103,8 +104,8 @@ class Rack(PrimaryModel):
     Each Rack is assigned to a Location and (optionally) a RackGroup.
     """
 
-    name = models.CharField(max_length=100, db_index=True)
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
+    _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True)
     status = StatusField(blank=False, null=False)
     role = RoleField(blank=True, null=True)
     facility_id = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- intentional, see below
@@ -134,9 +135,9 @@ class Rack(PrimaryModel):
         blank=True,
         null=True,
     )
-    serial = models.CharField(max_length=255, blank=True, verbose_name="Serial number", db_index=True)
+    serial = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, verbose_name="Serial number", db_index=True)
     asset_tag = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         null=True,
         unique=True,
@@ -471,7 +472,7 @@ class RackReservation(PrimaryModel):
         null=True,
     )
     user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="rack_reservations")
-    description = models.CharField(max_length=200)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
 
     class Meta:
         ordering = ["created"]
