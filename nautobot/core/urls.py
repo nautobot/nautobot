@@ -15,6 +15,7 @@ from nautobot.core.views import (
     ThemePreviewView,
 )
 from nautobot.extras.plugins.urls import (
+    apps_patterns,
     plugin_admin_patterns,
     plugin_patterns,
 )
@@ -47,7 +48,8 @@ urlpatterns = [
     path("admin/", admin_site.urls),
     # Errors
     path("media-failure/", StaticMediaFailureView.as_view(), name="media_failure"),
-    # Plugins
+    # Apps
+    path("apps/", include((apps_patterns, "apps"))),
     path("plugins/", include((plugin_patterns, "plugins"))),
     path("admin/plugins/", include(plugin_admin_patterns)),
     # Social auth/SSO

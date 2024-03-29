@@ -15,3 +15,6 @@ Additional fields are available for annotating the vCPU count, memory (GB), and 
 
 +/- 2.0.0
     In Nautobot 1.x, it was not possible to delete an IPAddress or an VMInterface that was serving as the primary IP address (`primary_ip4`/`primary_ip6`) for a VirtualMachine. As of Nautobot 2.0, this is now permitted; doing so will clear out the VirtualMachine's corresponding primary IP value.
+
++++ 2.2.0
+    The [Software Version](../dcim/softwareversion.md) model has been introduced to represent the software version that is currently installed on a virtual machine. An optional software version field has been added to virtual machines.

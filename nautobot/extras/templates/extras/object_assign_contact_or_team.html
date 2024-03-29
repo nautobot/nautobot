@@ -1,0 +1,52 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+{% load helpers %}
+
+{% block tabs %}
+    {% if not editing %}
+        {% include 'extras/inc/object_contact_header.html' with active_tab='assign' %}
+    {% endif %}
+{% endblock %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Contact Association</strong></div>
+        <div class="panel-body">
+            {% render_field form.contact %}
+            {% render_field form.team %}
+            {% render_field form.role %}
+            {% render_field form.status %}
+            {% render_field form.associated_object_type.as_hidden %}
+            {% render_field form.associated_object_id.as_hidden %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block buttons %}
+    <button type="submit" name="_create" class="btn btn-primary">Assign</button>
+    <button type="submit" name="_addanother" class="btn btn-primary">Assign and Add Another</button>
+    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    var contact = document.getElementById("id_contact");
+    var team = document.getElementById("id_team");
+    function disable_enable_team(){
+        if (team.disabled){
+            team.disabled=false;
+        } else {
+            team.disabled=true;
+        }
+    }
+    function disable_enable_contact(){
+        if (contact.disabled){
+            contact.disabled=false;
+        } else {
+            contact.disabled=true;
+        }
+    }
+    contact.onchange = disable_enable_team;
+    team.onchange = disable_enable_contact;
+</script>
+{% endblock %}

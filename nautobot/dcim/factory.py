@@ -9,6 +9,7 @@ import pytz
 
 from nautobot.circuits.models import CircuitTermination
 from nautobot.core.factory import (
+    get_random_instances,
     NautobotBoolIterator,
     OrganizationalModelFactory,
     PrimaryModelFactory,
@@ -20,10 +21,14 @@ from nautobot.dcim.choices import (
     RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
+    SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.models import (
+    Controller,
+    ControllerManagedDeviceGroup,
     Device,
+    DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
     Location,
@@ -34,8 +39,10 @@ from nautobot.dcim.models import (
     Rack,
     RackGroup,
     RackReservation,
+    SoftwareImageFile,
+    SoftwareVersion,
 )
-from nautobot.extras.models import Role, Status
+from nautobot.extras.models import ExternalIntegration, Role, Status
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
@@ -101,16 +108,23 @@ def get_random_platform_for_manufacturer(manufacturer):
     return factory.random.randgen.choice(qs) if qs.exists() else None
 
 
+def get_random_software_version_for_device_type(device_type):
+    qs = SoftwareVersion.objects.filter(software_image_files__device_types=device_type)
+    return factory.random.randgen.choice(qs) if qs.exists() else None
+
+
 class DeviceFactory(PrimaryModelFactory):
     class Meta:
         model = Device
         exclude = (
-            "has_tenant",
+            "has_asset_tag",
+            "has_comments",
+            "has_device_redundancy_group",
             "has_platform",
             "has_serial",
-            "has_asset_tag",
-            "has_device_redundancy_group",
-            "has_comments",
+            "has_software_image_files",
+            "has_software_version",
+            "has_tenant",
         )
 
     device_type = random_instance(DeviceType, allow_null=False)
@@ -153,8 +167,26 @@ class DeviceFactory(PrimaryModelFactory):
         factory.Faker("pyint", min_value=1, max_value=500),
     )
 
+    controller_managed_device_group = random_instance(ControllerManagedDeviceGroup)
+
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("bs"))
+
+    has_software_version = NautobotBoolIterator()
+    software_version = factory.Maybe(
+        "has_software_version",
+        factory.LazyAttribute(lambda o: get_random_software_version_for_device_type(o.device_type)),
+        None,
+    )
+
+    @factory.post_generation
+    def software_image_files(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            self.software_image_files.set(extracted)
+        else:
+            self.software_image_files.set(get_random_instances(SoftwareImageFile))
 
     # TODO to be done after these model factories are done.
     # has_cluster = NautobotBoolIterator()
@@ -215,10 +247,15 @@ class DeviceTypeFactory(PrimaryModelFactory):
     class Meta:
         model = DeviceType
         exclude = (
-            "has_part_number",
-            "is_subdevice_child",
             "has_comments",
+            "has_device_family",
+            "has_part_number",
+            "has_software_image_files",
+            "is_subdevice_child",
         )
+
+    has_device_family = NautobotBoolIterator()
+    device_family = factory.Maybe("has_device_family", random_instance(DeviceFamily), None)
 
     manufacturer = random_instance(Manufacturer)
 
@@ -228,7 +265,7 @@ class DeviceTypeFactory(PrimaryModelFactory):
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
 
     # If randomly a subdevice, set u_height to 0.
-    is_subdevice_child = factory.Faker("boolean", chance_of_getting_true=33)
+    is_subdevice_child = NautobotBoolIterator(chance_of_getting_true=33)
     u_height = factory.Maybe("is_subdevice_child", 0, factory.Faker("pyint", min_value=1, max_value=2))
 
     is_full_depth = NautobotBoolIterator()
@@ -242,6 +279,17 @@ class DeviceTypeFactory(PrimaryModelFactory):
 
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
+
+    has_software_image_files = NautobotBoolIterator()
+
+    @factory.post_generation
+    def software_image_files(self, create, extracted, **kwargs):
+        if not create or not DeviceTypeFactory.has_software_image_files.evaluate(None, None, None):
+            return
+        if extracted:
+            self.software_image_files.set(extracted)
+        else:
+            self.software_image_files.set(get_random_instances(SoftwareImageFile, minimum=1))
 
 
 class DeviceRedundancyGroupFactory(PrimaryModelFactory):
@@ -263,6 +311,17 @@ class DeviceRedundancyGroupFactory(PrimaryModelFactory):
 
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("paragraph"), "")
+
+
+class DeviceFamilyFactory(PrimaryModelFactory):
+    class Meta:
+        model = DeviceFamily
+        exclude = ("has_description",)
+
+    name = UniqueFaker("word")
+
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
 
 class ManufacturerFactory(OrganizationalModelFactory):
@@ -341,21 +400,22 @@ class LocationTypeFactory(OrganizationalModelFactory):
     @factory.post_generation
     def content_types(self, create, extract, **kwargs):
         """Assign some contenttypes to a location after generation"""
-        if self.name in ["Root", "Campus"]:
+        if self.name in ["Root", "Campus", "Building"]:
             self.content_types.set(ContentType.objects.filter(FeatureQuery("locations").get_query()))
-        elif self.name in ["Building", "Floor"]:
+        elif self.name in ["Floor"]:
             self.content_types.set(
                 [
+                    ContentType.objects.get_for_model(Controller),
                     ContentType.objects.get_for_model(Prefix),
                     ContentType.objects.get_for_model(Rack),
                     ContentType.objects.get_for_model(RackGroup),
                     ContentType.objects.get_for_model(VLANGroup),
-                    ContentType.objects.get_for_model(VLAN),
                 ]
             )
         elif self.name in ["Room"]:
             self.content_types.set(
                 [
+                    ContentType.objects.get_for_model(Controller),
                     ContentType.objects.get_for_model(Cluster),
                     ContentType.objects.get_for_model(PowerPanel),
                     ContentType.objects.get_for_model(Rack),
@@ -366,6 +426,7 @@ class LocationTypeFactory(OrganizationalModelFactory):
         elif self.name in ["Elevator"]:
             self.content_types.set(
                 [
+                    ContentType.objects.get_for_model(Controller),
                     ContentType.objects.get_for_model(Cluster),
                     ContentType.objects.get_for_model(PowerPanel),
                     ContentType.objects.get_for_model(VLAN),
@@ -374,6 +435,7 @@ class LocationTypeFactory(OrganizationalModelFactory):
         elif self.name in ["Aisle"]:
             self.content_types.set(
                 [
+                    ContentType.objects.get_for_model(Controller),
                     ContentType.objects.get_for_model(CircuitTermination),
                     ContentType.objects.get_for_model(Device),
                     ContentType.objects.get_for_model(PowerPanel),
@@ -513,7 +575,7 @@ class RackFactory(PrimaryModelFactory):
     has_rack_group = NautobotBoolIterator()  # TODO there's no RackGroupFactory yet...
     rack_group = factory.Maybe("has_rack_group", random_instance(RackGroup), None)
 
-    has_tenant = factory.Faker("boolean")
+    has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
     has_serial = NautobotBoolIterator()
@@ -555,10 +617,97 @@ class RackReservationFactory(PrimaryModelFactory):
     rack = random_instance(Rack, allow_null=False)
     units = factory.LazyAttribute(get_rack_reservation_units)
 
-    has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
+    has_tenant = NautobotBoolIterator(chance_of_getting_true=75)
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
     user = random_instance(User, allow_null=False)
 
     # Note no "has_description" here, RackReservation.description is mandatory.
     description = factory.Faker("sentence")
+
+
+class SoftwareImageFileFactory(PrimaryModelFactory):
+    class Meta:
+        model = SoftwareImageFile
+
+    class Params:
+        has_image_file_checksum = NautobotBoolIterator()
+        has_hashing_algorithm = NautobotBoolIterator()
+        has_image_file_size = NautobotBoolIterator()
+        has_download_url = NautobotBoolIterator()
+
+    status = random_instance(
+        lambda: Status.objects.get_for_model(SoftwareImageFile),
+        allow_null=False,
+    )
+    software_version = random_instance(SoftwareVersion, allow_null=False)
+    image_file_name = factory.Faker("file_name", extension="bin")
+    image_file_checksum = factory.Maybe("has_image_file_checksum", factory.Faker("md5"), "")
+    hashing_algorithm = factory.Maybe(
+        "has_hashing_algorithm",
+        factory.Faker("random_element", elements=SoftwareImageFileHashingAlgorithmChoices.values()),
+        "",
+    )
+    image_file_size = factory.Maybe("has_image_file_size", factory.Faker("pyint"), None)
+    download_url = factory.Maybe("has_download_url", factory.Faker("uri"), "")
+    default_image = factory.LazyAttribute(
+        lambda o: not o.software_version.software_image_files.filter(default_image=True).exists()
+    )
+
+
+class SoftwareVersionFactory(PrimaryModelFactory):
+    class Meta:
+        model = SoftwareVersion
+
+    class Params:
+        has_alias = NautobotBoolIterator()
+        has_release_date = NautobotBoolIterator()
+        has_end_of_support_date = NautobotBoolIterator()
+        has_documentation_url = NautobotBoolIterator()
+
+    status = random_instance(
+        lambda: Status.objects.get_for_model(SoftwareVersion),
+        allow_null=False,
+    )
+    platform = random_instance(Platform, allow_null=False)
+    version = factory.Faker("numerify", text="%!.%!.%!")
+    alias = factory.Maybe("has_alias", factory.Faker("word"), "")
+    release_date = factory.Maybe("has_release_date", factory.Faker("date_object"), None)
+    end_of_support_date = factory.Maybe("has_end_of_support_date", factory.Faker("date_object"), None)
+    documentation_url = factory.Maybe("has_documentation_url", factory.Faker("uri"), "")
+    long_term_support = NautobotBoolIterator()
+    pre_release = NautobotBoolIterator()
+
+
+class ControllerFactory(PrimaryModelFactory):
+    class Meta:
+        model = Controller
+
+    class Params:
+        has_device = NautobotBoolIterator()
+
+    name = UniqueFaker("word")
+    description = factory.Faker("sentence")
+    status = random_instance(lambda: Status.objects.get_for_model(Controller), allow_null=False)
+    role = random_instance(lambda: Role.objects.get_for_model(Controller))
+    platform = random_instance(Platform)
+    location = random_instance(lambda: Location.objects.get_for_model(Controller), allow_null=False)
+    tenant = random_instance(Tenant)
+    external_integration = random_instance(ExternalIntegration)
+    controller_device = factory.Maybe("has_device", random_instance(Device), None)
+    controller_device_redundancy_group = factory.Maybe("has_device", None, random_instance(DeviceRedundancyGroup))
+
+
+class ControllerManagedDeviceGroupFactory(PrimaryModelFactory):
+    class Meta:
+        model = ControllerManagedDeviceGroup
+
+    class Params:
+        has_parent = NautobotBoolIterator()
+
+    name = UniqueFaker("word")
+    parent = factory.Maybe("has_parent", random_instance(ControllerManagedDeviceGroup), None)
+    controller = factory.LazyAttribute(
+        lambda o: o.parent.controller if o.parent else Controller.objects.order_by("?").first()
+    )
+    weight = factory.Faker("pyint", min_value=1, max_value=1000)

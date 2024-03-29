@@ -47,9 +47,12 @@ from .models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
     FrontPort,
@@ -75,6 +78,8 @@ from .models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
+    SoftwareImageFile,
+    SoftwareVersion,
     VirtualChassis,
 )
 
@@ -195,7 +200,7 @@ class LocationTypeDeleteView(generic.ObjectDeleteView):
     queryset = LocationType.objects.all()
 
 
-class LocationTypeBulkImportView(generic.BulkImportView):
+class LocationTypeBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = LocationType.objects.all()
     table = tables.LocationTypeTable
 
@@ -237,9 +242,12 @@ class LocationView(generic.ObjectView):
             .filter(location__in=related_locations)
             .count(),
             "prefix_count": Prefix.objects.restrict(request.user, "view")
-            .filter(location__in=related_locations)
+            .filter(locations__in=related_locations)
             .count(),
-            "vlan_count": VLAN.objects.restrict(request.user, "view").filter(location__in=related_locations).count(),
+            "vlan_count": VLAN.objects.restrict(request.user, "view")
+            .filter(locations__in=related_locations)
+            .distinct()
+            .count(),
             "circuit_count": Circuit.objects.restrict(request.user, "view")
             .filter(circuit_terminations__location__in=related_locations)
             .count(),
@@ -295,7 +303,7 @@ class LocationBulkEditView(generic.BulkEditView):
     form = forms.LocationBulkEditForm
 
 
-class LocationBulkImportView(generic.BulkImportView):
+class LocationBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Location.objects.all()
     table = tables.LocationTable
 
@@ -352,7 +360,7 @@ class RackGroupDeleteView(generic.ObjectDeleteView):
     queryset = RackGroup.objects.all()
 
 
-class RackGroupBulkImportView(generic.BulkImportView):
+class RackGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = RackGroup.objects.all()
     table = tables.RackGroupTable
 
@@ -472,7 +480,7 @@ class RackDeleteView(generic.ObjectDeleteView):
     queryset = Rack.objects.all()
 
 
-class RackBulkImportView(generic.BulkImportView):
+class RackBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Rack.objects.all()
     table = tables.RackTable
 
@@ -523,7 +531,7 @@ class RackReservationDeleteView(generic.ObjectDeleteView):
     queryset = RackReservation.objects.all()
 
 
-class RackReservationImportView(generic.BulkImportView):
+class RackReservationImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = RackReservation.objects.all()
     table = tables.RackReservationTable
 
@@ -589,7 +597,7 @@ class ManufacturerDeleteView(generic.ObjectDeleteView):
     queryset = Manufacturer.objects.all()
 
 
-class ManufacturerBulkImportView(generic.BulkImportView):
+class ManufacturerBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Manufacturer.objects.all()
     table = tables.ManufacturerTable
 
@@ -610,11 +618,12 @@ class DeviceTypeListView(generic.ObjectListView):
     filterset = filters.DeviceTypeFilterSet
     filterset_form = forms.DeviceTypeFilterForm
     table = tables.DeviceTypeTable
+    template_name = "dcim/devicetype_list.html"
     use_new_ui = True
 
 
 class DeviceTypeView(generic.ObjectView):
-    queryset = DeviceType.objects.select_related("manufacturer")
+    queryset = DeviceType.objects.select_related("manufacturer").prefetch_related("software_image_files")
     use_new_ui = True
 
     def get_extra_context(self, request, instance):
@@ -663,6 +672,14 @@ class DeviceTypeView(generic.ObjectView):
             rear_port_table.columns.show("pk")
             devicebay_table.columns.show("pk")
 
+        software_image_files_table = tables.SoftwareImageFileTable(
+            instance.software_image_files.restrict(request.user, "view").annotate(
+                device_type_count=count_related(DeviceType, "software_image_files"),
+            ),
+            orderable=False,
+            exclude=["actions", "tags"],
+        )
+
         return {
             "instance_count": instance_count,
             "consoleport_table": consoleport_table,
@@ -673,6 +690,7 @@ class DeviceTypeView(generic.ObjectView):
             "front_port_table": front_port_table,
             "rear_port_table": rear_port_table,
             "devicebay_table": devicebay_table,
+            "software_image_files_table": software_image_files_table,
         }
 
 
@@ -715,8 +733,10 @@ class DeviceTypeImportView(generic.ObjectImportView):
 
 
 class DeviceTypeBulkEditView(generic.BulkEditView):
-    queryset = DeviceType.objects.select_related("manufacturer").annotate(
-        device_count=count_related(Device, "device_type")
+    queryset = (
+        DeviceType.objects.select_related("manufacturer")
+        .prefetch_related("software_image_files")
+        .annotate(device_count=count_related(Device, "device_type"))
     )
     filterset = filters.DeviceTypeFilterSet
     table = tables.DeviceTypeTable
@@ -724,8 +744,10 @@ class DeviceTypeBulkEditView(generic.BulkEditView):
 
 
 class DeviceTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = DeviceType.objects.select_related("manufacturer").annotate(
-        device_count=count_related(Device, "device_type")
+    queryset = (
+        DeviceType.objects.select_related("manufacturer")
+        .prefetch_related("software_image_files")
+        .annotate(device_count=count_related(Device, "device_type"))
     )
     filterset = filters.DeviceTypeFilterSet
     table = tables.DeviceTypeTable
@@ -892,7 +914,6 @@ class InterfaceTemplateCreateView(generic.ComponentCreateView):
     queryset = InterfaceTemplate.objects.all()
     form = forms.InterfaceTemplateCreateForm
     model_form = forms.InterfaceTemplateForm
-    template_name = "dcim/device_component_add.html"
 
 
 class InterfaceTemplateEditView(generic.ObjectEditView):
@@ -930,7 +951,6 @@ class FrontPortTemplateCreateView(generic.ComponentCreateView):
     queryset = FrontPortTemplate.objects.all()
     form = forms.FrontPortTemplateCreateForm
     model_form = forms.FrontPortTemplateForm
-    template_name = "dcim/device_component_add.html"
 
 
 class FrontPortTemplateEditView(generic.ObjectEditView):
@@ -968,7 +988,6 @@ class RearPortTemplateCreateView(generic.ComponentCreateView):
     queryset = RearPortTemplate.objects.all()
     form = forms.RearPortTemplateCreateForm
     model_form = forms.RearPortTemplateForm
-    template_name = "dcim/device_component_add.html"
 
 
 class RearPortTemplateEditView(generic.ObjectEditView):
@@ -1006,7 +1025,6 @@ class DeviceBayTemplateCreateView(generic.ComponentCreateView):
     queryset = DeviceBayTemplate.objects.all()
     form = forms.DeviceBayTemplateCreateForm
     model_form = forms.DeviceBayTemplateForm
-    template_name = "dcim/device_component_add.html"
 
 
 class DeviceBayTemplateEditView(generic.ObjectEditView):
@@ -1087,7 +1105,7 @@ class PlatformDeleteView(generic.ObjectDeleteView):
     queryset = Platform.objects.all()
 
 
-class PlatformBulkImportView(generic.BulkImportView):
+class PlatformBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Platform.objects.all()
     table = tables.PlatformTable
 
@@ -1123,6 +1141,7 @@ class DeviceView(generic.ObjectView):
         "platform",
         "primary_ip4",
         "primary_ip6",
+        "software_version",
         "status",
     )
     use_new_ui = True
@@ -1145,8 +1164,21 @@ class DeviceView(generic.ObjectView):
         vrf_assignments = instance.vrf_assignments.restrict(request.user, "view")
         vrf_table = VRFDeviceAssignmentTable(vrf_assignments, exclude=("virtual_machine", "device"))
 
+        # Software images
+        if instance.software_version is not None:
+            software_version_images = instance.software_version.software_image_files.restrict(
+                request.user, "view"
+            ).filter(device_types=instance.device_type)
+            if not software_version_images.exists():
+                software_version_images = instance.software_version.software_image_files.restrict(
+                    request.user, "view"
+                ).filter(default_image=True)
+        else:
+            software_version_images = []
+
         return {
             "services": services,
+            "software_version_images": software_version_images,
             "vc_members": vc_members,
             "vrf_table": vrf_table,
             "active_tab": "device",
@@ -1413,14 +1445,21 @@ class DeviceDeleteView(generic.ObjectDeleteView):
     queryset = Device.objects.all()
 
 
-class DeviceBulkImportView(generic.BulkImportView):
+class DeviceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Device.objects.all()
     table = tables.DeviceImportTable
 
 
 class DeviceBulkEditView(generic.BulkEditView):
     queryset = Device.objects.select_related(
-        "tenant", "location", "rack", "role", "device_type__manufacturer", "secrets_group", "device_redundancy_group"
+        "tenant",
+        "location",
+        "rack",
+        "role",
+        "device_type__manufacturer",
+        "secrets_group",
+        "device_redundancy_group",
+        "controller_managed_device_group",
     )
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
@@ -1457,7 +1496,6 @@ class ConsolePortCreateView(generic.ComponentCreateView):
     queryset = ConsolePort.objects.all()
     form = forms.ConsolePortCreateForm
     model_form = forms.ConsolePortForm
-    template_name = "dcim/device_component_add.html"
 
 
 class ConsolePortEditView(generic.ObjectEditView):
@@ -1470,7 +1508,7 @@ class ConsolePortDeleteView(generic.ObjectDeleteView):
     queryset = ConsolePort.objects.all()
 
 
-class ConsolePortBulkImportView(generic.BulkImportView):
+class ConsolePortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = ConsolePort.objects.all()
     table = tables.ConsolePortTable
 
@@ -1520,7 +1558,6 @@ class ConsoleServerPortCreateView(generic.ComponentCreateView):
     queryset = ConsoleServerPort.objects.all()
     form = forms.ConsoleServerPortCreateForm
     model_form = forms.ConsoleServerPortForm
-    template_name = "dcim/device_component_add.html"
 
 
 class ConsoleServerPortEditView(generic.ObjectEditView):
@@ -1533,7 +1570,7 @@ class ConsoleServerPortDeleteView(generic.ObjectDeleteView):
     queryset = ConsoleServerPort.objects.all()
 
 
-class ConsoleServerPortBulkImportView(generic.BulkImportView):
+class ConsoleServerPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = ConsoleServerPort.objects.all()
     table = tables.ConsoleServerPortTable
 
@@ -1583,7 +1620,6 @@ class PowerPortCreateView(generic.ComponentCreateView):
     queryset = PowerPort.objects.all()
     form = forms.PowerPortCreateForm
     model_form = forms.PowerPortForm
-    template_name = "dcim/device_component_add.html"
 
 
 class PowerPortEditView(generic.ObjectEditView):
@@ -1596,7 +1632,7 @@ class PowerPortDeleteView(generic.ObjectDeleteView):
     queryset = PowerPort.objects.all()
 
 
-class PowerPortBulkImportView(generic.BulkImportView):
+class PowerPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = PowerPort.objects.all()
     table = tables.PowerPortTable
 
@@ -1646,7 +1682,6 @@ class PowerOutletCreateView(generic.ComponentCreateView):
     queryset = PowerOutlet.objects.all()
     form = forms.PowerOutletCreateForm
     model_form = forms.PowerOutletForm
-    template_name = "dcim/device_component_add.html"
 
 
 class PowerOutletEditView(generic.ObjectEditView):
@@ -1659,7 +1694,7 @@ class PowerOutletDeleteView(generic.ObjectDeleteView):
     queryset = PowerOutlet.objects.all()
 
 
-class PowerOutletBulkImportView(generic.BulkImportView):
+class PowerOutletBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = PowerOutlet.objects.all()
     table = tables.PowerOutletTable
 
@@ -1719,8 +1754,10 @@ class InterfaceView(generic.ObjectView):
             vlans.append(instance.untagged_vlan)
             vlans[0].tagged = False
 
-        for vlan in instance.tagged_vlans.restrict(request.user).select_related(
-            "location", "vlan_group", "tenant", "role"
+        for vlan in (
+            instance.tagged_vlans.restrict(request.user)
+            .annotate(location_count=count_related(Location, "vlans"))
+            .select_related("vlan_group", "tenant", "role")
         ):
             vlan.tagged = True
             vlans.append(vlan)
@@ -1763,7 +1800,6 @@ class InterfaceCreateView(generic.ComponentCreateView):
     queryset = Interface.objects.all()
     form = forms.InterfaceCreateForm
     model_form = forms.InterfaceForm
-    template_name = "dcim/device_component_add.html"
 
 
 class InterfaceEditView(generic.ObjectEditView):
@@ -1777,7 +1813,7 @@ class InterfaceDeleteView(generic.ObjectDeleteView):
     template_name = "dcim/device_interface_delete.html"
 
 
-class InterfaceBulkImportView(generic.BulkImportView):
+class InterfaceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Interface.objects.all()
     table = tables.InterfaceTable
 
@@ -1828,7 +1864,6 @@ class FrontPortCreateView(generic.ComponentCreateView):
     queryset = FrontPort.objects.all()
     form = forms.FrontPortCreateForm
     model_form = forms.FrontPortForm
-    template_name = "dcim/device_component_add.html"
 
 
 class FrontPortEditView(generic.ObjectEditView):
@@ -1841,7 +1876,7 @@ class FrontPortDeleteView(generic.ObjectDeleteView):
     queryset = FrontPort.objects.all()
 
 
-class FrontPortBulkImportView(generic.BulkImportView):
+class FrontPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = FrontPort.objects.all()
     table = tables.FrontPortTable
 
@@ -1891,7 +1926,6 @@ class RearPortCreateView(generic.ComponentCreateView):
     queryset = RearPort.objects.all()
     form = forms.RearPortCreateForm
     model_form = forms.RearPortForm
-    template_name = "dcim/device_component_add.html"
 
 
 class RearPortEditView(generic.ObjectEditView):
@@ -1904,7 +1938,7 @@ class RearPortDeleteView(generic.ObjectDeleteView):
     queryset = RearPort.objects.all()
 
 
-class RearPortBulkImportView(generic.BulkImportView):
+class RearPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = RearPort.objects.all()
     table = tables.RearPortTable
 
@@ -1954,7 +1988,6 @@ class DeviceBayCreateView(generic.ComponentCreateView):
     queryset = DeviceBay.objects.all()
     form = forms.DeviceBayCreateForm
     model_form = forms.DeviceBayForm
-    template_name = "dcim/device_component_add.html"
 
 
 class DeviceBayEditView(generic.ObjectEditView):
@@ -2052,7 +2085,7 @@ class DeviceBayDepopulateView(generic.ObjectEditView):
         )
 
 
-class DeviceBayBulkImportView(generic.BulkImportView):
+class DeviceBayBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = DeviceBay.objects.all()
     table = tables.DeviceBayTable
 
@@ -2088,29 +2121,39 @@ class InventoryItemListView(generic.ObjectListView):
 
 
 class InventoryItemView(generic.ObjectView):
-    queryset = InventoryItem.objects.all()
+    queryset = InventoryItem.objects.all().select_related("device", "manufacturer", "software_version")
 
     def get_extra_context(self, request, instance):
-        return {"breadcrumb_url": "dcim:device_inventory"}
+        # Software images
+        if instance.software_version is not None:
+            software_version_images = instance.software_version.software_image_files.restrict(request.user, "view")
+        else:
+            software_version_images = []
+
+        return {
+            "breadcrumb_url": "dcim:device_inventory",
+            "software_version_images": software_version_images,
+        }
 
 
 class InventoryItemEditView(generic.ObjectEditView):
     queryset = InventoryItem.objects.all()
     model_form = forms.InventoryItemForm
+    template_name = "dcim/inventoryitem_edit.html"
 
 
 class InventoryItemCreateView(generic.ComponentCreateView):
     queryset = InventoryItem.objects.all()
     form = forms.InventoryItemCreateForm
     model_form = forms.InventoryItemForm
-    template_name = "dcim/device_component_add.html"
+    template_name = "dcim/inventoryitem_add.html"
 
 
 class InventoryItemDeleteView(generic.ObjectDeleteView):
     queryset = InventoryItem.objects.all()
 
 
-class InventoryItemBulkImportView(generic.BulkImportView):
+class InventoryItemBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = InventoryItem.objects.all()
     table = tables.InventoryItemTable
 
@@ -2390,7 +2433,7 @@ class CableDeleteView(generic.ObjectDeleteView):
     queryset = Cable.objects.all()
 
 
-class CableBulkImportView(generic.BulkImportView):
+class CableBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Cable.objects.all()
     table = tables.CableTable
 
@@ -2709,7 +2752,7 @@ class VirtualChassisRemoveMemberView(ObjectPermissionRequiredMixin, GetReturnURL
         )
 
 
-class VirtualChassisBulkImportView(generic.BulkImportView):
+class VirtualChassisBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = VirtualChassis.objects.all()
     table = tables.VirtualChassisTable
 
@@ -2762,7 +2805,7 @@ class PowerPanelDeleteView(generic.ObjectDeleteView):
     queryset = PowerPanel.objects.all()
 
 
-class PowerPanelBulkImportView(generic.BulkImportView):
+class PowerPanelBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = PowerPanel.objects.all()
     table = tables.PowerPanelTable
 
@@ -2808,7 +2851,7 @@ class PowerFeedDeleteView(generic.ObjectDeleteView):
     queryset = PowerFeed.objects.all()
 
 
-class PowerFeedBulkImportView(generic.BulkImportView):
+class PowerFeedBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = PowerFeed.objects.all()
     table = tables.PowerFeedTable
 
@@ -2905,3 +2948,129 @@ class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDe
     form_class = forms.InterfaceRedundancyGroupAssociationForm
     template_name = "dcim/interfaceredundancygroupassociation_create.html"
     lookup_field = "pk"
+
+
+class DeviceFamilyUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.DeviceFamilyFilterSet
+    form_class = forms.DeviceFamilyForm
+    bulk_update_form_class = forms.DeviceFamilyBulkEditForm
+    queryset = DeviceFamily.objects.annotate(device_type_count=count_related(DeviceType, "device_family"))
+    serializer_class = serializers.DeviceFamilySerializer
+    table_class = tables.DeviceFamilyTable
+    lookup_field = "pk"
+
+    def get_extra_context(self, request, instance):
+        # Related device types table
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            device_types = (
+                DeviceType.objects.restrict(request.user, "view")
+                .filter(device_family=instance)
+                .select_related("manufacturer")
+                .annotate(device_count=count_related(Device, "device_type"))
+            )
+            device_type_table = tables.DeviceTypeTable(device_types, orderable=False)
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(device_type_table)
+
+            context["device_type_table"] = device_type_table
+        return context
+
+
+#
+# Software image files
+#
+
+
+class SoftwareImageFileUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.SoftwareImageFileFilterSet
+    filterset_form_class = forms.SoftwareImageFileFilterForm
+    form_class = forms.SoftwareImageFileForm
+    bulk_update_form_class = forms.SoftwareImageFileBulkEditForm
+    queryset = SoftwareImageFile.objects.annotate(device_type_count=count_related(DeviceType, "software_image_files"))
+
+    serializer_class = serializers.SoftwareImageFileSerializer
+    table_class = tables.SoftwareImageFileTable
+
+
+class SoftwareVersionUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.SoftwareVersionFilterSet
+    filterset_form_class = forms.SoftwareVersionFilterForm
+    form_class = forms.SoftwareVersionForm
+    bulk_update_form_class = forms.SoftwareVersionBulkEditForm
+    queryset = SoftwareVersion.objects.annotate(
+        software_image_file_count=count_related(SoftwareImageFile, "software_version"),
+        device_count=count_related(Device, "software_version"),
+        inventory_item_count=count_related(InventoryItem, "software_version"),
+    )
+    serializer_class = serializers.SoftwareVersionSerializer
+    table_class = tables.SoftwareVersionTable
+
+
+#
+# Controllers
+#
+
+
+class ControllerUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.ControllerFilterSet
+    filterset_form_class = forms.ControllerFilterForm
+    form_class = forms.ControllerForm
+    bulk_update_form_class = forms.ControllerBulkEditForm
+    queryset = Controller.objects.all()
+    serializer_class = serializers.ControllerSerializer
+    table_class = tables.ControllerTable
+    template_name = "dcim/controller_create.html"
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action == "retrieve" and instance:
+            devices = Device.objects.restrict(request.user).filter(controller_managed_device_group__controller=instance)
+            devices_table = tables.DeviceTable(devices)
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(devices_table)
+
+            context["devices_table"] = devices_table
+
+        return context
+
+
+class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.ControllerManagedDeviceGroupFilterSet
+    filterset_form_class = forms.ControllerManagedDeviceGroupFilterForm
+    form_class = forms.ControllerManagedDeviceGroupForm
+    bulk_update_form_class = forms.ControllerManagedDeviceGroupBulkEditForm
+    queryset = (
+        ControllerManagedDeviceGroup.objects.all()
+        .prefetch_related("devices")
+        .annotate(device_count=count_related(Device, "controller_managed_device_group"))
+    )
+    serializer_class = serializers.ControllerManagedDeviceGroupSerializer
+    table_class = tables.ControllerManagedDeviceGroupTable
+    template_name = "dcim/controllermanageddevicegroup_create.html"
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action == "retrieve" and instance:
+            devices = instance.devices.restrict(request.user)
+            devices_table = tables.DeviceTable(devices)
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(devices_table)
+
+            context["devices_table"] = devices_table
+
+        return context

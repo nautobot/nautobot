@@ -3,6 +3,7 @@
 from django.test import TestCase
 
 from nautobot.dcim.models import (
+    Controller,
     Device,
     DeviceRedundancyGroup,
     DeviceType,
@@ -103,6 +104,7 @@ class DeviceRedundancyGroupTest(TestCase):
         self.device.device_redundancy_group_priority = 1
         self.device.validated_save()
 
+        Controller.objects.all().delete()
         deviceredundancygroup.delete()
 
         self.device.refresh_from_db()

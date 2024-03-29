@@ -39,7 +39,9 @@
     {% block buttons %}{% endblock %}
     {% plugin_buttons content_type.model_class 'list' %}
     {% if table and request.user.is_authenticated and table_config_form %}
-        <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
+        {% block table_config_button %}
+            <button type="button" class="btn btn-default" data-toggle="modal" data-target="#ObjectTable_config" title="Configure table"><i class="mdi mdi-cog"></i> Configure</button>
+        {% endblock table_config_button %}
     {% endif %}
     {% if filter_form or dynamic_filter_form %}
         <button type="button" class="btn btn-default" data-toggle="modal" data-target="#FilterForm_modal" title="Add filters" id="id__filterbtn"><i class="mdi mdi-filter"></i> Filter</button>
@@ -48,7 +50,9 @@
         {% add_button content_type.model_class|validated_viewname:"add" %}
     {% endif %}
     {% if permissions.add and 'import' in action_buttons %}
-        {% import_button content_type.model_class|validated_viewname:"import" %}
+        {% block import_button %}
+            {% job_import_button content_type %}
+        {% endblock import_button %}
     {% endif %}
     {% if 'export' in action_buttons %}
         {% block export_button %}

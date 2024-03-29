@@ -56,7 +56,7 @@ PERMISSIONS_ACTION_MAP = {
     "destroy": "delete",
     "create": "add",
     "update": "change",
-    "bulk_create": "add",
+    "bulk_create": "add",  # 3.0 TODO: remove, replaced by system Job
     "bulk_destroy": "delete",
     "bulk_update": "change",
     "changelog": "view",
@@ -226,6 +226,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     create_form_class = None
     update_form_class = None
     parser_classes = [FormParser, MultiPartParser]
+    is_contact_associatable_model = True
     queryset = None
     # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
     serializer_class = None
@@ -336,7 +337,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """
         raise NotImplementedError("_process_bulk_update_form() is not implemented")
 
-    def _process_bulk_create_form(self, form):
+    def _process_bulk_create_form(self, form):  # 3.0 TODO: remove, replaced by system Job
         """
         Helper method to create objects in bulk after the form is validated successfully.
         """
@@ -358,7 +359,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     def _handle_validation_error(self, e):
         # For bulk_create/bulk_update view, self.obj is not set since there are multiple
         # The errors will be rendered on the form itself.
-        if self.action not in ["bulk_create", "bulk_update"]:
+        if self.action not in ["bulk_create", "bulk_update"]:  # 3.0 TODO: remove bulk_create
             messages.error(self.request, f"{self.obj} failed validation: {e}")
         self.has_error = True
 
@@ -378,7 +379,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
                 self._process_create_or_update_form(form)
             elif self.action == "bulk_update":
                 self._process_bulk_update_form(form)
-            elif self.action == "bulk_create":
+            elif self.action == "bulk_create":  # 3.0 TODO: remove, replaced by system Job
                 self.obj_table = self._process_bulk_create_form(form)
         except ValidationError as e:
             self._handle_validation_error(e)
@@ -389,7 +390,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
 
         if not self.has_error:
             self.logger.debug("Form validation was successful")
-            if self.action == "bulk_create":
+            if self.action == "bulk_create":  # 3.0 TODO: remove, replaced by system Job
                 return Response(
                     {
                         "table": self.obj_table,
@@ -539,7 +540,7 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
                 form_class = getattr(self, f"{self.action}_form_class")
             else:
                 form_class = getattr(self, "form_class", None)
-        elif self.action == "bulk_create":
+        elif self.action == "bulk_create":  # 3.0 TODO: remove, replaced by system Job
             required_field_names = [
                 field["name"]
                 for field in get_csv_form_fields_from_serializer_class(self.serializer_class)
@@ -607,6 +608,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
     action_buttons = ("add", "import", "export")
     filterset_class = None
     filterset_form_class = None
+    hide_hierarchy_ui = False
     non_filter_params = (
         "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
         "page",  # used by django-tables2.RequestConfig
@@ -628,6 +630,12 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
                     format_html("Invalid filters were specified: {}", self.filterset.errors),
                 )
                 queryset = queryset.none()
+
+            # If a valid filterset is applied, we have to hide the hierarchy indentation in the UI for tables that support hierarchy indentation.
+            # NOTE: An empty filterset query-param is also valid filterset and we dont want to hide hierarchy indentation if no filter query-param is provided
+            #      hence `filterset.data`.
+            if self.filterset.is_valid() and self.filterset.data:
+                self.hide_hierarchy_ui = True
         return queryset
 
     # 3.0 TODO: remove, irrelevant after #4746
@@ -868,13 +876,15 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         if request.POST.get("_all"):
             filter_params = self.get_filter_params(request)
             if not filter_params:
-                self.pk_list = model.objects.only("pk").all().values_list("pk", flat=True)
+                self.pk_list = list(model.objects.only("pk").all().values_list("pk", flat=True))
             elif self.filterset_class is None:
                 raise NotImplementedError("filterset_class must be defined to use _all")
             else:
-                self.pk_list = self.filterset_class(filter_params, model.objects.only("pk")).qs
+                self.pk_list = list(
+                    self.filterset_class(filter_params, model.objects.only("pk")).qs.values_list("pk", flat=True)
+                )
         else:
-            self.pk_list = request.POST.getlist("pk")
+            self.pk_list = list(request.POST.getlist("pk"))
         form_class = self.get_form_class(**kwargs)
         data = {}
         if "_confirm" in request.POST:
@@ -896,9 +906,11 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         return Response(data)
 
 
-class ObjectBulkCreateViewMixin(NautobotViewSetMixin):
+class ObjectBulkCreateViewMixin(NautobotViewSetMixin):  # 3.0 TODO: remove, unused
     """
     UI mixin to bulk create model instances.
+
+    Deprecated - use ImportObjects system Job instead.
     """
 
     bulk_create_active_tab = "csv-data"
@@ -1045,18 +1057,20 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
         if request.POST.get("_all"):
             filter_params = self.get_filter_params(request)
             if not filter_params:
-                self.pk_list = model.objects.only("pk").all().values_list("pk", flat=True)
+                self.pk_list = list(model.objects.only("pk").all().values_list("pk", flat=True))
             elif self.filterset_class is None:
                 raise NotImplementedError("filterset_class must be defined to use _all")
             else:
-                self.pk_list = self.filterset_class(filter_params, model.objects.only("pk")).qs
+                self.pk_list = list(
+                    self.filterset_class(filter_params, model.objects.only("pk")).qs.values_list("pk", flat=True)
+                )
         else:
-            self.pk_list = request.POST.getlist("pk")
+            self.pk_list = list(request.POST.getlist("pk"))
         data = {}
         form_class = self.get_form_class()
         if "_apply" in request.POST:
             self.kwargs = kwargs
-            form = form_class(model, request.POST)
+            form = form_class(queryset.model, request.POST)
             restrict_form_fields(form, request.user)
             if form.is_valid():
                 return self.form_valid(form)

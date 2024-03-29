@@ -10,19 +10,6 @@
     {% endfor %}
 {% endblock %}
 
-{% block buttons %}
-        {% plugin_buttons object %}
-        {% if perms.dcim.add_location %}
-            {% clone_button object %}
-        {% endif %}
-        {% if perms.dcim.change_location %}
-            {% edit_button object key="pk" %}
-        {% endif %}
-        {% if perms.dcim.delete_location %}
-            {% delete_button object key="pk" %}
-        {% endif %}
-{% endblock buttons %}
-
 {% block content_left_page %}
     <div class="panel panel-default">
         <div class="panel-heading">
@@ -134,23 +121,11 @@
             </tr>
             <tr>
                 <td>Contact Phone</td>
-                <td>
-                    {% if object.contact_phone %}
-                        <a href="tel:{{ object.contact_phone }}">{{ object.contact_phone }}</a>
-                    {% else %}
-                        <span class="text-muted">&mdash;</span>
-                    {% endif %}
-                </td>
+                <td>{{ object.contact_phone|hyperlinked_phone_number }}</td>
             </tr>
             <tr>
                 <td>Contact E-Mail</td>
-                <td>
-                    {% if object.contact_email %}
-                        <a href="mailto:{{ object.contact_email }}">{{ object.contact_email }}</a>
-                    {% else %}
-                        <span class="text-muted">&mdash;</span>
-                    {% endif %}
-                </td>
+                <td>{{ object.contact_email|hyperlinked_email }}</td>
             </tr>
         </table>
     </div>
@@ -183,11 +158,11 @@
                 <p>Devices</p>
             </div>
             <div class="col-md-4 text-center">
-                <h2><a href="{% url 'ipam:prefix_list' %}?location={{ object.pk }}" class="btn {% if stats.prefix_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.prefix_count }}</a></h2>
+                <h2><a href="{% url 'ipam:prefix_list' %}?locations={{ object.pk }}" class="btn {% if stats.prefix_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.prefix_count }}</a></h2>
                 <p>Prefixes</p>
             </div>
             <div class="col-md-4 text-center">
-                <h2><a href="{% url 'ipam:vlan_list' %}?location={{ object.pk }}" class="btn {% if stats.vlan_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.vlan_count }}</a></h2>
+                <h2><a href="{% url 'ipam:vlan_list' %}?locations={{ object.pk }}" class="btn {% if stats.vlan_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ stats.vlan_count }}</a></h2>
                 <p>VLANs</p>
             </div>
             <div class="col-md-4 text-center">

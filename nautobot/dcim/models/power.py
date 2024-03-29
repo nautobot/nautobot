@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.validators import ExclusionValidator
 from nautobot.dcim.choices import PowerFeedPhaseChoices, PowerFeedSupplyChoices, PowerFeedTypeChoices
@@ -44,7 +45,7 @@ class PowerPanel(PrimaryModel):
     rack_group = models.ForeignKey(
         to="RackGroup", on_delete=models.PROTECT, blank=True, null=True, related_name="power_panels"
     )
-    name = models.CharField(max_length=100, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
 
     natural_key_field_names = ["name", "location"]
 
@@ -99,7 +100,7 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
 
     power_panel = models.ForeignKey(to="PowerPanel", on_delete=models.PROTECT, related_name="power_feeds")
     rack = models.ForeignKey(to="Rack", on_delete=models.PROTECT, blank=True, null=True, related_name="power_feeds")
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     status = StatusField(blank=False, null=False)
     type = models.CharField(
         max_length=50,

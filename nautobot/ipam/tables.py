@@ -42,28 +42,10 @@ UTILIZATION_GRAPH = """
 {% if record.present_in_database %}{% utilization_graph record.get_utilization %}{% else %}&mdash;{% endif %}
 """
 
-PREFIX_LINK = """
-{% load helpers %}
-{% for i in record.ancestors.count|as_range %}
-    <i class="mdi mdi-circle-small"></i>
-{% endfor %}
-    <a href="\
-{% if record.present_in_database %}\
-{% url 'ipam:prefix' pk=record.pk %}\
-{% else %}\
-{% url 'ipam:prefix_add' %}\
-?prefix={{ record }}&namespace={{ object.namespace.pk }}\
-{% if object.location %}&location={{ object.location.pk }}{% endif %}\
-{% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
-{% endif %}\
-">{{ record.prefix }}</a>
-"""
 
 PREFIX_COPY_LINK = """
 {% load helpers %}
-{% for i in record.ancestors.count|as_range %}
-    <i class="mdi mdi-circle-small"></i>
-{% endfor %}
+{% tree_hierarchy_ui_representation record.ancestors.count|as_range table.hide_hierarchy_ui%}
 <span class="hover_copy">
   <a href="\
 {% if record.present_in_database %}\
@@ -71,7 +53,7 @@ PREFIX_COPY_LINK = """
 {% else %}\
 {% url 'ipam:prefix_add' %}\
 ?prefix={{ record }}&namespace={{ object.namespace.pk }}\
-{% if object.location %}&location={{ object.location.pk }}{% endif %}\
+{% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}\
 {% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
 {% endif %}\
 " id="copy_{{record.id}}">{{ record.prefix }}</a>
@@ -365,16 +347,17 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     )
     # vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
-    location = tables.Column(linkify=True)
     namespace = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
     rir = tables.Column(linkify=True)
-    children = tables.Column(accessor="descendants_count")
+    children = tables.Column(accessor="descendants_count", orderable=False)
     date_allocated = tables.DateTimeColumn()
+    location_count = LinkedCountColumn(
+        viewname="dcim:location_list", url_params={"prefixes": "pk"}, verbose_name="Locations"
+    )
 
     class Meta(BaseTable.Meta):
         model = Prefix
-        orderable = False
         fields = (
             "pk",
             "prefix",
@@ -384,7 +367,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             # "vrf",
             "namespace",
             "tenant",
-            "location",
+            "location_count",
             "vlan",
             "role",
             "rir",
@@ -399,7 +382,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             # "vrf",
             "namespace",
             "tenant",
-            "location",
+            "location_count",
             "vlan",
             "role",
             "description",
@@ -425,7 +408,7 @@ class PrefixDetailTable(PrefixTable):
             # "vrf",
             "utilization",
             "tenant",
-            "location",
+            "location_count",
             "vlan",
             "role",
             "description",
@@ -441,7 +424,7 @@ class PrefixDetailTable(PrefixTable):
             # "vrf",
             "utilization",
             "tenant",
-            "location",
+            "location_count",
             "vlan",
             "role",
             "description",
@@ -688,8 +671,12 @@ class VLANGroupTable(BaseTable):
 class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     vid = tables.TemplateColumn(template_code=VLAN_LINK, verbose_name="ID")
-    location = tables.Column(linkify=True)
     vlan_group = tables.Column(linkify=True)
+    location_count = LinkedCountColumn(
+        viewname="dcim:location_list",
+        url_params={"vlans": "pk"},
+        verbose_name="Locations",
+    )
     tenant = TenantColumn()
 
     class Meta(BaseTable.Meta):
@@ -697,9 +684,9 @@ class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
         fields = (
             "pk",
             "vid",
-            "location",
             "vlan_group",
             "name",
+            "location_count",
             "tenant",
             "status",
             "role",
@@ -719,10 +706,10 @@ class VLANDetailTable(VLANTable):
         fields = (
             "pk",
             "vid",
-            "location",
             "vlan_group",
             "name",
             "prefixes",
+            "location_count",
             "tenant",
             "status",
             "role",
@@ -732,10 +719,10 @@ class VLANDetailTable(VLANTable):
         default_columns = (
             "pk",
             "vid",
-            "location",
             "vlan_group",
             "name",
             "prefixes",
+            "location_count",
             "tenant",
             "status",
             "role",
@@ -780,18 +767,22 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
 
     vid = tables.LinkColumn(viewname="ipam:vlan", args=[Accessor("pk")], verbose_name="ID")
     tagged = BooleanColumn()
-    location = tables.Column(linkify=True)
     vlan_group = tables.Column(accessor=Accessor("vlan_group__name"), verbose_name="Group")
     tenant = TenantColumn()
     role = tables.TemplateColumn(template_code=VLAN_ROLE_LINK)
+    location_count = LinkedCountColumn(
+        viewname="dcim:location",
+        url_params={"vlans": "pk"},
+        verbose_name="Locations",
+    )
 
     class Meta(BaseTable.Meta):
         model = VLAN
         fields = (
             "vid",
             "tagged",
-            "location",
             "vlan_group",
+            "location_count",
             "name",
             "tenant",
             "status",

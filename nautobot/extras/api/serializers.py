@@ -5,6 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 
 from nautobot.core.api import (
     BaseModelSerializer,
@@ -17,12 +18,14 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
 )
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.fields import NautobotHyperlinkedRelatedField
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
     get_nested_serializer_depth,
     nested_serializers_for_models,
     return_nested_serializer_data_based_on_depth,
 )
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.dcim.api.serializers import (
     DeviceSerializer,
@@ -45,6 +48,8 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
+    ContactAssociation,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -72,6 +77,7 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
 from nautobot.extras.models.mixins import NotesMixin
@@ -173,6 +179,59 @@ class ConfigContextSchemaSerializer(NautobotModelSerializer):
             return None
         depth = get_nested_serializer_depth(self)
         return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.owner, "owner")
+
+
+#
+# Contacts
+#
+
+
+class ContactSerializer(NautobotModelSerializer):
+    # needed since this is the reverse side of the M2M field.
+    teams = NautobotHyperlinkedRelatedField(queryset=Team.objects.all(), many=True, required=False)
+
+    class Meta:
+        model = Contact
+        fields = "__all__"
+
+    def validate(self, data):
+        attrs = data.copy()
+        attrs.pop("teams", None)
+        super().validate(attrs)
+        return data
+
+
+class ContactAssociationSerializer(NautobotModelSerializer):
+    associated_object_type = ContentTypeField(queryset=ContentType.objects.all(), many=False)
+
+    class Meta:
+        model = ContactAssociation
+        fields = "__all__"
+        validators = []
+        extra_kwargs = {
+            "role": {"required": False},
+            "contact": {"required": False},
+            "team": {"required": False},
+        }
+
+    def validate(self, data):
+        # Validate uniqueness of (contact/team, role)
+        if data.get("contact") and data.get("role"):
+            validator = UniqueTogetherValidator(
+                queryset=ContactAssociation.objects.all(),
+                fields=("contact", "role"),
+            )
+            validator(data, self)
+        elif data.get("team") and data.get("role"):
+            validator = UniqueTogetherValidator(
+                queryset=ContactAssociation.objects.all(),
+                fields=("team", "role"),
+            )
+            validator(data, self)
+
+        super().validate(data)
+
+        return data
 
 
 #
@@ -500,9 +559,9 @@ class JobClassSerializer(serializers.Serializer):
     )
     id = serializers.CharField(read_only=True, source="class_path")
     pk = serializers.SerializerMethodField(read_only=True)
-    name = serializers.CharField(max_length=255, read_only=True)
-    description = serializers.CharField(max_length=255, required=False, read_only=True)
-    test_methods = serializers.ListField(child=serializers.CharField(max_length=255))
+    name = serializers.CharField(max_length=CHARFIELD_MAX_LENGTH, read_only=True)
+    description = serializers.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, read_only=True)
+    test_methods = serializers.ListField(child=serializers.CharField(max_length=CHARFIELD_MAX_LENGTH))
     vars = serializers.SerializerMethodField(read_only=True)
 
     @extend_schema_field(serializers.DictField)
@@ -562,7 +621,7 @@ class JobCreationSerializer(BaseModelSerializer):
     """
 
     url = serializers.HyperlinkedIdentityField(view_name="extras-api:scheduledjob-detail")
-    name = serializers.CharField(max_length=255, required=False)
+    name = serializers.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     start_time = serializers.DateTimeField(format=None, required=False)
 
     class Meta:
@@ -605,7 +664,7 @@ class JobInputSerializer(serializers.Serializer):
 class JobMultiPartInputSerializer(serializers.Serializer):
     """JobMultiPartInputSerializer is a "flattened" version of JobInputSerializer for use with multipart/form-data submissions which only accept key-value pairs"""
 
-    _schedule_name = serializers.CharField(max_length=255, required=False)
+    _schedule_name = serializers.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     _schedule_start_time = serializers.DateTimeField(format=None, required=False)
     _schedule_interval = ChoiceField(choices=JobExecutionType, required=False)
     _schedule_crontab = serializers.CharField(required=False, allow_blank=True)
@@ -876,6 +935,18 @@ class TagSerializer(NautobotModelSerializer):
                 raise serializers.ValidationError(errors)
 
         return data
+
+
+#
+# Teams
+#
+
+
+class TeamSerializer(NautobotModelSerializer):
+    class Meta:
+        model = Team
+        fields = "__all__"
+        extra_kwargs = {"contacts": {"required": False}}
 
 
 #

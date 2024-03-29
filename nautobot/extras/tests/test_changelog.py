@@ -17,7 +17,7 @@ from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange,
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
-from example_plugin.signals import EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT, EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME
+from example_app.signals import EXAMPLE_APP_CUSTOM_FIELD_DEFAULT, EXAMPLE_APP_CUSTOM_FIELD_NAME
 
 
 class ChangeLogViewTest(ModelViewTestCase):
@@ -264,7 +264,7 @@ class ChangeLogAPITest(APITestCase):
             "custom_fields": {
                 "my_field": "ABC",
                 "my_field_select": "Bar",
-                EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME: EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT,
+                EXAMPLE_APP_CUSTOM_FIELD_NAME: EXAMPLE_APP_CUSTOM_FIELD_DEFAULT,
             },
             "tags": [
                 {"name": self.tags[0].name},
@@ -302,7 +302,7 @@ class ChangeLogAPITest(APITestCase):
             "custom_fields": {
                 "my_field": "DEF",
                 "my_field_select": "Foo",
-                EXAMPLE_PLUGIN_CUSTOM_FIELD_NAME: EXAMPLE_PLUGIN_CUSTOM_FIELD_DEFAULT,
+                EXAMPLE_APP_CUSTOM_FIELD_NAME: EXAMPLE_APP_CUSTOM_FIELD_DEFAULT,
             },
             "tags": [{"name": self.tags[2].name}],
         }

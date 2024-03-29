@@ -12,7 +12,7 @@ from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
 import django_tables2
 from django_tables2.data import TableQuerysetData
-from django_tables2.utils import Accessor
+from django_tables2.utils import Accessor, OrderBy, OrderByTuple
 from tree_queries.models import TreeNode
 
 from nautobot.core.templatetags import helpers
@@ -34,7 +34,7 @@ class BaseTable(django_tables2.Table):
             "class": "table table-hover table-headings",
         }
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, user=None, hide_hierarchy_ui=False, **kwargs):
         # Add custom field columns
         model = self._meta.model
 
@@ -62,12 +62,9 @@ class BaseTable(django_tables2.Table):
                 )
             # symmetric relationships are already handled above in the source_type case
 
-        # Disable ordering on these TreeNode Models Table because TreeNode do not support sorting
-        if model and issubclass(model, TreeNode):
-            kwargs["orderable"] = False
-
         # Init table
         super().__init__(*args, **kwargs)
+        self.hide_hierarchy_ui = hide_hierarchy_ui
 
         # Set default empty_text if none was provided
         if self.empty_text is None:
@@ -206,6 +203,47 @@ class BaseTable(django_tables2.Table):
     @property
     def visible_columns(self):
         return [name for name in self.sequence if self.columns[name].visible]
+
+    @property
+    def order_by(self):
+        return self._order_by
+
+    @order_by.setter
+    def order_by(self, value):
+        """
+        Order the rows of the table based on columns.
+
+        Arguments:
+            value: iterable or comma separated string of order by aliases.
+        """
+        # collapse empty values to ()
+        order_by = () if not value else value
+        # accept string
+        order_by = order_by.split(",") if isinstance(order_by, str) else order_by
+        valid = []
+
+        for alias in order_by:
+            name = OrderBy(alias).bare
+            if name in self.columns and self.columns[name].orderable:
+                valid.append(alias)
+        self._order_by = OrderByTuple(valid)
+
+        # The above block of code is copied from super().order_by
+        # due to limitations in directly calling parent class methods within a property setter.
+        # See Python bug report: https://bugs.python.org/issue14965
+        model = getattr(self.Meta, "model", None)
+        if model and issubclass(model, TreeNode):
+            # Use the TreeNode model's approach to sorting
+            queryset = self.data.data
+            # If the data passed into the Table is a list (as in cases like BulkImport post),
+            # convert this list to a queryset.
+            # This ensures consistent behavior regardless of the input type.
+            if isinstance(self.data.data, list):
+                queryset = model.objects.filter(pk__in=[instance.pk for instance in self.data.data])
+            self.data.data = queryset.extra(order_by=self._order_by)
+        else:
+            # Otherwise, use the default sorting method
+            self.data.order_by(self._order_by)
 
 
 #
