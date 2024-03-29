@@ -67,6 +67,20 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AlterField(
+            model_name="controller",
+            name="role",
+            field=nautobot.extras.models.roles.RoleField(
+                blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to="extras.role"
+            ),
+        ),
+        migrations.AlterField(
+            model_name="controller",
+            name="status",
+            field=nautobot.extras.models.statuses.StatusField(
+                on_delete=django.db.models.deletion.PROTECT, to="extras.status"
+            ),
+        ),
+        migrations.AlterField(
             model_name="device",
             name="local_config_context_data_owner_content_type",
             field=nautobot.core.models.fields.ForeignKeyWithAutoRelatedName(
@@ -263,6 +277,20 @@ class Migration(migrations.Migration):
             name="device_type",
             field=nautobot.core.models.fields.ForeignKeyWithAutoRelatedName(
                 on_delete=django.db.models.deletion.CASCADE, to="dcim.devicetype"
+            ),
+        ),
+        migrations.AlterField(
+            model_name="softwareimagefile",
+            name="status",
+            field=nautobot.extras.models.statuses.StatusField(
+                on_delete=django.db.models.deletion.PROTECT, to="extras.status"
+            ),
+        ),
+        migrations.AlterField(
+            model_name="softwareversion",
+            name="status",
+            field=nautobot.extras.models.statuses.StatusField(
+                on_delete=django.db.models.deletion.PROTECT, to="extras.status"
             ),
         ),
     ]

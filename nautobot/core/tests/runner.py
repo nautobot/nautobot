@@ -11,9 +11,9 @@ from nautobot.core.celery import app, setup_nautobot_job_logging
 from nautobot.core.settings_funcs import parse_redis_connection
 
 
-def init_worker_with_unique_cache(counter):
+def init_worker_with_unique_cache(*args, **kwargs):
     """Extend Django's default parallel unit test setup to also ensure distinct Redis caches."""
-    _init_worker(counter)  # call Django default to set _worker_id and set up parallel DB instances
+    _init_worker(*args, **kwargs)  # call Django default to set _worker_id and set up parallel DB instances
     # _worker_id is now 1, 2, 3, 4, etc.
 
     from django.test.runner import _worker_id
