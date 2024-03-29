@@ -1,0 +1,27 @@
+{% load helpers %}
+
+<tr>
+    <td>Software Version</td>
+    <td>
+        {{ object.software_version|hyperlinked_object }}
+        {% with overridden_software_image_files=object.software_image_files.all %}
+            <ul class="software-image-hierarchy">
+                {% for software_version_image in software_version_images %}
+                    {% if overridden_software_image_files %}
+                        <li>{{ software_version_image|hyperlinked_object:"image_file_name" }} (overridden)</li>
+                    {% else %}
+                        <li>{{ software_version_image|hyperlinked_object:"image_file_name" }}</li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+            {% if overridden_software_image_files %}
+                <strong>Software Image Files Overridden:</strong>
+                <ul>
+                    {% for overridden_software_image_file in overridden_software_image_files %}
+                        <li>{{ overridden_software_image_file|hyperlinked_object }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+    </td>
+</tr>

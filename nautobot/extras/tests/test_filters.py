@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import Q
-from django.test import override_settings
+from django.test import override_settings, RequestFactory
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import FilterTestCases
@@ -30,6 +30,7 @@ from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.filters import (
     ComputedFieldFilterSet,
     ConfigContextFilterSet,
+    ContactFilterSet,
     ContentTypeFilterSet,
     CustomFieldChoiceFilterSet,
     CustomLinkFilterSet,
@@ -53,11 +54,14 @@ from nautobot.extras.filters import (
     SecretsGroupFilterSet,
     StatusFilterSet,
     TagFilterSet,
+    TeamFilterSet,
     WebhookFilterSet,
 )
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
+    Contact,
+    ContactAssociation,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -81,12 +85,14 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.ipam.filters import VLANFilterSet
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant, TenantGroup
+from nautobot.users.factory import UserFactory
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType, VirtualMachine
 
 # Use the proper swappable User model
@@ -343,6 +349,16 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = ContentType.objects.order_by("app_label", "model")
     filterset = ContentTypeFilterSet
+    user_permissions = [
+        "dcim.add_location",
+        "extras.change_status",
+        "ipam.delete_prefix",
+        "tenancy.view_tenant",
+    ]
+
+    def setUp(self):
+        super().setUp()
+        self.factory = RequestFactory(SERVER_NAME="nautobot.example.com")
 
     def test_app_label(self):
         params = {"app_label": ["dcim"]}
@@ -354,12 +370,189 @@ class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
             self.filterset(params, self.queryset).qs, self.queryset.filter(model__in=["device", "virtualmachine"])
         )
 
+    def test_can_add(self):
+        # With no request user, can't add anything
+        params = {"can_add": True}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+        params = {"can_add": False}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset)
+        # With user, filter by permissions
+        request = self.factory.get("/api/extras/content-types/")
+        request.user = self.user
+        params = {"can_add": True}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.filter(app_label="dcim", model="location"),
+        )
+        params = {"can_add": False}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.exclude(app_label="dcim", model="location"),
+        )
+
+    def test_can_change(self):
+        # With no request user, can't change anything
+        params = {"can_change": True}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+        params = {"can_change": False}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset)
+        # With user, filter by permissions
+        request = self.factory.get("/api/extras/content-types/")
+        request.user = self.user
+        params = {"can_change": True}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.filter(app_label="extras", model="status"),
+        )
+        params = {"can_change": False}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.exclude(app_label="extras", model="status"),
+        )
+
+    def test_can_delete(self):
+        # With no request user, can't delete anything
+        params = {"can_delete": True}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+        params = {"can_delete": False}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset)
+        # With user, filter by permissions
+        request = self.factory.get("/api/extras/content-types/")
+        request.user = self.user
+        params = {"can_delete": True}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.filter(app_label="ipam", model="prefix"),
+        )
+        params = {"can_delete": False}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.exclude(app_label="ipam", model="prefix"),
+        )
+
+    def test_can_view(self):
+        # With no request user, can't view anything
+        params = {"can_view": True}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+        params = {"can_view": False}
+        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset)
+        # With user, filter by permissions
+        request = self.factory.get("/api/extras/content-types/")
+        request.user = self.user
+        params = {"can_view": True}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.filter(app_label="tenancy", model="tenant"),
+        )
+        params = {"can_view": False}
+        self.assertQuerysetEqual(
+            self.filterset(params, self.queryset, request=request).qs,
+            self.queryset.exclude(app_label="tenancy", model="tenant"),
+        )
+
     def test_search(self):
         params = {"q": "circ"}
         self.assertQuerysetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(Q(app_label__icontains="circ") | Q(model__icontains="circ")),
         )
+
+
+class ContactAndTeamFilterSetTestCaseMixin:
+    """Mixin class to test common filters to both Contact and Team filter sets."""
+
+    def test_similar_to_location_data(self):
+        """Complex test to test the complex `similar_to_location_data` method filter."""
+        ContactAssociation.objects.all().delete()
+        self.queryset.delete()
+        location_type = LocationType.objects.filter(parent__isnull=True).first()
+        location_status = Status.objects.get_for_model(Location).first()
+        test_locations = (
+            Location.objects.create(
+                location_type=location_type,
+                name="Filter Test Location 0",
+                status=location_status,
+                contact_name="match 0",
+            ),
+            Location.objects.create(
+                location_type=location_type,
+                name="Filter Test Location 1",
+                status=location_status,
+                contact_email="Test email for location 1 and 2",
+            ),
+            Location.objects.create(
+                location_type=location_type,
+                name="Filter Test Location 2",
+                status=location_status,
+                contact_email="TEST EMAIL FOR LOCATION 1 AND 2",
+                contact_phone="Test phone for location 2 and 3",
+            ),
+            Location.objects.create(
+                location_type=location_type,
+                name="Filter Test Location 3",
+                status=location_status,
+                contact_phone="Test phone for location 2 and 3",
+            ),
+            Location.objects.create(
+                location_type=location_type,
+                name="Filter Test Location 4",
+                status=location_status,
+                contact_name="Hopefully this doesn't match any random factory data",
+                contact_email="Hopefully this doesn't match any random factory data",
+                contact_phone="Hopefully this doesn't match any random factory data",
+                physical_address="Hopefully this doesn't match any random factory data",
+                shipping_address="Hopefully this doesn't match any random factory data",
+            ),
+        )
+
+        self.queryset.create(name="match 0")
+        self.queryset.create(name="match 1 and 2", email="Test email for location 1 and 2")
+        self.queryset.create(name="match 2 and 3", phone="Test phone for location 2 and 3")
+
+        # These subtests are confusing because we're trying to test the NaturalKeyOrPKMultipleChoiceFilter
+        # behavior while also testing the `similar_to_location_data` method filter behavior.
+        with self.subTest("Test name match"):
+            params = {"similar_to_location_data": [test_locations[0].pk]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(name__in=["match 0"]),
+            )
+        with self.subTest("Test email match"):
+            params = {"similar_to_location_data": [test_locations[1].pk]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(name__in=["match 1 and 2"]),
+            )
+        with self.subTest("Test phone match"):
+            params = {"similar_to_location_data": [test_locations[2].pk]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(name__in=["match 1 and 2", "match 2 and 3"]),
+            )
+        with self.subTest("Test email and phone match"):
+            params = {"similar_to_location_data": [test_locations[1].pk, test_locations[3].name]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(name__in=["match 1 and 2", "match 2 and 3"]),
+            )
+        with self.subTest("Test no match"):
+            params = {"similar_to_location_data": [test_locations[4].pk]}
+            self.assertFalse(self.filterset(params, self.queryset).qs.exists())
+            params = {"similar_to_location_data": [test_locations[4].name]}
+            self.assertFalse(self.filterset(params, self.queryset).qs.exists())
+
+
+class ContactFilterSetTestCase(ContactAndTeamFilterSetTestCaseMixin, FilterTestCases.FilterTestCase):
+    queryset = Contact.objects.all()
+    filterset = ContactFilterSet
+
+    generic_filter_tests = (
+        ["name"],
+        ["phone"],
+        ["email"],
+        ["address"],
+        ["comments"],
+    )
 
 
 class CustomFieldChoiceFilterSetTestCase(FilterTestCases.FilterTestCase):
@@ -475,7 +668,11 @@ class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
     @classmethod
     def setUpTestData(cls):
         content_types = ContentType.objects.filter(model__in=["location", "rack", "device"])
-
+        repo = GitRepository.objects.create(
+            name="Test Git Repository",
+            slug="test_git_repo",
+            remote_url="http://localhost/git.git",
+        )
         ExportTemplate.objects.create(
             name="Export Template 1",
             content_type=content_types[0],
@@ -490,6 +687,7 @@ class ExportTemplateTestCase(FilterTestCases.FilterTestCase):
             name="Export Template 3",
             content_type=content_types[2],
             template_code="TESTING",
+            owner=repo,
         )
 
     def test_name(self):
@@ -679,6 +877,8 @@ class GitRepositoryTestCase(FilterTestCases.FilterTestCase):
 class GraphQLTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = GraphQLQuery.objects.all()
     filterset = GraphQLQueryFilterSet
+    # skip testing "query" attribute for generic q filter test as it's not trivially modifiable
+    exclude_q_filter_predicates = ["query"]
 
     @classmethod
     def setUpTestData(cls):
@@ -841,11 +1041,12 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
     def setUpTestData(cls):
         jobs = Job.objects.all()[:3]
         cls.jobs = jobs
+        user = UserFactory.create()
         for job in jobs:
             JobResult.objects.create(
                 job_model=job,
                 name=job.class_path,
-                user=User.objects.first(),
+                user=user,
                 status=JobResultStatusChoices.STATUS_STARTED,
             )
 
@@ -1209,135 +1410,7 @@ class RelationshipTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
-class RelationshipAssociationTestCase(FilterTestCases.FilterTestCase):
-    queryset = RelationshipAssociation.objects.all()
-    filterset = RelationshipAssociationFilterSet
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.device_type = ContentType.objects.get_for_model(Device)
-        cls.vlan_type = ContentType.objects.get_for_model(VLAN)
-
-        cls.relationships = (
-            Relationship(
-                label="Device VLANs",
-                key="device_vlans",
-                type="many-to-many",
-                source_type=cls.device_type,
-                destination_type=cls.vlan_type,
-            ),
-            Relationship(
-                label="Primary VLAN",
-                key="primary_vlan",
-                type="one-to-many",
-                source_type=cls.vlan_type,
-                destination_type=cls.device_type,
-            ),
-            Relationship(
-                label="Device Device",
-                key="symmetric_device_device",
-                type="symmetric-many-to-many",
-                source_type=cls.device_type,
-                destination_type=cls.device_type,
-            ),
-        )
-        for relationship in cls.relationships:
-            relationship.validated_save()
-
-        manufacturer = Manufacturer.objects.first()
-        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
-        devicerole = Role.objects.get_for_model(Device).first()
-        devicestatus = Status.objects.get_for_model(Device).first()
-        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        cls.devices = (
-            Device.objects.create(
-                name="Device 1", device_type=devicetype, role=devicerole, status=devicestatus, location=location
-            ),
-            Device.objects.create(
-                name="Device 2", device_type=devicetype, role=devicerole, status=devicestatus, location=location
-            ),
-            Device.objects.create(
-                name="Device 3", device_type=devicetype, role=devicerole, status=devicestatus, location=location
-            ),
-        )
-        vlan_status = Status.objects.get_for_model(VLAN).first()
-        vlan_group = VLANGroup.objects.create(name="Test VLANGroup 1")
-        cls.vlans = (
-            VLAN.objects.create(vid=1, name="VLAN 1", status=vlan_status, vlan_group=vlan_group),
-            VLAN.objects.create(vid=2, name="VLAN 2", status=vlan_status, vlan_group=vlan_group),
-        )
-
-        RelationshipAssociation(
-            relationship=cls.relationships[0],
-            source_type=cls.device_type,
-            source_id=cls.devices[0].pk,
-            destination_type=cls.vlan_type,
-            destination_id=cls.vlans[0].pk,
-        ).validated_save()
-        RelationshipAssociation(
-            relationship=cls.relationships[0],
-            source_type=cls.device_type,
-            source_id=cls.devices[1].pk,
-            destination_type=cls.vlan_type,
-            destination_id=cls.vlans[1].pk,
-        ).validated_save()
-        RelationshipAssociation(
-            relationship=cls.relationships[1],
-            source_type=cls.vlan_type,
-            source_id=cls.vlans[0].pk,
-            destination_type=cls.device_type,
-            destination_id=cls.devices[0].pk,
-        ).validated_save()
-        RelationshipAssociation(
-            relationship=cls.relationships[1],
-            source_type=cls.vlan_type,
-            source_id=cls.vlans[1].pk,
-            destination_type=cls.device_type,
-            destination_id=cls.devices[1].pk,
-        ).validated_save()
-        RelationshipAssociation(
-            relationship=cls.relationships[2],
-            source_type=cls.device_type,
-            source_id=cls.devices[0].pk,
-            destination_type=cls.device_type,
-            destination_id=cls.devices[1].pk,
-        ).validated_save()
-        RelationshipAssociation(
-            relationship=cls.relationships[2],
-            source_type=cls.device_type,
-            source_id=cls.devices[1].pk,
-            destination_type=cls.device_type,
-            destination_id=cls.devices[2].pk,
-        ).validated_save()
-
-    def test_relationship(self):
-        params = {"relationship": [self.relationships[0].key]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_source_type(self):
-        params = {"source_type": ["dcim.device", "dcim.interface"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-
-    def test_source_id(self):
-        params = {"source_id": [self.devices[0].pk, self.devices[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-
-    def test_destination_type(self):
-        params = {"destination_type": ["dcim.device", "dcim.interface"]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-
-    def test_destination_id(self):
-        params = {"destination_id": [self.devices[0].pk, self.devices[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
-
-    def test_peer_id(self):
-        params = {"peer_id": [self.devices[0].pk, self.devices[1].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        params = {"peer_id": [self.devices[2].pk]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-
-class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
+class RelationshipAssociationFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = RelationshipAssociation.objects.all()
     filterset = RelationshipAssociationFilterSet
 
@@ -1454,6 +1527,32 @@ class RelationshipModelFilterSetTestCase(FilterTestCases.FilterTestCase):
         )
         for relationship_association in cls.relationship_associations:
             relationship_association.validated_save()
+
+    def test_relationship(self):
+        params = {"relationship": [self.relationships[0].key]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_source_type(self):
+        params = {"source_type": ["dcim.device", "dcim.interface"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
+
+    def test_source_id(self):
+        params = {"source_id": [self.devices[0].pk, self.devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
+
+    def test_destination_type(self):
+        params = {"destination_type": ["dcim.device", "dcim.interface"]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
+
+    def test_destination_id(self):
+        params = {"destination_id": [self.devices[0].pk, self.devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+
+    def test_peer_id(self):
+        params = {"peer_id": [self.devices[0].pk, self.devices[1].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        params = {"peer_id": [self.devices[2].pk]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_one_to_many_source(self):
         self.queryset = Device.objects.all()
@@ -1742,6 +1841,19 @@ class TagTestCase(FilterTestCases.NameOnlyFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
+class TeamFilterSetTestCase(ContactAndTeamFilterSetTestCaseMixin, FilterTestCases.FilterTestCase):
+    queryset = Team.objects.all()
+    filterset = TeamFilterSet
+
+    generic_filter_tests = (
+        ["name"],
+        ["phone"],
+        ["email"],
+        ["address"],
+        ["comments"],
+    )
+
+
 class WebhookTestCase(FilterTestCases.FilterTestCase):
     queryset = Webhook.objects.all()
     filterset = WebhookFilterSet
@@ -1839,7 +1951,7 @@ class RoleTestCase(FilterTestCases.NameOnlyFilterTestCase):
         params = {"q": value}
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
-            self.queryset.filter(name=value).distinct(),
+            self.queryset.filter(name__icontains=value).distinct(),
         )
         value = self.queryset.first().pk
         params = {"q": value}

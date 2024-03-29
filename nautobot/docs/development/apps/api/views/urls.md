@@ -23,4 +23,4 @@ A URL pattern has three components:
 This makes our view accessible at the URL `/plugins/animal-sounds/random/`. (Remember, our `AnimalSoundsConfig` class sets our app's base URL to `animal-sounds`.) Viewing this URL should show the base Nautobot template with our custom content inside it.
 
 !!! tip
-    As a next step, you would typically want to add links from the Nautobot UI to this view, either from the [navigation menu](../ui-extensions/navigation.md), the [Nautobot home page](../ui-extensions/home-page.md), and/or the [Installed Plugins view](../configuration-view.md).
+    As a next step, you would typically want to add links from the Nautobot UI to this view, either from the [navigation menu](../ui-extensions/navigation.md), the [Nautobot home page](../ui-extensions/home-page.md), and/or the [Installed Apps view](../configuration-view.md).

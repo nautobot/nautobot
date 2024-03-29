@@ -2,9 +2,9 @@
 
 This example shows how to extend the Social Auth Pipeline to read groups from a groups claim in Okta and sync those with Nautobot.  
 
-Create a python module with the `group_sync.py` file in it, this could be done as part of a plugin or as a standalone python module.
+Create a python module with the `group_sync.py` file in it, this could be done as part of a Nautobot App, or as a standalone python module.
 
-In the nautobot_config.py set the following values:
+In the `nautobot_config.py` set the following values:
 
 ```python
 SOCIAL_AUTH_OKTA_OAUTH2_SCOPE = ["groups"]

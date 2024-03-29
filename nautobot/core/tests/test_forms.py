@@ -514,11 +514,11 @@ class AddressFieldMixinTest(TestCase):
         ipaddr_status = extras_models.Status.objects.get_for_model(ipam_models.IPAddress).first()
         prefix_status = extras_models.Status.objects.get_for_model(ipam_models.Prefix).first()
         self.namespace = ipam_models.Namespace.objects.first()
-        self.prefix = ipam_models.Prefix.objects.create(
-            prefix="10.0.0.0/24", namespace=self.namespace, status=prefix_status
+        self.prefix, _ = ipam_models.Prefix.objects.get_or_create(
+            prefix="10.0.0.0/24", namespace=self.namespace, defaults={"status": prefix_status}
         )
-        self.ip = ipam_models.IPAddress.objects.create(
-            address="10.0.0.1/32", namespace=self.namespace, status=ipaddr_status
+        self.ip, _ = ipam_models.IPAddress.objects.get_or_create(
+            address="10.0.0.1/32", parent=self.prefix, defaults={"status": ipaddr_status}
         )
         self.initial = {"address": self.ip.address}
 
@@ -658,7 +658,7 @@ class DynamicFilterFormTest(TestCase):
                     ("created", "Created"),
                     ("description", "Description"),
                     ("devices", "Devices (name or ID)"),
-                    ("cf_example_plugin_auto_custom_field", "Example Plugin Automatically Added Custom Field"),
+                    ("cf_example_app_auto_custom_field", "Example App Automatically Added Custom Field"),
                     ("facility", "Facility"),
                     ("has_vlan_groups", "Has VLAN groups"),
                     ("has_vlans", "Has VLANs"),

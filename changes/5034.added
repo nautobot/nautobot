@@ -1,0 +1,1 @@
+Added a management command (`nautobot-server migrate_location_contacts`) to help migrate the Location `contact_name`, `contact_email` and `contact_phone` fields to Contact and Teams models.

@@ -3,13 +3,17 @@ from django.db import models
 from taggit.models import GenericUUIDTaggedItemBase
 
 from nautobot.core.choices import ColorChoices
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ColorField
 from nautobot.core.models.querysets import RestrictedQuerySet
-from nautobot.extras.models import ChangeLoggedModel, CustomFieldModel
-from nautobot.extras.models.mixins import NotesMixin
-from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.utils import extras_features, TaggableClassesQuery
+
+# These imports are in this particular order because of circular import problems
+from .change_logging import ChangeLoggedModel
+from .customfields import CustomFieldModel
+from .mixins import NotesMixin
+from .relationships import RelationshipModel
 
 #
 # Tags
@@ -31,7 +35,7 @@ class TagQuerySet(RestrictedQuerySet):
     "custom_validators",
 )
 class Tag(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, NotesMixin):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="tags",
@@ -39,7 +43,7 @@ class Tag(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, Not
     )
     color = ColorField(default=ColorChoices.COLOR_GREY)
     description = models.CharField(
-        max_length=200,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
     )
 
