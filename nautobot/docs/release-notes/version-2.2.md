@@ -66,6 +66,45 @@ The CSV import functionality for all models has been changed from a synchronous 
 Model CharFields' `max_length` attributes have been standardized globally to have at least 255 characters except where a shorter `max_length` is explicitly justified.
 
 <!-- towncrier release notes start -->
+## v2.2.0 (2024-03-29)
+
+!!! warning
+    Upgrading from beta releases to final releases is never recommended for Nautobot; in the case of 2.2.0b1 to 2.2.0 several data models and database migrations have been modified (see [#5454](https://github.com/nautobot/nautobot/issues/5454)) between the two releases, and so upgrading in place from 2.2.0b1 to 2.2.0 **will not work**.
+
+### Added
+
+- [#4811](https://github.com/nautobot/nautobot/issues/4811) - Added a new generic test case (`test_table_with_indentation_is_removed_on_filter_or_sort`) to `ListObjectsViewTestCase` to test that the tree hierarchy is correctly removed on TreeModel list views when sorting or filtering is applied. This test will also run in these subclasses of the `ListObjectsViewTestCase`: `PrimaryObjectViewTestCase`, `OrganizationalObjectViewTestCase`, and `DeviceComponentViewTestCase`.
+- [#5034](https://github.com/nautobot/nautobot/issues/5034) - Added a management command (`nautobot-server migrate_location_contacts`) to help migrate the Location `contact_name`, `contact_email` and `contact_phone` fields to Contact and Teams models.
+
+### Changed
+
+- [#5452](https://github.com/nautobot/nautobot/issues/5452) - Changed the behavior of Prefix table: now they are sortable, and after sorting is applied, all hierarchy indentations are removed.
+- [#5454](https://github.com/nautobot/nautobot/issues/5454) - Changed one-to-many links from Controller to `PROTECT` against deleting.
+- [#5454](https://github.com/nautobot/nautobot/issues/5454) - Renamed `ControllerDeviceGroup` to `ControllerManagedDeviceGroup`.
+- [#5454](https://github.com/nautobot/nautobot/issues/5454) - Renamed `Controller.deployed_controller_device` to `Controller.controller_device`.
+- [#5454](https://github.com/nautobot/nautobot/issues/5454) - Renamed `Controller.deployed_controller_group` to `Controller.controller_device_redundancy_group`.
+- [#5454](https://github.com/nautobot/nautobot/issues/5454) - Renamed `Device.controller_device_group` to `Device.controller_managed_device_group`.
+- [#5454](https://github.com/nautobot/nautobot/issues/5454) - Removed ConfigContext from ControllerManagedDeviceGroup.
+- [#5454](https://github.com/nautobot/nautobot/issues/5454) - Removed ConfigContext from Controller.
+- [#5475](https://github.com/nautobot/nautobot/issues/5475) - Changed the behavior of Prefix table and other Tree Model tables: now after filtering is applied, all hierarchy indentations are removed.
+- [#5487](https://github.com/nautobot/nautobot/issues/5487) - Moved some nav menu items around to make better logical sense and to allow quicker access to more commonly accessed features.
+
+### Fixed
+
+- [#5415](https://github.com/nautobot/nautobot/issues/5415) - Fixed Team(s) field not pre-populating when editing a Contact.
+- [#5431](https://github.com/nautobot/nautobot/issues/5431) - Fixed Roles API response containing duplicate entries when filtering on more than one `content_types` value.
+- [#5431](https://github.com/nautobot/nautobot/issues/5431) - Fixed Providers API response containing duplicate entries when filtering on more than one `location` value.
+- [#5440](https://github.com/nautobot/nautobot/issues/5440) - Fixed `Cannot resolve keyword 'task_id' into field` error when calling `nautobot-server celery result <task_id>`.
+
+### Dependencies
+
+- [#4583](https://github.com/nautobot/nautobot/issues/4583) - Updated pinned version of `social-auth-core` to remove dependency on `python-jose` & it's dependency on `ecdsa`.
+
+### Housekeeping
+
+- [#5435](https://github.com/nautobot/nautobot/issues/5435) - Added `--pattern` argument to `invoke unittest`.
+- [#5435](https://github.com/nautobot/nautobot/issues/5435) - Added `--parallel-workers` argument to `invoke unittest`.
+
 ## v2.2.0-beta.1 (2024-03-19)
 
 ### Added
