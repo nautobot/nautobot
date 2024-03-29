@@ -1,0 +1,1 @@
+Replaced references to `pytz` with `zoneinfo` in keeping with Django 4.
