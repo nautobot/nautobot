@@ -608,6 +608,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
     action_buttons = ("add", "import", "export")
     filterset_class = None
     filterset_form_class = None
+    hide_hierarchy_ui = False
     non_filter_params = (
         "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
         "page",  # used by django-tables2.RequestConfig
@@ -629,6 +630,12 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
                     format_html("Invalid filters were specified: {}", self.filterset.errors),
                 )
                 queryset = queryset.none()
+
+            # If a valid filterset is applied, we have to hide the hierarchy indentation in the UI for tables that support hierarchy indentation.
+            # NOTE: An empty filterset query-param is also valid filterset and we dont want to hide hierarchy indentation if no filter query-param is provided
+            #      hence `filterset.data`.
+            if self.filterset.is_valid() and self.filterset.data:
+                self.hide_hierarchy_ui = True
         return queryset
 
     # 3.0 TODO: remove, irrelevant after #4746
