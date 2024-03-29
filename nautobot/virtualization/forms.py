@@ -548,6 +548,7 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         query_params={
             "content_types": VMInterface._meta.label_lower,
         },
+        required=False,
     )
 
     def __init__(self, *args, **kwargs):
@@ -687,6 +688,7 @@ class VMInterfaceBulkCreateForm(
     role = DynamicModelChoiceField(
         queryset=Role.objects.all(),
         query_params={"content_types": VMInterface._meta.label_lower},
+        required=False,
     )
 
     field_order = (

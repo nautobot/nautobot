@@ -2473,7 +2473,7 @@ class InterfaceBulkCreateForm(
         query_params={"content_types": Interface._meta.label_lower},
     )
     role = DynamicModelChoiceField(
-        required=True,
+        required=False,
         queryset=Role.objects.all(),
         query_params={"content_types": Interface._meta.label_lower},
     )
