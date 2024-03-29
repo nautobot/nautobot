@@ -81,9 +81,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="contactassociation",
             name="role",
-            field=nautobot.extras.models.roles.RoleField(
-                blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to="extras.role"
-            ),
+            field=nautobot.extras.models.roles.RoleField(on_delete=django.db.models.deletion.PROTECT, to="extras.role"),
         ),
         migrations.AlterField(
             model_name="contactassociation",
