@@ -233,7 +233,7 @@ class RackElevationSVG:
                 start_y + unit_height / 2 + RACK_ELEVATION_BORDER_WIDTH,
             )
             unit = ru + 1 if self.rack.desc_units else self.rack.u_height - ru
-            drawing.add(drawing.text(str(unit), position_coordinates, class_="unit"))
+            drawing.add(drawing.text(f"{unit:02d}", position_coordinates, class_="unit"))
 
         for unit in self.merge_elevations(face):
             # Loop through all units in the elevation
