@@ -109,7 +109,7 @@ def assert_locations_content_types(sender, instance, action, reverse, model, pk_
         # instance = the Prefix or VLAN
         # model = Location class
         instance_ct = ContentType.objects.get_for_model(instance)
-        invalid_locations = model.objects.select_related("location_type").filter(
+        invalid_locations = model.objects.without_tree_fields().select_related("location_type").filter(
             Q(pk__in=pk_set), ~Q(location_type__content_types__in=[instance_ct])
         )
         if invalid_locations.exists():
