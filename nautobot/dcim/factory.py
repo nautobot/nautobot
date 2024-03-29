@@ -5,6 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 import factory
 from faker import Faker
+
 try:
     import zoneinfo
 except ImportError:  # python 3.8
