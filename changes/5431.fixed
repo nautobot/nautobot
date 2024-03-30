@@ -1,2 +1,0 @@
-Fixed Roles API response containing duplicate entries when filtering on more than one `content_types` value.
-Fixed Providers API response containing duplicate entries when filtering on more than one `location` value.
