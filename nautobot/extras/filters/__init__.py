@@ -1,7 +1,11 @@
+from difflib import get_close_matches
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 import django_filters
+from drf_spectacular.utils import extend_schema_field
 
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
@@ -447,7 +451,54 @@ class NautobotFilterSet(
 #
 
 
-class ContactFilterSet(NameSearchFilterSet, NautobotFilterSet):
+class ContactTeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
+    """Base filter set for Contacts and Teams."""
+
+    similar_to_location_data = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        label="Similar to location contact data",
+        method="_similar_to_location_data",
+    )
+
+    def generate_query__similar_to_location_data(self, queryset, locations):
+        """Helper method used by _similar_to_location_data() method."""
+        query_params = Q()
+        for location in locations:
+            contact_name = location.contact_name
+            contact_phone = location.contact_phone
+            contact_email = location.contact_email
+            if contact_name:
+                contact_names = list(queryset.order_by().values_list("name", flat=True).distinct())
+                name_matches = get_close_matches(contact_name, contact_names, cutoff=0.8)
+                if name_matches:
+                    query_params |= Q(name__in=name_matches)
+            if contact_phone:
+                contact_phones = list(queryset.order_by().values_list("phone", flat=True).distinct())
+                phone_matches = get_close_matches(contact_phone, contact_phones, cutoff=0.8)
+                if phone_matches:
+                    query_params |= Q(phone__in=phone_matches)
+            if contact_email:
+                contact_emails = list(queryset.order_by().values_list("email", flat=True).distinct())
+                # fuzzy matching for emails doesn't make sense, use case insensitive match here
+                email_matches = [e for e in contact_emails if e.casefold() == contact_email.casefold()]
+                if email_matches:
+                    query_params |= Q(email__in=email_matches)
+
+        return query_params
+
+    @extend_schema_field({"type": "string"})
+    def _similar_to_location_data(self, queryset, name, value):
+        """FilterSet method for getting Contacts or Teams that are similar to the explicit contact fields of a location"""
+        if value:
+            params = self.generate_query__similar_to_location_data(queryset, value)
+            if len(params) > 0:
+                return queryset.filter(params)
+            else:
+                return queryset.none()
+        return queryset
+
+
+class ContactFilterSet(ContactTeamFilterSet):
     class Meta:
         model = Contact
         fields = "__all__"
@@ -1109,7 +1160,7 @@ class TagFilterSet(NautobotFilterSet):
 #
 
 
-class TeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
+class TeamFilterSet(ContactTeamFilterSet):
     class Meta:
         model = Team
         fields = "__all__"

@@ -126,6 +126,7 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
 
 class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
     model = Prefix
+    filter_on_field = "prefix_length"
 
     @classmethod
     def setUpTestData(cls):

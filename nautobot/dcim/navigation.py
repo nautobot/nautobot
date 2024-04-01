@@ -18,25 +18,9 @@ menu_items = (
                 weight=150,
                 items=(
                     NavMenuItem(
-                        link="dcim:locationtype_list",
-                        name="Location Types",
-                        weight=100,
-                        permissions=[
-                            "dcim.view_locationtype",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="dcim:locationtype_add",
-                                permissions=[
-                                    "dcim.add_locationtype",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
                         link="dcim:location_list",
                         name="Locations",
-                        weight=200,
+                        weight=100,
                         permissions=[
                             "dcim.view_location",
                         ],
@@ -45,6 +29,22 @@ menu_items = (
                                 link="dcim:location_add",
                                 permissions=[
                                     "dcim.add_location",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:locationtype_list",
+                        name="Location Types",
+                        weight=200,
+                        permissions=[
+                            "dcim.view_locationtype",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:locationtype_add",
+                                permissions=[
+                                    "dcim.add_locationtype",
                                 ],
                             ),
                         ),
@@ -211,25 +211,9 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
-                        link="dcim:manufacturer_list",
-                        name="Manufacturers",
-                        weight=200,
-                        permissions=[
-                            "dcim.view_manufacturer",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="dcim:manufacturer_add",
-                                permissions=[
-                                    "dcim.add_manufacturer",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
                         link="dcim:devicefamily_list",
                         name="Device Families",
-                        weight=300,
+                        weight=200,
                         permissions=[
                             "dcim.view_devicefamily",
                         ],
@@ -238,6 +222,22 @@ menu_items = (
                                 link="dcim:devicefamily_add",
                                 permissions=[
                                     "dcim.add_devicefamily",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:manufacturer_list",
+                        name="Manufacturers",
+                        weight=300,
+                        permissions=[
+                            "dcim.view_manufacturer",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:manufacturer_add",
+                                permissions=[
+                                    "dcim.add_manufacturer",
                                 ],
                             ),
                         ),
