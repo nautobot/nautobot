@@ -1575,12 +1575,14 @@ class InterfaceTest(Mixins.BasePortTestMixin):
 
         # Interfaces have special handling around the "Active" status so let's set our interfaces to something else.
         non_default_status = Status.objects.get_for_model(Interface).exclude(name="Active").first()
+        intf_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
             Interface.objects.create(
                 device=cls.devices[0],
                 name="Interface 1",
                 type="1000base-t",
                 status=non_default_status,
+                role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.devices[0],
@@ -1593,12 +1595,14 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 name="Interface 3",
                 type=InterfaceTypeChoices.TYPE_BRIDGE,
                 status=non_default_status,
+                role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.devices[1],
                 name="Interface 4",
                 type=InterfaceTypeChoices.TYPE_1GE_GBIC,
                 status=non_default_status,
+                role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.devices[1],
@@ -1611,12 +1615,14 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 name="Interface 6",
                 type=InterfaceTypeChoices.TYPE_LAG,
                 status=non_default_status,
+                role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.devices[2],
                 name="Interface 7",
                 type=InterfaceTypeChoices.TYPE_1GE_GBIC,
                 status=non_default_status,
+                role=intf_role,
             ),
         )
 
@@ -1634,6 +1640,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 "name": "Interface 8",
                 "type": "1000base-t",
                 "status": interface_status.pk,
+                "role": intf_role.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
                 "untagged_vlan": cls.vlans[2].pk,
@@ -1644,6 +1651,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 "name": "Interface 9",
                 "type": "1000base-t",
                 "status": interface_status.pk,
+                "role": intf_role.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "bridge": cls.interfaces[3].pk,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
@@ -1694,6 +1702,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 {
                     "device": cls.devices[0].pk,
                     "name": "interface test 1",
+                    "role": intf_role.pk,
                     "type": InterfaceTypeChoices.TYPE_VIRTUAL,
                     "status": interface_status.pk,
                     "parent_interface": cls.interfaces[6].id,  # do not belong to same device or vc
@@ -1705,6 +1714,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                     "device": cls.devices[0].pk,
                     "name": "interface test 2",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "role": intf_role.pk,
                     "status": interface_status.pk,
                     "bridge": cls.interfaces[6].id,  # does not belong to same device or vc
                 },
@@ -1804,6 +1814,7 @@ class InterfaceTest(Mixins.BasePortTestMixin):
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 type=InterfaceTypeChoices.TYPE_VIRTUAL,
                 status=Status.objects.get_for_model(Interface).first(),
+                role=Role.objects.get_for_model(Interface).first(),
             )
             interface.tagged_vlans.add(self.vlans[0])
             payload = {"mode": None, "tagged_vlans": [self.vlans[2].pk]}
@@ -2075,6 +2086,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
 
         interfaces = []
         interface_status = Status.objects.get_for_model(Interface).first()
+        interface_role = Role.objects.get_for_model(Interface).first()
         for device in devices:
             for i in range(0, 10):
                 interfaces.append(
@@ -2083,6 +2095,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
                         type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                         name=f"eth{i}",
                         status=interface_status,
+                        role=interface_role,
                     )
                 )
 
@@ -2161,8 +2174,16 @@ class ConnectedDeviceTest(APITestCase):
             location=location,
         )
         interface_status = Status.objects.get_for_model(Interface).first()
-        interface1 = Interface.objects.create(device=self.device1, name="eth0", status=interface_status)
-        interface2 = Interface.objects.create(device=device2, name="eth0", status=interface_status)
+        interface1 = Interface.objects.create(
+            device=self.device1,
+            name="eth0",
+            status=interface_status,
+        )
+        interface2 = Interface.objects.create(
+            device=device2,
+            name="eth0",
+            status=interface_status,
+        )
 
         cable = Cable(termination_a=interface1, termination_b=interface2, status=cable_status)
         cable.validated_save()
@@ -2277,6 +2298,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
         # Create 12 interfaces per device
         interface_status = Status.objects.get_for_model(Interface).first()
+        interface_role = Role.objects.get_for_model(Interface).first()
         interfaces = []
         for i, device in enumerate(devices):
             for j in range(0, 13):
@@ -2287,6 +2309,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
                         name=f"{i%3+1}/{j}",
                         type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                         status=interface_status,
+                        role=interface_role,
                     )
                 )
 

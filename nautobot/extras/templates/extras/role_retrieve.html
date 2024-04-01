@@ -62,6 +62,22 @@
         </div>
     {% include 'inc/paginator.html' with paginator=device_table.paginator page=device_table.page %}
     {% endif %}
+    {% if interface_table %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Interfaces</strong>
+            </div>
+            {% include 'inc/table.html' with table=interface_table %}
+            {% if perms.dcim.add_interface %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'dcim:interface_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Interface
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    {% include 'inc/paginator.html' with paginator=interface_table.paginator page=interface_table.page %}
+    {% endif %}
     {% if rack_table %}
         <div class="panel panel-default">
             <div class="panel-heading">
@@ -125,6 +141,22 @@
             {% endif %}
         </div>
     {% include 'inc/paginator.html' with paginator=virtual_machine_table.paginator page=virtual_machine_table.page %}
+    {% endif %}
+    {% if vminterface_table %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>VM Interfaces</strong>
+            </div>
+            {% include 'inc/table.html' with table=vminterface_table %}
+            {% if perms.virtualization.add_vminterface %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'virtualization:vminterface_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VM Interface
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    {% include 'inc/paginator.html' with paginator=vminterface_table.paginator page=vminterface_table.page %}
     {% endif %}
     {% if vlan_table %}
         <div class="panel panel-default">

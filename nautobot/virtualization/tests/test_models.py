@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from nautobot.dcim.models import Location, LocationType
-from nautobot.extras.models import Status
+from nautobot.extras.models import Role, Status
 from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN
 from nautobot.tenancy.models import Tenant
@@ -32,6 +32,7 @@ class VirtualMachineTestCase(TestCase):  # TODO: change to BaseModelTestCase
         self.cluster = Cluster.objects.create(name="Test Cluster 1", cluster_type=cluster_type)
         self.status = statuses[0]
         self.int_status = Status.objects.get_for_model(VMInterface).first()
+        self.int_role = Role.objects.get_for_model(VMInterface).first()
 
     def test_vm_duplicate_name_per_cluster(self):
         vm1 = VirtualMachine(
@@ -73,7 +74,9 @@ class VirtualMachineTestCase(TestCase):  # TODO: change to BaseModelTestCase
             status=self.status,
         )
         vm1.save()
-        vm_interface = VMInterface.objects.create(name="Int1", virtual_machine=vm1, status=self.int_status)
+        vm_interface = VMInterface.objects.create(
+            name="Int1", virtual_machine=vm1, status=self.int_status, role=self.int_role
+        )
         ips = list(IPAddress.objects.filter(ip_version=4)[:5]) + list(IPAddress.objects.filter(ip_version=6)[:5])
         vm_interface.add_ip_addresses(ips)
         vm1.primary_ip4 = vm_interface.ip_addresses.all().filter(ip_version=6).first()
@@ -110,10 +113,11 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
         vm_status = Status.objects.get_for_model(VirtualMachine).first()
         cls.virtualmachine = VirtualMachine.objects.create(cluster=cluster, name="Test VM 1", status=vm_status)
         cls.int_status = Status.objects.get_for_model(VMInterface).first()
+        cls.int_role = Role.objects.get_for_model(VMInterface).first()
 
     def test_tagged_vlan_raise_error_if_mode_not_set_to_tagged(self):
         interface = VMInterface.objects.create(
-            virtual_machine=self.virtualmachine, name="Interface 1", status=self.int_status
+            virtual_machine=self.virtualmachine, name="Interface 1", status=self.int_status, role=self.int_role
         )
         with self.assertRaises(ValidationError) as err:
             interface.tagged_vlans.add(self.vlan)

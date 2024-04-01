@@ -251,7 +251,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
             f'<span class="label" style="color: {fbcolor}; background-color: #{color}">{display}</span>',
         )
         # Assert when obj is None
-        self.assertEqual(helpers.hyperlinked_object_with_color(obj=None), "—")
+        self.assertEqual(helpers.hyperlinked_object_with_color(obj=None), '<span class="text-muted">&mdash;</span>')
 
     @override_settings(BANNER_TOP="¡Hola, mundo!")
     @override_config(example_app__SAMPLE_VARIABLE="Testing")
