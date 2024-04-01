@@ -148,9 +148,9 @@
                 <strong>VM Interfaces</strong>
             </div>
             {% include 'inc/table.html' with table=vminterface_table %}
-            {% if perms.dcim.add_vminterface %}
+            {% if perms.virtualization.add_vminterface %}
                 <div class="panel-footer text-right noprint">
-                    <a href="{% url 'dcim:vminterface_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                    <a href="{% url 'virtualization:vminterface_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VM Interface
                     </a>
                 </div>
