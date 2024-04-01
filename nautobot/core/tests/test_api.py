@@ -770,6 +770,7 @@ class APIOrderingTestCase(testing.APITestCase):
             "TextField": "admin_contact",
             "DateTimeField": "created",
         }
+        cls.maxDiff = None
 
     def _validate_sorted_response(self, response, queryset, field_name, is_fk_field=False):
         self.assertHttpStatus(response, 200)
@@ -794,18 +795,24 @@ class APIOrderingTestCase(testing.APITestCase):
         """Tests that results are returned in the expected ascending order."""
 
         for field_type, field_name in self.field_type_map.items():
-            with self.subTest(f"Testing {field_type}"):
-                response = self.client.get(f"{self.url}?sort={field_name}&limit=10", **self.header)
-                self._validate_sorted_response(response, Provider.objects.all().order_by(field_name), field_name)
+            with self.subTest(f"Testing {field_type} {field_name}"):
+                # Use `name` as a secondary sort as fields like `asn` and `admin_contact` may be null
+                response = self.client.get(f"{self.url}?sort={field_name},name&limit=10", **self.header)
+                self._validate_sorted_response(
+                    response, Provider.objects.all().order_by(field_name, "name"), field_name
+                )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_descending_sort(self):
         """Tests that results are returned in the expected descending order."""
 
         for field_type, field_name in self.field_type_map.items():
-            with self.subTest(f"Testing {field_type}"):
-                response = self.client.get(f"{self.url}?sort=-{field_name}&limit=10", **self.header)
-                self._validate_sorted_response(response, Provider.objects.all().order_by(f"-{field_name}"), field_name)
+            with self.subTest(f"Testing {field_type} {field_name}"):
+                # Use `name` as a secondary sort as fields like `asn` and `admin_contact` may be null
+                response = self.client.get(f"{self.url}?sort=-{field_name},name&limit=10", **self.header)
+                self._validate_sorted_response(
+                    response, Provider.objects.all().order_by(f"-{field_name}", "name"), field_name
+                )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_sorting_tree_node_models(self):
