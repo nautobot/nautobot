@@ -191,7 +191,7 @@ if (
 # Enable two-digit format for the rack unit numbering in rack elevations.
 if (
     "NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT" in os.environ
-     and os.environ["RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"] != ""
+    and os.environ["RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"] != ""
 ):
     RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT = is_truthy(os.environ["RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"])
 
@@ -779,7 +779,7 @@ CONSTANCE_CONFIG = {
     "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT": ConstanceConfigItem(
         default=False,
         help_text="Enables two-digit format for the rack unit numbering in a rack elevation diagram",
-        field_type=bool
+        field_type=bool,
     ),
     "RELEASE_CHECK_TIMEOUT": ConstanceConfigItem(
         default=24 * 3600,
@@ -815,8 +815,8 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Rack Elevation Rendering": [
         "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT",
         "RACK_ELEVATION_DEFAULT_UNIT_WIDTH",
-        "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"
-        ],
+        "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
+    ],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
     "User Interface": ["SUPPORT_MESSAGE"],
     "Debugging": ["ALLOW_REQUEST_PROFILING"],
