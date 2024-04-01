@@ -13,7 +13,7 @@ from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
-from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Role, Status, Tag
+from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Status, Tag
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 

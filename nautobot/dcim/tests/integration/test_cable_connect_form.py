@@ -6,7 +6,7 @@ from splinter.exceptions import ElementDoesNotExist
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Interface
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.extras.models import Role, Status
+from nautobot.extras.models import Status
 
 
 class CableConnectFormTestCase(SeleniumTestCase):
