@@ -623,7 +623,6 @@ class DeviceTypeTestCase(
 
         cls.bulk_edit_data = {
             "manufacturer": manufacturers[1].pk,
-            "u_height": 3,
             "is_full_depth": False,
         }
 
