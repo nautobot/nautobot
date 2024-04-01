@@ -130,17 +130,10 @@
         </table>
         {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
             <div class="panel-footer text-right noprint">
-                {% url 'extras:map_contact_from_location' as map_url %}
-                {% with pk=object.pk|urlencode name=object.contact_name|urlencode phone=object.contact_phone|urlencode email=object.contact_email|urlencode contenttypeid=content_type.id|urlencode %}
-                {% if name or phone or email %}
-                    {% with map_url|add:"?return_url="|add:return_url|add:"&associated_object_id="|add:pk|add:"&associated_object_type="|add:contenttypeid|add:"&location="|add:pk|add:"&name="|add:name|add:"&phone="|add:phone|add:"&email="|add:email as new_map_url %}
-                        <a href="{{new_map_url}}" class="btn btn-primary btn-xs">
+                        <a href="{% url 'dcim:migrate_data_to_contact' pk=object.pk %}?return_url={{return_url}}" class="btn btn-primary btn-xs">
                             <span class="mdi mdi-account-edit" aria-hidden="true"></span>
                             Convert to contact/team
                         </a>
-                    {% endwith %}
-                {% endif %}
-                {% endwith %}
             </div>
         {% endwith %}
     </div>

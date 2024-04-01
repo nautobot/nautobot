@@ -161,6 +161,7 @@ class ContactAssociationForm(NautobotModelForm):
 
 
 class LocationSimilarContactAssociationForm(NautobotModelForm):
+    # Assign tab form fields
     location = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
     contact = DynamicModelChoiceField(
         queryset=Contact.objects.all(),
@@ -174,17 +175,92 @@ class LocationSimilarContactAssociationForm(NautobotModelForm):
         label="Similar Teams",
         query_params={"similar_to_location_data": "$location"},
     )
+    role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        required=True,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        required=True,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+    # Create new contact tab form fields
+    contact_name = forms.CharField(required=True, label="Name")
+    contact_phone = forms.CharField(required=False, label="Phone")
+    contact_email = forms.CharField(required=False, label="Email")
+    contact_address = forms.CharField(required=False, widget=forms.Textarea(), label="Address")
+    contact_role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        required=True,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+        label="Role",
+    )
+    contact_status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        required=True,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+        label="Status",
+    )
+    teams = DynamicModelMultipleChoiceField(
+        queryset=Team.objects.all(),
+        required=False,
+        label="Team(s)",
+    )
+    # Create new team tab form fields
+    team_name = forms.CharField(required=True, label="Name")
+    team_phone = forms.CharField(required=False, label="Phone")
+    team_email = forms.CharField(required=False, label="Email")
+    team_address = forms.CharField(required=False, widget=forms.Textarea(), label="Address")
+    contacts = DynamicModelMultipleChoiceField(
+        queryset=Contact.objects.all(),
+        required=False,
+        label="Contact(s)",
+    )
+    team_role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        required=True,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+        label="Role",
+    )
+    team_status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        required=True,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+        label="Status",
+    )
+    # Common form fields
+    associated_object_type = DynamicModelChoiceField(queryset=ContentType.objects.all(), required=True)
+    associated_object_id = forms.CharField(required=True)
 
     class Meta:
         model = ContactAssociation
         fields = [
+            # Assign tab form fields
             "location",
             "contact",
             "team",
-            "associated_object_type",
-            "associated_object_id",
             "role",
             "status",
+            # contact tab form fields
+            "contact_name",
+            "contact_phone",
+            "contact_email",
+            "contact_address",
+            "contact_role",
+            "contact_status",
+            "teams",
+            # team tab form fields
+            "team_name",
+            "team_phone",
+            "team_email",
+            "team_address",
+            "team_role",
+            "team_status",
+            "contacts",
+            # common form fields
+            "associated_object_type",
+            "associated_object_id",
         ]
 
 

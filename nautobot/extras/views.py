@@ -499,36 +499,6 @@ class ObjectAssignContactOrTeamView(generic.ObjectEditView):
     template_name = "extras/object_assign_contact_or_team.html"
 
 
-class MapContactOrTeamFromLocationView(generic.ObjectEditView):
-    queryset = ContactAssociation.objects.all()
-    model_form = forms.LocationSimilarContactAssociationForm
-    template_name = "extras/map_contact_or_team.html"
-
-
-class MapNewContactFromLocationView(ObjectContactTeamMixin, generic.ObjectEditView):
-    queryset = Contact.objects.all()
-    model_form = forms.ObjectNewContactForm
-    template_name = "extras/object_new_contact.html"
-
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        # tells the template which nav tab headers to use
-        context["map"] = True
-        return context
-
-
-class MapNewTeamFromLocationView(ObjectContactTeamMixin, generic.ObjectEditView):
-    queryset = Team.objects.all()
-    model_form = forms.ObjectNewTeamForm
-    template_name = "extras/object_new_team.html"
-
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        # tells the template which nav tab headers to use
-        context["map"] = True
-        return context
-
-
 #
 # Custom fields
 #
