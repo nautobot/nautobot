@@ -1044,12 +1044,10 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
             status=Status.objects.get_for_model(VirtualMachine)[0],
         )
         vmintf_status = Status.objects.get_for_model(VMInterface).first()
-        vmintf_role = Role.objects.get_for_model(VMInterface).first()
         cls.vminterface = VMInterface.objects.create(
             virtual_machine=cls.virtualmachine,
             name="eth0",
             status=vmintf_status,
-            role=vmintf_role,
         )
         cls.vmprefix = Prefix.objects.create(
             prefix="1.1.1.0/24", namespace=cls.namespace, status=cls.prefix_statuses[0]

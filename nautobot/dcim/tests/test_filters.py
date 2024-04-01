@@ -2255,9 +2255,8 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         Device.objects.filter(pk=devices[1].pk).update(virtual_chassis=virtual_chassis, vc_position=2, vc_priority=2)
 
         interface_status = Status.objects.get_for_model(Interface).first()
-        interface_role = Role.objects.get_for_model(Interface).first()
-        Interface.objects.create(device=devices[0], name="int1", status=interface_status, role=interface_role)
-        Interface.objects.create(device=devices[0], name="int2", status=interface_status, role=interface_role)
+        Interface.objects.create(device=devices[0], name="int1", status=interface_status)
+        Interface.objects.create(device=devices[0], name="int2", status=interface_status)
         Interface.objects.create(device=devices[1], name="int3", status=interface_status)
         Interface.objects.create(device=devices[2], name="int4", status=interface_status)
 
@@ -2803,7 +2802,6 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         )
 
         interface_status = Status.objects.get_for_model(Interface).first()
-        interface_role = Role.objects.get_for_model(Interface).first()
         interfaces = (
             Interface.objects.get(device__name="Device 1"),
             Interface.objects.get(device__name="Device 2"),
@@ -2814,7 +2812,6 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             Interface.objects.create(
                 device=devices[0],
                 name="Interface 7",
-                role=interface_role,
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
@@ -2827,7 +2824,6 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             Interface.objects.create(
                 device=devices[2],
                 name="Interface 9",
-                role=interface_role,
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
@@ -2840,7 +2836,6 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             Interface.objects.create(
                 device=devices[4],
                 name="Interface 11",
-                role=interface_role,
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),

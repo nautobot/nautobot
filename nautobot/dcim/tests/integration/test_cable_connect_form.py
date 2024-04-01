@@ -36,12 +36,9 @@ class CableConnectFormTestCase(SeleniumTestCase):
         device1 = create_test_device("Device 1")
         create_test_device("Device 2")
         interface_status = Status.objects.get_for_model(Interface).first()
-        interface_role = Role.objects.get_for_model(Interface).first()
-        interface1 = Interface.objects.create(
-            device=device1, name="Interface 1", status=interface_status, role=interface_role
-        )
+        interface1 = Interface.objects.create(device=device1, name="Interface 1", status=interface_status)
         Interface.objects.create(device=device1, name="Interface 2", status=interface_status)
-        Interface.objects.create(device=device1, name="Interface 3", status=interface_status, role=interface_role)
+        Interface.objects.create(device=device1, name="Interface 3", status=interface_status)
         cable_connect_form_url = reverse(
             "dcim:interface_connect", kwargs={"termination_a_id": interface1.pk, "termination_b_type": "interface"}
         )

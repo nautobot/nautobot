@@ -492,6 +492,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
 
 
 class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm, RoleNotRequiredModelFormMixin):
+    model = VMInterface
     virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
     name_pattern = ExpandableNameField(label="Name")
     enabled = forms.BooleanField(required=False, initial=True)

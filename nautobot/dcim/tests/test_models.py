@@ -92,10 +92,7 @@ class CableLengthTestCase(TestCase):
 
     def test_cable_validated_save(self):
         interfacestatus = Status.objects.get_for_model(Interface).first()
-        interfacerole = Role.objects.get_for_model(Interface).first()
-        interface1 = Interface.objects.create(
-            device=self.device1, name="eth0", status=interfacestatus, role=interfacerole
-        )
+        interface1 = Interface.objects.create(device=self.device1, name="eth0", status=interfacestatus)
         interface2 = Interface.objects.create(device=self.device2, name="eth0", status=interfacestatus)
         cable = Cable(
             termination_a=interface1,
@@ -109,10 +106,7 @@ class CableLengthTestCase(TestCase):
 
     def test_cable_full_clean(self):
         interfacestatus = Status.objects.get_for_model(Interface).first()
-        interfacerole = Role.objects.get_for_model(Interface).first()
-        interface3 = Interface.objects.create(
-            device=self.device1, name="eth1", status=interfacestatus, role=interfacerole
-        )
+        interface3 = Interface.objects.create(device=self.device1, name="eth1", status=interfacestatus)
         interface4 = Interface.objects.create(device=self.device2, name="eth1", status=interfacestatus)
         cable = Cable(
             termination_a=interface3,
@@ -279,12 +273,10 @@ class InterfaceRedundancyGroupTestCase(ModelTestCases.BaseModelTestCase):
             status=cls.device_status,
         )
         non_default_status = Status.objects.get_for_model(Interface).exclude(name="Active").first()
-        intf_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
             Interface.objects.create(
                 device=cls.device,
                 name="Interface 1",
-                role=intf_role,
                 type="1000base-t",
                 status=non_default_status,
             ),
@@ -297,14 +289,12 @@ class InterfaceRedundancyGroupTestCase(ModelTestCases.BaseModelTestCase):
             Interface.objects.create(
                 device=cls.device,
                 name="Interface 3",
-                role=intf_role,
                 type=InterfaceTypeChoices.TYPE_BRIDGE,
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.device,
                 name="Interface 4",
-                role=intf_role,
                 type=InterfaceTypeChoices.TYPE_1GE_GBIC,
                 status=non_default_status,
             ),
@@ -1236,14 +1226,9 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             status=devicestatus,
         )
         interfacestatus = Status.objects.get_for_model(Interface).first()
-        interfacerole = Role.objects.get_for_model(Interface).first()
-        cls.interface1 = Interface.objects.create(
-            device=cls.device1, name="eth0", status=interfacestatus, role=interfacerole
-        )
+        cls.interface1 = Interface.objects.create(device=cls.device1, name="eth0", status=interfacestatus)
         cls.interface2 = Interface.objects.create(device=cls.device2, name="eth0", status=interfacestatus)
-        cls.interface3 = Interface.objects.create(
-            device=cls.device2, name="eth1", status=interfacestatus, role=interfacerole
-        )
+        cls.interface3 = Interface.objects.create(device=cls.device2, name="eth1", status=interfacestatus)
         cls.status = Status.objects.get_for_model(Cable).get(name="Connected")
         cls.cable = Cable(
             termination_a=cls.interface1,
@@ -1468,14 +1453,12 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         device = Device.objects.first()
 
         interface_status = Status.objects.get_for_model(Interface).first()
-        interface_role = Role.objects.get_for_model(Interface).first()
         interfaces = (
             Interface.objects.create(
                 device=device,
                 name="eth-0",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
-                role=interface_role,
             ),
             Interface.objects.create(
                 device=device,
@@ -1503,11 +1486,8 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
 
         Cable.objects.all().delete()
         interface_status = Status.objects.get_for_model(Interface).first()
-        interface_role = Role.objects.get_for_model(Interface).first()
         Interface.objects.all().update(status=interface_status)
-        self.interface4 = Interface.objects.create(
-            device=self.device2, name="eth4", status=interface_status, role=interface_role
-        )
+        self.interface4 = Interface.objects.create(device=self.device2, name="eth4", status=interface_status)
         device1_power_ports = [
             PowerPort.objects.create(device=self.device1, name="Power Port 1"),
             PowerPort.objects.create(device=self.device1, name="Power Port 2"),

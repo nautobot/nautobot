@@ -1364,10 +1364,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
 
         dev = Device.objects.get(name="Device 3")
         intf_status = Status.objects.get_for_model(Interface).first()
-        intf_role = Role.objects.get_for_model(Interface).first()
-        dev_intf = Interface.objects.create(
-            name="Ethernet1", device=dev, type="1000base-t", status=intf_status, role=intf_role
-        )
+        dev_intf = Interface.objects.create(name="Ethernet1", device=dev, type="1000base-t", status=intf_status)
         ipaddr_status = Status.objects.get_for_model(IPAddress).first()
         prefix_status = Status.objects.get_for_model(Prefix).first()
         namespace = Namespace.objects.first()
@@ -2177,18 +2174,15 @@ class ConnectedDeviceTest(APITestCase):
             location=location,
         )
         interface_status = Status.objects.get_for_model(Interface).first()
-        interface_role = Role.objects.get_for_model(Interface).first()
         interface1 = Interface.objects.create(
             device=self.device1,
             name="eth0",
             status=interface_status,
-            role=interface_role,
         )
         interface2 = Interface.objects.create(
             device=device2,
             name="eth0",
             status=interface_status,
-            role=interface_role,
         )
 
         cable = Cable(termination_a=interface1, termination_b=interface2, status=cable_status)
@@ -2668,14 +2662,12 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
             status=cls.device_status,
         )
         non_default_status = Status.objects.get_for_model(Interface).exclude(name="Active").first()
-        intf_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
             Interface.objects.create(
                 device=cls.device,
                 name="Interface 1",
                 type="1000base-t",
                 status=non_default_status,
-                role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.device,
@@ -2688,7 +2680,6 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
                 name="Interface 3",
                 type=InterfaceTypeChoices.TYPE_BRIDGE,
                 status=non_default_status,
-                role=intf_role,
             ),
         )
         for i, interface in enumerate(cls.interfaces):

@@ -2349,6 +2349,7 @@ class InterfaceForm(InterfaceCommonForm, ComponentEditForm):
 
 
 class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm, RoleNotRequiredModelFormMixin):
+    model = Interface
     type = forms.ChoiceField(
         choices=InterfaceTypeChoices,
         widget=StaticSelect2(),

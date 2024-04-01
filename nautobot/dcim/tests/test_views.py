@@ -2297,14 +2297,12 @@ class CableTestCase(
         )
 
         interface_status = Status.objects.get_for_model(Interface).first()
-        interface_role = Role.objects.get_for_model(Interface).first()
         interfaces = (
             Interface.objects.create(
                 device=devices[0],
                 name="Interface 1",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
-                role=interface_role,
             ),
             Interface.objects.create(
                 device=devices[0],
@@ -2317,14 +2315,12 @@ class CableTestCase(
                 name="Interface 3",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
-                role=interface_role,
             ),
             Interface.objects.create(
                 device=devices[1],
                 name="Interface 1",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
-                role=interface_role,
             ),
             Interface.objects.create(
                 device=devices[1],
@@ -2337,7 +2333,6 @@ class CableTestCase(
                 name="Interface 3",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
-                role=interface_role,
             ),
             Interface.objects.create(
                 device=devices[2],
@@ -2350,7 +2345,6 @@ class CableTestCase(
                 name="Interface 2",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
-                role=interface_role,
             ),
             Interface.objects.create(
                 device=devices[2],
@@ -2363,7 +2357,6 @@ class CableTestCase(
                 name="Interface 1",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
-                role=interface_role,
             ),
             Interface.objects.create(
                 device=devices[3],
@@ -2376,7 +2369,6 @@ class CableTestCase(
                 name="Interface 3",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
-                role=interface_role,
             ),
         )
 
@@ -2435,10 +2427,9 @@ class CableTestCase(
         device = Device.objects.first()
 
         interface_status = Status.objects.get_for_model(Interface).first()
-        interface_role = Role.objects.get_for_model(Interface).first()
         interfaces = [
-            Interface.objects.create(device=device, name="eth0", status=interface_status, role=interface_role),
-            Interface.objects.create(device=device, name="eth1", status=interface_status, role=interface_role),
+            Interface.objects.create(device=device, name="eth0", status=interface_status),
+            Interface.objects.create(device=device, name="eth1", status=interface_status),
         ]
 
         provider = Provider.objects.first()
@@ -2762,8 +2753,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.user.is_superuser = True
         self.user.save()
         interface_status = Status.objects.get_for_model(Interface).first()
-        interface_role = Role.objects.get_for_model(Interface).first()
-        Interface.objects.create(device=self.devices[0], name="eth0", status=interface_status, role=interface_role)
+        Interface.objects.create(device=self.devices[0], name="eth0", status=interface_status)
         Interface.objects.create(device=self.devices[0], name="eth1", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[0].pk}))
         self.assertIn("<th >Device</th>", str(response.content))
@@ -2776,8 +2766,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.user.is_superuser = True
         self.user.save()
         interface_status = Status.objects.get_for_model(Interface).first()
-        interface_role = Role.objects.get_for_model(Interface).first()
-        Interface.objects.create(device=self.devices[1], name="eth2", status=interface_status, role=interface_role)
+        Interface.objects.create(device=self.devices[1], name="eth2", status=interface_status)
         Interface.objects.create(device=self.devices[1], name="eth3", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[1].pk}))
         self.assertNotIn("<th >Device</th>", str(response.content))
