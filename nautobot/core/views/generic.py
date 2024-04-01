@@ -4,6 +4,7 @@ import re
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
@@ -56,6 +57,14 @@ from nautobot.core.views.utils import (
 from nautobot.extras.models import ContactAssociation, ExportTemplate
 from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import remove_prefix_from_cf_key
+
+
+class GenericView(LoginRequiredMixin, View):
+    """
+    Base class for non-object-related views.
+
+    Enforces authentication, which Django's base View does not by default.
+    """
 
 
 class ObjectView(ObjectPermissionRequiredMixin, View):
@@ -220,6 +229,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         display_filter_params = []
         dynamic_filter_form = None
         filter_form = None
+        hide_hierarchy_ui = False
 
         if self.filterset:
             filter_params = self.get_filter_params(request)
@@ -231,6 +241,12 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                     format_html("Invalid filters were specified: {}", filterset.errors),
                 )
                 self.queryset = self.queryset.none()
+
+            # If a valid filterset is applied, we have to hide the hierarchy indentation in the UI for tables that support hierarchy indentation.
+            # NOTE: An empty filterset query-param is also valid filterset and we dont want to hide hierarchy indentation if no filter query-param is provided
+            #      hence `filterset.data`.
+            if filterset.is_valid() and filterset.data:
+                hide_hierarchy_ui = True
 
             display_filter_params = [
                 check_filter_for_display(filterset.filters, field_name, values)
@@ -283,9 +299,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         table_config_form = None
         if self.table:
             # Construct the objects table
-            # Order By is needed in the table `__init__` method
-            order_by = self.request.GET.getlist("sort")
-            table = self.table(self.queryset, user=request.user, order_by=order_by)
+            if self.request.GET.getlist("sort"):
+                hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
+            table = self.table(self.queryset, user=request.user, hide_hierarchy_ui=hide_hierarchy_ui)
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
 

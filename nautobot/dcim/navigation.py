@@ -18,25 +18,9 @@ menu_items = (
                 weight=150,
                 items=(
                     NavMenuItem(
-                        link="dcim:locationtype_list",
-                        name="Location Types",
-                        weight=100,
-                        permissions=[
-                            "dcim.view_locationtype",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="dcim:locationtype_add",
-                                permissions=[
-                                    "dcim.add_locationtype",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
                         link="dcim:location_list",
                         name="Locations",
-                        weight=200,
+                        weight=100,
                         permissions=[
                             "dcim.view_location",
                         ],
@@ -45,6 +29,22 @@ menu_items = (
                                 link="dcim:location_add",
                                 permissions=[
                                     "dcim.add_location",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:locationtype_list",
+                        name="Location Types",
+                        weight=200,
+                        permissions=[
+                            "dcim.view_locationtype",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:locationtype_add",
+                                permissions=[
+                                    "dcim.add_locationtype",
                                 ],
                             ),
                         ),
@@ -211,25 +211,9 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
-                        link="dcim:manufacturer_list",
-                        name="Manufacturers",
-                        weight=200,
-                        permissions=[
-                            "dcim.view_manufacturer",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="dcim:manufacturer_add",
-                                permissions=[
-                                    "dcim.add_manufacturer",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
                         link="dcim:devicefamily_list",
                         name="Device Families",
-                        weight=300,
+                        weight=200,
                         permissions=[
                             "dcim.view_devicefamily",
                         ],
@@ -242,11 +226,27 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="dcim:manufacturer_list",
+                        name="Manufacturers",
+                        weight=300,
+                        permissions=[
+                            "dcim.view_manufacturer",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:manufacturer_add",
+                                permissions=[
+                                    "dcim.add_manufacturer",
+                                ],
+                            ),
+                        ),
+                    ),
                 ),
             ),
             NavMenuGroup(
                 name="Software",
-                weight=250,
+                weight=300,
                 items=(
                     NavMenuItem(
                         link="dcim:platform_list",
@@ -299,8 +299,38 @@ menu_items = (
                 ),
             ),
             NavMenuGroup(
+                name="Controllers",
+                weight=400,
+                items=(
+                    NavMenuItem(
+                        link="dcim:controller_list",
+                        name="Controllers",
+                        weight=100,
+                        permissions=[
+                            "dcim.view_controller",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:controller_add",
+                                permissions=[
+                                    "dcim.add_controller",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:controllermanageddevicegroup_list",
+                        name="Managed Device Groups",
+                        weight=200,
+                        permissions=[
+                            "dcim.view_controllermanageddevicegroup",
+                        ],
+                    ),
+                ),
+            ),
+            NavMenuGroup(
                 name="Connections",
-                weight=300,
+                weight=500,
                 items=(
                     NavMenuItem(
                         link="dcim:cable_list",
@@ -344,7 +374,7 @@ menu_items = (
             ),
             NavMenuGroup(
                 name="Device Components",
-                weight=400,
+                weight=600,
                 items=(
                     NavMenuItem(
                         link="dcim:interface_list",

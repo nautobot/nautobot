@@ -17,7 +17,7 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import fields as core_fields
 from nautobot.core.utils import lookup
 from nautobot.dcim import choices as dcim_choices, filters as dcim_filters, models as dcim_models
-from nautobot.dcim.models import Device
+from nautobot.dcim.models import Controller, Device
 from nautobot.extras import models as extras_models
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam import models as ipam_models
@@ -830,6 +830,7 @@ class DynamicFilterLookupExpressionTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         manufacturers = dcim_models.Manufacturer.objects.all()[:3]
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
 
         device_types = (

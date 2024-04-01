@@ -40,6 +40,8 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.filters import (
     ConsoleConnectionFilterSet,
+    ControllerFilterSet,
+    ControllerManagedDeviceGroupFilterSet,
     InterfaceConnectionFilterSet,
     PowerConnectionFilterSet,
     SoftwareImageFileFilterSet,
@@ -52,6 +54,8 @@ from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -91,6 +95,7 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     CustomField,
     CustomFieldChoice,
+    ExternalIntegration,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -131,6 +136,7 @@ def create_test_device(name):
 
 class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = LocationType
+    sort_on_field = "nestable"
 
     @classmethod
     def setUpTestData(cls):
@@ -249,15 +255,20 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = RackGroup
+    sort_on_field = "name"
 
     @classmethod
     def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
-        RackGroup.objects.create(name="Rack Group 1", location=location)
-        RackGroup.objects.create(name="Rack Group 2", location=location)
-        RackGroup.objects.create(name="Rack Group 3", location=location)
-        RackGroup.objects.create(name="Rack Group 8", location=location)
+        rack_groups = (
+            RackGroup.objects.create(name="Rack Group 1", location=location),
+            RackGroup.objects.create(name="Rack Group 2", location=location),
+            RackGroup.objects.create(name="Rack Group 3", location=location),
+            RackGroup.objects.create(name="Rack Group 8", location=location),
+        )
+        RackGroup.objects.create(name="Rack Group Child 1", location=location, parent=rack_groups[0])
+        RackGroup.objects.create(name="Rack Group Child 2", location=location, parent=rack_groups[0])
 
         cls.form_data = {
             "name": "Rack Group X",
@@ -562,6 +573,7 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         DeviceType.objects.all().delete()
         Platform.objects.all().delete()
@@ -588,6 +600,7 @@ class DeviceTypeTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         manufacturers = Manufacturer.objects.all()[:2]
 
@@ -1273,6 +1286,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
@@ -1440,6 +1454,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "face": DeviceFaceChoices.FACE_FRONT,
             "secrets_group": secrets_groups[1].pk,
             "software_version": software_versions[1].pk,
+            "controller_managed_device_group": ControllerManagedDeviceGroup.objects.first().pk,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -2220,6 +2235,9 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "New description",
             "software_version": software_versions[2].pk,
         }
+
+    def test_table_with_indentation_is_removed_on_filter_or_sort(self):
+        self.skipTest("InventoryItem table has no implementation of indentation.")
 
 
 # TODO: Change base class to PrimaryObjectViewTestCase
@@ -3095,4 +3113,60 @@ class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "documentation_url": "https://example.com/software_version_test_case/docs2",
             "long_term_support": False,
             "pre_release": True,
+        }
+
+
+class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = Controller
+    filterset = ControllerFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        device = Device.objects.first()
+        external_integration = ExternalIntegration.objects.first()
+        location = Location.objects.get_for_model(Controller).first()
+        platform = Platform.objects.first()
+        role = Role.objects.get_for_model(Controller).first()
+        status = Status.objects.get_for_model(Controller).first()
+        tenant = Tenant.objects.first()
+
+        cls.form_data = {
+            "controller_device": device.pk,
+            "description": "Controller 1 description",
+            "external_integration": external_integration.pk,
+            "location": location.pk,
+            "name": "Controller 1",
+            "platform": platform.pk,
+            "role": role.pk,
+            "status": status.pk,
+            "tenant": tenant.pk,
+        }
+
+        cls.bulk_edit_data = {
+            "external_integration": external_integration.pk,
+            "location": location.pk,
+            "platform": platform.pk,
+            "role": role.pk,
+            "status": status.pk,
+            "tenant": tenant.pk,
+        }
+
+
+class ControllerManagedDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = ControllerManagedDeviceGroup
+    filterset = ControllerManagedDeviceGroupFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        controllers = Controller.objects.all()
+
+        cls.form_data = {
+            "name": "Managed Device Group 10",
+            "controller": controllers[0].pk,
+            "weight": 100,
+            "devices": [item.pk for item in Device.objects.all()[:2]],
+        }
+
+        cls.bulk_edit_data = {
+            "weight": 300,
         }
