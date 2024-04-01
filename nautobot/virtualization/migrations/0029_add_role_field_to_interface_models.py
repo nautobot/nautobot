@@ -2,20 +2,26 @@
 
 from django.db import migrations
 import django.db.models.deletion
+
 import nautobot.extras.models.roles
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('extras', '0106_populate_default_statuses_and_roles_for_contact_associations'),
-        ('virtualization', '0028_update_all_charfields_max_length_to_255'),
+        ("extras", "0106_populate_default_statuses_and_roles_for_contact_associations"),
+        ("virtualization", "0028_update_all_charfields_max_length_to_255"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='vminterface',
-            name='role',
-            field=nautobot.extras.models.roles.RoleField(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='vm_interfaces', to='extras.role'),
+            model_name="vminterface",
+            name="role",
+            field=nautobot.extras.models.roles.RoleField(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="vm_interfaces",
+                to="extras.role",
+            ),
         ),
     ]

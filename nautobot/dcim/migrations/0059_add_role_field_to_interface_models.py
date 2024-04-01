@@ -2,20 +2,26 @@
 
 from django.db import migrations
 import django.db.models.deletion
+
 import nautobot.extras.models.roles
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('extras', '0106_populate_default_statuses_and_roles_for_contact_associations'),
-        ('dcim', '0058_controller_data_migration'),
+        ("extras", "0106_populate_default_statuses_and_roles_for_contact_associations"),
+        ("dcim", "0058_controller_data_migration"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='interface',
-            name='role',
-            field=nautobot.extras.models.roles.RoleField(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='interfaces', to='extras.role'),
+            model_name="interface",
+            name="role",
+            field=nautobot.extras.models.roles.RoleField(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="interfaces",
+                to="extras.role",
+            ),
         ),
     ]
