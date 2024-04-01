@@ -1,4 +1,5 @@
 """Nautobot custom health checks."""
+
 from typing import Optional
 from urllib.parse import urlparse
 

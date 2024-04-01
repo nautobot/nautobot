@@ -1,4 +1,5 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
+
 from collections import OrderedDict
 import functools
 import inspect

@@ -1,6 +1,5 @@
 from celery import states
 from django.utils import timezone
-from django_celery_beat.managers import ExtendedManager
 from django_celery_results.managers import TaskResultManager, transaction_retry
 
 from nautobot.core.models import BaseManager
@@ -136,5 +135,5 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
         return obj
 
 
-class ScheduledJobsManager(BaseManager.from_queryset(RestrictedQuerySet), ExtendedManager):
+class ScheduledJobsManager(BaseManager.from_queryset(RestrictedQuerySet)):
     pass

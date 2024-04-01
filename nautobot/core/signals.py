@@ -1,4 +1,5 @@
 """Custom signals and handlers for the core Nautobot application."""
+
 import contextlib
 from functools import wraps
 import inspect

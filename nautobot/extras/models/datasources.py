@@ -1,4 +1,5 @@
 """Models for representing external data sources."""
+
 from importlib.util import find_spec
 import os
 

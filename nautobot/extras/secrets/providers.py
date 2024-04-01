@@ -2,6 +2,7 @@
 
 Plugins may define and register additional providers in addition to these.
 """
+
 import os
 
 from django import forms

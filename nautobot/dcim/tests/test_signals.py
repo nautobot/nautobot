@@ -1,4 +1,4 @@
-"""Tests for DCIM Signals.py """
+"""Tests for DCIM Signals.py"""
 
 from django.test import TestCase
 
