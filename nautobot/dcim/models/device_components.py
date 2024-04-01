@@ -444,6 +444,7 @@ class BaseInterface(RelationshipModel):
         validators=[MinValueValidator(1), MaxValueValidator(65536)],
         verbose_name="MTU",
     )
+    role = RoleField(blank=True, null=True)
     mode = models.CharField(max_length=50, choices=InterfaceModeChoices, blank=True)
     parent_interface = models.ForeignKey(
         to="self",
@@ -510,7 +511,6 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         blank=True,
         db_index=True,
     )
-    role = RoleField(blank=True, null=True)
     lag = models.ForeignKey(
         to="self",
         on_delete=models.SET_NULL,

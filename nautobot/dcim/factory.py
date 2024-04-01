@@ -31,6 +31,7 @@ from nautobot.dcim.models import (
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
+    Interface,
     Location,
     LocationType,
     Manufacturer,
