@@ -50,6 +50,8 @@ __all__ = (
     "RelationshipModelForm",
     "RoleModelBulkEditFormMixin",
     "RoleModelFilterFormMixin",
+    "RoleNotRequiredModelFormMixin",
+    "RoleRequiredModelFormMixin",
     "StatusBulkEditFormMixin",
     "StatusFilterFormMixin",
 )
@@ -694,6 +696,32 @@ class RoleModelBulkEditFormMixin(forms.Form):
         super().__init__(*args, **kwargs)
         self.fields["role"] = DynamicModelChoiceField(
             required=False,
+            queryset=Role.objects.all(),
+            query_params={"content_types": self.model._meta.label_lower},
+        )
+        self.order_fields(self.field_order)  # Reorder fields again
+
+
+class RoleNotRequiredModelFormMixin(forms.Form):
+    """Mixin to add non-required `role` choice field to forms."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"] = DynamicModelChoiceField(
+            required=False,
+            queryset=Role.objects.all(),
+            query_params={"content_types": self.model._meta.label_lower},
+        )
+        self.order_fields(self.field_order)  # Reorder fields again
+
+
+class RoleRequiredModelFormMixin(forms.Form):
+    """Mixin to add required `role` choice field to forms"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"] = DynamicModelChoiceField(
+            required=True,
             queryset=Role.objects.all(),
             query_params={"content_types": self.model._meta.label_lower},
         )

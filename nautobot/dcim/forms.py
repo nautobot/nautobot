@@ -49,11 +49,12 @@ from nautobot.extras.forms import (
     NoteModelFormMixin,
     RoleModelBulkEditFormMixin,
     RoleModelFilterFormMixin,
+    RoleNotRequiredModelFormMixin,
     StatusModelBulkEditFormMixin,
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
-from nautobot.extras.models import ExternalIntegration, Role, SecretsGroup, Status
+from nautobot.extras.models import ExternalIntegration, SecretsGroup, Status
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
@@ -2347,20 +2348,13 @@ class InterfaceForm(InterfaceCommonForm, ComponentEditForm):
         }
 
 
-class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
+class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm, RoleNotRequiredModelFormMixin):
     type = forms.ChoiceField(
         choices=InterfaceTypeChoices,
         widget=StaticSelect2(),
     )
     status = DynamicModelChoiceField(
         queryset=Status.objects.all(),
-        query_params={
-            "content_types": Interface._meta.label_lower,
-        },
-    )
-    role = DynamicModelChoiceField(
-        queryset=Role.objects.all(),
-        required=False,
         query_params={
             "content_types": Interface._meta.label_lower,
         },
@@ -2462,6 +2456,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
 class InterfaceBulkCreateForm(
     form_from_model(Interface, ["enabled", "mtu", "vrf", "mgmt_only", "mode", "tags"]),
     DeviceBulkAddComponentForm,
+    RoleNotRequiredModelFormMixin,
 ):
     type = forms.ChoiceField(
         choices=InterfaceTypeChoices,
@@ -2470,11 +2465,6 @@ class InterfaceBulkCreateForm(
     status = DynamicModelChoiceField(
         required=True,
         queryset=Status.objects.all(),
-        query_params={"content_types": Interface._meta.label_lower},
-    )
-    role = DynamicModelChoiceField(
-        required=False,
-        queryset=Role.objects.all(),
         query_params={"content_types": Interface._meta.label_lower},
     )
 

@@ -37,11 +37,12 @@ from nautobot.extras.forms import (
     NautobotModelForm,
     RoleModelBulkEditFormMixin,
     RoleModelFilterFormMixin,
+    RoleNotRequiredModelFormMixin,
     StatusModelBulkEditFormMixin,
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
-from nautobot.extras.models import Role, Status
+from nautobot.extras.models import Status
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
@@ -490,7 +491,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             self.fields["tagged_vlans"].widget.add_query_param("location", location.pk)
 
 
-class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
+class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm, RoleNotRequiredModelFormMixin):
     virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
     name_pattern = ExpandableNameField(label="Name")
     enabled = forms.BooleanField(required=False, initial=True)
@@ -542,13 +543,6 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm):
         query_params={
             "content_types": VMInterface._meta.label_lower,
         },
-    )
-    role = DynamicModelChoiceField(
-        queryset=Role.objects.all(),
-        query_params={
-            "content_types": VMInterface._meta.label_lower,
-        },
-        required=False,
     )
 
     def __init__(self, *args, **kwargs):
@@ -680,15 +674,11 @@ class VirtualMachineBulkAddComponentForm(CustomFieldModelBulkEditFormMixin, Boot
 class VMInterfaceBulkCreateForm(
     form_from_model(VMInterface, ["enabled", "mtu", "description", "mode", "tags"]),
     VirtualMachineBulkAddComponentForm,
+    RoleNotRequiredModelFormMixin,
 ):
     status = DynamicModelChoiceField(
         queryset=Status.objects.all(),
         query_params={"content_types": VMInterface._meta.label_lower},
-    )
-    role = DynamicModelChoiceField(
-        queryset=Role.objects.all(),
-        query_params={"content_types": VMInterface._meta.label_lower},
-        required=False,
     )
 
     field_order = (
