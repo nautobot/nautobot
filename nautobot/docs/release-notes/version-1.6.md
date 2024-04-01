@@ -72,6 +72,13 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.17 (2024-04-01)
+
+### Dependencies
+
+- [#4583](https://github.com/nautobot/nautobot/issues/4583) - Updated pinned version of `social-auth-core` to remove dependency on `python-jose` & its dependency on `ecdsa`.
+- [#5495](https://github.com/nautobot/nautobot/issues/5495) - Changed `jsonschema` version constraint from `>=4.7.0,<4.18.0` to `^4.7.0`.
+
 ## v1.6.16 (2024-03-25)
 
 ### Security
