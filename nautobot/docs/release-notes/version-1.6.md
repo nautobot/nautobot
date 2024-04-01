@@ -76,7 +76,7 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 
 ### Dependencies
 
-- [#4583](https://github.com/nautobot/nautobot/issues/4583) - Updated pinned version of `social-auth-core` to remove dependency on `python-jose` & it's dependency on `ecdsa`.
+- [#4583](https://github.com/nautobot/nautobot/issues/4583) - Updated pinned version of `social-auth-core` to remove dependency on `python-jose` & its dependency on `ecdsa`.
 - [#5495](https://github.com/nautobot/nautobot/issues/5495) - Changed `jsonschema` version constraint from `>=4.7.0,<4.18.0` to `^4.7.0`.
 
 ## v1.6.16 (2024-03-25)
