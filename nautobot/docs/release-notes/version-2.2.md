@@ -10,7 +10,7 @@ This document describes all new features and changes in Nautobot 2.2.
 
 #### Contact and Team Models ([#230](https://github.com/nautobot/nautobot/issues/230))
 
-Contact and Team are models that represent an individual and a group of individuals who can be linked to an object. Contacts and teams store the necessary information (name, phone number, email, and address) to uniquely identify and contact them. They are added to track ownerships of organizational entities and to manage resources more efficiently in Nautobot. Check out the documentation for [contact](../user-guide/core-data-model/extras/contact.md) and [team](../user-guide/core-data-model/extras/team.md). There is also a [user guide](../user-guide/feature-guides/contact-and-team.md) available on how to utilize these models.
+Contact and Team are models that represent an individual and a group of individuals who can be linked to an object. Contacts and teams store the necessary information (name, phone number, email, and address) to uniquely identify and contact them. They are added to track ownerships of organizational entities and to manage resources more efficiently in Nautobot. Check out the documentation for [Contact](../user-guide/core-data-model/extras/contact.md) and [Team](../user-guide/core-data-model/extras/team.md). There is also a [user guide](../user-guide/feature-guides/contacts-and-teams.md) available on how to utilize these models.
 
 A new management command has been introduced to assist with migrating the Location fields `contact_name`, `contact_phone` and `contact_email` to the new Contact and Team models. This command can be invoked with `nautobot-server migrate_location_contacts` and will present a series of prompts to guide you through migrating Locations that have data in the `contact_name`, `contact_phone`, or `contact_email` fields which are not already associated to a Contact or Team. This command will give you the option to create new Contacts or Teams or, if a similar Contact or Team already exists, to link the Location to the existing Contact or Team. Note that when assigning a Location to an existing Contact or Team that has a blank `phone` or `email` field, the value from the Location will be copied to the Contact/Team. After a Location has been associated to a Contact or Team, the `contact_name`, `contact_phone`, and `contact_email` fields will be cleared from the Location.
 
@@ -18,27 +18,27 @@ A new management command has been introduced to assist with migrating the Locati
 
 Controller models have been added to the `dcim` app. A Controller in Nautobot is an abstraction meant to represent network or SDN (Software-Defined Networking) controllers. These may include, but are not limited to, wireless controllers, cloud-based network management systems, and other forms of central network control mechanisms.
 
-For more details, refer to the user guide for a [`Controller` model](../user-guide/core-data-model/dcim/controller.md), a [`ControllerManagedDeviceGroup` model](../user-guide/core-data-model/dcim/controllermanageddevicegroup.md), or developer documentation for [controllers](../development/core/controllers.md).
+For more details, refer to the user guide for a [`Controller` model](../user-guide/core-data-model/dcim/controller.md), a [`ControllerManagedDeviceGroup` model](../user-guide/core-data-model/dcim/controllermanageddevicegroup.md), or developer documentation for [Controllers](../development/core/controllers.md).
 
 #### DeviceFamily Model ([#3559](https://github.com/nautobot/nautobot/issues/3559))
 
-A [device family](../user-guide/core-data-model/dcim/devicefamily.md) represents a group of related [device types](../user-guide/core-data-model/dcim/devicetype.md). A device type can be optionally assigned to a device family. Each device family must have a unique name and may have a description assigned to it.
+A [Device Family](../user-guide/core-data-model/dcim/devicefamily.md) represents a group of related [Device Types](../user-guide/core-data-model/dcim/devicetype.md). A Device Type can be optionally assigned to a Device Family. Each Device Family must have a unique name and may have a description assigned to it.
 
-#### Jobs tile view ([#5129](https://github.com/nautobot/nautobot/issues/5129))
+#### Jobs Tile View ([#5129](https://github.com/nautobot/nautobot/issues/5129))
 
 Job list is now available in two display variants: list and tiles. List is a standard table view with no major changes introduced. Tiles is a new type of view displaying jobs in a two-dimensional grid.
 
 #### Prefix and VLAN Many Locations ([#4334](https://github.com/nautobot/nautobot/issues/4334), [#4412](https://github.com/nautobot/nautobot/issues/4412))
 
-The Prefix and VLAN models have replaced their single `location` foreign-key field with a many-to-many `locations` field, allowing multiple Locations to be attached to a single Prefix or VLAN. To ensure backwards compatibility with pre-2.2 code, these models now have a `location` property which can be get or set for the case of a single associated Location, but will raise a `MultipleObjectsReturned` exception if the Prefix or VLAN in question has more than one associated Location. REST API versions 2.0 and 2.1 similarly still have a `location` field, while REST API version 2.2 and later replace this with `locations`.
+The Prefix and VLAN models have replaced their single `location` foreign-key field with a many-to-many `locations` field, allowing multiple Locations to be attached to a single Prefix or VLAN. To ensure backwards compatibility with pre-2.2 code, these models now have a `location` property which can be retrieved or set for the case of a single associated Location, but will raise a `MultipleObjectsReturned` exception if the Prefix or VLAN in question has more than one associated Location. REST API versions 2.0 and 2.1 similarly still have a `location` field, while REST API version 2.2 and later replace this with `locations`.
 
 #### Software Image File and Software Version models ([#1](https://github.com/nautobot/nautobot/issues/1))
 
-New models have been added for software image files and software versions. These models are used to track the software versions of devices, inventory items and virtual machines and their associated image files. These models have been ported from the [Device Lifecycle Management App](https://github.com/nautobot/nautobot-app-device-lifecycle-mgmt/) and a future update to that app will migrate all existing data from the `nautobot_device_lifecycle_mgmt.SoftwareImageLCM` and `nautobot_device_lifecycle_mgmt.SoftwareLCM` models to the `dcim.SoftwareImageFile` and `dcim.SoftwareVersion` models added here.
+New models have been added for Software Image Files and Software Versions. These models are used to track the software versions of Devices, Inventory Items and Virtual Machines and their associated image files. These models have been ported from the [Device Lifecycle Management App](https://github.com/nautobot/nautobot-app-device-lifecycle-mgmt/) and a future update to that app will migrate all existing data from the `nautobot_device_lifecycle_mgmt.SoftwareImageLCM` and `nautobot_device_lifecycle_mgmt.SoftwareLCM` models to the `dcim.SoftwareImageFile` and `dcim.SoftwareVersion` models added here.
 
-Software versions must be associated to a platform. Software image files must be associated to one software version and may be associated to one or more device types. Devices, inventory items and virtual machines may be associated to one software version to track their current version. See the documentation for [software image file](../user-guide/core-data-model/dcim/softwareimagefile.md) and [software version](../user-guide/core-data-model/dcim/softwareversion.md). There is also a [user guide](../user-guide/feature-guides/software-image-files-and-versions.md) with instructions on how to create these models.
+Software Versions must be associated to a Platform. Software Image Files must be associated to one Software Version and may be associated to one or more Device Types. Devices, Inventory Items and Virtual Machines may be associated to one Software Version to track their current version. See the documentation for [Software Image File](../user-guide/core-data-model/dcim/softwareimagefile.md) and [Software Version](../user-guide/core-data-model/dcim/softwareversion.md). There is also a [user guide](../user-guide/feature-guides/software-image-files-and-versions.md) with instructions on how to create these models.
 
-#### Syntax highlighting ([#5098](https://github.com/nautobot/nautobot/issues/5098))
+#### Syntax Highlighting ([#5098](https://github.com/nautobot/nautobot/issues/5098))
 
 Language syntax highlighting for GraphQL, JSON, XML and YAML is now supported in the UI via JavaScript. To enable the feature, a code snippet has to be wrapped in the following HTML structure:
 
@@ -66,6 +66,45 @@ The CSV import functionality for all models has been changed from a synchronous 
 Model CharFields' `max_length` attributes have been standardized globally to have at least 255 characters except where a shorter `max_length` is explicitly justified.
 
 <!-- towncrier release notes start -->
+## v2.2.0 (2024-03-29)
+
+!!! warning
+    Upgrading from beta releases to final releases is never recommended for Nautobot; in the case of 2.2.0b1 to 2.2.0 several data models and database migrations have been modified (see [#5454](https://github.com/nautobot/nautobot/issues/5454)) between the two releases, and so upgrading in place from 2.2.0b1 to 2.2.0 **will not work**.
+
+### Added
+
+- [#4811](https://github.com/nautobot/nautobot/issues/4811) - Added a new generic test case (`test_table_with_indentation_is_removed_on_filter_or_sort`) to `ListObjectsViewTestCase` to test that the tree hierarchy is correctly removed on TreeModel list views when sorting or filtering is applied. This test will also run in these subclasses of the `ListObjectsViewTestCase`: `PrimaryObjectViewTestCase`, `OrganizationalObjectViewTestCase`, and `DeviceComponentViewTestCase`.
+- [#5034](https://github.com/nautobot/nautobot/issues/5034) - Added a management command (`nautobot-server migrate_location_contacts`) to help migrate the Location `contact_name`, `contact_email` and `contact_phone` fields to Contact and Teams models.
+
+### Changed
+
+- [#5452](https://github.com/nautobot/nautobot/issues/5452) - Changed the behavior of Prefix table: now they are sortable, and after sorting is applied, all hierarchy indentations are removed.
+- [#5454](https://github.com/nautobot/nautobot/issues/5454) - Changed one-to-many links from Controller to `PROTECT` against deleting.
+- [#5454](https://github.com/nautobot/nautobot/issues/5454) - Renamed `ControllerDeviceGroup` to `ControllerManagedDeviceGroup`.
+- [#5454](https://github.com/nautobot/nautobot/issues/5454) - Renamed `Controller.deployed_controller_device` to `Controller.controller_device`.
+- [#5454](https://github.com/nautobot/nautobot/issues/5454) - Renamed `Controller.deployed_controller_group` to `Controller.controller_device_redundancy_group`.
+- [#5454](https://github.com/nautobot/nautobot/issues/5454) - Renamed `Device.controller_device_group` to `Device.controller_managed_device_group`.
+- [#5454](https://github.com/nautobot/nautobot/issues/5454) - Removed ConfigContext from ControllerManagedDeviceGroup.
+- [#5454](https://github.com/nautobot/nautobot/issues/5454) - Removed ConfigContext from Controller.
+- [#5475](https://github.com/nautobot/nautobot/issues/5475) - Changed the behavior of Prefix table and other Tree Model tables: now after filtering is applied, all hierarchy indentations are removed.
+- [#5487](https://github.com/nautobot/nautobot/issues/5487) - Moved some nav menu items around to make better logical sense and to allow quicker access to more commonly accessed features.
+
+### Fixed
+
+- [#5415](https://github.com/nautobot/nautobot/issues/5415) - Fixed Team(s) field not pre-populating when editing a Contact.
+- [#5431](https://github.com/nautobot/nautobot/issues/5431) - Fixed Roles API response containing duplicate entries when filtering on more than one `content_types` value.
+- [#5431](https://github.com/nautobot/nautobot/issues/5431) - Fixed Providers API response containing duplicate entries when filtering on more than one `location` value.
+- [#5440](https://github.com/nautobot/nautobot/issues/5440) - Fixed `Cannot resolve keyword 'task_id' into field` error when calling `nautobot-server celery result <task_id>`.
+
+### Dependencies
+
+- [#4583](https://github.com/nautobot/nautobot/issues/4583) - Updated pinned version of `social-auth-core` to remove dependency on `python-jose` & it's dependency on `ecdsa`.
+
+### Housekeeping
+
+- [#5435](https://github.com/nautobot/nautobot/issues/5435) - Added `--pattern` argument to `invoke unittest`.
+- [#5435](https://github.com/nautobot/nautobot/issues/5435) - Added `--parallel-workers` argument to `invoke unittest`.
+
 ## v2.2.0-beta.1 (2024-03-19)
 
 ### Added
