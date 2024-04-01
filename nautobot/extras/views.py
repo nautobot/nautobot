@@ -38,14 +38,14 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, Device, Interface, Location, Rack
-from nautobot.dcim.tables import ControllerTable, DeviceTable, RackTable
+from nautobot.dcim.tables import ControllerTable, DeviceTable, InterfaceTable, RackTable
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
-from nautobot.virtualization.tables import VirtualMachineTable
+from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 
 from . import filters, forms, tables
 from .api import serializers
@@ -2118,6 +2118,17 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 RequestConfig(request, paginate).configure(device_table)
                 context["device_table"] = device_table
 
+            if ContentType.objects.get_for_model(Interface) in context["content_types"]:
+                interfaces = instance.interfaces.select_related(
+                    "device",
+                    "status",
+                    "role",
+                ).restrict(request.user, "view")
+                interface_table = InterfaceTable(interfaces)
+                interface_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(interface_table)
+                context["interface_table"] = interface_table
+
             if ContentType.objects.get_for_model(Controller) in context["content_types"]:
                 controllers = instance.controllers.select_related(
                     "status",
@@ -2185,7 +2196,17 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 virtual_machine_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(virtual_machine_table)
                 context["virtual_machine_table"] = virtual_machine_table
-
+            if ContentType.objects.get_for_model(VMInterface) in context["content_types"]:
+                vm_interfaces = instance.vm_interfaces.select_related(
+                    "virtual_machine",
+                    "status",
+                    "role",
+                    "vrf",
+                ).restrict(request.user, "view")
+                vminterface_table = VMInterfaceTable(vm_interfaces)
+                vminterface_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(vminterface_table)
+                context["vminterface_table"] = vminterface_table
             if ContentType.objects.get_for_model(VLAN) in context["content_types"]:
                 vlans = (
                     instance.vlans.annotate(location_count=count_related(Location, "vlans"))

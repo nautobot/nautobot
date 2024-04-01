@@ -522,10 +522,11 @@ class IPAddressMergeTestCase(ModelViewTestCase):
         cls.devices = devices
 
         intf_status = Status.objects.get_for_model(Interface).first()
+        intf_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
-            Interface.objects.create(device=cls.devices[0], name="Interface 1", status=intf_status),
+            Interface.objects.create(device=cls.devices[0], name="Interface 1", status=intf_status, role=intf_role),
             Interface.objects.create(device=cls.devices[1], name="Interface 2", status=intf_status),
-            Interface.objects.create(device=cls.devices[2], name="Interface 3", status=intf_status),
+            Interface.objects.create(device=cls.devices[2], name="Interface 3", status=intf_status, role=intf_role),
         )
         cls.services = (
             Service.objects.create(
