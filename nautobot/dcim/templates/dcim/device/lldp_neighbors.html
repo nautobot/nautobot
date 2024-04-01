@@ -65,6 +65,9 @@ var ready = (callback) => {
 };
 
 function getAttribute(node, querySelector, attribute) {
+    if (node === null) {
+        return "";
+    }
     const child = node.querySelector(querySelector);
     if (child === null) {
         return "";
