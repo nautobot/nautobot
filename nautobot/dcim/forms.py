@@ -2459,6 +2459,7 @@ class InterfaceBulkCreateForm(
     DeviceBulkAddComponentForm,
     RoleNotRequiredModelFormMixin,
 ):
+    model = Interface
     type = forms.ChoiceField(
         choices=InterfaceTypeChoices,
         widget=StaticSelect2(),

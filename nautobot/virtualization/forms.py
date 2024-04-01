@@ -677,6 +677,7 @@ class VMInterfaceBulkCreateForm(
     VirtualMachineBulkAddComponentForm,
     RoleNotRequiredModelFormMixin,
 ):
+    model = VMInterface
     status = DynamicModelChoiceField(
         queryset=Status.objects.all(),
         query_params={"content_types": VMInterface._meta.label_lower},
