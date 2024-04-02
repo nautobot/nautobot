@@ -1,0 +1,1 @@
+Fixed off-by-one error in generic filter testing helper `BaseFilterTestCase.get_filterset_test_values`.

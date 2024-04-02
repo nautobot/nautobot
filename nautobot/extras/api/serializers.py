@@ -193,10 +193,18 @@ class ContactSerializer(NautobotModelSerializer):
     class Meta:
         model = Contact
         fields = "__all__"
+        # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
+        validators = []
+        extra_kwargs = {
+            "email": {"default": ""},
+            "phone": {"default": ""},
+        }
 
     def validate(self, data):
         attrs = data.copy()
         attrs.pop("teams", None)
+        validator = UniqueTogetherValidator(queryset=Contact.objects.all(), fields=("name", "phone", "email"))
+        validator(attrs, self)
         super().validate(attrs)
         return data
 
@@ -946,7 +954,18 @@ class TeamSerializer(NautobotModelSerializer):
     class Meta:
         model = Team
         fields = "__all__"
-        extra_kwargs = {"contacts": {"required": False}}
+        extra_kwargs = {
+            "contacts": {"required": False},
+            "email": {"default": ""},
+            "phone": {"default": ""},
+        }
+        # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
+        validators = []
+
+    def validate(self, data):
+        validator = UniqueTogetherValidator(queryset=Team.objects.all(), fields=("name", "phone", "email"))
+        validator(data, self)
+        return super().validate(data)
 
 
 #
