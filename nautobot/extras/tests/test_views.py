@@ -3009,12 +3009,6 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
                 verbose_name_plural = model_class._meta.verbose_name_plural
                 content_type = ContentType.objects.get_for_model(model_class)
                 result = " ".join(bettertitle(elem) for elem in verbose_name_plural.split())
-                if result == "Ip Addresses":
-                    result = "IP Addresses"
-                elif result == "Vlans":
-                    result = "VLANs"
-                elif result == "Vm Interfaces":
-                    result = "VM Interfaces"
                 # Assert tables are correctly rendered
                 if content_type not in role_content_types:
                     if result == "Contact Associations":
