@@ -14,6 +14,8 @@
         onerror="window.location='{% url 'media_failure' %}?filename=clipboard.js-2.0.9/clipboard.min.js'"></script>
 <script src="{% static 'flatpickr-4.6.9/flatpickr.min.js' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/flatpickr.min.js'"></script>
+<script src="{% static 'highlight.js-11.9.0/highlight.min.js' %}"
+        onerror="window.location='{% url 'media_failure' %}?filename=highlight.js-11.9.0/highlight.min.js'"></script>
 <script src="{% versioned_static 'js/forms.js' %}"
         onerror="window.location='{% url 'media_failure' %}?filename=js/forms.js'"></script>
 <script src="{% versioned_static 'js/theme.js' %}"
@@ -28,5 +30,13 @@
         loading.hide();
     });
     // Applies bootstrap tooltip to all elements with the title attribute.
-    $("[title]").tooltip();
+    // Button groups are "special" and require child tooltips to have
+    // `{ container: 'body' }` option not to break their styles:
+    // https://getbootstrap.com/docs/3.4/javascript/#markup-1
+    $("*:not(.btn-group) > [title]").tooltip();
+    $(".btn-group > [title]").tooltip({ container: 'body' });
+</script>
+<script type="text/javascript">
+    hljs.configure({ cssSelector: '.language-graphql, .language-json, .language-xml, .language-yaml' });
+    hljs.highlightAll();
 </script>

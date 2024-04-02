@@ -6,8 +6,9 @@ from django.db import models, transaction
 from django.db.models import Sum
 from django.utils.functional import classproperty
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, MACAddressCharField, NaturalOrderingField
-from nautobot.core.models.generics import BaseModel, ChangeLoggedModel, PrimaryModel
+from nautobot.core.models.generics import BaseModel, PrimaryModel
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.core.models.tree_queries import TreeModel
@@ -32,6 +33,7 @@ from nautobot.dcim.constants import (
     WIRELESS_IFACE_TYPES,
 )
 from nautobot.extras.models import (
+    ChangeLoggedModel,
     RelationshipModel,
     Status,
     StatusField,
@@ -62,10 +64,10 @@ class ComponentModel(PrimaryModel):
     """
 
     device = ForeignKeyWithAutoRelatedName(to="dcim.Device", on_delete=models.CASCADE)
-    name = models.CharField(max_length=64, db_index=True)
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True, db_index=True)
-    label = models.CharField(max_length=64, blank=True, help_text="Physical label")
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
+    _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True)
+    label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     natural_key_field_names = ["name", "device"]
 
@@ -501,7 +503,11 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
 
     # Override ComponentModel._name to specify naturalize_interface function
     _name = NaturalOrderingField(
-        target_field="name", naturalize_function=naturalize_interface, max_length=100, blank=True, db_index=True
+        target_field="name",
+        naturalize_function=naturalize_interface,
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True,
+        db_index=True,
     )
     lag = models.ForeignKey(
         to="self",
@@ -632,11 +638,15 @@ class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
         # Validate untagged VLAN
         # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to assign a VLAN belongs to
         # the parent Locations or the child locations of `device.location`?
-        if self.untagged_vlan and self.untagged_vlan.location_id not in [self.device.location_id, None]:
+        if (
+            self.untagged_vlan
+            and self.untagged_vlan.locations.exists()
+            and not self.untagged_vlan.locations.filter(id=self.device.location_id).exists()
+        ):
             raise ValidationError(
                 {
                     "untagged_vlan": (
-                        f"The untagged VLAN ({self.untagged_vlan}) must belong to the same location as the interface's parent "
+                        f"The untagged VLAN ({self.untagged_vlan}) must have a common location as the interface's parent "
                         f"device, or it must be global."
                     )
                 }
@@ -772,12 +782,12 @@ class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancest
     A collection of Interfaces that supply a redundancy group for protocols like HSRP/VRRP.
     """
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     status = StatusField(blank=False, null=False)
     # Preemptively model 2.0 behavior by making `created` a DateTimeField rather than a DateField.
     created = models.DateTimeField(auto_now_add=True)
     description = models.CharField(
-        max_length=200,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
     )
     interfaces = models.ManyToManyField(
@@ -793,7 +803,7 @@ class InterfaceRedundancyGroup(PrimaryModel):  # pylint: disable=too-many-ancest
         verbose_name="Redundancy Protocol",
     )
     protocol_group_id = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
     )
     secrets_group = models.ForeignKey(
@@ -1037,14 +1047,14 @@ class InventoryItem(TreeModel, ComponentModel):
         null=True,
     )
     part_id = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         verbose_name="Part ID",
         blank=True,
         help_text="Manufacturer-assigned part identifier",
     )
-    serial = models.CharField(max_length=255, verbose_name="Serial number", blank=True, db_index=True)
+    serial = models.CharField(max_length=CHARFIELD_MAX_LENGTH, verbose_name="Serial number", blank=True, db_index=True)
     asset_tag = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         unique=True,
         blank=True,
         null=True,
@@ -1052,6 +1062,21 @@ class InventoryItem(TreeModel, ComponentModel):
         help_text="A unique tag used to identify this item",
     )
     discovered = models.BooleanField(default=False, help_text="This item was automatically discovered")
+    software_version = models.ForeignKey(
+        to="dcim.SoftwareVersion",
+        on_delete=models.PROTECT,
+        related_name="inventory_items",
+        blank=True,
+        null=True,
+        verbose_name="The software version installed on this inventory item",
+    )
+    software_image_files = models.ManyToManyField(
+        to="dcim.SoftwareImageFile",
+        related_name="inventory_items",
+        blank=True,
+        verbose_name="Software Image Files",
+        help_text="Override the software image files associated with the software version for this inventory item",
+    )
 
     class Meta:
         ordering = ("_name",)

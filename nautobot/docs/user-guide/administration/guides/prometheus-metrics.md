@@ -25,10 +25,8 @@ CACHES = {
 }
 ```
 
-<!-- TODO: Which version? -->
-++ 2.2.0
-
-In case your `/metrics` endpoint is slow, you can disable specific apps that may be causing problems with the `METRICS_DISABLED_APPS` configuration setting.
++++ 2.2.1
+    In case the `/metrics` endpoint is unacceptably slow to respond, you can disable specific apps that may be causing problems with the `METRICS_DISABLED_APPS` configuration setting.
 
 For more information see the [django-prometheus](https://github.com/korfuri/django-prometheus) docs.
 

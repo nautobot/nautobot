@@ -1,3 +1,4 @@
+import datetime
 from decimal import Decimal
 import unittest
 
@@ -12,6 +13,7 @@ import yaml
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from nautobot.core.templatetags.buttons import job_export_url, job_import_url
 from nautobot.core.testing import extract_page_body, ModelViewTestCase, post_data, ViewTestCases
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
 from nautobot.dcim.choices import (
@@ -33,9 +35,18 @@ from nautobot.dcim.choices import (
     RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
+    SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
-from nautobot.dcim.filters import ConsoleConnectionFilterSet, InterfaceConnectionFilterSet, PowerConnectionFilterSet
+from nautobot.dcim.filters import (
+    ConsoleConnectionFilterSet,
+    ControllerFilterSet,
+    ControllerManagedDeviceGroupFilterSet,
+    InterfaceConnectionFilterSet,
+    PowerConnectionFilterSet,
+    SoftwareImageFileFilterSet,
+    SoftwareVersionFilterSet,
+)
 from nautobot.dcim.models import (
     Cable,
     CablePath,
@@ -43,11 +54,15 @@ from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
     Interface,
@@ -70,13 +85,17 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
+    SoftwareImageFile,
+    SoftwareVersion,
     VirtualChassis,
 )
+from nautobot.dcim.views import ConsoleConnectionsListView, InterfaceConnectionsListView, PowerConnectionsListView
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.models import (
     ConfigContextSchema,
     CustomField,
     CustomFieldChoice,
+    ExternalIntegration,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -117,6 +136,7 @@ def create_test_device(name):
 
 class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = LocationType
+    sort_on_field = "nestable"
 
     @classmethod
     def setUpTestData(cls):
@@ -144,17 +164,6 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "content_types": [ContentType.objects.get_for_model(Rack).pk, ContentType.objects.get_for_model(Device).pk],
             "nestable": True,
         }
-
-        cls.csv_data = (
-            "name,parent,description,content_types,nestable",
-            # Import understands foreign-keys provided as either a composite-key (for LocationType, this is .name)...
-            f"Intermediate 3,{lt1.name},Another intermediate type,ipam.prefix,false",
-            # ... or as a PK value
-            f'Intermediate 4,{lt1.pk},Another intermediate type,"ipam.prefix,dcim.device",false',
-            "Root 3,,Another root type,,true",
-            # We also support later rows having back-references to previous rows now
-            "Leaf 3,Intermediate 3,Another leaf type,,FALSE",
-        )
 
     def _get_queryset(self):
         return super()._get_queryset().order_by("last_updated")
@@ -202,16 +211,6 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "A new root location",
         }
 
-        cls.csv_data = (
-            "name,location_type,parent__name,status,tenant,description",
-            # Mix and match composite keys and PKs to confirm that the serializer handles both correctly
-            f'Root 3,"{lt1.name}",NoObject,{status.name},,',
-            f'Intermediate 2,"{lt2.pk}",{loc2.name},{status.pk},"{tenant.name}",Hello world!',
-            f'Leaf 2,"{lt3.name}",{loc3.name},{status.name},"{tenant.name}",',
-            # Back-reference to an instance that didn't exist until processing previous lines of this data
-            f'Leaf 3,"{lt3.pk}",Intermediate 2,{status.name},"{tenant.name}",',
-        )
-
         cls.bulk_edit_data = {
             "description": "A generic description",
             # Because we have a mix of root and non-root LocationTypes,
@@ -256,29 +255,26 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = RackGroup
+    sort_on_field = "name"
 
     @classmethod
     def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
-        RackGroup.objects.create(name="Rack Group 1", location=location)
-        RackGroup.objects.create(name="Rack Group 2", location=location)
-        RackGroup.objects.create(name="Rack Group 3", location=location)
-        RackGroup.objects.create(name="Rack Group 8", location=location)
+        rack_groups = (
+            RackGroup.objects.create(name="Rack Group 1", location=location),
+            RackGroup.objects.create(name="Rack Group 2", location=location),
+            RackGroup.objects.create(name="Rack Group 3", location=location),
+            RackGroup.objects.create(name="Rack Group 8", location=location),
+        )
+        RackGroup.objects.create(name="Rack Group Child 1", location=location, parent=rack_groups[0])
+        RackGroup.objects.create(name="Rack Group Child 2", location=location, parent=rack_groups[0])
 
         cls.form_data = {
             "name": "Rack Group X",
             "location": location.pk,
             "description": "A new rack group",
         }
-
-        cls.csv_data = (
-            "location,name,description",
-            f"{location.composite_key},Rack Group 4,Fourth rack group",
-            f"{location.pk},Rack Group 5,Fifth rack group",
-            f"{location.composite_key},Rack Group 6,Sixth rack group",
-            f"{location.pk},Rack Group 7,Seventh rack group",
-        )
 
 
 class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -308,13 +304,6 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "Rack reservation",
             "tags": [t.pk for t in Tag.objects.get_for_model(RackReservation)],
         }
-
-        cls.csv_data = (
-            "rack,units,description",
-            f'{rack.composite_key},"10,11,12",Reservation 1',
-            f"{rack.pk},13,Reservation 2",
-            f'{rack.composite_key},"16,17,18",Reservation 3',
-        )
 
         cls.bulk_edit_data = {
             "user": user3.pk,
@@ -425,13 +414,6 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "cf_rack-colors": ["red", "green", "blue"],
             "cr_backup-location__destination": [cls.locations[0].pk],
         }
-
-        cls.csv_data = (
-            "location,rack_group,name,width,u_height,status",
-            f"{cls.locations[0].composite_key},,Rack 4,19,42,{statuses[0].name}",
-            f"{cls.locations[0].pk},{rackgroups[0].composite_key},Rack 5,19,42,{statuses[1].name}",
-            f"{cls.locations[1].composite_key},{rackgroups[1].pk},Rack 6,19,42,{statuses[2].pk}",
-        )
 
         cls.bulk_edit_data = {
             "location": cls.locations[1].pk,
@@ -566,6 +548,23 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertContains(response, total_utilization_html, html=True)
 
 
+class DeviceFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = DeviceFamily
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.form_data = {
+            "name": "New Device Family",
+            "description": "A new device family",
+        }
+        cls.bulk_edit_data = {
+            "description": "A new device family",
+        }
+        DeviceFamily.objects.create(name="Deletable Device Family 1")
+        DeviceFamily.objects.create(name="Deletable Device Family 2", description="Delete this one")
+        DeviceFamily.objects.create(name="Deletable Device Family 3")
+
+
 class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = Manufacturer
 
@@ -574,6 +573,7 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         DeviceType.objects.all().delete()
         Platform.objects.all().delete()
@@ -582,13 +582,6 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "name": "Manufacturer X",
             "description": "A new manufacturer",
         }
-        cls.csv_data = (
-            "name,description",
-            "Manufacturer 4,Fourth manufacturer",
-            "Manufacturer 5,Fifth manufacturer",
-            "Manufacturer 6,Sixth manufacturer",
-            "Manufacturer 7,Seventh manufacturer",
-        )
 
 
 # TODO: Change base class to PrimaryObjectViewTestCase
@@ -607,6 +600,7 @@ class DeviceTypeTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         manufacturers = Manufacturer.objects.all()[:2]
 
@@ -617,6 +611,7 @@ class DeviceTypeTestCase(
 
         cls.form_data = {
             "manufacturer": manufacturers[1].pk,
+            "device_family": None,
             "model": "Device Type X",
             "part_number": "123ABC",
             "u_height": 2,
@@ -632,23 +627,35 @@ class DeviceTypeTestCase(
             "is_full_depth": False,
         }
 
-    # Temporary FIXME(jathan): Literally just trying to get the tests running so
-    # we can keep moving on the fixture factories. This should be removed once
-    # we've cleaned up all the hard-coded object comparisons and are all in on
-    # factories.
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_bulk_edit_objects_with_constrained_permission(self):
-        DeviceType.objects.exclude(model__startswith="Test Device Type").delete()
-        super().test_bulk_edit_objects_with_constrained_permission()
+    def test_list_has_correct_links(self):
+        """Assert that the DeviceType list view has import/export buttons for both CSV and YAML/JSON formats."""
+        self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype")
+        response = self.client.get(reverse("dcim:devicetype_list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
 
-    # Temporary FIXME(jathan): Literally just trying to get the tests running so
-    # we can keep moving on the fixture factories. This should be removed once
-    # we've cleaned up all the hard-coded object comparisons and are all in on
-    # factories.
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_bulk_edit_objects_with_permission(self):
-        DeviceType.objects.exclude(model__startswith="Test Device Type").delete()
-        super().test_bulk_edit_objects_with_permission()
+        yaml_import_url = reverse("dcim:devicetype_import")
+        csv_import_url = job_import_url(ContentType.objects.get_for_model(DeviceType))
+        # Main import button links to YAML/JSON import
+        self.assertInHTML(
+            f'<a id="import-button" type="button" class="btn btn-info" href="{yaml_import_url}">'
+            '<span class="mdi mdi-database-import" aria-hidden="true"></span> Import</a>',
+            content,
+        )
+        # Dropdown provides both YAML/JSON and CSV import as options
+        self.assertInHTML(f'<a href="{yaml_import_url}">JSON/YAML format (single record)</a>', content)
+        self.assertInHTML(f'<a href="{csv_import_url}">CSV format (multiple records)</a>', content)
+
+        export_url = job_export_url()
+        # Export is a little trickier to check since it's done as a form submission rather than an <a> element.
+        self.assertIn(f'<form action="{export_url}" method="post">', content)
+        self.assertInHTML(
+            f'<input type="hidden" name="content_type" value="{ContentType.objects.get_for_model(DeviceType).pk}">',
+            content,
+        )
+        self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
+        self.assertInHTML('<button type="submit" class="btn btn-link">YAML format</button>', content)
+        self.assertInHTML('<button type="submit" class="btn btn-link">CSV format</button>', content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_import_objects(self):
@@ -731,9 +738,6 @@ device-bays:
   - name: Device Bay 3
 """
 
-        # Create the manufacturer
-        Manufacturer.objects.first()
-
         # Add all required permissions to the test user
         self.add_permissions(
             "dcim.view_devicetype",
@@ -751,7 +755,6 @@ device-bays:
         form_data = {"data": IMPORT_DATA, "format": "yaml"}
         response = self.client.post(reverse("dcim:devicetype_import"), data=form_data, follow=True)
         self.assertHttpStatus(response, 200)
-
         dt = DeviceType.objects.get(model="TEST-1000")
         self.assertEqual(dt.comments, "test comment")
 
@@ -797,6 +800,106 @@ device-bays:
         self.assertEqual(dt.device_bay_templates.count(), 3)
         db1 = DeviceBayTemplate.objects.first()
         self.assertEqual(db1.name, "Device Bay 1")
+
+    def test_import_objects_unknown_type_enums(self):
+        """
+        YAML import of data with `type` values that we don't recognize should remap those to "other" rather than fail.
+        """
+        manufacturer = Manufacturer.objects.first()
+        IMPORT_DATA = f"""
+manufacturer: {manufacturer.name}
+model: TEST-2000
+u_height: 0
+subdevice_role: parent
+comments: "test comment"
+console-ports:
+  - name: Console Port Alpha-Beta
+    type: alpha-beta
+console-server-ports:
+  - name: Console Server Port Pineapple
+    type: pineapple
+power-ports:
+  - name: Power Port Fred
+    type: frederick
+power-outlets:
+  - name: Power Outlet Rick
+    type: frederick
+    power_port_template: Power Port Fred
+interfaces:
+  - name: Interface North
+    type: northern
+rear-ports:
+  - name: Rear Port Foosball
+    type: foosball
+front-ports:
+  - name: Front Port Pickleball
+    type: pickleball
+    rear_port_template: Rear Port Foosball
+device-bays:
+  - name: Device Bay of Uncertain Type
+    type: unknown  # should be ignored
+  - name: Device Bay of Unspecified Type
+"""
+        # Add all required permissions to the test user
+        self.add_permissions(
+            "dcim.view_devicetype",
+            "dcim.view_manufacturer",
+            "dcim.add_devicetype",
+            "dcim.add_consoleporttemplate",
+            "dcim.add_consoleserverporttemplate",
+            "dcim.add_powerporttemplate",
+            "dcim.add_poweroutlettemplate",
+            "dcim.add_interfacetemplate",
+            "dcim.add_frontporttemplate",
+            "dcim.add_rearporttemplate",
+            "dcim.add_devicebaytemplate",
+        )
+
+        form_data = {"data": IMPORT_DATA, "format": "yaml"}
+        response = self.client.post(reverse("dcim:devicetype_import"), data=form_data, follow=True)
+        self.assertHttpStatus(response, 200)
+        dt = DeviceType.objects.get(model="TEST-2000")
+        self.assertEqual(dt.comments, "test comment")
+
+        # Verify all of the components were created with appropriate "other" types
+        self.assertEqual(dt.console_port_templates.count(), 1)
+        cpt = ConsolePortTemplate.objects.filter(device_type=dt).first()
+        self.assertEqual(cpt.name, "Console Port Alpha-Beta")
+        self.assertEqual(cpt.type, ConsolePortTypeChoices.TYPE_OTHER)
+
+        self.assertEqual(dt.console_server_port_templates.count(), 1)
+        cspt = ConsoleServerPortTemplate.objects.filter(device_type=dt).first()
+        self.assertEqual(cspt.name, "Console Server Port Pineapple")
+        self.assertEqual(cspt.type, ConsolePortTypeChoices.TYPE_OTHER)
+
+        self.assertEqual(dt.power_port_templates.count(), 1)
+        ppt = PowerPortTemplate.objects.filter(device_type=dt).first()
+        self.assertEqual(ppt.name, "Power Port Fred")
+        self.assertEqual(ppt.type, PowerPortTypeChoices.TYPE_OTHER)
+
+        self.assertEqual(dt.power_outlet_templates.count(), 1)
+        pot = PowerOutletTemplate.objects.filter(device_type=dt).first()
+        self.assertEqual(pot.name, "Power Outlet Rick")
+        self.assertEqual(pot.type, PowerOutletTypeChoices.TYPE_OTHER)
+        self.assertEqual(pot.power_port_template, ppt)
+
+        self.assertEqual(dt.interface_templates.count(), 1)
+        it = InterfaceTemplate.objects.filter(device_type=dt).first()
+        self.assertEqual(it.name, "Interface North")
+        self.assertEqual(it.type, InterfaceTypeChoices.TYPE_OTHER)
+
+        self.assertEqual(dt.rear_port_templates.count(), 1)
+        rpt = RearPortTemplate.objects.filter(device_type=dt).first()
+        self.assertEqual(rpt.name, "Rear Port Foosball")
+        self.assertEqual(rpt.type, PortTypeChoices.TYPE_OTHER)
+
+        self.assertEqual(dt.front_port_templates.count(), 1)
+        fpt = FrontPortTemplate.objects.filter(device_type=dt).first()
+        self.assertEqual(fpt.name, "Front Port Pickleball")
+        self.assertEqual(fpt.type, PortTypeChoices.TYPE_OTHER)
+
+        self.assertEqual(dt.device_bay_templates.count(), 2)
+        # DeviceBayTemplate doesn't have a type field.
 
     def test_devicetype_export(self):
         url = reverse("dcim:devicetype_list")
@@ -1163,6 +1266,11 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()
 
+        # Protected FK to SoftwareImageFile prevents deletion
+        DeviceTypeToSoftwareImageFile.objects.all().delete()
+        # Protected FK to SoftwareVersion prevents deletion
+        Device.objects.all().update(software_version=None)
+
         cls.form_data = {
             "name": "Platform X",
             "manufacturer": manufacturer.pk,
@@ -1172,20 +1280,13 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             "description": "A new platform",
         }
 
-        cls.csv_data = (
-            "name,description",
-            "Platform 4,Fourth platform",
-            "Platform 5,Fifth platform",
-            "Platform 6,Sixth platform",
-            "Platform 7,Seventh platform",
-        )
-
 
 class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Device
 
     @classmethod
     def setUpTestData(cls):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
@@ -1219,6 +1320,18 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         statuses = Status.objects.get_for_model(Device)
         status_active = statuses[0]
 
+        # We want unique sets of software image files for each device type
+        software_image_files = list(SoftwareImageFile.objects.all()[:4])
+        software_versions = list(SoftwareVersion.objects.filter(software_image_files__isnull=False)[:2])
+        software_image_files[0].software_version = software_versions[0]
+        software_image_files[1].software_version = software_versions[0]
+        software_image_files[2].software_version = software_versions[1]
+        software_image_files[3].software_version = software_versions[1]
+        for software_image_file in software_image_files:
+            software_image_file.save()
+        devicetypes[0].software_image_files.set(software_image_files[:2])
+        devicetypes[1].software_image_files.set(software_image_files[2:])
+
         cls.custom_fields = (
             CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_INTEGER, label="Crash Counter", default=0),
         )
@@ -1233,6 +1346,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 role=deviceroles[0],
                 platform=platforms[0],
                 status=status_active,
+                software_version=software_versions[0],
                 _custom_field_data={"crash_counter": 5},
             ),
             Device.objects.create(
@@ -1243,6 +1357,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 role=deviceroles[0],
                 platform=platforms[0],
                 status=status_active,
+                software_version=software_versions[0],
                 _custom_field_data={"crash_counter": 10},
             ),
             Device.objects.create(
@@ -1257,8 +1372,6 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 _custom_field_data={"crash_counter": 15},
             ),
         )
-
-        device_bay = DeviceBay.objects.create(device=devices[0], name="Device Bay 1")
 
         cls.relationships = (
             Relationship(
@@ -1324,15 +1437,9 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "local_config_context_data": None,
             "cf_crash_counter": -1,
             "cr_router-id": None,
+            "software_version": software_versions[1].pk,
+            "software_image_files": [f.pk for f in software_versions[0].software_image_files.all()],
         }
-
-        cls.csv_data = (
-            "role,device_type,status,name,location,rack,position,face,secrets_group,parent_bay",
-            f"{deviceroles[0].name},{devicetypes[0].composite_key},{statuses[0].name},Device 4,{locations[0].name},{racks[0].composite_key},10,front,",
-            f"{deviceroles[0].pk},{devicetypes[0].pk},{statuses[0].pk},Device 5,{locations[0].pk},{racks[0].pk},20,front,",
-            f"{deviceroles[0].name},{devicetypes[0].composite_key},{statuses[0].name},Device 6,{locations[0].name},{racks[0].composite_key},30,front,Secrets Group 2",
-            f"{deviceroles[1].name},{devicetypes[1].composite_key},{statuses[0].name},Child Device,{locations[0].name},,,,,{device_bay.composite_key}",
-        )
 
         cls.bulk_edit_data = {
             "device_type": devicetypes[1].pk,
@@ -1346,6 +1453,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "position": None,
             "face": DeviceFaceChoices.FACE_FRONT,
             "secrets_group": secrets_groups[1].pk,
+            "software_version": software_versions[1].pk,
+            "controller_managed_device_group": ControllerManagedDeviceGroup.objects.first().pk,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1652,13 +1761,6 @@ class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "New description",
         }
 
-        cls.csv_data = (
-            "device,name",
-            f"{device.composite_key},Console Port 4",
-            f"{device.pk},Console Port 5",
-            f"{device.composite_key},Console Port 6",
-        )
-
 
 class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsoleServerPort
@@ -1697,13 +1799,6 @@ class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "type": ConsolePortTypeChoices.TYPE_RJ11,
             "description": "New description",
         }
-
-        cls.csv_data = (
-            "device,name",
-            f"{device.composite_key},Console Server Port 4",
-            f"{device.pk},Console Server Port 5",
-            f"{device.composite_key},Console Server Port 6",
-        )
 
 
 class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
@@ -1748,13 +1843,6 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "allocated_draw": 50,
             "description": "New description",
         }
-
-        cls.csv_data = (
-            "device,name",
-            f"{device.composite_key},Power Port 4",
-            f"{device.pk},Power Port 5",
-            f"{device.composite_key},Power Port 6",
-        )
 
 
 class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
@@ -1813,13 +1901,6 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "feed_leg": PowerOutletFeedLegChoices.FEED_LEG_B,
             "description": "New description",
         }
-
-        cls.csv_data = (
-            "device,name",
-            f"{device.composite_key},Power Outlet 4",
-            f"{device.pk},Power Outlet 5",
-            f"{device.composite_key},Power Outlet 6",
-        )
 
 
 class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
@@ -1935,13 +2016,6 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "vrf": vrfs[2].pk,
         }
 
-        cls.csv_data = (
-            "type,name,device__name,device__location__name,status",
-            f"virtual,Interface 4,{device.name},{device.location.name},{statuses[0].name}",
-            f"1000base-t,Interface 5,{device.name},{device.location.name},{statuses[0].name}",
-            f"1000base-t,Interface 6,{device.name},{device.location.name},{statuses[1].name}",
-        )
-
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_virtual_interface_with_parent_lag(self):
         """https://github.com/nautobot/nautobot/issues/4436."""
@@ -2028,13 +2102,6 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "New description",
         }
 
-        cls.csv_data = (
-            "device,name,type,rear_port,rear_port_position",
-            f"{device.composite_key},Front Port 4,8p8c,{rearports[3].composite_key},1",
-            f"{device.pk},Front Port 5,8p8c,{rearports[4].composite_key},1",
-            f"{device.composite_key},Front Port 6,8p8c,{rearports[5].pk},1",
-        )
-
     @unittest.skip("No DeviceBulkAddFrontPortView exists at present")
     def test_bulk_add_component(self):
         pass
@@ -2079,13 +2146,6 @@ class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "New description",
         }
 
-        cls.csv_data = (
-            "device,name,type,positions",
-            f"{device.composite_key},Rear Port 4,8p8c,1",
-            f"{device.pk},Rear Port 5,8p8c,1",
-            f"{device.composite_key},Rear Port 6,8p8c,1",
-        )
-
 
 class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = DeviceBay
@@ -2124,19 +2184,13 @@ class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "New description",
         }
 
-        cls.csv_data = (
-            "device,name",
-            f"{device.composite_key},Device Bay 4",
-            f"{device.pk},Device Bay 5",
-            f"{device.composite_key},Device Bay 6",
-        )
-
 
 class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = InventoryItem
 
     @classmethod
     def setUpTestData(cls):
+        software_versions = SoftwareVersion.objects.all()[:3]
         device = create_test_device("Device 1")
         manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1")
 
@@ -2160,6 +2214,7 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "asset_tag": "ABC123",
             "description": "An inventory item",
             "tags": [t.pk for t in Tag.objects.get_for_model(InventoryItem)],
+            "software_version": software_versions[0].pk,
         }
 
         cls.bulk_create_data = {
@@ -2172,19 +2227,17 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "serial": "VMWARE-XX XX XX XX XX XX XX XX-XX XX XX XX XX XX XX XX ABC",
             "description": "An inventory item",
             "tags": [t.pk for t in Tag.objects.get_for_model(InventoryItem)],
+            "software_version": software_versions[1].pk,
         }
 
         cls.bulk_edit_data = {
             "part_id": "123456",
             "description": "New description",
+            "software_version": software_versions[2].pk,
         }
 
-        cls.csv_data = (
-            "device,name",
-            f"{device.composite_key},Inventory Item 4",
-            f"{device.pk},Inventory Item 5",
-            f"{device.composite_key},Inventory Item 6",
-        )
+    def test_table_with_indentation_is_removed_on_filter_or_sort(self):
+        self.skipTest("InventoryItem table has no implementation of indentation.")
 
 
 # TODO: Change base class to PrimaryObjectViewTestCase
@@ -2195,7 +2248,6 @@ class CableTestCase(
     ViewTestCases.EditObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkImportObjectsViewTestCase,
     ViewTestCases.BulkEditObjectsViewTestCase,
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
@@ -2354,13 +2406,6 @@ class CableTestCase(
             "tags": [t.pk for t in Tag.objects.get_for_model(Cable)],
         }
 
-        cls.csv_data = (
-            "termination_a_id,termination_a_type,termination_b_id,termination_b_type,status",
-            f"{interfaces[6].id},dcim.interface,{interfaces[9].id},dcim.interface,{statuses[0].name}",
-            f"{interfaces[7].id},dcim.interface,{interfaces[10].id},dcim.interface,{statuses[0].name}",
-            f"{interfaces[8].id},dcim.interface,{interfaces[11].id},dcim.interface,{statuses[0].name}",
-        )
-
         cls.bulk_edit_data = {
             "type": CableTypeChoices.TYPE_CAT5E,
             "status": statuses[0].pk,
@@ -2454,6 +2499,9 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     def get_title(self):
         return "Console Connections"
 
+    def get_list_view(self):
+        return ConsoleConnectionsListView
+
     model = ConsolePort
     filterset = ConsoleConnectionFilterSet
 
@@ -2493,6 +2541,9 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     def _get_base_url(self):
         return "dcim:power_connections_{}"
+
+    def get_list_view(self):
+        return PowerConnectionsListView
 
     model = PowerPort
     filterset = PowerConnectionFilterSet
@@ -2540,6 +2591,9 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     def get_title(self):
         return "Interface Connections"
+
+    def get_list_view(self):
+        return InterfaceConnectionsListView
 
     model = Interface
     filterset = InterfaceConnectionFilterSet
@@ -2670,13 +2724,6 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "form-MAX_NUM_FORMS": 1000,
         }
 
-        cls.csv_data = (
-            "name,domain,master",
-            f"VC4,Domain 4,{cls.devices[9].composite_key}",
-            f"VC5,Domain 5,{cls.devices[10].pk}",
-            f"VC6,Domain 6,{cls.devices[11].composite_key}",
-        )
-
         cls.bulk_edit_data = {
             "domain": "domain-x",
         }
@@ -2731,13 +2778,6 @@ class PowerPanelTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "name": "Power Panel X",
             "tags": [t.pk for t in Tag.objects.get_for_model(PowerPanel)],
         }
-
-        cls.csv_data = (
-            "location,rack_group,name",
-            f"{locations[0].composite_key},{rackgroups[0].composite_key},Power Panel 4",
-            f"{locations[0].pk},{rackgroups[0].composite_key},Power Panel 5",
-            f"{locations[0].composite_key},{rackgroups[0].pk},Power Panel 6",
-        )
 
         cls.bulk_edit_data = {
             "location": locations[1].pk,
@@ -2798,13 +2838,6 @@ class PowerFeedTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "comments": "New comments",
             "tags": [t.pk for t in Tag.objects.get_for_model(PowerFeed)],
         }
-
-        cls.csv_data = (
-            "power_panel,name,voltage,amperage,max_utilization,status",
-            f"{powerpanels[0].composite_key},Power Feed 4,120,20,80,{statuses[0].name}",
-            f"{powerpanels[0].pk},Power Feed 5,120,20,80,{statuses[0].pk}",
-            f"{powerpanels[0].composite_key},Power Feed 6,120,20,80,{statuses[1].name}",
-        )
 
         cls.bulk_edit_data = {
             "power_panel": powerpanels[1].pk,
@@ -2889,14 +2922,6 @@ class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses[3].pk,
             "local_config_context_data": None,
         }
-
-        cls.csv_data = (
-            "name,failover_strategy,status",
-            f"DRG δ,,{statuses[0].name}",
-            f"DRG ε,,{statuses[0].name}",
-            f"DRG ζ,active-active,{statuses[1].name}",
-            f"DRG 7,active-passive,{statuses[1].name}",
-        )
 
         cls.bulk_edit_data = {
             "failover_strategy": DeviceRedundancyGroupFailoverStrategyChoices.FAILOVER_ACTIVE_PASSIVE,
@@ -2988,14 +3013,6 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "priority": 100,
         }
 
-        cls.csv_data = (
-            "name,protocol,status",
-            f"IRG δ,hsrp,{statuses[0].name}",
-            f"IRG ε,glbp,{statuses[1].name}",
-            f"IRG ζ,hsrp,{statuses[0].name}",
-            f"IRG 7,carp,{statuses[2].name}",
-        )
-
         cls.bulk_edit_data = {
             "protocol": InterfaceRedundancyGroupProtocolChoices.HSRP,
             "status": statuses[0].pk,
@@ -3028,3 +3045,128 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
         self.assertHttpStatus(self.client.post(**request), 302)
         self.assertEqual(initial_count + 2, InterfaceRedundancyGroupAssociation.objects.all().count())
+
+
+class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = SoftwareImageFile
+    filterset = SoftwareImageFileFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        device_types = DeviceType.objects.all()[:2]
+        statuses = Status.objects.get_for_model(SoftwareImageFile)
+        software_versions = SoftwareVersion.objects.all()
+
+        cls.form_data = {
+            "software_version": software_versions[0].pk,
+            "image_file_name": "software_image_file_test_case.bin",
+            "status": statuses[0].pk,
+            "image_file_checksum": "abcdef1234567890",
+            "image_file_size": 1234567890,
+            "hashing_algorithm": SoftwareImageFileHashingAlgorithmChoices.SHA512,
+            "download_url": "https://example.com/software_image_file_test_case.bin",
+            "device_types": [device_types[0].pk, device_types[1].pk],
+        }
+
+        cls.bulk_edit_data = {
+            "software_version": software_versions[0].pk,
+            "status": statuses[0].pk,
+            "image_file_checksum": "abcdef1234567890",
+            "hashing_algorithm": SoftwareImageFileHashingAlgorithmChoices.SHA512,
+            "image_file_size": 1234567890,
+            "download_url": "https://example.com/software_image_file_test_case.bin",
+        }
+
+
+class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = SoftwareVersion
+    filterset = SoftwareVersionFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        statuses = Status.objects.get_for_model(SoftwareVersion)
+        platforms = Platform.objects.all()
+
+        # Protected FK to SoftwareImageFile prevents deletion
+        DeviceTypeToSoftwareImageFile.objects.all().delete()
+        # Protected FK to SoftwareVersion prevents deletion
+        Device.objects.all().update(software_version=None)
+
+        cls.form_data = {
+            "platform": platforms[0].pk,
+            "version": "1.0.0",
+            "status": statuses[0].pk,
+            "alias": "Version 1.0.0",
+            "release_date": datetime.date(2001, 1, 1),
+            "end_of_support_date": datetime.date(2005, 1, 1),
+            "documentation_url": "https://example.com/software_version_test_case",
+            "long_term_support": True,
+            "pre_release": False,
+        }
+
+        cls.bulk_edit_data = {
+            "platform": platforms[0].pk,
+            "status": statuses[0].pk,
+            "alias": "Version x.y.z",
+            "release_date": datetime.date(2001, 12, 31),
+            "end_of_support_date": datetime.date(2005, 12, 31),
+            "documentation_url": "https://example.com/software_version_test_case/docs2",
+            "long_term_support": False,
+            "pre_release": True,
+        }
+
+
+class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = Controller
+    filterset = ControllerFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        device = Device.objects.first()
+        external_integration = ExternalIntegration.objects.first()
+        location = Location.objects.get_for_model(Controller).first()
+        platform = Platform.objects.first()
+        role = Role.objects.get_for_model(Controller).first()
+        status = Status.objects.get_for_model(Controller).first()
+        tenant = Tenant.objects.first()
+
+        cls.form_data = {
+            "controller_device": device.pk,
+            "description": "Controller 1 description",
+            "external_integration": external_integration.pk,
+            "location": location.pk,
+            "name": "Controller 1",
+            "platform": platform.pk,
+            "role": role.pk,
+            "status": status.pk,
+            "tenant": tenant.pk,
+        }
+
+        cls.bulk_edit_data = {
+            "external_integration": external_integration.pk,
+            "location": location.pk,
+            "platform": platform.pk,
+            "role": role.pk,
+            "status": status.pk,
+            "tenant": tenant.pk,
+        }
+
+
+class ControllerManagedDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = ControllerManagedDeviceGroup
+    filterset = ControllerManagedDeviceGroupFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        controllers = Controller.objects.all()
+
+        cls.form_data = {
+            "name": "Managed Device Group 10",
+            "controller": controllers[0].pk,
+            "weight": 100,
+            "devices": [item.pk for item in Device.objects.all()[:2]],
+        }
+
+        cls.bulk_edit_data = {
+            "weight": 300,
+        }

@@ -340,6 +340,10 @@ ul.nav-tabs li a:hover,
 .label a {
     color: inherit;
 }
+ul.software-image-hierarchy {
+    list-style-type: "↳ ";
+    padding-left: 18px;
+}
 
 /* Filters */
 .filter-container {
@@ -871,4 +875,88 @@ td span.hover_copy:hover .hover_copy_button {
 /* Make panel being dragged opaque */
 .dragging {
     opacity: 0.5;
+}
+
+/* Special diff block `<pre><code>...</code></pre>` backgrounds */
+pre.diff-added {
+    background-color: #e6ffec;
+}
+pre.diff-removed {
+    background-color: #ffebe9;
+}
+pre.diff-added code,
+pre.diff-removed code {
+    background-color: inherit;
+}
+
+/* Fix highlight.js and Bootstrap 3 style incompatibilities */
+pre:has(code.hljs) {
+    padding: 0; /* Reset Bootstrap 3 `pre` padding in case it contains a `code` element already formatted by highlight.js */
+}
+pre code.hljs {
+    padding: 11.5px; /* Same as Bootstrap 3 `pre` padding */
+}
+code.hljs {
+    padding: 2px 4px; /* Same as Bootstrap 3 `code` padding */
+}
+
+/* Table or tile dropdown context menu option spacings and icon colors */
+.context-menu li i {
+    margin-right: 10px;
+}
+.context-menu a:focus i,
+.context-menu a:focus span,
+.context-menu a:hover i,
+.context-menu a:hover span {
+    color: inherit;
+}
+
+/* Tile component styles */
+.tiles {
+    display: grid;
+    grid-gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(445px, 1fr));
+}
+@media (max-width: 1007px) {
+    .tiles {
+        /* More than one tile won't fit into a row when the viewport is narrower than 1007px */
+        /* On the other hand this makes tiles shrink if container width becomes less than 445px */
+        grid-template-columns: 1fr;
+    }
+}
+.tile {
+    background: #ffffff;
+    border: 1px solid #d8d8d8;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+.tile.disabled {
+    background: #f4f4f4;
+    color: #7d7f7c;
+}
+.tile h2 {
+    margin: 10px 0;
+}
+.tile-header {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+}
+.tile-header h3 {
+    color: #999999;
+    display: flex;
+    flex: 1;
+    font-size: 12px;
+    font-weight: 400;
+    margin: 0;
+}
+.tile-description {
+    flex: 1;
+}
+.tile-footer {
+    border-top: 1px solid #d8d8d8;
+    display: flex;
+    padding-top: 10px;
 }

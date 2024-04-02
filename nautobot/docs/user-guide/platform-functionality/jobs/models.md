@@ -15,7 +15,7 @@ For any given Job record, most of its fields are populated initially from data d
 
 Records of this type store the following data as read-only (not modifiable via the UI or REST API):
 
-* The source of the job (local installation, Git repository, plugin)
+* The source of the job (local installation, Git repository, App)
 * The name of the module containing the Job
 * The name of the Job class
 * Whether the job is installed presently

@@ -7,7 +7,9 @@
         </div>
     {% endif %}
     {% if table.rows %}
-        {% render_table table table_inc_template|default:'inc/table.html' %}
+        <div class="table-responsive">
+            {% render_table table table_inc_template|default:'inc/table.html' %}
+        </div>
     {% else %}
         <div class="panel-body text-muted">None</div>
     {% endif %}

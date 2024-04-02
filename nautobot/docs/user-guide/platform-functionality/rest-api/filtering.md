@@ -132,11 +132,7 @@ Certain other fields, namely foreign key relationships support the lookup expres
 
 ### Network and Host Fields
 
-There are [Custom Lookups](https://docs.djangoproject.com/en/3.2/howto/custom-lookups/) built for the `VarbinaryIPField` field types. While
-the `VarbinaryIPField` is applied to fields for network, host, and broadcast, the below filters only apply to network and host. The design
-makes an assumption that there is in fact a broadcast (of type `VarbinaryIPField`) and prefix_length (of type `Integer`) within the same
-model. This assumption is used to understand the relevant scope of the network in question and is important to note when extending the
-Nautobot core or plugin data model.
+There are [Custom Lookups](https://docs.djangoproject.com/en/3.2/howto/custom-lookups/) built for the `VarbinaryIPField` field types. While the `VarbinaryIPField` is applied to fields for `network`, `host`, and `broadcast`, the below filters only apply to `network` and `host`. The design makes an assumption that there is in fact a `broadcast` (of type `VarbinaryIPField`) and `prefix_length` (of type `Integer`) within the same model. This assumption is used to understand the relevant scope of the network in question and is important to note when extending the Nautobot core or App data model.
 
 - `**` `exact` - An exact match of an IP or network address, e.g. `host__exact="10.0.0.1"`
 - `**` `iexact` - An exact match of an IP or network address, e.g. `host__iexact="10.0.0.1"`

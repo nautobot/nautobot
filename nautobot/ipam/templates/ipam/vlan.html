@@ -2,14 +2,9 @@
 {% load helpers %}
 
 {% block extra_breadcrumbs %}
-                {% if object.location %}
-                    <li><a href="{% url 'ipam:vlan_list' %}?location={{ object.location.name }}">
-                        {{ object.location }}
-                    </a></li>
-                {% endif %}
-                {% if object.vlan_group %}
-                    <li><a href="{% url 'ipam:vlan_list' %}?vlan_group={{ object.vlan_group.name }}">{{ object.vlan_group }}</a></li>
-                {% endif %}
+    {% if object.vlan_group %}
+        <li><a href="{% url 'ipam:vlan_list' %}?vlan_group={{ object.vlan_group.name }}">{{ object.vlan_group }}</a></li>
+    {% endif %}
 {% endblock extra_breadcrumbs %}
 
 {% block extra_nav_tabs %}
@@ -28,8 +23,14 @@
                 </div>
                 <table class="table table-hover panel-body attr-table">
                     <tr>
-                        <td>Location</td>
-                        <td>{% include 'dcim/inc/location_hierarchy.html' with location=object.location %}</td>
+                        <td>Locations</td>
+                        <td>
+                            {% for location in object.locations.all %}
+                                {{ location|hyperlinked_object }}<br>
+                            {% empty %}
+                                <span class="text-muted">None</span>
+                            {% endfor %}
+                        </td>
                     </tr>
                     <tr>
                         <td>VLAN Group</td>
@@ -78,7 +79,7 @@
                 {% include 'responsive_table.html' with table=prefix_table %}
                 {% if perms.ipam.add_prefix %}
                     <div class="panel-footer text-right noprint">
-                        <a href="{% url 'ipam:prefix_add' %}?{% if object.tenant %}tenant={{ object.tenant.pk }}&{% endif %}&location={{ object.location.pk }}&vlan={{ object.pk }}" class="btn btn-primary btn-xs">
+                        <a href="{% url 'ipam:prefix_add' %}?{% if object.tenant %}tenant={{ object.tenant.pk }}{% endif %}&vlan={{ object.pk }}{% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}" class="btn btn-primary btn-xs">
                             <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                             Add a prefix
                         </a>

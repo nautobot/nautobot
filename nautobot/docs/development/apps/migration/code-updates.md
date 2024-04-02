@@ -71,7 +71,7 @@ items = [
 
 menu_items = (
     NavMenuTab(
-        name="Plugins",
+        name="Apps",
         groups=(NavMenuGroup(name="Your App", weight=1000, items=tuple(items)),),
     ),
 )
@@ -137,7 +137,7 @@ Include all model attributes:
 class ExampleModelSerializer(NautobotModelSerializer):
     """Used for normal CRUD operations."""
 
-    url = serializers.HyperlinkedIdentityField(view_name="plugins-api:example_plugin-api:anotherexamplemodel-detail")
+    url = serializers.HyperlinkedIdentityField(view_name="plugins-api:example_app-api:anotherexamplemodel-detail")
 
     class Meta:
         model = AnotherExampleModel
@@ -150,7 +150,7 @@ Include only specified model attributes:
 class ExampleModelSerializer(NautobotModelSerializer):
     """Used for normal CRUD operations."""
 
-    url = serializers.HyperlinkedIdentityField(view_name="plugins-api:example_plugin-api:anotherexamplemodel-detail")
+    url = serializers.HyperlinkedIdentityField(view_name="plugins-api:example_app-api:anotherexamplemodel-detail")
 
     class Meta:
         model = AnotherExampleModel

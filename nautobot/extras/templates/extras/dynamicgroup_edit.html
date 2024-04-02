@@ -1,4 +1,4 @@
-{% extends "generic/object_edit.html" %}
+{% extends 'generic/object_create.html' %}
 {% load static %}
 {% load form_helpers %}
 
@@ -120,7 +120,7 @@
                                                 {% for error in field.errors %}
                                                     {# Embed an HTML comment indicating the error for extraction by tests #}
                                                     <!-- FORM-ERROR {{ field.name }}: {{ error }} -->
-                                                    <li clas="text-danger">{{ error }}</li>
+                                                    <li class="text-danger">{{ error }}</li>
                                                 {% endfor %}
                                             </ul>
                                         {% endif %}
