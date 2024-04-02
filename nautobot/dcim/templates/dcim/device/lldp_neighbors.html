@@ -65,14 +65,10 @@ var ready = (callback) => {
 };
 
 function getAttribute(node, querySelector, attribute) {
-    if (node === null) {
+    if (node === null or node.querySelector(querySelector) === null) {
         return "";
     }
-    const child = node.querySelector(querySelector);
-    if (child === null) {
-        return "";
-    }
-    return child.getAttribute(attribute) || "";
+    return node.querySelector(querySelector).getAttribute(attribute) || "";
 }
 
 ready(() => {
