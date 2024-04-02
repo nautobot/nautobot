@@ -262,9 +262,7 @@ class VirtualMachineFilterSet(
         return queryset.filter(primary_ip6__in=ip_queryset)
 
 
-class VMInterfaceFilterSet(
-    BaseFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin, CustomFieldModelFilterSetMixin
-):
+class VMInterfaceFilterSet(BaseFilterSet, StatusModelFilterSetMixin, CustomFieldModelFilterSetMixin):
     q = SearchFilter(filter_predicates={"name": "icontains"})
 
     cluster_id = django_filters.ModelMultipleChoiceFilter(

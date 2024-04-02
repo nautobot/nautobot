@@ -35,7 +35,6 @@ from nautobot.dcim.constants import (
 from nautobot.extras.models import (
     ChangeLoggedModel,
     RelationshipModel,
-    RoleField,
     Status,
     StatusField,
 )
@@ -444,7 +443,6 @@ class BaseInterface(RelationshipModel):
         validators=[MinValueValidator(1), MaxValueValidator(65536)],
         verbose_name="MTU",
     )
-    role = RoleField(blank=True, null=True)
     mode = models.CharField(max_length=50, choices=InterfaceModeChoices, blank=True)
     parent_interface = models.ForeignKey(
         to="self",

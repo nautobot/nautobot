@@ -1125,7 +1125,6 @@ class InterfaceFilterSet(
     CableTerminationModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
     StatusModelFilterSetMixin,
-    RoleModelFilterSetMixin,
 ):
     # Override device and device_id filters from DeviceComponentModelFilterSetMixin to
     # match against any peer virtual chassis members

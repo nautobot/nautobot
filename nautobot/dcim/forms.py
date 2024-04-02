@@ -49,7 +49,6 @@ from nautobot.extras.forms import (
     NoteModelFormMixin,
     RoleModelBulkEditFormMixin,
     RoleModelFilterFormMixin,
-    RoleNotRequiredModelFormMixin,
     StatusModelBulkEditFormMixin,
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
@@ -2248,7 +2247,7 @@ class PowerOutletBulkEditForm(
 #
 
 
-class InterfaceFilterForm(DeviceComponentFilterForm, RoleModelFilterFormMixin, StatusModelFilterFormMixin):
+class InterfaceFilterForm(DeviceComponentFilterForm, StatusModelFilterFormMixin):
     model = Interface
     type = forms.MultipleChoiceField(choices=InterfaceTypeChoices, required=False, widget=StaticSelect2Multiple())
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -2317,7 +2316,6 @@ class InterfaceForm(InterfaceCommonForm, ComponentEditForm):
         fields = [
             "device",
             "name",
-            "role",
             "label",
             "type",
             "enabled",
@@ -2348,8 +2346,7 @@ class InterfaceForm(InterfaceCommonForm, ComponentEditForm):
         }
 
 
-class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm, RoleNotRequiredModelFormMixin):
-    model = Interface
+class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
     type = forms.ChoiceField(
         choices=InterfaceTypeChoices,
         widget=StaticSelect2(),
@@ -2435,7 +2432,6 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm, RoleNotRequi
         "name_pattern",
         "label_pattern",
         "status",
-        "role",
         "type",
         "enabled",
         "parent_interface",
@@ -2457,9 +2453,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm, RoleNotRequi
 class InterfaceBulkCreateForm(
     form_from_model(Interface, ["enabled", "mtu", "vrf", "mgmt_only", "mode", "tags"]),
     DeviceBulkAddComponentForm,
-    RoleNotRequiredModelFormMixin,
 ):
-    model = Interface
     type = forms.ChoiceField(
         choices=InterfaceTypeChoices,
         widget=StaticSelect2(),
@@ -2474,7 +2468,6 @@ class InterfaceBulkCreateForm(
         "name_pattern",
         "label_pattern",
         "status",
-        "role",
         "type",
         "enabled",
         "mtu",
@@ -2492,7 +2485,6 @@ class InterfaceBulkEditForm(
     ),
     TagsBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
-    RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Interface.objects.all(), widget=forms.MultipleHiddenInput())
