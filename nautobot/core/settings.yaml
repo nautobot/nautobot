@@ -1382,6 +1382,7 @@ properties:
     environment_variable: "NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"
     is_constance_config: true
     type: "boolean"
+    version_added: "2.2.1"
   REDIS_LOCK_TIMEOUT:
     default: 600
     description: >-

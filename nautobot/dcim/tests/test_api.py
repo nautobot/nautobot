@@ -618,7 +618,11 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.get("Content-Type"), "image/svg+xml")
         self.assertIn(b'class="slot" height="19" width="190"', response.content)
 
-    @override_settings(RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT=False)
+    @override_settings(
+        RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT=False,
+        RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22,
+        RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230,
+    )
     @override_config(RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT=True)
     def test_get_rack_elevation_unit_svg_settings_overridden(self):
         """
@@ -634,6 +638,7 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.get("Content-Type"), "image/svg+xml")
         self.assertIn(b'<text class="unit" x="15.0" y="915.0">1</text>', response.content)
 
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
     @override_config(RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT=True)
     def test_get_rack_elevation_unit_svg_config_overridden(self):
         """
