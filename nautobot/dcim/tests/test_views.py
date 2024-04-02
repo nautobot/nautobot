@@ -270,11 +270,10 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         role = self.contact_roles.first().pk
         status = self.contact_statuses.first().pk
         form_data = {
+            "action": "use existing contact",
             "contact": similar_contact.pk,
             "role": role,
             "status": status,
-            "associated_object_type": ContentType.objects.get_for_model(Location).pk,
-            "associated_object_id": location.pk,
         }
         request = {
             "path": reverse("dcim:migrate_data_to_contact", kwargs={"pk": location.pk}),
@@ -293,8 +292,6 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(location.contact_name, "")
         self.assertEqual(location.contact_phone, "")
         self.assertEqual(location.contact_email, "")
-        self.assertEqual(location.physical_address, "")
-        self.assertEqual(location.shipping_address, "")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_migrate_location_data_from_location_new_contact(self):
@@ -308,14 +305,13 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         role = self.contact_roles.first().pk
         status = self.contact_statuses.first().pk
         form_data = {
-            "contact_name": "Should be unique Contact Name",
-            "contact_phone": "123123123",
-            "contact_email": "helloword@example.com",
-            "contact_address": "418 Brown Locks Barrettchester, NM 85792\n53 blue Locks manchester, NY 12124",
-            "contact_role": role,
-            "contact_status": status,
-            "associated_object_type": ContentType.objects.get_for_model(Location).pk,
-            "associated_object_id": location.pk,
+            "action": "create and assign new contact",
+            "name": "Should be unique Contact Name",
+            "phone": "123123123",
+            "email": "helloword@example.com",
+            "address": "418 Brown Locks Barrettchester, NM 85792\n53 blue Locks manchester, NY 12124",
+            "role": role,
+            "status": status,
         }
         request = {
             "path": reverse("dcim:migrate_data_to_contact", kwargs={"pk": location.pk}),
@@ -324,10 +320,10 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(self.client.post(**request), 302)
         # assert a new contact is created successfully
         contact = Contact.objects.get(name="Should be unique Contact Name")
-        self.assertEqual(contact.name, form_data["contact_name"])
-        self.assertEqual(contact.phone, form_data["contact_phone"])
-        self.assertEqual(contact.email, form_data["contact_email"])
-        self.assertEqual(contact.address, form_data["contact_address"])
+        self.assertEqual(contact.name, form_data["name"])
+        self.assertEqual(contact.phone, form_data["phone"])
+        self.assertEqual(contact.email, form_data["email"])
+        self.assertEqual(contact.address, form_data["address"])
         # assert ContactAssociation is created correctly
         created_contact_association = ContactAssociation.objects.order_by("created").last()
         self.assertEqual(created_contact_association.associated_object_id, location.pk)
@@ -340,8 +336,6 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(location.contact_name, "")
         self.assertEqual(location.contact_phone, "")
         self.assertEqual(location.contact_email, "")
-        self.assertEqual(location.physical_address, "")
-        self.assertEqual(location.shipping_address, "")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_migrate_location_data_from_location_new_team(self):
@@ -355,14 +349,13 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         role = self.contact_roles.first().pk
         status = self.contact_statuses.first().pk
         form_data = {
-            "team_name": "Should be unique Team Name",
-            "team_phone": "123123123",
-            "team_email": "helloword@example.com",
-            "team_address": "418 Brown Locks Barrettchester, NM 85792\n53 blue Locks manchester, NY 12124",
-            "team_role": role,
-            "team_status": status,
-            "associated_object_type": ContentType.objects.get_for_model(Location).pk,
-            "associated_object_id": location.pk,
+            "action": "create and assign new team",
+            "name": "Should be unique Team Name",
+            "phone": "123123123",
+            "email": "helloword@example.com",
+            "address": "418 Brown Locks Barrettchester, NM 85792\n53 blue Locks manchester, NY 12124",
+            "role": role,
+            "status": status,
         }
         request = {
             "path": reverse("dcim:migrate_data_to_contact", kwargs={"pk": location.pk}),
@@ -371,10 +364,10 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(self.client.post(**request), 302)
         # assert a new team is created successfully
         team = Team.objects.get(name="Should be unique Team Name")
-        self.assertEqual(team.name, form_data["team_name"])
-        self.assertEqual(team.phone, form_data["team_phone"])
-        self.assertEqual(team.email, form_data["team_email"])
-        self.assertEqual(team.address, form_data["team_address"])
+        self.assertEqual(team.name, form_data["name"])
+        self.assertEqual(team.phone, form_data["phone"])
+        self.assertEqual(team.email, form_data["email"])
+        self.assertEqual(team.address, form_data["address"])
         # assert ContactAssociation is created correctly
         created_contact_association = ContactAssociation.objects.order_by("created").last()
         self.assertEqual(created_contact_association.associated_object_id, location.pk)
@@ -387,8 +380,6 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(location.contact_name, "")
         self.assertEqual(location.contact_phone, "")
         self.assertEqual(location.contact_email, "")
-        self.assertEqual(location.physical_address, "")
-        self.assertEqual(location.shipping_address, "")
 
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):

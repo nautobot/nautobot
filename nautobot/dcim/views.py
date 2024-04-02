@@ -35,8 +35,8 @@ from nautobot.core.views.mixins import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
+from nautobot.dcim.forms import LocationSimilarContactAssociationForm
 from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
-from nautobot.extras.forms import LocationSimilarContactAssociationForm
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
@@ -326,7 +326,7 @@ class LocationBulkDeleteView(generic.BulkDeleteView):
 class MigrateLocationDataToContactView(generic.ObjectEditView):
     queryset = Location.objects.all()
     model_form = LocationSimilarContactAssociationForm
-    template_name = "extras/map_contact_or_team.html"
+    template_name = "dcim/map_contact_or_team.html"
 
     def get(self, request, *args, **kwargs):
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
@@ -337,20 +337,9 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
         initial_data["location"] = obj.pk
 
         # populate contact tab fields initial data
-        initial_data["contact_name"] = obj.contact_name
-        initial_data["contact_phone"] = obj.contact_phone
-        initial_data["contact_email"] = obj.contact_email
-        initial_data["contact_address"] = obj.shipping_address + "\n" + obj.physical_address
-
-        # populate team tab fields initial data
-        initial_data["team_name"] = obj.contact_name
-        initial_data["team_phone"] = obj.contact_phone
-        initial_data["team_email"] = obj.contact_email
-        initial_data["team_address"] = obj.shipping_address + "\n" + obj.physical_address
-
-        initial_data["contenttype_id"] = ContentType.objects.get_for_model(Location).pk
-        initial_data["associated_object_id"] = obj.pk
-        initial_data["associated_object_type"] = ContentType.objects.get_for_model(Location).pk
+        initial_data["name"] = obj.contact_name
+        initial_data["phone"] = obj.contact_phone
+        initial_data["email"] = obj.contact_email
         form = self.model_form(instance=obj, initial=initial_data)
         restrict_form_fields(form, request.user)
         return render(
@@ -371,111 +360,90 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
         form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
         restrict_form_fields(form, request.user)
-        if request.POST.get("role"):
-            form.fields["contact_name"].required = False
-            form.fields["team_name"].required = False
-            form.fields["contact_role"].required = False
-            form.fields["contact_status"].required = False
-            form.fields["team_role"].required = False
-            form.fields["team_status"].required = False
-        elif request.POST.get("contact_role"):
-            form.fields["team_name"].required = False
-            form.fields["role"].required = False
-            form.fields["status"].required = False
-            form.fields["team_role"].required = False
-            form.fields["team_status"].required = False
-        else:
-            form.fields["contact_name"].required = False
-            form.fields["role"].required = False
-            form.fields["status"].required = False
-            form.fields["contact_role"].required = False
-            form.fields["contact_status"].required = False
-        if form.is_valid():
-            logger.debug("Form validation was successful")
-            try:
-                with transaction.atomic():
-                    if request.POST.get("contact_role"):
-                        contact = Contact.objects.create(
-                            name=request.POST.get("contact_name"),
-                            phone=request.POST.get("contact_phone"),
-                            email=request.POST.get("contact_email"),
-                            address=request.POST.get("contact_address"),
-                        )
-                        contact.teams.set(request.POST.get("teams", []))
-                        contact.validated_save()
-                        association = ContactAssociation(
-                            contact=contact,
-                            associated_object_type=ContentType.objects.get(
-                                id=request.POST.get("associated_object_type")
-                            ),
-                            associated_object_id=request.POST.get("associated_object_id"),
-                            status=Status.objects.get(id=request.POST.get("contact_status")),
-                            role=Role.objects.get(id=request.POST.get("contact_role")),
-                        )
-                        association.validated_save()
-                    elif request.POST.get("team_role"):
-                        team = Team.objects.create(
-                            name=request.POST.get("team_name"),
-                            phone=request.POST.get("team_phone"),
-                            email=request.POST.get("team_email"),
-                            address=request.POST.get("team_address"),
-                        )
-                        team.contacts.set(request.POST.get("contacts", []))
-                        team.validated_save()
-                        association = ContactAssociation(
-                            team=team,
-                            associated_object_type=ContentType.objects.get(
-                                id=request.POST.get("associated_object_type")
-                            ),
-                            associated_object_id=request.POST.get("associated_object_id"),
-                            status=Status.objects.get(id=request.POST.get("team_status")),
-                            role=Role.objects.get(id=request.POST.get("team_role")),
-                        )
-                        association.validated_save()
-                    else:
-                        assignment_id = request.POST.get("contact") or request.POST.get("team")
-                        try:
-                            assignment = Contact.objects.get(pk=assignment_id)
-                        except ObjectDoesNotExist:
-                            assignment = Team.objects.get(pk=assignment_id)
-                        association = ContactAssociation(
-                            contact=assignment,
-                            associated_object_type=ContentType.objects.get(
-                                id=request.POST.get("associated_object_type")
-                            ),
-                            associated_object_id=request.POST.get("associated_object_id"),
-                            status=Status.objects.get(id=request.POST.get("status")),
-                            role=Role.objects.get(id=request.POST.get("role")),
-                        )
-                        association.validated_save()
 
-                    # Clear out contact fields from location
-                    location = self.get_object(kwargs)
-                    location.contact_name = ""
-                    location.contact_phone = ""
-                    location.contact_email = ""
-                    location.physical_address = ""
-                    location.shipping_address = ""
-                    location.validated_save()
-                    object_created = not form.instance.present_in_database
-                if hasattr(form, "save_note") and callable(form.save_note):
-                    form.save_note(instance=obj, user=request.user)
-
-                self.successful_post(request, obj, object_created, logger)
-
-                return_url = form.cleaned_data.get("return_url")
-                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(iri_to_uri(return_url))
+        associated_object_id = obj.pk
+        associated_object_content_type = ContentType.objects.get_for_model(Location)
+        action = request.POST.get("action")
+        try:
+            with transaction.atomic():
+                if action == "create and assign new contact":
+                    contact = Contact.objects.create(
+                        name=request.POST.get("name"),
+                        phone=request.POST.get("phone"),
+                        email=request.POST.get("email"),
+                        address=request.POST.get("address"),
+                    )
+                    contact.validated_save()
+                    # Trigger permission check
+                    Contact.objects.get(pk=contact.pk)
+                    association = ContactAssociation(
+                        contact=contact,
+                        associated_object_type=associated_object_content_type,
+                        associated_object_id=associated_object_id,
+                        status=Status.objects.get(pk=request.POST.get("status")),
+                        role=Role.objects.get(pk=request.POST.get("role")),
+                    )
+                    association.validated_save()
+                    # Trigger permission check
+                    ContactAssociation.objects.get(pk=association.pk)
+                elif action == "create and assign new team":
+                    team = Team.objects.create(
+                        name=request.POST.get("name"),
+                        phone=request.POST.get("phone"),
+                        email=request.POST.get("email"),
+                        address=request.POST.get("address"),
+                    )
+                    team.validated_save()
+                    # Trigger permission check
+                    Team.objects.get(pk=team.pk)
+                    association = ContactAssociation(
+                        team=team,
+                        associated_object_type=associated_object_content_type,
+                        associated_object_id=associated_object_id,
+                        status=Status.objects.get(pk=request.POST.get("status")),
+                        role=Role.objects.get(pk=request.POST.get("role")),
+                    )
+                    association.validated_save()
+                    # Trigger permission check
+                    ContactAssociation.objects.get(pk=association.pk)
                 else:
-                    return redirect(self.get_return_url(request, obj))
+                    assignment_id = request.POST.get("contact") or request.POST.get("team")
+                    try:
+                        assignment = Contact.objects.get(pk=assignment_id)
+                    except ObjectDoesNotExist:
+                        assignment = Team.objects.get(pk=assignment_id)
+                    association = ContactAssociation(
+                        contact=assignment,
+                        associated_object_type=associated_object_content_type,
+                        associated_object_id=associated_object_id,
+                        status=Status.objects.get(pk=request.POST.get("status")),
+                        role=Role.objects.get(pk=request.POST.get("role")),
+                    )
+                    association.validated_save()
+                    # Trigger permission check
+                    ContactAssociation.objects.get(pk=association.pk)
 
-            except ObjectDoesNotExist:
-                msg = "Object save failed due to object-level permissions violation"
-                logger.debug(msg)
-                form.add_error(None, msg)
+                # Clear out contact fields from location
+                location = self.get_object(kwargs)
+                location.contact_name = ""
+                location.contact_phone = ""
+                location.contact_email = ""
+                location.validated_save()
 
-        else:
-            logger.debug("Form validation failed")
+                object_created = not form.instance.present_in_database
+
+            self.successful_post(request, obj, object_created, logger)
+
+            return_url = request.POST.get("return_url")
+            if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                return redirect(iri_to_uri(return_url))
+            else:
+                return redirect(self.get_return_url(request, obj))
+
+        except ObjectDoesNotExist:
+            msg = "Object save failed due to object-level permissions violation"
+            logger.debug(msg)
+            form.add_error(None, msg)
 
         return render(
             request,

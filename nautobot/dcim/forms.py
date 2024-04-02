@@ -3,6 +3,7 @@ import re
 
 from django import forms
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from timezone_field import TimeZoneFormField
@@ -54,7 +55,7 @@ from nautobot.extras.forms import (
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
-from nautobot.extras.models import ExternalIntegration, SecretsGroup, Status
+from nautobot.extras.models import Contact, ContactAssociation, ExternalIntegration, Role, SecretsGroup, Status, Team
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
@@ -70,6 +71,7 @@ from .choices import (
     InterfaceModeChoices,
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
+    LocationDataToContactActionChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
     PowerFeedSupplyChoices,
@@ -365,6 +367,57 @@ class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Tenancy
     parent = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     subtree = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     tags = TagFilterField(model)
+
+
+class LocationSimilarContactAssociationForm(NautobotModelForm):
+    # Assign tab form fields
+    action = forms.ChoiceField(
+        choices=LocationDataToContactActionChoices,
+        required=True,
+        widget=StaticSelect2(),
+    )
+    location = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
+    contact = DynamicModelChoiceField(
+        queryset=Contact.objects.all(),
+        required=False,
+        label="Similar Contacts",
+        query_params={"similar_to_location_data": "$location"},
+    )
+    team = DynamicModelChoiceField(
+        queryset=Team.objects.all(),
+        required=False,
+        label="Similar Teams",
+        query_params={"similar_to_location_data": "$location"},
+    )
+    role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        required=True,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        required=True,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+    name = forms.CharField(required=False, label="Name")
+    phone = forms.CharField(required=False, label="Phone")
+    email = forms.CharField(required=False, label="Email")
+    address = forms.CharField(required=False, widget=forms.Textarea())
+
+    class Meta:
+        model = ContactAssociation
+        fields = [
+            "action",
+            "location",
+            "contact",
+            "team",
+            "role",
+            "status",
+            "name",
+            "phone",
+            "email",
+            "address",
+        ]
 
 
 #

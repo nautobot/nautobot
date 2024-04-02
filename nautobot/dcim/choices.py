@@ -21,6 +21,20 @@ class LocationStatusChoices(ChoiceSet):
     )
 
 
+class LocationDataToContactActionChoices(ChoiceSet):
+    USE_EXISTING_CONTACT = "use existing contact"
+    USE_EXISTING_TEAM = "use existing team"
+    CREATE_AND_ASSIGN_NEW_CONTACT = "create and assign new contact"
+    CREATE_AND_ASSIGN_NEW_TEAM = "create and assign new team"
+
+    CHOICES = (
+        (USE_EXISTING_CONTACT, "Use existing contact"),
+        (USE_EXISTING_TEAM, "Use existing team"),
+        (CREATE_AND_ASSIGN_NEW_CONTACT, "Create and assign new contact"),
+        (CREATE_AND_ASSIGN_NEW_TEAM, "Create and assign new team"),
+    )
+
+
 #
 # Racks
 #

@@ -1,0 +1,121 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+{% load helpers %}
+
+{% block form %}
+    <div id="assign" class="tabcontent">
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>Action</strong></div>
+            <div class="panel-body">
+                {% render_field form.action %}
+            </div>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>Location Data</strong></div>
+            <div class="panel-body">
+                {% render_field form.location %}
+                {% render_field form.name %}
+                {% render_field form.phone %}
+                {% render_field form.email %}
+                {% render_field form.address %}
+            </div>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>Contact Association</strong></div>
+            <div class="panel-body">
+                {% render_field form.contact %}
+                {% render_field form.team %}
+                {% render_field form.role %}
+                {% render_field form.status %}
+                {% render_field form.associated_object_type.as_hidden %}
+                {% render_field form.associated_object_id.as_hidden %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block buttons %}
+    <button type="submit" name="_create" class="btn btn-primary">Assign</button>
+    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    document.getElementById("id_location").disabled=true;
+
+    // action drop down toggle
+    var action = document.getElementById("id_action");
+    function toggle_form_fields() {
+        var action_option = action.value;
+        var name = document.getElementById("id_name");
+        var name_label = document.querySelector("label[for=id_name]");
+        var phone = document.getElementById("id_phone");
+        var email = document.getElementById("id_email");
+        var address = document.getElementById("id_address");å
+        var similar_contacts_label = document.querySelector("label[for=id_contact]");
+        var similar_contacts = document.getElementById("id_contact");
+        var similar_teams_label = document.querySelector("label[for=id_team]");
+        var similar_teams = document.getElementById("id_team");
+        if (action_option === "use existing contact"){
+            similar_contacts.parentElement.parentElement.style.display = "block";
+            similar_contacts.setAttribute("required", "")
+            if (! similar_contacts_label.className.includes(" required")){
+                similar_contacts_label.className += " required";
+            }
+            similar_teams.parentElement.parentElement.style.display = "none";
+            similar_teams.removeAttribute("required")
+            if (similar_teams_label.className.includes(" required")){
+                similar_teams_label.className = similar_teams_label.className.replace(" required", "");
+            }
+            name.disabled = true;
+            name.removeAttribute("required")
+            if (name_label.className.includes(" required")){
+                name_label.className = name_label.className.replace(" required", "");
+            }
+            phone.disabled = true;
+            email.disabled = true;
+            address.parentElement.parentElement.style.display = "none";
+        } else if (action_option === "use existing team"){
+            similar_teams.parentElement.parentElement.style.display = "block";
+            similar_teams.setAttribute("required", "")
+            if (! similar_teams_label.className.includes(" required")){
+                similar_teams_label.className += " required";
+            }
+            similar_contacts.parentElement.parentElement.style.display = "none";
+            similar_contacts.removeAttribute("required")
+            if (similar_contacts_label.className.includes(" required")){
+                similar_contacts_label.className = similar_contacts_label.className.replace(" required", "");
+            }
+            name.disabled = true;
+            name.removeAttribute("required")
+            if (name_label.className.includes(" required")){
+                name_label.className = name_label.className.replace(" required", "");
+            }
+            phone.disabled = true;
+            email.disabled = true;
+            address.parentElement.parentElement.style.display = "none";
+        } else {
+            similar_contacts.parentElement.parentElement.style.display = "none";
+            similar_contacts.removeAttribute("required")
+            if (similar_contacts_label.className.includes(" required")){
+                similar_contacts_label.className = similar_contacts_label.className.replace(" required", "");
+            }
+            similar_teams.parentElement.parentElement.style.display = "none";
+            similar_teams.removeAttribute("required")
+            if (similar_teams_label.className.includes(" required")){
+                similar_teams_label.className = similar_teams_label.className.replace(" required", "");
+            }
+            name.disabled = false;
+            name.setAttribute("required", "")
+            if (! name_label.className.includes(" required")){
+                name_label.className += " required";
+            }
+            phone.disabled = false;
+            email.disabled = false;
+            address.parentElement.parentElement.style.display = "block";
+        }
+    }
+    window.onload = toggle_form_fields
+    action.onchange = toggle_form_fields
+</script>
+{% endblock %}
