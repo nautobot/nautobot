@@ -3,6 +3,8 @@ from django.urls import reverse
 from django.utils.http import urlencode
 import svgwrite
 
+from nautobot.core.utils.config import get_settings_or_config
+
 from .choices import DeviceFaceChoices
 from .constants import RACK_ELEVATION_BORDER_WIDTH
 
@@ -233,7 +235,9 @@ class RackElevationSVG:
                 start_y + unit_height / 2 + RACK_ELEVATION_BORDER_WIDTH,
             )
             unit = ru + 1 if self.rack.desc_units else self.rack.u_height - ru
-            drawing.add(drawing.text(str(unit), position_coordinates, class_="unit"))
+            unit_two_digit_format = get_settings_or_config("RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT")
+            unit_display = f"{unit:02d}" if unit_two_digit_format else str(unit)
+            drawing.add(drawing.text(unit_display, position_coordinates, class_="unit"))
 
         for unit in self.merge_elevations(face):
             # Loop through all units in the elevation

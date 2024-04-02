@@ -472,6 +472,14 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # ):
 #     RACK_ELEVATION_DEFAULT_UNIT_WIDTH = int(os.environ["NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH"])
 
+# Enable two-digit format for the rack unit numbering in rack elevations.
+#
+# if (
+#     "NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT" in os.environ
+#      and os.environ["NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"] != ""
+# ):
+#     RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT = is_truthy(os.environ["NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"])
+
 # Sets an age out timer of redis lock. This is NOT implicitly applied to locks, must be added
 # to a lock creation as `timeout=settings.REDIS_LOCK_TIMEOUT`
 #

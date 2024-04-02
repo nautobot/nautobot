@@ -618,6 +618,42 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.get("Content-Type"), "image/svg+xml")
         self.assertIn(b'class="slot" height="19" width="190"', response.content)
 
+    @override_settings(
+        RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT=False,
+        RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22,
+        RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230,
+    )
+    @override_config(RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT=True)
+    def test_get_rack_elevation_unit_svg_settings_overridden(self):
+        """
+        GET a single rack elevation in SVG format, with Django settings specifying the default RU display format
+        """
+        rack = Rack.objects.first()
+        self.add_permissions("dcim.view_rack")
+        reverse_url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+        url = f"{reverse_url}?render=svg"
+
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.get("Content-Type"), "image/svg+xml")
+        self.assertIn(b'<text class="unit" x="15.0" y="915.0">1</text>', response.content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    @override_config(RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT=True)
+    def test_get_rack_elevation_unit_svg_config_overridden(self):
+        """
+        GET a single rack elevation in SVG format, with Constance config specifying the 2-digit RU display format
+        """
+        rack = Rack.objects.first()
+        self.add_permissions("dcim.view_rack")
+        reverse_url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+        url = f"{reverse_url}?render=svg"
+
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.get("Content-Type"), "image/svg+xml")
+        self.assertIn(b'<text class="unit" x="15.0" y="915.0">01</text>', response.content)
+
     def test_detail_view_schema(self):
         url = self._get_detail_url(self._get_queryset().first())
         response = self.client.options(url, **self.header)
