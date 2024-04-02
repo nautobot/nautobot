@@ -2,7 +2,6 @@ from django import forms
 from django.contrib.contenttypes.models import ContentType
 
 from nautobot.core.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceField
-from nautobot.dcim.models import Location
 from nautobot.extras.models import Role, Status
 from nautobot.extras.models.contacts import Contact, ContactAssociation, Team
 

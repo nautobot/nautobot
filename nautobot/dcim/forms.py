@@ -3,7 +3,6 @@ import re
 
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from timezone_field import TimeZoneFormField
