@@ -191,9 +191,9 @@ if (
 # Enable two-digit format for the rack unit numbering in rack elevations.
 if (
     "NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT" in os.environ
-    and os.environ["RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"] != ""
+    and os.environ["NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"] != ""
 ):
-    RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT = is_truthy(os.environ["RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"])
+    RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT = is_truthy(os.environ["NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"])
 
 # How frequently to check for a new Nautobot release on GitHub, and the URL to check for this information.
 # Defaults to disabled (no URL) and check every 24 hours when enabled
