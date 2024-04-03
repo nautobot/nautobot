@@ -1,0 +1,1 @@
+Added `ObjectChangeFactory` class and added creation of fake `ObjectChange` records to `nautobot-server generate_test_data` command.

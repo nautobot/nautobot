@@ -1,1 +1,1 @@
-Replaced overly broad `invalidate_models_cache` signal handler with two more narrowly scoped handlers, preventing the signal hannder from being invoked for operations on irrelevant models.
+Replaced overly broad `invalidate_models_cache` signal handler with two more narrowly scoped handlers, preventing the signal handler from being invoked for operations on irrelevant models.
