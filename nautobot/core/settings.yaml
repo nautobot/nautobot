@@ -1175,8 +1175,8 @@ properties:
     default: []
     description: >-
       A list of app names for which Prometheus metrics should be disabled.
-      (If provided as an environment variable, it should be a space-separated string, for example
-      `NAUTOBOT_METRICS_DISABLED_APPS="nautobot_ssot nautobot_device_lifecycle_mgmt"`.)
+      (If provided as an environment variable, it should be a comma-separated string, for example
+      `NAUTOBOT_METRICS_DISABLED_APPS="nautobot_ssot, nautobot_device_lifecycle_mgmt"`.)
     environment_variable: "NAUTOBOT_METRICS_DISABLED_APPS"
     items:
       type: "string"

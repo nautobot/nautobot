@@ -104,4 +104,8 @@ COMPOSITE_KEY_SEPARATOR = ";"
 # For the natural slug separator, it's much simpler and we can just go with "_".
 NATURAL_SLUG_SEPARATOR = "_"
 
+# For config settings that contain a list of things.
+# As environment variables only allow string types, these need to be split into the final list.
+CONFIG_SETTING_SEPARATOR = ","
+
 CHARFIELD_MAX_LENGTH = 255
