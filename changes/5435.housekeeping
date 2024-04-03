@@ -1,2 +1,0 @@
-Added `--pattern` argument to `invoke unittest`.
-Added `--parallel-workers` argument to `invoke unittest`.

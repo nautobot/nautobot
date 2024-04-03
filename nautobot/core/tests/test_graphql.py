@@ -863,6 +863,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         ]
 
         interface_status = Status.objects.get_for_model(Interface).first()
+        interface_role = Role.objects.get_for_model(Interface).first()
         cls.interface11 = Interface.objects.create(
             name="Int1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
@@ -871,12 +872,14 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
             mode=InterfaceModeChoices.MODE_ACCESS,
             untagged_vlan=cls.vlan1,
             status=interface_status,
+            role=interface_role,
         )
         cls.interface12 = Interface.objects.create(
             name="Int2",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=cls.device1,
             status=interface_status,
+            role=interface_role,
         )
         cls.namespace = Namespace.objects.first()
         cls.intr_group_status = Status.objects.get_for_model(InterfaceRedundancyGroup).first()
@@ -957,6 +960,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
             untagged_vlan=cls.vlan2,
             mode=InterfaceModeChoices.MODE_ACCESS,
             status=interface_status,
+            role=interface_role,
         )
         cls.interface22 = Interface.objects.create(
             name="Int2",
@@ -982,7 +986,11 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         )
 
         cls.interface31 = Interface.objects.create(
-            name="Int1", type=InterfaceTypeChoices.TYPE_VIRTUAL, device=cls.device3, status=interface_status
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=cls.device3,
+            status=interface_status,
+            role=interface_role,
         )
         cls.interface31 = Interface.objects.create(
             name="Mgmt1",
@@ -991,6 +999,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
             mgmt_only=True,
             enabled=False,
             status=interface_status,
+            role=interface_role,
         )
 
         cable_statuses = Status.objects.get_for_model(Cable)

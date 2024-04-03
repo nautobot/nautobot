@@ -1399,11 +1399,11 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         intf_status = Status.objects.get_for_model(Interface).first()
-
+        intf_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
-            Interface.objects.create(device=devices[0], name="Interface 1", status=intf_status),
+            Interface.objects.create(device=devices[0], name="Interface 1", status=intf_status, role=intf_role),
             Interface.objects.create(device=devices[0], name="Interface 2", status=intf_status),
-            Interface.objects.create(device=devices[0], name="Interface 3", status=intf_status),
+            Interface.objects.create(device=devices[0], name="Interface 3", status=intf_status, role=intf_role),
         )
 
         for device, ipaddress in zip(devices, ipaddresses):
@@ -1914,16 +1914,16 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         statuses = Status.objects.get_for_model(Interface)
         status_active = statuses[0]
-
+        role = Role.objects.get_for_model(Interface).first()
         interfaces = (
-            Interface.objects.create(device=device, name="Interface 1", status=status_active),
+            Interface.objects.create(device=device, name="Interface 1", status=status_active, role=role),
             Interface.objects.create(device=device, name="Interface 2", status=status_active),
-            Interface.objects.create(device=device, name="Interface 3", status=status_active),
+            Interface.objects.create(device=device, name="Interface 3", status=status_active, role=role),
             Interface.objects.create(
-                device=device, name="LAG", status=status_active, type=InterfaceTypeChoices.TYPE_LAG
+                device=device, name="LAG", status=status_active, type=InterfaceTypeChoices.TYPE_LAG, role=role
             ),
             Interface.objects.create(
-                device=device, name="BRIDGE", status=status_active, type=InterfaceTypeChoices.TYPE_BRIDGE
+                device=device, name="BRIDGE", status=status_active, type=InterfaceTypeChoices.TYPE_BRIDGE, role=role
             ),
         )
         cls.lag_interface = interfaces[3]
@@ -1954,6 +1954,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
             "enabled": False,
             "status": status_active.pk,
+            "role": role.pk,
             "lag": interfaces[3].pk,
             "mac_address": EUI("01:02:03:04:05:06"),
             "mtu": 2000,
@@ -1982,6 +1983,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "tags": [t.pk for t in Tag.objects.get_for_model(Interface)],
             "status": status_active.pk,
+            "role": role.pk,
             "vrf": vrfs[0].pk,
         }
 
@@ -1990,6 +1992,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "name_pattern": "Interface [4-6]",
             "label_pattern": "Interface Number [4-6]",
             "status": status_active.pk,
+            "role": role.pk,
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
             "enabled": True,
             "mtu": 1500,
@@ -2012,6 +2015,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "status": status_active.pk,
+            "role": role.pk,
             "vrf": vrfs[2].pk,
         }
 
@@ -2605,12 +2609,21 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         device_2 = create_test_device("Device 2")
 
         interface_status = Status.objects.get_for_model(Interface).first()
+        interface_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
             Interface.objects.create(
-                device=device_1, name="Interface 1", type=InterfaceTypeChoices.TYPE_1GE_SFP, status=interface_status
+                device=device_1,
+                name="Interface 1",
+                type=InterfaceTypeChoices.TYPE_1GE_SFP,
+                status=interface_status,
+                role=interface_role,
             ),
             Interface.objects.create(
-                device=device_1, name="Interface 2", type=InterfaceTypeChoices.TYPE_1GE_SFP, status=interface_status
+                device=device_1,
+                name="Interface 2",
+                type=InterfaceTypeChoices.TYPE_1GE_SFP,
+                status=interface_status,
+                role=interface_role,
             ),
             Interface.objects.create(
                 device=device_1, name="Interface 3", type=InterfaceTypeChoices.TYPE_1GE_SFP, status=interface_status
@@ -2618,7 +2631,11 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         )
 
         cls.device_2_interface = Interface.objects.create(
-            device=device_2, name="Interface 1", type=InterfaceTypeChoices.TYPE_1GE_SFP, status=interface_status
+            device=device_2,
+            name="Interface 1",
+            type=InterfaceTypeChoices.TYPE_1GE_SFP,
+            status=interface_status,
+            role=interface_role,
         )
         rearport = RearPort.objects.create(device=device_2, type=PortTypeChoices.TYPE_8P8C)
 
@@ -2994,11 +3011,11 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             status=status_active,
         )
         intf_status = Status.objects.get_for_model(Interface).first()
-
+        intf_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
-            Interface.objects.create(device=device, name="Interface 1", status=intf_status),
+            Interface.objects.create(device=device, name="Interface 1", status=intf_status, role=intf_role),
             Interface.objects.create(device=device, name="Interface 2", status=intf_status),
-            Interface.objects.create(device=device, name="Interface 3", status=intf_status),
+            Interface.objects.create(device=device, name="Interface 3", status=intf_status, role=intf_role),
         )
 
         cls.form_data = {

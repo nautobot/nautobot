@@ -260,6 +260,9 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
         if not self.conjoined:
             qs = qs.filter(q)
 
+        if self.distinct:
+            qs = qs.distinct()
+
         return qs
 
 
@@ -522,7 +525,10 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
 
         # Fetch the generated Q object and filter the incoming qs with it before passing it along.
         query = self.generate_query(value)
-        return self.get_method(qs)(query)
+        result = self.get_method(qs)(query)
+        if self.distinct:
+            result = result.distinct()
+        return result
 
 
 #

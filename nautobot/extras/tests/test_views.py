@@ -15,6 +15,7 @@ from django.utils.html import format_html
 from nautobot.circuits.models import Circuit
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
+from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import extract_form_failures, extract_page_body, TestCase, ViewTestCases
 from nautobot.core.testing.utils import disable_warnings, post_data
 from nautobot.dcim.models import (
@@ -3007,11 +3008,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             for model_class in eligible_ct_model_classes:
                 verbose_name_plural = model_class._meta.verbose_name_plural
                 content_type = ContentType.objects.get_for_model(model_class)
-                result = " ".join(elem.capitalize() for elem in verbose_name_plural.split())
-                if result == "Ip Addresses":
-                    result = "IP Addresses"
-                elif result == "Vlans":
-                    result = "VLANs"
+                result = " ".join(bettertitle(elem) for elem in verbose_name_plural.split())
                 # Assert tables are correctly rendered
                 if content_type not in role_content_types:
                     if result == "Contact Associations":
