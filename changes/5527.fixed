@@ -1,1 +1,1 @@
-Fix issue on virtual chassis table member count url linked correctly to filtered device table.
+Fixed incorrect "members" links in Virtual Chassis list view.
