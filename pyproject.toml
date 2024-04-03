@@ -118,7 +118,7 @@ nh3 = "~0.2.15"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
-Pillow = "~10.2.0"
+Pillow = ">=10.2,<10.4"
 # Custom prometheus metrics
 prometheus-client = "~0.17.1"
 # PostgreSQL database adapter
