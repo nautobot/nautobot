@@ -294,6 +294,8 @@ class LocationView(generic.ObjectView):
             "rack_groups": rack_groups,
             "stats": stats,
             "contact_association_permission": ["extras.add_contactassociation"],
+            # show the button if any of these fields have non-empty value.
+            "show_convert_to_contact_button": instance.contact_name or instance.contact_phone or instance.contact_email,
         }
 
 
@@ -352,6 +354,7 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
                 "return_url": self.get_return_url(request, obj),
+                "cancel_return_url": self.get_return_url(request, obj).replace("?tab=contacts", "?tab=main"),
                 "editing": obj.present_in_database,
                 "active_tab": "assign",
                 **self.get_extra_context(request, obj),

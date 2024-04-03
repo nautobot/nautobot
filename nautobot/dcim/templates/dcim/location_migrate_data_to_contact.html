@@ -2,26 +2,40 @@
 {% load form_helpers %}
 {% load helpers %}
 
+{% block title %}Migrating contact data from {{ obj_type }} {{ obj }}{% endblock %}
 {% block form %}
     <div id="assign" class="tabcontent">
         <div class="panel panel-default">
-            <div class="panel-heading"><strong>Action</strong></div>
+            <div class="panel-heading"><strong>Contact Data</strong></div>
             <div class="panel-body">
                 {% render_field form.action %}
-            </div>
-        </div>
-        <div class="panel panel-default">
-            <div class="panel-heading"><strong>Location Data</strong></div>
-            <div class="panel-body">
-                {% render_field form.location %}
+                <div class="form-group">
+                    <label class="col-md-3 control-label required">Source Location</label>
+                    <div class="col-md-9">
+                        <p class="form-control-static">{{ obj.name }}</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-md-3 control-label required">Source Location Contact Name</label>
+                    <div class="col-md-9">
+                        <p class="form-control-static">{{ obj.contact_name | placeholder}}</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-md-3 control-label required">Source Location Contact Phone</label>
+                    <div class="col-md-9">
+                        <p class="form-control-static">{{ obj.contact_phone | placeholder}}</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-md-3 control-label required">Source Location Contact Email</label>
+                    <div class="col-md-9">
+                        <p class="form-control-static">{{ obj.contact_email | placeholder}}</p>
+                    </div>
+                </div>
                 {% render_field form.name %}
                 {% render_field form.phone %}
                 {% render_field form.email %}
-            </div>
-        </div>
-        <div class="panel panel-default">
-            <div class="panel-heading"><strong>Contact Association</strong></div>
-            <div class="panel-body">
                 {% render_field form.contact %}
                 {% render_field form.team %}
                 {% render_field form.role %}
@@ -33,12 +47,11 @@
 
 {% block buttons %}
     <button type="submit" name="_create" class="btn btn-primary">Assign</button>
-    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+    <a href="{{ cancel_return_url }}" class="btn btn-default">Cancel</a>
 {% endblock %}
 
 {% block javascript %}
 <script>
-    document.getElementById("id_location").disabled=true;
 
     // action drop down toggle
     const action = document.getElementById("id_action");
@@ -73,6 +86,9 @@
             if (name_label.className.includes(" required")){
                 name_label.className = name_label.className.replace(" required", "");
             }
+            name.parentElement.parentElement.style.display = "none";
+            phone.parentElement.parentElement.style.display = "none";
+            email.parentElement.parentElement.style.display = "none";
         } else if (action_option === "use existing team"){
             similar_teams.parentElement.parentElement.style.display = "block";
             if (! similar_teams_label.className.includes(" required")){
@@ -85,6 +101,9 @@
             if (name_label.className.includes(" required")){
                 name_label.className = name_label.className.replace(" required", "");
             }
+            name.parentElement.parentElement.style.display = "none";
+            phone.parentElement.parentElement.style.display = "none";
+            email.parentElement.parentElement.style.display = "none";
         } else {
             similar_contacts.parentElement.parentElement.style.display = "none";
             similar_contacts.removeAttribute("required")
@@ -100,6 +119,9 @@
             if (! name_label.className.includes(" required")){
                 name_label.className += " required";
             }
+            name.parentElement.parentElement.style.display = "block";
+            phone.parentElement.parentElement.style.display = "block";
+            email.parentElement.parentElement.style.display = "block";
         }
 
     }
