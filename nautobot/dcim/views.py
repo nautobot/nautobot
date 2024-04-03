@@ -4,7 +4,7 @@ import uuid
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import transaction
 from django.db.models import F, Prefetch
@@ -24,6 +24,7 @@ from django_tables2 import RequestConfig
 from nautobot.circuits.models import Circuit
 from nautobot.core.forms import ConfirmationForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
+from nautobot.core.templatetags.helpers import has_perms
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
@@ -35,7 +36,7 @@ from nautobot.core.views.mixins import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.forms import LocationSimilarContactAssociationForm
+from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
@@ -292,6 +293,7 @@ class LocationView(generic.ObjectView):
             "children_table": children_table,
             "rack_groups": rack_groups,
             "stats": stats,
+            "contact_association_permission": ["extras.add_contactassociation"],
         }
 
 
@@ -325,8 +327,8 @@ class LocationBulkDeleteView(generic.BulkDeleteView):
 
 class MigrateLocationDataToContactView(generic.ObjectEditView):
     queryset = Location.objects.all()
-    model_form = LocationSimilarContactAssociationForm
-    template_name = "dcim/map_contact_or_team.html"
+    model_form = LocationMigrateDataToContactForm
+    template_name = "dcim/location_migrate_data_to_contact.html"
 
     def get(self, request, *args, **kwargs):
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
@@ -366,62 +368,66 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
         action = request.POST.get("action")
         try:
             with transaction.atomic():
+                if not has_perms(request.user, ["extras.add_contactassociation"]):
+                    raise PermissionDenied(
+                        "ObjectPermission extras.add_contactassociation is needed to perform this action"
+                    )
+                contact = None
+                team = None
                 if action == "create and assign new contact":
-                    contact = Contact.objects.create(
+                    if not has_perms(request.user, ["extras.add_contact"]):
+                        raise PermissionDenied("ObjectPermission extras.add_contact is needed to perform this action")
+                    contact = Contact(
                         name=request.POST.get("name"),
                         phone=request.POST.get("phone"),
                         email=request.POST.get("email"),
-                        address=request.POST.get("address"),
                     )
                     contact.validated_save()
                     # Trigger permission check
-                    Contact.objects.get(pk=contact.pk)
-                    association = ContactAssociation(
-                        contact=contact,
-                        associated_object_type=associated_object_content_type,
-                        associated_object_id=associated_object_id,
-                        status=Status.objects.get(pk=request.POST.get("status")),
-                        role=Role.objects.get(pk=request.POST.get("role")),
-                    )
-                    association.validated_save()
-                    # Trigger permission check
-                    ContactAssociation.objects.get(pk=association.pk)
+                    Contact.objects.restrict(request.user, "view").get(pk=contact.pk)
                 elif action == "create and assign new team":
-                    team = Team.objects.create(
+                    if not has_perms(request.user, ["extras.add_team"]):
+                        raise PermissionDenied("ObjectPermission extras.add_team is needed to perform this action")
+                    team = Team(
                         name=request.POST.get("name"),
                         phone=request.POST.get("phone"),
                         email=request.POST.get("email"),
-                        address=request.POST.get("address"),
                     )
                     team.validated_save()
                     # Trigger permission check
-                    Team.objects.get(pk=team.pk)
-                    association = ContactAssociation(
-                        team=team,
-                        associated_object_type=associated_object_content_type,
-                        associated_object_id=associated_object_id,
-                        status=Status.objects.get(pk=request.POST.get("status")),
-                        role=Role.objects.get(pk=request.POST.get("role")),
-                    )
-                    association.validated_save()
-                    # Trigger permission check
-                    ContactAssociation.objects.get(pk=association.pk)
+                    Team.objects.restrict(request.user, "view").get(pk=team.pk)
+                elif action == "use existing contact":
+                    contact = Contact.objects.restrict(request.user, "view").get(pk=request.POST.get("contact"))
+                elif action == "use existing team":
+                    team = Team.objects.restrict(request.user, "view").get(pk=request.POST.get("team"))
                 else:
-                    assignment_id = request.POST.get("contact") or request.POST.get("team")
-                    try:
-                        assignment = Contact.objects.get(pk=assignment_id)
-                    except ObjectDoesNotExist:
-                        assignment = Team.objects.get(pk=assignment_id)
-                    association = ContactAssociation(
-                        contact=assignment,
-                        associated_object_type=associated_object_content_type,
-                        associated_object_id=associated_object_id,
-                        status=Status.objects.get(pk=request.POST.get("status")),
-                        role=Role.objects.get(pk=request.POST.get("role")),
+                    msg = f"Invalid action {action} passed from the form"
+                    logger.debug(msg)
+                    form.add_error(None, msg)
+                    return render(
+                        request,
+                        self.template_name,
+                        {
+                            "obj": obj,
+                            "obj_type": self.queryset.model._meta.verbose_name,
+                            "form": form,
+                            "return_url": self.get_return_url(request, obj),
+                            "editing": obj.present_in_database,
+                            **self.get_extra_context(request, obj),
+                        },
                     )
-                    association.validated_save()
-                    # Trigger permission check
-                    ContactAssociation.objects.get(pk=association.pk)
+
+                association = ContactAssociation(
+                    contact=contact,
+                    team=team,
+                    associated_object_type=associated_object_content_type,
+                    associated_object_id=associated_object_id,
+                    status=Status.objects.get(pk=request.POST.get("status")),
+                    role=Role.objects.get(pk=request.POST.get("role")),
+                )
+                association.validated_save()
+                # Trigger permission check
+                ContactAssociation.objects.restrict(request.user, "view").get(pk=association.pk)
 
                 # Clear out contact fields from location
                 location = self.get_object(kwargs)

@@ -276,9 +276,12 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": status,
         }
         request = {
-            "path": reverse("dcim:migrate_data_to_contact", kwargs={"pk": location.pk}),
+            "path": reverse("dcim:location_migrate_data_to_contact", kwargs={"pk": location.pk}),
             "data": post_data(form_data),
         }
+        # Assert permission checks are triggered
+        self.assertHttpStatus(self.client.post(**request), 403)
+        self.add_permissions("extras.add_contactassociation")
         self.assertHttpStatus(self.client.post(**request), 302)
         # assert ContactAssociation is created correctly
         created_contact_association = ContactAssociation.objects.order_by("created").last()
@@ -309,21 +312,23 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "name": "Should be unique Contact Name",
             "phone": "123123123",
             "email": "helloword@example.com",
-            "address": "418 Brown Locks Barrettchester, NM 85792\n53 blue Locks manchester, NY 12124",
             "role": role,
             "status": status,
         }
         request = {
-            "path": reverse("dcim:migrate_data_to_contact", kwargs={"pk": location.pk}),
+            "path": reverse("dcim:location_migrate_data_to_contact", kwargs={"pk": location.pk}),
             "data": post_data(form_data),
         }
+        # Assert permission checks are triggered
+        self.assertHttpStatus(self.client.post(**request), 403)
+        self.add_permissions("extras.add_contactassociation")
+        self.add_permissions("extras.add_contact")
         self.assertHttpStatus(self.client.post(**request), 302)
         # assert a new contact is created successfully
         contact = Contact.objects.get(name="Should be unique Contact Name")
         self.assertEqual(contact.name, form_data["name"])
         self.assertEqual(contact.phone, form_data["phone"])
         self.assertEqual(contact.email, form_data["email"])
-        self.assertEqual(contact.address, form_data["address"])
         # assert ContactAssociation is created correctly
         created_contact_association = ContactAssociation.objects.order_by("created").last()
         self.assertEqual(created_contact_association.associated_object_id, location.pk)
@@ -353,21 +358,23 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "name": "Should be unique Team Name",
             "phone": "123123123",
             "email": "helloword@example.com",
-            "address": "418 Brown Locks Barrettchester, NM 85792\n53 blue Locks manchester, NY 12124",
             "role": role,
             "status": status,
         }
         request = {
-            "path": reverse("dcim:migrate_data_to_contact", kwargs={"pk": location.pk}),
+            "path": reverse("dcim:location_migrate_data_to_contact", kwargs={"pk": location.pk}),
             "data": post_data(form_data),
         }
+        # Assert permission checks are triggered
+        self.assertHttpStatus(self.client.post(**request), 403)
+        self.add_permissions("extras.add_contactassociation")
+        self.add_permissions("extras.add_team")
         self.assertHttpStatus(self.client.post(**request), 302)
         # assert a new team is created successfully
         team = Team.objects.get(name="Should be unique Team Name")
         self.assertEqual(team.name, form_data["name"])
         self.assertEqual(team.phone, form_data["phone"])
         self.assertEqual(team.email, form_data["email"])
-        self.assertEqual(team.address, form_data["address"])
         # assert ContactAssociation is created correctly
         created_contact_association = ContactAssociation.objects.order_by("created").last()
         self.assertEqual(created_contact_association.associated_object_id, location.pk)

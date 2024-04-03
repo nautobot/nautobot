@@ -368,7 +368,7 @@ class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Tenancy
     tags = TagFilterField(model)
 
 
-class LocationSimilarContactAssociationForm(NautobotModelForm):
+class LocationMigrateDataToContactForm(NautobotModelForm):
     # Assign tab form fields
     action = forms.ChoiceField(
         choices=LocationDataToContactActionChoices,
@@ -401,7 +401,6 @@ class LocationSimilarContactAssociationForm(NautobotModelForm):
     name = forms.CharField(required=False, label="Name")
     phone = forms.CharField(required=False, label="Phone")
     email = forms.CharField(required=False, label="Email")
-    address = forms.CharField(required=False, widget=forms.Textarea())
 
     class Meta:
         model = ContactAssociation
@@ -415,7 +414,6 @@ class LocationSimilarContactAssociationForm(NautobotModelForm):
             "name",
             "phone",
             "email",
-            "address",
         ]
 
 

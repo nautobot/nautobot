@@ -87,7 +87,7 @@ urlpatterns = [
     path(
         "locations/<uuid:pk>/migrate-data-to-contact/",
         views.MigrateLocationDataToContactView.as_view(),
-        name="migrate_data_to_contact",
+        name="location_migrate_data_to_contact",
     ),
     path(
         "locations/<uuid:object_id>/images/add/",
