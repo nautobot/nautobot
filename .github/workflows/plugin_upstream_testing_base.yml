@@ -24,7 +24,7 @@ jobs:
     runs-on: "ubuntu-20.04"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v3"
+        uses: "actions/checkout@v4"
         with:
           ref: "${{ matrix.nautobot-version == 'develop' && 'develop' || matrix.nautobot-version == 'ltm-1.6' && 'ltm-1.6' || env.GITHUB_REF_NAME || 'develop' }}"
       - name: "Setup environment"

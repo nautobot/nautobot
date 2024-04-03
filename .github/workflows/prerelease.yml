@@ -17,7 +17,7 @@ jobs:
     runs-on: "ubuntu-20.04"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v3"
+        uses: "actions/checkout@v4"
       - name: "Set up Python"
         uses: "actions/setup-python@v2"
         with:
@@ -59,7 +59,7 @@ jobs:
       INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
     steps:
       - name: "Check out repository code"
-        uses: "actions/checkout@v3"
+        uses: "actions/checkout@v4"
       - run: echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_OUTPUT
         id: "gitbranch"
       - name: "Set up QEMU"
