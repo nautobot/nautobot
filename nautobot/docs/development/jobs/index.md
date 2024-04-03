@@ -673,7 +673,7 @@ A full description on how to deal with the output of `cProfile` can be found in 
 ```python
 import pstats
 job_result_uuid = "66b70231-002f-412b-8cc4-1cc9609c2c9b"
-stats = pstats.Stats(f"/tmp/job-result-{job_result_uuid}.pstats")
+stats = pstats.Stats(f"/tmp/nautobot-jobresult-{job_result_uuid}.pstats")
 stats.sort_stats(pstats.SortKey.CUMULATIVE).print_stats(10)
 ```
 
