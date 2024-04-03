@@ -573,11 +573,7 @@ def pylint(context, target=None, recursive=False):
     base_command = 'pylint --verbose --init-hook "import nautobot; nautobot.setup()" '
     if not target:
         # Lint everything
-        # Lint the installed nautobot package and the file tasks.py in the current directory
-        command = base_command + " nautobot tasks.py"
-        run_command(context, command)
-        # Lint Python files discovered recursively in the development/ and examples/ directories
-        command = base_command + " --recursive=y development/ examples/"
+        command = base_command + "--recursive=y nautobot tasks.py development/ examples/"
         run_command(context, command)
     else:
         command = base_command
