@@ -37,6 +37,7 @@ from nautobot.core.forms import (
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
+from nautobot.core.utils.change_logging import get_change_context_state_data, handle_change_logging_on_form_bulk_action
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -54,7 +55,9 @@ from nautobot.core.views.utils import (
     import_csv_helper,
     prepare_cloned_fields,
 )
+from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.models import ContactAssociation, ExportTemplate
+from nautobot.extras.signals import change_context_state
 from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import remove_prefix_from_cf_key
 
@@ -990,6 +993,12 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 nullified_fields = request.POST.getlist("_nullify")
 
                 try:
+                    context_state_data = get_change_context_state_data()
+                    # Disable automatic ChangeLog creation on signal to enhance performance.
+                    # Multiple object updates lead to excessive database calls.
+                    # Instead, we'll manually manage a bulk ChangeLog creation post-update.
+                    prev_state = change_context_state.set(None)
+
                     with transaction.atomic():
                         updated_objects = []
                         for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
@@ -1056,6 +1065,13 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                         logger.info(msg)
                         messages.success(self.request, msg)
 
+                        handle_change_logging_on_form_bulk_action(
+                            objs=updated_objects,
+                            request=request.user,
+                            context_state_data=context_state_data,
+                            action=ObjectChangeActionChoices.ACTION_UPDATE,
+                        )
+                        change_context_state.reset(prev_state)
                     return redirect(self.get_return_url(request))
 
                 except ValidationError as e:
@@ -1249,18 +1265,30 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             if form.is_valid():
                 logger.debug("Form validation was successful")
 
+                context_state_data = get_change_context_state_data()
+                # Disable automatic ChangeLog creation on signal to enhance performance.
+                # Multiple object updates lead to excessive database calls.
+                # Instead, we'll manually manage a bulk ChangeLog creation post-update.
+                prev_state = change_context_state.set(None)
+
                 # Delete objects
                 queryset = self.queryset.filter(pk__in=pk_list)
 
                 self.perform_pre_delete(request, queryset)
                 try:
+                    handle_change_logging_on_form_bulk_action(
+                        objs=queryset,
+                        request=request.user,
+                        context_state_data=context_state_data,
+                        action=ObjectChangeActionChoices.ACTION_DELETE,
+                    )
                     _, deleted_info = queryset.delete()
                     deleted_count = deleted_info[model._meta.label]
                 except ProtectedError as e:
                     logger.info("Caught ProtectedError while attempting to delete objects")
                     handle_protectederror(queryset, request, e)
                     return redirect(self.get_return_url(request))
-
+                change_context_state.reset(prev_state)
                 msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
                 logger.info(msg)
                 messages.success(request, msg)
