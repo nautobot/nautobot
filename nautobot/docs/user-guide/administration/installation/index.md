@@ -38,7 +38,7 @@ The following minimum versions are required for Nautobot to operate:
 --- 2.1.0
     Support for versions of PostgreSQL older than 12.0 was removed.
 
-+++ 2.2.0
++++ 2.3.0
     Python 3.12 support was added.
 
 Nautobot will not work without these dependencies.

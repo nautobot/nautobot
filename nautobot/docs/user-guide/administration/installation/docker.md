@@ -23,7 +23,7 @@ Currently images are pushed for the following python versions:
 --- 1.6.0
     Python 3.7 was removed from the set of published images as Python 3.7 is now end-of-life.
 
-+++ 2.2.0
++++ 2.3.0
     Python 3.12 was added to the set of published images and is now the default version.
 
 ## Platforms
@@ -54,10 +54,10 @@ The following tags are available on both Docker Hub and the GitHub Container Reg
 | ------------------------------------------------------------- | --------------------- | -------------- | -------------- |
 | `latest`                                                      | Latest stable release | 3.12           | `latest`       |
 | `latest-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `latest-py3.8` |
-| `${NAUTOBOT_VER}`                                             | As specified          | 3.12           | `2.2.0`        |
-| `${NAUTOBOT_VER}-py${PYTHON_VER}`                             | As specified          | As specified   | `2.2.0-py3.8`  |
-| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}`                 | As specified          | 3.12           | `2.2`          |
-| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}-py${PYTHON_VER}` | As specified          | As specified   | `2.2-py3.8`    |
+| `${NAUTOBOT_VER}`                                             | As specified          | 3.12           | `2.3.0`        |
+| `${NAUTOBOT_VER}-py${PYTHON_VER}`                             | As specified          | As specified   | `2.3.0-py3.8`  |
+| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}`                 | As specified          | 3.12           | `2.3`          |
+| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}-py${PYTHON_VER}` | As specified          | As specified   | `2.3-py3.8`    |
 | `stable`                                                      | Latest stable release | 3.12           | `stable`       |
 | `stable-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `stable-py3.8` |
 

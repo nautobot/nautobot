@@ -117,7 +117,7 @@ Nautobot supports Python 3.8 through 3.12.
 +/- 1.6.0
     Python 3.11 support was added and Python 3.7 support was removed.
 
-+++ 2.2.0
++++ 2.3.0
     Python 3.12 support was added.
 
 ## Getting Started
