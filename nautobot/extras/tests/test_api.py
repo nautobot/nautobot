@@ -2519,6 +2519,10 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
 class ObjectChangeTest(APIViewTestCases.GetObjectViewTestCase, APIViewTestCases.ListObjectsViewTestCase):
     model = ObjectChange
 
+    # ObjectChange records created for SoftwareImageFile records will contain a `hashing_algorithm` key;
+    # presence of strings like "md5" and "sha256" in the API response for ObjectChanges is therefore *not* a failure
+    VERBOTEN_STRINGS = ("password",)
+
     @classmethod
     def setUpTestData(cls):
         cc = ConfigContext.objects.create(name="Config Context 1", weight=100, data={"foo": 123})
