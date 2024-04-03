@@ -45,6 +45,7 @@ from nautobot.core.views.utils import (
     import_csv_helper,
     prepare_cloned_fields,
 )
+from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.models import ExportTemplate
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
@@ -845,7 +846,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         queryset = queryset.filter(pk__in=pk_list)
 
         try:
-            with transaction.atomic():
+            with deferred_change_logging_for_bulk_operation():
                 deleted_count = queryset.delete()[1][model._meta.label]
                 msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
                 self.logger.info(msg)
@@ -978,7 +979,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
             if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
         ]
         nullified_fields = request.POST.getlist("_nullify")
-        with transaction.atomic():
+        with deferred_change_logging_for_bulk_operation():
             updated_objects = []
             for obj in queryset.filter(pk__in=form.cleaned_data["pk"]):
                 self.obj = obj
