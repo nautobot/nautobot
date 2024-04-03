@@ -13,12 +13,11 @@ from nautobot.core import exceptions, forms, settings_funcs
 from nautobot.core.api import utils as api_utils
 from nautobot.core.models import fields as core_fields, utils as models_utils
 from nautobot.core.utils import data as data_utils, filtering, lookup, requests
-from nautobot.core.utils.change_logging import handle_change_logging_on_form_bulk_action
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
 from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models, tables
 from nautobot.extras import models as extras_models, utils as extras_utils
-from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices, RelationshipTypeChoices
-from nautobot.extras.models import Contact, ContactAssociation, Note, ObjectChange, Role, Status, Tag
+from nautobot.extras.choices import ObjectChangeActionChoices, RelationshipTypeChoices
+from nautobot.extras.models import ObjectChange
 from nautobot.extras.registry import registry
 
 from example_app.models import ExampleModel
@@ -752,62 +751,3 @@ class TestMigrationUtils(TestCase):
             )
             self.assertEqual(ObjectChange.objects.get(request_id=request_id).changed_object_type, location_ct)
             self.assertEqual(ObjectChange.objects.get(request_id=request_id).related_object_type, location_ct)
-
-
-class ChangeLoggingUtils(TestCase):
-    def _assert_change_logging_created(self, objs, action):
-        request_id = uuid.uuid4()
-        handle_change_logging_on_form_bulk_action(
-            objs=objs,
-            user=None,
-            context_state_data={
-                "change_id": request_id,
-                "context": ObjectChangeEventContextChoices.CONTEXT_ORM,
-                "context_detail": "",
-            },
-            action=action,
-        )
-        object_change_queryset = ObjectChange.objects.filter(
-            request_id=request_id, action=action, change_context=ObjectChangeEventContextChoices.CONTEXT_ORM
-        )
-        self.assertEqual(object_change_queryset.count(), len(objs))
-        self.assertTrue(object_change_queryset.filter(changed_object_id=objs[0].pk).exists())
-        self.assertTrue(object_change_queryset.filter(changed_object_id=objs[1].pk).exists())
-
-    def test_handle_change_logging_on_form_bulk_action(self):
-        tags = Tag.objects.all()[:2]
-
-        with self.subTest("Test Update Action"):
-            updated_items = []
-            for tag in tags:
-                tag.name = f"{tag.name}-updated"
-                tag.save()
-                updated_items.append(tag)
-            self._assert_change_logging_created(
-                objs=updated_items,
-                action=ObjectChangeActionChoices.ACTION_UPDATE,
-            )
-
-        with self.subTest("Test Delete Action"):
-            tags_pks = [tag.pk for tag in tags]
-            roles = Role.objects.get_for_model(ContactAssociation)
-            statuses = Status.objects.get_for_model(ContactAssociation)
-            notes_created = []
-            contact_association_created = []
-            for idx, tag in enumerate(tags):
-                note = Note.objects.create(note="Note to delete", assigned_object=tag)
-                notes_created.append(note.pk)
-                contact_association = ContactAssociation.objects.create(
-                    contact=Contact.objects.all()[idx],
-                    associated_object=tag,
-                    role=roles[1],
-                    status=statuses[1],
-                )
-                contact_association_created.append(contact_association.pk)
-            self._assert_change_logging_created(
-                objs=tags,
-                action=ObjectChangeActionChoices.ACTION_DELETE,
-            )
-            Tag.objects.filter(pk__in=tags_pks).delete()
-            self.assertFalse(Note.objects.filter(pk__in=notes_created))
-            self.assertFalse(ContactAssociation.objects.filter(pk__in=contact_association_created))

@@ -3,10 +3,16 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
+from django.contrib.contenttypes.models import ContentType
 from django.test.client import RequestFactory
 
-from nautobot.extras.choices import ObjectChangeEventContextChoices
+from nautobot.core.models import BaseModel
+from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import ObjectChange
+from nautobot.extras.models.contacts import ContactAssociation
+from nautobot.extras.models.models import Note
+from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.signals import change_context_state
 from nautobot.extras.webhooks import enqueue_webhooks
 
@@ -152,3 +158,56 @@ def web_request_context(
         for object_change in ObjectChange.objects.filter(request_id=change_context.change_id).iterator():
             enqueue_job_hooks(object_change)
             enqueue_webhooks(object_change)
+
+
+@contextmanager
+def object_changelogs_bulk_operation(objs, user, action):
+    def get_objectchange_for_instance(instance, context_state, action):
+        objectchange = instance.to_objectchange(action)
+        objectchange.user = user
+        objectchange.request_id = context_state.change_id
+        objectchange.change_context = context_state.context
+        objectchange.change_context_detail = context_state.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+        return objectchange
+
+    # Disable automatic ChangeLog creation on signal to enhance performance.
+    # Multiple object updates lead to excessive database calls.
+    # Instead, we'll manually manage a bulk ChangeLog creation post-update.
+    prev_state = change_context_state.set(None)
+
+    if action == ObjectChangeActionChoices.ACTION_DELETE:
+        associations_to_delete = set()
+        notes_to_delete = set()
+        objectchange_entries = []
+        for instance in objs:
+            if isinstance(instance, BaseModel):
+                associations = ContactAssociation.objects.filter(
+                    associated_object_type=ContentType.objects.get_for_model(type(instance)),
+                    associated_object_id=instance.pk,
+                ).values_list("pk", flat=True)
+                associations_to_delete.update(associations)
+
+            if hasattr(instance, "notes") and isinstance(instance.notes, NotesQuerySet):
+                notes = instance.notes.values_list("pk", flat=True)
+                notes_to_delete.update(notes)
+
+            objectchange = get_objectchange_for_instance(instance, prev_state.old_value, action)
+            objectchange_entries.append(objectchange)
+        if associations_to_delete:
+            ContactAssociation.objects.filter(pk__in=associations_to_delete).delete()
+        if notes_to_delete:
+            Note.objects.filter(pk__in=notes_to_delete).delete()
+        ObjectChange.objects.bulk_create(objectchange_entries, batch_size=1000)
+    try:
+        yield
+    except Exception as err:
+        change_context_state.reset(prev_state)
+        raise err
+    finally:
+        if action == ObjectChangeActionChoices.ACTION_UPDATE:
+            objectchange_entries = []
+            for instance in objs:
+                objectchange = get_objectchange_for_instance(instance, prev_state.old_value, action)
+                objectchange_entries.append(objectchange)
+            ObjectChange.objects.bulk_create(objectchange_entries, batch_size=1000)
+        change_context_state.reset(prev_state)

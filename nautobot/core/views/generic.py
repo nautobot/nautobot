@@ -37,7 +37,6 @@ from nautobot.core.forms import (
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
-from nautobot.core.utils.change_logging import get_change_context_state_data, handle_change_logging_on_form_bulk_action
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -56,8 +55,8 @@ from nautobot.core.views.utils import (
     prepare_cloned_fields,
 )
 from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.context_managers import object_changelogs_bulk_operation
 from nautobot.extras.models import ContactAssociation, ExportTemplate
-from nautobot.extras.signals import change_context_state
 from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import remove_prefix_from_cf_key
 
@@ -993,85 +992,77 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 nullified_fields = request.POST.getlist("_nullify")
 
                 try:
-                    context_state_data = get_change_context_state_data()
-                    # Disable automatic ChangeLog creation on signal to enhance performance.
-                    # Multiple object updates lead to excessive database calls.
-                    # Instead, we'll manually manage a bulk ChangeLog creation post-update.
-                    prev_state = change_context_state.set(None)
-
+                    queryset = self.queryset.filter(pk__in=form.cleaned_data["pk"])
                     with transaction.atomic():
-                        updated_objects = []
-                        for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
-                            obj = self.alter_obj(obj, request, [], kwargs)
-
-                            # Update standard fields. If a field is listed in _nullify, delete its value.
-                            for name in standard_fields:
-                                try:
-                                    model_field = model._meta.get_field(name)
-                                except FieldDoesNotExist:
-                                    # This form field is used to modify a field rather than set its value directly
-                                    model_field = None
-
-                                # Handle nullification
-                                if name in form.nullable_fields and name in nullified_fields:
-                                    if isinstance(model_field, ManyToManyField):
-                                        getattr(obj, name).set([])
-                                    else:
-                                        setattr(obj, name, None if model_field is not None and model_field.null else "")
-
-                                # ManyToManyFields
-                                elif isinstance(model_field, ManyToManyField):
-                                    if form.cleaned_data[name]:
-                                        getattr(obj, name).set(form.cleaned_data[name])
-                                # Normal fields
-                                elif form.cleaned_data[name] not in (None, ""):
-                                    setattr(obj, name, form.cleaned_data[name])
-
-                            # Update custom fields
-                            for field_name in form_custom_fields:
-                                if field_name in form.nullable_fields and field_name in nullified_fields:
-                                    obj.cf[remove_prefix_from_cf_key(field_name)] = None
-                                elif form.cleaned_data.get(field_name) not in (None, "", []):
-                                    obj.cf[remove_prefix_from_cf_key(field_name)] = form.cleaned_data[field_name]
-
-                            obj.full_clean()
-                            obj.save()
-                            updated_objects.append(obj)
-                            logger.debug(f"Saved {obj} (PK: {obj.pk})")
-
-                            # Add/remove tags
-                            if form.cleaned_data.get("add_tags", None):
-                                obj.tags.add(*form.cleaned_data["add_tags"])
-                            if form.cleaned_data.get("remove_tags", None):
-                                obj.tags.remove(*form.cleaned_data["remove_tags"])
-
-                            if hasattr(form, "save_relationships") and callable(form.save_relationships):
-                                # Add/remove relationship associations
-                                form.save_relationships(instance=obj, nullified_fields=nullified_fields)
-
-                            if hasattr(form, "save_note") and callable(form.save_note):
-                                form.save_note(instance=obj, user=request.user)
-
-                            self.extra_post_save_action(obj, form)
-
-                        # Enforce object-level permissions
-                        if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(
-                            updated_objects
+                        with object_changelogs_bulk_operation(
+                            objs=queryset, user=request.user, action=ObjectChangeActionChoices.ACTION_UPDATE
                         ):
-                            raise ObjectDoesNotExist
+                            updated_objects = []
+                            for obj in queryset:
+                                obj = self.alter_obj(obj, request, [], kwargs)
 
-                    if updated_objects:
-                        msg = f"Updated {len(updated_objects)} {model._meta.verbose_name_plural}"
-                        logger.info(msg)
-                        messages.success(self.request, msg)
+                                # Update standard fields. If a field is listed in _nullify, delete its value.
+                                for name in standard_fields:
+                                    try:
+                                        model_field = model._meta.get_field(name)
+                                    except FieldDoesNotExist:
+                                        # This form field is used to modify a field rather than set its value directly
+                                        model_field = None
 
-                        handle_change_logging_on_form_bulk_action(
-                            objs=updated_objects,
-                            request=request.user,
-                            context_state_data=context_state_data,
-                            action=ObjectChangeActionChoices.ACTION_UPDATE,
-                        )
-                        change_context_state.reset(prev_state)
+                                    # Handle nullification
+                                    if name in form.nullable_fields and name in nullified_fields:
+                                        if isinstance(model_field, ManyToManyField):
+                                            getattr(obj, name).set([])
+                                        else:
+                                            setattr(
+                                                obj, name, None if model_field is not None and model_field.null else ""
+                                            )
+
+                                    # ManyToManyFields
+                                    elif isinstance(model_field, ManyToManyField):
+                                        if form.cleaned_data[name]:
+                                            getattr(obj, name).set(form.cleaned_data[name])
+                                    # Normal fields
+                                    elif form.cleaned_data[name] not in (None, ""):
+                                        setattr(obj, name, form.cleaned_data[name])
+
+                                # Update custom fields
+                                for field_name in form_custom_fields:
+                                    if field_name in form.nullable_fields and field_name in nullified_fields:
+                                        obj.cf[remove_prefix_from_cf_key(field_name)] = None
+                                    elif form.cleaned_data.get(field_name) not in (None, "", []):
+                                        obj.cf[remove_prefix_from_cf_key(field_name)] = form.cleaned_data[field_name]
+
+                                obj.full_clean()
+                                obj.save()
+                                updated_objects.append(obj)
+                                logger.debug(f"Saved {obj} (PK: {obj.pk})")
+
+                                # Add/remove tags
+                                if form.cleaned_data.get("add_tags", None):
+                                    obj.tags.add(*form.cleaned_data["add_tags"])
+                                if form.cleaned_data.get("remove_tags", None):
+                                    obj.tags.remove(*form.cleaned_data["remove_tags"])
+
+                                if hasattr(form, "save_relationships") and callable(form.save_relationships):
+                                    # Add/remove relationship associations
+                                    form.save_relationships(instance=obj, nullified_fields=nullified_fields)
+
+                                if hasattr(form, "save_note") and callable(form.save_note):
+                                    form.save_note(instance=obj, user=request.user)
+
+                                self.extra_post_save_action(obj, form)
+
+                            # Enforce object-level permissions
+                            if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(
+                                updated_objects
+                            ):
+                                raise ObjectDoesNotExist
+
+                        if updated_objects:
+                            msg = f"Updated {len(updated_objects)} {model._meta.verbose_name_plural}"
+                            logger.info(msg)
+                            messages.success(self.request, msg)
                     return redirect(self.get_return_url(request))
 
                 except ValidationError as e:
@@ -1265,30 +1256,21 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
             if form.is_valid():
                 logger.debug("Form validation was successful")
 
-                context_state_data = get_change_context_state_data()
-                # Disable automatic ChangeLog creation on signal to enhance performance.
-                # Multiple object updates lead to excessive database calls.
-                # Instead, we'll manually manage a bulk ChangeLog creation post-update.
-                prev_state = change_context_state.set(None)
-
                 # Delete objects
                 queryset = self.queryset.filter(pk__in=pk_list)
 
                 self.perform_pre_delete(request, queryset)
                 try:
-                    handle_change_logging_on_form_bulk_action(
-                        objs=queryset,
-                        request=request.user,
-                        context_state_data=context_state_data,
-                        action=ObjectChangeActionChoices.ACTION_DELETE,
-                    )
-                    _, deleted_info = queryset.delete()
-                    deleted_count = deleted_info[model._meta.label]
+                    with transaction.atomic():
+                        with object_changelogs_bulk_operation(
+                            objs=queryset, user=request.user, action=ObjectChangeActionChoices.ACTION_DELETE
+                        ):
+                            _, deleted_info = queryset.delete()
+                            deleted_count = deleted_info[model._meta.label]
                 except ProtectedError as e:
                     logger.info("Caught ProtectedError while attempting to delete objects")
                     handle_protectederror(queryset, request, e)
                     return redirect(self.get_return_url(request))
-                change_context_state.reset(prev_state)
                 msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
                 logger.info(msg)
                 messages.success(request, msg)
