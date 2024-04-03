@@ -1,7 +1,9 @@
 import os
+import os.path
 import platform
 import re
 import sys
+import tempfile
 
 from django.contrib.messages import constants as messages
 import django.forms
@@ -330,6 +332,7 @@ SPECTACULAR_SETTINGS = {
     # trim it from all of the individual paths correspondingly.
     # See also https://github.com/nautobot/nautobot-ansible/pull/135 for an example of why this is desirable.
     "SERVERS": [{"url": "/api"}],
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.IsAuthenticated"],
     "SCHEMA_PATH_PREFIX": "/api",
     "SCHEMA_PATH_PREFIX_TRIM": True,
     # use sidecar - locally packaged UI files, not CDN
@@ -859,6 +862,12 @@ CONTENT_TYPE_CACHE_TIMEOUT = int(os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT"
 #
 # Celery (used for background processing)
 #
+
+# Celery Beat heartbeat file path - will be touched by Beat each time it wakes up as a proof-of-health.
+CELERY_BEAT_HEARTBEAT_FILE = os.getenv(
+    "NAUTOBOT_CELERY_BEAT_HEARTBEAT_FILE",
+    os.path.join(tempfile.gettempdir(), "nautobot_celery_beat_heartbeat"),
+)
 
 # Celery broker URL used to tell workers where queues are located
 CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))

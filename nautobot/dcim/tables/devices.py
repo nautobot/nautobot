@@ -13,6 +13,8 @@ from nautobot.core.tables import (
 from nautobot.dcim.models import (
     ConsolePort,
     ConsoleServerPort,
+    Controller,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceRedundancyGroup,
@@ -51,11 +53,14 @@ from .template_code import (
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
     REARPORT_BUTTONS,
+    TREE_LINK,
 )
 
 __all__ = (
     "ConsolePortTable",
     "ConsoleServerPortTable",
+    "ControllerTable",
+    "ControllerManagedDeviceGroupTable",
     "DeviceBayTable",
     "DeviceConsolePortTable",
     "DeviceConsoleServerPortTable",
@@ -159,6 +164,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     device_redundancy_group_priority = tables.TemplateColumn(
         template_code="""{% if record.device_redundancy_group %}<span class="badge badge-default">{{ record.device_redundancy_group_priority|default:'None' }}</span>{% else %}—{% endif %}"""
     )
+    controller_managed_device_group = tables.Column(linkify=True)
     secrets_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:device_list")
 
@@ -187,6 +193,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "vc_priority",
             "device_redundancy_group",
             "device_redundancy_group_priority",
+            "controller_managed_device_group",
             "secrets_group",
             "tags",
         )
@@ -553,6 +560,7 @@ class InterfaceTable(StatusTableMixin, DeviceComponentTable, BaseInterfaceTable,
             "device",
             "name",
             "status",
+            "role",
             "label",
             "enabled",
             "type",
@@ -575,6 +583,7 @@ class InterfaceTable(StatusTableMixin, DeviceComponentTable, BaseInterfaceTable,
             "device",
             "name",
             "status",
+            "role",
             "label",
             "enabled",
             "type",
@@ -1119,6 +1128,87 @@ class SoftwareVersionTable(StatusTableMixin, BaseTable):
             "software_image_file_count",
             "device_count",
             "inventory_item_count",
+            "tags",
+            "actions",
+        )
+
+
+class ControllerTable(BaseTable):
+    """Table for list view."""
+
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    status = ColoredLabelColumn()
+    location = tables.Column(linkify=True)
+    platform = tables.Column(linkify=True)
+    role = tables.Column(linkify=True)
+    tenant = TenantColumn()
+    external_integration = tables.Column(linkify=True)
+    controller_device = tables.Column(linkify=True)
+    controller_device_redundancy_group = tables.Column(linkify=True)
+    tags = TagColumn(url_name="dcim:controller_list")
+    actions = ButtonsColumn(Controller)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = Controller
+        fields = (
+            "pk",
+            "name",
+            "status",
+            "location",
+            "platform",
+            "role",
+            "tenant",
+            "external_integration",
+            "controller_device",
+            "controller_device_redundancy_group",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "status",
+            "location",
+            "platform",
+            "role",
+            "tenant",
+            "actions",
+        )
+
+
+class ControllerManagedDeviceGroupTable(BaseTable):
+    """Table for list view."""
+
+    pk = ToggleColumn()
+    name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
+    weight = tables.Column()
+    controller = tables.Column(linkify=True)
+    tags = TagColumn(url_name="dcim:controllermanageddevicegroup_list")
+    actions = ButtonsColumn(ControllerManagedDeviceGroup)
+    device_count = tables.TemplateColumn(template_code=LINKED_RECORD_COUNT, verbose_name="Devices")
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ControllerManagedDeviceGroup
+        fields = (
+            "pk",
+            "name",
+            "device_count",
+            "controller",
+            "weight",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "device_count",
+            "controller",
+            "weight",
             "tags",
             "actions",
         )

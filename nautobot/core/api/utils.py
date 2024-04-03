@@ -178,6 +178,10 @@ def get_view_name(view, suffix=None):
 
     else:
         # Replicate DRF's built-in behavior.
+        name = getattr(view, "name", None)
+        if name is not None:
+            return view.name
+
         name = view.__class__.__name__
         name = formatting.remove_trailing_string(name, "View")
         name = formatting.remove_trailing_string(name, "ViewSet")

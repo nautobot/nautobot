@@ -11,7 +11,7 @@ from django.forms import (
     ModelMultipleChoiceField,
     MultipleHiddenInput,
 )
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
 from django.utils.functional import cached_property
 from django.utils.html import format_html
 from django.views.generic import View
@@ -47,6 +47,8 @@ from .models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -616,6 +618,7 @@ class DeviceTypeListView(generic.ObjectListView):
     filterset = filters.DeviceTypeFilterSet
     filterset_form = forms.DeviceTypeFilterForm
     table = tables.DeviceTypeTable
+    template_name = "dcim/devicetype_list.html"
     use_new_ui = True
 
 
@@ -1449,7 +1452,14 @@ class DeviceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
 
 class DeviceBulkEditView(generic.BulkEditView):
     queryset = Device.objects.select_related(
-        "tenant", "location", "rack", "role", "device_type__manufacturer", "secrets_group", "device_redundancy_group"
+        "tenant",
+        "location",
+        "rack",
+        "role",
+        "device_type__manufacturer",
+        "secrets_group",
+        "device_redundancy_group",
+        "controller_managed_device_group",
     )
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
@@ -2349,7 +2359,7 @@ class CableCreateView(generic.ObjectEditView):
             "rear-port": forms.ConnectCableToRearPortForm,
             "power-feed": forms.ConnectCableToPowerFeedForm,
             "circuit-termination": forms.ConnectCableToCircuitTerminationForm,
-        }[kwargs.get("termination_b_type")]
+        }.get(kwargs.get("termination_b_type"), None)
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -2366,6 +2376,9 @@ class CableCreateView(generic.ObjectEditView):
         return obj
 
     def get(self, request, *args, **kwargs):
+        if self.model_form is None:
+            return HttpResponse(status_code=400)
+
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
 
         # Parse initial data manually to avoid setting field values as lists
@@ -2996,3 +3009,68 @@ class SoftwareVersionUIViewSet(NautobotUIViewSet):
     )
     serializer_class = serializers.SoftwareVersionSerializer
     table_class = tables.SoftwareVersionTable
+
+
+#
+# Controllers
+#
+
+
+class ControllerUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.ControllerFilterSet
+    filterset_form_class = forms.ControllerFilterForm
+    form_class = forms.ControllerForm
+    bulk_update_form_class = forms.ControllerBulkEditForm
+    queryset = Controller.objects.all()
+    serializer_class = serializers.ControllerSerializer
+    table_class = tables.ControllerTable
+    template_name = "dcim/controller_create.html"
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action == "retrieve" and instance:
+            devices = Device.objects.restrict(request.user).filter(controller_managed_device_group__controller=instance)
+            devices_table = tables.DeviceTable(devices)
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(devices_table)
+
+            context["devices_table"] = devices_table
+
+        return context
+
+
+class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.ControllerManagedDeviceGroupFilterSet
+    filterset_form_class = forms.ControllerManagedDeviceGroupFilterForm
+    form_class = forms.ControllerManagedDeviceGroupForm
+    bulk_update_form_class = forms.ControllerManagedDeviceGroupBulkEditForm
+    queryset = (
+        ControllerManagedDeviceGroup.objects.all()
+        .prefetch_related("devices")
+        .annotate(device_count=count_related(Device, "controller_managed_device_group"))
+    )
+    serializer_class = serializers.ControllerManagedDeviceGroupSerializer
+    table_class = tables.ControllerManagedDeviceGroupTable
+    template_name = "dcim/controllermanageddevicegroup_create.html"
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+
+        if self.action == "retrieve" and instance:
+            devices = instance.devices.restrict(request.user)
+            devices_table = tables.DeviceTable(devices)
+
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(devices_table)
+
+            context["devices_table"] = devices_table
+
+        return context

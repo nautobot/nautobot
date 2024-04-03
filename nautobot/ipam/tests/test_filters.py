@@ -939,9 +939,14 @@ class IPAddressToInterfaceTestCase(FilterTestCases.FilterTestCase):
         vm_status = Status.objects.get_for_model(VirtualMachine).first()
         virtual_machine = (VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, status=vm_status),)
         vm_int_status = Status.objects.get_for_model(VMInterface).first()
+        vm_int_role = Role.objects.get_for_model(VMInterface).first()
         vm_interfaces = [
-            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status),
-            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth1", status=vm_int_status),
+            VMInterface.objects.create(
+                virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status, role=vm_int_role
+            ),
+            VMInterface.objects.create(
+                virtual_machine=virtual_machine[0], name="veth1", status=vm_int_status, role=vm_int_role
+            ),
         ]
 
         IPAddressToInterface.objects.create(ip_address=ip_addresses[0], interface=interfaces[0], vm_interface=None)

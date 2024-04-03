@@ -16,6 +16,7 @@ from nautobot.dcim.choices import PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet
 from nautobot.dcim.forms import DeviceFilterForm, DeviceForm
 from nautobot.dcim.models import (
+    Controller,
     Device,
     DeviceType,
     FrontPort,
@@ -48,6 +49,7 @@ from nautobot.tenancy.models import Tenant
 class DynamicGroupTestBase(TestCase):
     @classmethod
     def setUpTestData(cls):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         cls.device_ct = ContentType.objects.get_for_model(Device)
         cls.dynamicgroup_ct = ContentType.objects.get_for_model(DynamicGroup)
@@ -1016,7 +1018,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
             self.assertEqual(mock_get_queryset.call_count, 2)
 
         # Clean-up after ourselves
-        cache.delete(f"{group.__class__.__name__}.{group.id}.cached_members")
+        cache.delete(group.members_cache_key)
 
     @override_settings(DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT=0)
     def test_member_caching_disabled(self):

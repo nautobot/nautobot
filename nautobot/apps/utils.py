@@ -32,6 +32,8 @@ from nautobot.core.utils.lookup import (
     get_related_class_for_model,
     get_route_for_model,
     get_table_for_model,
+    get_url_for_url_pattern,
+    get_url_patterns,
     get_view_for_model,
 )
 from nautobot.core.utils.migrations import migrate_content_type_references_to_new_model
@@ -113,6 +115,8 @@ __all__ = (
     "get_settings_or_config",
     "get_table_for_model",
     "get_view_for_model",
+    "get_url_for_url_pattern",
+    "get_url_patterns",
     "get_worker_count",
     "GitRepo",
     "hex_to_rgb",

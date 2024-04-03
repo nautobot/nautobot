@@ -882,11 +882,12 @@ class IPAddressToInterfaceTest(APIViewTestCases.APIViewTestCase):
             status=devicestatus,
         )
         int_status = Status.objects.get_for_model(Interface).first()
+        int_role = Role.objects.get_for_model(Interface).first()
         int_type = InterfaceTypeChoices.TYPE_1GE_FIXED
         interfaces = [
-            Interface.objects.create(device=device, name="eth0", status=int_status, type=int_type),
+            Interface.objects.create(device=device, name="eth0", status=int_status, role=int_role, type=int_type),
             Interface.objects.create(device=device, name="eth1", status=int_status, type=int_type),
-            Interface.objects.create(device=device, name="eth2", status=int_status, type=int_type),
+            Interface.objects.create(device=device, name="eth2", status=int_status, role=int_role, type=int_type),
             Interface.objects.create(device=device, name="eth3", status=int_status, type=int_type),
         ]
 
@@ -895,8 +896,11 @@ class IPAddressToInterfaceTest(APIViewTestCases.APIViewTestCase):
         vm_status = Status.objects.get_for_model(VirtualMachine).first()
         virtual_machine = (VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, status=vm_status),)
         vm_int_status = Status.objects.get_for_model(VMInterface).first()
+        vm_int_role = Role.objects.get_for_model(VMInterface).first()
         vm_interfaces = [
-            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status),
+            VMInterface.objects.create(
+                virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status, role=vm_int_role
+            ),
             VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth1", status=vm_int_status),
         ]
 

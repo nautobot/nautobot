@@ -1810,6 +1810,15 @@ class JobResultTestCase(TestCase):
                 JobResult.objects.create(name="ExampleJob2", user=None, result=lambda: 1)
             self.assertEqual(str(err.exception), "Object of type function is not JSON serializable")
 
+    def test_get_task(self):
+        """Assert bug fix for `Cannot resolve keyword 'task_id' into field` #5440"""
+        data = {
+            "output": "valid data",
+        }
+        job_result = JobResult.objects.create(name="ExampleJob1", user=None, result=data)
+
+        self.assertEqual(JobResult.objects.get_task(job_result.pk), job_result)
+
 
 class WebhookTest(ModelTestCases.BaseModelTestCase):
     model = Webhook

@@ -85,7 +85,7 @@ def hyperlinked_object(value, field="display"):
 @register.filter()
 def hyperlinked_email(value):
     """Render an email address as a `mailto:` hyperlink."""
-    if value is None:
+    if not value:
         return placeholder(value)
     return format_html('<a href="mailto:{}">{}</a>', value, value)
 
@@ -94,7 +94,7 @@ def hyperlinked_email(value):
 @register.filter()
 def hyperlinked_phone_number(value):
     """Render a phone number as a `tel:` hyperlink."""
-    if value is None:
+    if not value:
         return placeholder(value)
     return format_html('<a href="tel:{}">{}</a>', value, value)
 
@@ -813,7 +813,7 @@ def hyperlinked_object_with_color(obj):
     if obj:
         content = f'<span class="label" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{hyperlinked_object(obj)}</span>'
         return format_html(content)
-    return "—"
+    return HTML_NONE
 
 
 @register.filter()

@@ -6,7 +6,6 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
 from rest_framework.response import Response
-from rest_framework.routers import APIRootView
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.utils.config import get_settings_or_config
@@ -31,16 +30,6 @@ from nautobot.ipam.models import (
 )
 
 from . import serializers
-
-
-class IPAMRootView(APIRootView):
-    """
-    IPAM API root view
-    """
-
-    def get_view_name(self):
-        return "IPAM"
-
 
 #
 # Namespace
@@ -181,7 +170,9 @@ class PrefixViewSet(NautobotModelViewSet):
         """
         prefix = get_object_or_404(self.queryset, pk=pk)
         if request.method == "POST":
-            with cache.lock("available-prefixes", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT):
+            with cache.lock(
+                "nautobot.ipam.api.views.available_prefixes", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT
+            ):
                 available_prefixes = prefix.get_available_prefixes()
 
                 # Validate Requested Prefixes' length
@@ -264,7 +255,9 @@ class PrefixViewSet(NautobotModelViewSet):
 
         # Create the next available IP within the prefix
         if request.method == "POST":
-            with cache.lock("available-ips", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT):
+            with cache.lock(
+                "nautobot.ipam.api.views.available_ips", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT
+            ):
                 # Normalize to a list of objects
                 requested_ips = request.data if isinstance(request.data, list) else [request.data]
 

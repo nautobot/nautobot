@@ -37,15 +37,15 @@ from nautobot.core.views.mixins import (
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.models import Device, Interface, Location, Rack
-from nautobot.dcim.tables import DeviceTable, RackTable
+from nautobot.dcim.models import Controller, Device, Interface, Location, Rack
+from nautobot.dcim.tables import ControllerTable, DeviceTable, InterfaceTable, RackTable
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
-from nautobot.virtualization.tables import VirtualMachineTable
+from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 
 from . import filters, forms, tables
 from .api import serializers
@@ -917,7 +917,7 @@ class DynamicGroupBulkDeleteView(generic.BulkDeleteView):
     filterset = filters.DynamicGroupFilterSet
 
 
-class ObjectDynamicGroupsView(View):
+class ObjectDynamicGroupsView(generic.GenericView):
     """
     Present a list of dynamic groups associated to a particular object.
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
@@ -1116,18 +1116,18 @@ def check_and_call_git_repository_function(request, pk, func):
         messages.error(request, "Unable to run job: Celery worker process not running.")
         return redirect(request.get_full_path(), permanent=False)
     else:
-        repository = get_object_or_404(GitRepository, pk=pk)
+        repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
         job_result = func(repository, request.user)
 
     return redirect(job_result.get_absolute_url())
 
 
-class GitRepositorySyncView(View):
+class GitRepositorySyncView(generic.GenericView):
     def post(self, request, pk):
         return check_and_call_git_repository_function(request, pk, enqueue_pull_git_repository_and_refresh_data)
 
 
-class GitRepositoryDryRunView(View):
+class GitRepositoryDryRunView(generic.GenericView):
     def post(self, request, pk):
         return check_and_call_git_repository_function(request, pk, enqueue_git_repository_diff_origin_and_local)
 
@@ -1806,7 +1806,7 @@ class JobResultView(generic.ObjectView):
         }
 
 
-class JobLogEntryTableView(View):
+class JobLogEntryTableView(generic.GenericView):
     """
     Display a table of `JobLogEntry` objects for a given `JobResult` instance.
     """
@@ -1814,7 +1814,7 @@ class JobLogEntryTableView(View):
     queryset = JobResult.objects.all()
 
     def get(self, request, pk=None):
-        instance = self.queryset.get(pk=pk)
+        instance = get_object_or_404(self.queryset.restrict(request.user, "view"), pk=pk)
         filter_q = request.GET.get("q")
         if filter_q:
             queryset = instance.job_log_entries.filter(
@@ -1893,7 +1893,7 @@ class ObjectChangeView(generic.ObjectView):
         }
 
 
-class ObjectChangeLogView(View):
+class ObjectChangeLogView(generic.GenericView):
     """
     Present a history of changes made to a particular object.
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
@@ -1979,7 +1979,7 @@ class NoteDeleteView(generic.ObjectDeleteView):
     queryset = Note.objects.all()
 
 
-class ObjectNotesView(View):
+class ObjectNotesView(generic.GenericView):
     """
     Present a list of notes associated to a particular object.
     base_template: The name of the template to extend. If not provided, "<app>/<model>.html" will be used.
@@ -2000,7 +2000,7 @@ class ObjectNotesView(View):
                 "assigned_object_id": obj.pk,
             }
         )
-        notes_table = tables.NoteTable(obj.notes)
+        notes_table = tables.NoteTable(obj.notes.restrict(request.user, "view"))
 
         # Apply the request context
         paginate = {
@@ -2118,6 +2118,29 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 RequestConfig(request, paginate).configure(device_table)
                 context["device_table"] = device_table
 
+            if ContentType.objects.get_for_model(Interface) in context["content_types"]:
+                interfaces = instance.interfaces.select_related(
+                    "device",
+                    "status",
+                    "role",
+                ).restrict(request.user, "view")
+                interface_table = InterfaceTable(interfaces)
+                interface_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(interface_table)
+                context["interface_table"] = interface_table
+
+            if ContentType.objects.get_for_model(Controller) in context["content_types"]:
+                controllers = instance.controllers.select_related(
+                    "status",
+                    "location",
+                    "tenant",
+                    "role",
+                ).restrict(request.user, "view")
+                controller_table = ControllerTable(controllers)
+                controller_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(controller_table)
+                context["controller_table"] = controller_table
+
             if ContentType.objects.get_for_model(IPAddress) in context["content_types"]:
                 ipaddress = (
                     instance.ip_addresses.select_related("status", "tenant")
@@ -2173,7 +2196,17 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 virtual_machine_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(virtual_machine_table)
                 context["virtual_machine_table"] = virtual_machine_table
-
+            if ContentType.objects.get_for_model(VMInterface) in context["content_types"]:
+                vm_interfaces = instance.vm_interfaces.select_related(
+                    "virtual_machine",
+                    "status",
+                    "role",
+                    "vrf",
+                ).restrict(request.user, "view")
+                vminterface_table = VMInterfaceTable(vm_interfaces)
+                vminterface_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(vminterface_table)
+                context["vminterface_table"] = vminterface_table
             if ContentType.objects.get_for_model(VLAN) in context["content_types"]:
                 vlans = (
                     instance.vlans.annotate(location_count=count_related(Location, "vlans"))
@@ -2229,7 +2262,7 @@ class SecretView(generic.ObjectView):
         }
 
 
-class SecretProviderParametersFormView(View):
+class SecretProviderParametersFormView(generic.GenericView):
     """
     Helper view to SecretView; retrieve the HTML form appropriate for entering parameters for a given SecretsProvider.
     """

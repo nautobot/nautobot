@@ -28,7 +28,7 @@ menu_items = (
                             NavMenuAddButton(
                                 link="tenancy:tenant_add",
                                 permissions=[
-                                    "tenancy.add_tag",
+                                    "tenancy.add_tenant",
                                 ],
                             ),
                         ),

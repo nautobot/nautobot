@@ -13,6 +13,7 @@ import yaml
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from nautobot.core.templatetags.buttons import job_export_url, job_import_url
 from nautobot.core.testing import extract_page_body, ModelViewTestCase, post_data, ViewTestCases
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
 from nautobot.dcim.choices import (
@@ -39,6 +40,8 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.filters import (
     ConsoleConnectionFilterSet,
+    ControllerFilterSet,
+    ControllerManagedDeviceGroupFilterSet,
     InterfaceConnectionFilterSet,
     PowerConnectionFilterSet,
     SoftwareImageFileFilterSet,
@@ -51,6 +54,8 @@ from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
@@ -90,6 +95,7 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     CustomField,
     CustomFieldChoice,
+    ExternalIntegration,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -130,6 +136,7 @@ def create_test_device(name):
 
 class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = LocationType
+    sort_on_field = "nestable"
 
     @classmethod
     def setUpTestData(cls):
@@ -248,15 +255,20 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = RackGroup
+    sort_on_field = "name"
 
     @classmethod
     def setUpTestData(cls):
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
-        RackGroup.objects.create(name="Rack Group 1", location=location)
-        RackGroup.objects.create(name="Rack Group 2", location=location)
-        RackGroup.objects.create(name="Rack Group 3", location=location)
-        RackGroup.objects.create(name="Rack Group 8", location=location)
+        rack_groups = (
+            RackGroup.objects.create(name="Rack Group 1", location=location),
+            RackGroup.objects.create(name="Rack Group 2", location=location),
+            RackGroup.objects.create(name="Rack Group 3", location=location),
+            RackGroup.objects.create(name="Rack Group 8", location=location),
+        )
+        RackGroup.objects.create(name="Rack Group Child 1", location=location, parent=rack_groups[0])
+        RackGroup.objects.create(name="Rack Group Child 2", location=location, parent=rack_groups[0])
 
         cls.form_data = {
             "name": "Rack Group X",
@@ -561,6 +573,7 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
         # FIXME(jathan): This has to be replaced with# `get_deletable_object` and
         # `get_deletable_object_pks` but this is a workaround just so all of these objects are
         # deletable for now.
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         DeviceType.objects.all().delete()
         Platform.objects.all().delete()
@@ -587,6 +600,7 @@ class DeviceTypeTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         manufacturers = Manufacturer.objects.all()[:2]
 
@@ -613,23 +627,35 @@ class DeviceTypeTestCase(
             "is_full_depth": False,
         }
 
-    # Temporary FIXME(jathan): Literally just trying to get the tests running so
-    # we can keep moving on the fixture factories. This should be removed once
-    # we've cleaned up all the hard-coded object comparisons and are all in on
-    # factories.
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_bulk_edit_objects_with_constrained_permission(self):
-        DeviceType.objects.exclude(model__startswith="Test Device Type").delete()
-        super().test_bulk_edit_objects_with_constrained_permission()
+    def test_list_has_correct_links(self):
+        """Assert that the DeviceType list view has import/export buttons for both CSV and YAML/JSON formats."""
+        self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype")
+        response = self.client.get(reverse("dcim:devicetype_list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
 
-    # Temporary FIXME(jathan): Literally just trying to get the tests running so
-    # we can keep moving on the fixture factories. This should be removed once
-    # we've cleaned up all the hard-coded object comparisons and are all in on
-    # factories.
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_bulk_edit_objects_with_permission(self):
-        DeviceType.objects.exclude(model__startswith="Test Device Type").delete()
-        super().test_bulk_edit_objects_with_permission()
+        yaml_import_url = reverse("dcim:devicetype_import")
+        csv_import_url = job_import_url(ContentType.objects.get_for_model(DeviceType))
+        # Main import button links to YAML/JSON import
+        self.assertInHTML(
+            f'<a id="import-button" type="button" class="btn btn-info" href="{yaml_import_url}">'
+            '<span class="mdi mdi-database-import" aria-hidden="true"></span> Import</a>',
+            content,
+        )
+        # Dropdown provides both YAML/JSON and CSV import as options
+        self.assertInHTML(f'<a href="{yaml_import_url}">JSON/YAML format (single record)</a>', content)
+        self.assertInHTML(f'<a href="{csv_import_url}">CSV format (multiple records)</a>', content)
+
+        export_url = job_export_url()
+        # Export is a little trickier to check since it's done as a form submission rather than an <a> element.
+        self.assertIn(f'<form action="{export_url}" method="post">', content)
+        self.assertInHTML(
+            f'<input type="hidden" name="content_type" value="{ContentType.objects.get_for_model(DeviceType).pk}">',
+            content,
+        )
+        self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
+        self.assertInHTML('<button type="submit" class="btn btn-link">YAML format</button>', content)
+        self.assertInHTML('<button type="submit" class="btn btn-link">CSV format</button>', content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_import_objects(self):
@@ -1260,6 +1286,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:2]
 
@@ -1373,11 +1400,11 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
 
         intf_status = Status.objects.get_for_model(Interface).first()
-
+        intf_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
-            Interface.objects.create(device=devices[0], name="Interface 1", status=intf_status),
+            Interface.objects.create(device=devices[0], name="Interface 1", status=intf_status, role=intf_role),
             Interface.objects.create(device=devices[0], name="Interface 2", status=intf_status),
-            Interface.objects.create(device=devices[0], name="Interface 3", status=intf_status),
+            Interface.objects.create(device=devices[0], name="Interface 3", status=intf_status, role=intf_role),
         )
 
         for device, ipaddress in zip(devices, ipaddresses):
@@ -1427,6 +1454,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "face": DeviceFaceChoices.FACE_FRONT,
             "secrets_group": secrets_groups[1].pk,
             "software_version": software_versions[1].pk,
+            "controller_managed_device_group": ControllerManagedDeviceGroup.objects.first().pk,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1887,16 +1915,16 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         statuses = Status.objects.get_for_model(Interface)
         status_active = statuses[0]
-
+        role = Role.objects.get_for_model(Interface).first()
         interfaces = (
-            Interface.objects.create(device=device, name="Interface 1", status=status_active),
+            Interface.objects.create(device=device, name="Interface 1", status=status_active, role=role),
             Interface.objects.create(device=device, name="Interface 2", status=status_active),
-            Interface.objects.create(device=device, name="Interface 3", status=status_active),
+            Interface.objects.create(device=device, name="Interface 3", status=status_active, role=role),
             Interface.objects.create(
-                device=device, name="LAG", status=status_active, type=InterfaceTypeChoices.TYPE_LAG
+                device=device, name="LAG", status=status_active, type=InterfaceTypeChoices.TYPE_LAG, role=role
             ),
             Interface.objects.create(
-                device=device, name="BRIDGE", status=status_active, type=InterfaceTypeChoices.TYPE_BRIDGE
+                device=device, name="BRIDGE", status=status_active, type=InterfaceTypeChoices.TYPE_BRIDGE, role=role
             ),
         )
         cls.lag_interface = interfaces[3]
@@ -1927,6 +1955,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
             "enabled": False,
             "status": status_active.pk,
+            "role": role.pk,
             "lag": interfaces[3].pk,
             "mac_address": EUI("01:02:03:04:05:06"),
             "mtu": 2000,
@@ -1955,6 +1984,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "tags": [t.pk for t in Tag.objects.get_for_model(Interface)],
             "status": status_active.pk,
+            "role": role.pk,
             "vrf": vrfs[0].pk,
         }
 
@@ -1963,6 +1993,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "name_pattern": "Interface [4-6]",
             "label_pattern": "Interface Number [4-6]",
             "status": status_active.pk,
+            "role": role.pk,
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
             "enabled": True,
             "mtu": 1500,
@@ -1985,6 +2016,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
             "status": status_active.pk,
+            "role": role.pk,
             "vrf": vrfs[2].pk,
         }
 
@@ -2207,6 +2239,9 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "New description",
             "software_version": software_versions[2].pk,
         }
+
+    def test_table_with_indentation_is_removed_on_filter_or_sort(self):
+        self.skipTest("InventoryItem table has no implementation of indentation.")
 
 
 # TODO: Change base class to PrimaryObjectViewTestCase
@@ -2575,12 +2610,21 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         device_2 = create_test_device("Device 2")
 
         interface_status = Status.objects.get_for_model(Interface).first()
+        interface_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
             Interface.objects.create(
-                device=device_1, name="Interface 1", type=InterfaceTypeChoices.TYPE_1GE_SFP, status=interface_status
+                device=device_1,
+                name="Interface 1",
+                type=InterfaceTypeChoices.TYPE_1GE_SFP,
+                status=interface_status,
+                role=interface_role,
             ),
             Interface.objects.create(
-                device=device_1, name="Interface 2", type=InterfaceTypeChoices.TYPE_1GE_SFP, status=interface_status
+                device=device_1,
+                name="Interface 2",
+                type=InterfaceTypeChoices.TYPE_1GE_SFP,
+                status=interface_status,
+                role=interface_role,
             ),
             Interface.objects.create(
                 device=device_1, name="Interface 3", type=InterfaceTypeChoices.TYPE_1GE_SFP, status=interface_status
@@ -2588,7 +2632,11 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         )
 
         cls.device_2_interface = Interface.objects.create(
-            device=device_2, name="Interface 1", type=InterfaceTypeChoices.TYPE_1GE_SFP, status=interface_status
+            device=device_2,
+            name="Interface 1",
+            type=InterfaceTypeChoices.TYPE_1GE_SFP,
+            status=interface_status,
+            role=interface_role,
         )
         rearport = RearPort.objects.create(device=device_2, type=PortTypeChoices.TYPE_8P8C)
 
@@ -2964,11 +3012,11 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             status=status_active,
         )
         intf_status = Status.objects.get_for_model(Interface).first()
-
+        intf_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
-            Interface.objects.create(device=device, name="Interface 1", status=intf_status),
+            Interface.objects.create(device=device, name="Interface 1", status=intf_status, role=intf_role),
             Interface.objects.create(device=device, name="Interface 2", status=intf_status),
-            Interface.objects.create(device=device, name="Interface 3", status=intf_status),
+            Interface.objects.create(device=device, name="Interface 3", status=intf_status, role=intf_role),
         )
 
         cls.form_data = {
@@ -3082,4 +3130,60 @@ class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "documentation_url": "https://example.com/software_version_test_case/docs2",
             "long_term_support": False,
             "pre_release": True,
+        }
+
+
+class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = Controller
+    filterset = ControllerFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        device = Device.objects.first()
+        external_integration = ExternalIntegration.objects.first()
+        location = Location.objects.get_for_model(Controller).first()
+        platform = Platform.objects.first()
+        role = Role.objects.get_for_model(Controller).first()
+        status = Status.objects.get_for_model(Controller).first()
+        tenant = Tenant.objects.first()
+
+        cls.form_data = {
+            "controller_device": device.pk,
+            "description": "Controller 1 description",
+            "external_integration": external_integration.pk,
+            "location": location.pk,
+            "name": "Controller 1",
+            "platform": platform.pk,
+            "role": role.pk,
+            "status": status.pk,
+            "tenant": tenant.pk,
+        }
+
+        cls.bulk_edit_data = {
+            "external_integration": external_integration.pk,
+            "location": location.pk,
+            "platform": platform.pk,
+            "role": role.pk,
+            "status": status.pk,
+            "tenant": tenant.pk,
+        }
+
+
+class ControllerManagedDeviceGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = ControllerManagedDeviceGroup
+    filterset = ControllerManagedDeviceGroupFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        controllers = Controller.objects.all()
+
+        cls.form_data = {
+            "name": "Managed Device Group 10",
+            "controller": controllers[0].pk,
+            "weight": 100,
+            "devices": [item.pk for item in Device.objects.all()[:2]],
+        }
+
+        cls.bulk_edit_data = {
+            "weight": 300,
         }
