@@ -4,6 +4,7 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
 from django.test.client import RequestFactory
 
 from nautobot.core.models import BaseModel
@@ -170,44 +171,45 @@ def object_changelogs_bulk_operation(objs, user, action):
         objectchange.change_context_detail = context_state.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
         return objectchange
 
-    # Disable automatic ChangeLog creation on signal to enhance performance.
-    # Multiple object updates lead to excessive database calls.
-    # Instead, we'll manually manage a bulk ChangeLog creation post-update.
-    prev_state = change_context_state.set(None)
+    with transaction.atomic():
+        # Disable automatic ChangeLog creation on signal to enhance performance.
+        # Multiple object updates lead to excessive database calls.
+        # Instead, we'll manually manage a bulk ChangeLog creation post-update.
+        prev_state = change_context_state.set(None)
 
-    if action == ObjectChangeActionChoices.ACTION_DELETE:
-        associations_to_delete = set()
-        notes_to_delete = set()
-        objectchange_entries = []
-        for instance in objs:
-            if isinstance(instance, BaseModel):
-                associations = ContactAssociation.objects.filter(
-                    associated_object_type=ContentType.objects.get_for_model(type(instance)),
-                    associated_object_id=instance.pk,
-                ).values_list("pk", flat=True)
-                associations_to_delete.update(associations)
-
-            if hasattr(instance, "notes") and isinstance(instance.notes, NotesQuerySet):
-                notes = instance.notes.values_list("pk", flat=True)
-                notes_to_delete.update(notes)
-
-            objectchange = get_objectchange_for_instance(instance, prev_state.old_value, action)
-            objectchange_entries.append(objectchange)
-        if associations_to_delete:
-            ContactAssociation.objects.filter(pk__in=associations_to_delete).delete()
-        if notes_to_delete:
-            Note.objects.filter(pk__in=notes_to_delete).delete()
-        ObjectChange.objects.bulk_create(objectchange_entries, batch_size=1000)
-    try:
-        yield
-    except Exception as err:
-        change_context_state.reset(prev_state)
-        raise err
-    finally:
-        if action == ObjectChangeActionChoices.ACTION_UPDATE:
+        if action == ObjectChangeActionChoices.ACTION_DELETE:
+            associations_to_delete = set()
+            notes_to_delete = set()
             objectchange_entries = []
             for instance in objs:
-                objectchange = get_objectchange_for_instance(instance, prev_state.old_value, action)
-                objectchange_entries.append(objectchange)
-            ObjectChange.objects.bulk_create(objectchange_entries, batch_size=1000)
-        change_context_state.reset(prev_state)
+                if isinstance(instance, BaseModel):
+                    associations = ContactAssociation.objects.filter(
+                        associated_object_type=ContentType.objects.get_for_model(type(instance)),
+                        associated_object_id=instance.pk,
+                    ).values_list("pk", flat=True)
+                    associations_to_delete.update(associations)
+
+                if hasattr(instance, "notes") and isinstance(instance.notes, NotesQuerySet):
+                    notes = instance.notes.values_list("pk", flat=True)
+                    notes_to_delete.update(notes)
+                if hasattr(instance, "to_objectchange"):
+                    objectchange = get_objectchange_for_instance(instance, prev_state.old_value, action)
+                    objectchange_entries.append(objectchange)
+            if associations_to_delete:
+                ContactAssociation.objects.filter(pk__in=associations_to_delete).delete()
+            if notes_to_delete:
+                Note.objects.filter(pk__in=notes_to_delete).delete()
+            if objectchange_entries:
+                ObjectChange.objects.bulk_create(objectchange_entries, batch_size=1000)
+        try:
+            yield
+            if action == ObjectChangeActionChoices.ACTION_UPDATE and hasattr(objs[0], "to_objectchange"):
+                objectchange_entries = []
+                for instance in objs:
+                    objectchange = get_objectchange_for_instance(instance, prev_state.old_value, action)
+                    objectchange_entries.append(objectchange)
+                ObjectChange.objects.bulk_create(objectchange_entries, batch_size=1000)
+        except Exception as err:
+            raise err
+        finally:
+            change_context_state.reset(prev_state)
