@@ -98,6 +98,12 @@ class LogoutView(View):
     """
 
     def get(self, request):
+        if social_auth := request.user.social_auth.first():
+            # If user used SSO to authenticate
+            backend = social_auth.provider
+            social_auth_logout_url = reverse("social:disconnect", args=(backend,))
+            return redirect(social_auth_logout_url)
+
         # Log out the user
         auth_logout(request)
         messages.info(request, "You have logged out.")

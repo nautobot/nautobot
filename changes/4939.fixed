@@ -1,0 +1,1 @@
+Fixed SSO session using `/logout` endpoint instead of `/disconnect/<backend>/` for SSO logout.
