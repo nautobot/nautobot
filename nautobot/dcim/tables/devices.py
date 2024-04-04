@@ -919,7 +919,7 @@ class VirtualChassisTable(BaseTable):
     master = tables.Column(linkify=True)
     member_count = LinkedCountColumn(
         viewname="dcim:device_list",
-        url_params={"virtual_chassis_id": "pk"},
+        url_params={"virtual_chassis": "pk"},
         verbose_name="Members",
     )
     tags = TagColumn(url_name="dcim:virtualchassis_list")
