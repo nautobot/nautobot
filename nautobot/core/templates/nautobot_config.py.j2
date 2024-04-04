@@ -409,8 +409,7 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 
 # Expose Prometheus monitoring metrics at the HTTP endpoint '/metrics'
 #
-# if "NAUTOBOT_METRICS_DISABLED_APPS" in os.environ and os.environ["NAUTOBOT_METRICS_DISABLED_APPS"] != "":
-#     METRICS_DISABLED_APPS = os.getenv("NAUTOBOT_METRICS_DISABLED_APPS", "").split(",")
+# METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_METRICS_ENABLED", "False"))
 
 # Require API Authentication to HTTP endpoint '/metrics'
 #
@@ -418,7 +417,8 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 
 # Disable app metrics for specific apps
 #
-# METRICS_DISABLED_APPS = os.getenv("NAUTOBOT_METRICS_DISABLED_APPS", "").split(",")
+# if "NAUTOBOT_METRICS_DISABLED_APPS" in os.environ and os.environ["NAUTOBOT_METRICS_DISABLED_APPS"] != "":
+#     METRICS_DISABLED_APPS = os.getenv("NAUTOBOT_METRICS_DISABLED_APPS", "").split(",")
 
 # Credentials that Nautobot will uses to authenticate to devices when connecting via NAPALM.
 #

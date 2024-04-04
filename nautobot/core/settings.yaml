@@ -1183,6 +1183,7 @@ properties:
     see_also:
       "Guide to Nautobot Prometheus metrics": "../guides/prometheus-metrics.md"
     type: "array"
+    version_added: "2.2.1"
   METRICS_ENABLED:
     default: false
     description: "Toggle the availability of Prometheus-compatible metrics at `/metrics`."
