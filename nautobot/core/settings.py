@@ -188,6 +188,13 @@ if (
 ):
     RACK_ELEVATION_DEFAULT_UNIT_WIDTH = int(os.environ["NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH"])
 
+# Enable two-digit format for the rack unit numbering in rack elevations.
+if (
+    "NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT" in os.environ
+    and os.environ["NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"] != ""
+):
+    RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT = is_truthy(os.environ["NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"])
+
 # How frequently to check for a new Nautobot release on GitHub, and the URL to check for this information.
 # Defaults to disabled (no URL) and check every 24 hours when enabled
 if "NAUTOBOT_RELEASE_CHECK_TIMEOUT" in os.environ and os.environ["NAUTOBOT_RELEASE_CHECK_TIMEOUT"] != "":
@@ -769,6 +776,11 @@ CONSTANCE_CONFIG = {
     "RACK_ELEVATION_DEFAULT_UNIT_WIDTH": ConstanceConfigItem(
         default=230, help_text="Default width (in pixels) of a rack unit in a rack elevation diagram", field_type=int
     ),
+    "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT": ConstanceConfigItem(
+        default=False,
+        help_text="Enables two-digit format for the rack unit numbering in a rack elevation diagram",
+        field_type=bool,
+    ),
     "RELEASE_CHECK_TIMEOUT": ConstanceConfigItem(
         default=24 * 3600,
         help_text="Number of seconds (must be at least 3600, or one hour) to cache the result of a release check "
@@ -800,7 +812,11 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Natural Keys": ["DEVICE_NAME_AS_NATURAL_KEY", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Performance": ["DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT", "JOB_CREATE_FILE_MAX_SIZE"],
-    "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
+    "Rack Elevation Rendering": [
+        "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT",
+        "RACK_ELEVATION_DEFAULT_UNIT_WIDTH",
+        "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
+    ],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
     "User Interface": ["SUPPORT_MESSAGE"],
     "Debugging": ["ALLOW_REQUEST_PROFILING"],
