@@ -1122,7 +1122,7 @@ name = "example-app"
 version = "1.0.0"
 description = "Nautobot example app that does a whole lot of nothing."
 optional = false
-python-versions = ">=3.8,<3.12"
+python-versions = ">=3.8,<3.13"
 files = []
 develop = true
 
@@ -1918,17 +1918,6 @@ files = [
 mkdocs = ">=1.0.3"
 
 [[package]]
-name = "mkdocs-include-markdown-plugin"
-version = "4.0.4"
-description = "Mkdocs Markdown includer plugin."
-optional = false
-python-versions = "<3.12,>=3.7"
-files = [
-    {file = "mkdocs_include_markdown_plugin-4.0.4-py3-none-any.whl", hash = "sha256:792caa91c2c46fa174ad44caa786656ac3f475f2cef5ad33ad28a106f7bc4086"},
-    {file = "mkdocs_include_markdown_plugin-4.0.4.tar.gz", hash = "sha256:a5d569a653a610cbbe5b9c0ebb257ce7f94b453e93c3ae2c503b682e77465773"},
-]
-
-[[package]]
 name = "mkdocs-macros-plugin"
 version = "1.0.5"
 description = "Unleash the power of MkDocs with macros and variables"
@@ -2173,13 +2162,13 @@ textfsm = ">=1.1.3"
 
 [[package]]
 name = "netutils"
-version = "1.7.0"
+version = "1.8.0"
 description = "Common helper functions useful in network automation."
 optional = false
-python-versions = ">=3.8,<4.0"
+python-versions = "<4.0,>=3.8"
 files = [
-    {file = "netutils-1.7.0-py3-none-any.whl", hash = "sha256:ad2e65d2e5bb7cf857faeee96f03b8823782c509cb003f2e4e86cccf5b0a3328"},
-    {file = "netutils-1.7.0.tar.gz", hash = "sha256:e0f461092e02c03166a6830706377dfe079b661ad9e41940f265424121621dc8"},
+    {file = "netutils-1.8.0-py3-none-any.whl", hash = "sha256:5e705793528d8e771edae6648b15c9f9a7c3cfc9c749299f6ff4a35454545858"},
+    {file = "netutils-1.8.0.tar.gz", hash = "sha256:d5e0205c2e8f095314cf755f4dbda956db42a97502501824c6c4764726eda93f"},
 ]
 
 [package.extras]
@@ -2652,7 +2641,8 @@ astroid = ">=3.0.1,<=3.1.0-dev0"
 colorama = {version = ">=0.4.5", markers = "sys_platform == \"win32\""}
 dill = [
     {version = ">=0.2", markers = "python_version < \"3.11\""},
-    {version = ">=0.3.6", markers = "python_version >= \"3.11\""},
+    {version = ">=0.3.7", markers = "python_version >= \"3.12\""},
+    {version = ">=0.3.6", markers = "python_version >= \"3.11\" and python_version < \"3.12\""},
 ]
 isort = ">=4.2.5,<5.13.0 || >5.13.0,<6"
 mccabe = ">=0.6,<0.8"
@@ -3947,5 +3937,5 @@ sso = ["social-auth-core"]
 
 [metadata]
 lock-version = "2.0"
-python-versions = ">=3.8,<3.12"
-content-hash = "f15591a5e2badde9a8c212b80bb530365deaffa11d67ca583374e1ef6e72a2a3"
+python-versions = ">=3.8,<3.13"
+content-hash = "7d20a5c257bf0eff34d532fbce7a0188c72fee896d1f392125901c835209ff9e"
