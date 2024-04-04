@@ -106,7 +106,7 @@ The following diagram displays how data travels through Nautobot's application s
 
 ## Supported Python Versions
 
-Nautobot supports Python 3.8 through 3.11.
+Nautobot supports Python 3.8 through 3.12.
 
 +++ 1.3.0
     Python 3.10 support was added.
@@ -116,6 +116,9 @@ Nautobot supports Python 3.8 through 3.11.
 
 +/- 1.6.0
     Python 3.11 support was added and Python 3.7 support was removed.
+
++++ 2.3.0
+    Python 3.12 support was added.
 
 ## Getting Started
 
