@@ -280,7 +280,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(form_data),
         }
         # Assert permission checks are triggered
-        self.assertHttpStatus(self.client.post(**request), 403)
+        self.assertHttpStatus(self.client.post(**request), 200)
         self.add_permissions("extras.add_contactassociation")
         self.assertHttpStatus(self.client.post(**request), 302)
         # assert ContactAssociation is created correctly
@@ -320,7 +320,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(form_data),
         }
         # Assert permission checks are triggered
-        self.assertHttpStatus(self.client.post(**request), 403)
+        self.assertHttpStatus(self.client.post(**request), 200)
         self.add_permissions("extras.add_contactassociation")
         self.add_permissions("extras.add_contact")
         self.assertHttpStatus(self.client.post(**request), 302)
@@ -366,7 +366,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(form_data),
         }
         # Assert permission checks are triggered
-        self.assertHttpStatus(self.client.post(**request), 403)
+        self.assertHttpStatus(self.client.post(**request), 200)
         self.add_permissions("extras.add_contactassociation")
         self.add_permissions("extras.add_team")
         self.assertHttpStatus(self.client.post(**request), 302)

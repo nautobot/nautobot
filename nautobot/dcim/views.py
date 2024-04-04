@@ -354,7 +354,6 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
                 "return_url": self.get_return_url(request, obj),
-                "cancel_return_url": self.get_return_url(request, obj).replace("?tab=contacts", "?tab=main"),
                 "editing": obj.present_in_database,
                 "active_tab": "assign",
                 **self.get_extra_context(request, obj),
@@ -404,21 +403,7 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
                 elif action == "use existing team":
                     team = Team.objects.restrict(request.user, "view").get(pk=request.POST.get("team"))
                 else:
-                    msg = f"Invalid action {action} passed from the form"
-                    logger.debug(msg)
-                    form.add_error(None, msg)
-                    return render(
-                        request,
-                        self.template_name,
-                        {
-                            "obj": obj,
-                            "obj_type": self.queryset.model._meta.verbose_name,
-                            "form": form,
-                            "return_url": self.get_return_url(request, obj),
-                            "editing": obj.present_in_database,
-                            **self.get_extra_context(request, obj),
-                        },
-                    )
+                    raise ValueError(f"Invalid action {action} passed from the form")
 
                 association = ContactAssociation(
                     contact=contact,
@@ -451,6 +436,14 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
 
         except ObjectDoesNotExist:
             msg = "Object save failed due to object-level permissions violation"
+            logger.debug(msg)
+            form.add_error(None, msg)
+        except PermissionDenied as e:
+            msg = e
+            logger.debug(msg)
+            form.add_error(None, msg)
+        except ValueError:
+            msg = f"Invalid action {action} passed from the form"
             logger.debug(msg)
             form.add_error(None, msg)
 

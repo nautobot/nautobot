@@ -128,7 +128,7 @@
                 <td>{{ object.contact_email|hyperlinked_email }}</td>
             </tr>
         </table>
-        {% if request.user|has_perms:contact_association_permission and show_convert_to_contact_button%}
+        {% if show_convert_to_contact_button and request.user|has_perms:contact_association_permission %}
             {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
                 <div class="panel-footer text-right noprint">
                     <a href="{% url 'dcim:location_migrate_data_to_contact' pk=object.pk %}?return_url={{return_url}}" class="btn btn-primary btn-xs">

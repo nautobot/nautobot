@@ -375,7 +375,7 @@ class LocationMigrateDataToContactForm(NautobotModelForm):
         required=True,
         widget=StaticSelect2(),
     )
-    location = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
+    location = DynamicModelChoiceField(queryset=Location.objects.all(), required=False, label="Source Location")
     contact = DynamicModelChoiceField(
         queryset=Contact.objects.all(),
         required=False,
