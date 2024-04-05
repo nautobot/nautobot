@@ -1,1 +1,1 @@
-Disable automatic ChangeLog creation on signal to enhance performance and manually manage a bulk ChangeLog creation post-update.
+Improved performance of UI bulk-edit and bulk-delete operations by refactoring change-log logic for these cases.
