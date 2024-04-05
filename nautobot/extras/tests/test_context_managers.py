@@ -8,7 +8,7 @@ from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import (
-    object_changelogs_bulk_operation,
+    deferred_change_logging_for_bulk_operation,
     web_request_context,
 )
 from nautobot.extras.models import Status, Webhook
@@ -235,7 +235,7 @@ class BulkEditDeleteChangeLogging(TestCase):
 
     def test_bulk_update_with_changelogging(self):
         with web_request_context(self.user, context_detail="test_change_log_context"):
-            with object_changelogs_bulk_operation(
+            with deferred_change_logging_for_bulk_operation(
                 objs=self.tags, user=self.user, action=ObjectChangeActionChoices.ACTION_UPDATE
             ):
                 for tag in self.tags:
@@ -246,7 +246,7 @@ class BulkEditDeleteChangeLogging(TestCase):
     def test_bulk_delete(self):
         tags_pks = [tag.pk for tag in self.tags]
         with web_request_context(self.user, context_detail="test_change_log_context"):
-            with object_changelogs_bulk_operation(
+            with deferred_change_logging_for_bulk_operation(
                 objs=self.tags, user=self.user, action=ObjectChangeActionChoices.ACTION_DELETE
             ):
                 self._assert_change_logging_created(action=ObjectChangeActionChoices.ACTION_DELETE)

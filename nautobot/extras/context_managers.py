@@ -162,7 +162,17 @@ def web_request_context(
 
 
 @contextmanager
-def object_changelogs_bulk_operation(objs, user, action):
+def deferred_change_logging_for_bulk_operation(objs, user, action):
+    """
+    Manages bulk object change logging in a performance-efficient way by deferring ChangeLog entry
+    creation until after bulk operations (update/delete) are completed.
+
+    Args:
+        - objs (iterable): Objects being modified.
+        - user (User): User performing the operation.
+        - action (ObjectChangeActionChoices): Type of action.
+    """
+
     def get_objectchange_for_instance(instance, context_state, action):
         objectchange = instance.to_objectchange(action)
         objectchange.user = user

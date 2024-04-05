@@ -46,7 +46,7 @@ from nautobot.core.views.utils import (
     prepare_cloned_fields,
 )
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.context_managers import object_changelogs_bulk_operation
+from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.models import ExportTemplate
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
@@ -848,7 +848,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         queryset = queryset.filter(pk__in=pk_list)
 
         try:
-            with object_changelogs_bulk_operation(
+            with deferred_change_logging_for_bulk_operation(
                 objs=queryset, user=request.user, action=ObjectChangeActionChoices.ACTION_DELETE
             ):
                 deleted_count = queryset.delete()[1][model._meta.label]
@@ -984,7 +984,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
         ]
         nullified_fields = request.POST.getlist("_nullify")
         queryset_to_update = queryset.filter(pk__in=form.cleaned_data["pk"])
-        with object_changelogs_bulk_operation(
+        with deferred_change_logging_for_bulk_operation(
             objs=queryset_to_update, user=request.user, action=ObjectChangeActionChoices.ACTION_UPDATE
         ):
             updated_objects = []

@@ -55,7 +55,7 @@ from nautobot.core.views.utils import (
     prepare_cloned_fields,
 )
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.context_managers import object_changelogs_bulk_operation
+from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.models import ContactAssociation, ExportTemplate
 from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import remove_prefix_from_cf_key
@@ -993,7 +993,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                 try:
                     queryset = self.queryset.filter(pk__in=form.cleaned_data["pk"])
-                    with object_changelogs_bulk_operation(
+                    with deferred_change_logging_for_bulk_operation(
                         objs=queryset, user=request.user, action=ObjectChangeActionChoices.ACTION_UPDATE
                     ):
                         updated_objects = []
@@ -1258,7 +1258,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                 self.perform_pre_delete(request, queryset)
                 try:
-                    with object_changelogs_bulk_operation(
+                    with deferred_change_logging_for_bulk_operation(
                         objs=queryset, user=request.user, action=ObjectChangeActionChoices.ACTION_DELETE
                     ):
                         _, deleted_info = queryset.delete()
