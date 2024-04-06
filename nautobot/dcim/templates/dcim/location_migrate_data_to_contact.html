@@ -68,6 +68,7 @@
         similar_teams.toggleAttribute("required", action_option=="use existing team");
         similar_teams_label.classList.toggle("required", action_option=="use existing team")
         name.toggleAttribute("disabled", action_option.match(/use existing/));
+        name.toggleAttribute("required", action_option.match(/create and assign/));
         name_label.classList.toggle("required", action_option.match(/create and assign/));
         phone.toggleAttribute("disabled", action_option.match(/use existing/));
         email.toggleAttribute("disabled", action_option.match(/use existing/));
