@@ -36,6 +36,7 @@ from nautobot.core.views.mixins import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
+from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
 from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
@@ -376,7 +377,7 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
                     )
                 contact = None
                 team = None
-                if action == "create and assign new contact":
+                if action == LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_CONTACT:
                     if not has_perms(request.user, ["extras.add_contact"]):
                         raise PermissionDenied("ObjectPermission extras.add_contact is needed to perform this action")
                     contact = Contact(
@@ -387,7 +388,7 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
                     contact.validated_save()
                     # Trigger permission check
                     Contact.objects.restrict(request.user, "view").get(pk=contact.pk)
-                elif action == "create and assign new team":
+                elif action == LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_TEAM:
                     if not has_perms(request.user, ["extras.add_team"]):
                         raise PermissionDenied("ObjectPermission extras.add_team is needed to perform this action")
                     team = Team(
@@ -398,9 +399,9 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
                     team.validated_save()
                     # Trigger permission check
                     Team.objects.restrict(request.user, "view").get(pk=team.pk)
-                elif action == "use existing contact":
+                elif action == LocationDataToContactActionChoices.USE_EXISTING_CONTACT:
                     contact = Contact.objects.restrict(request.user, "view").get(pk=request.POST.get("contact"))
-                elif action == "use existing team":
+                elif action == LocationDataToContactActionChoices.USE_EXISTING_TEAM:
                     team = Team.objects.restrict(request.user, "view").get(pk=request.POST.get("team"))
                 else:
                     raise ValueError(f"Invalid action {action} passed from the form")
