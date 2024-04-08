@@ -271,7 +271,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         role = self.contact_roles.first().pk
         status = self.contact_statuses.first().pk
         form_data = {
-            "action": LocationDataToContactActionChoices.USE_EXISTING_CONTACT,
+            "action": LocationDataToContactActionChoices.ASSOCIATE_EXISTING_CONTACT,
             "contact": similar_contact.pk,
             "role": role,
             "status": status,

@@ -399,9 +399,9 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
                     team.validated_save()
                     # Trigger permission check
                     Team.objects.restrict(request.user, "view").get(pk=team.pk)
-                elif action == LocationDataToContactActionChoices.USE_EXISTING_CONTACT:
+                elif action == LocationDataToContactActionChoices.ASSOCIATE_EXISTING_CONTACT:
                     contact = Contact.objects.restrict(request.user, "view").get(pk=request.POST.get("contact"))
-                elif action == LocationDataToContactActionChoices.USE_EXISTING_TEAM:
+                elif action == LocationDataToContactActionChoices.ASSOCIATE_EXISTING_TEAM:
                     team = Team.objects.restrict(request.user, "view").get(pk=request.POST.get("team"))
                 else:
                     raise ValueError(f"Invalid action {action} passed from the form")

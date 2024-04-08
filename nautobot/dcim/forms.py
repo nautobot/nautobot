@@ -379,13 +379,13 @@ class LocationMigrateDataToContactForm(NautobotModelForm):
     contact = DynamicModelChoiceField(
         queryset=Contact.objects.all(),
         required=False,
-        label="Similar Contacts",
+        label="Available Contacts",
         query_params={"similar_to_location_data": "$location"},
     )
     team = DynamicModelChoiceField(
         queryset=Team.objects.all(),
         required=False,
-        label="Similar Teams",
+        label="Available Teams",
         query_params={"similar_to_location_data": "$location"},
     )
     role = DynamicModelChoiceField(

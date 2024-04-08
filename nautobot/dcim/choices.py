@@ -22,14 +22,14 @@ class LocationStatusChoices(ChoiceSet):
 
 
 class LocationDataToContactActionChoices(ChoiceSet):
-    USE_EXISTING_CONTACT = "use existing contact"
-    USE_EXISTING_TEAM = "use existing team"
+    ASSOCIATE_EXISTING_CONTACT = "associate existing contact"
+    ASSOCIATE_EXISTING_TEAM = "associate existing team"
     CREATE_AND_ASSIGN_NEW_CONTACT = "create and assign new contact"
     CREATE_AND_ASSIGN_NEW_TEAM = "create and assign new team"
 
     CHOICES = (
-        (USE_EXISTING_CONTACT, "Use existing contact"),
-        (USE_EXISTING_TEAM, "Use existing team"),
+        (ASSOCIATE_EXISTING_CONTACT, "Associate existing contact"),
+        (ASSOCIATE_EXISTING_TEAM, "Associate existing team"),
         (CREATE_AND_ASSIGN_NEW_CONTACT, "Create and assign new contact"),
         (CREATE_AND_ASSIGN_NEW_TEAM, "Create and assign new team"),
     )
