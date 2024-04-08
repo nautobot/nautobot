@@ -1,8 +1,10 @@
 from collections import OrderedDict
+import logging
 import uuid
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import transaction
 from django.db.models import F, Prefetch
@@ -12,15 +14,19 @@ from django.forms import (
     MultipleHiddenInput,
 )
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
+from django.utils.encoding import iri_to_uri
 from django.utils.functional import cached_property
 from django.utils.html import format_html
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
-from nautobot.core.forms import ConfirmationForm
+from nautobot.core.forms import ConfirmationForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
+from nautobot.core.templatetags.helpers import has_perms
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
@@ -30,7 +36,10 @@ from nautobot.core.views.mixins import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
+from nautobot.dcim.choices import LocationDataToContactActionChoices
+from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
+from nautobot.extras.models import Contact, ContactAssociation, Role, Status, Team
 from nautobot.extras.views import ObjectChangeLogView, ObjectConfigContextView, ObjectDynamicGroupsView
 from nautobot.ipam.models import IPAddress, Prefix, Service, VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, VRFDeviceAssignmentTable
@@ -82,6 +91,8 @@ from .models import (
     SoftwareVersion,
     VirtualChassis,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
@@ -283,6 +294,9 @@ class LocationView(generic.ObjectView):
             "children_table": children_table,
             "rack_groups": rack_groups,
             "stats": stats,
+            "contact_association_permission": ["extras.add_contactassociation"],
+            # show the button if any of these fields have non-empty value.
+            "show_convert_to_contact_button": instance.contact_name or instance.contact_phone or instance.contact_email,
         }
 
 
@@ -312,6 +326,140 @@ class LocationBulkDeleteView(generic.BulkDeleteView):
     queryset = Location.objects.select_related("location_type", "parent", "tenant")
     filterset = filters.LocationFilterSet
     table = tables.LocationTable
+
+
+class MigrateLocationDataToContactView(generic.ObjectEditView):
+    queryset = Location.objects.all()
+    model_form = LocationMigrateDataToContactForm
+    template_name = "dcim/location_migrate_data_to_contact.html"
+
+    def get(self, request, *args, **kwargs):
+        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+
+        initial_data = normalize_querydict(request.GET, form_class=self.model_form)
+        # remove status from the location itself
+        initial_data["status"] = None
+        initial_data["location"] = obj.pk
+
+        # populate contact tab fields initial data
+        initial_data["name"] = obj.contact_name
+        initial_data["phone"] = obj.contact_phone
+        initial_data["email"] = obj.contact_email
+        form = self.model_form(instance=obj, initial=initial_data)
+        restrict_form_fields(form, request.user)
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "return_url": self.get_return_url(request, obj),
+                "editing": obj.present_in_database,
+                "active_tab": "assign",
+                **self.get_extra_context(request, obj),
+            },
+        )
+
+    def post(self, request, *args, **kwargs):
+        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        restrict_form_fields(form, request.user)
+
+        associated_object_id = obj.pk
+        associated_object_content_type = ContentType.objects.get_for_model(Location)
+        action = request.POST.get("action")
+        try:
+            with transaction.atomic():
+                if not has_perms(request.user, ["extras.add_contactassociation"]):
+                    raise PermissionDenied(
+                        "ObjectPermission extras.add_contactassociation is needed to perform this action"
+                    )
+                contact = None
+                team = None
+                if action == LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_CONTACT:
+                    if not has_perms(request.user, ["extras.add_contact"]):
+                        raise PermissionDenied("ObjectPermission extras.add_contact is needed to perform this action")
+                    contact = Contact(
+                        name=request.POST.get("name"),
+                        phone=request.POST.get("phone"),
+                        email=request.POST.get("email"),
+                    )
+                    contact.validated_save()
+                    # Trigger permission check
+                    Contact.objects.restrict(request.user, "view").get(pk=contact.pk)
+                elif action == LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_TEAM:
+                    if not has_perms(request.user, ["extras.add_team"]):
+                        raise PermissionDenied("ObjectPermission extras.add_team is needed to perform this action")
+                    team = Team(
+                        name=request.POST.get("name"),
+                        phone=request.POST.get("phone"),
+                        email=request.POST.get("email"),
+                    )
+                    team.validated_save()
+                    # Trigger permission check
+                    Team.objects.restrict(request.user, "view").get(pk=team.pk)
+                elif action == LocationDataToContactActionChoices.ASSOCIATE_EXISTING_CONTACT:
+                    contact = Contact.objects.restrict(request.user, "view").get(pk=request.POST.get("contact"))
+                elif action == LocationDataToContactActionChoices.ASSOCIATE_EXISTING_TEAM:
+                    team = Team.objects.restrict(request.user, "view").get(pk=request.POST.get("team"))
+                else:
+                    raise ValueError(f"Invalid action {action} passed from the form")
+
+                association = ContactAssociation(
+                    contact=contact,
+                    team=team,
+                    associated_object_type=associated_object_content_type,
+                    associated_object_id=associated_object_id,
+                    status=Status.objects.get(pk=request.POST.get("status")),
+                    role=Role.objects.get(pk=request.POST.get("role")),
+                )
+                association.validated_save()
+                # Trigger permission check
+                ContactAssociation.objects.restrict(request.user, "view").get(pk=association.pk)
+
+                # Clear out contact fields from location
+                location = self.get_object(kwargs)
+                location.contact_name = ""
+                location.contact_phone = ""
+                location.contact_email = ""
+                location.validated_save()
+
+                object_created = not form.instance.present_in_database
+
+            self.successful_post(request, obj, object_created, logger)
+
+            return_url = request.POST.get("return_url")
+            if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                return redirect(iri_to_uri(return_url))
+            else:
+                return redirect(self.get_return_url(request, obj))
+
+        except ObjectDoesNotExist:
+            msg = "Object save failed due to object-level permissions violation"
+            logger.debug(msg)
+            form.add_error(None, msg)
+        except PermissionDenied as e:
+            msg = e
+            logger.debug(msg)
+            form.add_error(None, msg)
+        except ValueError:
+            msg = f"Invalid action {action} passed from the form"
+            logger.debug(msg)
+            form.add_error(None, msg)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "return_url": self.get_return_url(request, obj),
+                "editing": obj.present_in_database,
+                **self.get_extra_context(request, obj),
+            },
+        )
 
 
 #

@@ -25,6 +25,7 @@ from nautobot.dcim.choices import (
     InterfaceModeChoices,
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
+    LocationDataToContactActionChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
     PowerFeedSupplyChoices,
@@ -93,6 +94,8 @@ from nautobot.dcim.views import ConsoleConnectionsListView, InterfaceConnections
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.models import (
     ConfigContextSchema,
+    Contact,
+    ContactAssociation,
     CustomField,
     CustomFieldChoice,
     ExternalIntegration,
@@ -102,6 +105,7 @@ from nautobot.extras.models import (
     SecretsGroup,
     Status,
     Tag,
+    Team,
 )
 from nautobot.ipam.choices import IPAddressTypeChoices
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup, VRF
@@ -174,6 +178,8 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        cls.contact_statuses = Status.objects.get_for_model(ContactAssociation)
+        cls.contact_roles = Role.objects.get_for_model(ContactAssociation)
         lt1 = LocationType.objects.get(name="Campus")
         lt2 = LocationType.objects.get(name="Building")
         lt3 = LocationType.objects.get(name="Floor")
@@ -251,6 +257,137 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         request["data"] = post_data(test_form_data)
         self.assertHttpStatus(self.client.post(**request), 302)
         self.assertEqual(Location.objects.get(name="Root 3").parent.pk, site_1.pk)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_migrate_location_data_from_location_assign(self):
+        self.add_permissions("dcim.change_location")
+        location = Location.objects.first()
+        location.contact_name = "Should be unique Contact Name"
+        location.contact_phone = "123123123"
+        location.contact_email = "helloword@example.com"
+        location.physical_address = "418 Brown Locks Barrettchester, NM 85792"
+        location.shipping_address = "53 blue Locks manchester, NY 12124"
+        similar_contact = Contact.objects.first()
+        role = self.contact_roles.first().pk
+        status = self.contact_statuses.first().pk
+        form_data = {
+            "action": LocationDataToContactActionChoices.ASSOCIATE_EXISTING_CONTACT,
+            "contact": similar_contact.pk,
+            "role": role,
+            "status": status,
+        }
+        request = {
+            "path": reverse("dcim:location_migrate_data_to_contact", kwargs={"pk": location.pk}),
+            "data": post_data(form_data),
+        }
+        # Assert permission checks are triggered
+        self.assertHttpStatus(self.client.post(**request), 200)
+        self.add_permissions("extras.add_contactassociation")
+        self.assertHttpStatus(self.client.post(**request), 302)
+        # assert ContactAssociation is created correctly
+        created_contact_association = ContactAssociation.objects.order_by("created").last()
+        self.assertEqual(created_contact_association.associated_object_id, location.pk)
+        self.assertEqual(created_contact_association.contact.pk, similar_contact.pk)
+        self.assertEqual(created_contact_association.role.pk, role)
+        self.assertEqual(created_contact_association.status.pk, status)
+
+        # assert location data is cleared out
+        location.refresh_from_db()
+        self.assertEqual(location.contact_name, "")
+        self.assertEqual(location.contact_phone, "")
+        self.assertEqual(location.contact_email, "")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_migrate_location_data_from_location_new_contact(self):
+        self.add_permissions("dcim.change_location")
+        location = Location.objects.first()
+        location.contact_name = "Should be unique Contact Name"
+        location.contact_phone = "123123123"
+        location.contact_email = "helloword@example.com"
+        location.physical_address = "418 Brown Locks Barrettchester, NM 85792"
+        location.shipping_address = "53 blue Locks manchester, NY 12124"
+        role = self.contact_roles.first().pk
+        status = self.contact_statuses.first().pk
+        form_data = {
+            "action": LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_CONTACT,
+            "name": "Should be unique Contact Name",
+            "phone": "123123123",
+            "email": "helloword@example.com",
+            "role": role,
+            "status": status,
+        }
+        request = {
+            "path": reverse("dcim:location_migrate_data_to_contact", kwargs={"pk": location.pk}),
+            "data": post_data(form_data),
+        }
+        # Assert permission checks are triggered
+        self.assertHttpStatus(self.client.post(**request), 200)
+        self.add_permissions("extras.add_contactassociation")
+        self.add_permissions("extras.add_contact")
+        self.assertHttpStatus(self.client.post(**request), 302)
+        # assert a new contact is created successfully
+        contact = Contact.objects.get(name="Should be unique Contact Name")
+        self.assertEqual(contact.name, form_data["name"])
+        self.assertEqual(contact.phone, form_data["phone"])
+        self.assertEqual(contact.email, form_data["email"])
+        # assert ContactAssociation is created correctly
+        created_contact_association = ContactAssociation.objects.order_by("created").last()
+        self.assertEqual(created_contact_association.associated_object_id, location.pk)
+        self.assertEqual(created_contact_association.contact.pk, contact.pk)
+        self.assertEqual(created_contact_association.role.pk, role)
+        self.assertEqual(created_contact_association.status.pk, status)
+
+        # assert location data is cleared out
+        location.refresh_from_db()
+        self.assertEqual(location.contact_name, "")
+        self.assertEqual(location.contact_phone, "")
+        self.assertEqual(location.contact_email, "")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_migrate_location_data_from_location_new_team(self):
+        self.add_permissions("dcim.change_location")
+        location = Location.objects.first()
+        location.contact_name = "Should be unique Team Name"
+        location.contact_phone = "123123123"
+        location.contact_email = "helloword@example.com"
+        location.physical_address = "418 Brown Locks Barrettchester, NM 85792"
+        location.shipping_address = "53 blue Locks manchester, NY 12124"
+        role = self.contact_roles.first().pk
+        status = self.contact_statuses.first().pk
+        form_data = {
+            "action": LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_TEAM,
+            "name": "Should be unique Team Name",
+            "phone": "123123123",
+            "email": "helloword@example.com",
+            "role": role,
+            "status": status,
+        }
+        request = {
+            "path": reverse("dcim:location_migrate_data_to_contact", kwargs={"pk": location.pk}),
+            "data": post_data(form_data),
+        }
+        # Assert permission checks are triggered
+        self.assertHttpStatus(self.client.post(**request), 200)
+        self.add_permissions("extras.add_contactassociation")
+        self.add_permissions("extras.add_team")
+        self.assertHttpStatus(self.client.post(**request), 302)
+        # assert a new team is created successfully
+        team = Team.objects.get(name="Should be unique Team Name")
+        self.assertEqual(team.name, form_data["name"])
+        self.assertEqual(team.phone, form_data["phone"])
+        self.assertEqual(team.email, form_data["email"])
+        # assert ContactAssociation is created correctly
+        created_contact_association = ContactAssociation.objects.order_by("created").last()
+        self.assertEqual(created_contact_association.associated_object_id, location.pk)
+        self.assertEqual(created_contact_association.team.pk, team.pk)
+        self.assertEqual(created_contact_association.role.pk, role)
+        self.assertEqual(created_contact_association.status.pk, status)
+
+        # assert location data is cleared out
+        location.refresh_from_db()
+        self.assertEqual(location.contact_name, "")
+        self.assertEqual(location.contact_phone, "")
+        self.assertEqual(location.contact_email, "")
 
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
