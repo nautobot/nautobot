@@ -54,6 +54,7 @@ class AuthenticationEnforcedTestCase(TestCase):
                         url.startswith(path)
                         for path in [
                             "/complete/",  # social auth
+                            "/health/string/",  # health-check
                             "/login/",  # social auth
                             "/media/",  # MEDIA_ROOT
                             "/plugins/example-app/docs/",  # STATIC_ROOT
