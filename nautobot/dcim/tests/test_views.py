@@ -25,6 +25,7 @@ from nautobot.dcim.choices import (
     InterfaceModeChoices,
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
+    LocationDataToContactActionChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
     PowerFeedSupplyChoices,
@@ -270,7 +271,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         role = self.contact_roles.first().pk
         status = self.contact_statuses.first().pk
         form_data = {
-            "action": "use existing contact",
+            "action": LocationDataToContactActionChoices.USE_EXISTING_CONTACT,
             "contact": similar_contact.pk,
             "role": role,
             "status": status,
@@ -308,7 +309,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         role = self.contact_roles.first().pk
         status = self.contact_statuses.first().pk
         form_data = {
-            "action": "create and assign new contact",
+            "action": LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_CONTACT,
             "name": "Should be unique Contact Name",
             "phone": "123123123",
             "email": "helloword@example.com",
@@ -354,7 +355,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         role = self.contact_roles.first().pk
         status = self.contact_statuses.first().pk
         form_data = {
-            "action": "create and assign new team",
+            "action": LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_TEAM,
             "name": "Should be unique Team Name",
             "phone": "123123123",
             "email": "helloword@example.com",
