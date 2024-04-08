@@ -1,4 +1,4 @@
-from datetime import timezone
+from datetime import timedelta, timezone
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -16,9 +16,26 @@ from nautobot.core.factory import (
     random_instance,
     UniqueFaker,
 )
-from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices, WebhookHttpMethodChoices
+from nautobot.extras.choices import (
+    JobResultStatusChoices,
+    LogLevelChoices,
+    ObjectChangeActionChoices,
+    ObjectChangeEventContextChoices,
+    WebhookHttpMethodChoices,
+)
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, CHANGELOG_MAX_OBJECT_REPR
-from nautobot.extras.models import Contact, ExternalIntegration, ObjectChange, Role, Status, Tag, Team
+from nautobot.extras.models import (
+    Contact,
+    ExternalIntegration,
+    Job,
+    JobLogEntry,
+    JobResult,
+    ObjectChange,
+    Role,
+    Status,
+    Tag,
+    Team,
+)
 from nautobot.extras.utils import change_logged_models_queryset, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
 
 
@@ -76,6 +93,95 @@ class ExternalIntegrationFactory(PrimaryModelFactory):
         factory.LazyAttributeSequence(lambda o, n: f"{o.name}/file/path/{n + 1}"),
         "",
     )
+
+
+class JobLogEntryFactory(BaseModelFactory):
+    """JobLogEntry model factory."""
+
+    class Meta:
+        model = JobLogEntry
+
+    class Params:
+        has_message = NautobotBoolIterator(chance_of_getting_true=90)
+        has_log_object = NautobotBoolIterator()
+        has_absolute_url = NautobotBoolIterator()
+
+    job_result = random_instance(JobResult, allow_null=False)
+    log_level = factory.Iterator(LogLevelChoices.CHOICES, getter=lambda choice: choice[0])
+    grouping = factory.Faker("word")
+    message = factory.Maybe("has_message", factory.Faker("sentence"), "")
+    log_object = factory.Maybe("has_log_object", factory.Faker("word"), "")
+    absolute_url = factory.Maybe("has_absolute_url", factory.Faker("uri_path"), "")
+
+    @factory.lazy_attribute
+    def created(self):
+        if self.job_result.date_done:
+            return faker.Faker().date_time_between_dates(
+                datetime_start=self.job_result.date_created, datetime_end=self.job_result.date_done, tzinfo=timezone.utc
+            )
+        return faker.Faker().past_datetime(start_date=self.job_result.date_created, tzinfo=timezone.utc)
+
+
+class JobResultFactory(BaseModelFactory):
+    """JobResult model factory."""
+
+    class Meta:
+        model = JobResult
+
+    class Params:
+        has_job_model = NautobotBoolIterator(chance_of_getting_true=90)
+        has_user = NautobotBoolIterator(chance_of_getting_true=80)
+        has_task_args = NautobotBoolIterator(chance_of_getting_true=10)
+        has_task_kwargs = NautobotBoolIterator(chance_of_getting_true=90)
+        # TODO has_scheduled_job? has_meta? has_celery_kwargs?
+
+    job_model = factory.Maybe("has_job_model", random_instance(Job), None)
+    name = factory.Faker("word")
+    task_name = factory.Faker("word")
+    # date_created and date_done are handled below
+    user = factory.Maybe("has_user", random_instance(get_user_model()), None)
+    status = factory.Iterator(
+        [
+            JobResultStatusChoices.STATUS_FAILURE,
+            JobResultStatusChoices.STATUS_SUCCESS,
+        ],
+    )
+    worker = factory.LazyAttribute(lambda obj: f"celery@{faker.Faker().hostname()}")
+    task_args = factory.Maybe("has_task_args", factory.Faker("pyiterable"), "")
+    task_kwargs = factory.Maybe("has_task_kwargs", factory.Faker("pydict"), {})
+    # TODO celery_kwargs?
+    # TODO meta?
+
+    @factory.lazy_attribute
+    def result(self):
+        if self.status != JobResultStatusChoices.STATUS_SUCCESS:
+            return None
+        return faker.Faker().pyobject(faker.Faker().random_element([bool, str, float, int, list, dict]))
+
+    @factory.lazy_attribute
+    def traceback(self):
+        if self.status == JobResultStatusChoices.STATUS_FAILURE:
+            return faker.Faker().paragraph()
+        return None
+
+    @factory.post_generation
+    def date_created(self, created, extracted, **kwargs):  # pylint: disable=method-hidden
+        if created:
+            if extracted:
+                self.date_created = extracted
+            else:
+                self.date_created = faker.Faker().date_time_between(
+                    start_date="-1y", end_date="now", tzinfo=timezone.utc
+                )
+
+    @factory.post_generation
+    def date_done(self, created, extracted, **kwargs):  # pylint: disable=method-hidden
+        if created:
+            if extracted:
+                self.date_done = extracted
+            else:
+                # TODO, should we create "in progress" job results without a date_done value as well?
+                self.date_done = self.date_created + timedelta(minutes=faker.Faker().random_int())
 
 
 class ObjectChangeFactory(BaseModelFactory):
@@ -146,15 +252,21 @@ class ObjectChangeFactory(BaseModelFactory):
         return None
 
     @factory.post_generation
-    def post_generation(self, created, extracted, **kwargs):
+    def object_repr(self, created, extracted, **kwargs):  # pylint: disable=method-hidden
         if created:
             if extracted:
                 self.object_repr = extracted
-                self.time = extracted
             else:
-                self.time = faker.Faker().date_time(tzinfo=timezone.utc)
                 if self.changed_object is None:
                     self.object_repr = faker.Faker().sentence()[:CHANGELOG_MAX_OBJECT_REPR]
+
+    @factory.post_generation
+    def time(self, created, extracted, **kwargs):  # pylint: disable=method-hidden
+        if created:
+            if extracted:
+                self.time = extracted
+            else:
+                self.time = faker.Faker().date_time_between(start_date="-1y", end_date="now", tzinfo=timezone.utc)
 
 
 class RoleFactory(OrganizationalModelFactory):

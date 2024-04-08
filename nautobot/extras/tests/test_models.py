@@ -1785,8 +1785,8 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
         )
         log.save()
 
-        self.assertEqual(JobLogEntry.objects.all().count(), 1)
-        log_object = JobLogEntry.objects.first()
+        self.assertEqual(JobLogEntry.objects.filter(job_result=self.job_result).count(), 1)
+        log_object = JobLogEntry.objects.filter(job_result=self.job_result).first()
         self.assertEqual(log_object.message, log.message)
         self.assertEqual(log_object.log_level, log.log_level)
         self.assertEqual(log_object.grouping, log.grouping)

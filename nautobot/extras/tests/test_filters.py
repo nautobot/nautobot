@@ -1234,15 +1234,33 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
     def test_search(self):
         params = {"q": "run"}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(grouping__icontains="run")
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(
+                # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+                # pylint: disable=unsupported-binary-operation
+                Q(grouping__icontains="run") | Q(message__icontains="run") | Q(log_level__icontains="run")
+                # pylint: enable=unsupported-binary-operation
+            ),
         )
-        params = {"q": "warning log"}
+        params = {"q": "warning"}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(message__icontains="warning log")
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(
+                # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+                # pylint: disable=unsupported-binary-operation
+                Q(grouping__icontains="warning") | Q(message__icontains="warning") | Q(log_level__icontains="warning")
+                # pylint: enable=unsupported-binary-operation
+            ),
         )
         params = {"q": "debug"}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(log_level__icontains="debug")
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(
+                # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+                # pylint: disable=unsupported-binary-operation
+                Q(grouping__icontains="debug") | Q(message__icontains="debug") | Q(log_level__icontains="debug")
+                # pylint: enable=unsupported-binary-operation
+            ),
         )
 
 

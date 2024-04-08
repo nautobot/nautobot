@@ -1,1 +1,1 @@
-Added "Cleanup of ObjectChange records" system Job.
+Added "Logs Cleanup" system Job, which can be run to delete ObjectChange and/or JobResult records older than a given cutoff.

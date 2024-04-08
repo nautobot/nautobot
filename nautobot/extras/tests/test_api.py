@@ -2230,7 +2230,7 @@ class JobLogEntryTest(
         self.add_permissions("extras.view_jobresult")
         url = reverse("extras-api:jobresult-logs", kwargs={"pk": self.job_result.pk})
         response = self.client.get(url, **self.header)
-        self.assertEqual(len(response.json()), JobLogEntry.objects.count())
+        self.assertEqual(len(response.json()), JobLogEntry.objects.filter(job_result=self.job_result).count())
 
 
 class ScheduledJobTest(
