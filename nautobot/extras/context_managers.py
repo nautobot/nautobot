@@ -3,17 +3,11 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from django.contrib.contenttypes.models import ContentType
-from django.db import transaction
 from django.test.client import RequestFactory
 
-from nautobot.core.models import BaseModel
-from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
+from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import ObjectChange
-from nautobot.extras.models.contacts import ContactAssociation
-from nautobot.extras.models.models import Note
-from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.signals import change_context_state
 from nautobot.extras.webhooks import enqueue_webhooks
 
@@ -35,6 +29,10 @@ class ChangeContext:
     def __init__(self, user=None, request=None, context=None, context_detail="", change_id=None):
         self.request = request
         self.user = user
+        self.queued_object_changes = {
+            "create": {},
+            "update": {},
+        }
 
         if self.request is None and self.user is None:
             raise TypeError("Either user or request must be provided")
@@ -58,6 +56,56 @@ class ChangeContext:
         if self.user is not None:
             return self.user
         return self.request.user
+
+    def _object_change_batch(self, key, n):
+        # Return first n keys from the self.queued_object_changes[key] dict
+        keys = []
+        for i, k in enumerate(self.queued_object_changes[key].keys()):
+            if i >= n:
+                return keys
+            keys.append(k)
+        return keys
+
+    def flush_object_changes(self, batch_size=1000, force=False):
+        if force or len(self.queued_object_changes["create"]) + len(self.queued_object_changes["update"]) >= batch_size:
+            self.create_object_changes(batch_size=batch_size)
+            self.update_object_changes(batch_size=batch_size)
+
+    def create_object_changes(self, batch_size=1000):
+        while self.queued_object_changes["create"]:
+            create_object_changes = []
+            for key in self._object_change_batch("create", batch_size):
+                instance = self.queued_object_changes["create"][key]["instance"]
+                action = self.queued_object_changes["create"][key]["action"]
+                user = self.queued_object_changes["create"][key]["user"]
+                objectchange = instance.to_objectchange(action)
+                objectchange.user = user
+                objectchange.request_id = self.change_id
+                objectchange.change_context = self.context
+                objectchange.change_context_detail = self.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+                create_object_changes.append(objectchange)
+                self.queued_object_changes["create"].pop(key, None)
+            ObjectChange.objects.bulk_create(create_object_changes, batch_size=batch_size)
+
+    def update_object_changes(self, batch_size=1000):
+        while self.queued_object_changes["update"]:
+            update_object_changes = []
+            for key in self._object_change_batch("update", batch_size):
+                objectchange = self.queued_object_changes["update"][key]["from"]
+                instance = self.queued_object_changes["update"][key]["instance"]
+                action = self.queued_object_changes["update"][key]["action"]
+
+                # update objectchange `object_data` and `object_data_v2` from provided instance
+                updated_objectchange = instance.to_objectchange(action)
+                objectchange.object_data = updated_objectchange.object_data
+                objectchange.object_data_v2 = updated_objectchange.object_data_v2
+
+                objectchange.action = action
+                update_object_changes.append(objectchange)
+                self.queued_object_changes["update"].pop(key, None)
+            ObjectChange.objects.bulk_update(
+                update_object_changes, fields=["action", "object_data", "object_data_v2"], batch_size=batch_size
+            )
 
 
 class JobChangeContext(ChangeContext):
@@ -98,9 +146,22 @@ def change_logging(change_context):
 
     try:
         yield
+        change_context.flush_object_changes(force=True)
     finally:
         # Reset change logging state. This is necessary to avoid recording any errant
         # changes during test cleanup.
+        # TODO: We may not be able to use this approach because we could become out of sync in this kind of scenario:
+        # with change_logging(change_context):
+        #     with transaction.atomic():
+        #         Namespace.objects.create(name="foo")
+        #         raise Exception("rollback that change!")
+        #
+        #     with transaction.atomic():
+        #         Namespace.objects.create(name="bar")
+        #
+        # The above code would create an object change for Namespace foo even though it was rolled back
+
+        change_context.flush_object_changes(force=True)
         change_context_state.reset(prev_state)
 
 
@@ -159,67 +220,3 @@ def web_request_context(
         for object_change in ObjectChange.objects.filter(request_id=change_context.change_id).iterator():
             enqueue_job_hooks(object_change)
             enqueue_webhooks(object_change)
-
-
-@contextmanager
-def deferred_change_logging_for_bulk_operation(objs, user, action):
-    """
-    Manages bulk object change logging in a performance-efficient way by deferring ChangeLog entry
-    creation until after bulk operations (update/delete) are completed.
-
-    Args:
-        - objs (iterable): Objects being modified.
-        - user (User): User performing the operation.
-        - action (ObjectChangeActionChoices): Type of action.
-    """
-
-    def get_objectchange_for_instance(instance, context_state, action):
-        objectchange = instance.to_objectchange(action)
-        objectchange.user = user
-        objectchange.request_id = context_state.change_id
-        objectchange.change_context = context_state.context
-        objectchange.change_context_detail = context_state.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
-        return objectchange
-
-    with transaction.atomic():
-        # Disable automatic ChangeLog creation on signal to enhance performance.
-        # Multiple object updates lead to excessive database calls.
-        # Instead, we'll manually manage a bulk ChangeLog creation post-update.
-        prev_state = change_context_state.set(None)
-
-        if action == ObjectChangeActionChoices.ACTION_DELETE:
-            associations_to_delete = set()
-            notes_to_delete = set()
-            objectchange_entries = []
-            for instance in objs:
-                if isinstance(instance, BaseModel):
-                    associations = ContactAssociation.objects.filter(
-                        associated_object_type=ContentType.objects.get_for_model(type(instance)),
-                        associated_object_id=instance.pk,
-                    ).values_list("pk", flat=True)
-                    associations_to_delete.update(associations)
-
-                if hasattr(instance, "notes") and isinstance(instance.notes, NotesQuerySet):
-                    notes = instance.notes.values_list("pk", flat=True)
-                    notes_to_delete.update(notes)
-                if hasattr(instance, "to_objectchange"):
-                    objectchange = get_objectchange_for_instance(instance, prev_state.old_value, action)
-                    objectchange_entries.append(objectchange)
-            if associations_to_delete:
-                ContactAssociation.objects.filter(pk__in=associations_to_delete).delete()
-            if notes_to_delete:
-                Note.objects.filter(pk__in=notes_to_delete).delete()
-            if objectchange_entries:
-                ObjectChange.objects.bulk_create(objectchange_entries, batch_size=1000)
-        try:
-            yield
-            if action == ObjectChangeActionChoices.ACTION_UPDATE and hasattr(objs[0], "to_objectchange"):
-                objectchange_entries = []
-                for instance in objs:
-                    objectchange = get_objectchange_for_instance(instance, prev_state.old_value, action)
-                    objectchange_entries.append(objectchange)
-                ObjectChange.objects.bulk_create(objectchange_entries, batch_size=1000)
-        except Exception as err:
-            raise err
-        finally:
-            change_context_state.reset(prev_state)

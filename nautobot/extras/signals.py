@@ -103,7 +103,9 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
     if raw:
         return
 
-    if change_context_state.get() is None:
+    change_context = change_context_state.get()
+
+    if change_context is None:
         return
 
     # Determine the type of change being made
@@ -119,39 +121,45 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
-        user = _get_user_if_authenticated(change_context_state.get().get_user(), instance)
+        user = _get_user_if_authenticated(change_context.get_user(), instance)
         # save a copy of this instance's field cache so it can be restored after serialization
         # to prevent unexpected behavior when chaining multiple signal handlers
         original_cache = instance._state.fields_cache.copy()
 
         # If a change already exists for this change_id, user, and object, update it instead of creating a new one.
         # If the object was deleted then recreated with the same pk (don't do this), change the action to update.
+        changed_object_type = ContentType.objects.get_for_model(instance)
+        changed_object_id = instance.id
+        unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}__{user.pk}"
         related_changes = ObjectChange.objects.filter(
-            changed_object_type=ContentType.objects.get_for_model(instance),
-            changed_object_id=instance.pk,
+            changed_object_type=changed_object_type,
+            changed_object_id=changed_object_id,
             user=user,
-            request_id=change_context_state.get().change_id,
+            request_id=change_context.change_id,
         )
-        objectchange = instance.to_objectchange(action)
-        if related_changes.exists():
+        if unique_object_change_id not in change_context.queued_object_changes["update"] and related_changes.exists():
             most_recent_change = related_changes.order_by("-time").first()
+            change_context.queued_object_changes["update"][unique_object_change_id] = {
+                "from": most_recent_change,
+                "action": action,
+                "instance": instance,
+            }
             if most_recent_change.action == ObjectChangeActionChoices.ACTION_DELETE:
-                most_recent_change.action = ObjectChangeActionChoices.ACTION_UPDATE
-            most_recent_change.object_data = objectchange.object_data
-            most_recent_change.object_data_v2 = objectchange.object_data_v2
-            most_recent_change.save()
-            objectchange = most_recent_change
+                change_context.queued_object_changes["update"][unique_object_change_id][
+                    "action"
+                ] = ObjectChangeActionChoices.ACTION_UPDATE
         else:
-            objectchange.user = user
-            objectchange.request_id = change_context_state.get().change_id
-            objectchange.change_context = change_context_state.get().context
-            objectchange.change_context_detail = change_context_state.get().context_detail[
-                :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
-            ]
-            objectchange.save()
+            change_context.queued_object_changes["create"][unique_object_change_id] = {
+                "action": action,
+                "instance": instance,
+                "user": user,
+            }
 
         # restore field cache
         instance._state.fields_cache = original_cache
+
+    # Flush object changes from queue if necessary
+    change_context.flush_object_changes()
 
     # Increment metric counters
     if action == ObjectChangeActionChoices.ACTION_CREATE:

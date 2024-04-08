@@ -109,7 +109,7 @@ def get_job_class_and_model(module, name, source="local"):
 
 
 @tag("unit")
-class TransactionTestCase(_TransactionTestCase, NautobotTestCaseMixin):
+class TransactionTestCase(NautobotTestCaseMixin, _TransactionTestCase):
     """
     Base test case class using the TransactionTestCase for unit testing
     """

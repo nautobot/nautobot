@@ -45,8 +45,6 @@ from nautobot.core.views.utils import (
     import_csv_helper,
     prepare_cloned_fields,
 )
-from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.models import ExportTemplate
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
@@ -848,9 +846,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         queryset = queryset.filter(pk__in=pk_list)
 
         try:
-            with deferred_change_logging_for_bulk_operation(
-                objs=queryset, user=request.user, action=ObjectChangeActionChoices.ACTION_DELETE
-            ):
+            with transaction.atomic():
                 deleted_count = queryset.delete()[1][model._meta.label]
                 msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
                 self.logger.info(msg)
@@ -983,12 +979,9 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
             if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
         ]
         nullified_fields = request.POST.getlist("_nullify")
-        queryset_to_update = queryset.filter(pk__in=form.cleaned_data["pk"])
-        with deferred_change_logging_for_bulk_operation(
-            objs=queryset_to_update, user=request.user, action=ObjectChangeActionChoices.ACTION_UPDATE
-        ):
+        with transaction.atomic():
             updated_objects = []
-            for obj in queryset_to_update:
+            for obj in queryset.filter(pk__in=form.cleaned_data["pk"]):
                 self.obj = obj
                 # Update standard fields. If a field is listed in _nullify, delete its value.
                 for name in standard_fields:

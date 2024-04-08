@@ -54,8 +54,6 @@ from nautobot.core.views.utils import (
     import_csv_helper,
     prepare_cloned_fields,
 )
-from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.models import ContactAssociation, ExportTemplate
 from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import remove_prefix_from_cf_key
@@ -992,12 +990,9 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 nullified_fields = request.POST.getlist("_nullify")
 
                 try:
-                    queryset = self.queryset.filter(pk__in=form.cleaned_data["pk"])
-                    with deferred_change_logging_for_bulk_operation(
-                        objs=queryset, user=request.user, action=ObjectChangeActionChoices.ACTION_UPDATE
-                    ):
+                    with transaction.atomic():
                         updated_objects = []
-                        for obj in queryset:
+                        for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
                             obj = self.alter_obj(obj, request, [], kwargs)
 
                             # Update standard fields. If a field is listed in _nullify, delete its value.
@@ -1056,10 +1051,11 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                         ):
                             raise ObjectDoesNotExist
 
-                        if updated_objects:
-                            msg = f"Updated {len(updated_objects)} {model._meta.verbose_name_plural}"
-                            logger.info(msg)
-                            messages.success(self.request, msg)
+                    if updated_objects:
+                        msg = f"Updated {len(updated_objects)} {model._meta.verbose_name_plural}"
+                        logger.info(msg)
+                        messages.success(self.request, msg)
+
                     return redirect(self.get_return_url(request))
 
                 except ValidationError as e:
@@ -1258,15 +1254,13 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                 self.perform_pre_delete(request, queryset)
                 try:
-                    with deferred_change_logging_for_bulk_operation(
-                        objs=queryset, user=request.user, action=ObjectChangeActionChoices.ACTION_DELETE
-                    ):
-                        _, deleted_info = queryset.delete()
-                        deleted_count = deleted_info[model._meta.label]
+                    _, deleted_info = queryset.delete()
+                    deleted_count = deleted_info[model._meta.label]
                 except ProtectedError as e:
                     logger.info("Caught ProtectedError while attempting to delete objects")
                     handle_protectederror(queryset, request, e)
                     return redirect(self.get_return_url(request))
+
                 msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
                 logger.info(msg)
                 messages.success(request, msg)
