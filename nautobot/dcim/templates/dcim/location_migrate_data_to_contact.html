@@ -1,0 +1,102 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+{% load helpers %}
+
+{% block title %}Migrating contact data from {{ obj_type }} {{ obj }}{% endblock %}
+{% block form %}
+    <div id="assign" class="tabcontent">
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>Contact Data</strong></div>
+            <div class="panel-body">
+                {% render_field form.action %}
+                {% render_field form.location %}
+                <div class="form-group">
+                    <label class="col-md-3 control-label required">Source Location "Contact Name"</label>
+                    <div class="col-md-9">
+                        <p class="form-control-static">{{ obj.contact_name | placeholder}}</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-md-3 control-label required">Source Location "Contact Phone"</label>
+                    <div class="col-md-9">
+                        <p class="form-control-static">{{ obj.contact_phone | placeholder}}</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-md-3 control-label required">Source Location "Contact Email"</label>
+                    <div class="col-md-9">
+                        <p class="form-control-static">{{ obj.contact_email | placeholder}}</p>
+                    </div>
+                </div>
+                {% render_field form.name %}
+                {% render_field form.phone %}
+                {% render_field form.email %}
+                {% render_field form.contact %}
+                {% render_field form.team %}
+                {% render_field form.role %}
+                {% render_field form.status %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block buttons %}
+    <button type="submit" name="_create" class="btn btn-primary">Assign</button>
+    <a href="{% url 'dcim:location' pk=obj.pk %}" class="btn btn-default">Cancel</a>
+{% endblock %}
+
+{% block javascript %}
+<script>
+
+    // action drop down toggle
+    const action = document.getElementById("id_action");
+    function toggle_form_fields() {
+        const action_option = action.value;
+        document.getElementById("id_location").disabled = true;
+        const name = document.getElementById("id_name");
+        const name_label = document.querySelector("label[for=id_name]");
+        const phone = document.getElementById("id_phone");
+        const email = document.getElementById("id_email");
+        const similar_contacts_label = document.querySelector("label[for=id_contact]");
+        const similar_contacts = document.getElementById("id_contact");
+        const similar_teams_label = document.querySelector("label[for=id_team]");
+        const similar_teams = document.getElementById("id_team");
+
+        // Toggle these form fields when the action matches
+        similar_contacts.toggleAttribute("required", action_option=="associate existing contact");
+        similar_contacts_label.classList.toggle("required", action_option=="associate existing contact")
+        similar_teams.toggleAttribute("required", action_option=="associate existing team");
+        similar_teams_label.classList.toggle("required", action_option=="associate existing team")
+        name.toggleAttribute("disabled", action_option.match(/associate existing/));
+        name.toggleAttribute("required", action_option.match(/create and assign/));
+        name_label.classList.toggle("required", action_option.match(/create and assign/));
+        phone.toggleAttribute("disabled", action_option.match(/associate existing/));
+        email.toggleAttribute("disabled", action_option.match(/associate existing/));
+
+        // Show and hide form fields and toggle form field labels
+        if (action_option === "associate existing contact"){
+            similar_contacts.parentElement.parentElement.style.display = "block";
+            similar_teams.parentElement.parentElement.style.display = "none";
+            name.parentElement.parentElement.style.display = "none";
+            phone.parentElement.parentElement.style.display = "none";
+            email.parentElement.parentElement.style.display = "none";
+        } else if (action_option === "associate existing team"){
+            similar_teams.parentElement.parentElement.style.display = "block";
+            similar_contacts.parentElement.parentElement.style.display = "none";
+            name.parentElement.parentElement.style.display = "none";
+            phone.parentElement.parentElement.style.display = "none";
+            email.parentElement.parentElement.style.display = "none";
+        } else {
+            similar_contacts.parentElement.parentElement.style.display = "none";
+            similar_contacts.removeAttribute("required")
+            similar_teams.parentElement.parentElement.style.display = "none";
+            name.parentElement.parentElement.style.display = "block";
+            phone.parentElement.parentElement.style.display = "block";
+            email.parentElement.parentElement.style.display = "block";
+        }
+
+    }
+    window.onload = toggle_form_fields
+    action.onchange = toggle_form_fields
+</script>
+{% endblock %}
