@@ -1,4 +1,5 @@
 """Nautobot development configuration file."""
+
 import os
 
 from nautobot.core.settings import *  # noqa: F403  # undefined-local-with-import-star
