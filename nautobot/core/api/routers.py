@@ -27,6 +27,31 @@ class OrderedDefaultRouter(DefaultRouter):
             }
         )
 
+    def register(self, prefix, viewset, basename=None):
+        """
+        Override DRF's BaseRouter.register() to bypass an unnecessary restriction added in version 3.15.0.
+
+        (Reference: https://github.com/encode/django-rest-framework/pull/8438)
+        """
+        if basename is None:
+            basename = self.get_default_basename(viewset)
+
+        # DRF:
+        # if self.is_already_registered(basename):
+        #     msg = (f'Router with basename "{basename}" is already registered. '
+        #            f'Please provide a unique basename for viewset "{viewset}"')
+        #     raise ImproperlyConfigured(msg)
+        #
+        # We bypass this because we have at least one use case (/api/extras/jobs/) where we are *intentionally*
+        # registering two viewsets with the same basename, but have carefully defined them so as not to conflict.
+
+        # resuming standard DRF code...
+        self.registry.append((prefix, viewset, basename))
+
+        # invalidate the urls cache
+        if hasattr(self, "_urls"):
+            del self._urls
+
     def get_api_root_view(self, api_urls=None):
         """
         Wrap DRF's DefaultRouter to return an alphabetized list of endpoints.
