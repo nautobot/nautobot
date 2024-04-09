@@ -415,6 +415,11 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #
 # METRICS_AUTHENTICATED = is_truthy(os.getenv("NAUTOBOT_METRICS_AUTHENTICATED", "False"))
 
+# Disable app metrics for specific apps
+#
+# if "NAUTOBOT_METRICS_DISABLED_APPS" in os.environ and os.environ["NAUTOBOT_METRICS_DISABLED_APPS"] != "":
+#     METRICS_DISABLED_APPS = os.getenv("NAUTOBOT_METRICS_DISABLED_APPS", "").split(",")
+
 # Credentials that Nautobot will uses to authenticate to devices when connecting via NAPALM.
 #
 # NAPALM_USERNAME = os.getenv("NAUTOBOT_NAPALM_USERNAME", "")
