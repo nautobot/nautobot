@@ -1537,8 +1537,10 @@ class CustomFieldFilterTest(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        CustomFieldChoice.objects.create(custom_field=cf, value="Foo")
-        CustomFieldChoice.objects.create(custom_field=cf, value="Bar")
+        cls.select_choices = (
+            CustomFieldChoice.objects.create(custom_field=cf, value="Foo"),
+            CustomFieldChoice.objects.create(custom_field=cf, value="Bar"),
+        )
 
         # Multi-select filtering
         cf = CustomField(
@@ -1548,8 +1550,11 @@ class CustomFieldFilterTest(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        CustomFieldChoice.objects.create(custom_field=cf, value="Foo")
-        CustomFieldChoice.objects.create(custom_field=cf, value="Bar")
+        cls.multiselect_choices = (
+            CustomFieldChoice.objects.create(custom_field=cf, value="Foo"),
+            CustomFieldChoice.objects.create(custom_field=cf, value="Bar"),
+        )
+
         cls.location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
         Location.objects.create(
@@ -1844,6 +1849,10 @@ class CustomFieldFilterTest(TestCase):
             self.filterset({"cf_cf8": ["Foo", "AR"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf8__in=["Foo", "AR"]),
         )
+        self.assertQuerysetEqualAndNotEmpty(  # https://github.com/nautobot/nautobot/issues/5009
+            self.filterset({"cf_cf8": [str(choice.pk) for choice in self.select_choices]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf8__in=[choice.value for choice in self.select_choices]),
+        )
         self.assertQuerysetEqual(
             self.filterset({"cf_cf8__n": ["Foo"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf8="Foo")
@@ -1912,6 +1921,10 @@ class CustomFieldFilterTest(TestCase):
         self.assertQuerysetEqual(
             self.filterset({"cf_cf9": "Bar"}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf9__contains="Bar"),
+        )
+        self.assertQuerysetEqualAndNotEmpty(  # https://github.com/nautobot/nautobot/issues/5009
+            self.filterset({"cf_cf9": str(self.multiselect_choices[0].pk)}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf9__contains=self.multiselect_choices[0].value),
         )
 
 
