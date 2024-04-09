@@ -1,4 +1,5 @@
 """Schema module for GraphQL."""
+
 from collections import OrderedDict
 import logging
 
