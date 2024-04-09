@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.urls import reverse
@@ -419,16 +417,12 @@ class ChangeLogAPITest(APITestCase):
         new_location_response = self.client.post(locations_url, location_payload, format="json", **self.header)
         self.assertHttpStatus(new_location_response, status.HTTP_201_CREATED)
 
-        gql_payload = f'{{query: object_changes(time__lte: "{time}") {{ object_repr time }} }}'
+        gql_payload = f'{{query: object_changes(time__lte: "{time}") {{ object_repr }} }}'
         resp = execute_query(gql_payload, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
         self.assertIsInstance(resp["data"].get("query"), list)
-        # First (most recent) ObjectChange should *not* be the create record.
-        self.assertNotIn(location_payload["name"], resp["data"]["query"][0].get("object_repr"))
-        # And it should come before the cutoff. Note that we have to convert the time to UTC to allow comparison.
-        self.assertLess(
-            datetime.fromisoformat(resp["data"]["query"][0].get("time")), datetime.fromisoformat(f"{time}+00:00")
-        )
+        # ObjectChangeFactory creates records in the last year only; there shouldn't be any in this filtered response.
+        self.assertEqual(len(resp["data"].get("query")), 0)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_graphql_object_gte_filter(self):
