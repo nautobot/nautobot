@@ -1066,18 +1066,18 @@ waitress = ["waitress"]
 
 [[package]]
 name = "djangorestframework"
-version = "3.14.0"
+version = "3.15.1"
 description = "Web APIs for Django, made easy."
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "djangorestframework-3.14.0-py3-none-any.whl", hash = "sha256:eb63f58c9f218e1a7d064d17a70751f528ed4e1d35547fdade9aaf4cd103fd08"},
-    {file = "djangorestframework-3.14.0.tar.gz", hash = "sha256:579a333e6256b09489cbe0a067e66abe55c6595d8926be6b99423786334350c8"},
+    {file = "djangorestframework-3.15.1-py3-none-any.whl", hash = "sha256:3ccc0475bce968608cf30d07fb17d8e52d1d7fc8bfe779c905463200750cbca6"},
+    {file = "djangorestframework-3.15.1.tar.gz", hash = "sha256:f88fad74183dfc7144b2756d0d2ac716ea5b4c7c9840995ac3bfd8ec034333c1"},
 ]
 
 [package.dependencies]
+"backports.zoneinfo" = {version = "*", markers = "python_version < \"3.9\""}
 django = ">=3.0"
-pytz = "*"
 
 [[package]]
 name = "drf-react-template-framework"
@@ -4010,4 +4010,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "aa7fe7f85992706b73efb70c04207481055d031e1d78a2d6c3100cba85172dfc"
+content-hash = "696a1070c64d48e829d98c3fcf7bbc9c7f3ceb83f1a69ecfb9e8258c47495cd8"
