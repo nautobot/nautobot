@@ -4,6 +4,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models.signals import pre_delete
 from django.utils import timezone
 
+from nautobot.core.choices import ChoiceSet
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.jobs import IntegerVar, Job, MultiChoiceVar
 from nautobot.extras.models import JobResult, ObjectChange
@@ -12,19 +13,23 @@ from nautobot.extras.signals import _handle_deleted_object
 name = "System Jobs"
 
 
-CLEANUP_TYPES = (
-    ("ObjectChange", "Change logs"),
-    ("JobResult", "Job results"),
-)
+class CleanupTypes(ChoiceSet):
+    JOB_RESULT = "extras.JobResult"
+    OBJECT_CHANGE = "extras.ObjectChange"
+
+    CHOICES = (
+        (JOB_RESULT, "Job results"),
+        (OBJECT_CHANGE, "Change logs"),
+    )
 
 
 class LogsCleanup(Job):
     """
-    System job to clean up ObjectChange and/or JobResult and JobLogEntry records older than a given age.
+    System job to clean up ObjectChange and/or JobResult (and JobLogEntry) records older than a given age.
     """
 
     cleanup_types = MultiChoiceVar(
-        choices=CLEANUP_TYPES,
+        choices=CleanupTypes.CHOICES,
         required=True,
     )
 
@@ -52,11 +57,11 @@ class LogsCleanup(Job):
                 )
                 return 0
 
-        if "JobResult" in cleanup_types and not self.user.has_perm("extras.delete_jobresult"):
+        if CleanupTypes.JOB_RESULT in cleanup_types and not self.user.has_perm("extras.delete_jobresult"):
             self.logger.error('User "%s" does not have permission to delete JobResult records', self.user)
             raise PermissionDenied("User does not have delete permissions for JobResult records")
 
-        if "ObjectChange" in cleanup_types and not self.user.has_perm("extras.delete_objectchange"):
+        if CleanupTypes.OBJECT_CHANGE in cleanup_types and not self.user.has_perm("extras.delete_objectchange"):
             self.logger.error('User "%s" does not have permission to delete ObjectChange records', self.user)
             raise PermissionDenied("User does not have delete permissions for ObjectChange records")
 
@@ -69,13 +74,7 @@ class LogsCleanup(Job):
             cutoff = timezone.now() - timedelta(days=max_age)
             result = {}
 
-            if "ObjectChange" in cleanup_types:
-                self.logger.info("Deleting ObjectChange records prior to %s", cutoff)
-                deleted_count, _ = ObjectChange.objects.restrict(self.user, "delete").filter(time__lt=cutoff).delete()
-                self.logger.info("Deleted %d ObjectChange records", deleted_count)
-                result["extras.ObjectChange"] = deleted_count
-
-            if "JobResult" in cleanup_types:
+            if CleanupTypes.JOB_RESULT in cleanup_types:
                 self.logger.info("Deleting JobResult records prior to %s", cutoff)
                 _, deleted_dict = JobResult.objects.restrict(self.user, "delete").filter(date_done__lt=cutoff).delete()
                 result.setdefault("extras.JobResult", 0)
@@ -86,6 +85,12 @@ class LogsCleanup(Job):
                     result["extras.JobResult"],
                     result["extras.JobLogEntry"],
                 )
+
+            if CleanupTypes.OBJECT_CHANGE in cleanup_types:
+                self.logger.info("Deleting ObjectChange records prior to %s", cutoff)
+                deleted_count, _ = ObjectChange.objects.restrict(self.user, "delete").filter(time__lt=cutoff).delete()
+                self.logger.info("Deleted %d ObjectChange records", deleted_count)
+                result["extras.ObjectChange"] = deleted_count
 
             return result
         finally:

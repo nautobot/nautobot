@@ -6,6 +6,7 @@ from django.core.cache import cache
 from django.utils import timezone
 import yaml
 
+from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.dcim.models import DeviceType, Manufacturer
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
@@ -288,7 +289,7 @@ class LogsCleanupTestCase(TransactionTestCase):
             "nautobot.core.jobs.cleanup",
             "LogsCleanup",
             username=self.user.username,
-            cleanup_types=["JobResult"],
+            cleanup_types=[CleanupTypes.JOB_RESULT],
             max_age=0,
         )
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
@@ -302,7 +303,7 @@ class LogsCleanupTestCase(TransactionTestCase):
             "nautobot.core.jobs.cleanup",
             "LogsCleanup",
             username=self.user.username,
-            cleanup_types=["ObjectChange"],
+            cleanup_types=[CleanupTypes.OBJECT_CHANGE],
             max_age=0,
         )
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
@@ -335,7 +336,7 @@ class LogsCleanupTestCase(TransactionTestCase):
             "nautobot.core.jobs.cleanup",
             "LogsCleanup",
             username=self.user.username,
-            cleanup_types=["JobResult", "ObjectChange"],
+            cleanup_types=[CleanupTypes.JOB_RESULT, CleanupTypes.OBJECT_CHANGE],
             max_age=0,
         )
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
@@ -354,7 +355,7 @@ class LogsCleanupTestCase(TransactionTestCase):
         create_job_result_and_run_job(
             "nautobot.core.jobs.cleanup",
             "LogsCleanup",
-            cleanup_types=["JobResult"],
+            cleanup_types=[CleanupTypes.JOB_RESULT],
             max_age=60,
         )
         self.assertFalse(JobResult.objects.filter(date_done__lt=cutoff).exists())
@@ -368,7 +369,7 @@ class LogsCleanupTestCase(TransactionTestCase):
         create_job_result_and_run_job(
             "nautobot.core.jobs.cleanup",
             "LogsCleanup",
-            cleanup_types=["ObjectChange"],
+            cleanup_types=[CleanupTypes.OBJECT_CHANGE],
             max_age=60,
         )
         self.assertTrue(JobResult.objects.filter(date_done__lt=cutoff).exists())
