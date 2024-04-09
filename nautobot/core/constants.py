@@ -109,6 +109,3 @@ NATURAL_SLUG_SEPARATOR = "_"
 CONFIG_SETTING_SEPARATOR = ","
 
 CHARFIELD_MAX_LENGTH = 255
-
-# Models that cannot be associated with a contact or a team
-NON_CONTACT_ASSOCIABLE_MODELS = ["extras.contact", "extras.team"]
