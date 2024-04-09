@@ -242,9 +242,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
             context["created_by"] = created_by
             context["last_updated_by"] = last_updated_by
-            associated_contacts = instance.associated_contacts.restrict(request.user, "view").order_by("role__name")
             if instance.is_contact_associable_model:
-                context["associated_contacts_table"] = AssociatedContactsTable(data=associated_contacts)
+                paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+                associations = instance.associated_contacts.restrict(request.user, "view").order_by("role__name")
+                associations_table = AssociatedContactsTable(associations, orderable=False)
+                RequestConfig(request, paginate).configure(associations_table)
+                associations_table.columns.show("pk")
+                context["associated_contacts_table"] = associations_table
             else:
                 context["associated_contacts_table"] = None
             context.update(view.get_extra_context(request, instance))
