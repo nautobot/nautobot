@@ -77,7 +77,6 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
 
     queryset = None
     template_name = None
-    is_contact_associatable_model = True
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -136,7 +135,6 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             content_type = ContentType.objects.get_for_model(self.queryset.model)
             context = {
                 "object": instance,
-                "is_contact_associatable_model": self.is_contact_associatable_model,
                 "content_type": content_type,
                 "verbose_name": self.queryset.model._meta.verbose_name,
                 "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
@@ -144,7 +142,7 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                 "last_updated_by": last_updated_by,
                 **self.get_extra_context(request, instance),
             }
-            if self.is_contact_associatable_model:
+            if instance.is_contact_associable_model:
                 paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
                 associations = (
                     ContactAssociation.objects.filter(

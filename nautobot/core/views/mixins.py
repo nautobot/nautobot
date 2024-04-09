@@ -226,7 +226,6 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     create_form_class = None
     update_form_class = None
     parser_classes = [FormParser, MultiPartParser]
-    is_contact_associatable_model = True
     queryset = None
     # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
     serializer_class = None

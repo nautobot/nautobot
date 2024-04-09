@@ -10,6 +10,7 @@ from django.urls import NoReverseMatch, reverse
 from django.utils.encoding import is_protected_type
 from django.utils.functional import classproperty
 
+from nautobot.core.constants import NON_CONTACT_ASSOCIABLE_MODELS
 from nautobot.core.models.managers import BaseManager
 from nautobot.core.models.querysets import CompositeKeyQuerySetMixin, RestrictedQuerySet
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
@@ -88,6 +89,13 @@ class BaseModel(models.Model):
         True if the record exists in the database, False if it does not.
         """
         return not self._state.adding
+
+    @property
+    def is_contact_associable_model(self):
+        """
+        True if the record can be associated with a contact/team, False if it cannot.
+        """
+        return f"{self._meta.app_label}.{self._meta.model_name}" not in NON_CONTACT_ASSOCIABLE_MODELS
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def _content_type(cls):  # pylint: disable=no-self-argument
