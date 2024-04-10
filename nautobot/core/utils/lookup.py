@@ -335,6 +335,8 @@ def get_url_for_url_pattern(url_pattern):
     url = re.sub(r"<str:\w+>", "string", url)
     # "/dcim/locations/<uuid:pk>/"
     url = re.sub(r"<uuid:\w+>", "00000000-0000-0000-0000-000000000000", url)
+    # "/api/circuits/<drf_format_suffix:format>"
+    url = re.sub(r"<drf_format_suffix:\w+>", ".json", url)
     # tokens in regexp-style router urls, including REST and NautobotUIViewSet:
     # "/extras/^external-integrations/(?P<pk>[^/.]+)/$"
     # "/api/virtualization/^interfaces/(?P<pk>[^/.]+)/$"
