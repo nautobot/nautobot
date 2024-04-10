@@ -1,0 +1,1 @@
+Removed `nautobot-server pylint` management command from the `example_app`, as pylint can be invoked directly with an appropriate `--init-hook` instead.

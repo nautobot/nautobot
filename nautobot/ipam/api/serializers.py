@@ -495,6 +495,7 @@ class ServiceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = Service
         fields = "__all__"
+        validators = []
         extra_kwargs = {
             "device": {"help_text": "Required if no virtual_machine is specified"},
             "virtual_machine": {"help_text": "Required if no device is specified"},
@@ -504,3 +505,12 @@ class ServiceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         # `device`.
         # list_display_fields = ["name", "parent", "protocol", "ports", "description"]
         list_display_fields = ["name", "device", "protocol", "ports", "description"]
+
+    def validate(self, data):
+        if data.get("device"):
+            validator = UniqueTogetherValidator(queryset=Service.objects.all(), fields=("name", "device"))
+            validator(data, self)
+        if data.get("virtual_machine"):
+            validator = UniqueTogetherValidator(queryset=Service.objects.all(), fields=("name", "virtual_machine"))
+            validator(data, self)
+        return super().validate(data)

@@ -10,6 +10,7 @@ import django.forms
 from django.utils.safestring import mark_safe
 
 from nautobot import __version__
+from nautobot.core.constants import CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR
 from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
 
 #
@@ -152,6 +153,9 @@ if "NAUTOBOT_MAX_PAGE_SIZE" in os.environ and os.environ["NAUTOBOT_MAX_PAGE_SIZE
 # Metrics
 METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_METRICS_ENABLED", "False"))
 METRICS_AUTHENTICATED = is_truthy(os.getenv("NAUTOBOT_METRICS_AUTHENTICATED", "False"))
+METRICS_DISABLED_APPS = []
+if "NAUTOBOT_METRICS_DISABLED_APPS" in os.environ and os.environ["NAUTOBOT_METRICS_DISABLED_APPS"] != "":
+    METRICS_DISABLED_APPS = os.getenv("NAUTOBOT_METRICS_DISABLED_APPS", "").split(_CONFIG_SETTING_SEPARATOR)
 
 # Napalm
 NAPALM_ARGS = {}
@@ -166,7 +170,7 @@ if "NAUTOBOT_PAGINATE_COUNT" in os.environ and os.environ["NAUTOBOT_PAGINATE_COU
 # The options displayed in the web interface dropdown to limit the number of objects per page.
 # Default is [25, 50, 100, 250, 500, 1000]
 if "NAUTOBOT_PER_PAGE_DEFAULTS" in os.environ and os.environ["NAUTOBOT_PER_PAGE_DEFAULTS"] != "":
-    PER_PAGE_DEFAULTS = [int(val) for val in os.environ["NAUTOBOT_PER_PAGE_DEFAULTS"].split(",")]
+    PER_PAGE_DEFAULTS = [int(val) for val in os.environ["NAUTOBOT_PER_PAGE_DEFAULTS"].split(_CONFIG_SETTING_SEPARATOR)]
 
 # Plugins
 PLUGINS = []
@@ -930,7 +934,7 @@ CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", str(10
 CELERY_WORKER_PROMETHEUS_PORTS = []
 if os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS"):
     CELERY_WORKER_PROMETHEUS_PORTS = [
-        int(value) for value in os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS").split(",")
+        int(value) for value in os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS").split(_CONFIG_SETTING_SEPARATOR)
     ]
 
 # These settings define the custom nautobot serialization encoding as an accepted data encoding format

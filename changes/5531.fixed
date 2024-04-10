@@ -1,0 +1,1 @@
+Re-added `nautobot.setup()` function mistakenly removed in 2.2.0.
