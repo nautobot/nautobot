@@ -10,24 +10,18 @@ from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
 
-from nautobot.circuits.apps import CircuitsConfig
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
-from nautobot.dcim.apps import DCIMConfig
 from nautobot.dcim.models.locations import Location
-from nautobot.extras.apps import ExtrasConfig
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import FileProxy
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
-from nautobot.ipam.apps import IPAMConfig
-from nautobot.tenancy.apps import TenancyConfig
 from nautobot.users.models import ObjectPermission
-from nautobot.virtualization.apps import VirtualizationConfig
 
 
 class GetReturnURLMixinTestCase(TestCase):
@@ -80,24 +74,34 @@ class HomeViewTestCase(TestCase):
         self.assertHttpStatus(response, 200)
 
     def test_appropriate_models_included_in_global_search(self):
+        # Gather core app configs
+        circuit_config = apps.get_app_config("circuits")
+        dcim_config = apps.get_app_config("dcim")
+        extras_config = apps.get_app_config("extras")
+        ipam_config = apps.get_app_config("ipam")
+        tenancy_config = apps.get_app_config("tenancy")
+        virtualization_config = apps.get_app_config("virtualization")
         # Check for existing models in core apps and example app
         existing_models = []
-        core_app_list = ["circuits", "dcim", "extras", "ipam", "tenancy", "virtualization"]
-        for model in apps.get_models():
-            if model._meta.app_label in core_app_list:
-                existing_models.append(f"{model._meta.model_name}")
+        existing_models += circuit_config.get_models()
+        existing_models += dcim_config.get_models()
+        existing_models += extras_config.get_models()
+        existing_models += ipam_config.get_models()
+        existing_models += tenancy_config.get_models()
+        existing_models += virtualization_config.get_models()
+        existing_models = [model._meta.model_name for model in existing_models]
         existing_models.sort()
         # Remove those models that are not searchable
         existing_models = [model for model in existing_models if model not in GLOBAL_SEARCH_EXCLUDE_LIST]
 
         # Gather searchable models currently configured in nautobot core
         global_searchable_models = []
-        global_searchable_models += CircuitsConfig.searchable_models
-        global_searchable_models += DCIMConfig.searchable_models
-        global_searchable_models += ExtrasConfig.searchable_models
-        global_searchable_models += IPAMConfig.searchable_models
-        global_searchable_models += TenancyConfig.searchable_models
-        global_searchable_models += VirtualizationConfig.searchable_models
+        global_searchable_models += circuit_config.searchable_models
+        global_searchable_models += dcim_config.searchable_models
+        global_searchable_models += extras_config.searchable_models
+        global_searchable_models += ipam_config.searchable_models
+        global_searchable_models += tenancy_config.searchable_models
+        global_searchable_models += virtualization_config.searchable_models
         global_searchable_models.sort()
 
         # See if there are any models that are missing from global search
