@@ -8,8 +8,9 @@ from nautobot.core.filters import (
     MultiValueNumberFilter,
 )
 from nautobot.core.forms import NullableDateField
-from nautobot.core.forms.widgets import StaticSelect2Multiple
+from nautobot.core.utils.data import is_uuid
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
+from nautobot.extras.models import CustomFieldChoice
 
 EXACT_FILTER_TYPES = (
     CustomFieldTypeChoices.TYPE_BOOLEAN,
@@ -71,19 +72,23 @@ class CustomFieldJSONFilter(CustomFieldFilterMixin, django_filters.Filter):
     """Custom field single value filter for backwards compatibility"""
 
 
-class CustomFieldMultiSelectFilter(CustomFieldFilterMixin, MultiValueCharFilter):
-    """This provides functionality for filtering custom fields with multiple  select type"""
+class CustomFieldSelectFilter(CustomFieldFilterMixin, MultiValueCharFilter):
+    """Filter for custom fields of type TYPE_SELECT."""
+
+    def get_filter_predicate(self, v):
+        if is_uuid(v):
+            try:
+                v = self.custom_field.custom_field_choices.get(pk=v).value
+            except CustomFieldChoice.DoesNotExist:
+                v = ""
+        return super().get_filter_predicate(v)
+
+
+class CustomFieldMultiSelectFilter(CustomFieldSelectFilter):
+    """Filter for custom fields of type TYPE_MULTISELECT."""
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("lookup_expr", "contains")
-        super().__init__(*args, **kwargs)
-
-
-class CustomFieldMultiValueSelectFilter(CustomFieldFilterMixin, django_filters.MultipleChoiceFilter):
-    """This provides functionality for filtering custom fields with select type"""
-
-    def __init__(self, *args, **kwargs):
-        self.field_class.widget = StaticSelect2Multiple
         super().__init__(*args, **kwargs)
 
 
