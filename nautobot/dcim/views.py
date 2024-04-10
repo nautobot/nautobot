@@ -2980,10 +2980,10 @@ class DeviceFamilyUIViewSet(NautobotUIViewSet):
             context["device_type_table"] = device_type_table
 
             total_devices = 0
-            for device_type in device_types: 
-                total_devices += device_type.device_count 
-            context['total_devices'] = total_devices 
-            
+            for device_type in device_types:
+                total_devices += device_type.device_count
+            context['total_devices'] = total_devices
+
         return context
 
 
