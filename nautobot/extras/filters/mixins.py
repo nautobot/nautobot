@@ -5,7 +5,7 @@ from django_filters.utils import verbose_lookup_expr
 
 from nautobot.core.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
-    FILTER_LIST_BASED_LOOKUP_MAP,
+    FILTER_NEGATION_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
 )
 from nautobot.core.filters import (
@@ -95,7 +95,7 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
         if issubclass(filter_type, (CustomFieldMultiValueNumberFilter, CustomFieldMultiValueDateFilter)):
             return FILTER_NUMERIC_BASED_LOOKUP_MAP
         elif issubclass(filter_type, CustomFieldMultiSelectFilter):
-            return FILTER_LIST_BASED_LOOKUP_MAP
+            return FILTER_NEGATION_LOOKUP_MAP
         else:
             return FILTER_CHAR_BASED_LOOKUP_MAP
 

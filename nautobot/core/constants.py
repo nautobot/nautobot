@@ -26,10 +26,6 @@ FILTER_CHAR_BASED_LOOKUP_MAP = {
     "nire": "iregex",
 }
 
-FILTER_LIST_BASED_LOOKUP_MAP = {
-    "nic": "icontains",
-}
-
 FILTER_NUMERIC_BASED_LOOKUP_MAP = {
     "n": "exact",
     "lte": "lte",
