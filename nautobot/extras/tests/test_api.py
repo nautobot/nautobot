@@ -2230,7 +2230,7 @@ class JobLogEntryTest(
         self.add_permissions("extras.view_jobresult")
         url = reverse("extras-api:jobresult-logs", kwargs={"pk": self.job_result.pk})
         response = self.client.get(url, **self.header)
-        self.assertEqual(len(response.json()), JobLogEntry.objects.count())
+        self.assertEqual(len(response.json()), JobLogEntry.objects.filter(job_result=self.job_result).count())
 
 
 class ScheduledJobTest(
@@ -2518,6 +2518,10 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
 
 class ObjectChangeTest(APIViewTestCases.GetObjectViewTestCase, APIViewTestCases.ListObjectsViewTestCase):
     model = ObjectChange
+
+    # ObjectChange records created for SoftwareImageFile records will contain a `hashing_algorithm` key;
+    # presence of strings like "md5" and "sha256" in the API response for ObjectChanges is therefore *not* a failure
+    VERBOTEN_STRINGS = ("password",)
 
     @classmethod
     def setUpTestData(cls):
