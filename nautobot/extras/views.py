@@ -369,7 +369,6 @@ class ContactUIViewSet(NautobotUIViewSet):
     queryset = Contact.objects.all()
     serializer_class = serializers.ContactSerializer
     table_class = tables.ContactTable
-    is_contact_associatable_model = False
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -1939,8 +1938,6 @@ class ObjectChangeLogView(generic.GenericView):
                 "table": objectchanges_table,
                 "base_template": self.base_template,
                 "active_tab": "changelog",
-                # Currently only Contact and Team models are not contact_associatable.
-                "is_contact_associatable_model": type(obj) not in [Contact, Team],
             },
         )
 
@@ -2022,8 +2019,6 @@ class ObjectNotesView(generic.GenericView):
                 "base_template": self.base_template,
                 "active_tab": "notes",
                 "form": notes_form,
-                # Currently only Contact and Team models are not contact_associatable.
-                "is_contact_associatable_model": type(obj) not in [Contact, Team],
             },
         )
 
@@ -2532,7 +2527,6 @@ class TeamUIViewSet(NautobotUIViewSet):
     queryset = Team.objects.all()
     serializer_class = serializers.TeamSerializer
     table_class = tables.TeamTable
-    is_contact_associatable_model = False
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

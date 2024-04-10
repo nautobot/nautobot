@@ -87,7 +87,7 @@
                 Advanced
             </a>
         </li>
-        {% if is_contact_associatable_model %}
+        {% if object.is_contact_associable_model %}
             <li role="presentation"{% if request.GET.tab == 'contacts' %} class="active"{% endif %}>
                 <a href="{{ object.get_absolute_url }}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">
                     Contacts
@@ -159,7 +159,7 @@
                 </div>
             </div>
         </div>
-        {% if is_contact_associatable_model %}
+        {% if object.is_contact_associable_model %}
             <div id="contacts" role="tabpanel" class="tab-pane {% if request.GET.tab == 'contacts' %}active{% else %}fade{% endif %}">
                 <div class="row">
                     <div class="col-md-12">
