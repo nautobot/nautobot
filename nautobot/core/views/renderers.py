@@ -145,7 +145,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         view = renderer_context["view"]
         request = renderer_context["request"]
         # Check if queryset attribute is set before doing anything
-        is_contact_associatable_model = view.is_contact_associatable_model
         queryset = view.alter_queryset(request)
         model = queryset.model
         form_class = view.get_form_class()
@@ -222,7 +221,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
         context = {
             "content_type": content_type,
-            "is_contact_associatable_model": is_contact_associatable_model,
             "form": form,
             "filter_form": filter_form,
             "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset_class=view.filterset_class),
@@ -244,9 +242,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
             context["created_by"] = created_by
             context["last_updated_by"] = last_updated_by
-            associated_contacts = instance.associated_contacts.restrict(request.user, "view").order_by("role__name")
-            if is_contact_associatable_model:
-                context["associated_contacts_table"] = AssociatedContactsTable(data=associated_contacts)
+            if instance.is_contact_associable_model:
+                paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+                associations = instance.associated_contacts.restrict(request.user, "view").order_by("role__name")
+                associations_table = AssociatedContactsTable(associations, orderable=False)
+                RequestConfig(request, paginate).configure(associations_table)
+                associations_table.columns.show("pk")
+                context["associated_contacts_table"] = associations_table
             else:
                 context["associated_contacts_table"] = None
             context.update(view.get_extra_context(request, instance))
