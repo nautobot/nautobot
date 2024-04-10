@@ -78,9 +78,9 @@ class HomeViewTestCase(TestCase):
         existing_models = []
         global_searchable_models = []
         for app_name in ["circuits", "dcim", "extras", "ipam", "tenancy", "virtualization"]:
-             app_config = apps.get_app_config(app_name)
-             existing_models += [model._meta.model_name for model in app_config.get_models()]
-             global_searchable_models += app_config.searchable_models
+            app_config = apps.get_app_config(app_name)
+            existing_models += [model._meta.model_name for model in app_config.get_models()]
+            global_searchable_models += app_config.searchable_models
 
         # Remove those models that are not searchable
         existing_models = [model for model in existing_models if model not in GLOBAL_SEARCH_EXCLUDE_LIST]
