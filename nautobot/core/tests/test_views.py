@@ -75,34 +75,16 @@ class HomeViewTestCase(TestCase):
 
     def test_appropriate_models_included_in_global_search(self):
         # Gather core app configs
-        circuit_config = apps.get_app_config("circuits")
-        dcim_config = apps.get_app_config("dcim")
-        extras_config = apps.get_app_config("extras")
-        ipam_config = apps.get_app_config("ipam")
-        tenancy_config = apps.get_app_config("tenancy")
-        virtualization_config = apps.get_app_config("virtualization")
-        # Check for existing models in core apps and example app
         existing_models = []
-        existing_models += circuit_config.get_models()
-        existing_models += dcim_config.get_models()
-        existing_models += extras_config.get_models()
-        existing_models += ipam_config.get_models()
-        existing_models += tenancy_config.get_models()
-        existing_models += virtualization_config.get_models()
-        existing_models = [model._meta.model_name for model in existing_models]
-        existing_models.sort()
+        global_searchable_models = []
+        for app_name in ["circuits", "dcim", "extras", "ipam", "tenancy", "virtualization"]:
+             app_config = apps.get_app_config(app_name)
+             existing_models += [model._meta.model_name for model in app_config.get_models()]
+             global_searchable_models += app_config.searchable_models
+
         # Remove those models that are not searchable
         existing_models = [model for model in existing_models if model not in GLOBAL_SEARCH_EXCLUDE_LIST]
-
-        # Gather searchable models currently configured in nautobot core
-        global_searchable_models = []
-        global_searchable_models += circuit_config.searchable_models
-        global_searchable_models += dcim_config.searchable_models
-        global_searchable_models += extras_config.searchable_models
-        global_searchable_models += ipam_config.searchable_models
-        global_searchable_models += tenancy_config.searchable_models
-        global_searchable_models += virtualization_config.searchable_models
-        global_searchable_models.sort()
+        existing_models.sort()
 
         # See if there are any models that are missing from global search
         difference = [model for model in existing_models if model not in global_searchable_models]
