@@ -84,8 +84,6 @@ class HomeViewTestCase(TestCase):
         # Check for existing models in core apps and example app
         existing_models = []
         core_app_list = ["circuits", "dcim", "extras", "ipam", "tenancy", "virtualization"]
-        if "example_app" in settings.PLUGINS:
-            core_app_list.append("example_app")
         for model in apps.get_models():
             if model._meta.app_label in core_app_list:
                 existing_models.append(f"{model._meta.model_name}")
@@ -93,6 +91,7 @@ class HomeViewTestCase(TestCase):
         # Remove those models that are not searchable
         existing_models = [model for model in existing_models if model not in GLOBAL_SEARCH_EXCLUDE_LIST]
 
+        # Gather searchable models currently configured in nautobot core
         global_searchable_models = []
         global_searchable_models += CircuitsConfig.searchable_models
         global_searchable_models += DCIMConfig.searchable_models
@@ -100,12 +99,9 @@ class HomeViewTestCase(TestCase):
         global_searchable_models += IPAMConfig.searchable_models
         global_searchable_models += TenancyConfig.searchable_models
         global_searchable_models += VirtualizationConfig.searchable_models
-        if "example_app" in settings.PLUGINS:
-            from example_app import ExampleAppConfig
-
-            global_searchable_models += ExampleAppConfig.searchable_models
-
         global_searchable_models.sort()
+
+        # See if there are any models that are missing from global search
         difference = [model for model in existing_models if model not in global_searchable_models]
         if difference:
             self.fail(
