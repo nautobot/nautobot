@@ -2978,6 +2978,12 @@ class DeviceFamilyUIViewSet(NautobotUIViewSet):
             RequestConfig(request, paginate).configure(device_type_table)
 
             context["device_type_table"] = device_type_table
+
+            total_devices = 0
+            for device_type in device_types:
+                total_devices += device_type.device_count
+            context["total_devices"] = total_devices
+
         return context
 
 
