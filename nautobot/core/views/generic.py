@@ -1253,9 +1253,8 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                 self.perform_pre_delete(request, queryset)
                 try:
-                    with deferred_change_logging_for_bulk_operation():
-                        _, deleted_info = queryset.delete()
-                        deleted_count = deleted_info[model._meta.label]
+                    _, deleted_info = queryset.delete()
+                    deleted_count = deleted_info[model._meta.label]
                 except ProtectedError as e:
                     logger.info("Caught ProtectedError while attempting to delete objects")
                     handle_protectederror(queryset, request, e)

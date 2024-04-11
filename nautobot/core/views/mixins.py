@@ -846,7 +846,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
         queryset = queryset.filter(pk__in=pk_list)
 
         try:
-            with deferred_change_logging_for_bulk_operation():
+            with transaction.atomic():
                 deleted_count = queryset.delete()[1][model._meta.label]
                 msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
                 self.logger.info(msg)
