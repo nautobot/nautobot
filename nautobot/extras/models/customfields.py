@@ -725,18 +725,15 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         super().delete(*args, **kwargs)
 
         # Circular Import
-        from nautobot.extras.signals import _get_user_if_authenticated, change_context_state
+        from nautobot.extras.signals import change_context_state
 
         change_context = change_context_state.get()
         if change_context is None:
             context = None
         else:
-            context = {
-                "user": _get_user_if_authenticated(change_context.get_user(), self),
-                "change_id": change_context.change_id,
-                "context_detail": "delete custom field data",
-                "context": change_context.context,
-            }
+            context = change_context.as_dict()
+            context["user"] = change_context.get_user(self)
+            context["context_detail"] = "delete custom field data"
         delete_custom_field_data.delay(self.key, content_types, context)
 
     def add_prefix_to_cf_key(self):
@@ -797,18 +794,15 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
 
         if self.value != database_object.value:
             # Circular Import
-            from nautobot.extras.signals import _get_user_if_authenticated, change_context_state
+            from nautobot.extras.signals import change_context_state
 
             change_context = change_context_state.get()
             if change_context is None:
                 context = None
             else:
-                context = {
-                    "user": _get_user_if_authenticated(change_context.get_user(), self),
-                    "change_id": change_context.change_id,
-                    "context_detail": "update custom field choice data",
-                    "context": change_context.context,
-                }
+                context = change_context.as_dict()
+                context["user"] = change_context.get_user(self)
+                context["context_detail"] = "update custom field choice data"
             transaction.on_commit(
                 lambda: update_custom_field_choice_data.delay(
                     self.custom_field.pk,
