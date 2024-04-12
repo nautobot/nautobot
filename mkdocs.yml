@@ -58,7 +58,7 @@ extra_css:
 # jquery is not (yet) injected by RTD automatically and it might be dropped
 # as a dependency in the future
 extra_javascript:
-  - "https://code.jquery.com/jquery-3.6.0.min.js"
+  - "https://code.jquery.com/jquery-3.7.1.min.js"
 
 extra:
   generator: false
