@@ -30,7 +30,7 @@ article ul li {
 - _optional_ Add [data migration(s)](https://docs.djangoproject.com/en/stable/topics/migrations/#data-migrations) to populate default records, migrate data from existing models, etc.
     - Remember: data migrations must not share a file with schema migrations or vice versa!
     - Specify appropriate migration dependencies (for example, against another app that you're using models from). If you're retrieving models in a data migration with `apps.get_model("app_label.model_name")`, your migration should have a dependency that ensures the model is in the desired state before your migration runs. This may only require a dependency on the migration where that model was created or, if a specific field is required on the referenced model, the migration where that field was introduced.
-- _optional_ Enhance `ConfigContext` to be assignable by new Device-related model
+- _optional_ Enhance `ConfigContext` if the new model can be used as a filter criteria for assigning Devices or Virtual Machines to Config Contexts
     - Update ConfigContextQuerySet, ConfigContextFilterSet, ConfigContext forms, edit and detail views and HTML templates
 - _optional_ Expose any new relevant Python APIs in `nautobot.apps` namespace for App consumption
 
