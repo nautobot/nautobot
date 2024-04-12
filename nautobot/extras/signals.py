@@ -238,13 +238,21 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
     """
     Handle the cleanup of old custom field data when a CustomField is removed from one or more ContentTypes.
     """
+
+    change_context = change_context_state.get()
+    context = {
+        "user": _get_user_if_authenticated(change_context.get_user(), instance),
+        "change_id": change_context.change_id,
+        "context_detail": "update custom field choice data",
+        "context": change_context.context,
+    }
     if action == "post_remove":
         # Existing content types have been removed from the custom field, delete their data
-        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.key, pk_set))
+        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.key, pk_set, context))
 
     elif action == "post_add":
         # New content types have been added to the custom field, provision them
-        transaction.on_commit(lambda: provision_field.delay(instance.pk, pk_set))
+        transaction.on_commit(lambda: provision_field.delay(instance.pk, pk_set, context))
 
 
 m2m_changed.connect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)

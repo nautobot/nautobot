@@ -724,7 +724,17 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
         super().delete(*args, **kwargs)
 
-        delete_custom_field_data.delay(self.key, content_types)
+        # Circular Import
+        from nautobot.extras.signals import _get_user_if_authenticated, change_context_state
+
+        change_context = change_context_state.get()
+        context = {
+            "user": _get_user_if_authenticated(change_context.get_user(), self),
+            "change_id": change_context.change_id,
+            "context_detail": "update custom field choice data",
+            "context": change_context.context,
+        }
+        delete_custom_field_data.delay(self.key, content_types, context)
 
     def add_prefix_to_cf_key(self):
         return "cf_" + str(self.key)
@@ -782,9 +792,24 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
 
         super().save(*args, **kwargs)
 
+        # Circular Import
+        from nautobot.extras.signals import _get_user_if_authenticated, change_context_state
+
+        change_context = change_context_state.get()
+        context = {
+            "user": _get_user_if_authenticated(change_context.get_user(), self),
+            "change_id": change_context.change_id,
+            "context_detail": "update custom field choice data",
+            "context": change_context.context,
+        }
         if self.value != database_object.value:
             transaction.on_commit(
-                lambda: update_custom_field_choice_data.delay(self.custom_field.pk, database_object.value, self.value)
+                lambda: update_custom_field_choice_data.delay(
+                    self.custom_field.pk,
+                    database_object.value,
+                    self.value,
+                    context,
+                )
             )
 
     def delete(self, *args, **kwargs):

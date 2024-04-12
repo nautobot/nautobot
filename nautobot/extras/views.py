@@ -40,6 +40,7 @@ from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, Device, Interface, Location, Rack
 from nautobot.dcim.tables import ControllerTable, DeviceTable, RackTable
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
+from nautobot.extras.signals import _get_user_if_authenticated, change_context_state
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
@@ -676,8 +677,15 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
         """
         Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
         """
+        change_context = change_context_state.get()
+        context = {
+            "user": _get_user_if_authenticated(change_context.get_user(), self),
+            "change_id": change_context.change_id,
+            "context_detail": "update custom field choice data",
+            "context": change_context.context,
+        }
         tasks = [
-            delete_custom_field_data.si(obj.key, set(obj.content_types.values_list("pk", flat=True)))
+            delete_custom_field_data.si(obj.key, set(obj.content_types.values_list("pk", flat=True), context))
             for obj in queryset
         ]
         return tasks
