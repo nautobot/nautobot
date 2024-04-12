@@ -129,6 +129,7 @@ article ul li {
 - Add a `DynamicModelChoiceField(required=False, ...)` to `<ModelA>BulkEditForm`
 - Add `select_related` to API `<ModelA>ViewSet.queryset`
 - Add `select_related` to UI `<ModelA>UIViewSet.queryset`
+- Validate that the reverse relation is accessible through GraphQL on ModelB.
 - _optional_ Add [`has_<related_name>` `RelatedMembershipBooleanFilter` filter](best-practices.md#filter-naming-and-definition) to `<ModelB>FilterSet`
 - _optional_ Add `annotate(<model_a>_count=count_related(ModelA,...)` to `<ModelB>ViewSet.queryset`
     - Add `<model_a>_count` field to `<ModelB>Serializer`
@@ -158,6 +159,8 @@ The through table should generally be treated as a new model (see above), but th
     - URLs
     - Tests
 - Add related object table to ModelA detail view
+- Validate that the forward relation is accessible through GraphQL on ModelA.
+- Validate that the reverse relation is accessible through GraphQL on ModelB.
 - _optional_ Add `annotate(<model_a>_count=count_related(ModelA,...)` to `<ModelB>ViewSet.queryset`
     - Add `<model_a>_count` field to `<ModelB>Serializer`
 - _optional_ Add `<model_a>_count = LinkedCountColumn(...)` to `<ModelB>Table` and `<ModelB>Table.fields`
