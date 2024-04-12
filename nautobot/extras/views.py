@@ -678,14 +678,17 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
         Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
         """
         change_context = change_context_state.get()
-        context = {
-            "user": _get_user_if_authenticated(change_context.get_user(), self),
-            "change_id": change_context.change_id,
-            "context_detail": "update custom field choice data",
-            "context": change_context.context,
-        }
+        if change_context is None:
+            context = {}
+        else:
+            context = {
+                "user": _get_user_if_authenticated(change_context.get_user(), self),
+                "change_id": change_context.change_id,
+                "context_detail": "bulk delete custom field data",
+                "context": change_context.context,
+            }
         tasks = [
-            delete_custom_field_data.si(obj.key, set(obj.content_types.values_list("pk", flat=True), context))
+            delete_custom_field_data.si(obj.key, set(obj.content_types.values_list("pk", flat=True)), context)
             for obj in queryset
         ]
         return tasks

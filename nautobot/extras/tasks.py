@@ -145,6 +145,10 @@ def provision_field(field_id, content_type_pk_set, change_context={}):
                     for obj in model.objects.all():
                         obj._custom_field_data.setdefault(field.key, field.default)
                         obj.save()
+            else:
+                for obj in model.objects.all():
+                    obj._custom_field_data.setdefault(field.key, field.default)
+                    obj.save()
 
     return True
 
