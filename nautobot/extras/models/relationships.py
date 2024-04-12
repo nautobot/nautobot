@@ -244,6 +244,13 @@ class RelationshipModel(models.Model):
             if relation.skip_required(cls, opposite_side):
                 continue
 
+            if getattr(relation, f"{relation.required_on}_filter") and instance:
+                filterset = get_filterset_for_model(cls)
+                if filterset:
+                    filter_params = getattr(relation, f"{relation.required_on}_filter")
+                    if not filterset(filter_params, cls.objects.filter(id=instance.id)).qs.exists():
+                        continue
+
             if relation.has_many(opposite_side):
                 num_required_verbose = "at least one"
             else:
