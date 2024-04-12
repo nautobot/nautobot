@@ -430,12 +430,12 @@ def refresh_job_models(sender, *, apps, **kwargs):
     import_jobs_as_celery_tasks(app)
 
     job_models = []
-    for task in app.tasks.values():
-        # Skip Celery tasks that aren't Jobs
-        if not isinstance(task, JobClass):
-            continue
+    def all_subclasses(cls):
+        return set(cls.__subclasses__()).union([sc for c in cls.__subclasses__() for sc in all_subclasses(c)])
 
-        job_model, _ = refresh_job_model_from_job_class(Job, task.__class__)
+    for job_class in all_subclasses(JobClass):
+        # Skip Celery tasks that aren't Jobs
+        job_model, _ = refresh_job_model_from_job_class(Job, job_class)
         if job_model is not None:
             job_models.append(job_model)
 

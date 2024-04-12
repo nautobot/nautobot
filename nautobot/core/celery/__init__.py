@@ -1,3 +1,4 @@
+from importlib import import_module
 from importlib.util import find_spec
 import json
 import logging
@@ -59,8 +60,7 @@ def import_jobs_as_celery_tasks(sender, database_ready=True, **kwargs):
 
     Note that app-provided Jobs are automatically imported at startup time via NautobotAppConfig.ready()
     """
-    logger.debug("Importing system Jobs")
-    sender.loader.import_task_module("nautobot.core.jobs")
+    import nautobot.core.jobs
 
     jobs_root = settings.JOBS_ROOT
     if jobs_root and os.path.exists(jobs_root):
@@ -77,7 +77,7 @@ def import_jobs_as_celery_tasks(sender, database_ready=True, **kwargs):
                         raise ImportError(
                             f"JOBS_ROOT Jobs module {module_name} conflicts with existing module {existing_module_path}"
                         )
-                sender.loader.import_task_module(module_name)
+                import_module(module_name)
             except Exception as exc:
                 logger.exception(exc)
 
@@ -210,5 +210,6 @@ def register_jobs(*jobs):
     """Helper method to register jobs with Celery"""
     for job in jobs:
         # TODO: should we only register a job if it corresponds to a Job database record?
-        logger.debug("Registering job %s.%s", job.__module__, job.__name__)
-        app.register_task(job)
+        # logger.debug("Registering job %s.%s", job.__module__, job.__name__)
+        # app.register_task(job)
+        pass

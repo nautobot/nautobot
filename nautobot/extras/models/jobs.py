@@ -14,6 +14,7 @@ from django.db import models, transaction
 from django.db.models import signals
 from django.utils import timezone
 from django.utils.functional import cached_property
+from django.utils.module_loading import import_string
 from django_celery_beat.clockedschedule import clocked
 from prometheus_client import Histogram
 
@@ -239,7 +240,7 @@ class Job(PrimaryModel):
         if not self.installed:
             return None
         try:
-            return self.job_task.__class__
+            return self.job_task
         except Exception as exc:
             logger.error(str(exc))
             return None
@@ -284,7 +285,7 @@ class Job(PrimaryModel):
             refresh_git_repository(
                 state=None, repository_pk=self.git_repository.pk, head=self.git_repository.current_head
             )
-        return app.tasks[f"{self.module_name}.{self.job_class_name}"]
+        return import_string(f"{self.module_name}.{self.job_class_name}")
 
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
@@ -623,6 +624,8 @@ class JobResult(BaseModel, CustomFieldModel):
         Returns:
             JobResult instance
         """
+        from nautobot.extras.jobs import run_job  # TODO circular import
+
         if schedule is not None and synchronous:
             raise ValueError("Scheduled jobs cannot be run synchronously")
 
@@ -687,8 +690,8 @@ class JobResult(BaseModel, CustomFieldModel):
         else:
             # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
             transaction.on_commit(
-                lambda: job_model.job_task.apply_async(
-                    args=job_args, kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs
+                lambda: run_job.apply_async(
+                    args=[job_model.class_path, *job_args], kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs
                 )
             )
 

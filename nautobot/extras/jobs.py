@@ -6,6 +6,7 @@ import inspect
 import json
 import logging
 import os
+import sys
 import tempfile
 from textwrap import dedent
 from typing import final
@@ -30,12 +31,12 @@ from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
 from django.utils.functional import classproperty
+from django.utils.module_loading import import_string
 from kombu.utils.uuid import uuid
 import netaddr
 import yaml
 
-from nautobot.core.celery import app as celery_app
-from nautobot.core.celery.task import Task
+from nautobot.core.celery import app as celery_app, nautobot_task
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -88,7 +89,7 @@ class RunJobTaskFailed(Exception):
     """Celery task failed for some reason."""
 
 
-class BaseJob(Task):
+class BaseJob:
     """Base model for jobs.
 
     Users can subclass this directly if they want to provide their own base class for implementing multiple jobs
@@ -313,10 +314,6 @@ class BaseJob(Task):
 
         if status == JobResultStatusChoices.STATUS_SUCCESS:
             self.logger.info("Job completed", extra={"grouping": "post_run"})
-
-        # TODO(gary): document this in job author docs
-        # Super.after_return must be called for chords to function properly
-        super().after_return(status, retval, task_id, args, kwargs, einfo=einfo)
 
     def apply(
         self,
@@ -632,7 +629,7 @@ class BaseJob(Task):
 
     @functools.cached_property
     def job_model(self):
-        return JobModel.objects.get(module_name=self.__module__, job_class_name=self.__name__)
+        return JobModel.objects.get(module_name=self.__module__, job_class_name=self.__class__.__name__)
 
     @functools.cached_property
     def job_result(self):
@@ -1203,13 +1200,29 @@ def get_job(class_path):
     """
     Retrieve a specific job class by its class_path (`<module_name>.<JobClassName>`).
 
-    May return None if the job isn't properly registered with Celery at this time.
+    May return None if the job can't be imported.
     """
     try:
-        return celery_app.tasks[class_path].__class__
-    except NotRegistered:
+        return import_string(class_path)
+    except ImportError:
         return None
 
+
+@nautobot_task(bind=True)
+def run_job(self, job_class_path, *args, **kwargs):
+    job_class = get_job(job_class_path)
+    job = job_class()
+    job.request = self.request
+    job.before_start(self.request.id, args, kwargs)
+    try:
+        result = job(*args, **kwargs)
+        job.after_return(JobResultStatusChoices.STATUS_SUCCESS, result, self.request.id, args, kwargs, None)
+        return result
+    except Exception as exc:
+        job.after_return(
+            JobResultStatusChoices.STATUS_FAILURE, exc, self.request.id, args, kwargs, ExceptionInfo(sys.exc_info())
+        )
+        raise
 
 def enqueue_job_hooks(object_change):
     """
