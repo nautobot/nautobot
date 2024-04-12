@@ -729,7 +729,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
         change_context = change_context_state.get()
         if change_context is None:
-            context = {}
+            context = None
         else:
             context = {
                 "user": _get_user_if_authenticated(change_context.get_user(), self),
@@ -801,7 +801,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
 
             change_context = change_context_state.get()
             if change_context is None:
-                context = {}
+                context = None
             else:
                 context = {
                     "user": _get_user_if_authenticated(change_context.get_user(), self),

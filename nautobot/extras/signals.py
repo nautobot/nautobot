@@ -241,7 +241,7 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
 
     change_context = change_context_state.get()
     if change_context is None:
-        context = {}
+        context = None
     else:
         context = {
             "user": _get_user_if_authenticated(change_context.get_user(), instance),

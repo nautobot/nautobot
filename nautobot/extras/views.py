@@ -679,7 +679,7 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
         """
         change_context = change_context_state.get()
         if change_context is None:
-            context = {}
+            context = None
         else:
             context = {
                 "user": _get_user_if_authenticated(change_context.get_user(), self),

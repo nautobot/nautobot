@@ -14,7 +14,7 @@ logger = getLogger("nautobot.extras.tasks")
 
 
 @nautobot_task
-def update_custom_field_choice_data(field_id, old_value, new_value, change_context={}):
+def update_custom_field_choice_data(field_id, old_value, new_value, change_context=None):
     """
     Update the values for a custom field choice used in objects' _custom_field_data for the given field.
 
@@ -37,7 +37,7 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
         # Loop through all field content types and search for values to update
         for ct in field.content_types.all():
             model = ct.model_class()
-            if change_context:
+            if change_context is not None:
                 with web_request_context(
                     user=change_context.get("user"),
                     change_id=change_context.get("change_id"),
@@ -56,7 +56,7 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
         # Loop through all field content types and search for values to update
         for ct in field.content_types.all():
             model = ct.model_class()
-            if change_context:
+            if change_context is not None:
                 with web_request_context(
                     user=change_context.get("user"),
                     change_id=change_context.get("change_id"),
@@ -83,7 +83,7 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
 
 
 @nautobot_task
-def delete_custom_field_data(field_key, content_type_pk_set, change_context={}):
+def delete_custom_field_data(field_key, content_type_pk_set, change_context=None):
     """
     Delete the values for a custom field
 
@@ -97,7 +97,7 @@ def delete_custom_field_data(field_key, content_type_pk_set, change_context={}):
     with transaction.atomic():
         for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
             model = ct.model_class()
-            if change_context:
+            if change_context is not None:
                 with web_request_context(
                     user=change_context.get("user"),
                     change_id=change_context.get("change_id"),
@@ -114,7 +114,7 @@ def delete_custom_field_data(field_key, content_type_pk_set, change_context={}):
 
 
 @nautobot_task
-def provision_field(field_id, content_type_pk_set, change_context={}):
+def provision_field(field_id, content_type_pk_set, change_context=None):
     """
     Provision a new custom field on all relevant content type object instances.
 
@@ -135,7 +135,7 @@ def provision_field(field_id, content_type_pk_set, change_context={}):
     with transaction.atomic():
         for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
             model = ct.model_class()
-            if change_context:
+            if change_context is not None:
                 with web_request_context(
                     user=change_context.get("user"),
                     change_id=change_context.get("change_id"),
