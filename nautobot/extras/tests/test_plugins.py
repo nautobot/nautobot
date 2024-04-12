@@ -9,17 +9,17 @@ from django.urls import NoReverseMatch, reverse
 import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
-from nautobot.core.celery import app
 from nautobot.core.testing import APIViewTestCases, disable_warnings, extract_page_body, TestCase, ViewTestCases
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
-from nautobot.extras.jobs import get_job
+from nautobot.extras.jobs import get_job, Job as JobClass
 from nautobot.extras.models import CustomField, Relationship, RelationshipAssociation, Role, Secret, Status
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
 from nautobot.extras.plugins.validators import wrap_model_clean_methods
 from nautobot.extras.registry import DatasourceContent, registry
+from nautobot.extras.utils import all_subclasses
 from nautobot.ipam.models import IPAddress, Namespace, Prefix
 from nautobot.tenancy.filters import TenantFilterSet
 from nautobot.tenancy.forms import TenantFilterForm
@@ -116,7 +116,7 @@ class AppTest(TestCase):
 
         self.assertIn(ExampleJob, registry.get("plugin_jobs", []))
         self.assertEqual(ExampleJob, get_job("example_app.jobs.ExampleJob"))
-        self.assertIn("example_app.jobs.ExampleJob", app.tasks)
+        self.assertIn("example_app.jobs.ExampleJob", (sc.class_path for sc in all_subclasses(JobClass)))
 
     def test_git_datasource_contents_registration(self):
         """

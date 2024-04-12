@@ -746,6 +746,7 @@ def refresh_code_from_repository(repository_slug, consumer=None, skip_reimport=F
                 del sys.modules[module_name]
 
     # Unregister any previous Celery tasks from this module
+    # TODO this may be no longer needed now that jobs are once again not actual Celery tasks?
     for task_name in list(app.tasks):
         if task_name.startswith(f"{repository_slug}."):
             logger.debug("Unregistering Celery task %s", task_name)

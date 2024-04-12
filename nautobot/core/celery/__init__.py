@@ -60,7 +60,7 @@ def import_jobs_as_celery_tasks(sender, database_ready=True, **kwargs):
 
     Note that app-provided Jobs are automatically imported at startup time via NautobotAppConfig.ready()
     """
-    import nautobot.core.jobs
+    import nautobot.core.jobs  # noqa: F401
 
     jobs_root = settings.JOBS_ROOT
     if jobs_root and os.path.exists(jobs_root):
@@ -207,9 +207,4 @@ nautobot_task = shared_task
 
 
 def register_jobs(*jobs):
-    """Helper method to register jobs with Celery"""
-    for job in jobs:
-        # TODO: should we only register a job if it corresponds to a Job database record?
-        # logger.debug("Registering job %s.%s", job.__module__, job.__name__)
-        # app.register_task(job)
-        pass
+    """Helper method to register jobs with Celery - no longer needed but kept for backward compatibility."""

@@ -669,8 +669,11 @@ class JobResult(BaseModel, CustomFieldModel):
             redirect_logger = get_logger("celery.redirected")
             proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
             with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
-                eager_result = job_model.job_task.apply(
-                    args=job_args, kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs
+                eager_result = run_job.apply(
+                    args=[job_model.class_path, *job_args],
+                    kwargs=job_kwargs,
+                    task_id=str(job_result.id),
+                    **job_celery_kwargs,
                 )
 
             # copy fields from eager result to job result
@@ -691,7 +694,10 @@ class JobResult(BaseModel, CustomFieldModel):
             # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
             transaction.on_commit(
                 lambda: run_job.apply_async(
-                    args=[job_model.class_path, *job_args], kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs
+                    args=[job_model.class_path, *job_args],
+                    kwargs=job_kwargs,
+                    task_id=str(job_result.id),
+                    **job_celery_kwargs,
                 )
             )
 

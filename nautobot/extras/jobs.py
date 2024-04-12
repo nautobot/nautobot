@@ -14,7 +14,7 @@ import warnings
 
 from billiard.einfo import ExceptionInfo, ExceptionWithTraceback
 from celery import states
-from celery.exceptions import NotRegistered, Retry
+from celery.exceptions import Retry
 from celery.result import EagerResult
 from celery.utils.functional import maybe_list
 from celery.utils.log import get_task_logger
@@ -36,7 +36,7 @@ from kombu.utils.uuid import uuid
 import netaddr
 import yaml
 
-from nautobot.core.celery import app as celery_app, nautobot_task
+from nautobot.core.celery import nautobot_task
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -158,38 +158,6 @@ class BaseJob:
         return str(self.name)
 
     # See https://github.com/PyCQA/pylint-django/issues/240 for why we have a pylint disable on each classproperty below
-
-    # TODO(jathan): Could be interesting for custom stuff when the Job is
-    # enabled in the database and then therefore registered in Celery
-    @classmethod
-    def on_bound(cls, app):
-        """Called when the task is bound to an app.
-
-        Note:
-            This class method can be defined to do additional actions when
-            the task class is bound to an app.
-        """
-
-    # TODO(jathan): Could be interesting for showing the Job's class path as the
-    # shadow name vs. the Celery task_name?
-    def shadow_name(self, args, kwargs, options):
-        """Override for custom task name in worker logs/monitoring.
-
-        Example:
-                from celery.utils.imports import qualname
-
-                def shadow_name(task, args, kwargs, options):
-                    return qualname(args[0])
-
-                @app.task(shadow_name=shadow_name, serializer='pickle')
-                def apply_function_async(fun, *args, **kwargs):
-                    return fun(*args, **kwargs)
-
-        Arguments:
-            args (Tuple): Task positional arguments.
-            kwargs (Dict): Task keyword arguments.
-            options (Dict): Task execution options.
-        """
 
     def before_start(self, task_id, args, kwargs):
         """Handler called before the task starts.
@@ -1216,13 +1184,15 @@ def run_job(self, job_class_path, *args, **kwargs):
     job.before_start(self.request.id, args, kwargs)
     try:
         result = job(*args, **kwargs)
+        job.on_success(result, self.request.id, args, kwargs)
         job.after_return(JobResultStatusChoices.STATUS_SUCCESS, result, self.request.id, args, kwargs, None)
         return result
     except Exception as exc:
-        job.after_return(
-            JobResultStatusChoices.STATUS_FAILURE, exc, self.request.id, args, kwargs, ExceptionInfo(sys.exc_info())
-        )
+        einfo = ExceptionInfo(sys.exc_info())
+        job.on_failure(exc, self.request.id, args, kwargs, einfo)
+        job.after_return(JobResultStatusChoices.STATUS_FAILURE, exc, self.request.id, args, kwargs, einfo)
         raise
+
 
 def enqueue_job_hooks(object_change):
     """
