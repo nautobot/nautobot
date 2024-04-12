@@ -27,9 +27,9 @@ article ul li {
         - Be sure to always call `super().clean()` as well!
     - _optional_ Define appropriate `verbose_name`/`verbose_name_plural` if defaults aren't optimal
 - Generate database schema migration(s) with `invoke makemigrations <app> -n <migration_name>`
-- _optional_ Add [data migration(s)](https://docs.djangoproject.com/en/stable/topics/migrations/) to populate default records, migrate data from existing models, etc.
+- _optional_ Add [data migration(s)](https://docs.djangoproject.com/en/stable/topics/migrations/#data-migrations) to populate default records, migrate data from existing models, etc.
     - Remember: data migrations must not share a file with schema migrations or vice versa!
-    - Specify appropriate migration dependencies (for example, against another app that you're using models from)
+    - Specify appropriate migration dependencies (for example, against another app that you're using models from). If you're retrieving models in a data migration with `apps.get_model("app_label.model_name")`, your migration should have a dependency that ensures the model is in the desired state before your migration runs. This may only require a dependency on the migration where that model was created or, if a specific field is required on the referenced model, the migration where that field was introduced.
 - _optional_ Enhance `ConfigContext` to be assignable by new Device-related model
     - Update ConfigContextQuerySet, ConfigContextFilterSet, ConfigContext forms, edit and detail views and HTML templates
 - _optional_ Expose any new relevant Python APIs in `nautobot.apps` namespace for App consumption
@@ -57,7 +57,7 @@ article ul li {
     - Use appropriate [base class](best-practices.md#base-classes) and mixin(s)
 - Implement `<Model>BulkEditForm` class in `nautobot.<app>.forms` module
     - Use appropriate [base class](best-practices.md#base-classes) and mixin(s)
-- Implement `nautobot/<app>/templates/<app>/<model>.html` detail template
+- Implement `nautobot/<app>/templates/<app>/<model>_retrieve.html` detail template
 - Implement `NautobotUIViewSet` subclass in `nautobot.<app>.views` module
     - Use appropriate [base class](best-practices.md#base-classes) and mixin(s)
     - Use appropriate `select_related`/`prefetch_related` for performance
@@ -104,7 +104,7 @@ article ul li {
 - Add field column to `<Model>Table.fields`
     - Keep `"pk"` as the first column and `"actions"` (if present) as the last column
     - _optional_ Add field column to `<Model>Table.default_columns` if desired
-- Add field to `nautobot/<app>/templates/<app>/<model>.html` detail template
+- Add field to `nautobot/<app>/templates/<app>/<model>_retrieve.html` detail template
 - Add field to test data in appropriate unit tests (including view, filter, model, and API tests)
     - Add field testing in`test_api.<Model>TestCase`
     - Add field testing in `test_filters.<Model>TestCase`
