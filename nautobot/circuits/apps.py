@@ -5,8 +5,8 @@ class CircuitsConfig(NautobotConfig):
     name = "nautobot.circuits"
     verbose_name = "Circuits"
     searchable_models = [
-        "provider",
         "circuit",
+        "provider",
         "providernetwork",
     ]
 
