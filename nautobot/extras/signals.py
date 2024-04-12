@@ -40,7 +40,7 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
-from nautobot.extras.utils import refresh_job_model_from_job_class
+from nautobot.extras.utils import all_subclasses, refresh_job_model_from_job_class
 
 # thread safe change context state variable
 change_context_state = contextvars.ContextVar("change_context_state", default=None)
@@ -430,11 +430,8 @@ def refresh_job_models(sender, *, apps, **kwargs):
     import_jobs_as_celery_tasks(app)
 
     job_models = []
-    def all_subclasses(cls):
-        return set(cls.__subclasses__()).union([sc for c in cls.__subclasses__() for sc in all_subclasses(c)])
 
     for job_class in all_subclasses(JobClass):
-        # Skip Celery tasks that aren't Jobs
         job_model, _ = refresh_job_model_from_job_class(Job, job_class)
         if job_model is not None:
             job_models.append(job_model)

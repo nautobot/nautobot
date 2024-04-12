@@ -37,7 +37,7 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
-from nautobot.extras.utils import refresh_job_model_from_job_class
+from nautobot.extras.utils import all_subclasses, refresh_job_model_from_job_class
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 
@@ -769,17 +769,19 @@ def refresh_code_from_repository(repository_slug, consumer=None, skip_reimport=F
 
 def refresh_git_jobs(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all Job records managed by this repository."""
+    from nautobot.extras.jobs import Job as JobClass  # TODO circular import
+
     installed_jobs = []
     if "extras.job" in repository_record.provided_contents and not delete:
         found_jobs = False
         try:
             refresh_code_from_repository(repository_record.slug)
 
-            for task_name, task in celery_app.tasks.items():
-                if not task_name.startswith(f"{repository_record.slug}."):
+            for job_class in all_subclasses(JobClass):
+                if not job_class.class_path.startswith(f"{repository_record.slug}."):
                     continue
                 found_jobs = True
-                job_model, created = refresh_job_model_from_job_class(Job, task.__class__)
+                job_model, created = refresh_job_model_from_job_class(Job, job_class)
 
                 if job_model is None:
                     msg = "Failed to create Job record; check Nautobot logs for details"

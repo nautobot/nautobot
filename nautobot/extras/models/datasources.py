@@ -126,7 +126,7 @@ class GitRepository(PrimaryModel):
 
         # This will match all "GitRepository" jobs (pull/refresh, dry-run, etc.)
         prefix = "nautobot.core.jobs.GitRepository"
-        return JobResult.objects.filter(task_name__startswith=prefix, task_kwargs__repository=self.pk).latest()
+        return JobResult.objects.filter(task_args__icontains=prefix, task_kwargs__repository=self.pk).latest()
 
     def to_csv(self):
         return (

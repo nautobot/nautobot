@@ -341,6 +341,11 @@ def task_queues_as_choices(task_queues):
     return choices
 
 
+def all_subclasses(cls):
+    """Get the set of all subclasses of the given class currently imported and known to Python."""
+    return set(cls.__subclasses__()).union([sc for c in cls.__subclasses__() for sc in all_subclasses(c)])
+
+
 def refresh_job_model_from_job_class(job_model_class, job_class):
     """
     Create or update a job_model record based on the metadata of the provided job_class.
