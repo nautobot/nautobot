@@ -731,8 +731,7 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
         if change_context is None:
             context = None
         else:
-            context = change_context.as_dict()
-            context["user"] = change_context.get_user(self)
+            context = change_context.as_dict(instance=self)
             context["context_detail"] = "delete custom field data"
         delete_custom_field_data.delay(self.key, content_types, context)
 
