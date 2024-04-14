@@ -204,7 +204,7 @@ def _handle_deleted_object(sender, instance, **kwargs):
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
         if change_context.defer_object_changes:
-            raise ValueError("Deferred ObjectChanges cannot be created for delete actions")
+            raise ValueError("Change logging cannot be deferred for delete actions")
 
         user = _get_user_if_authenticated(change_context.get_user(), instance)
 

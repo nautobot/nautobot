@@ -1,1 +1,1 @@
-Improved performance of UI bulk-edit and bulk-delete operations by refactoring change-log logic for these cases.
+Improved performance of bulk-edit operations by refactoring change logging logic.
