@@ -192,12 +192,13 @@ def web_request_context(
 @contextmanager
 def deferred_change_logging_for_bulk_operation():
     """
-    Defers change logging until the end of the context manager to improve performance. For use with bulk edit views.
+    Defers change logging until the end of the context manager to improve performance. For use with bulk edit views. This
+    context manager is wrapped in an atomic transaction.
     """
 
     change_context = change_context_state.get()
     if change_context is None:
-        raise ValueError("ChangeContext must be set before using deferred_change_logging_for_bulk_operation")
+        raise ValueError("Change logging must be enabled before using deferred_change_logging_for_bulk_operation")
 
     with transaction.atomic():
         try:
