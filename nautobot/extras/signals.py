@@ -203,9 +203,6 @@ def _handle_deleted_object(sender, instance, **kwargs):
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
-        if change_context.defer_object_changes:
-            raise ValueError("Change logging cannot be deferred for delete actions")
-
         user = _get_user_if_authenticated(change_context.get_user(), instance)
 
         # save a copy of this instance's field cache so it can be restored after serialization
@@ -251,12 +248,13 @@ def _handle_deleted_object(sender, instance, **kwargs):
             change_context.deferred_object_changes.setdefault(unique_object_change_id, []).append(
                 {"action": ObjectChangeActionChoices.ACTION_DELETE, "instance": instance, "user": user}
             )
-            objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-            objectchange.user = user
-            objectchange.request_id = change_context.change_id
-            objectchange.change_context = change_context.context
-            objectchange.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
-            objectchange.save()
+            if not change_context.defer_object_changes:
+                objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
+                objectchange.user = user
+                objectchange.request_id = change_context.change_id
+                objectchange.change_context = change_context.context
+                objectchange.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+                objectchange.save()
 
         # restore field cache
         instance._state.fields_cache = original_cache

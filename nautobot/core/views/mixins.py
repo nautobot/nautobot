@@ -49,7 +49,7 @@ from nautobot.extras.context_managers import deferred_change_logging_for_bulk_op
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.models import ExportTemplate
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
-from nautobot.extras.utils import remove_prefix_from_cf_key
+from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -847,7 +847,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
 
         try:
             with transaction.atomic():
-                deleted_count = queryset.delete()[1][model._meta.label]
+                deleted_count = bulk_delete_with_bulk_change_logging(queryset)[1][model._meta.label]
                 msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
                 self.logger.info(msg)
                 self.success_url = self.get_return_url(request)

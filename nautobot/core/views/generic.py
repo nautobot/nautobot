@@ -57,7 +57,7 @@ from nautobot.core.views.utils import (
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.models import ContactAssociation, ExportTemplate
 from nautobot.extras.tables import AssociatedContactsTable
-from nautobot.extras.utils import remove_prefix_from_cf_key
+from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
 
 
 class GenericView(LoginRequiredMixin, View):
@@ -1253,7 +1253,7 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                 self.perform_pre_delete(request, queryset)
                 try:
-                    _, deleted_info = queryset.delete()
+                    _, deleted_info = bulk_delete_with_bulk_change_logging(queryset)
                     deleted_count = deleted_info[model._meta.label]
                 except ProtectedError as e:
                     logger.info("Caught ProtectedError while attempting to delete objects")
