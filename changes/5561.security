@@ -1,0 +1,1 @@
+Updated `idna` to 3.7 due to CVE-2024-3651. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
