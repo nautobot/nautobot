@@ -1,0 +1,1 @@
+Added the option to filter objects with select/multi-select custom fields based on the UUID of the defined custom field choice(s), for example `/api/dcim/locations/?cf_multiselect=1ea9237c-3ba7-4985-ba7e-6fd9e9bff813` as an alternative to `/api/dcim/locations/?cf_multiselect=some-choice-value`.
