@@ -248,7 +248,7 @@ def _handle_deleted_object(sender, instance, **kwargs):
                     save_new_objectchange = False
 
         if save_new_objectchange:
-            change_context.deferred_object_changes.setdefault(unique_object_change_id, list()).append(
+            change_context.deferred_object_changes.setdefault(unique_object_change_id, []).append(
                 {"action": ObjectChangeActionChoices.ACTION_DELETE, "instance": instance, "user": user}
             )
             objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
