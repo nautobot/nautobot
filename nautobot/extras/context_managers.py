@@ -27,12 +27,12 @@ class ChangeContext:
     :param change_id: Optional uuid object to uniquely identify the transaction. One will be generated if not supplied
     """
 
-    cache_object_changes = False  # advanced usage, for creating object changes in bulk
+    defer_object_changes = False  # advanced usage, for creating object changes in bulk
 
     def __init__(self, user=None, request=None, context=None, context_detail="", change_id=None):
         self.request = request
         self.user = user
-        self.reset_queued_object_changes()
+        self.reset_deferred_object_changes()
 
         if self.request is None and self.user is None:
             raise TypeError("Either user or request must be provided")
@@ -58,33 +58,33 @@ class ChangeContext:
         return self.request.user
 
     def _object_change_batch(self, n):
-        # Return first n keys from the self.queued_object_changes dict
+        # Return first n keys from the self.deferred_object_changes dict
         keys = []
-        for i, k in enumerate(self.queued_object_changes.keys()):
+        for i, k in enumerate(self.deferred_object_changes.keys()):
             if i >= n:
                 return keys
             keys.append(k)
         return keys
 
-    def reset_queued_object_changes(self):
-        self.queued_object_changes = {}
+    def reset_deferred_object_changes(self):
+        self.deferred_object_changes = {}
 
-    def flush_object_changes(self, batch_size=1000):
-        if self.cache_object_changes:
+    def flush_deferred_object_changes(self, batch_size=1000):
+        if self.defer_object_changes:
             self.create_object_changes(batch_size=batch_size)
 
     def create_object_changes(self, batch_size=1000):
-        while self.queued_object_changes:
+        while self.deferred_object_changes:
             create_object_changes = []
             for key in self._object_change_batch(batch_size):
-                for entry in self.queued_object_changes[key]:
+                for entry in self.deferred_object_changes[key]:
                     objectchange = entry["instance"].to_objectchange(entry["action"])
                     objectchange.user = entry["user"]
                     objectchange.request_id = self.change_id
                     objectchange.change_context = self.context
                     objectchange.change_context_detail = self.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
                     create_object_changes.append(objectchange)
-                self.queued_object_changes.pop(key, None)
+                self.deferred_object_changes.pop(key, None)
             ObjectChange.objects.bulk_create(create_object_changes, batch_size=batch_size)
 
 
@@ -192,8 +192,7 @@ def web_request_context(
 @contextmanager
 def deferred_change_logging_for_bulk_operation():
     """
-    Manages bulk object change logging in a performance-efficient way by deferring ChangeLog entry
-    creation until after bulk operations (update/delete) are completed.
+    Defers change logging until the end of the context manager to improve performance. For use with bulk edit views.
     """
 
     change_context = change_context_state.get()
@@ -201,14 +200,10 @@ def deferred_change_logging_for_bulk_operation():
         raise ValueError("ChangeContext must be set before using deferred_change_logging_for_bulk_operation")
 
     with transaction.atomic():
-        # Disable automatic ChangeLog creation on signal to enhance performance.
-        # Multiple object updates lead to excessive database calls.
-        # Instead, we'll manually manage a bulk ChangeLog creation post-update.
-
         try:
-            change_context.cache_object_changes = True
+            change_context.defer_object_changes = True
             yield
-            change_context.flush_object_changes()
+            change_context.flush_deferred_object_changes()
         finally:
-            change_context.cache_object_changes = False
-            change_context.reset_queued_object_changes()
+            change_context.defer_object_changes = False
+            change_context.reset_deferred_object_changes()

@@ -128,11 +128,14 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
 
         changed_object_type = ContentType.objects.get_for_model(instance)
         changed_object_id = instance.id
+
+        # Generate a unique identifier for this change to stash in the change context
+        # This is used for deferred change logging and for looking up related changes without querying the database
         unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}__{user.pk}"
 
         # If a change already exists for this change_id, user, and object, update it instead of creating a new one.
         # If the object was deleted then recreated with the same pk (don't do this), change the action to update.
-        if unique_object_change_id in change_context.queued_object_changes:
+        if unique_object_change_id in change_context.deferred_object_changes:
             related_changes = ObjectChange.objects.filter(
                 changed_object_type=changed_object_type,
                 changed_object_id=changed_object_id,
@@ -140,7 +143,8 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
                 request_id=change_context.change_id,
             )
 
-            if not change_context.cache_object_changes and related_changes.exists():
+            # Skip the database check when deferring object changes
+            if not change_context.defer_object_changes and related_changes.exists():
                 objectchange = instance.to_objectchange(action)
                 most_recent_change = related_changes.order_by("-time").first()
                 if most_recent_change.action == ObjectChangeActionChoices.ACTION_DELETE:
@@ -150,10 +154,10 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
                 most_recent_change.save()
 
         else:
-            change_context.queued_object_changes[unique_object_change_id] = [
+            change_context.deferred_object_changes[unique_object_change_id] = [
                 {"action": action, "instance": instance, "user": user}
             ]
-            if not change_context.cache_object_changes:
+            if not change_context.defer_object_changes:
                 objectchange = instance.to_objectchange(action)
                 objectchange.user = user
                 objectchange.request_id = change_context.change_id
@@ -199,7 +203,7 @@ def _handle_deleted_object(sender, instance, **kwargs):
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
-        if change_context.cache_object_changes:
+        if change_context.defer_object_changes:
             raise ValueError("Deferred ObjectChanges cannot be created for delete actions")
 
         user = _get_user_if_authenticated(change_context.get_user(), instance)
@@ -210,14 +214,17 @@ def _handle_deleted_object(sender, instance, **kwargs):
 
         changed_object_type = ContentType.objects.get_for_model(instance)
         changed_object_id = instance.id
+
+        # Generate a unique identifier for this change to stash in the change context
+        # This is used for deferred change logging and for looking up related changes without querying the database
         unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}__{user.pk}"
         save_new_objectchange = True
 
         # if a change already exists for this change_id, user, and object, update it instead of creating a new one
         # except in the case that the object was created and deleted in the same change_id
         # we don't want to create a delete change for an object that never existed
-        if unique_object_change_id in change_context.queued_object_changes:
-            cached_related_change = change_context.queued_object_changes[unique_object_change_id][-1]
+        if unique_object_change_id in change_context.deferred_object_changes:
+            cached_related_change = change_context.deferred_object_changes[unique_object_change_id][-1]
             if cached_related_change["action"] != ObjectChangeActionChoices.ACTION_CREATE:
                 cached_related_change["action"] = ObjectChangeActionChoices.ACTION_DELETE
                 save_new_objectchange = False
@@ -229,7 +236,8 @@ def _handle_deleted_object(sender, instance, **kwargs):
                 request_id=change_context.change_id,
             )
 
-            if not change_context.cache_object_changes and related_changes.exists():
+            # Skip the database check when deferring object changes
+            if not change_context.defer_object_changes and related_changes.exists():
                 objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
                 most_recent_change = related_changes.order_by("-time").first()
                 if most_recent_change.action != ObjectChangeActionChoices.ACTION_CREATE:
@@ -240,7 +248,7 @@ def _handle_deleted_object(sender, instance, **kwargs):
                     save_new_objectchange = False
 
         if save_new_objectchange:
-            change_context.queued_object_changes.setdefault(unique_object_change_id, list()).append(
+            change_context.deferred_object_changes.setdefault(unique_object_change_id, list()).append(
                 {"action": ObjectChangeActionChoices.ACTION_DELETE, "instance": instance, "user": user}
             )
             objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)

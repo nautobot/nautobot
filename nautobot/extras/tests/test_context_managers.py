@@ -1,5 +1,3 @@
-import time
-
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
@@ -14,7 +12,6 @@ from nautobot.extras.context_managers import (
     web_request_context,
 )
 from nautobot.extras.models import Status, Webhook
-from nautobot.ipam.models import Namespace
 
 # Use the proper swappable User model
 User = get_user_model()
