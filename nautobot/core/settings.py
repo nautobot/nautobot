@@ -10,6 +10,7 @@ import django.forms
 from django.utils.safestring import mark_safe
 
 from nautobot import __version__
+from nautobot.core.constants import CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR
 from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
 
 #
@@ -152,6 +153,9 @@ if "NAUTOBOT_MAX_PAGE_SIZE" in os.environ and os.environ["NAUTOBOT_MAX_PAGE_SIZE
 # Metrics
 METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_METRICS_ENABLED", "False"))
 METRICS_AUTHENTICATED = is_truthy(os.getenv("NAUTOBOT_METRICS_AUTHENTICATED", "False"))
+METRICS_DISABLED_APPS = []
+if "NAUTOBOT_METRICS_DISABLED_APPS" in os.environ and os.environ["NAUTOBOT_METRICS_DISABLED_APPS"] != "":
+    METRICS_DISABLED_APPS = os.getenv("NAUTOBOT_METRICS_DISABLED_APPS", "").split(_CONFIG_SETTING_SEPARATOR)
 
 # Napalm
 NAPALM_ARGS = {}
@@ -166,7 +170,7 @@ if "NAUTOBOT_PAGINATE_COUNT" in os.environ and os.environ["NAUTOBOT_PAGINATE_COU
 # The options displayed in the web interface dropdown to limit the number of objects per page.
 # Default is [25, 50, 100, 250, 500, 1000]
 if "NAUTOBOT_PER_PAGE_DEFAULTS" in os.environ and os.environ["NAUTOBOT_PER_PAGE_DEFAULTS"] != "":
-    PER_PAGE_DEFAULTS = [int(val) for val in os.environ["NAUTOBOT_PER_PAGE_DEFAULTS"].split(",")]
+    PER_PAGE_DEFAULTS = [int(val) for val in os.environ["NAUTOBOT_PER_PAGE_DEFAULTS"].split(_CONFIG_SETTING_SEPARATOR)]
 
 # Plugins
 PLUGINS = []
@@ -187,6 +191,13 @@ if (
     and os.environ["NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH"] != ""
 ):
     RACK_ELEVATION_DEFAULT_UNIT_WIDTH = int(os.environ["NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH"])
+
+# Enable two-digit format for the rack unit numbering in rack elevations.
+if (
+    "NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT" in os.environ
+    and os.environ["NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"] != ""
+):
+    RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT = is_truthy(os.environ["NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"])
 
 # How frequently to check for a new Nautobot release on GitHub, and the URL to check for this information.
 # Defaults to disabled (no URL) and check every 24 hours when enabled
@@ -769,6 +780,11 @@ CONSTANCE_CONFIG = {
     "RACK_ELEVATION_DEFAULT_UNIT_WIDTH": ConstanceConfigItem(
         default=230, help_text="Default width (in pixels) of a rack unit in a rack elevation diagram", field_type=int
     ),
+    "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT": ConstanceConfigItem(
+        default=False,
+        help_text="Enables two-digit format for the rack unit numbering in a rack elevation diagram",
+        field_type=bool,
+    ),
     "RELEASE_CHECK_TIMEOUT": ConstanceConfigItem(
         default=24 * 3600,
         help_text="Number of seconds (must be at least 3600, or one hour) to cache the result of a release check "
@@ -800,7 +816,11 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Natural Keys": ["DEVICE_NAME_AS_NATURAL_KEY", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Performance": ["DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT", "JOB_CREATE_FILE_MAX_SIZE"],
-    "Rack Elevation Rendering": ["RACK_ELEVATION_DEFAULT_UNIT_HEIGHT", "RACK_ELEVATION_DEFAULT_UNIT_WIDTH"],
+    "Rack Elevation Rendering": [
+        "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT",
+        "RACK_ELEVATION_DEFAULT_UNIT_WIDTH",
+        "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
+    ],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
     "User Interface": ["SUPPORT_MESSAGE"],
     "Debugging": ["ALLOW_REQUEST_PROFILING"],
@@ -914,7 +934,7 @@ CELERY_TASK_TIME_LIMIT = int(os.getenv("NAUTOBOT_CELERY_TASK_TIME_LIMIT", str(10
 CELERY_WORKER_PROMETHEUS_PORTS = []
 if os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS"):
     CELERY_WORKER_PROMETHEUS_PORTS = [
-        int(value) for value in os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS").split(",")
+        int(value) for value in os.getenv("NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS").split(_CONFIG_SETTING_SEPARATOR)
     ]
 
 # These settings define the custom nautobot serialization encoding as an accepted data encoding format

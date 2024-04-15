@@ -58,7 +58,7 @@ extra_css:
 # jquery is not (yet) injected by RTD automatically and it might be dropped
 # as a dependency in the future
 extra_javascript:
-  - "https://code.jquery.com/jquery-3.6.0.min.js"
+  - "https://code.jquery.com/jquery-3.7.1.min.js"
 
 extra:
   generator: false
@@ -160,7 +160,7 @@ plugins:
         'development/best-practices.md': 'development/core/best-practices.md'
         'development/core/react-ui.md': 'development/core/index.md'
         'development/docker-compose-advanced-use-cases.md': 'development/core/docker-compose-advanced-use-cases.md'
-        'development/extending-models.md': 'development/core/extending-models.md'
+        'development/extending-models.md': 'development/core/model-checklist.md'
         'development/generic-views.md': 'development/core/generic-views.md'
         'development/getting-started.md': 'development/core/getting-started.md'
         'development/homepage.md': 'development/core/homepage.md'
@@ -281,6 +281,7 @@ plugins:
 
         # Post 2.x redirects
         'development/apps/api/ui-extensions/object-detail-views.md': 'development/apps/api/ui-extensions/object-views.md'
+        'development/core/extending-models.md': 'development/core/model-checklist.md'
 
 nav:
   - Overview: "index.md"
@@ -554,9 +555,9 @@ nav:
       - Best Practices: "development/core/best-practices.md"
       - Caching: "development/core/caching.md"
       - Controllers: "development/core/controllers.md"
-      - Extending Models: "development/core/extending-models.md"
       - Generic Views: "development/core/generic-views.md"
       - Home Page Panels: "development/core/homepage.md"
+      - Model Development Checklist: "development/core/model-checklist.md"
       - Model Features: "development/core/model-features.md"
       - Natural Keys: "development/core/natural-keys.md"
       - Navigation Menu: "development/core/navigation-menu.md"

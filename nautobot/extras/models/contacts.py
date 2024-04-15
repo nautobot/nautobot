@@ -19,6 +19,7 @@ class ContactTeamSharedBase(PrimaryModel):
     address = models.TextField(blank=True)
 
     comments = models.TextField(blank=True)
+    is_contact_associable_model = False
 
     class Meta:
         abstract = True

@@ -1171,6 +1171,19 @@ properties:
       "Guide to Nautobot Prometheus metrics": "../guides/prometheus-metrics.md"
     type: "boolean"
     version_added: "2.1.5"
+  METRICS_DISABLED_APPS:
+    default: []
+    description: >-
+      A list of app names for which Prometheus metrics should be disabled.
+      (If provided as an environment variable, it should be a comma-separated string, for example
+      `NAUTOBOT_METRICS_DISABLED_APPS="nautobot_ssot, nautobot_device_lifecycle_mgmt"`.)
+    environment_variable: "NAUTOBOT_METRICS_DISABLED_APPS"
+    items:
+      type: "string"
+    see_also:
+      "Guide to Nautobot Prometheus metrics": "../guides/prometheus-metrics.md"
+    type: "array"
+    version_added: "2.2.1"
   METRICS_ENABLED:
     default: false
     description: "Toggle the availability of Prometheus-compatible metrics at `/metrics`."
@@ -1376,6 +1389,13 @@ properties:
     environment_variable: "NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH"
     is_constance_config: true
     type: "integer"
+  RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT:
+    default: false
+    description: "Enables two-digit format for the rack unit numbering in a rack elevation diagram."
+    environment_variable: "NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"
+    is_constance_config: true
+    type: "boolean"
+    version_added: "2.2.1"
   REDIS_LOCK_TIMEOUT:
     default: 600
     description: >-
