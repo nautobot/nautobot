@@ -66,6 +66,53 @@ The CSV import functionality for all models has been changed from a synchronous 
 Model CharFields' `max_length` attributes have been standardized globally to have at least 255 characters except where a shorter `max_length` is explicitly justified.
 
 <!-- towncrier release notes start -->
+## vv2.2.1 (2024-04-15)
+
+### Security
+
+- [#5521](https://github.com/nautobot/nautobot/issues/5521) - Updated `Pillow` dependency to `~10.3.0` to address `CVE-2024-28219`.
+- [#5543](https://github.com/nautobot/nautobot/issues/5543) - Updated `jquery-ui` to version `1.13.2` due to `CVE-2022-31160`.
+- [#5561](https://github.com/nautobot/nautobot/issues/5561) - Updated `idna` to 3.7 due to CVE-2024-3651. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+### Added
+
+- [#1631](https://github.com/nautobot/nautobot/issues/1631) - Added changelogging for custom field background tasks.
+- [#5009](https://github.com/nautobot/nautobot/issues/5009) - Added the option to filter objects with select/multi-select custom fields based on the UUID of the defined custom field choice(s), for example `/api/dcim/locations/?cf_multiselect=1ea9237c-3ba7-4985-ba7e-6fd9e9bff813` as an alternative to `/api/dcim/locations/?cf_multiselect=some-choice-value`.
+- [#5493](https://github.com/nautobot/nautobot/issues/5493) - Added a configuration setting `METRICS_DISABLED_APPS` to disable app metrics for specific apps.
+- [#5540](https://github.com/nautobot/nautobot/issues/5540) - Added total devices count to device family detail page.
+
+### Changed
+
+- [#5274](https://github.com/nautobot/nautobot/issues/5274) - Added a setting that changes all rack unit numbers to display a minimum of two digits in rack elevations.
+
+### Fixed
+
+- [#5469](https://github.com/nautobot/nautobot/issues/5469) - Fixed the bug that contact and team instances are not included in global search.
+- [#5489](https://github.com/nautobot/nautobot/issues/5489) - Fixed REST API for Contact and Team incorrectly marking the `phone` and `email` fields as mandatory.
+- [#5502](https://github.com/nautobot/nautobot/issues/5502) - Fixed off-by-one error in generic filter testing helper `BaseFilterTestCase.get_filterset_test_values`.
+- [#5511](https://github.com/nautobot/nautobot/issues/5511) - Fixed contact tab disappearing when accessing dynamic groups tab.
+- [#5515](https://github.com/nautobot/nautobot/issues/5515) - Fixed javascript exception thrown in the Device LLDP neighbors view for neighbors without configured devices/interfaces.
+- [#5526](https://github.com/nautobot/nautobot/issues/5526) - Fixed doc reference to job cprofile file location.
+- [#5527](https://github.com/nautobot/nautobot/issues/5527) - Fixed incorrect "members" links in Virtual Chassis list view.
+- [#5531](https://github.com/nautobot/nautobot/issues/5531) - Re-added `nautobot.setup()` function mistakenly removed in 2.2.0.
+
+### Dependencies
+
+- [#5495](https://github.com/nautobot/nautobot/issues/5495) - Changed jsonschema version constraint from `>=4.7.0,<4.19.0` to `^4.7.0`.
+- [#5517](https://github.com/nautobot/nautobot/issues/5517) - Updated `djangorestframework` to `~3.15.1`.
+- [#5521](https://github.com/nautobot/nautobot/issues/5521) - Updated most dependencies to the latest versions available as of 2024-04-01.
+- [#5543](https://github.com/nautobot/nautobot/issues/5543) - Updated `jquery` to version `3.7.1`.
+
+### Documentation
+
+- [#5189](https://github.com/nautobot/nautobot/issues/5189) - Added "Model Development Checklist" to the developer documentation.
+- [#5189](https://github.com/nautobot/nautobot/issues/5189) - Merged "Extending Models" documentation into the "Model Development Checklist" documentation.
+
+### Housekeeping
+
+- [#5531](https://github.com/nautobot/nautobot/issues/5531) - Removed `nautobot-server pylint` management command from the `example_app`, as pylint can be invoked directly with an appropriate `--init-hook` instead.
+- [#5547](https://github.com/nautobot/nautobot/issues/5547) - Fixed TransactionTestCase inheritance order so that `test.client` works in test cases using this class.
+
 ## v2.2.0 (2024-03-29)
 
 !!! warning

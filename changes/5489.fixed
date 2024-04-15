@@ -1,1 +1,0 @@
-Fixed REST API for Contact and Team incorrectly marking the `phone` and `email` fields as mandatory.

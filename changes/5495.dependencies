@@ -1,1 +1,0 @@
-Changed jsonschema version constraint from `>=4.7.0,<4.19.0` to `^4.7.0`.
