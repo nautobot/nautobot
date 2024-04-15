@@ -614,7 +614,7 @@ def migrate_role_data(
         )
 
 
-def bulk_delete_with_bulk_change_logging(qs):
+def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
     """
     Deletes objects in the provided queryset and creates ObjectChange instances in bulk to improve performance.
     For use with bulk delete views. This operation is wrapped in an atomic transaction.
@@ -633,6 +633,9 @@ def bulk_delete_with_bulk_change_logging(qs):
             for obj in qs.iterator():
                 if not hasattr(obj, "to_objectchange"):
                     break
+                if len(queued_object_changes) >= batch_size:
+                    ObjectChange.objects.bulk_create(queued_object_changes)
+                    queued_object_changes = []
                 oc = obj.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
                 oc.user = change_context.user
                 oc.request_id = change_context.change_id
