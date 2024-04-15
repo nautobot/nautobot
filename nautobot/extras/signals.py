@@ -243,8 +243,7 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
     if change_context is None:
         context = None
     else:
-        context = change_context.as_dict()
-        context["user"] = change_context.get_user(instance)
+        context = change_context.as_dict(instance=instance)
     if action == "post_remove":
         # Existing content types have been removed from the custom field, delete their data
         if context:

@@ -681,8 +681,7 @@ class CustomFieldBulkDeleteView(generic.BulkDeleteView):
         if change_context is None:
             context = None
         else:
-            context = change_context.as_dict()
-            context["user"] = change_context.get_user(queryset)
+            context = change_context.as_dict(queryset)
             context["context_detail"] = "bulk delete custom field data"
         tasks = [
             delete_custom_field_data.si(obj.key, set(obj.content_types.values_list("pk", flat=True)), context)

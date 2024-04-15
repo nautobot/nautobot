@@ -799,8 +799,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
             if change_context is None:
                 context = None
             else:
-                context = change_context.as_dict()
-                context["user"] = change_context.get_user(self)
+                context = change_context.as_dict(instance=self)
                 context["context_detail"] = "update custom field choice data"
             transaction.on_commit(
                 lambda: update_custom_field_choice_data.delay(

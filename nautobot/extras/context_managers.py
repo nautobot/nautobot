@@ -52,11 +52,12 @@ class ChangeContext:
             return get_user_if_authenticated(self.user, instance)
         return get_user_if_authenticated(self.request.user, instance)
 
-    def as_dict(self):
+    def as_dict(self, instance=None):
         """
         Return ChangeContext attributes in dictionary format
         """
         context = {
+            "user": self.get_user(instance),
             "change_id": self.change_id,
             "context": self.context,
         }
