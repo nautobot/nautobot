@@ -72,6 +72,17 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## vv1.6.18 (2024-04-15)
+
+### Security
+
+- [#5543](https://github.com/nautobot/nautobot/issues/5543) - Updated `jquery-ui` to version `1.13.2` due to `CVE-2022-31160`.
+
+### Dependencies
+
+- [#5543](https://github.com/nautobot/nautobot/issues/5543) - Updated `jquery` to version `3.7.1`.
+
+
 ## v1.6.17 (2024-04-01)
 
 ### Dependencies
