@@ -66,7 +66,7 @@ The CSV import functionality for all models has been changed from a synchronous 
 Model CharFields' `max_length` attributes have been standardized globally to have at least 255 characters except where a shorter `max_length` is explicitly justified.
 
 <!-- towncrier release notes start -->
-## vv2.2.1 (2024-04-15)
+## v2.2.1 (2024-04-15)
 
 ### Security
 
@@ -76,7 +76,7 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 
 ### Added
 
-- [#1631](https://github.com/nautobot/nautobot/issues/1631) - Added changelogging for custom field background tasks.
+- [#1631](https://github.com/nautobot/nautobot/issues/1631) - Added change logging for custom field background tasks.
 - [#5009](https://github.com/nautobot/nautobot/issues/5009) - Added the option to filter objects with select/multi-select custom fields based on the UUID of the defined custom field choice(s), for example `/api/dcim/locations/?cf_multiselect=1ea9237c-3ba7-4985-ba7e-6fd9e9bff813` as an alternative to `/api/dcim/locations/?cf_multiselect=some-choice-value`.
 - [#5493](https://github.com/nautobot/nautobot/issues/5493) - Added a configuration setting `METRICS_DISABLED_APPS` to disable app metrics for specific apps.
 - [#5540](https://github.com/nautobot/nautobot/issues/5540) - Added total devices count to device family detail page.
@@ -87,12 +87,11 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 
 ### Fixed
 
-- [#5469](https://github.com/nautobot/nautobot/issues/5469) - Fixed the bug that contact and team instances are not included in global search.
+- [#5469](https://github.com/nautobot/nautobot/issues/5469) - Fixed contacts and teams not being included in the global search.
 - [#5489](https://github.com/nautobot/nautobot/issues/5489) - Fixed REST API for Contact and Team incorrectly marking the `phone` and `email` fields as mandatory.
 - [#5502](https://github.com/nautobot/nautobot/issues/5502) - Fixed off-by-one error in generic filter testing helper `BaseFilterTestCase.get_filterset_test_values`.
 - [#5511](https://github.com/nautobot/nautobot/issues/5511) - Fixed contact tab disappearing when accessing dynamic groups tab.
 - [#5515](https://github.com/nautobot/nautobot/issues/5515) - Fixed javascript exception thrown in the Device LLDP neighbors view for neighbors without configured devices/interfaces.
-- [#5526](https://github.com/nautobot/nautobot/issues/5526) - Fixed doc reference to job cprofile file location.
 - [#5527](https://github.com/nautobot/nautobot/issues/5527) - Fixed incorrect "members" links in Virtual Chassis list view.
 - [#5531](https://github.com/nautobot/nautobot/issues/5531) - Re-added `nautobot.setup()` function mistakenly removed in 2.2.0.
 
@@ -105,8 +104,9 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 
 ### Documentation
 
-- [#5189](https://github.com/nautobot/nautobot/issues/5189) - Added "Model Development Checklist" to the developer documentation.
+- [#5189](https://github.com/nautobot/nautobot/issues/5189) - Added "Model Development Checklist" to the core developer documentation.
 - [#5189](https://github.com/nautobot/nautobot/issues/5189) - Merged "Extending Models" documentation into the "Model Development Checklist" documentation.
+- [#5526](https://github.com/nautobot/nautobot/issues/5526) - Fixed doc reference to job cprofile file location.
 
 ### Housekeeping
 
