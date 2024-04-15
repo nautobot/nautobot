@@ -82,7 +82,6 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 
 - [#5543](https://github.com/nautobot/nautobot/issues/5543) - Updated `jquery` to version `3.7.1`.
 
-
 ## v1.6.17 (2024-04-01)
 
 ### Dependencies
