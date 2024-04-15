@@ -9,7 +9,7 @@ from django.test.client import RequestFactory
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import ObjectChange
-from nautobot.extras.signals import change_context_state
+from nautobot.extras.signals import change_context_state, get_user_if_authenticated
 from nautobot.extras.webhooks import enqueue_webhooks
 
 
@@ -51,11 +51,22 @@ class ChangeContext:
         if self.change_id is None:
             self.change_id = uuid.uuid4()
 
-    def get_user(self):
+    def get_user(self, instance=None):
         """Return self.user if set, otherwise return self.request.user"""
         if self.user is not None:
-            return self.user
-        return self.request.user
+            return get_user_if_authenticated(self.user, instance)
+        return get_user_if_authenticated(self.request.user, instance)
+
+    def as_dict(self, instance=None):
+        """
+        Return ChangeContext attributes in dictionary format
+        """
+        context = {
+            "user": self.get_user(instance),
+            "change_id": self.change_id,
+            "context": self.context,
+        }
+        return context
 
     def _object_change_batch(self, n):
         # Return first n keys from the self.deferred_object_changes dict

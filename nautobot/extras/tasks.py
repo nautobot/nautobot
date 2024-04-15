@@ -14,7 +14,7 @@ logger = getLogger("nautobot.extras.tasks")
 
 
 @nautobot_task
-def update_custom_field_choice_data(field_id, old_value, new_value):
+def update_custom_field_choice_data(field_id, old_value, new_value, change_context=None):
     """
     Update the values for a custom field choice used in objects' _custom_field_data for the given field.
 
@@ -23,6 +23,8 @@ def update_custom_field_choice_data(field_id, old_value, new_value):
         old_value (str): The existing value of the choice
         new_value (str): The value which will be used as replacement
     """
+    # Circular Import
+    from nautobot.extras.context_managers import web_request_context
     from nautobot.extras.models import CustomField
 
     try:
@@ -35,19 +37,43 @@ def update_custom_field_choice_data(field_id, old_value, new_value):
         # Loop through all field content types and search for values to update
         for ct in field.content_types.all():
             model = ct.model_class()
-            for obj in model.objects.filter(**{f"_custom_field_data__{field.key}": old_value}):
-                obj._custom_field_data[field.key] = new_value
-                obj.save()
+            if change_context is not None:
+                with web_request_context(
+                    user=change_context.get("user"),
+                    change_id=change_context.get("change_id"),
+                    context_detail=change_context.get("context_detail"),
+                    context=change_context.get("context"),
+                ):
+                    for obj in model.objects.filter(**{f"_custom_field_data__{field.key}": old_value}):
+                        obj._custom_field_data[field.key] = new_value
+                        obj.save()
+            else:
+                for obj in model.objects.filter(**{f"_custom_field_data__{field.key}": old_value}):
+                    obj._custom_field_data[field.key] = new_value
+                    obj.save()
 
     elif field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
         # Loop through all field content types and search for values to update
         for ct in field.content_types.all():
             model = ct.model_class()
-            for obj in model.objects.filter(**{f"_custom_field_data__{field.key}__contains": old_value}):
-                old_list = obj._custom_field_data[field.key]
-                new_list = [new_value if e == old_value else e for e in old_list]
-                obj._custom_field_data[field.key] = new_list
-                obj.save()
+            if change_context is not None:
+                with web_request_context(
+                    user=change_context.get("user"),
+                    change_id=change_context.get("change_id"),
+                    context_detail=change_context.get("context_detail"),
+                    context=change_context.get("context"),
+                ):
+                    for obj in model.objects.filter(**{f"_custom_field_data__{field.key}__contains": old_value}):
+                        old_list = obj._custom_field_data[field.key]
+                        new_list = [new_value if e == old_value else e for e in old_list]
+                        obj._custom_field_data[field.key] = new_list
+                        obj.save()
+            else:
+                for obj in model.objects.filter(**{f"_custom_field_data__{field.key}__contains": old_value}):
+                    old_list = obj._custom_field_data[field.key]
+                    new_list = [new_value if e == old_value else e for e in old_list]
+                    obj._custom_field_data[field.key] = new_list
+                    obj.save()
 
     else:
         logger.error(f"Unknown field type, failing to act on choice data for this field {field.key}.")
@@ -57,7 +83,7 @@ def update_custom_field_choice_data(field_id, old_value, new_value):
 
 
 @nautobot_task
-def delete_custom_field_data(field_key, content_type_pk_set):
+def delete_custom_field_data(field_key, content_type_pk_set, change_context=None):
     """
     Delete the values for a custom field
 
@@ -65,16 +91,30 @@ def delete_custom_field_data(field_key, content_type_pk_set):
         field_key (str): The key of the custom field which is being deleted
         content_type_pk_set (list): List of PKs for content types to act upon
     """
+    # Circular Import
+    from nautobot.extras.context_managers import web_request_context
+
     with transaction.atomic():
         for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
             model = ct.model_class()
-            for obj in model.objects.filter(**{f"_custom_field_data__{field_key}__isnull": False}):
-                del obj._custom_field_data[field_key]
-                obj.save()
+            if change_context is not None:
+                with web_request_context(
+                    user=change_context.get("user"),
+                    change_id=change_context.get("change_id"),
+                    context_detail=change_context.get("context_detail"),
+                    context=change_context.get("context"),
+                ):
+                    for obj in model.objects.filter(**{f"_custom_field_data__{field_key}__isnull": False}):
+                        del obj._custom_field_data[field_key]
+                        obj.save()
+            else:
+                for obj in model.objects.filter(**{f"_custom_field_data__{field_key}__isnull": False}):
+                    del obj._custom_field_data[field_key]
+                    obj.save()
 
 
 @nautobot_task
-def provision_field(field_id, content_type_pk_set):
+def provision_field(field_id, content_type_pk_set, change_context=None):
     """
     Provision a new custom field on all relevant content type object instances.
 
@@ -82,6 +122,8 @@ def provision_field(field_id, content_type_pk_set):
         field_id (uuid4): The PK of the custom field being provisioned
         content_type_pk_set (list): List of PKs for content types to act upon
     """
+    # Circular Import
+    from nautobot.extras.context_managers import web_request_context
     from nautobot.extras.models import CustomField
 
     try:
@@ -93,9 +135,20 @@ def provision_field(field_id, content_type_pk_set):
     with transaction.atomic():
         for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
             model = ct.model_class()
-            for obj in model.objects.all():
-                obj._custom_field_data.setdefault(field.key, field.default)
-                obj.save()
+            if change_context is not None:
+                with web_request_context(
+                    user=change_context.get("user"),
+                    change_id=change_context.get("change_id"),
+                    context_detail=change_context.get("context_detail"),
+                    context=change_context.get("context"),
+                ):
+                    for obj in model.objects.all():
+                        obj._custom_field_data.setdefault(field.key, field.default)
+                        obj.save()
+            else:
+                for obj in model.objects.all():
+                    obj._custom_field_data.setdefault(field.key, field.default)
+                    obj.save()
 
     return True
 

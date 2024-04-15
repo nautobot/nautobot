@@ -16,11 +16,13 @@ from nautobot.core.tables import CustomFieldColumn
 from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.testing.utils import post_data
+from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.filters import LocationFilterSet
 from nautobot.dcim.forms import RackFilterForm
 from nautobot.dcim.models import Device, Location, LocationType, Rack
 from nautobot.dcim.tables import LocationTable
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
+from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
 from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import VirtualMachine
@@ -2029,29 +2031,63 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
         self.assertEqual(location.cf["cf1"], "Foo")
 
+        with web_request_context(self.user):
+            cf = CustomField(label="CF2", type=CustomFieldTypeChoices.TYPE_TEXT, default="Bar")
+            cf.save()
+            cf.content_types.set([obj_type])
+
+            location.refresh_from_db()
+
+            self.assertEqual(location.cf["cf2"], "Bar")
+
+        oc_list = get_changes_for_model(location).order_by("pk")
+        self.assertEqual(len(oc_list), 1)
+        self.assertEqual(oc_list[0].changed_object, location)
+        self.assertEqual(oc_list[0].change_context_detail, "provision custom field data for new content types")
+        self.assertEqual(oc_list[0].user, self.user)
+
     def test_delete_custom_field_data_task(self):
         obj_type = ContentType.objects.get_for_model(Location)
-        cf = CustomField(
+        cf_1 = CustomField(
             label="CF1",
             type=CustomFieldTypeChoices.TYPE_TEXT,
         )
-        cf.save()
-        cf.content_types.set([obj_type])
+        cf_1.save()
+        cf_1.content_types.set([obj_type])
+        cf_2 = CustomField(
+            label="CF2",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+        )
+        cf_2.save()
+        cf_2.content_types.set([obj_type])
         location_type = LocationType.objects.create(name="Root Type 2")
         location_status = Status.objects.get_for_model(Location).first()
         location = Location(
             name="Location 1",
             location_type=location_type,
             status=location_status,
-            _custom_field_data={"cf1": "foo"},
+            _custom_field_data={"cf1": "foo", "cf2": "bar"},
         )
         location.save()
 
-        cf.delete()
+        cf_1.delete()
 
         location.refresh_from_db()
 
         self.assertTrue("cf1" not in location.cf)
+
+        with web_request_context(self.user):
+            cf_2.delete()
+
+            location.refresh_from_db()
+
+            self.assertTrue("cf2" not in location.cf)
+
+        oc_list = get_changes_for_model(location).order_by("pk")
+        self.assertEqual(len(oc_list), 1)
+        self.assertEqual(oc_list[0].changed_object, location)
+        self.assertEqual(oc_list[0].change_context_detail, "delete custom field data")
+        self.assertEqual(oc_list[0].user, self.user)
 
     def test_update_custom_field_choice_data_task(self):
         obj_type = ContentType.objects.get_for_model(Location)
@@ -2080,6 +2116,20 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         location.refresh_from_db()
 
         self.assertEqual(location.cf["cf1"], "Bar")
+
+        with web_request_context(self.user):
+            choice.value = "FizzBuzz"
+            choice.save()
+
+            location.refresh_from_db()
+
+            self.assertEqual(location.cf["cf1"], "FizzBuzz")
+
+        oc_list = get_changes_for_model(location).order_by("pk")
+        self.assertEqual(len(oc_list), 1)
+        self.assertEqual(oc_list[0].changed_object, location)
+        self.assertEqual(oc_list[0].change_context_detail, "update custom field choice data")
+        self.assertEqual(oc_list[0].user, self.user)
 
 
 class CustomFieldTableTest(TestCase):
