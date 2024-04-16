@@ -1,4 +1,4 @@
-class LocationFieldReplaceMixin:
+class LocationToLocationsQuerySetMixin:
     """
     A mixin for Django QuerySets to support backward compatibility by converting
     queries from a previously used 'location' field to the new
@@ -12,8 +12,11 @@ class LocationFieldReplaceMixin:
         for field, value in kwargs.items():
             if field.startswith("location") and not field.startswith("locations"):
                 _, lookup_expr = field.split("location", maxsplit=1)
-                locations_field = f"locations{lookup_expr}".strip()
-                updated_kwargs[locations_field] = value
+                if lookup_expr:
+                    locations_field = f"locations{lookup_expr}".strip()
+                    updated_kwargs[locations_field] = value
+                else:
+                    updated_kwargs["locations__in"] = [value]
             else:
                 updated_kwargs[field] = value
         return updated_kwargs

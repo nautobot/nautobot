@@ -12,6 +12,7 @@ from nautobot.dcim import choices as dcim_choices
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices, ServiceProtocolChoices
+from nautobot.ipam.factory import PrefixFactory
 from nautobot.ipam.models import (
     get_default_namespace,
     IPAddress,
@@ -294,6 +295,43 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         )
         self.child1 = Prefix.objects.create(prefix="101.102.0.0/26", status=self.status, namespace=self.namespace)
         self.child2 = Prefix.objects.create(prefix="101.102.0.64/26", status=self.status, namespace=self.namespace)
+
+    def test_location_queries(self):
+        PrefixFactory.create_batch(10)
+        location = Prefix.objects.filter(locations__isnull=False).first().locations.first()
+
+        with self.subTest("Assert filtering and excluding `location`"):
+            self.assertQuerysetEqualAndNotEmpty(
+                Prefix.objects.filter(location=location),
+                Prefix.objects.filter(locations__in=[location]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                Prefix.objects.exclude(location=location),
+                Prefix.objects.exclude(locations__in=[location]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                Prefix.objects.filter(location__in=[location]),
+                Prefix.objects.filter(locations__in=[location]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                Prefix.objects.exclude(location__in=[location]),
+                Prefix.objects.exclude(locations__in=[location]),
+            )
+
+        # These fields cannot be null, Hence using these for the test
+        query_params = ["name", "location_type", "status"]
+
+        for field_name in query_params:
+            with self.subTest(f"Assert location__{field_name} query."):
+                value = getattr(location, field_name)
+                self.assertQuerysetEqualAndNotEmpty(
+                    Prefix.objects.filter(**{f"location__{field_name}": value}),
+                    Prefix.objects.filter(**{f"locations__{field_name}": value}),
+                )
+                self.assertQuerysetEqualAndNotEmpty(
+                    Prefix.objects.exclude(**{f"location__{field_name}": value}),
+                    Prefix.objects.exclude(**{f"locations__{field_name}": value}),
+                )
 
     def test_prefix_validation(self):
         location_type = LocationType.objects.get(name="Room")
