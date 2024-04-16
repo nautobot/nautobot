@@ -1,1 +1,0 @@
-Updated `Pillow` dependency to `~10.3.0` to address `CVE-2024-28219`.

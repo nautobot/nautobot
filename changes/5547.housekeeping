@@ -1,1 +1,0 @@
-Fixed TransactionTestCase inheritance order so that `test.client` works in test cases using this class.
