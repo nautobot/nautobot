@@ -2,7 +2,7 @@ from django_celery_results.backends import DatabaseBackend
 
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.constants import JOB_RESULT_CUSTOM_CELERY_KWARGS
-from nautobot.extras.models import JobResult
+from nautobot.extras.models import Job, JobResult, ScheduledJob
 
 
 class NautobotDatabaseBackend(DatabaseBackend):
@@ -54,14 +54,30 @@ class NautobotDatabaseBackend(DatabaseBackend):
             if traceback is not None:
                 traceback = sanitize(traceback)
 
+            job_model_id = properties.get("nautobot_job_job_model_id", None)
+            scheduled_job_id = properties.get("nautobot_job_scheduled_job_id", None)
+            task_name = getattr(request, "task", None)
+            if scheduled_job_id:
+                try:
+                    schedule = ScheduledJob.objects.get(pk=scheduled_job_id)
+                    task_name = schedule.name
+                except ScheduledJob.DoesNotExist:
+                    pass
+            elif job_model_id:
+                try:
+                    job = Job.objects.get(pk=job_model_id)
+                    task_name = job.name
+                except Job.DoesNotExist:
+                    pass
+
             extended_props.update(
                 {
                     "task_args": task_args,
                     "task_kwargs": task_kwargs,
                     "celery_kwargs": celery_kwargs,
-                    "job_model_id": properties.get("nautobot_job_job_model_id", None),
-                    "scheduled_job_id": properties.get("nautobot_job_scheduled_job_id", None),
-                    "task_name": getattr(request, "task", None),
+                    "job_model_id": job_model_id,
+                    "scheduled_job_id": scheduled_job_id,
+                    "task_name": task_name,
                     "traceback": traceback,
                     "user_id": properties.get("nautobot_job_user_id", None),
                     "worker": getattr(request, "hostname", None),
