@@ -27,22 +27,7 @@ logger = logging.getLogger(__name__)
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "nautobot_config")
 
-
-class NautobotCelery(Celery):
-    task_cls = "nautobot.core.celery.task:NautobotTask"
-
-    def register_task(self, task, **options):
-        """Override the default task name for job classes to allow app provided jobs to use the full module path."""
-        from nautobot.extras.jobs import Job
-
-        if issubclass(task, Job):
-            task = task()
-            task.name = task.registered_name
-
-        return super().register_task(task, **options)
-
-
-app = NautobotCelery("nautobot")
+app = Celery("nautobot")
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.
