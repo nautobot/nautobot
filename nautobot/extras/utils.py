@@ -19,7 +19,9 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
+from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.constants import (
+    CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL,
     EXTRAS_FEATURES,
     JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
@@ -610,3 +612,38 @@ def migrate_role_data(
             model_to_migrate._meta.label,
             to_role_field_name,
         )
+
+
+def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
+    """
+    Deletes objects in the provided queryset and creates ObjectChange instances in bulk to improve performance.
+    For use with bulk delete views. This operation is wrapped in an atomic transaction.
+    """
+    from nautobot.extras.models import ObjectChange
+    from nautobot.extras.signals import change_context_state
+
+    change_context = change_context_state.get()
+    if change_context is None:
+        raise ValueError("Change logging must be enabled before using bulk_delete_with_bulk_change_logging")
+
+    with transaction.atomic():
+        try:
+            queued_object_changes = []
+            change_context.defer_object_changes = True
+            for obj in qs.iterator():
+                if not hasattr(obj, "to_objectchange"):
+                    break
+                if len(queued_object_changes) >= batch_size:
+                    ObjectChange.objects.bulk_create(queued_object_changes)
+                    queued_object_changes = []
+                oc = obj.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
+                oc.user = change_context.user
+                oc.request_id = change_context.change_id
+                oc.change_context = change_context.context
+                oc.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+                queued_object_changes.append(oc)
+            ObjectChange.objects.bulk_create(queued_object_changes)
+            return qs.delete()
+        finally:
+            change_context.defer_object_changes = False
+            change_context.reset_deferred_object_changes()
