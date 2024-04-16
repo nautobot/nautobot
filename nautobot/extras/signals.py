@@ -21,7 +21,7 @@ from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
 import redis.exceptions
 
-from nautobot.core.celery import import_jobs
+from nautobot.core.celery import app, import_jobs
 from nautobot.core.models import BaseModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.logging import sanitize

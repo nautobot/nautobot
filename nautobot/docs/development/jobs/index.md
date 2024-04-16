@@ -25,9 +25,6 @@ In any case, each module holds one or more Jobs (Python classes), each of which 
 
 For example, we can create a module named `devices.py` to hold all of our jobs which pertain to devices in Nautobot. Within that module, we might define several jobs. Each job is defined as a Python class inheriting from `nautobot.apps.jobs.Job`, which provides the base functionality needed to accept user input and log activity.
 
-+/- 2.0.0
-    All job classes must now be registered with `nautobot.apps.jobs.register_jobs` on module import. For Apps providing jobs, the `register_jobs` method must called from the App's `jobs.py` file/submodule at import time. The `register_jobs` method accepts one or more job classes as arguments.
-
 +/- 2.2.2
     Removed the requirement to call `register_jobs()` on module import. Any subclasses of `nautobot.extras.jobs.Job` that are defined at import time will be automatically registered.
 

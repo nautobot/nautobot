@@ -12,7 +12,7 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model
-from nautobot.core.celery import app, register_jobs
+from nautobot.core.celery import app
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
@@ -314,4 +314,3 @@ class ImportObjects(Job):
 
 
 jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun, ImportObjects]
-register_jobs(*jobs)
