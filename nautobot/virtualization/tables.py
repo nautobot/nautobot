@@ -197,6 +197,7 @@ class VMInterfaceTable(StatusTableMixin, BaseInterfaceTable):
             "virtual_machine",
             "name",
             "status",
+            "role",
             "enabled",
             "mac_address",
             "mtu",
@@ -207,7 +208,7 @@ class VMInterfaceTable(StatusTableMixin, BaseInterfaceTable):
             "untagged_vlan",
             "tagged_vlans",
         )
-        default_columns = ("pk", "virtual_machine", "name", "status", "enabled", "description")
+        default_columns = ("pk", "virtual_machine", "name", "status", "role", "enabled", "description")
 
 
 class VirtualMachineVMInterfaceTable(VMInterfaceTable):

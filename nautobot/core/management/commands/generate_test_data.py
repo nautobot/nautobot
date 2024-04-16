@@ -74,6 +74,9 @@ class Command(BaseCommand):
             from nautobot.extras.factory import (
                 ContactFactory,
                 ExternalIntegrationFactory,
+                JobLogEntryFactory,
+                JobResultFactory,
+                ObjectChangeFactory,
                 RoleFactory,
                 StatusFactory,
                 TagFactory,
@@ -220,6 +223,12 @@ class Command(BaseCommand):
         # ClusterFactory.create_batch(10)
         # VirtualMachineFactory.create_batch(10)
         # We need to remove them from there and enable them here instead, but that will require many test updates.
+        self.stdout.write("Creating ObjectChanges...")
+        ObjectChangeFactory.create_batch(100, using=db_name)
+        self.stdout.write("Creating JobResults...")
+        JobResultFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating JobLogEntries...")
+        JobLogEntryFactory.create_batch(100, using=db_name)
 
         self._output_hash_for_factory_models(
             factories=[
@@ -235,10 +244,13 @@ class Command(BaseCommand):
                 DeviceTypeFactory,
                 ExternalIntegrationFactory,
                 IPAddressFactory,
+                JobLogEntryFactory,
+                JobResultFactory,
                 LocationFactory,
                 LocationTypeFactory,
                 ManufacturerFactory,
                 NamespaceFactory,
+                ObjectChangeFactory,
                 PlatformFactory,
                 PrefixFactory,
                 ProviderFactory,
@@ -292,7 +304,13 @@ Type 'yes' to continue, or 'no' to cancel: """
             self.stdout.write(
                 self.style.WARNING(f'Flushing all existing data from the database "{options["database"]}"...')
             )
-            call_command("flush", "--no-input", "--database", options["database"])
+
+            # If we already have a fixture file to use, suppress the "post_migrate" signal that "flush" would normally
+            # trigger, as that would lead to creation of Job records (etc.) that WILL conflict with the fixture data.
+            inhibit_post_migrate = options["cache_test_fixtures"] and os.path.exists(options["fixture_file"])
+            call_command(
+                "flush", "--no-input", "--database", options["database"], inhibit_post_migrate=inhibit_post_migrate
+            )
 
         if options["cache_test_fixtures"] and os.path.exists(options["fixture_file"]):
             self.stdout.write(self.style.WARNING(f"Loading factory data from file {options['fixture_file']}"))
@@ -307,7 +325,7 @@ Type 'yes' to continue, or 'no' to cancel: """
                     "dumpdata",
                     indent=2,
                     format="json",
-                    exclude=["auth.permission", "extras.job", "extras.customfield"],
+                    exclude=["auth.permission"],
                     output=options["fixture_file"],
                 )
 

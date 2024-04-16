@@ -15,7 +15,6 @@ from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
 from nautobot.extras.models import Role, Status
 from nautobot.ipam import choices
-from nautobot.ipam.factory import VLANGroupFactory
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
@@ -51,17 +50,17 @@ class NamespaceTest(APIViewTestCases.APIViewTestCase):
         location = Location.objects.first()
         cls.create_data = [
             {
-                "name": "Purple Monkey Namesapce 1",
+                "name": "Purple Monkey Namespace 1",
                 "description": "A perfectly cromulent namespace.",
                 "location": location.pk,
             },
             {
-                "name": "Purple Monkey Namesapce 2",
+                "name": "Purple Monkey Namespace 2",
                 "description": "A secondarily cromulent namespace.",
                 "location": location.pk,
             },
             {
-                "name": "Purple Monkey Namesapce 3",
+                "name": "Purple Monkey Namespace 3",
                 "description": "A third cromulent namespace.",
                 "location": location.pk,
             },
@@ -211,7 +210,7 @@ class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.vrfs = VRF.objects.all()
+        cls.vrfs = VRF.objects.annotate(prefixes_count=Count("namespace__prefixes")).filter(prefixes_count__gte=2)
         cls.prefixes = Prefix.objects.all()
 
         VRFPrefixAssignment.objects.create(
@@ -882,11 +881,12 @@ class IPAddressToInterfaceTest(APIViewTestCases.APIViewTestCase):
             status=devicestatus,
         )
         int_status = Status.objects.get_for_model(Interface).first()
+        int_role = Role.objects.get_for_model(Interface).first()
         int_type = InterfaceTypeChoices.TYPE_1GE_FIXED
         interfaces = [
-            Interface.objects.create(device=device, name="eth0", status=int_status, type=int_type),
+            Interface.objects.create(device=device, name="eth0", status=int_status, role=int_role, type=int_type),
             Interface.objects.create(device=device, name="eth1", status=int_status, type=int_type),
-            Interface.objects.create(device=device, name="eth2", status=int_status, type=int_type),
+            Interface.objects.create(device=device, name="eth2", status=int_status, role=int_role, type=int_type),
             Interface.objects.create(device=device, name="eth3", status=int_status, type=int_type),
         ]
 
@@ -895,8 +895,11 @@ class IPAddressToInterfaceTest(APIViewTestCases.APIViewTestCase):
         vm_status = Status.objects.get_for_model(VirtualMachine).first()
         virtual_machine = (VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, status=vm_status),)
         vm_int_status = Status.objects.get_for_model(VMInterface).first()
+        vm_int_role = Role.objects.get_for_model(VMInterface).first()
         vm_interfaces = [
-            VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status),
+            VMInterface.objects.create(
+                virtual_machine=virtual_machine[0], name="veth0", status=vm_int_status, role=vm_int_role
+            ),
             VMInterface.objects.create(virtual_machine=virtual_machine[0], name="veth1", status=vm_int_status),
         ]
 
@@ -947,7 +950,11 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
         return VLANGroup.objects.create(name="DELETE ME")
 
     def get_deletable_object_pks(self):
-        vlangroups = VLANGroupFactory.create_batch(size=3)
+        vlangroups = [
+            VLANGroup.objects.create(name="DELETE ME"),
+            VLANGroup.objects.create(name="ME TOO"),
+            VLANGroup.objects.create(name="AND ME"),
+        ]
         return [vg.pk for vg in vlangroups]
 
 

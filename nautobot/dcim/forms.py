@@ -49,11 +49,12 @@ from nautobot.extras.forms import (
     NoteModelFormMixin,
     RoleModelBulkEditFormMixin,
     RoleModelFilterFormMixin,
+    RoleNotRequiredModelFormMixin,
     StatusModelBulkEditFormMixin,
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
-from nautobot.extras.models import ExternalIntegration, SecretsGroup, Status
+from nautobot.extras.models import Contact, ContactAssociation, ExternalIntegration, Role, SecretsGroup, Status, Team
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
@@ -69,6 +70,7 @@ from .choices import (
     InterfaceModeChoices,
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
+    LocationDataToContactActionChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
     PowerFeedSupplyChoices,
@@ -364,6 +366,55 @@ class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Tenancy
     parent = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     subtree = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     tags = TagFilterField(model)
+
+
+class LocationMigrateDataToContactForm(NautobotModelForm):
+    # Assign tab form fields
+    action = forms.ChoiceField(
+        choices=LocationDataToContactActionChoices,
+        required=True,
+        widget=StaticSelect2(),
+    )
+    location = DynamicModelChoiceField(queryset=Location.objects.all(), required=False, label="Source Location")
+    contact = DynamicModelChoiceField(
+        queryset=Contact.objects.all(),
+        required=False,
+        label="Available Contacts",
+        query_params={"similar_to_location_data": "$location"},
+    )
+    team = DynamicModelChoiceField(
+        queryset=Team.objects.all(),
+        required=False,
+        label="Available Teams",
+        query_params={"similar_to_location_data": "$location"},
+    )
+    role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        required=True,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        required=True,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+    name = forms.CharField(required=False, label="Name")
+    phone = forms.CharField(required=False, label="Phone")
+    email = forms.CharField(required=False, label="Email")
+
+    class Meta:
+        model = ContactAssociation
+        fields = [
+            "action",
+            "location",
+            "contact",
+            "team",
+            "role",
+            "status",
+            "name",
+            "phone",
+            "email",
+        ]
 
 
 #
@@ -2247,7 +2298,7 @@ class PowerOutletBulkEditForm(
 #
 
 
-class InterfaceFilterForm(DeviceComponentFilterForm, StatusModelFilterFormMixin):
+class InterfaceFilterForm(DeviceComponentFilterForm, RoleModelFilterFormMixin, StatusModelFilterFormMixin):
     model = Interface
     type = forms.MultipleChoiceField(choices=InterfaceTypeChoices, required=False, widget=StaticSelect2Multiple())
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -2316,6 +2367,7 @@ class InterfaceForm(InterfaceCommonForm, ComponentEditForm):
         fields = [
             "device",
             "name",
+            "role",
             "label",
             "type",
             "enabled",
@@ -2346,7 +2398,8 @@ class InterfaceForm(InterfaceCommonForm, ComponentEditForm):
         }
 
 
-class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
+class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm, RoleNotRequiredModelFormMixin):
+    model = Interface
     type = forms.ChoiceField(
         choices=InterfaceTypeChoices,
         widget=StaticSelect2(),
@@ -2432,6 +2485,7 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
         "name_pattern",
         "label_pattern",
         "status",
+        "role",
         "type",
         "enabled",
         "parent_interface",
@@ -2453,7 +2507,9 @@ class InterfaceCreateForm(ComponentCreateForm, InterfaceCommonForm):
 class InterfaceBulkCreateForm(
     form_from_model(Interface, ["enabled", "mtu", "vrf", "mgmt_only", "mode", "tags"]),
     DeviceBulkAddComponentForm,
+    RoleNotRequiredModelFormMixin,
 ):
+    model = Interface
     type = forms.ChoiceField(
         choices=InterfaceTypeChoices,
         widget=StaticSelect2(),
@@ -2468,6 +2524,7 @@ class InterfaceBulkCreateForm(
         "name_pattern",
         "label_pattern",
         "status",
+        "role",
         "type",
         "enabled",
         "mtu",
@@ -2485,6 +2542,7 @@ class InterfaceBulkEditForm(
     ),
     TagsBulkEditFormMixin,
     StatusModelBulkEditFormMixin,
+    RoleModelBulkEditFormMixin,
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Interface.objects.all(), widget=forms.MultipleHiddenInput())

@@ -1072,8 +1072,8 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.app_job.class_path, self.app_job.job_class.class_path)
 
     def test_latest_result(self):
-        self.assertEqual(self.local_job.latest_result, None)
-        self.assertEqual(self.app_job.latest_result, None)
+        self.assertEqual(self.local_job.latest_result, self.local_job.job_results.only("status").first())
+        self.assertEqual(self.app_job.latest_result, self.app_job.job_results.only("status").first())
         # TODO(Glenn): create some JobResults and test that this works correctly for them as well.
 
     def test_defaults(self):
@@ -1785,8 +1785,8 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
         )
         log.save()
 
-        self.assertEqual(JobLogEntry.objects.all().count(), 1)
-        log_object = JobLogEntry.objects.first()
+        self.assertEqual(JobLogEntry.objects.filter(job_result=self.job_result).count(), 1)
+        log_object = JobLogEntry.objects.filter(job_result=self.job_result).first()
         self.assertEqual(log_object.message, log.message)
         self.assertEqual(log_object.log_level, log.log_level)
         self.assertEqual(log_object.grouping, log.grouping)
