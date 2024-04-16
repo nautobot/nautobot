@@ -20,6 +20,7 @@ from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 from nautobot.core.celery.control import discard_git_repository, refresh_git_repository  # noqa: F401  # unused-import
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.celery.log import NautobotDatabaseHandler
+from nautobot.core.utils.module_loading import flush_module
 
 logger = logging.getLogger(__name__)
 
@@ -54,11 +55,11 @@ app.autodiscover_tasks()
 
 
 @signals.import_modules.connect
-def import_jobs_as_celery_tasks(sender, database_ready=True, **kwargs):
+def import_jobs(sender=None, database_ready=True, **kwargs):
     """
-    Import system Jobs into Celery as well as Jobs from JOBS_ROOT and GIT_ROOT.
+    Import system Jobs into memory as well as (re-?)importing Jobs from JOBS_ROOT and GIT_ROOT.
 
-    Note that app-provided Jobs are automatically imported at startup time via NautobotAppConfig.ready()
+    Note that app-provided Jobs are imported at startup time via NautobotAppConfig.ready()
     """
     import nautobot.core.jobs  # noqa: F401
 
@@ -66,13 +67,22 @@ def import_jobs_as_celery_tasks(sender, database_ready=True, **kwargs):
     if jobs_root and os.path.exists(jobs_root):
         if jobs_root not in sys.path:
             sys.path.append(jobs_root)
+        jobs_root_path = os.path.realpath(jobs_root)
+
+        # Flush previously loaded modules from JOBS_ROOT
+        for existing_name, existing_module in sys.modules.items():
+            if any(
+                os.path.realpath(path).startswith(jobs_root_path) for path in getattr(existing_module, "__path__", [])
+            ):
+                flush_module(existing_name, reimport=False)
+
+        # Load current modules in JOBS_ROOT
         for _, module_name, _ in pkgutil.iter_modules([jobs_root]):
             try:
                 logger.debug("Importing Jobs from %s in JOBS_ROOT", module_name)
                 existing_module = find_spec(module_name)
                 if existing_module is not None:
                     existing_module_path = os.path.realpath(existing_module.origin)
-                    jobs_root_path = os.path.realpath(jobs_root)
                     if not existing_module_path.startswith(jobs_root_path):
                         raise ImportError(
                             f"JOBS_ROOT Jobs module {module_name} conflicts with existing module {existing_module_path}"

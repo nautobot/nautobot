@@ -17,8 +17,8 @@ from django.db import transaction
 from git import InvalidGitRepositoryError, Repo
 import yaml
 
-from nautobot.core.celery import app as celery_app
 from nautobot.core.utils.git import GitRepo
+from nautobot.core.utils.module_loading import flush_module
 from nautobot.dcim.models import Device, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     LogLevelChoices,
@@ -37,7 +37,7 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents
-from nautobot.extras.utils import all_subclasses, refresh_job_model_from_job_class
+from nautobot.extras.utils import refresh_job_model_from_job_class
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 
@@ -720,57 +720,28 @@ def refresh_code_from_repository(repository_slug, consumer=None, skip_reimport=F
 
     Args:
         repository_slug (str): Repository directory in GIT_ROOT that was refreshed.
-        consumer (celery.worker.Consumer): Celery Consumer to update as well
+        consumer (celery.worker.Consumer): unused at this time.
         skip_reimport (bool): If True, unload existing code from this repository but do not re-import it.
     """
     if settings.GIT_ROOT not in sys.path:
         sys.path.append(settings.GIT_ROOT)
 
-    app = consumer.app if consumer is not None else celery_app
-    # TODO: This is ugly, but when app.use_fast_trace_task is set (true by default), Celery calls
-    # celery.app.trace.fast_trace_task(...) which assumes that all tasks are cached and have a valid `__trace__()`
-    # function defined. In theory consumer.update_strategies() (below) should ensure this, but it doesn't
-    # go far enough (possibly a discrepancy between the main worker process and the prefork executors?)
-    # as we can and do still encounter errors where `task.__trace__` is unexpectedly None.
-    # For now, simply disabling use_fast_trace_task forces the task trace function to be rebuilt each time,
-    # which avoids the issue at the cost of very slight overhead.
-    app.use_fast_trace_task = False
-
-    # Unload any previous version of this module and its submodules if present
-    for module_name in list(sys.modules):
-        if module_name == repository_slug or module_name.startswith(f"{repository_slug}."):
-            logger.debug("Unloading module %s", module_name)
-            if module_name in app.loader.task_modules:
-                app.loader.task_modules.remove(module_name)
-            if module_name in sys.modules:
-                del sys.modules[module_name]
-
-    # Unregister any previous Celery tasks from this module
-    # TODO this may be no longer needed now that jobs are once again not actual Celery tasks?
-    for task_name in list(app.tasks):
-        if task_name.startswith(f"{repository_slug}."):
-            logger.debug("Unregistering Celery task %s", task_name)
-            app.tasks.unregister(task_name)
-            if consumer is not None and task_name in consumer.strategies:
-                del consumer.strategies[task_name]
-
     if not skip_reimport:
         try:
             repository = GitRepository.objects.get(slug=repository_slug)
-            if "extras.job" in repository.provided_contents:
-                # Re-import Celery tasks from this module
-                logger.debug("Importing Jobs from %s.jobs in GIT_ROOT", repository_slug)
-                app.loader.import_task_module(f"{repository_slug}.jobs")
-                if consumer is not None:
-                    consumer.update_strategies()
+            if "extras.job" not in repository.provided_contents:
+                skip_reimport = True
         except GitRepository.DoesNotExist as exc:
             logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
-            raise
+            skip_reimport = True
+
+    flush_module(repository_slug, reimport=not skip_reimport)
+    flush_module(f"{repository_slug}.jobs", reimport=not skip_reimport)
 
 
 def refresh_git_jobs(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all Job records managed by this repository."""
-    from nautobot.extras.jobs import Job as JobClass  # TODO circular import
+    from nautobot.extras.jobs import all_job_classes  # avoid circular import
 
     installed_jobs = []
     if "extras.job" in repository_record.provided_contents and not delete:
@@ -778,8 +749,8 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
         try:
             refresh_code_from_repository(repository_record.slug)
 
-            for job_class in all_subclasses(JobClass):
-                if not job_class.class_path.startswith(f"{repository_record.slug}."):
+            for job_class in all_job_classes():
+                if not job_class.class_path.startswith(f"{repository_record.slug}.jobs"):
                     continue
                 found_jobs = True
                 job_model, created = refresh_job_model_from_job_class(Job, job_class)
@@ -799,7 +770,7 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                 installed_jobs.append(job_model)
 
             if not found_jobs:
-                msg = "No jobs were registered on loading the `jobs` submodule. Did you miss a `register_jobs()` call?"
+                msg = f"No jobs were found on importing the `{repository_record.slug}.jobs` submodule."
                 logger.warning(msg)
                 job_result.log(msg, grouping="jobs", level_choice=LogLevelChoices.LOG_WARNING)
         except Exception as exc:

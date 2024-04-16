@@ -36,7 +36,7 @@ from kombu.utils.uuid import uuid
 import netaddr
 import yaml
 
-from nautobot.core.celery import nautobot_task
+from nautobot.core.celery import import_jobs, nautobot_task
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -54,7 +54,7 @@ from nautobot.extras.models import (
     JobResult,
     ObjectChange,
 )
-from nautobot.extras.utils import change_logged_models_queryset, task_queues_as_choices
+from nautobot.extras.utils import all_subclasses, change_logged_models_queryset, task_queues_as_choices
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -203,7 +203,7 @@ class BaseJob:
                 extra={"grouping": "initialization"},
             )
 
-        self.logger.info("Running job", extra={"grouping": "initialization"})
+        self.logger.info("Running job %s", self.name, extra={"grouping": "initialization"})
 
     def run(self, *args, **kwargs):
         """
@@ -1176,8 +1176,22 @@ def get_job(class_path):
         return None
 
 
+def all_job_classes():
+    for candidate in all_subclasses(Job):
+        if candidate not in [Job, JobButtonReceiver, JobHookReceiver]:
+            yield candidate
+
+
 @nautobot_task(bind=True)
 def run_job(self, job_class_path, *args, **kwargs):
+    logger.debug("Running job %s", job_class_path)
+    # In the case of Git-provided jobs, thanks to Celery's prefork worker pattern, the worker may not be aware of a
+    # newly added GitRepository or a recent resync of an existing repository, though the repo should be up-to-date on
+    # disk thanks to `nautobot.core.celery.control.refresh_git_repository`.
+    # Similarly, if a user has recently made changes to files in JOBS_ROOT, the worker similarly may have stale info.
+    # In both cases, we just need to blunt-force reload those Job sources:
+    import_jobs()
+
     job_class = get_job(job_class_path)
     job = job_class()
     job.request = self.request

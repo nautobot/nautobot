@@ -1,0 +1,1 @@
+Removed the requirement for Job-providing modules to call `register_jobs()` at import time.
