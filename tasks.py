@@ -570,18 +570,15 @@ def build_example_app_docs(context):
 )
 def pylint(context, target=None, recursive=False):
     """Perform static analysis of Nautobot code."""
+    base_command = 'pylint --verbose --init-hook "import nautobot; nautobot.setup()" '
     if not target:
         # Lint everything
-        # Lint the installed nautobot package and the file tasks.py in the current directory
-        command = "nautobot-server pylint nautobot tasks.py"
-        run_command(context, command)
-        # Lint Python files discovered recursively in the development/ and examples/ directories
-        command = "nautobot-server pylint --recursive development/ examples/"
+        command = base_command + "--recursive=y nautobot tasks.py development/ examples/"
         run_command(context, command)
     else:
-        command = "nautobot-server pylint "
+        command = base_command
         if recursive:
-            command += "--recursive "
+            command += "--recursive=y "
         command += " ".join(target)
         run_command(context, command)
 

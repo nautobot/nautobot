@@ -8,16 +8,18 @@ The below best practices apply to test code as well as feature code, and there a
 
 For models that support change-logging, custom fields, and relationships (which includes all subclasses of `OrganizationalModel` and `PrimaryModel`), the "Full-featured models" base classes below should always be used. For less full-featured models, refer to the "Minimal models" column instead.
 
-| Feature                  | Full-featured models       | Minimal models             |
-| ------------------------ | -------------------------- | -------------------------- |
-| FilterSets               | `NautobotFilterSet`        | `BaseFilterSet`            |
-| Object create/edit forms | `NautobotModelForm`        | `BootstrapMixin`           |
-| Object bulk-edit forms   | `NautobotBulkEditForm`     | `BootstrapMixin`           |
-| Table filter forms       | `NautobotFilterForm`       | `BootstrapMixin`           |
-| Read-only serializers    | `BaseModelSerializer`      | `BaseModelSerializer`      |
-| Nested serializers       | `WritableNestedSerializer` | `WritableNestedSerializer` |
-| All other serializers    | `NautobotModelSerializer`  | `ValidatedModelSerializer` |
-| API View Sets            | `NautobotModelViewSet`     | `ModelViewSet`             |
+| Feature                  | Full-featured models       | Minimal models              |
+| ------------------------ | -------------------------- | --------------------------- |
+| Data models              | `PrimaryModel`             | `BaseModel`                 |
+| FilterSets               | `NautobotFilterSet`        | `BaseFilterSet`             |
+| Object create/edit forms | `NautobotModelForm`        | `BootstrapMixin`            |
+| Object bulk-edit forms   | `NautobotBulkEditForm`     | `BootstrapMixin`            |
+| Table filter forms       | `NautobotFilterForm`       | `BootstrapMixin`            |
+| Read-only serializers    | `BaseModelSerializer`      | `BaseModelSerializer`       |
+| All other serializers    | `NautobotModelSerializer`  | `ValidatedModelSerializer`  |
+| List view tables         | `BaseTable`                | `BaseTable`                 |
+| API ViewSets             | `NautobotModelViewSet`     | `ModelViewSet`              |
+| UI ViewSets              | `NautobotUIViewSet`        | individual mixins as needed |
 
 ## Data Model Best Practices
 
@@ -125,7 +127,7 @@ class ExampleModel(PrimaryModel):
 
 ### CharField and SlugField Max Length
 
-When constructing a CharField or SlugField, always utilize the 'CHARFIELD_MAX_LENGTH' constant unless your field requires a value greater than 'CHARFIELD_MAX_LENGTH', which is '255'.
+When constructing a CharField or SlugField, always utilize the `CHARFIELD_MAX_LENGTH` constant unless your field requires a value greater than `CHARFIELD_MAX_LENGTH`, which is `255`.
 
 ## Getting URL Routes
 
@@ -236,7 +238,7 @@ The following best practices must be considered when establishing new `FilterSet
 
 ### Mapping Model Fields to Filters
 
-- FilterSets **must** inherit from `nautobot.extras.filters.NautobotFilterSet` (which inherits from `nautobot.core.filters.BaseFilterSet`)
+- FilterSets **must** inherit from `nautobot.core.filters.BaseFilterSet` or `nautobot.extras.filters.NautobotFilterSet` (which inherits from `nautobot.core.filters.BaseFilterSet`)
     - This affords that automatically generated lookup expressions (`ic`, `nic`, `iew`, `niew`, etc.) are always included
     - This also asserts that the correct underlying `Form` class that maps the generated form field types and widgets will be included
 

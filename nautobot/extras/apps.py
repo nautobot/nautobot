@@ -12,6 +12,13 @@ logger = logging.getLogger(__name__)
 
 class ExtrasConfig(NautobotConfig):
     name = "nautobot.extras"
+    searchable_models = [
+        "contact",
+        "dynamicgroup",
+        "externalintegration",
+        "gitrepository",
+        "team",
+    ]
 
     def ready(self):
         super().ready()

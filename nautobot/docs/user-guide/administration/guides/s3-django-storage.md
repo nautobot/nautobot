@@ -45,7 +45,7 @@ The [`django-storages`](https://django-storages.readthedocs.io/en/stable/) libra
 In `nautobot_config.py` define the following configuration:
 
 ```python
-STORAGE_BACKEND = "storages.backends.s3boto3.S3Boto3Storage"
+STORAGE_BACKEND = "storages.backends.s3.S3Storage"
 
 STORAGE_CONFIG = {
     "AWS_ACCESS_KEY_ID": "...",
@@ -113,9 +113,9 @@ For this example I created a simple python file called `customer_storage.py` in 
 
 ```python
 """Example of a custom extension to support flexible s3 storage."""
-from storages.backends.s3boto3 import S3Boto3Storage
+from storages.backends.s3 import S3Storage
 
-class MediaStorage(S3Boto3Storage):
+class MediaStorage(S3Storage):
     bucket_name = 'nautobot-sw-media'
     location = "software_images" # store files under directory `software_images/` in bucket `nautobot-sw-media`
 ```

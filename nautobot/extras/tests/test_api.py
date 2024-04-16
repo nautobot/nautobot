@@ -409,11 +409,9 @@ class ContactTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Contact 3",
                 "phone": "555-0123",
-                "email": "",
             },
             {
                 "name": "Contact 4",
-                "phone": "",
                 "email": "contact4@example.com",
             },
         ]
@@ -3617,11 +3615,9 @@ class TeamTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Team 3",
                 "phone": "555-0123",
-                "email": "",
             },
             {
                 "name": "Team 4",
-                "phone": "",
                 "email": "team4@example.com",
                 "address": "Rainbow Bridge, Central NJ",
             },

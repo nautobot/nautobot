@@ -13,7 +13,6 @@ from django.core.management import CommandError, CommandParser, execute_from_com
 from django.core.management.utils import get_random_secret_key
 from jinja2 import BaseLoader, Environment
 
-from nautobot import __version__
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.extras.plugins.utils import load_plugins
 
@@ -126,7 +125,7 @@ def _preprocess_settings(settings, config_path):
     load_plugins(settings)
 
 
-def _load_settings(config_path):
+def load_settings(config_path):
     """Load nautobot_config.py or its equivalent into memory as a `nautobot_config` pseudo-module."""
     if not os.path.exists(config_path):
         raise FileNotFoundError(
@@ -154,6 +153,8 @@ class _VersionAction(argparse.Action):
         super().__init__(*args, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string):
+        from nautobot import __version__
+
         print(f"Nautobot version: {__version__}")
         print(f"Django version: {django.__version__}")
         print(f"Configuration file: {namespace.config_path}")
@@ -215,13 +216,9 @@ def _init_settings(args):
     print(f"Configuration file created at {config_path}")
 
 
-def main():
-    """Run administrative tasks."""
-    # Point Django to our 'nautobot_config' pseudo-module that we'll load from the provided config path
-    os.environ["DJANGO_SETTINGS_MODULE"] = "nautobot_config"
-
-    # Default config path based on NAUTOBOT_CONFIG or NAUTOBOT_ROOT environment variables
-    config_path = os.getenv(
+def get_config_path():
+    """Get the default Nautobot config file path based on the NAUTOBOT_CONFIG or NAUTOBOT_ROOT environment variables."""
+    return os.getenv(
         "NAUTOBOT_CONFIG",
         os.path.join(
             os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot")),
@@ -229,13 +226,23 @@ def main():
         ),
     )
 
+
+def main():
+    """Run administrative tasks."""
+    # Point Django to our 'nautobot_config' pseudo-module that we'll load from the provided config path
+    os.environ["DJANGO_SETTINGS_MODULE"] = "nautobot_config"
+
+    default_config_path = get_config_path()
+
     # Intercept certain CLI parameters and arguments before they reach Django
     parser = CommandParser(
         description=DESCRIPTION,
         usage=USAGE,
         formatter_class=_VerboseHelpFormatter,
     )
-    parser.add_argument("-c", "--config-path", default=config_path, help="Path to the Nautobot configuration file")
+    parser.add_argument(
+        "-c", "--config-path", default=default_config_path, help="Path to the Nautobot configuration file"
+    )
     parser.add_argument("--version", action=_VersionAction, help="Show version numbers and exit")
 
     # Parse out the `--config` argument here and capture the rest of the CLI args
@@ -282,7 +289,7 @@ def main():
             raise
 
     # If we get here, it's a regular Django management command - so load in the nautobot_config.py then hand off
-    _load_settings(args.config_path)
+    load_settings(args.config_path)
     execute_from_command_line([sys.argv[0], *unparsed_args])
 
 

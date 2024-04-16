@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 #
 
 
-def _get_user_if_authenticated(user, instance):
+def get_user_if_authenticated(user, instance):
     """Return the user object associated with the request if the user is defined.
 
     If the user is not defined, log a warning to indicate that the user couldn't be retrived from the request
@@ -125,7 +125,7 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
-        user = _get_user_if_authenticated(change_context_state.get().get_user(), instance)
+        user = change_context_state.get().get_user(instance)
         # save a copy of this instance's field cache so it can be restored after serialization
         # to prevent unexpected behavior when chaining multiple signal handlers
         original_cache = instance._state.fields_cache.copy()
@@ -186,7 +186,7 @@ def _handle_deleted_object(sender, instance, **kwargs):
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
-        user = _get_user_if_authenticated(change_context_state.get().get_user(), instance)
+        user = change_context_state.get().get_user(instance)
 
         # save a copy of this instance's field cache so it can be restored after serialization
         # to prevent unexpected behavior when chaining multiple signal handlers
@@ -238,13 +238,23 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
     """
     Handle the cleanup of old custom field data when a CustomField is removed from one or more ContentTypes.
     """
+
+    change_context = change_context_state.get()
+    if change_context is None:
+        context = None
+    else:
+        context = change_context.as_dict(instance=instance)
     if action == "post_remove":
         # Existing content types have been removed from the custom field, delete their data
-        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.key, pk_set))
+        if context:
+            context["context_detail"] = "delete custom field data from existing content types"
+        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.key, pk_set, context))
 
     elif action == "post_add":
         # New content types have been added to the custom field, provision them
-        transaction.on_commit(lambda: provision_field.delay(instance.pk, pk_set))
+        if context:
+            context["context_detail"] = "provision custom field data for new content types"
+        transaction.on_commit(lambda: provision_field.delay(instance.pk, pk_set, context))
 
 
 m2m_changed.connect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)

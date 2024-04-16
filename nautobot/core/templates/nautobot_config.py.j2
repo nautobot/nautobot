@@ -415,6 +415,11 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #
 # METRICS_AUTHENTICATED = is_truthy(os.getenv("NAUTOBOT_METRICS_AUTHENTICATED", "False"))
 
+# Disable app metrics for specific apps
+#
+# if "NAUTOBOT_METRICS_DISABLED_APPS" in os.environ and os.environ["NAUTOBOT_METRICS_DISABLED_APPS"] != "":
+#     METRICS_DISABLED_APPS = os.getenv("NAUTOBOT_METRICS_DISABLED_APPS", "").split(",")
+
 # Credentials that Nautobot will uses to authenticate to devices when connecting via NAPALM.
 #
 # NAPALM_USERNAME = os.getenv("NAUTOBOT_NAPALM_USERNAME", "")
@@ -472,6 +477,14 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # ):
 #     RACK_ELEVATION_DEFAULT_UNIT_WIDTH = int(os.environ["NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH"])
 
+# Enable two-digit format for the rack unit numbering in rack elevations.
+#
+# if (
+#     "NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT" in os.environ
+#      and os.environ["NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"] != ""
+# ):
+#     RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT = is_truthy(os.environ["NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"])
+
 # Sets an age out timer of redis lock. This is NOT implicitly applied to locks, must be added
 # to a lock creation as `timeout=settings.REDIS_LOCK_TIMEOUT`
 #
@@ -509,7 +522,7 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # class path of the storage driver in STORAGE_BACKEND and any configuration options in STORAGE_CONFIG.
 # These default to None and {} respectively.
 #
-# STORAGE_BACKEND = 'storages.backends.s3boto3.S3Boto3Storage'
+# STORAGE_BACKEND = 'storages.backends.s3.S3Storage'
 # STORAGE_CONFIG = {
 #     'AWS_ACCESS_KEY_ID': 'Key ID',
 #     'AWS_SECRET_ACCESS_KEY': 'Secret',

@@ -3,7 +3,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.db.models import F, Model, OuterRef, Q, Subquery
 from django.db.models.functions import JSONObject
-from django_celery_beat.managers import ExtendedQuerySet
 
 from nautobot.core.models.query_functions import EmptyGroupByJSONBAgg
 from nautobot.core.models.querysets import RestrictedQuerySet
@@ -272,7 +271,7 @@ class JobQuerySet(RestrictedQuerySet):
         )
 
 
-class ScheduledJobExtendedQuerySet(RestrictedQuerySet, ExtendedQuerySet):
+class ScheduledJobExtendedQuerySet(RestrictedQuerySet):
     """
     Base queryset used for the ScheduledJob class
     """

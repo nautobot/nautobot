@@ -27,6 +27,7 @@ from nautobot.extras.filters.customfields import (
     CustomFieldMultiValueDateFilter,
     CustomFieldMultiValueNumberFilter,
     CustomFieldNumberFilter,
+    CustomFieldSelectFilter,
 )
 from nautobot.extras.models import (
     ConfigContextSchema,
@@ -61,12 +62,16 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
         super().__init__(*args, **kwargs)
 
         custom_field_filter_classes = {
+            # Here, for the "base" filters for each custom field, for backwards compatibility, use single-value filters.
+            # For the "extended" filters, see below, we use multi-value filters.
+            # 3.0 TODO: switch the "base" filters to multi-value filters as well.
             CustomFieldTypeChoices.TYPE_DATE: CustomFieldDateFilter,
             CustomFieldTypeChoices.TYPE_BOOLEAN: CustomFieldBooleanFilter,
             CustomFieldTypeChoices.TYPE_INTEGER: CustomFieldNumberFilter,
             CustomFieldTypeChoices.TYPE_JSON: CustomFieldJSONFilter,
+            # The below are multi-value filters already:
             CustomFieldTypeChoices.TYPE_MULTISELECT: CustomFieldMultiSelectFilter,
-            CustomFieldTypeChoices.TYPE_SELECT: CustomFieldMultiSelectFilter,
+            CustomFieldTypeChoices.TYPE_SELECT: CustomFieldSelectFilter,
         }
 
         custom_fields = CustomField.objects.get_for_model(self._meta.model, exclude_filter_disabled=True)
