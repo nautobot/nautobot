@@ -1,1 +1,0 @@
-Fixed javascript exception thrown in the Device LLDP neighbors view for neighbors without configured devices/interfaces.
