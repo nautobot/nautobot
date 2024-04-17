@@ -624,7 +624,7 @@ class JobResult(BaseModel, CustomFieldModel):
         Returns:
             JobResult instance
         """
-        from nautobot.extras.jobs import patched_apply, run_job  # TODO circular import
+        from nautobot.extras.jobs import run_job  # TODO circular import
 
         if schedule is not None and synchronous:
             raise ValueError("Scheduled jobs cannot be run synchronously")
@@ -669,8 +669,7 @@ class JobResult(BaseModel, CustomFieldModel):
             redirect_logger = get_logger("celery.redirected")
             proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
             with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
-                eager_result = patched_apply(
-                    run_job,
+                eager_result = run_job.apply(
                     args=[job_model.class_path, *job_args],
                     kwargs=job_kwargs,
                     task_id=str(job_result.id),

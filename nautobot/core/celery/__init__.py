@@ -27,7 +27,12 @@ logger = logging.getLogger(__name__)
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "nautobot_config")
 
-app = Celery("nautobot")
+
+class NautobotCelery(Celery):
+    task_cls = "nautobot.core.celery.task.NautobotTask"
+
+
+app = NautobotCelery("nautobot")
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.

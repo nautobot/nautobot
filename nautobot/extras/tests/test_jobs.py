@@ -876,6 +876,7 @@ class JobHookReceiverTransactionTest(TransactionTestCase):
         test_location = Location.objects.get(name="test_jhr")
         oc = get_changes_for_model(test_location).first()
         self.assertEqual(oc.change_context, ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK)
+        self.assertIsNotNone(job_result.user)
         self.assertEqual(oc.user_id, job_result.user.pk)
 
     def test_missing_receive_job_hook_method(self):
@@ -933,6 +934,8 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         module = "job_hook_receiver"
         name = "TestJobHookReceiverLog"
         self.job_class, self.job_model = get_job_class_and_model(module, name)
+        self.assertIsNotNone(self.job_class)
+        self.assertIsNotNone(self.job_model)
         job_hook = models.JobHook(
             name="JobHookTest",
             type_create=True,
