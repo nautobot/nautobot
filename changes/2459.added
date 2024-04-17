@@ -1,0 +1,2 @@
+Added `nautobot.extras.utils.bulk_delete_with_bulk_change_logging` helper function for improving performance on bulk delete.
+Added `nautobot.extras.context_managers.deferred_change_logging_for_bulk_operation` context manager for improving performance on bulk update.
