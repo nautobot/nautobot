@@ -10,16 +10,15 @@ class LocationToLocationsQuerySetMixin:
         """Transforms query parameters that reference 'location' field into the corresponding 'locations' field."""
         updated_kwargs = {}
         for field, value in kwargs.items():
-            if field.startswith("location") and not field.startswith("locations"):
+            if field == "location":
+                # If there is no lookup expression, it means 'location' is queried directly,
+                # thus use 'locations__in' to accommodate the ManyToMany relationship
+                updated_kwargs["locations__in"] = [value]
+            elif field.startswith("location__"):
+                # If there is a lookup expression following 'location', prepend it with 'locations'
                 _, lookup_expr = field.split("location", maxsplit=1)
-                if lookup_expr:
-                    # If there is a lookup expression following 'location', prepend it with 'locations'
-                    locations_field = f"locations{lookup_expr}".strip()
-                    updated_kwargs[locations_field] = value
-                else:
-                    # If there is no lookup expression, it means 'location' is queried directly,
-                    # thus use 'locations__in' to accommodate the ManyToMany relationship
-                    updated_kwargs["locations__in"] = [value]
+                locations_field = f"locations{lookup_expr}".strip()
+                updated_kwargs[locations_field] = value
             else:
                 updated_kwargs[field] = value
         return updated_kwargs
