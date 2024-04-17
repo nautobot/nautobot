@@ -1,4 +1,3 @@
-from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import get_task_logger, Job, MultiObjectVar, ObjectVar
 from nautobot.extras.models import Role
 
@@ -20,6 +19,3 @@ class TestObjectVars(Job):
         logger.info("Job didn't crash!")
 
         return "Nice Roles!"
-
-
-register_jobs(TestObjectVars)

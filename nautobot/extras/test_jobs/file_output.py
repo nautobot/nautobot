@@ -1,4 +1,3 @@
-from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import IntegerVar, Job
 
 
@@ -11,6 +10,3 @@ class FileOutputJob(Job):
 
     def run(self, lines):
         self.create_file("output.txt", "Hello World!\n" * lines)
-
-
-register_jobs(FileOutputJob)

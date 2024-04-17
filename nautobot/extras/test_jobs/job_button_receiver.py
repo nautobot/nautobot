@@ -1,4 +1,3 @@
-from nautobot.core.celery import register_jobs
 from nautobot.dcim.models import Device, Location
 from nautobot.extras.jobs import get_task_logger, JobButtonReceiver
 
@@ -22,6 +21,3 @@ class TestJobButtonReceiverComplex(JobButtonReceiver):
 
 class TestJobButtonReceiverFail(JobButtonReceiver):
     pass
-
-
-register_jobs(TestJobButtonReceiverComplex, TestJobButtonReceiverFail, TestJobButtonReceiverSimple)

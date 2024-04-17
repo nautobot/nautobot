@@ -1422,11 +1422,10 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                 celery_kwargs = {"nautobot_job_profile": profile, "queue": task_queue}
                 scheduled_job = ScheduledJob(
                     name=schedule_name,
-                    task="nautobot.extras.jobs.run_job",
+                    task=job_model.class_path,
                     job_model=job_model,
                     start_time=schedule_datetime,
                     description=f"Nautobot job {schedule_name} scheduled by {request.user} for {schedule_datetime}",
-                    args=[job_model.class_path],
                     kwargs=job_model.job_class.serialize_data(job_form.cleaned_data),
                     celery_kwargs=celery_kwargs,
                     interval=schedule_type,
@@ -1692,7 +1691,7 @@ class ScheduledJobView(generic.ObjectView):
     queryset = ScheduledJob.objects.all()
 
     def get_extra_context(self, request, instance):
-        job_class = get_job(instance.args[0])
+        job_class = get_job(instance.task)
         labels = {}
         if job_class is not None:
             for name, var in job_class._get_vars().items():

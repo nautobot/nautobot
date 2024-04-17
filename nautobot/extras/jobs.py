@@ -203,7 +203,7 @@ class BaseJob:
                 extra={"grouping": "initialization"},
             )
 
-        self.logger.info("Running job %s", self.name, extra={"grouping": "initialization"})
+        self.logger.info("Running job", extra={"grouping": "initialization", "object": self.job_model})
 
     def run(self, *args, **kwargs):
         """
@@ -395,7 +395,7 @@ class BaseJob:
     @classproperty
     def grouping(cls) -> str:  # pylint: disable=no-self-argument
         module = inspect.getmodule(cls)
-        return getattr(module, "name", module.__name__)
+        return getattr(module, "name", cls.__module__)
 
     @final
     @classmethod
@@ -495,6 +495,7 @@ class BaseJob:
     @final
     @classproperty
     def registered_name(cls) -> str:  # pylint: disable=no-self-argument
+        """Deprecated - use class_path classproperty instead."""
         return f"{cls.__module__}.{cls.__name__}"
 
     @classmethod

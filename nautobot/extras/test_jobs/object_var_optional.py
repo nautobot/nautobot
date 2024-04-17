@@ -1,4 +1,3 @@
-from nautobot.core.celery import register_jobs
 from nautobot.dcim.models import Location
 from nautobot.extras.jobs import get_task_logger, Job, ObjectVar
 
@@ -15,6 +14,3 @@ class TestOptionalObjectVar(Job):
     def run(self, location=None):
         logger.info("The Location if any that the user provided.", extra={"object": location})
         return "Nice Location (or not)!"
-
-
-register_jobs(TestOptionalObjectVar)

@@ -484,11 +484,10 @@ def _create_schedule(serializer, data, job_model, user, approval_required, task_
     # scheduled for.
     scheduled_job = ScheduledJob(
         name=name,
-        task="nautobot.extras.jobs.run_job",
+        task=job_model.class_path,
         job_model=job_model,
         start_time=time,
         description=f"Nautobot job {name} scheduled by {user} for {time}",
-        args=[job_model.class_path],
         kwargs=data,
         celery_kwargs=celery_kwargs,
         interval=type_,

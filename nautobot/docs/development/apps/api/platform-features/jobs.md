@@ -6,7 +6,7 @@ By default, for each app, Nautobot looks for an iterable named `jobs` within a `
 
 ```python
 # jobs.py
-from nautobot.apps.jobs import Job, register_jobs
+from nautobot.apps.jobs import Job
 
 
 class CreateDevices(Job):
@@ -22,8 +22,7 @@ class DeviceIPsReport(Job):
 
 
 jobs = [CreateDevices, DeviceConnectionsReport, DeviceIPsReport]
-register_jobs(*jobs)
 ```
 
-+/- 2.0.0
-    Because Jobs are now proper Celery tasks, you now must call `register_jobs()` from within your `jobs.py` file when it is imported; any jobs not included in this call will not be available for Celery to schedule and execute.
++/- 2.2.2
+    In Nautobot 2.0.0 through 2.2.1, you were required to call `nautobot.apps.jobs.register_jobs()` from within your `jobs.py` file when it is imported. This requirement has been removed in newer Nautobot versions.

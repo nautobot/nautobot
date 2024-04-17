@@ -240,7 +240,7 @@ class Job(PrimaryModel):
         if not self.installed:
             return None
         try:
-            return self.job_task
+            return self.job_task.__class__
         except Exception as exc:
             logger.error(str(exc))
             return None
@@ -279,13 +279,13 @@ class Job(PrimaryModel):
 
     @property
     def job_task(self):
-        """Get the registered Celery task, refreshing it if necessary."""
+        """Get an instance of the associated Job class, refreshing it if necessary."""
         if self.git_repository is not None:
             # If this Job comes from a Git repository, make sure we have the correct version of said code.
             refresh_git_repository(
                 state=None, repository_pk=self.git_repository.pk, head=self.git_repository.current_head
             )
-        return import_string(f"{self.module_name}.{self.job_class_name}")
+        return import_string(f"{self.module_name}.{self.job_class_name}")()
 
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""

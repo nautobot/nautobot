@@ -1,4 +1,3 @@
-from nautobot.core.celery import register_jobs
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.jobs import get_task_logger, JobHookReceiver
 from nautobot.extras.models import Status
@@ -23,6 +22,3 @@ class TestJobHookReceiverChange(JobHookReceiver):
 
 class TestJobHookReceiverFail(JobHookReceiver):
     pass
-
-
-register_jobs(TestJobHookReceiverChange, TestJobHookReceiverFail, TestJobHookReceiverLog)

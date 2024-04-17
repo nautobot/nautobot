@@ -55,7 +55,7 @@ def import_jobs(sender=None, database_ready=True, **kwargs):
         jobs_root_path = os.path.realpath(jobs_root)
 
         # Flush previously loaded modules from JOBS_ROOT
-        for existing_name, existing_module in sys.modules.items():
+        for existing_name, existing_module in sys.modules.copy().items():
             if any(
                 os.path.realpath(path).startswith(jobs_root_path) for path in getattr(existing_module, "__path__", [])
             ):

@@ -1,4 +1,3 @@
-from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import get_task_logger, Job
 
 logger = get_task_logger(__name__)
@@ -19,6 +18,3 @@ class TestHasSensitiveVariables(Job):
         Job function.
         """
         logger.info("Success")
-
-
-register_jobs(TestHasSensitiveVariables)

@@ -180,7 +180,7 @@ class GitTest(TransactionTestCase):
             fd.write("{% for vlan in queryset %}\n{{ vlan.name }}\n{% endfor %}")
 
         with open(os.path.join(path, "jobs", "__init__.py"), "w") as fd:
-            fd.write("from nautobot.core.celery import register_jobs\nfrom .my_job import MyJob\nregister_jobs(MyJob)")
+            fd.write("from .my_job import MyJob")
 
         with open(os.path.join(path, "jobs", "my_job.py"), "w") as fd:
             fd.write("from nautobot.extras.jobs import Job\nclass MyJob(Job):\n    def run(self):\n        pass")
@@ -677,7 +677,7 @@ class GitTest(TransactionTestCase):
                         fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
                     with open(os.path.join(path, "jobs", "__init__.py"), "w") as fd:
                         fd.write(
-                            "from nautobot.core.celery import register_jobs\nfrom .my_job import MyJob\nregister_jobs(MyJob)"
+                            "from .my_job import MyJob"
                         )
 
                     with open(os.path.join(path, "jobs", "my_job.py"), "w") as fd:

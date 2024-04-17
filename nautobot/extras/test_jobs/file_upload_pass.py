@@ -1,4 +1,3 @@
-from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import FileVar, get_task_logger, Job
 
 logger = get_task_logger(__name__)
@@ -19,6 +18,3 @@ class TestFileUploadPass(Job):
         logger.info("Job didn't crash!")
 
         return "Great job!"
-
-
-register_jobs(TestFileUploadPass)
