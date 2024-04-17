@@ -7,7 +7,10 @@ from nautobot.core.testing import TransactionTestCase
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
-from nautobot.extras.context_managers import web_request_context
+from nautobot.extras.context_managers import (
+    deferred_change_logging_for_bulk_operation,
+    web_request_context,
+)
 from nautobot.extras.models import Status, Webhook
 
 # Use the proper swappable User model
@@ -193,3 +196,97 @@ class WebRequestContextTransactionTestCase(TransactionTestCase):
             Status.objects.create(name="Test Status 2")
 
         self.assertEqual(get_changes_for_model(Status).count(), 2)
+
+
+class BulkEditDeleteChangeLogging(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="jacob",
+            email="jacob@example.com",
+            password="top_secret",  # noqa: S106  # hardcoded-password-func-arg -- ok as this is test code only
+        )
+
+    def test_change_log_created(self):
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
+        with web_request_context(self.user):
+            with deferred_change_logging_for_bulk_operation():
+                location = Location(name="Test Location 1", location_type=location_type, status=location_status)
+                location.save()
+
+        location = Location.objects.get(name="Test Location 1")
+        oc_list = get_changes_for_model(location).order_by("pk")
+        self.assertEqual(len(oc_list), 1)
+        self.assertEqual(oc_list[0].changed_object, location)
+        self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
+
+    def test_delete(self):
+        """Test that deletes raise an exception"""
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
+        with self.assertRaises(ValueError):
+            with web_request_context(self.user):
+                with deferred_change_logging_for_bulk_operation():
+                    location = Location(name="Test Location 1", location_type=location_type, status=location_status)
+                    location.save()
+                    location.delete()
+
+    def test_create_then_update(self):
+        """Test that a create followed by an update is logged as a single create"""
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
+        with web_request_context(self.user):
+            with deferred_change_logging_for_bulk_operation():
+                location = Location(name="Test Location 1", location_type=location_type, status=location_status)
+                location.save()
+                location.description = "changed"
+                location.save()
+
+        oc_list = get_changes_for_model(location)
+        self.assertEqual(len(oc_list), 1)
+        self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
+        snapshots = oc_list[0].get_snapshots()
+        self.assertIsNone(snapshots["prechange"])
+        self.assertIsNotNone(snapshots["postchange"])
+        self.assertIsNone(snapshots["differences"]["removed"])
+        self.assertEqual(snapshots["differences"]["added"]["description"], "changed")
+
+    def test_bulk_edit(self):
+        """Test that edits to multiple objects are correctly logged"""
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
+        locations = [
+            Location(name=f"Test Location {i}", location_type=location_type, status=location_status)
+            for i in range(1, 4)
+        ]
+        Location.objects.bulk_create(locations)
+        with web_request_context(self.user):
+            with deferred_change_logging_for_bulk_operation():
+                for location in locations:
+                    location.description = "changed"
+                    location.save()
+
+        oc_list = get_changes_for_model(Location)
+        self.assertEqual(len(oc_list), 3)
+        for oc in oc_list:
+            self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)
+            snapshots = oc.get_snapshots()
+            self.assertIsNone(snapshots["prechange"])
+            self.assertIsNotNone(snapshots["postchange"])
+            self.assertIsNone(snapshots["differences"]["removed"])
+            self.assertEqual(snapshots["differences"]["added"]["description"], "changed")
+
+    def test_change_log_context(self):
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
+        with web_request_context(self.user, context_detail="test_change_log_context"):
+            with deferred_change_logging_for_bulk_operation():
+                location = Location(name="Test Location 1", location_type=location_type, status=location_status)
+                location.save()
+
+        location = Location.objects.get(name="Test Location 1")
+        oc_list = get_changes_for_model(location)
+        with self.subTest():
+            self.assertEqual(oc_list[0].change_context, ObjectChangeEventContextChoices.CONTEXT_ORM)
+        with self.subTest():
+            self.assertEqual(oc_list[0].change_context_detail, "test_change_log_context")
