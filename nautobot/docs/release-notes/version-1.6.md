@@ -72,6 +72,60 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.18 (2024-04-15)
+
+### Security
+
+- [#5543](https://github.com/nautobot/nautobot/issues/5543) - Updated `jquery-ui` to version `1.13.2` due to `CVE-2022-31160`.
+
+### Dependencies
+
+- [#5543](https://github.com/nautobot/nautobot/issues/5543) - Updated `jquery` to version `3.7.1`.
+
+## v1.6.17 (2024-04-01)
+
+### Dependencies
+
+- [#4583](https://github.com/nautobot/nautobot/issues/4583) - Updated pinned version of `social-auth-core` to remove dependency on `python-jose` & its dependency on `ecdsa`.
+- [#5495](https://github.com/nautobot/nautobot/issues/5495) - Changed `jsonschema` version constraint from `>=4.7.0,<4.18.0` to `^4.7.0`.
+
+## v1.6.16 (2024-03-25)
+
+### Security
+
+- [#5450](https://github.com/nautobot/nautobot/issues/5450) - Updated `django` to `~3.2.25` due to `CVE-2024-27351`.
+- [#5465](https://github.com/nautobot/nautobot/issues/5465) - Added requirement for user authentication to access the endpoint `/extras/job-results/<uuid:pk>/log-table/`; furthermore it will not allow an authenticated user to view log entries for a JobResult they don't otherwise have permission to view. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5465](https://github.com/nautobot/nautobot/issues/5465) - Added narrower permissions enforcement on the endpoints `/extras/git-repositories/<str:slug>/sync/` and `/extras/git-repositories/<str:slug>/dry-run/`; a user who has `change` permissions for a subset of Git repositories is no longer permitted to sync or dry-run other repositories for which they lack the appropriate permissions. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5465](https://github.com/nautobot/nautobot/issues/5465) - Added narrower permissions enforcement on the `/api/dcim/connected-device/?peer_device=...&?peer_interface=...` REST API endpoint; a user who has `view` permissions for a subset of interfaces is no longer permitted to query other interfaces for which they lack permissions. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5465](https://github.com/nautobot/nautobot/issues/5465) - Added narrower permissions enforcement on all `<app>/<model>/<lookup>/notes/` UI endpoints; a user must now have the appropriate `extras.view_note` permissions to view existing notes. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5465](https://github.com/nautobot/nautobot/issues/5465) - Added requirement for user authentication to access the REST API endpoints `/api/redoc/`, `/api/swagger/`, `/api/swagger.json`, and `/api/swagger.yaml`. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5465](https://github.com/nautobot/nautobot/issues/5465) - Added requirement for user authentication to access the `/api/graphql` REST API endpoint, even when `EXEMPT_VIEW_PERMISSIONS` is configured. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5465](https://github.com/nautobot/nautobot/issues/5465) - Added requirement for user authentication to access the endpoints `/dcim/racks/<uuid>/dynamic-groups/`, `/dcim/devices/<uuid>/dynamic-groups/`, `/ipam/prefixes/<uuid>/dynamic-groups/`, `/ipam/ip-addresses/<uuid>/dynamic-groups/`, `/virtualization/clusters/<uuid>/dynamic-groups/`, and `/virtualization/virtual-machines/<uuid>/dynamic-groups/`, even when `EXEMPT_VIEW_PERMISSIONS` is configured. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+- [#5465](https://github.com/nautobot/nautobot/issues/5465) - Added requirement for user authentication to access the endpoint `/extras/secrets/provider/<str:provider_slug>/form/`. ([GHSA-m732-wvh2-7cq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-m732-wvh2-7cq4))
+
+### Added
+
+- [#5465](https://github.com/nautobot/nautobot/issues/5465) - Added `nautobot.apps.utils.get_url_for_url_pattern` and `nautobot.apps.utils.get_url_patterns` lookup functions.
+- [#5465](https://github.com/nautobot/nautobot/issues/5465) - Added `nautobot.apps.views.GenericView` base class.
+
+### Changed
+
+- [#5465](https://github.com/nautobot/nautobot/issues/5465) - Added support for `view_name` and `view_description` optional parameters when instantiating a `nautobot.apps.api.OrderedDefaultRouter`. Specifying these parameters is to be preferred over defining a custom `APIRootView` subclass when defining App API URLs.
+- [#5465](https://github.com/nautobot/nautobot/issues/5465) - Added requirement for user authentication by default on the `nautobot.core.api.AuthenticatedAPIRootView` class. As a consequence, viewing the browsable REST API root endpoints (e.g. `/api/`, `/api/circuits/`, `/api/dcim/`, etc.) now requires user authentication.
+- [#5465](https://github.com/nautobot/nautobot/issues/5465) - Added requirement for user authentication to access `/api/docs/` and `/graphql/` even when `HIDE_RESTRICTED_UI` is False.
+
+### Fixed
+
+- [#5465](https://github.com/nautobot/nautobot/issues/5465) - Fixed a 500 error when accessing any of the `/dcim/<port-type>/<uuid>/connect/<termination_b_type>/` view endpoints with an invalid/nonexistent `termination_b_type` string.
+
+### Documentation
+
+- [#5465](https://github.com/nautobot/nautobot/issues/5465) - Updated example views in the App developer documentation to include `ObjectPermissionRequiredMixin` or `LoginRequiredMixin` as appropriate best practices.
+
+### Housekeeping
+
+- [#5465](https://github.com/nautobot/nautobot/issues/5465) - Updated custom views in the `example_plugin` to use the new `GenericView` base class as a best practice.
+
 ## v1.6.15 (2024-03-18)
 
 ### Added
