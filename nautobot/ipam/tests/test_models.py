@@ -1239,6 +1239,42 @@ class TestVLAN(ModelTestCases.BaseModelTestCase):
             location.vlans.add(vlan)
         self.assertIn(f"{location} is a Floor and may not have VLANs associated to it.", str(cm.exception))
 
+    def test_location_queries(self):
+        location = VLAN.objects.filter(locations__isnull=False).first().locations.first()
+
+        with self.subTest("Assert filtering and excluding `location`"):
+            self.assertQuerysetEqualAndNotEmpty(
+                VLAN.objects.filter(location=location),
+                VLAN.objects.filter(locations__in=[location]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                VLAN.objects.exclude(location=location),
+                VLAN.objects.exclude(locations__in=[location]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                VLAN.objects.filter(location__in=[location]),
+                VLAN.objects.filter(locations__in=[location]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                VLAN.objects.exclude(location__in=[location]),
+                VLAN.objects.exclude(locations__in=[location]),
+            )
+
+        # These fields cannot be null, Hence using these for the test
+        query_params = ["name", "location_type", "status"]
+
+        for field_name in query_params:
+            with self.subTest(f"Assert location__{field_name} query."):
+                value = getattr(location, field_name)
+                self.assertQuerysetEqualAndNotEmpty(
+                    VLAN.objects.filter(**{f"location__{field_name}": value}),
+                    VLAN.objects.filter(**{f"locations__{field_name}": value}),
+                )
+                self.assertQuerysetEqualAndNotEmpty(
+                    VLAN.objects.exclude(**{f"location__{field_name}": value}),
+                    VLAN.objects.exclude(**{f"locations__{field_name}": value}),
+                )
+
 
 class TestVRF(ModelTestCases.BaseModelTestCase):
     model = VRF
