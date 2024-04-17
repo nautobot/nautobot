@@ -726,17 +726,18 @@ def refresh_code_from_repository(repository_slug, consumer=None, skip_reimport=F
     if settings.GIT_ROOT not in sys.path:
         sys.path.append(settings.GIT_ROOT)
 
-    if not skip_reimport:
-        try:
+    try:
+        if not skip_reimport:
             repository = GitRepository.objects.get(slug=repository_slug)
             if "extras.job" not in repository.provided_contents:
                 skip_reimport = True
-        except GitRepository.DoesNotExist as exc:
-            logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
-            skip_reimport = True
-
-    flush_module(repository_slug, reimport=not skip_reimport)
-    flush_module(f"{repository_slug}.jobs", reimport=not skip_reimport)
+    except GitRepository.DoesNotExist as exc:
+        logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
+        skip_reimport = True
+        raise
+    finally:
+        flush_module(repository_slug, reimport=not skip_reimport)
+        flush_module(f"{repository_slug}.jobs", reimport=not skip_reimport)
 
 
 def refresh_git_jobs(repository_record, job_result, delete=False):
@@ -762,9 +763,9 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                     continue
 
                 if created:
-                    message = "Created Job record"
+                    message = f"Created Job record for {job_class.class_path}"
                 else:
-                    message = "Refreshed Job record"
+                    message = f"Refreshed Job record for {job_class.class_path}"
                 logger.info(message)
                 job_result.log(message=message, obj=job_model, grouping="jobs", level_choice=LogLevelChoices.LOG_INFO)
                 installed_jobs.append(job_model)

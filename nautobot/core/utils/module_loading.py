@@ -17,6 +17,8 @@ def flush_module(base_module_name, reimport=True):
     Note that Django `runserver` autoreload uses a much more blunt-force approach; it literally does a `sys.exit()` on
     detecting any file change.
     """
+    from nautobot.extras.jobs import all_job_classes
+
     modules_to_reimport = [base_module_name]
     for module_name in list(sys.modules):
         if module_name == base_module_name or module_name.startswith(f"{base_module_name}."):
@@ -24,6 +26,15 @@ def flush_module(base_module_name, reimport=True):
             del sys.modules[module_name]
             if module_name not in modules_to_reimport:
                 modules_to_reimport.append(module_name)
+
+    for job_class in all_job_classes():
+        if job_class.class_path.startswith(f"{base_module_name}."):
+            del job_class
+
+    # run garbage collection to ensure stale job classes aren't left in Job.__subclasses__
+    import gc
+
+    gc.collect()
 
     if reimport:
         for module_name in modules_to_reimport:
@@ -33,6 +44,7 @@ def flush_module(base_module_name, reimport=True):
             except ModuleNotFoundError:
                 # Maybe it no longer exists?
                 logger.warning("Unable to find module %s to re-import it after unloading it", module_name)
+                raise
             except Exception as exc:
                 # More problematic!
                 logger.error("Unable to import module %s: %s", module_name, exc)
