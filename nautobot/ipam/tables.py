@@ -771,7 +771,7 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
     tenant = TenantColumn()
     role = tables.TemplateColumn(template_code=VLAN_ROLE_LINK)
     location_count = LinkedCountColumn(
-        viewname="dcim:location",
+        viewname="dcim:location_list",
         url_params={"vlans": "pk"},
         verbose_name="Locations",
     )
