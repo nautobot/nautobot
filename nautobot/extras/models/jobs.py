@@ -5,6 +5,7 @@ from datetime import timedelta
 import logging
 
 from celery import schedules
+from celery.exceptions import NotRegistered
 from celery.utils.log import get_logger, LoggingProxy
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -285,7 +286,10 @@ class Job(PrimaryModel):
             refresh_git_repository(
                 state=None, repository_pk=self.git_repository.pk, head=self.git_repository.current_head
             )
-        return import_string(f"{self.module_name}.{self.job_class_name}")()
+        try:
+            return import_string(f"{self.module_name}.{self.job_class_name}")()
+        except ModuleNotFoundError as err:  # keep 2.0-2.2.1 exception behavior
+            raise NotRegistered from err
 
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""

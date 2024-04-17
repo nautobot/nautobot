@@ -186,7 +186,7 @@ def ensure_git_repository(repository_record, logger=None, head=None):  # pylint:
 def git_repository_dry_run(repository_record, logger):  # pylint: disable=redefined-outer-name
     """Log the difference between local branch and remote branch files.
     Args:
-        repository_record (GitRepository): The GitRepostiory instance to diff.
+        repository_record (GitRepository): The GitRepository instance to diff.
         logger (logging.Logger): Logger to log results to.
     """
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)

@@ -36,3 +36,4 @@ def flush_module(base_module_name, reimport=True):
             except Exception as exc:
                 # More problematic!
                 logger.error("Unable to import module %s: %s", module_name, exc)
+                raise
