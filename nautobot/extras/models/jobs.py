@@ -238,10 +238,12 @@ class Job(PrimaryModel):
     @cached_property
     def job_class(self):
         """Get the Job class (source code) associated with this Job model."""
+        from nautobot.extras.jobs import get_job
+
         if not self.installed:
             return None
         try:
-            return self.job_task.__class__
+            return get_job(self.class_path)
         except Exception as exc:
             logger.error(str(exc))
             return None

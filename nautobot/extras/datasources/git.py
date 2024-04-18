@@ -7,10 +7,8 @@ import mimetypes
 import os
 from pathlib import Path
 import re
-import sys
 from urllib.parse import quote
 
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
@@ -18,7 +16,6 @@ from git import InvalidGitRepositoryError, Repo
 import yaml
 
 from nautobot.core.utils.git import GitRepo
-from nautobot.core.utils.module_loading import flush_module
 from nautobot.dcim.models import Device, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     LogLevelChoices,
@@ -714,61 +711,37 @@ def delete_git_config_context_schemas(repository_record, job_result, preserve=()
 #
 
 
-def refresh_code_from_repository(repository_slug, consumer=None, skip_reimport=False):
-    """
-    After cloning/updating a GitRepository on disk, call this function to reload and reregister the repo's Python code.
-
-    Args:
-        repository_slug (str): Repository directory in GIT_ROOT that was refreshed.
-        consumer (celery.worker.Consumer): unused at this time.
-        skip_reimport (bool): If True, unload existing code from this repository but do not re-import it.
-    """
-    if settings.GIT_ROOT not in sys.path:
-        sys.path.append(settings.GIT_ROOT)
-
-    try:
-        if not skip_reimport:
-            repository = GitRepository.objects.get(slug=repository_slug)
-            if "extras.job" not in repository.provided_contents:
-                skip_reimport = True
-    except GitRepository.DoesNotExist as exc:
-        logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
-        skip_reimport = True
-        raise
-    finally:
-        flush_module(repository_slug, reimport=not skip_reimport)
-        flush_module(f"{repository_slug}.jobs", reimport=not skip_reimport)
-
-
 def refresh_git_jobs(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all Job records managed by this repository."""
-    from nautobot.extras.jobs import all_job_classes  # avoid circular import
+    from nautobot.extras.jobs import get_jobs  # avoid circular import
 
     installed_jobs = []
     if "extras.job" in repository_record.provided_contents and not delete:
         found_jobs = False
         try:
-            refresh_code_from_repository(repository_record.slug)
+            jobs_data = get_jobs()
 
-            for job_class in all_job_classes():
-                if not job_class.class_path.startswith(f"{repository_record.slug}.jobs"):
-                    continue
-                found_jobs = True
-                job_model, created = refresh_job_model_from_job_class(Job, job_class)
+            for module_name, module_data in jobs_data.items():
+                if module_name.startswith(f"{repository_record.slug}.jobs"):
+                    for job_class in module_data["jobs"].values():
+                        found_jobs = True
+                        job_model, created = refresh_job_model_from_job_class(Job, job_class)
 
-                if job_model is None:
-                    msg = "Failed to create Job record; check Nautobot logs for details"
-                    logger.error(msg)
-                    job_result.log(msg, grouping="jobs", level_choice=LogLevelChoices.LOG_ERROR)
-                    continue
+                        if job_model is None:
+                            msg = "Failed to create Job record; check Nautobot logs for details"
+                            logger.error(msg)
+                            job_result.log(msg, grouping="jobs", level_choice=LogLevelChoices.LOG_ERROR)
+                            continue
 
-                if created:
-                    message = f"Created Job record for {job_class.class_path}"
-                else:
-                    message = f"Refreshed Job record for {job_class.class_path}"
-                logger.info(message)
-                job_result.log(message=message, obj=job_model, grouping="jobs", level_choice=LogLevelChoices.LOG_INFO)
-                installed_jobs.append(job_model)
+                        if created:
+                            message = f"Created Job record for {job_class.class_path}"
+                        else:
+                            message = f"Refreshed Job record for {job_class.class_path}"
+                        logger.info(message)
+                        job_result.log(
+                            message=message, obj=job_model, grouping="jobs", level_choice=LogLevelChoices.LOG_INFO
+                        )
+                        installed_jobs.append(job_model)
 
             if not found_jobs:
                 msg = f"No jobs were found on importing the `{repository_record.slug}.jobs` submodule."
@@ -778,9 +751,6 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
             msg = f"Error in loading Jobs from Git repository: {exc}"
             logger.error(msg)
             job_result.log(msg, grouping="jobs", level_choice=LogLevelChoices.LOG_ERROR)
-    else:
-        # Unload code from this repository, do not reimport it
-        refresh_code_from_repository(repository_record.slug, skip_reimport=True)
 
     for job_model in Job.objects.filter(module_name__startswith=f"{repository_record.slug}."):
         if job_model.installed and job_model not in installed_jobs:

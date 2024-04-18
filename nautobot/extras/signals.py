@@ -21,7 +21,7 @@ from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
 import redis.exceptions
 
-from nautobot.core.celery import app, import_jobs
+from nautobot.core.celery import app
 from nautobot.core.models import BaseModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.logging import sanitize
@@ -462,7 +462,7 @@ def refresh_job_models(sender, *, apps, **kwargs):
     """
     Callback for the nautobot_database_ready signal; updates Jobs in the database based on Job source file availability.
     """
-    from nautobot.extras.jobs import all_job_classes  # avoid circular import
+    from nautobot.extras.jobs import get_jobs  # avoid circular import
 
     Job = apps.get_model("extras", "Job")
 
@@ -471,14 +471,13 @@ def refresh_job_models(sender, *, apps, **kwargs):
         logger.info("Skipping refresh_job_models() as it appears Job model has not yet been migrated to latest.")
         return
 
-    import_jobs()
-
     job_models = []
 
-    for job_class in all_job_classes():
-        job_model, _ = refresh_job_model_from_job_class(Job, job_class)
-        if job_model is not None:
-            job_models.append(job_model)
+    for jobs_data in get_jobs().values():
+        for job_class in jobs_data["jobs"].values():
+            job_model, _ = refresh_job_model_from_job_class(Job, job_class)
+            if job_model is not None:
+                job_models.append(job_model)
 
     for job_model in Job.objects.filter(installed=True):
         if job_model not in job_models:

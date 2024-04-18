@@ -305,7 +305,6 @@ class GitTest(TransactionTestCase):
             self.assertTrue(job_model.installed)
             # Is the in-memory code accessible?
             self.assertIsNotNone(job_model.job_class)
-            # Is it registered properly with Celery?
             self.assertIsNotNone(job_model.job_task)
         else:
             self.assertFalse(job_model.installed)

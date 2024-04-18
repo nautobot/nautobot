@@ -6,6 +6,7 @@ import inspect
 import json
 import logging
 import os
+import pkgutil
 import sys
 import tempfile
 from textwrap import dedent
@@ -26,11 +27,10 @@ from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
 from django.utils.functional import classproperty
-from django.utils.module_loading import import_string
 import netaddr
 import yaml
 
-from nautobot.core.celery import import_jobs, nautobot_task
+from nautobot.core.celery import nautobot_task
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -40,9 +40,11 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_model_from_name
 from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
+from nautobot.extras.datasources.git import ensure_git_repository
 from nautobot.extras.forms import JobForm
 from nautobot.extras.models import (
     FileProxy,
+    GitRepository,
     Job as JobModel,
     JobHook,
     JobResult,
@@ -434,7 +436,10 @@ class BaseJob:
         base_classes = reversed(inspect.getmro(cls))
         attr_names = [name for base in base_classes for name in base.__dict__.keys()]
         for name in attr_names:
-            attr_class = getattr(cls, name, None).__class__
+            try:
+                attr_class = getattr(cls, name, None).__class__
+            except TypeError:
+                pass
             if name not in cls_vars and issubclass(attr_class, ScriptVariable):
                 cls_vars[name] = getattr(cls, name)
 
@@ -1088,6 +1093,83 @@ def is_variable(obj):
     return isinstance(obj, ScriptVariable)
 
 
+def get_jobs():
+    """
+    Compile a dictionary of all jobs available at this time.
+
+    Returns a dict:
+
+    {
+        <module_name>: {
+            "name": <human-readable module/grouping>,
+            "jobs": {
+                <class_name>: <job_class>,
+                <class_name>: <job_class>,
+                ...
+            },
+        },
+        <module_name>: { ... },
+        ...
+    }
+    """
+    result = {}
+
+    # Classes provided by core or by a loaded App
+    for candidate in all_subclasses(Job):
+        if is_job(candidate):
+            result.setdefault(candidate.__module__, {"name": candidate.grouping, "jobs": {}})
+            result[candidate.__module__]["jobs"][candidate.__name__] = candidate
+
+    # Classes dynamically discoverable from JOBS_ROOT or Git
+    for base_path, subdirectory in _job_source_paths():
+        for module_name, module, job_class_name, job_class in _jobs_in_directory(base_path, subdirectory):
+            result.setdefault(module_name, {"name": job_class.grouping, "jobs": {}})
+            result[module_name]["jobs"][job_class_name] = job_class
+
+    return result
+
+
+def _job_source_paths():
+    if settings.JOBS_ROOT and os.path.isdir(settings.JOBS_ROOT):
+        yield (settings.JOBS_ROOT, "")
+
+    if settings.GIT_ROOT and os.path.isdir(settings.GIT_ROOT):
+        for repository_record in GitRepository.objects.all():
+            if "extras.job" not in repository_record.provided_contents:
+                continue
+
+            ensure_git_repository(repository_record, head=repository_record.current_head, logger=logger)
+
+            jobs_path = os.path.join(repository_record.filesystem_path, "jobs")
+            if os.path.isdir(jobs_path):
+                yield (settings.GIT_ROOT, f"{repository_record.slug}/jobs")
+            else:
+                logger.warning(
+                    "Git repository %s is configured to provide Jobs, but no /jobs/ directory was found in it!",
+                    repository_record,
+                )
+
+        # TODO delete any stale directories in GIT_ROOT?
+
+
+def _jobs_in_directory(base_path, submodule_path):
+    if submodule_path:
+        submodule_name = ".".join(submodule_path.split("/"))
+    else:
+        submodule_name = None
+    for importer, discovered_module_name, _ in pkgutil.iter_modules([os.path.join(base_path, submodule_path)]):
+        try:
+            module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
+            for job_class_name, job_class in inspect.getmembers(module, is_job):
+                if submodule_name:
+                    job_class.__module__ = f"{submodule_name}.{discovered_module_name}"
+                    yield (f"{submodule_name}.{discovered_module_name}", module, job_class_name, job_class)
+                else:
+                    yield (discovered_module_name, module, job_class_name, job_class)
+        except Exception as exc:
+            logger.error("Unable to load module %s from %s: %s", discovered_module_name, base_path, exc)
+
+
 def get_job(class_path):
     """
     Retrieve a specific job class by its class_path (`<module_name>.<JobClassName>`).
@@ -1095,26 +1177,17 @@ def get_job(class_path):
     May return None if the job can't be imported.
     """
     try:
-        return import_string(class_path)
-    except ImportError:
+        module_name, class_name = class_path.rsplit(".", 1)
+    except ValueError:
         return None
 
-
-def all_job_classes():
-    for candidate in all_subclasses(Job):
-        if candidate not in [Job, JobButtonReceiver, JobHookReceiver]:
-            yield candidate
+    jobs = get_jobs()
+    return jobs.get(module_name, {}).get("jobs", {}).get(class_name, None)
 
 
 @nautobot_task(bind=True)
 def run_job(self, job_class_path, *args, **kwargs):
     logger.debug("Running job %s", job_class_path)
-    # In the case of Git-provided jobs, thanks to Celery's prefork worker pattern, the worker may not be aware of a
-    # newly added GitRepository or a recent resync of an existing repository, though the repo should be up-to-date on
-    # disk thanks to `nautobot.core.celery.control.refresh_git_repository`.
-    # Similarly, if a user has recently made changes to files in JOBS_ROOT, the worker similarly may have stale info.
-    # In both cases, we just need to blunt-force reload those Job sources:
-    import_jobs()
 
     job_class = get_job(job_class_path)
     job = job_class()

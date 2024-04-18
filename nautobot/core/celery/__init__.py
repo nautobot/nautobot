@@ -1,12 +1,8 @@
 from importlib import import_module
-from importlib.util import find_spec
 import json
 import logging
 import os
 from pathlib import Path
-import pkgutil
-import shutil
-import sys
 
 from celery import Celery, shared_task, signals
 from celery.app.log import TaskFormatter
@@ -20,7 +16,6 @@ from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 from nautobot.core.celery.control import discard_git_repository, refresh_git_repository  # noqa: F401  # unused-import
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.celery.log import NautobotDatabaseHandler
-from nautobot.core.utils.module_loading import flush_module
 
 logger = logging.getLogger(__name__)
 
@@ -47,66 +42,12 @@ app.autodiscover_tasks()
 @signals.import_modules.connect
 def import_jobs(sender=None, database_ready=True, **kwargs):
     """
-    Import system Jobs into memory as well as (re-?)importing Jobs from JOBS_ROOT and GIT_ROOT.
+    Import system Jobs into memory.
 
-    Note that app-provided Jobs are automatically imported at startup time via NautobotAppConfig.ready()
+    Note that app-provided Jobs are automatically imported at startup time via NautobotAppConfig.ready(),
+    and JOBS_ROOT and GitRepository Jobs are loaded on-demand only.
     """
     import_module("nautobot.core.jobs")
-
-    jobs_root = settings.JOBS_ROOT
-    if jobs_root and os.path.exists(jobs_root):
-        if jobs_root not in sys.path:
-            sys.path.append(jobs_root)
-        jobs_root_path = os.path.realpath(jobs_root)
-
-        # Flush previously loaded modules from JOBS_ROOT
-        for existing_name, existing_module in sys.modules.copy().items():
-            if any(
-                os.path.realpath(path).startswith(jobs_root_path) for path in getattr(existing_module, "__path__", [])
-            ):
-                flush_module(existing_name, reimport=False)
-
-        # Load current modules in JOBS_ROOT
-        for _, module_name, _ in pkgutil.iter_modules([jobs_root]):
-            try:
-                logger.debug("Importing Jobs from %s in JOBS_ROOT", module_name)
-                existing_module = find_spec(module_name)
-                if existing_module is not None:
-                    existing_module_path = os.path.realpath(existing_module.origin)
-                    if not existing_module_path.startswith(jobs_root_path):
-                        raise ImportError(
-                            f"JOBS_ROOT Jobs module {module_name} conflicts with existing module {existing_module_path}"
-                        )
-                import_module(module_name)
-            except Exception as exc:
-                logger.exception(exc)
-
-    git_root = settings.GIT_ROOT
-    if git_root and os.path.exists(git_root):
-        if git_root not in sys.path:
-            sys.path.append(git_root)
-
-        # We can't detect which Git directories we're *supposed* to auto-load Jobs from if we can't read GitRepository
-        # records from the DB, unfortunately.
-        # We work around this in JobModel.job_task to try later loading Git jobs on-the-fly if needed.
-        if database_ready:
-            from nautobot.extras.models import GitRepository
-
-            # Make sure there are no git clones in GIT_ROOT that *aren't* tracked by a GitRepository;
-            # for example, maybe a GitRepository was deleted while this worker process wasn't running?
-            for filename in os.listdir(git_root):
-                filepath = os.path.join(git_root, filename)
-                if (
-                    os.path.isdir(filepath)
-                    and os.path.isdir(os.path.join(filepath, ".git"))
-                    and not GitRepository.objects.filter(slug=filename).exists()
-                ):
-                    logger.warning("Deleting unmanaged (leftover?) Git repository clone at %s", filepath)
-                    shutil.rmtree(filepath)
-
-            # Make sure all GitRepository records that include Jobs have up-to-date git clones, and load their jobs
-            for repo in GitRepository.objects.all():
-                refresh_git_repository(state=None, repository_pk=repo.pk, head=repo.current_head)
 
 
 def add_nautobot_log_handler(logger_instance, log_format=None):
