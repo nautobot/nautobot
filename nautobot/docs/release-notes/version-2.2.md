@@ -66,7 +66,7 @@ The CSV import functionality for all models has been changed from a synchronous 
 Model CharFields' `max_length` attributes have been standardized globally to have at least 255 characters except where a shorter `max_length` is explicitly justified.
 
 <!-- towncrier release notes start -->
-## vv2.2.2 (2024-04-18)
+## v2.2.2 (2024-04-18)
 
 ### Security
 
