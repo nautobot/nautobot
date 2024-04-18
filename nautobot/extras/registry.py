@@ -25,6 +25,7 @@ class Registry(dict):
 registry = Registry(
     datasource_contents=defaultdict(list),
     secrets_providers={},
+    system_jobs=[],
 )
 
 

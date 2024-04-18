@@ -16,6 +16,7 @@ from nautobot.core.apps import (
     register_homepage_panels,
     register_menu_items,
 )
+from nautobot.core.celery import register_jobs
 from nautobot.core.signals import nautobot_database_ready
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.choices import BannerClassChoices
@@ -143,11 +144,8 @@ class NautobotAppConfig(NautobotConfig):
         # Import jobs (if present)
         jobs = import_object(f"{self.__module__}.{self.jobs}")
         if jobs is not None:
-            from nautobot.extras.jobs import is_job
-            for job_class in jobs:
-                if not is_job(job_class):
-                    raise TypeError(f"{job_class} is not a Job class!")
-                registry["plugin_jobs"].append(job_class)
+            # Redundant, as Apps are *supposed* to call register_jobs() on their own, but this is existing behavior
+            register_jobs(*jobs)
             self.features["jobs"] = jobs
 
         # Import metrics (if present)

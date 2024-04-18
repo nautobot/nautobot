@@ -25,14 +25,14 @@ In any case, each module holds one or more Jobs (Python classes), each of which 
 
 For example, we can create a module named `devices.py` to hold all of our jobs which pertain to devices in Nautobot. Within that module, we might define several jobs. Each job is defined as a Python class inheriting from `nautobot.apps.jobs.Job`, which provides the base functionality needed to accept user input and log activity.
 
-+/- 2.2.2
-    Removed the requirement to call `register_jobs()` on module import. Any subclasses of `nautobot.extras.jobs.Job` that are defined at import time will be automatically registered.
++/- 2.0.0
+    All job classes must now be registered with `nautobot.apps.jobs.register_jobs` on module import. For Apps providing jobs, the `register_jobs` method must called from the App's `jobs.py` file/submodule at import time. The `register_jobs` method accepts one or more job classes as arguments.
 
 !!! warning
     Make sure your Job subclasses inherit from `nautobot.apps.Job` and *not* from `nautobot.extras.models.Job` instead; if you mistakenly inherit from the latter, Django will think you want to define a new database model.
 
 ```python
-from nautobot.apps.jobs import Job
+from nautobot.apps.jobs import Job, register_jobs
 
 class CreateDevices(Job):
     ...
@@ -42,6 +42,8 @@ class DeviceConnectionsReport(Job):
 
 class DeviceIPsReport(Job):
     ...
+
+register_jobs(CreateDevices, DeviceConnectionsReport, DeviceIPsReport)
 ```
 
 Each job class will implement some or all of the following components:
@@ -59,33 +61,34 @@ It's important to understand that jobs execute on the server asynchronously as b
 
 ### Job Registration
 
-All `Job` subclasses, including `JobHookReceiver` and `JobButtonReceiver` subclasses must be defined at **import time** for Nautobot to be able to discover and run them.
++/- 2.0.0
 
-+/- 2.2.2
-    Removed the requirement to call `register_jobs()` on module import. Any subclasses of `nautobot.extras.jobs.Job` that are defined at import time will be automatically discovered and registered.
+All Job classes, including `JobHookReceiver` and `JobButtonReceiver` classes must be registered at **import time** using the `nautobot.apps.jobs.register_jobs` method. This method accepts one or more job classes as arguments. You must account for how your jobs are imported when deciding where to call this method.
 
-#### Registering Jobs in `JOBS_ROOT` or Git Repositories
+#### Registering Jobs in JOBS_ROOT or Git Repositories
 
-Only top level module names within `JOBS_ROOT` are auto-imported by Nautobot at runtime. This means that if you're using submodules, you need to ensure that your jobs are either defined in your top level `__init__.py` or that this file imports your submodules where the jobs are defined:
+Only top level module names within JOBS_ROOT are imported by Nautobot at runtime. This means that if you're using submodules, you need to ensure that your jobs are either registered in your top level `__init__.py` or that this file imports your submodules where the jobs are registered:
 
 ```py title="$JOBS_ROOT/my_jobs/__init__.py"
 from . import my_job_module
 ```
 
 ```py title="$JOBS_ROOT/my_jobs/my_job_module.py"
-from nautobot.apps.jobs import Job
+from nautobot.apps.jobs import Job, register_jobs
 
 class MyJob(Job):
     ...
+
+register_jobs(MyJob)
 ```
 
-Similarly, only the `jobs` module is auto-imported from Git repositories. If you're using submodules, you need to ensure that your jobs are either defined in the repository's `jobs/__init__.py` or that this file imports your submodules where the jobs are defined.
+Similarly, only the `jobs` module is loaded from Git repositories. If you're using submodules, you need to ensure that your jobs are either registered in the repository's `jobs/__init__.py` or that this file imports your submodules where the jobs are registered.
 
-If not using submodules, you should define your job in the `jobs.py` file.
+If not using submodules, you should register your job in the file where your job is defined.
 
 #### Registering Jobs in an App
 
-Apps should define or import jobs in the module defined in their [`NautobotAppConfig.jobs`](../apps/api/nautobot-app-config.md#nautobotappconfig-code-location-attributes) property. This defaults to the `jobs` module of the App.
+Apps should register jobs in the module defined in their [`NautobotAppConfig.jobs`](../apps/api/nautobot-app-config.md#nautobotappconfig-code-location-attributes) property. This defaults to the `jobs` module of the App.
 
 ### Module Metadata Attributes
 

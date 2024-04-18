@@ -12,14 +12,13 @@ from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model
-from nautobot.core.celery import app
+from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
 from nautobot.extras.datasources import ensure_git_repository, git_repository_dry_run, refresh_datasource_content
 from nautobot.extras.jobs import BooleanVar, ChoiceVar, FileVar, Job, ObjectVar, RunJobTaskFailed, StringVar, TextVar
 from nautobot.extras.models import ExportTemplate, GitRepository
-from nautobot.extras.registry import registry
 
 name = "System Jobs"
 
@@ -316,4 +315,4 @@ class ImportObjects(Job):
 
 
 jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun, ImportObjects]
-registry["system_jobs"] = jobs
+register_jobs(*jobs)

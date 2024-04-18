@@ -192,6 +192,9 @@ class MyJob(Job):
                 jobs_data = get_jobs()
                 self.assertIn("my_jobs.MyJob", jobs_data.keys())
                 self.assertIsNotNone(get_job("my_jobs.MyJob"))
+                # Also make sure some representative previous JOBS_ROOT jobs aren't still around:
+                self.assertNotIn("dry_run.TestDryRun", jobs_data.keys())
+                self.assertNotIn("pass.TestPass", jobs_data.keys())
 
                 # Create a second Job in the same module
                 with open(os.path.join(temp_dir, "my_jobs.py"), "a") as fd:
@@ -247,8 +250,11 @@ class BadJob(Job):
                 self.assertIsNotNone(get_job("my_jobs.MyJob"))
                 self.assertIn("my_jobs.MyOtherJob", jobs_data.keys())
                 self.assertIsNotNone(get_job("my_jobs.MyOtherJob"))
-                self.assertIn("traceback.BadJob", jobs_data.keys())
-                self.assertIsNotNone(get_job("traceback.BadJob"))
+                # Since `traceback` conflicts with a system module, it should not get loaded
+                self.assertNotIn("traceback.BadJob", jobs_data.keys())
+                self.assertIsNone(get_job("traceback.BadJob"))
+
+                # TODO: testing with subdirectories/submodules under JOBS_ROOT...
 
 
 class JobTransactionTest(TransactionTestCase):

@@ -111,10 +111,8 @@ The `read_only` Job field no longer forces an automatic database rollback at the
 ### Job Registration
 
 +/- 2.0.0
-    All Job subclasses, including `JobHookReceiver` and `JobButtonReceiver` subclasses must be registered at **import time** using the `nautobot.apps.jobs.register_jobs` method. This method accepts one or more job classes as arguments. You must account for how your jobs are imported when deciding where to call this method.
 
-+/- 2.2.2
-    Removed the requirement to call `register_jobs()` on module import. Any subclasses of `Job` that are defined at import time will automatically be registered.
+All Job classes, including `JobHookReceiver` and `JobButtonReceiver` classes must be registered at **import time** using the `nautobot.apps.jobs.register_jobs` method. This method accepts one or more job classes as arguments. You must account for how your jobs are imported when deciding where to call this method.
 
 #### Registering Jobs in JOBS_ROOT or Git Repositories
 
@@ -125,10 +123,12 @@ from . import my_job_module
 ```
 
 ```py title="$JOBS_ROOT/my_jobs/my_job_module.py"
-from nautobot.apps.jobs import Job
+from nautobot.apps.jobs import Job, register_jobs
 
 class MyJob(Job):
     ...
+
+register_jobs(MyJob)
 ```
 
 Similarly, only the `jobs` module is loaded from Git repositories. If you're using submodules, you need to ensure that your jobs are either registered in the repository's `jobs/__init__.py` or that this file imports your submodules where the jobs are registered.

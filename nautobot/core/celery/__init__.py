@@ -1,8 +1,8 @@
-from importlib import import_module
 import json
 import logging
 import os
 from pathlib import Path
+import sys
 
 from celery import Celery, shared_task, signals
 from celery.app.log import TaskFormatter
@@ -16,6 +16,7 @@ from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 from nautobot.core.celery.control import discard_git_repository, refresh_git_repository  # noqa: F401  # unused-import
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.celery.log import NautobotDatabaseHandler
+from nautobot.extras.registry import registry
 
 logger = logging.getLogger(__name__)
 
@@ -37,17 +38,6 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
-
-
-@signals.import_modules.connect
-def import_jobs(sender=None, database_ready=True, **kwargs):
-    """
-    Import system Jobs into memory.
-
-    Note that app-provided Jobs are automatically imported at startup time via NautobotAppConfig.ready(),
-    and JOBS_ROOT and GitRepository Jobs are loaded on-demand only.
-    """
-    import_module("nautobot.core.jobs")
 
 
 def add_nautobot_log_handler(logger_instance, log_format=None):
@@ -92,11 +82,11 @@ def setup_prometheus(**kwargs):
     multiprocess_coordination_directory.mkdir(parents=True, exist_ok=True)
 
     # Set up the collector registry
-    registry = CollectorRegistry()
-    multiprocess.MultiProcessCollector(registry, path=multiprocess_coordination_directory)
+    collector_registry = CollectorRegistry()
+    multiprocess.MultiProcessCollector(collector_registry, path=multiprocess_coordination_directory)
     for port in settings.CELERY_WORKER_PROMETHEUS_PORTS:
         try:
-            start_http_server(port, registry=registry)
+            start_http_server(port, registry=collector_registry)
             break
         except OSError:
             continue
@@ -147,10 +137,22 @@ register("nautobot_json", _dumps, _loads, content_type="application/x-nautobot-j
 nautobot_task = shared_task
 
 
-# 3.0 TODO: remove this method as no longer needed.
 def register_jobs(*jobs):
     """
-    Deprecated helper method to register jobs with Celery in Nautobot 2.0 through 2.2.1.
+    Method to register jobs - with Celery in Nautobot 2.0 through 2.2.1, with Nautobot itself in 2.2.2 and later.
 
-    No longer does anything but is kept for backward compatibility for now; should be removed in Nautobot 3.0.
+    In older versions, all of Apps, JOBS_ROOT, and GitRepository Jobs would need to call this method.
+    In current versions, Apps still should call this method, and (because we dynamically load and reload Jobs from
+    JOBS_ROOT and Git) it's unnecessary but harmless for the latter.
     """
+    for job in jobs:
+        if job.__module__ not in sys.modules:
+            # Dynamically loaded job from JOBS_ROOT or Git.
+            # Don't register it, as we want to be able to throw it away and reload it on the fly as needed.
+            continue
+        if job.__module__.startswith("nautobot."):
+            if job not in registry["system_jobs"]:
+                registry["system_jobs"].append(job)
+        else:
+            if job not in registry["plugin_jobs"]:
+                registry["plugin_jobs"].append(job)

@@ -15,7 +15,6 @@ from django.db import models, transaction
 from django.db.models import signals
 from django.utils import timezone
 from django.utils.functional import cached_property
-from django.utils.module_loading import import_string
 from django_celery_beat.clockedschedule import clocked
 from prometheus_client import Histogram
 
@@ -24,7 +23,6 @@ from nautobot.core.celery import (
     NautobotKombuJSONEncoder,
     setup_nautobot_job_logging,
 )
-from nautobot.core.celery.control import refresh_git_repository
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField
@@ -283,14 +281,11 @@ class Job(PrimaryModel):
     @property
     def job_task(self):
         """Get an instance of the associated Job class, refreshing it if necessary."""
-        if self.git_repository is not None:
-            # If this Job comes from a Git repository, make sure we have the correct version of said code.
-            refresh_git_repository(
-                state=None, repository_pk=self.git_repository.pk, head=self.git_repository.current_head
-            )
+        from nautobot.extras.jobs import get_job
+
         try:
-            return import_string(f"{self.module_name}.{self.job_class_name}")()
-        except ModuleNotFoundError as err:  # keep 2.0-2.2.1 exception behavior
+            return get_job(self.class_path)()
+        except TypeError as err:  # keep 2.0-2.2.1 exception behavior
             raise NotRegistered from err
 
     def clean(self):

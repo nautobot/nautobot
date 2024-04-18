@@ -12,6 +12,7 @@ from nautobot.apps.jobs import (
     JobButtonReceiver,
     JobHookReceiver,
     JSONVar,
+    register_jobs,
 )
 from nautobot.dcim.models import Device, Location
 from nautobot.extras.choices import ObjectChangeActionChoices
@@ -195,3 +196,4 @@ jobs = (
     ExampleSimpleJobButtonReceiver,
     ExampleComplexJobButtonReceiver,
 )
+register_jobs(*jobs)

@@ -719,32 +719,30 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
     if "extras.job" in repository_record.provided_contents and not delete:
         found_jobs = False
         try:
-            jobs_data = get_jobs()
+            jobs_data = get_jobs(repository_record=repository_record, job_result=job_result)
 
-            for module_name, module_data in jobs_data.items():
-                if module_name.startswith(f"{repository_record.slug}.jobs"):
-                    for job_class in module_data["jobs"].values():
-                        found_jobs = True
-                        job_model, created = refresh_job_model_from_job_class(Job, job_class)
+            for job_class_path, job_class in jobs_data.items():
+                if not job_class_path.startswith(f"{repository_record.slug}.jobs"):
+                    continue
+                found_jobs = True
+                job_model, created = refresh_job_model_from_job_class(Job, job_class)
 
-                        if job_model is None:
-                            msg = "Failed to create Job record; check Nautobot logs for details"
-                            logger.error(msg)
-                            job_result.log(msg, grouping="jobs", level_choice=LogLevelChoices.LOG_ERROR)
-                            continue
+                if job_model is None:
+                    msg = "Failed to create Job record; check Nautobot logs for details"
+                    logger.error(msg)
+                    job_result.log(msg, grouping="jobs", level_choice=LogLevelChoices.LOG_ERROR)
+                    continue
 
-                        if created:
-                            message = f"Created Job record for {job_class.class_path}"
-                        else:
-                            message = f"Refreshed Job record for {job_class.class_path}"
-                        logger.info(message)
-                        job_result.log(
-                            message=message, obj=job_model, grouping="jobs", level_choice=LogLevelChoices.LOG_INFO
-                        )
-                        installed_jobs.append(job_model)
+                if created:
+                    message = f"Created Job record for {job_class_path}"
+                else:
+                    message = f"Refreshed Job record for {job_class_path}"
+                logger.info(message)
+                job_result.log(message=message, obj=job_model, grouping="jobs", level_choice=LogLevelChoices.LOG_INFO)
+                installed_jobs.append(job_model)
 
             if not found_jobs:
-                msg = f"No jobs were found on importing the `{repository_record.slug}.jobs` submodule."
+                msg = f"No jobs were successfully imported from the `{repository_record.slug}.jobs` submodule."
                 logger.warning(msg)
                 job_result.log(msg, grouping="jobs", level_choice=LogLevelChoices.LOG_WARNING)
         except Exception as exc:

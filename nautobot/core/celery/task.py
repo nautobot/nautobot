@@ -80,3 +80,6 @@ class NautobotTask(Task):
             return retval.sig.apply(retries=retries + 1)
         state = states.SUCCESS if ret.info is None else ret.info.state
         return EagerResult(task_id, retval, state, traceback=tb)
+
+
+Task = NautobotTask  # So that the class path resolves.

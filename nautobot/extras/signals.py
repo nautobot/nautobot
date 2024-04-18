@@ -333,8 +333,7 @@ def git_repository_pre_delete(instance, **kwargs):
         app.control.broadcast("discard_git_repository", repository_slug=instance.slug)
         # But we don't have an equivalent way to broadcast to any other Django instances.
         # For now we just delete the one that we have locally and rely on other methods,
-        # such as the import_jobs() signal that runs on server startup,
-        # to clean up other clones as they're encountered.
+        # such as the get_jobs() function itself, to clean up other clones as they're encountered.
         if os.path.isdir(instance.filesystem_path):
             shutil.rmtree(instance.filesystem_path)
     except Exception as exc:

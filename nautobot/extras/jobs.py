@@ -2,11 +2,13 @@
 
 from collections import OrderedDict
 import functools
+from importlib.util import find_spec
 import inspect
 import json
 import logging
 import os
 import pkgutil
+import shutil
 import sys
 import tempfile
 from textwrap import dedent
@@ -1094,7 +1096,7 @@ def is_variable(obj):
     return isinstance(obj, ScriptVariable)
 
 
-def get_jobs():
+def get_jobs(**kwargs):
     """
     Compile a dictionary of all Job classes available at this time.
 
@@ -1114,16 +1116,16 @@ def get_jobs():
         result[job_class.class_path] = job_class
 
     # Classes dynamically discoverable from JOBS_ROOT or Git
-    for path, module_prefix in _job_source_paths():
-        for job_class in _jobs_in_directory(path, module_prefix=module_prefix):
+    for path, module_prefix in _job_source_paths(**kwargs):
+        for job_class in _jobs_in_directory(path, module_prefix=module_prefix, **kwargs):
             result[job_class.class_path] = job_class
 
     return result
 
 
-def _job_source_paths():
+def _job_source_paths(**kwargs):
     if settings.JOBS_ROOT and os.path.isdir(settings.JOBS_ROOT):
-        yield (settings.JOBS_ROOT, "")
+        yield (os.path.realpath(settings.JOBS_ROOT), "")
 
     if settings.GIT_ROOT and os.path.isdir(settings.GIT_ROOT):
         for repository_record in GitRepository.objects.all():
@@ -1140,12 +1142,50 @@ def _job_source_paths():
                     "Git repository %s is configured to provide Jobs, but no /jobs/ directory was found in it!",
                     repository_record,
                 )
+                if "repository_record" in kwargs and "job_result" in kwargs:
+                    if repository_record == kwargs["repository_record"]:
+                        kwargs["job_result"].log(
+                            "No `jobs` subdirectory found in Git repository",
+                            grouping="jobs",
+                            level_choice="warning",
+                        )
+
+        # TODO(Glenn): when a Git repo is deleted, we update the local filesystem, and alert all Celery workers
+        # (see extras/signals.py) to update their local filesystems, but if there are multiple Django instances, there
+        # may be multiple other filesystems involved, so not all local clones of deleted Git repositories may have
+        # been deleted yet. For now, if we encounter a "leftover" Git repo here, we delete it now.
+        for git_slug in os.listdir(settings.GIT_ROOT):
+            git_path = os.path.join(settings.GIT_ROOT, git_slug)
+            if not os.path.isdir(git_path):
+                logger.warning(
+                    f"Found non-directory {git_slug} in {settings.GIT_ROOT}. Only Git repositories should exist here."
+                )
+            elif not os.path.isdir(os.path.join(git_path, ".git")):
+                logger.warning(f"Directory {git_slug} in {settings.GIT_ROOT} does not appear to be a Git repository.")
+            elif not GitRepository.objects.filter(slug=git_slug):
+                logger.warning(f"Deleting unmanaged (leftover?) repository at {git_path}")
+                shutil.rmtree(git_path)
 
 
-def _jobs_in_directory(path, module_prefix=""):
+def _jobs_in_directory(path, module_prefix="", **kwargs):
     if module_prefix and not module_prefix.endswith("."):
         module_prefix += "."
     for importer, discovered_module_name, _ in pkgutil.iter_modules([path]):
+        loaded_module_name = f"{module_prefix}{discovered_module_name}"
+        try:
+            existing_module = find_spec(loaded_module_name)
+        except ModuleNotFoundError:
+            existing_module = None
+        if existing_module is not None:
+            existing_module_path = os.path.realpath(existing_module.origin)
+            if not existing_module_path.startswith(path):
+                logger.error(
+                    "Unable to load module %s from %s as it conflicts with existing module %s",
+                    loaded_module_name,
+                    path,
+                    existing_module_path,
+                )
+                continue
         try:
             module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
             for job_class_name, job_class in inspect.getmembers(module, is_job):
@@ -1153,6 +1193,13 @@ def _jobs_in_directory(path, module_prefix=""):
                 yield job_class
         except Exception as exc:
             logger.error("Unable to load module %s from %s: %s", discovered_module_name, path, exc)
+            if "job_result" in kwargs and "repository_record" in kwargs:
+                if module_prefix.startswith(kwargs["repository_record"].slug):
+                    kwargs["job_result"].log(
+                        "Error in loading Jobs from `{module_prefix}`: `{exc}`",
+                        grouping="jobs",
+                        level_choice="failure",
+                    )
 
 
 def get_job(class_path):
