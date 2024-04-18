@@ -1,8 +1,8 @@
 from django.test import TestCase
 
 from nautobot.core.testing.forms import FormTestCases
-from nautobot.dcim.choices import DeviceFaceChoices, InterfaceTypeChoices, RackWidthChoices
-from nautobot.dcim.forms import DeviceFilterForm, DeviceForm, InterfaceCreateForm, RackForm
+from nautobot.dcim.choices import DeviceFaceChoices, InterfaceModeChoices, InterfaceTypeChoices, RackWidthChoices
+from nautobot.dcim.forms import DeviceFilterForm, DeviceForm, InterfaceCreateForm, InterfaceForm, RackForm
 from nautobot.dcim.models import (
     Device,
     DeviceType,
@@ -14,6 +14,7 @@ from nautobot.dcim.models import (
     Rack,
 )
 from nautobot.extras.models import Role, SecretsGroup, Status
+from nautobot.ipam.models import VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 
@@ -262,4 +263,50 @@ class RackTestCase(TestCase):
             "width": RackWidthChoices.WIDTH_19IN,
         }
         form = RackForm(data=data, instance=racks[0])
+        self.assertTrue(form.is_valid())
+
+
+class InterfaceTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.device = Device.objects.first()
+        status = Status.objects.get_for_model(Interface).first()
+        cls.interface = Interface.objects.create(
+            device=cls.device,
+            name="test interface form 0.0",
+            type=InterfaceTypeChoices.TYPE_2GFC_SFP,
+            status=status,
+        )
+        cls.vlan = VLAN.objects.first()
+        cls.data = {
+            "device": cls.device.pk,
+            "name": "test interface form 0.0",
+            "type": InterfaceTypeChoices.TYPE_2GFC_SFP,
+            "status": status.pk,
+            "mode": InterfaceModeChoices.MODE_TAGGED,
+            "tagged_vlans": [cls.vlan.pk],
+        }
+
+    def test_interface_form_clean_vlan_location_fail(self):
+        """Assert that form validation fails when no matching locations are associated to tagged VLAN"""
+        self.vlan.locations.set(list(Location.objects.exclude(pk=self.device.location.pk))[:2])
+        form = InterfaceForm(data=self.data, instance=self.interface)
+        self.assertFalse(form.is_valid())
+
+    def test_interface_vlan_location_clean_multiple_locations_pass(self):
+        """Assert that form validation passes when multiple locations are associated to tagged VLAN with one matching"""
+        self.vlan.locations.add(self.device.location)
+        form = InterfaceForm(data=self.data, instance=self.interface)
+        self.assertTrue(form.is_valid())
+
+    def test_interface_vlan_location_clean_single_location_pass(self):
+        """Assert that form validation passes when a single location is associated to tagged VLAN"""
+        self.vlan.locations.set([self.device.location])
+        form = InterfaceForm(data=self.data, instance=self.interface)
+        self.assertTrue(form.is_valid())
+
+    def test_interface_vlan_location_clean_no_locations_pass(self):
+        """Assert that form validation passes when no locations are associated to tagged VLAN"""
+        self.vlan.locations.clear()
+        form = InterfaceForm(data=self.data, instance=self.interface)
         self.assertTrue(form.is_valid())
