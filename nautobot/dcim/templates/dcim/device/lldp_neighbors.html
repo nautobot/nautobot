@@ -65,7 +65,7 @@ var ready = (callback) => {
 };
 
 function getAttribute(node, querySelector, attribute) {
-    if (node === null or node.querySelector(querySelector) === null) {
+    if (node === null || node.querySelector(querySelector) === null) {
         return "";
     }
     return node.querySelector(querySelector).getAttribute(attribute) || "";
