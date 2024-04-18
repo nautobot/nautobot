@@ -90,7 +90,7 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 
 ### Documentation
 
-- [#5583](https://github.com/nautobot/nautobot/issues/5583) - Re-added release note content for  v1.6.16 through v1.6.18.
+- [#5583](https://github.com/nautobot/nautobot/issues/5583) - Re-added release note content for v1.6.16 through v1.6.18.
 
 ### Housekeeping
 
