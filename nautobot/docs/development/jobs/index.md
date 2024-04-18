@@ -12,10 +12,10 @@ TODO: Jobs authorship introduction
 Jobs may be installed in one of three ways:
 
 * Manually installed as files in the [`JOBS_ROOT`](../../user-guide/administration/configuration/optional-settings.md#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`).
-    * This directory is added to Python's `sys.path` at runtime, so any Python modules placed in this directory will be imported in the root module namespace. For example, a job class named `MyJobClass` in `$JOBS_ROOT/my_job.py` will be loaded into Python as `my_job.MyJobClass`.
+    * Python files and subdirectories containing Python files will be dynamically loaded at Nautobot startup in order to discover available Job classes. For example, a job class named `MyJobClass` in `$JOBS_ROOT/my_job.py` will be loaded into Nautobot as `my_job.MyJobClass`.
     * All Python modules in this directory are imported by Nautobot and all worker processes at startup. If you have a `custom_jobs.py` and a `custom_jobs_module/__init__.py` file in your `JOBS_ROOT`, both of these files will be imported at startup.
 * Imported from an external [Git repository](../../user-guide/platform-functionality/gitrepository.md#jobs).
-    * Git repositories are loaded into the module namespace of the `GitRepository.slug` value at startup. For example, if your `slug` value is `my_git_jobs` your jobs will be loaded into Python as `my_git_jobs.jobs`.
+    * Git repositories are loaded into the module namespace of the `GitRepository.slug` value at startup. For example, if your `slug` value is `my_git_jobs` your jobs will be loaded into Python as `my_git_jobs.jobs.MyJobClass`.
     * All git repositories providing jobs must include a `__init__.py` file at the root of the repository.
     * Nautobot and all worker processes will import the git repository's `jobs` module at startup so a `jobs.py` or `jobs/__init__.py` file must exist in the root of the repository.
 * Packaged as part of an [App](../apps/api/platform-features/jobs.md).

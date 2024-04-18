@@ -50,7 +50,8 @@ from nautobot.extras.models import (
     JobResult,
     ObjectChange,
 )
-from nautobot.extras.utils import all_subclasses, change_logged_models_queryset, task_queues_as_choices
+from nautobot.extras.registry import registry
+from nautobot.extras.utils import change_logged_models_queryset, task_queues_as_choices
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
     MaxPrefixLengthValidator,
@@ -1095,36 +1096,27 @@ def is_variable(obj):
 
 def get_jobs():
     """
-    Compile a dictionary of all jobs available at this time.
+    Compile a dictionary of all Job classes available at this time.
 
-    Returns a dict:
-
-    {
-        <module_name>: {
-            "name": <human-readable module/grouping>,
-            "jobs": {
-                <class_name>: <job_class>,
-                <class_name>: <job_class>,
-                ...
-            },
-        },
-        <module_name>: { ... },
-        ...
-    }
+    Returns:
+        {
+            <class_path>: <job_class>,
+            <class_path>: <job_class>,
+            ...
+        }
     """
     result = {}
 
     # Classes provided by core or by a loaded App
-    for candidate in all_subclasses(Job):
-        if is_job(candidate):
-            result.setdefault(candidate.__module__, {"name": candidate.grouping, "jobs": {}})
-            result[candidate.__module__]["jobs"][candidate.__name__] = candidate
+    for job_class in registry["system_jobs"]:
+        result[job_class.class_path] = job_class
+    for job_class in registry["plugin_jobs"]:
+        result[job_class.class_path] = job_class
 
     # Classes dynamically discoverable from JOBS_ROOT or Git
-    for base_path, subdirectory in _job_source_paths():
-        for module_name, module, job_class_name, job_class in _jobs_in_directory(base_path, subdirectory):
-            result.setdefault(module_name, {"name": job_class.grouping, "jobs": {}})
-            result[module_name]["jobs"][job_class_name] = job_class
+    for path, module_prefix in _job_source_paths():
+        for job_class in _jobs_in_directory(path, module_prefix=module_prefix):
+            result[job_class.class_path] = job_class
 
     return result
 
@@ -1142,32 +1134,25 @@ def _job_source_paths():
 
             jobs_path = os.path.join(repository_record.filesystem_path, "jobs")
             if os.path.isdir(jobs_path):
-                yield (settings.GIT_ROOT, f"{repository_record.slug}/jobs")
+                yield (jobs_path, f"{repository_record.slug}.jobs")
             else:
                 logger.warning(
                     "Git repository %s is configured to provide Jobs, but no /jobs/ directory was found in it!",
                     repository_record,
                 )
 
-        # TODO delete any stale directories in GIT_ROOT?
 
-
-def _jobs_in_directory(base_path, submodule_path):
-    if submodule_path:
-        submodule_name = ".".join(submodule_path.split("/"))
-    else:
-        submodule_name = None
-    for importer, discovered_module_name, _ in pkgutil.iter_modules([os.path.join(base_path, submodule_path)]):
+def _jobs_in_directory(path, module_prefix=""):
+    if module_prefix and not module_prefix.endswith("."):
+        module_prefix += "."
+    for importer, discovered_module_name, _ in pkgutil.iter_modules([path]):
         try:
             module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
             for job_class_name, job_class in inspect.getmembers(module, is_job):
-                if submodule_name:
-                    job_class.__module__ = f"{submodule_name}.{discovered_module_name}"
-                    yield (f"{submodule_name}.{discovered_module_name}", module, job_class_name, job_class)
-                else:
-                    yield (discovered_module_name, module, job_class_name, job_class)
+                job_class.__module__ = f"{module_prefix}{discovered_module_name}"
+                yield job_class
         except Exception as exc:
-            logger.error("Unable to load module %s from %s: %s", discovered_module_name, base_path, exc)
+            logger.error("Unable to load module %s from %s: %s", discovered_module_name, path, exc)
 
 
 def get_job(class_path):
@@ -1176,13 +1161,8 @@ def get_job(class_path):
 
     May return None if the job can't be imported.
     """
-    try:
-        module_name, class_name = class_path.rsplit(".", 1)
-    except ValueError:
-        return None
-
     jobs = get_jobs()
-    return jobs.get(module_name, {}).get("jobs", {}).get(class_name, None)
+    return jobs.get(class_path, None)
 
 
 @nautobot_task(bind=True)

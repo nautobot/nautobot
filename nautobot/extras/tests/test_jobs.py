@@ -1,6 +1,7 @@
 import datetime
 from io import StringIO
 import json
+import os
 from pathlib import Path
 import re
 import tempfile
@@ -34,7 +35,7 @@ from nautobot.extras.choices import (
     ObjectChangeEventContextChoices,
 )
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
-from nautobot.extras.jobs import get_job
+from nautobot.extras.jobs import get_job, get_jobs
 
 
 class JobTest(TestCase):
@@ -173,6 +174,81 @@ class JobTest(TestCase):
         job_class, job_model = get_job_class_and_model(module, name)
         self.assertFalse(job_class.supports_dryrun)
         self.assertFalse(job_model.supports_dryrun)
+
+    def test_get_jobs_from_jobs_root(self):
+        """
+        Test that get_jobs() correctly loads jobs from JOBS_ROOT as its contents change.
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with override_settings(JOBS_ROOT=temp_dir):
+                # Create a new Job and make sure it's discovered correctly
+                with open(os.path.join(temp_dir, "my_jobs.py"), "w") as fd:
+                    fd.write("""\
+from nautobot.apps.jobs import Job
+class MyJob(Job):
+    def run(self):
+        pass
+""")
+                jobs_data = get_jobs()
+                self.assertIn("my_jobs.MyJob", jobs_data.keys())
+                self.assertIsNotNone(get_job("my_jobs.MyJob"))
+
+                # Create a second Job in the same module
+                with open(os.path.join(temp_dir, "my_jobs.py"), "a") as fd:
+                    fd.write("""
+class MyOtherJob(MyJob):
+    pass
+""")
+                jobs_data = get_jobs()
+                self.assertIn("my_jobs.MyJob", jobs_data.keys())
+                self.assertIsNotNone(get_job("my_jobs.MyJob"))
+                self.assertIn("my_jobs.MyOtherJob", jobs_data.keys())
+                self.assertIsNotNone(get_job("my_jobs.MyOtherJob"))
+
+                # Create a third Job in another module
+                with open(os.path.join(temp_dir, "their_jobs.py"), "w") as fd:
+                    fd.write("""
+from nautobot.apps.jobs import Job
+
+class MyJob(Job):
+    def run(self):
+        pass
+""")
+                jobs_data = get_jobs()
+                self.assertIn("my_jobs.MyJob", jobs_data.keys())
+                self.assertIsNotNone(get_job("my_jobs.MyJob"))
+                self.assertIn("my_jobs.MyOtherJob", jobs_data.keys())
+                self.assertIsNotNone(get_job("my_jobs.MyOtherJob"))
+                self.assertIn("their_jobs.MyJob", jobs_data.keys())
+                self.assertIsNotNone(get_job("their_jobs.MyJob"))
+                self.assertNotEqual(get_job("my_jobs.MyJob"), get_job("their_jobs.MyJob"))
+
+                # Delete a module
+                os.remove(os.path.join(temp_dir, "their_jobs.py"))
+                jobs_data = get_jobs()
+                self.assertIn("my_jobs.MyJob", jobs_data.keys())
+                self.assertIsNotNone(get_job("my_jobs.MyJob"))
+                self.assertIn("my_jobs.MyOtherJob", jobs_data.keys())
+                self.assertIsNotNone(get_job("my_jobs.MyOtherJob"))
+                self.assertNotIn("their_jobs", jobs_data.keys())
+                self.assertIsNone(get_job("their_jobs.MyJob"))
+
+                # Create a module with an inauspicious name
+                with open(os.path.join(temp_dir, "traceback.py"), "w") as fd:
+                    fd.write("""
+from nautobot.apps.jobs import Job
+
+class BadJob(Job):
+    def run(self):
+        raise RuntimeError("You ran a bad job!")
+""")
+                jobs_data = get_jobs()
+                self.assertIn("my_jobs.MyJob", jobs_data.keys())
+                self.assertIsNotNone(get_job("my_jobs.MyJob"))
+                self.assertIn("my_jobs.MyOtherJob", jobs_data.keys())
+                self.assertIsNotNone(get_job("my_jobs.MyOtherJob"))
+                self.assertIn("traceback.BadJob", jobs_data.keys())
+                self.assertIsNotNone(get_job("traceback.BadJob"))
 
 
 class JobTransactionTest(TransactionTestCase):

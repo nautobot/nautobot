@@ -97,8 +97,7 @@ class GitRepository(PrimaryModel):
         if not self.present_in_database:
             check_if_key_is_graphql_safe(self.__class__.__name__, self.slug, "slug")
             # Check on create whether the proposed slug conflicts with a module name already in the Python environment.
-            # Because we add GIT_ROOT to the end of sys.path, trying to import this repository will instead
-            # import the earlier-found Python module in its place, which would be undesirable.
+            # TODO: so long as we're not actually adding this to sys.path (which we don't, as of 2.2.1) any slug is safe
             if find_spec(self.slug) is not None:
                 raise ValidationError(
                     f'Please choose a different slug, as "{self.slug}" is an installed Python package or module.'

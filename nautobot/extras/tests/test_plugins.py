@@ -13,7 +13,7 @@ from nautobot.core.testing import APIViewTestCases, disable_warnings, extract_pa
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
-from nautobot.extras.jobs import all_job_classes, get_job
+from nautobot.extras.jobs import get_job
 from nautobot.extras.models import CustomField, Relationship, RelationshipAssociation, Role, Secret, Status
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import load_plugin
@@ -115,7 +115,6 @@ class AppTest(TestCase):
 
         self.assertIn(ExampleJob, registry.get("plugin_jobs", []))
         self.assertEqual(ExampleJob, get_job("example_app.jobs.ExampleJob"))
-        self.assertIn("example_app.jobs.ExampleJob", (sc.class_path for sc in all_job_classes()))
 
     def test_git_datasource_contents_registration(self):
         """

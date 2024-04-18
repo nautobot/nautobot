@@ -19,6 +19,7 @@ from nautobot.core.utils.requests import get_filterable_params_from_filter_param
 from nautobot.extras.datasources import ensure_git_repository, git_repository_dry_run, refresh_datasource_content
 from nautobot.extras.jobs import BooleanVar, ChoiceVar, FileVar, Job, ObjectVar, RunJobTaskFailed, StringVar, TextVar
 from nautobot.extras.models import ExportTemplate, GitRepository
+from nautobot.extras.registry import registry
 
 name = "System Jobs"
 
@@ -315,3 +316,4 @@ class ImportObjects(Job):
 
 
 jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun, ImportObjects]
+registry["system_jobs"] = jobs

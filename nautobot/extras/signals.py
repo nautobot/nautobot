@@ -473,11 +473,10 @@ def refresh_job_models(sender, *, apps, **kwargs):
 
     job_models = []
 
-    for jobs_data in get_jobs().values():
-        for job_class in jobs_data["jobs"].values():
-            job_model, _ = refresh_job_model_from_job_class(Job, job_class)
-            if job_model is not None:
-                job_models.append(job_model)
+    for job_class in get_jobs().values():
+        job_model, _ = refresh_job_model_from_job_class(Job, job_class)
+        if job_model is not None:
+            job_models.append(job_model)
 
     for job_model in Job.objects.filter(installed=True):
         if job_model not in job_models:

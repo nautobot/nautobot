@@ -143,7 +143,11 @@ class NautobotAppConfig(NautobotConfig):
         # Import jobs (if present)
         jobs = import_object(f"{self.__module__}.{self.jobs}")
         if jobs is not None:
-            register_jobs(jobs)
+            from nautobot.extras.jobs import is_job
+            for job_class in jobs:
+                if not is_job(job_class):
+                    raise TypeError(f"{job_class} is not a Job class!")
+                registry["plugin_jobs"].append(job_class)
             self.features["jobs"] = jobs
 
         # Import metrics (if present)
@@ -421,24 +425,6 @@ def register_graphql_types(class_list):
             raise TypeError(f"DjangoObjectType class {item} does not define a valid model!")
 
         registry["plugin_graphql_types"].append(item)
-
-
-def register_jobs(class_list):
-    """
-    Register a list of Job classes
-    """
-    from nautobot.extras.jobs import Job
-
-    for job in class_list:
-        if not inspect.isclass(job):
-            raise TypeError(f"Job class {job} was passed as an instance!")
-        if not issubclass(job, Job):
-            raise TypeError(f"{job} is not a subclass of extras.jobs.Job!")
-
-        registry["plugin_jobs"].append(job)
-
-    # Note that we do not (and cannot) update the Job records in the Nautobot database at this time.
-    # That is done in response to the `nautobot_database_ready` signal, see nautobot.extras.signals.refresh_job_models
 
 
 def register_metrics(function_list):
