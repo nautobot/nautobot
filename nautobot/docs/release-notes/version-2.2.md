@@ -66,6 +66,36 @@ The CSV import functionality for all models has been changed from a synchronous 
 Model CharFields' `max_length` attributes have been standardized globally to have at least 255 characters except where a shorter `max_length` is explicitly justified.
 
 <!-- towncrier release notes start -->
+## vv2.2.2 (2024-04-18)
+
+### Security
+
+- [#5579](https://github.com/nautobot/nautobot/issues/5579) - Updated `sqlparse` to `0.5.0` to fix [GHSA-2m57-hf25-phgg](https://github.com/advisories/GHSA-2m57-hf25-phgg). This is not a direct dependency so it will not auto-update when upgrading Nautobot. Please be sure to update your local environment.
+
+### Added
+
+- [#2459](https://github.com/nautobot/nautobot/issues/2459) - Added `nautobot.extras.utils.bulk_delete_with_bulk_change_logging` helper function for improving performance on bulk delete.
+- [#2459](https://github.com/nautobot/nautobot/issues/2459) - Added `nautobot.extras.context_managers.deferred_change_logging_for_bulk_operation` context manager for improving performance on bulk update.
+
+### Changed
+
+- [#2459](https://github.com/nautobot/nautobot/issues/2459) - Improved performance of bulk-edit and bulk-delete UI operations by refactoring change logging logic.
+- [#5568](https://github.com/nautobot/nautobot/issues/5568) - Added url link to the total device count number under device family.
+- [#5589](https://github.com/nautobot/nautobot/issues/5589) - Fixed an invalid Javascript operator in the LLDP neighbor view.
+
+### Fixed
+
+- [#5580](https://github.com/nautobot/nautobot/issues/5580) - Fixed bugs when assigning a VLAN to an Interface related to the recently introduced many-to-many relationship between VLANs and Locations.
+- [#5592](https://github.com/nautobot/nautobot/issues/5592) - Fixed plugins not loading when using Gunicorn.
+
+### Documentation
+
+- [#5583](https://github.com/nautobot/nautobot/issues/5583) - Re-added release note content for  v1.6.16 through v1.6.18.
+
+### Housekeeping
+
+- [#5590](https://github.com/nautobot/nautobot/issues/5590) - Fixed upstream testing workflows showing successful when one of the steps fail.
+
 ## v2.2.1 (2024-04-15)
 
 ### Security
