@@ -1188,7 +1188,7 @@ def _jobs_in_directory(path, module_prefix="", **kwargs):
                 continue
         try:
             module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
-            for job_class_name, job_class in inspect.getmembers(module, is_job):
+            for _, job_class in inspect.getmembers(module, is_job):
                 job_class.__module__ = f"{module_prefix}{discovered_module_name}"
                 yield job_class
         except Exception as exc:
