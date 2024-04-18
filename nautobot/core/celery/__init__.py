@@ -29,7 +29,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "nautobot_config")
 
 
 class NautobotCelery(Celery):
-    task_cls = "nautobot.core.celery.task.NautobotTask"
+    task_cls = "nautobot.core.celery.task:NautobotTask"
 
 
 app = NautobotCelery("nautobot")
@@ -49,9 +49,9 @@ def import_jobs(sender=None, database_ready=True, **kwargs):
     """
     Import system Jobs into memory as well as (re-?)importing Jobs from JOBS_ROOT and GIT_ROOT.
 
-    Note that app-provided Jobs are imported at startup time via NautobotAppConfig.ready()
+    Note that app-provided Jobs are automatically imported at startup time via NautobotAppConfig.ready()
     """
-    import nautobot.core.jobs  # noqa: F401
+    import_module("nautobot.core.jobs")
 
     jobs_root = settings.JOBS_ROOT
     if jobs_root and os.path.exists(jobs_root):
@@ -206,5 +206,10 @@ register("nautobot_json", _dumps, _loads, content_type="application/x-nautobot-j
 nautobot_task = shared_task
 
 
+# 3.0 TODO: remove this method as no longer needed.
 def register_jobs(*jobs):
-    """Helper method to register jobs with Celery - no longer needed but kept for backward compatibility."""
+    """
+    Deprecated helper method to register jobs with Celery in Nautobot 2.0 through 2.2.1.
+
+    No longer does anything but is kept for backward compatibility for now; should be removed in Nautobot 3.0.
+    """
