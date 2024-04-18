@@ -80,7 +80,7 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 ### Changed
 
 - [#2459](https://github.com/nautobot/nautobot/issues/2459) - Improved performance of bulk-edit and bulk-delete UI operations by refactoring change logging logic.
-- [#5568](https://github.com/nautobot/nautobot/issues/5568) - Added url link to the total device count number under device family.
+- [#5568](https://github.com/nautobot/nautobot/issues/5568) - Added hyperlink to the total device count number under device family.
 - [#5589](https://github.com/nautobot/nautobot/issues/5589) - Fixed an invalid Javascript operator in the LLDP neighbor view.
 
 ### Fixed
