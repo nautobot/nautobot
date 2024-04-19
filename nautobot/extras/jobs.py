@@ -2,7 +2,7 @@
 
 from collections import OrderedDict
 import functools
-from importlib.util import find_spec
+from importlib.util import find_spec, module_from_spec
 import inspect
 import json
 import logging
@@ -1170,7 +1170,7 @@ def _job_source_paths(**kwargs):
 def _jobs_in_directory(path, module_prefix="", **kwargs):
     if module_prefix and not module_prefix.endswith("."):
         module_prefix += "."
-    for importer, discovered_module_name, _ in pkgutil.iter_modules([path]):
+    for finder, discovered_module_name, _ in pkgutil.iter_modules([path]):
         loaded_module_name = f"{module_prefix}{discovered_module_name}"
         try:
             existing_module = find_spec(loaded_module_name)
@@ -1187,7 +1187,11 @@ def _jobs_in_directory(path, module_prefix="", **kwargs):
                 )
                 continue
         try:
-            module = importer.find_module(discovered_module_name).load_module(discovered_module_name)
+            spec = finder.find_spec(discovered_module_name)
+            if spec is None:
+                raise ValueError("Unable to find module spec")
+            module = module_from_spec(spec)
+            spec.loader.exec_module(module)
             for _, job_class in inspect.getmembers(module, is_job):
                 job_class.__module__ = f"{module_prefix}{discovered_module_name}"
                 yield job_class
@@ -1196,9 +1200,9 @@ def _jobs_in_directory(path, module_prefix="", **kwargs):
             if "job_result" in kwargs and "repository_record" in kwargs:
                 if module_prefix.startswith(kwargs["repository_record"].slug):
                     kwargs["job_result"].log(
-                        "Error in loading Jobs from `{module_prefix}`: `{exc}`",
+                        f"Error in loading Jobs from `{module_prefix}`: `{exc}`",
                         grouping="jobs",
-                        level_choice="failure",
+                        level_choice="error",
                     )
 
 
