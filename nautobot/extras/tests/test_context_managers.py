@@ -57,7 +57,7 @@ class WebRequestContextTestCase(TestCase):
             location.save()
 
         location = Location.objects.get(name="Test Location 1")
-        oc_list = get_changes_for_model(location).order_by("pk")
+        oc_list = get_changes_for_model(location).order_by("pk").filter(changed_object_id=location.id)
         self.assertEqual(len(oc_list), 1)
         self.assertEqual(oc_list[0].changed_object, location)
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
@@ -113,7 +113,7 @@ class WebRequestContextTestCase(TestCase):
             location.description = "changed"
             location.save()
 
-        oc_list = get_changes_for_model(location)
+        oc_list = get_changes_for_model(location).filter(changed_object_id=location.id)
         self.assertEqual(len(oc_list), 1)
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
         snapshots = oc_list[0].get_snapshots()
@@ -126,10 +126,12 @@ class WebRequestContextTestCase(TestCase):
         """Test that a delete followed by a create is logged as a single update"""
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
+        pk_list = []
         with web_request_context(self.user):
             location = Location(name="Test Location 1", location_type=location_type, status=location_status)
             location.save()
             location_pk = location.pk
+            pk_list.append(location.pk)
         with web_request_context(self.user):
             location.delete()
             location = Location.objects.create(
@@ -139,8 +141,9 @@ class WebRequestContextTestCase(TestCase):
                 status=location_status,
                 description="changed",
             )
+            pk_list.append(location.pk)
 
-        oc_list = get_changes_for_model(location)
+        oc_list = get_changes_for_model(location).filter(changed_object_id__in=pk_list)
         self.assertEqual(len(oc_list), 2)
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_UPDATE)
         snapshots = oc_list[0].get_snapshots()
@@ -216,7 +219,7 @@ class BulkEditDeleteChangeLogging(TestCase):
                 location.save()
 
         location = Location.objects.get(name="Test Location 1")
-        oc_list = get_changes_for_model(location).order_by("pk")
+        oc_list = get_changes_for_model(location).order_by("pk").filter(changed_object_id=location.id)
         self.assertEqual(len(oc_list), 1)
         self.assertEqual(oc_list[0].changed_object, location)
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
@@ -243,7 +246,7 @@ class BulkEditDeleteChangeLogging(TestCase):
                 location.description = "changed"
                 location.save()
 
-        oc_list = get_changes_for_model(location)
+        oc_list = get_changes_for_model(location).filter(changed_object_id=location.id)
         self.assertEqual(len(oc_list), 1)
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
         snapshots = oc_list[0].get_snapshots()
@@ -261,13 +264,15 @@ class BulkEditDeleteChangeLogging(TestCase):
             for i in range(1, 4)
         ]
         Location.objects.bulk_create(locations)
+        pk_list = []
         with web_request_context(self.user):
             with deferred_change_logging_for_bulk_operation():
                 for location in locations:
                     location.description = "changed"
                     location.save()
+                    pk_list.append(location.id)
 
-        oc_list = get_changes_for_model(Location)
+        oc_list = get_changes_for_model(Location).filter(changed_object_id__in=pk_list)
         self.assertEqual(len(oc_list), 3)
         for oc in oc_list:
             self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)
