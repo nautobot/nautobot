@@ -37,7 +37,7 @@ class PrefixType(OptimizedNautobotObjectType):
 
 
 class VLANType(OptimizedNautobotObjectType):
-    """Graphql Type Object for Prefix model."""
+    """Graphql Type Object for VLAN model."""
 
     location = graphene.Field("nautobot.dcim.graphql.types.LocationType")
 
