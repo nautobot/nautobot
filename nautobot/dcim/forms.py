@@ -56,7 +56,7 @@ from nautobot.extras.forms import (
 )
 from nautobot.extras.models import Contact, ContactAssociation, ExternalIntegration, Role, SecretsGroup, Status, Team
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
-from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VLANLocationAssignment, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
@@ -196,8 +196,13 @@ class InterfaceCommonForm(forms.Form):
         # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to add a VLAN
         # belongs to the parent Location or the child location of the parent device to the `tagged_vlan` field of the interface?
         elif mode == InterfaceModeChoices.MODE_TAGGED:
-            valid_locations = [None, self.cleaned_data[parent_field].location]
-            invalid_vlans = [str(v) for v in tagged_vlans if v.location not in valid_locations]
+            valid_location = self.cleaned_data[parent_field].location
+            invalid_vlans = [
+                str(v)
+                for v in tagged_vlans
+                if v.locations.without_tree_fields().exists()
+                and not VLANLocationAssignment.objects.filter(location=valid_location, vlan=v).exists()
+            ]
 
             if invalid_vlans:
                 raise forms.ValidationError(

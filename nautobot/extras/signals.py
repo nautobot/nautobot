@@ -109,7 +109,9 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
     if raw:
         return
 
-    if change_context_state.get() is None:
+    change_context = change_context_state.get()
+
+    if change_context is None:
         return
 
     # Determine the type of change being made
@@ -125,36 +127,49 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
-        user = change_context_state.get().get_user(instance)
+        user = change_context.get_user(instance)
         # save a copy of this instance's field cache so it can be restored after serialization
         # to prevent unexpected behavior when chaining multiple signal handlers
         original_cache = instance._state.fields_cache.copy()
 
+        changed_object_type = ContentType.objects.get_for_model(instance)
+        changed_object_id = instance.id
+
+        # Generate a unique identifier for this change to stash in the change context
+        # This is used for deferred change logging and for looking up related changes without querying the database
+        unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}__{user.pk}"
+
         # If a change already exists for this change_id, user, and object, update it instead of creating a new one.
         # If the object was deleted then recreated with the same pk (don't do this), change the action to update.
-        related_changes = ObjectChange.objects.filter(
-            changed_object_type=ContentType.objects.get_for_model(instance),
-            changed_object_id=instance.pk,
-            user=user,
-            request_id=change_context_state.get().change_id,
-        )
-        objectchange = instance.to_objectchange(action)
-        if related_changes.exists():
-            most_recent_change = related_changes.order_by("-time").first()
-            if most_recent_change.action == ObjectChangeActionChoices.ACTION_DELETE:
-                most_recent_change.action = ObjectChangeActionChoices.ACTION_UPDATE
-            most_recent_change.object_data = objectchange.object_data
-            most_recent_change.object_data_v2 = objectchange.object_data_v2
-            most_recent_change.save()
-            objectchange = most_recent_change
+        if unique_object_change_id in change_context.deferred_object_changes:
+            related_changes = ObjectChange.objects.filter(
+                changed_object_type=changed_object_type,
+                changed_object_id=changed_object_id,
+                user=user,
+                request_id=change_context.change_id,
+            )
+
+            # Skip the database check when deferring object changes
+            if not change_context.defer_object_changes and related_changes.exists():
+                objectchange = instance.to_objectchange(action)
+                most_recent_change = related_changes.order_by("-time").first()
+                if most_recent_change.action == ObjectChangeActionChoices.ACTION_DELETE:
+                    most_recent_change.action = ObjectChangeActionChoices.ACTION_UPDATE
+                most_recent_change.object_data = objectchange.object_data
+                most_recent_change.object_data_v2 = objectchange.object_data_v2
+                most_recent_change.save()
+
         else:
-            objectchange.user = user
-            objectchange.request_id = change_context_state.get().change_id
-            objectchange.change_context = change_context_state.get().context
-            objectchange.change_context_detail = change_context_state.get().context_detail[
-                :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+            change_context.deferred_object_changes[unique_object_change_id] = [
+                {"action": action, "instance": instance, "user": user}
             ]
-            objectchange.save()
+            if not change_context.defer_object_changes:
+                objectchange = instance.to_objectchange(action)
+                objectchange.user = user
+                objectchange.request_id = change_context.change_id
+                objectchange.change_context = change_context.context
+                objectchange.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+                objectchange.save()
 
         # restore field cache
         instance._state.fields_cache = original_cache
@@ -171,7 +186,9 @@ def _handle_deleted_object(sender, instance, **kwargs):
     """
     Fires when an object is deleted.
     """
-    if change_context_state.get() is None:
+    change_context = change_context_state.get()
+
+    if change_context is None:
         return
 
     if isinstance(instance, BaseModel):
@@ -186,41 +203,58 @@ def _handle_deleted_object(sender, instance, **kwargs):
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
-        user = change_context_state.get().get_user(instance)
+        user = change_context.get_user(instance)
 
         # save a copy of this instance's field cache so it can be restored after serialization
         # to prevent unexpected behavior when chaining multiple signal handlers
         original_cache = instance._state.fields_cache.copy()
 
+        changed_object_type = ContentType.objects.get_for_model(instance)
+        changed_object_id = instance.id
+
+        # Generate a unique identifier for this change to stash in the change context
+        # This is used for deferred change logging and for looking up related changes without querying the database
+        unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}__{user.pk}"
+        save_new_objectchange = True
+
         # if a change already exists for this change_id, user, and object, update it instead of creating a new one
         # except in the case that the object was created and deleted in the same change_id
         # we don't want to create a delete change for an object that never existed
-        related_changes = ObjectChange.objects.filter(
-            changed_object_type=ContentType.objects.get_for_model(instance),
-            changed_object_id=instance.pk,
-            user=user,
-            request_id=change_context_state.get().change_id,
-        )
-        objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-        save_new_objectchange = True
-        if related_changes.exists():
-            most_recent_change = related_changes.order_by("-time").first()
-            if most_recent_change.action != ObjectChangeActionChoices.ACTION_CREATE:
-                most_recent_change.action = ObjectChangeActionChoices.ACTION_DELETE
-                most_recent_change.object_data = objectchange.object_data
-                most_recent_change.object_data_v2 = objectchange.object_data_v2
-                most_recent_change.save()
-                objectchange = most_recent_change
+        if unique_object_change_id in change_context.deferred_object_changes:
+            cached_related_change = change_context.deferred_object_changes[unique_object_change_id][-1]
+            if cached_related_change["action"] != ObjectChangeActionChoices.ACTION_CREATE:
+                cached_related_change["action"] = ObjectChangeActionChoices.ACTION_DELETE
                 save_new_objectchange = False
 
+            related_changes = ObjectChange.objects.filter(
+                changed_object_type=changed_object_type,
+                changed_object_id=changed_object_id,
+                user=user,
+                request_id=change_context.change_id,
+            )
+
+            # Skip the database check when deferring object changes
+            if not change_context.defer_object_changes and related_changes.exists():
+                objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
+                most_recent_change = related_changes.order_by("-time").first()
+                if most_recent_change.action != ObjectChangeActionChoices.ACTION_CREATE:
+                    most_recent_change.action = ObjectChangeActionChoices.ACTION_DELETE
+                    most_recent_change.object_data = objectchange.object_data
+                    most_recent_change.object_data_v2 = objectchange.object_data_v2
+                    most_recent_change.save()
+                    save_new_objectchange = False
+
         if save_new_objectchange:
-            objectchange.user = user
-            objectchange.request_id = change_context_state.get().change_id
-            objectchange.change_context = change_context_state.get().context
-            objectchange.change_context_detail = change_context_state.get().context_detail[
-                :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
-            ]
-            objectchange.save()
+            change_context.deferred_object_changes.setdefault(unique_object_change_id, []).append(
+                {"action": ObjectChangeActionChoices.ACTION_DELETE, "instance": instance, "user": user}
+            )
+            if not change_context.defer_object_changes:
+                objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
+                objectchange.user = user
+                objectchange.request_id = change_context.change_id
+                objectchange.change_context = change_context.context
+                objectchange.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+                objectchange.save()
 
         # restore field cache
         instance._state.fields_cache = original_cache
