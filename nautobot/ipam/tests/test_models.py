@@ -318,7 +318,9 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
                 Prefix.objects.exclude(locations__in=[location]),
             )
 
-        # These fields cannot be null, Hence using these for the test
+        # We use `assertQuerysetEqualAndNotEmpty` for test validation. Including a nullable field could lead
+        # to flaky tests where querysets might return None, causing tests to fail. Therefore, we select
+        # fields that consistently contain values to ensure reliable filtering.
         query_params = ["name", "location_type", "status"]
 
         for field_name in query_params:
@@ -1260,7 +1262,9 @@ class TestVLAN(ModelTestCases.BaseModelTestCase):
                 VLAN.objects.exclude(locations__in=[location]),
             )
 
-        # These fields cannot be null, Hence using these for the test
+        # We use `assertQuerysetEqualAndNotEmpty` for test validation. Including a nullable field could lead
+        # to flaky tests where querysets might return None, causing tests to fail. Therefore, we select
+        # fields that consistently contain values to ensure reliable filtering.
         query_params = ["name", "location_type", "status"]
 
         for field_name in query_params:
