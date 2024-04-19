@@ -173,7 +173,7 @@ def get_view_name(view, suffix=None):
     """
     name = getattr(view, "name", None)
     if name is not None:
-            return view.name
+        return view.name
     elif hasattr(view, "queryset"):
         # Determine the model name from the queryset.
         if hasattr(view, "detail") and view.detail:
