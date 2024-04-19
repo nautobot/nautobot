@@ -1,7 +1,7 @@
-from collections import namedtuple
 import logging
 import platform
 import sys
+from collections import namedtuple
 
 from django.apps import apps
 from django.conf import settings
@@ -10,7 +10,7 @@ from django.urls import reverse
 from rest_framework import serializers, status
 from rest_framework.utils import formatting
 from rest_framework.utils.field_mapping import get_nested_relation_kwargs
-from rest_framework.utils.model_meta import _get_to_field, RelationInfo
+from rest_framework.utils.model_meta import RelationInfo, _get_to_field
 
 from nautobot.core.api import exceptions
 
@@ -167,12 +167,11 @@ def is_api_request(request):
     return request.path_info.startswith(api_path)
 
 
-def get_view_name(view, suffix=None):
+def get_view_name(view):
     """
     Derive the view name from its associated model, if it has one. Fall back to DRF's built-in `get_view_name`.
     """
-    name = getattr(view, "name", None)
-    if name is not None:
+    if hasattr(view, "name") and view.name:
         return view.name
     elif hasattr(view, "queryset"):
         # Determine the model name from the queryset.
@@ -189,8 +188,10 @@ def get_view_name(view, suffix=None):
         name = formatting.remove_trailing_string(name, "ViewSet")
         name = formatting.camelcase_to_spaces(name)
 
-    if suffix:
-        name += " " + suffix
+        # Suffix may be set by some Views, such as a ViewSet.
+        suffix = getattr(view, 'suffix', None)
+        if suffix:
+            name += ' ' + suffix
 
     return name
 
