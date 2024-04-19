@@ -1,0 +1,1 @@
+Added `JobResultFactory`, `JobLogEntryFactory`, and `ObjectChangeFactory` classes and added creation of fake `JobResult`, `JobLogEntry`, and `ObjectChange` records to the `nautobot-server generate_test_data` command.

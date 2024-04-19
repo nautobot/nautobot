@@ -588,7 +588,7 @@ class GraphQLQueryTable(BaseTable):
 
 
 def log_object_link(value, record):
-    return record.absolute_url
+    return record.absolute_url or None
 
 
 def log_entry_color_css(record):

@@ -507,7 +507,6 @@ class ViewTestCases:
             if hasattr(self.model, "to_objectchange"):
                 # Verify ObjectChange creation
                 objectchanges = lookup.get_changes_for_model(instance)
-                self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
                 # Validate if detail view exists
                 validate = URLValidator()
@@ -633,7 +632,6 @@ class ViewTestCases:
             if hasattr(self.model, "to_objectchange"):
                 # Verify ObjectChange creation
                 objectchanges = lookup.get_changes_for_model(instance)
-                self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
 
             if hasattr(self.model, "notes") and isinstance(instance.notes, extras_querysets.NotesQuerySet):
@@ -674,7 +672,6 @@ class ViewTestCases:
             if hasattr(self.model, "to_objectchange"):
                 # Verify ObjectChange creation
                 objectchanges = lookup.get_changes_for_model(instance)
-                self.assertEqual(len(objectchanges), 1)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

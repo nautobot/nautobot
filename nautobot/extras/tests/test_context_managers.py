@@ -192,10 +192,11 @@ class WebRequestContextTransactionTestCase(TransactionTestCase):
         user = User.objects.create(username="test-user123")
         with web_request_context(user, context_detail="test_change_log_context"):
             with web_request_context(user, context_detail="test_change_log_context"):
-                Status.objects.create(name="Test Status 1")
-            Status.objects.create(name="Test Status 2")
+                status1 = Status.objects.create(name="Test Status 1")
+            status2 = Status.objects.create(name="Test Status 2")
 
-        self.assertEqual(get_changes_for_model(Status).count(), 2)
+        self.assertEqual(get_changes_for_model(status1).count(), 1)
+        self.assertEqual(get_changes_for_model(status2).count(), 1)
 
 
 class BulkEditDeleteChangeLogging(TestCase):

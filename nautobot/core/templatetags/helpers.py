@@ -813,7 +813,7 @@ def hyperlinked_object_with_color(obj):
     if obj:
         content = f'<span class="label" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{hyperlinked_object(obj)}</span>'
         return format_html(content)
-    return "—"
+    return HTML_NONE
 
 
 @register.filter()

@@ -38,7 +38,7 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, Device, Interface, Location, Rack
-from nautobot.dcim.tables import ControllerTable, DeviceTable, RackTable
+from nautobot.dcim.tables import ControllerTable, DeviceTable, InterfaceTable, RackTable
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.signals import change_context_state
 from nautobot.extras.tasks import delete_custom_field_data
@@ -46,7 +46,7 @@ from nautobot.extras.utils import get_base_template, get_worker_count
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
-from nautobot.virtualization.tables import VirtualMachineTable
+from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 
 from . import filters, forms, tables
 from .api import serializers
@@ -404,144 +404,93 @@ class ContactAssociationUIViewSet(
     non_filter_params = ("export", "page", "per_page", "sort")
 
 
-class ObjectNewContactView(generic.ObjectEditView):
+class ObjectContactTeamMixin:
+    """Mixin that contains a custom post() method to create a new contact/team and assign it to an existing object"""
+
+    def post(self, request, *args, **kwargs):
+        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        restrict_form_fields(form, request.user)
+
+        if form.is_valid():
+            logger.debug("Form validation was successful")
+
+            try:
+                with transaction.atomic():
+                    object_created = not form.instance.present_in_database
+                    obj = form.save()
+
+                    # Check that the new object conforms with any assigned object-level permissions
+                    self.queryset.get(pk=obj.pk)
+
+                if hasattr(form, "save_note") and callable(form.save_note):
+                    form.save_note(instance=obj, user=request.user)
+
+                if isinstance(obj, Contact):
+                    association = ContactAssociation(
+                        contact=obj,
+                        associated_object_type=ContentType.objects.get(id=request.POST.get("associated_object_type")),
+                        associated_object_id=request.POST.get("associated_object_id"),
+                        status=Status.objects.get(id=request.POST.get("status")),
+                        role=Role.objects.get(id=request.POST.get("role")) if request.POST.get("role") else None,
+                    )
+                else:
+                    association = ContactAssociation(
+                        team=obj,
+                        associated_object_type=ContentType.objects.get(id=request.POST.get("associated_object_type")),
+                        associated_object_id=request.POST.get("associated_object_id"),
+                        status=Status.objects.get(id=request.POST.get("status")),
+                        role=Role.objects.get(id=request.POST.get("role")) if request.POST.get("role") else None,
+                    )
+                association.validated_save()
+                self.successful_post(request, obj, object_created, logger)
+
+                if "_addanother" in request.POST:
+                    # If the object has clone_fields, pre-populate a new instance of the form
+                    if hasattr(obj, "clone_fields"):
+                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
+                        return redirect(url)
+
+                    return redirect(request.get_full_path())
+
+                return_url = form.cleaned_data.get("return_url")
+                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                    return redirect(iri_to_uri(return_url))
+                else:
+                    return redirect(self.get_return_url(request, obj))
+
+            except ObjectDoesNotExist:
+                msg = "Object save failed due to object-level permissions violation"
+                logger.debug(msg)
+                form.add_error(None, msg)
+
+        else:
+            logger.debug("Form validation failed")
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "obj": obj,
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "return_url": self.get_return_url(request, obj),
+                "editing": obj.present_in_database,
+                **self.get_extra_context(request, obj),
+            },
+        )
+
+
+class ObjectNewContactView(ObjectContactTeamMixin, generic.ObjectEditView):
     queryset = Contact.objects.all()
     model_form = forms.ObjectNewContactForm
     template_name = "extras/object_new_contact.html"
 
-    def post(self, request, *args, **kwargs):
-        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
-        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
-        restrict_form_fields(form, request.user)
 
-        if form.is_valid():
-            logger.debug("Form validation was successful")
-
-            try:
-                with transaction.atomic():
-                    object_created = not form.instance.present_in_database
-                    obj = form.save()
-
-                    # Check that the new object conforms with any assigned object-level permissions
-                    self.queryset.get(pk=obj.pk)
-
-                if hasattr(form, "save_note") and callable(form.save_note):
-                    form.save_note(instance=obj, user=request.user)
-
-                association = ContactAssociation(
-                    contact=obj,
-                    associated_object_type=ContentType.objects.get(id=request.POST.get("associated_object_type")),
-                    associated_object_id=request.POST.get("associated_object_id"),
-                    status=Status.objects.get(id=request.POST.get("status")),
-                    role=Role.objects.get(id=request.POST.get("role")) if request.POST.get("role") else None,
-                )
-                association.validated_save()
-                self.successful_post(request, obj, object_created, logger)
-
-                if "_addanother" in request.POST:
-                    # If the object has clone_fields, pre-populate a new instance of the form
-                    if hasattr(obj, "clone_fields"):
-                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
-                        return redirect(url)
-
-                    return redirect(request.get_full_path())
-
-                return_url = form.cleaned_data.get("return_url")
-                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(iri_to_uri(return_url))
-                else:
-                    return redirect(self.get_return_url(request, obj))
-
-            except ObjectDoesNotExist:
-                msg = "Object save failed due to object-level permissions violation"
-                logger.debug(msg)
-                form.add_error(None, msg)
-
-        else:
-            logger.debug("Form validation failed")
-
-        return render(
-            request,
-            self.template_name,
-            {
-                "obj": obj,
-                "obj_type": self.queryset.model._meta.verbose_name,
-                "form": form,
-                "return_url": self.get_return_url(request, obj),
-                "editing": obj.present_in_database,
-                **self.get_extra_context(request, obj),
-            },
-        )
-
-
-class ObjectNewTeamView(generic.ObjectEditView):
+class ObjectNewTeamView(ObjectContactTeamMixin, generic.ObjectEditView):
     queryset = Team.objects.all()
     model_form = forms.ObjectNewTeamForm
     template_name = "extras/object_new_team.html"
-
-    def post(self, request, *args, **kwargs):
-        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
-        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
-        restrict_form_fields(form, request.user)
-
-        if form.is_valid():
-            logger.debug("Form validation was successful")
-
-            try:
-                with transaction.atomic():
-                    object_created = not form.instance.present_in_database
-                    obj = form.save()
-
-                    # Check that the new object conforms with any assigned object-level permissions
-                    self.queryset.get(pk=obj.pk)
-
-                if hasattr(form, "save_note") and callable(form.save_note):
-                    form.save_note(instance=obj, user=request.user)
-
-                association = ContactAssociation(
-                    team=obj,
-                    associated_object_type=ContentType.objects.get(id=request.POST.get("associated_object_type")),
-                    associated_object_id=request.POST.get("associated_object_id"),
-                    status=Status.objects.get(id=request.POST.get("status")),
-                    role=Role.objects.get(id=request.POST.get("role")) if request.POST.get("role") else None,
-                )
-                association.validated_save()
-                self.successful_post(request, obj, object_created, logger)
-
-                if "_addanother" in request.POST:
-                    # If the object has clone_fields, pre-populate a new instance of the form
-                    if hasattr(obj, "clone_fields"):
-                        url = f"{request.path}?{prepare_cloned_fields(obj)}"
-                        return redirect(url)
-
-                    return redirect(request.get_full_path())
-
-                return_url = form.cleaned_data.get("return_url")
-                if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
-                    return redirect(iri_to_uri(return_url))
-                else:
-                    return redirect(self.get_return_url(request, obj))
-
-            except ObjectDoesNotExist:
-                msg = "Object save failed due to object-level permissions violation"
-                logger.debug(msg)
-                form.add_error(None, msg)
-
-        else:
-            logger.debug("Form validation failed")
-
-        return render(
-            request,
-            self.template_name,
-            {
-                "obj": obj,
-                "obj_type": self.queryset.model._meta.verbose_name,
-                "form": form,
-                "return_url": self.get_return_url(request, obj),
-                "editing": obj.present_in_database,
-                **self.get_extra_context(request, obj),
-            },
-        )
 
 
 class ObjectAssignContactOrTeamView(generic.ObjectEditView):
@@ -2120,6 +2069,17 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 RequestConfig(request, paginate).configure(device_table)
                 context["device_table"] = device_table
 
+            if ContentType.objects.get_for_model(Interface) in context["content_types"]:
+                interfaces = instance.interfaces.select_related(
+                    "device",
+                    "status",
+                    "role",
+                ).restrict(request.user, "view")
+                interface_table = InterfaceTable(interfaces)
+                interface_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(interface_table)
+                context["interface_table"] = interface_table
+
             if ContentType.objects.get_for_model(Controller) in context["content_types"]:
                 controllers = instance.controllers.select_related(
                     "status",
@@ -2187,7 +2147,17 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 virtual_machine_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(virtual_machine_table)
                 context["virtual_machine_table"] = virtual_machine_table
-
+            if ContentType.objects.get_for_model(VMInterface) in context["content_types"]:
+                vm_interfaces = instance.vm_interfaces.select_related(
+                    "virtual_machine",
+                    "status",
+                    "role",
+                    "vrf",
+                ).restrict(request.user, "view")
+                vminterface_table = VMInterfaceTable(vm_interfaces)
+                vminterface_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(vminterface_table)
+                context["vminterface_table"] = vminterface_table
             if ContentType.objects.get_for_model(VLAN) in context["content_types"]:
                 vlans = (
                     instance.vlans.annotate(location_count=count_related(Location, "vlans"))

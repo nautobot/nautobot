@@ -889,6 +889,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         )
         self.device_role = Role.objects.get_for_model(Device).first()
         self.device_status = Status.objects.get_for_model(Device).first()
+        self.intf_role = Role.objects.get_for_model(Interface).first()
         self.location_type_1 = LocationType.objects.get(name="Building")
         self.location_type_2 = LocationType.objects.get(name="Floor")
         self.location_type_3 = LocationType.objects.get(name="Campus")
@@ -1140,7 +1141,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             location=self.location_3,
         )
         device.validated_save()
-        interface = Interface.objects.create(name="Int1", device=device, status=self.device_status)
+        interface = Interface.objects.create(name="Int1", device=device, status=self.device_status, role=self.intf_role)
         ips = list(IPAddress.objects.filter(ip_version=4)[:5]) + list(IPAddress.objects.filter(ip_version=6)[:5])
         interface.add_ip_addresses(ips)
         device.primary_ip4 = interface.ip_addresses.all().filter(ip_version=6).first()
@@ -1609,6 +1610,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=self.device,
             status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
         )
         with self.assertRaises(ValidationError) as err:
             interface.tagged_vlans.add(self.vlan)
@@ -1623,6 +1625,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
                 mode=InterfaceModeChoices.MODE_TAGGED,
                 device=self.device,
                 status=Status.objects.get_for_model(Interface).first(),
+                role=Role.objects.get_for_model(Interface).first(),
             )
             interface.tagged_vlans.add(self.other_location_vlan)
         self.assertEqual(
@@ -1638,6 +1641,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=self.device,
             status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
         )
         ips = list(IPAddress.objects.filter(parent__namespace=self.namespace))
 
@@ -1663,6 +1667,7 @@ class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we 
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=self.device,
             status=Status.objects.get_for_model(Interface).first(),
+            role=Role.objects.get_for_model(Interface).first(),
         )
         ips = list(IPAddress.objects.filter(parent__namespace=self.namespace))
 
