@@ -1200,7 +1200,7 @@ def _jobs_in_directory(path, module_prefix="", **kwargs):
             if "job_result" in kwargs and "repository_record" in kwargs:
                 if module_prefix.startswith(kwargs["repository_record"].slug):
                     kwargs["job_result"].log(
-                        f"Error in loading Jobs from `{module_prefix}`: `{exc}`",
+                        f"Error in loading Jobs from `{module_prefix}{discovered_module_name}`: `{exc}`",
                         grouping="jobs",
                         level_choice="error",
                     )

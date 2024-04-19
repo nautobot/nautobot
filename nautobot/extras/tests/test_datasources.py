@@ -625,8 +625,11 @@ class GitTest(TransactionTestCase):
                     )
                     failure_logs.get(
                         grouping="jobs",
-                        # The specific exception message differs between Python versions
-                        message__contains="Error in loading Jobs from Git repository: ",
+                        message__contains="Error in loading Jobs from `test_git_repo.jobs.importerror`: ",
+                    )
+                    failure_logs.get(
+                        grouping="jobs",
+                        message__contains="Error in loading Jobs from `test_git_repo.jobs.syntaxerror`: ",
                     )
                 except JobLogEntry.DoesNotExist:
                     for log in log_entries:
