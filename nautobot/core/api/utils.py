@@ -1,7 +1,7 @@
+from collections import namedtuple
 import logging
 import platform
 import sys
-from collections import namedtuple
 
 from django.apps import apps
 from django.conf import settings
@@ -10,7 +10,7 @@ from django.urls import reverse
 from rest_framework import serializers, status
 from rest_framework.utils import formatting
 from rest_framework.utils.field_mapping import get_nested_relation_kwargs
-from rest_framework.utils.model_meta import RelationInfo, _get_to_field
+from rest_framework.utils.model_meta import _get_to_field, RelationInfo
 
 from nautobot.core.api import exceptions
 
@@ -189,9 +189,9 @@ def get_view_name(view):
         name = formatting.camelcase_to_spaces(name)
 
         # Suffix may be set by some Views, such as a ViewSet.
-        suffix = getattr(view, 'suffix', None)
+        suffix = getattr(view, "suffix", None)
         if suffix:
-            name += ' ' + suffix
+            name += " " + suffix
 
     return name
 
