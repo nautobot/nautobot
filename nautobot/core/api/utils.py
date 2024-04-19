@@ -171,17 +171,19 @@ def get_view_name(view, suffix=None):
     """
     Derive the view name from its associated model, if it has one. Fall back to DRF's built-in `get_view_name`.
     """
-    if hasattr(view, "queryset"):
+    name = getattr(view, "name", None)
+    if name is not None:
+            return view.name
+    elif hasattr(view, "queryset"):
         # Determine the model name from the queryset.
-        name = view.queryset.model._meta.verbose_name
+        if hasattr(view, "detail") and view.detail:
+            name = view.queryset.model._meta.verbose_name
+        else:
+            name = view.queryset.model._meta.verbose_name_plural
         name = " ".join([w[0].upper() + w[1:] for w in name.split()])  # Capitalize each word
 
     else:
         # Replicate DRF's built-in behavior.
-        name = getattr(view, "name", None)
-        if name is not None:
-            return view.name
-
         name = view.__class__.__name__
         name = formatting.remove_trailing_string(name, "View")
         name = formatting.remove_trailing_string(name, "ViewSet")
