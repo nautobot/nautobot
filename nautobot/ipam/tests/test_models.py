@@ -329,7 +329,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
 
         for field_name in query_params:
             with self.subTest(f"Assert location__{field_name} query."):
-                value = getattr(location, field_name)
+                value = getattr(locations[0], field_name)
                 self.assertQuerysetEqualAndNotEmpty(
                     Prefix.objects.filter(**{f"location__{field_name}": value}),
                     Prefix.objects.filter(**{f"locations__{field_name}": value}),
