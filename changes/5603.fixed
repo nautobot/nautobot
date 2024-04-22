@@ -1,1 +1,1 @@
-Corrected config context metadata filters to include device_redundancy_groups key.
+Fixed config contexts loaded from Git repositories not populating Device Redundancy Group information.
