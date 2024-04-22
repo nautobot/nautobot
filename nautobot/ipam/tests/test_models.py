@@ -12,7 +12,6 @@ from nautobot.dcim import choices as dcim_choices
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices, ServiceProtocolChoices
-from nautobot.ipam.factory import PrefixFactory
 from nautobot.ipam.models import (
     get_default_namespace,
     IPAddress,
@@ -297,25 +296,30 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         self.child2 = Prefix.objects.create(prefix="101.102.0.64/26", status=self.status, namespace=self.namespace)
 
     def test_location_queries(self):
-        PrefixFactory.create_batch(10)
-        location = Prefix.objects.filter(locations__isnull=False).first().locations.first()
+        locations = Location.objects.all()[:4]
+        for location in locations:
+            location.location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
+        for i in range(10):
+            pfx = Prefix.objects.create(prefix=f"1.1.1.{4*i}/30", status=self.status, namespace=self.namespace)
+            if i > 4:
+                pfx.locations.set(locations)
 
         with self.subTest("Assert filtering and excluding `location`"):
             self.assertQuerysetEqualAndNotEmpty(
-                Prefix.objects.filter(location=location),
-                Prefix.objects.filter(locations__in=[location]),
+                Prefix.objects.filter(location=locations[0]),
+                Prefix.objects.filter(locations__in=[locations[0]]),
             )
             self.assertQuerysetEqualAndNotEmpty(
-                Prefix.objects.exclude(location=location),
-                Prefix.objects.exclude(locations__in=[location]),
+                Prefix.objects.exclude(location=locations[0]),
+                Prefix.objects.exclude(locations__in=[locations[0]]),
             )
             self.assertQuerysetEqualAndNotEmpty(
-                Prefix.objects.filter(location__in=[location]),
-                Prefix.objects.filter(locations__in=[location]),
+                Prefix.objects.filter(location__in=[locations[0]]),
+                Prefix.objects.filter(locations__in=[locations[0]]),
             )
             self.assertQuerysetEqualAndNotEmpty(
-                Prefix.objects.exclude(location__in=[location]),
-                Prefix.objects.exclude(locations__in=[location]),
+                Prefix.objects.exclude(location__in=[locations[0]]),
+                Prefix.objects.exclude(locations__in=[locations[0]]),
             )
 
         # We use `assertQuerysetEqualAndNotEmpty` for test validation. Including a nullable field could lead
