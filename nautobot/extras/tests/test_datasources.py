@@ -314,7 +314,7 @@ class GitTest(TransactionTestCase):
 
     def test_pull_git_repository_and_refresh_data_with_no_data(self, MockGitRepo):
         """
-        The pull_git_repository_and_refresh_data job should succeed if the given repo is empty.
+        The pull_git_repository_and_refresh_data job should fail if the given repo is empty.
         """
         with tempfile.TemporaryDirectory() as tempdir:
             with self.settings(GIT_ROOT=tempdir):
@@ -337,7 +337,7 @@ class GitTest(TransactionTestCase):
 
                 self.assertEqual(
                     job_result.status,
-                    JobResultStatusChoices.STATUS_SUCCESS,
+                    JobResultStatusChoices.STATUS_FAILURE,
                     (job_result.result, list(job_result.job_log_entries.values_list("message", "log_object"))),
                 )
                 self.repo.refresh_from_db()
@@ -345,8 +345,14 @@ class GitTest(TransactionTestCase):
                 MockGitRepo.assert_called_with(os.path.join(tempdir, self.repo.slug), "http://localhost/git.git")
 
                 log_entries = JobLogEntry.objects.filter(job_result=job_result)
-                failure_logs = log_entries.filter(log_level=LogLevelChoices.LOG_WARNING)
-                failure_logs.get(grouping="jobs", message__contains="No `jobs` subdirectory or file found")
+                failure_logs = log_entries.filter(log_level=LogLevelChoices.LOG_ERROR)
+                try:
+                    failure_logs.get(grouping="jobs", message__contains="No `jobs` subdirectory or file found")
+                except JobLogEntry.DoesNotExist:
+                    for log in log_entries:
+                        print(log.message)
+                    print(job_result.traceback)
+                    raise
 
     def test_pull_git_repository_and_refresh_data_with_secrets(self, MockGitRepo):
         """
@@ -624,11 +630,9 @@ class GitTest(TransactionTestCase):
                         message__contains="Error in loading local config context from `devices/nosuchdevice.json`: "
                         "record not found",
                     )
-                    self.assertTrue(
-                        failure_logs.filter(
-                            grouping="jobs",
-                            message__contains="Error in loading Jobs from `test_git_repo.jobs",
-                        ).exists()
+                    failure_logs.get(
+                        grouping="jobs",
+                        message__contains="Error in loading Jobs from Git repository: ",
                     )
                 except (AssertionError, JobLogEntry.DoesNotExist):
                     for log in log_entries:

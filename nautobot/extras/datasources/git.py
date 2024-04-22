@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 from urllib.parse import quote
 
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import transaction
@@ -16,6 +17,7 @@ from git import InvalidGitRepositoryError, Repo
 import yaml
 
 from nautobot.core.utils.git import GitRepo
+from nautobot.core.utils.module_loading import import_modules_privately
 from nautobot.dcim.models import Device, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     LogLevelChoices,
@@ -33,7 +35,7 @@ from nautobot.extras.models import (
     Role,
     Tag,
 )
-from nautobot.extras.registry import DatasourceContent, register_datasource_contents
+from nautobot.extras.registry import DatasourceContent, register_datasource_contents, registry
 from nautobot.extras.utils import refresh_job_model_from_job_class
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
@@ -711,18 +713,54 @@ def delete_git_config_context_schemas(repository_record, job_result, preserve=()
 #
 
 
+def refresh_code_from_repository(repository_slug, skip_reimport=False, should_raise=False):
+    """
+    After cloning/updating/deleting a GitRepository on disk, call this function to reload and reregister its Python.
+
+    Args:
+        repository_slug (str): Repository directory in GIT_ROOT that was updated or deleted.
+        skip_reimport (bool): If True, unload existing code from this repository but do not re-import it.
+        should_raise (bool): If True, any exceptions raised in the import will be re-raised.
+    """
+    # Unload any previous version of this module and its submodules if present
+    for job_class_path in list(registry["jobs"]):
+        if job_class_path.startswith(f"{repository_slug}."):
+            del registry["jobs"][job_class_path]
+
+    if skip_reimport:
+        return
+
+    try:
+        repository = GitRepository.objects.get(slug=repository_slug)
+        if "extras.job" in repository.provided_contents:
+            if not (
+                os.path.isdir(os.path.join(repository.filesystem_path, "jobs"))
+                or os.path.isfile(os.path.join(repository.filesystem_path, "jobs.py"))
+            ):
+                if should_raise:
+                    raise FileNotFoundError(f"No `jobs` subdirectory or file found in Git repository {repository}")
+                else:
+                    logger.error("No `jobs` subdirectory or file found in Git repository %s", repository)
+            else:
+                import_modules_privately(
+                    settings.GIT_ROOT, module_path=[repository_slug, "jobs"], should_raise=should_raise
+                )
+    except GitRepository.DoesNotExist as exc:
+        logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
+        if should_raise:
+            raise
+
+
 def refresh_git_jobs(repository_record, job_result, delete=False):
     """Callback function for GitRepository updates - refresh all Job records managed by this repository."""
-    from nautobot.extras.jobs import get_jobs  # avoid circular import
-
     installed_jobs = []
     if "extras.job" in repository_record.provided_contents and not delete:
         found_jobs = False
         try:
-            jobs_data = get_jobs(reload=True, repository_record=repository_record, job_result=job_result)
+            refresh_code_from_repository(repository_record.slug, should_raise=True)
 
-            for job_class_path, job_class in jobs_data.items():
-                if not job_class_path.startswith(f"{repository_record.slug}.jobs"):
+            for job_class_path, job_class in registry["jobs"].items():
+                if not job_class_path.startswith(f"{repository_record.slug}.jobs."):
                     continue
                 found_jobs = True
                 job_model, created = refresh_job_model_from_job_class(Job, job_class)
@@ -754,7 +792,7 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
             job_result.log(msg, grouping="jobs", level_choice=LogLevelChoices.LOG_ERROR)
     else:
         # Flush this repository's job classes
-        get_jobs(reload=True)
+        refresh_code_from_repository(repository_record.slug, skip_reimport=True)
 
     for job_model in Job.objects.filter(module_name__startswith=f"{repository_record.slug}."):
         if job_model.installed and job_model not in installed_jobs:

@@ -21,7 +21,7 @@ from django.utils import timezone
 from django_prometheus.models import model_deletes, model_inserts, model_updates
 import redis.exceptions
 
-from nautobot.core.celery import app
+from nautobot.core.celery import app, import_jobs
 from nautobot.core.models import BaseModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.logging import sanitize
@@ -333,7 +333,8 @@ def git_repository_pre_delete(instance, **kwargs):
         app.control.broadcast("discard_git_repository", repository_slug=instance.slug)
         # But we don't have an equivalent way to broadcast to any other Django instances.
         # For now we just delete the one that we have locally and rely on other methods,
-        # such as the get_jobs() function itself, to clean up other clones as they're encountered.
+        # such as the import_jobs() signal that runs on server startup,
+        # to clean up other clones as they're encountered.
         if os.path.isdir(instance.filesystem_path):
             shutil.rmtree(instance.filesystem_path)
     except Exception as exc:
@@ -470,9 +471,11 @@ def refresh_job_models(sender, *, apps, **kwargs):
         logger.info("Skipping refresh_job_models() as it appears Job model has not yet been migrated to latest.")
         return
 
+    import_jobs()
+
     job_models = []
 
-    for job_class in get_jobs(reload=True).values():
+    for job_class in get_jobs().values():
         job_model, _ = refresh_job_model_from_job_class(Job, job_class)
         if job_model is not None:
             job_models.append(job_model)

@@ -1,16 +1,11 @@
 """Jobs functionality - consolidates and replaces legacy "custom scripts" and "reports" features."""
 
 from collections import OrderedDict
-from contextlib import contextmanager
 import functools
-import importlib
-from importlib.util import find_spec, module_from_spec
 import inspect
 import json
 import logging
 import os
-import pkgutil
-import shutil
 import sys
 import tempfile
 from textwrap import dedent
@@ -34,7 +29,7 @@ from django.utils.functional import classproperty
 import netaddr
 import yaml
 
-from nautobot.core.celery import nautobot_task
+from nautobot.core.celery import import_jobs, nautobot_task
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -44,11 +39,9 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_model_from_name
 from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
-from nautobot.extras.datasources.git import ensure_git_repository
 from nautobot.extras.forms import JobForm
 from nautobot.extras.models import (
     FileProxy,
-    GitRepository,
     Job as JobModel,
     JobHook,
     JobResult,
@@ -1098,13 +1091,12 @@ def is_variable(obj):
     return isinstance(obj, ScriptVariable)
 
 
-def get_jobs(*, reload=False, **kwargs):
+def get_jobs(*, reload=False):
     """
     Compile a dictionary of all Job classes available at this time.
 
     Args:
         reload (bool): If true, reimport Jobs from JOBS_ROOT and all applicable GitRepositories.
-        kwargs: Passed through to helper functions.
 
     Returns:
         {
@@ -1114,159 +1106,9 @@ def get_jobs(*, reload=False, **kwargs):
         }
     """
     if reload:
-        # Delete cached reloadable jobs
-        for job_class_path in list(registry["jobs"]):
-            if job_class_path.startswith("nautobot."):
-                # System job - not reloadable
-                continue
-            if any(job_class_path.startswith(f"{app_name}.") for app_name in settings.PLUGINS):
-                # App provided job - not reloadable
-                continue
-            del registry["jobs"][job_class_path]
-
-        # Classes dynamically discoverable from JOBS_ROOT or Git
-        for path, module_path in _job_source_paths(**kwargs):
-            _import_modules(path=path, module_path=module_path, **kwargs)
+        import_jobs()
 
     return registry["jobs"]
-
-
-def _job_source_paths(**kwargs):
-    """
-    Get the directories that may contain importable Python modules that register Jobs.
-
-    Args:
-        kwargs: May include "repository_record" (GitRepository) and "job_result" (JobResult); if provided, and
-            the specified GitRepository is configured as providing `extras.job`, but there is no `jobs/` subdirectory
-            or `jobs.py` file, then a warning message will be logged through the provided JobResult.
-            This is admittedly gross but it replicates prior behavior that tests are expecting to see.
-
-    Yields:
-        (str, str): directory path, possible subpackage of interest within that directory (or "" meaning all packages)
-    """
-    if settings.JOBS_ROOT and os.path.isdir(settings.JOBS_ROOT):
-        yield (os.path.realpath(settings.JOBS_ROOT), [])
-
-    if settings.GIT_ROOT and os.path.isdir(settings.GIT_ROOT):
-        for repository_record in GitRepository.objects.all():
-            if "extras.job" not in repository_record.provided_contents:
-                continue
-
-            ensure_git_repository(repository_record, head=repository_record.current_head, logger=logger)
-
-            jobs_dir_path = os.path.join(repository_record.filesystem_path, "jobs")
-            jobs_file_path = os.path.join(repository_record.filesystem_path, "jobs.py")
-            if os.path.isdir(jobs_dir_path) or os.path.isfile(jobs_file_path):
-                yield (settings.GIT_ROOT, [repository_record.slug, "jobs"])
-            else:
-                logger.warning(
-                    "Git repository %s is configured to provide Jobs, "
-                    "but no /jobs/ directory or jobs.py file was found in it!",
-                    repository_record,
-                )
-                if "repository_record" in kwargs and "job_result" in kwargs:
-                    if repository_record == kwargs["repository_record"]:
-                        kwargs["job_result"].log(
-                            "No `jobs` subdirectory or file found in Git repository",
-                            grouping="jobs",
-                            level_choice="warning",
-                        )
-
-        # TODO(Glenn): when a Git repo is deleted, we update the local filesystem, and alert all Celery workers
-        # (see extras/signals.py) to update their local filesystems, but if there are multiple Django instances, there
-        # may be multiple other filesystems involved, so not all local clones of deleted Git repositories may have
-        # been deleted yet. For now, if we encounter a "leftover" Git repo here, we delete it now.
-        for git_slug in os.listdir(settings.GIT_ROOT):
-            git_path = os.path.join(settings.GIT_ROOT, git_slug)
-            if not os.path.isdir(git_path):
-                logger.warning(
-                    f"Found non-directory {git_slug} in {settings.GIT_ROOT}. Only Git repositories should exist here."
-                )
-            elif not os.path.isdir(os.path.join(git_path, ".git")):
-                logger.warning(f"Directory {git_slug} in {settings.GIT_ROOT} does not appear to be a Git repository.")
-            elif not GitRepository.objects.filter(slug=git_slug):
-                logger.warning(f"Deleting unmanaged (leftover?) repository at {git_path}")
-                shutil.rmtree(git_path)
-
-
-@contextmanager
-def _temporarily_add_to_sys_path(path):
-    """
-    Allow loading of modules and packages from within the provided directory by temporarily modifying `sys.path`.
-
-    On exit, it restores the original `sys.path` and `sys.modules` values.
-    """
-    old_sys_path = sys.path.copy()
-    old_sys_modules = sys.modules.copy()
-    logger.info("Adding %s to sys.path", path)
-    sys.path.insert(0, path)
-    try:
-        yield
-    finally:
-        sys.path = old_sys_path
-        sys.modules = old_sys_modules
-
-
-def _import_modules(path, module_path=None, **kwargs):
-    """
-    Args:
-        path (str): Directory path possibly containing Python modules or packages to load.
-        module_path (list): If set to a non-empty list, only modules matching the given chain of modules will be loaded.
-            For example, `["my_git_repo", "jobs"]`.
-        kwargs: May include "repository_record" (GitRepository) and "job_result" (JobResult); if provided, and
-            any exception occurs while trying load the `jobs` module provided by the GitRepository, then
-            an error message will be logged through the provided JobResult.
-            This is admittedly gross but it replicates prior behavior that tests are expecting to see.
-    """
-    if module_path is None:
-        module_path = []
-        module_prefix = None
-    else:
-        module_prefix = ".".join(module_path)
-    with _temporarily_add_to_sys_path(path):
-        logger.info("Checking for importable modules in %s beginning with %s", path, module_prefix)
-        for finder, discovered_module_name, is_package in pkgutil.walk_packages([path], onerror=logger.error):
-            logger.debug("Discovered module %s", discovered_module_name)
-            if module_prefix and not (
-                module_prefix.startswith(f"{discovered_module_name}.")  # my_repo/__init__.py
-                or discovered_module_name == module_prefix  # my_repo/jobs.py
-                or discovered_module_name.startswith(f"{module_prefix}.")  # my_repo/jobs/foobar.py
-            ):
-                logger.debug("Skipping module %s", discovered_module_name)
-                continue
-            try:
-                existing_module = find_spec(discovered_module_name)
-            except ModuleNotFoundError:
-                existing_module = None
-            if existing_module is not None:
-                existing_module_path = os.path.realpath(existing_module.origin)
-                if not existing_module_path.startswith(path):
-                    logger.error(
-                        "Unable to load module %s from %s as it conflicts with existing module %s",
-                        discovered_module_name,
-                        path,
-                        existing_module_path,
-                    )
-                    continue
-
-            try:
-                if not is_package:
-                    spec = finder.find_spec(discovered_module_name)
-                    if spec is None:
-                        raise ValueError("Unable to find module spec")
-                    module = module_from_spec(spec)
-                    spec.loader.exec_module(module)
-                else:
-                    importlib.import_module(discovered_module_name)
-            except Exception as exc:
-                logger.error("Unable to load module %s from %s: %s", discovered_module_name, path, exc)
-                if "job_result" in kwargs and "repository_record" in kwargs:
-                    if module_prefix.startswith(kwargs["repository_record"].slug):
-                        kwargs["job_result"].log(
-                            f"Error in loading Jobs from `{discovered_module_name}`: `{exc}`",
-                            grouping="jobs",
-                            level_choice="error",
-                        )
 
 
 def get_job(class_path, reload=False):

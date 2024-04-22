@@ -2,11 +2,13 @@ import json
 import logging
 import os
 from pathlib import Path
+import shutil
 
 from celery import Celery, shared_task, signals
 from celery.app.log import TaskFormatter
 from celery.utils.log import get_logger
 from django.conf import settings
+from django.db.utils import ProgrammingError
 from django.utils.functional import SimpleLazyObject
 from django.utils.module_loading import import_string
 from kombu.serialization import register
@@ -15,6 +17,7 @@ from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 from nautobot.core.celery.control import discard_git_repository, refresh_git_repository  # noqa: F401  # unused-import
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.celery.log import NautobotDatabaseHandler
+from nautobot.core.utils.module_loading import import_modules_privately
 from nautobot.extras.registry import registry
 
 logger = logging.getLogger(__name__)
@@ -37,6 +40,77 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
+
+
+@signals.import_modules.connect
+def import_jobs(sender=None, **kwargs):
+    """
+    Import system Jobs into Nautobot as well as Jobs from JOBS_ROOT and GIT_ROOT.
+
+    Note that app-provided jobs are automatically imported at startup time via NautobotAppConfig.ready()
+    """
+    import nautobot.core.jobs  # noqa: F401
+
+    _import_jobs_from_jobs_root()
+
+    try:
+        _import_jobs_from_git_repositories()
+    except ProgrammingError:  # Database not ready yet, as may be the case on initial startup and migration
+        pass
+
+
+def _import_jobs_from_jobs_root():
+    """
+    (Re)import all modules in settings.JOBS_ROOT.
+    """
+    if not (settings.JOBS_ROOT and os.path.isdir(settings.JOBS_ROOT)):
+        return
+
+    # Flush any previously loaded non-system, non-App Jobs
+    for job_class_path in list(registry["jobs"]):
+        if job_class_path.startswith("nautobot."):
+            # System job
+            continue
+        if any(job_class_path.startswith(f"{app_name}.") for app_name in settings.PLUGINS):
+            # App provided job
+            continue
+        try:
+            from nautobot.extras.models import GitRepository
+
+            if any(job_class_path.startswith(f"{repo.slug}.") for repo in GitRepository.objects.all()):
+                # Git provided job
+                continue
+        except ProgrammingError:  # Database not ready yet, as may be the case on initial startup and migration
+            pass
+        # Else, it's presumably a JOBS_ROOT job
+        del registry["jobs"][job_class_path]
+
+    # Load all modules in JOBS_ROOT
+    import_modules_privately(path=os.path.realpath(settings.JOBS_ROOT))
+
+
+def _import_jobs_from_git_repositories():
+    git_root = os.path.realpath(settings.GIT_ROOT)
+    if not (git_root and os.path.exists(git_root)):
+        return
+
+    from nautobot.extras.models import GitRepository
+
+    # Make sure there are no git clones in GIT_ROOT that *aren't* tracked by a GitRepository;
+    # for example, maybe a GitRepository was deleted while this worker process wasn't running?
+    for filename in os.listdir(git_root):
+        filepath = os.path.join(git_root, filename)
+        if (
+            os.path.isdir(filepath)
+            and os.path.isdir(os.path.join(filepath, ".git"))
+            and not GitRepository.objects.filter(slug=filename).exists()
+        ):
+            logger.warning("Deleting unmanaged (leftover?) Git repository clone at %s", filepath)
+            shutil.rmtree(filepath)
+
+    # Make sure all GitRepository records that include Jobs have up-to-date git clones, and load their jobs
+    for repo in GitRepository.objects.all():
+        refresh_git_repository(state=None, repository_pk=repo.pk, head=repo.current_head)
 
 
 def add_nautobot_log_handler(logger_instance, log_format=None):

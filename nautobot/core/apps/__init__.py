@@ -918,7 +918,9 @@ class CoreConfig(NautobotConfig):
         super().ready()
 
         # Register jobs last after everything else has been done.
-        import nautobot.core.jobs  # noqa: F401  # unused-import -- but this import loads the jobs
+        from nautobot.core.celery import import_jobs
+
+        import_jobs()
 
 
 class NautobotConstanceConfig(ConstanceConfig):

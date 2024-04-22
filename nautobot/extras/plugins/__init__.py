@@ -16,7 +16,6 @@ from nautobot.core.apps import (
     register_homepage_panels,
     register_menu_items,
 )
-from nautobot.core.celery import register_jobs
 from nautobot.core.signals import nautobot_database_ready
 from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.choices import BannerClassChoices
