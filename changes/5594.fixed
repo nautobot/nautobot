@@ -1,0 +1,1 @@
+Fixed Job tiles view doesn't understand `per_page` and `page` query parameters.
