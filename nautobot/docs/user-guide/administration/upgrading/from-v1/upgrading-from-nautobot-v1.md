@@ -479,13 +479,13 @@ Therefore all code that is calling `JobResult.set_status()` (which has been remo
 
 ### Fundamental Changes
 
-+/- 2.2.2
-    In Nautobot 2.0.0 through 2.2.1, Nautobot's `BaseJob` class was made to be a subclass of Celery's `Task` class. The implications of this change are outside the scope of this document, but this change has been reverted in Nautobot 2.2.2 and later.
++/- 2.2.3
+    In Nautobot 2.0.0 through 2.2.2, Nautobot's `BaseJob` class was made to be a subclass of Celery's `Task` class. The implications of this change are outside the scope of this document, but this change has been reverted in Nautobot 2.2.3 and later.
 
 - The `test_*` and `post_run` methods for backwards compatibility to NetBox scripts and reports were removed. In their place, Nautobot Jobs now have `before_start`, `on_success`, `on_failure`, and `after_return` methods that can be used by job authors to perform similar functions.
 
 !!! important
-    In Nautobot 2.0.0 through 2.2.1, you must be sure to call the `super()` method when overloading any of the job's `before_start`, `on_success`, `on_retry`, `on_failure`, or `after_return` methods. In Nautobot 2.2.2 and later, because `BaseJob` is no longer a subclass of `Task`, calling `super()` is no longer required in these methods.
+    In Nautobot 2.0.0 through 2.2.2, you must be sure to call the `super()` method when overloading any of the job's `before_start`, `on_success`, `on_retry`, `on_failure`, or `after_return` methods. In Nautobot 2.2.3 and later, because `BaseJob` is no longer a subclass of `Task`, calling `super()` is no longer required in these methods.
 
 - The `run` method signature now includes each of the input variables defined on the Job. This means that the `data` and `commit` arguments are no longer passed to the job by default and the job's run method signature should match the the job's input variables.
 

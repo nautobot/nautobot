@@ -101,7 +101,7 @@ def get_job_class_and_model(module, name, source="local"):
     Returns:
         (JobClassInfo): Named 2-tuple of (job_class, job_model)
     """
-    job_class = get_job(f"{module}.{name}", reload=True)
+    job_class = get_job(f"{module}.{name}")
     try:
         job_model = Job.objects.get(module_name=module, job_class_name=name)
     except Job.DoesNotExist:
