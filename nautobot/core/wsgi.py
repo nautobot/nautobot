@@ -1,11 +1,18 @@
 import logging
-import os
 
 from django.core import cache
 from django.core.wsgi import get_wsgi_application
 from django.db import connections
 
-os.environ["DJANGO_SETTINGS_MODULE"] = "nautobot_config"
+import nautobot
+
+# This is the Django default left here for visibility on how the Nautobot pattern
+# differs.
+# os.environ.setdefault("DJANGO_SETTINGS_MODULE", "nautobot.core.settings")
+
+# Instead of just pointing to `DJANGO_SETTINGS_MODULE` and letting Django run with it,
+# we're using the custom Nautobot loader code to read environment or config path for us.
+nautobot.setup()
 
 # Use try/except because we might not be running uWSGI. If `settings.WEBSERVER_WARMUP` is `True`,
 # will first call `get_internal_wsgi_application` which does not have `uwsgi` module loaded
