@@ -18,7 +18,7 @@ import yaml
 
 from nautobot.core.utils.git import GitRepo
 from nautobot.core.utils.module_loading import import_modules_privately
-from nautobot.dcim.models import Device, DeviceType, Location, Platform
+from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     LogLevelChoices,
     SecretsGroupAccessTypeChoices,
@@ -271,6 +271,7 @@ def update_git_config_contexts(repository_record, job_result):
         "tenants",
         "tags",
         "dynamic_groups",
+        "device_redundancy_groups",
     ):
         if os.path.isdir(os.path.join(repository_record.filesystem_path, filter_type)):
             msg = (
@@ -401,6 +402,7 @@ def import_config_context(context_data, repository_record, job_result):
         ("tenants", Tenant),
         ("tags", Tag),
         ("dynamic_groups", DynamicGroup),
+        ("device_redundancy_groups", DeviceRedundancyGroup),
     ]:
         relations[key] = []
         for object_data in context_metadata.get(key, ()):
