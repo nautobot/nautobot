@@ -1,3 +1,4 @@
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import IntegerVar, Job
 
 
@@ -13,3 +14,6 @@ class TestFieldDefault(Job):
         """Metaclass attrs."""
 
         field_order = ["var_int", "var_int_no_default"]
+
+
+register_jobs(TestFieldDefault)

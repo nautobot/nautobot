@@ -472,7 +472,7 @@ def refresh_job_models(sender, *, apps, **kwargs):
 
     job_models = []
 
-    for job_class in get_jobs().values():
+    for job_class in get_jobs(reload=True).values():
         job_model, _ = refresh_job_model_from_job_class(Job, job_class)
         if job_model is not None:
             job_models.append(job_model)

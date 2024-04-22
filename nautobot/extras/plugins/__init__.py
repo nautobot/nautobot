@@ -32,7 +32,6 @@ logger = getLogger(__name__)
 registry["plugin_banners"] = []
 registry["plugin_custom_validators"] = collections.defaultdict(list)
 registry["plugin_graphql_types"] = []
-registry["plugin_jobs"] = []
 registry["plugin_template_extensions"] = collections.defaultdict(list)
 registry["app_metrics"] = []
 
@@ -142,10 +141,9 @@ class NautobotAppConfig(NautobotConfig):
             register_graphql_types(graphql_types)
 
         # Import jobs (if present)
+        # Note that we do *not* auto-call `register_jobs()` - the App is responsible for doing so when imported.
         jobs = import_object(f"{self.__module__}.{self.jobs}")
         if jobs is not None:
-            # Redundant, as Apps are *supposed* to call register_jobs() on their own, but this is existing behavior
-            register_jobs(*jobs)
             self.features["jobs"] = jobs
 
         # Import metrics (if present)

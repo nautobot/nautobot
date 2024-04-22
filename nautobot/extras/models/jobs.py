@@ -284,7 +284,7 @@ class Job(PrimaryModel):
         from nautobot.extras.jobs import get_job
 
         try:
-            return get_job(self.class_path)()
+            return get_job(self.class_path, reload=True)()
         except TypeError as err:  # keep 2.0-2.2.1 exception behavior
             raise NotRegistered from err
 

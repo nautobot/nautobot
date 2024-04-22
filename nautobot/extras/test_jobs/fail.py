@@ -1,3 +1,4 @@
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import get_task_logger, Job, RunJobTaskFailed
 
 logger = get_task_logger(__name__)
@@ -45,3 +46,6 @@ class TestFailWithSanitization(Job):
             b"Cloning into '/Users/jathan/.nautobot/git/git_test'...\nfatal: could not read Password for https://abc123@github.com': terminal prompts disabled\n",
         )
         raise exc
+
+
+register_jobs(TestFail, TestFailWithSanitization)

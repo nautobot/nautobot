@@ -1,3 +1,4 @@
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import get_task_logger, Job
 from nautobot.extras.models import Status
 
@@ -18,3 +19,6 @@ class TestModifyDB(Job):
         )
         obj.save()
         logger.info("Status created successfully.", extra={"object": obj})
+
+
+register_jobs(TestModifyDB)

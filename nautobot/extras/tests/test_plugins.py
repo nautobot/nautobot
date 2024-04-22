@@ -113,7 +113,7 @@ class AppTest(TestCase):
         """
         from example_app.jobs import ExampleJob
 
-        self.assertIn(ExampleJob, registry.get("plugin_jobs", []))
+        self.assertIn(ExampleJob.class_path, registry.get("jobs", {}))
         self.assertEqual(ExampleJob, get_job("example_app.jobs.ExampleJob"))
 
     def test_git_datasource_contents_registration(self):

@@ -1,5 +1,6 @@
 from django.conf import settings
 
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import BooleanVar, get_task_logger, IntegerVar, Job, ObjectVar, StringVar
 from nautobot.extras.models import Role
 
@@ -24,3 +25,6 @@ class APITestJob(Job):
         logger.error(var4)
 
         return "Job complete"
+
+
+register_jobs(APITestJob)

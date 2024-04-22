@@ -183,7 +183,7 @@ class GitTest(TransactionTestCase):
             fd.write("{% for vlan in queryset %}\n{{ vlan.name }}\n{% endfor %}")
 
         with open(os.path.join(path, "jobs", "__init__.py"), "w") as fd:
-            fd.write("from .my_job import MyJob")
+            fd.write("from nautobot.core.celery import register_jobs\nfrom .my_job import MyJob\nregister_jobs(MyJob)")
 
         with open(os.path.join(path, "jobs", "my_job.py"), "w") as fd:
             fd.write("from nautobot.extras.jobs import Job\nclass MyJob(Job):\n    def run(self):\n        pass")
@@ -297,7 +297,7 @@ class GitTest(TransactionTestCase):
         self.assertIsNotNone(export_template_vlan)
 
     def assert_job_exists(self, installed=True):
-        """Helper function to assert JobModel and registerd Job exist."""
+        """Helper function to assert JobModel and registered Job exist."""
         # Is it registered correctly in the database?
         job_model = Job.objects.get(name="MyJob", module_name=f"{self.repo_slug}.jobs.my_job", job_class_name="MyJob")
         self.assertIsNotNone(job_model)
@@ -346,7 +346,7 @@ class GitTest(TransactionTestCase):
 
                 log_entries = JobLogEntry.objects.filter(job_result=job_result)
                 failure_logs = log_entries.filter(log_level=LogLevelChoices.LOG_WARNING)
-                failure_logs.get(grouping="jobs", message__contains="No `jobs` subdirectory found")
+                failure_logs.get(grouping="jobs", message__contains="No `jobs` subdirectory or file found")
 
     def test_pull_git_repository_and_refresh_data_with_secrets(self, MockGitRepo):
         """
@@ -592,6 +592,7 @@ class GitTest(TransactionTestCase):
                 except JobLogEntry.DoesNotExist:
                     for log in log_entries:
                         print(log.message)
+                    print(job_result.traceback)
                     raise
 
                 try:
@@ -623,17 +624,16 @@ class GitTest(TransactionTestCase):
                         message__contains="Error in loading local config context from `devices/nosuchdevice.json`: "
                         "record not found",
                     )
-                    failure_logs.get(
-                        grouping="jobs",
-                        message__contains="Error in loading Jobs from `test_git_repo.jobs.importerror`: ",
+                    self.assertTrue(
+                        failure_logs.filter(
+                            grouping="jobs",
+                            message__contains="Error in loading Jobs from `test_git_repo.jobs",
+                        ).exists()
                     )
-                    failure_logs.get(
-                        grouping="jobs",
-                        message__contains="Error in loading Jobs from `test_git_repo.jobs.syntaxerror`: ",
-                    )
-                except JobLogEntry.DoesNotExist:
+                except (AssertionError, JobLogEntry.DoesNotExist):
                     for log in log_entries:
                         print(log.message)
+                    print(job_result.traceback)
                     raise
 
     def test_delete_git_repository_cleanup(self, MockGitRepo):
@@ -683,7 +683,9 @@ class GitTest(TransactionTestCase):
                     ) as fd:
                         fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
                     with open(os.path.join(path, "jobs", "__init__.py"), "w") as fd:
-                        fd.write("from .my_job import MyJob")
+                        fd.write(
+                            "from nautobot.core.celery import register_jobs\nfrom .my_job import MyJob\nregister_jobs(MyJob)"
+                        )
 
                     with open(os.path.join(path, "jobs", "my_job.py"), "w") as fd:
                         fd.write(

@@ -175,6 +175,22 @@ class JobTest(TestCase):
         self.assertFalse(job_class.supports_dryrun)
         self.assertFalse(job_model.supports_dryrun)
 
+    def test_submodule_in_jobs_root(self):
+        """
+        Test that a subdirectory/submodule in JOBS_ROOT can contain Jobs.
+        """
+        job_class, job_model = get_job_class_and_model("jobs_module.jobs_submodule.jobs", "ChildJob")
+        self.assertIsNotNone(job_class)
+        self.assertIsNotNone(job_model)
+
+    def test_relative_import_among_files_in_jobs_root(self):
+        """
+        Test that a module in JOBS_ROOT can import from other modules in JOBS_ROOT.
+        """
+        job_class, job_model = get_job_class_and_model("relative_import", "TestReallyPass")
+        self.assertIsNotNone(job_class)
+        self.assertIsNotNone(job_model)
+
     def test_get_jobs_from_jobs_root(self):
         """
         Test that get_jobs() correctly loads jobs from JOBS_ROOT as its contents change.
@@ -184,12 +200,13 @@ class JobTest(TestCase):
                 # Create a new Job and make sure it's discovered correctly
                 with open(os.path.join(temp_dir, "my_jobs.py"), "w") as fd:
                     fd.write("""\
-from nautobot.apps.jobs import Job
+from nautobot.apps.jobs import Job, register_jobs
 class MyJob(Job):
     def run(self):
         pass
+register_jobs(MyJob)
 """)
-                jobs_data = get_jobs()
+                jobs_data = get_jobs(reload=True)
                 self.assertIn("my_jobs.MyJob", jobs_data.keys())
                 self.assertIsNotNone(get_job("my_jobs.MyJob"))
                 # Also make sure some representative previous JOBS_ROOT jobs aren't still around:
@@ -201,8 +218,9 @@ class MyJob(Job):
                     fd.write("""
 class MyOtherJob(MyJob):
     pass
+register_jobs(MyOtherJob)
 """)
-                jobs_data = get_jobs()
+                jobs_data = get_jobs(reload=True)
                 self.assertIn("my_jobs.MyJob", jobs_data.keys())
                 self.assertIsNotNone(get_job("my_jobs.MyJob"))
                 self.assertIn("my_jobs.MyOtherJob", jobs_data.keys())
@@ -211,13 +229,14 @@ class MyOtherJob(MyJob):
                 # Create a third Job in another module
                 with open(os.path.join(temp_dir, "their_jobs.py"), "w") as fd:
                     fd.write("""
-from nautobot.apps.jobs import Job
+from nautobot.apps.jobs import Job, register_jobs
 
 class MyJob(Job):
     def run(self):
         pass
+register_jobs(MyJob)
 """)
-                jobs_data = get_jobs()
+                jobs_data = get_jobs(reload=True)
                 self.assertIn("my_jobs.MyJob", jobs_data.keys())
                 self.assertIsNotNone(get_job("my_jobs.MyJob"))
                 self.assertIn("my_jobs.MyOtherJob", jobs_data.keys())
@@ -228,7 +247,7 @@ class MyJob(Job):
 
                 # Delete a module
                 os.remove(os.path.join(temp_dir, "their_jobs.py"))
-                jobs_data = get_jobs()
+                jobs_data = get_jobs(reload=True)
                 self.assertIn("my_jobs.MyJob", jobs_data.keys())
                 self.assertIsNotNone(get_job("my_jobs.MyJob"))
                 self.assertIn("my_jobs.MyOtherJob", jobs_data.keys())
@@ -239,13 +258,14 @@ class MyJob(Job):
                 # Create a module with an inauspicious name
                 with open(os.path.join(temp_dir, "traceback.py"), "w") as fd:
                     fd.write("""
-from nautobot.apps.jobs import Job
+from nautobot.apps.jobs import Job, register_jobs
 
 class BadJob(Job):
     def run(self):
         raise RuntimeError("You ran a bad job!")
+register_jobs(BadJob)
 """)
-                jobs_data = get_jobs()
+                jobs_data = get_jobs(reload=True)
                 self.assertIn("my_jobs.MyJob", jobs_data.keys())
                 self.assertIsNotNone(get_job("my_jobs.MyJob"))
                 self.assertIn("my_jobs.MyOtherJob", jobs_data.keys())

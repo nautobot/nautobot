@@ -2,7 +2,6 @@ import json
 import logging
 import os
 from pathlib import Path
-import sys
 
 from celery import Celery, shared_task, signals
 from celery.app.log import TaskFormatter
@@ -137,22 +136,13 @@ register("nautobot_json", _dumps, _loads, content_type="application/x-nautobot-j
 nautobot_task = shared_task
 
 
+registry["jobs"] = {}
+
+
 def register_jobs(*jobs):
     """
     Method to register jobs - with Celery in Nautobot 2.0 through 2.2.1, with Nautobot itself in 2.2.2 and later.
-
-    In older versions, all of Apps, JOBS_ROOT, and GitRepository Jobs would need to call this method.
-    In current versions, Apps still should call this method, and (because we dynamically load and reload Jobs from
-    JOBS_ROOT and Git) it's unnecessary but harmless for the latter.
     """
     for job in jobs:
-        if job.__module__ not in sys.modules:
-            # Dynamically loaded job from JOBS_ROOT or Git.
-            # Don't register it, as we want to be able to throw it away and reload it on the fly as needed.
-            continue
-        if job.__module__.startswith("nautobot."):
-            if job not in registry["system_jobs"]:
-                registry["system_jobs"].append(job)
-        else:
-            if job not in registry["plugin_jobs"]:
-                registry["plugin_jobs"].append(job)
+        if job.class_path not in registry["jobs"]:
+            registry["jobs"][job.class_path] = job

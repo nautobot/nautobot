@@ -1,3 +1,4 @@
+from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import get_task_logger, Job
 
 logger = get_task_logger(__name__)
@@ -13,3 +14,6 @@ class TestLogRedaction(Job):
         logger.warning("The secret is supersecret123")
         logger.error("The secret is supersecret123")
         logger.critical("The secret is supersecret123")
+
+
+register_jobs(TestLogRedaction)

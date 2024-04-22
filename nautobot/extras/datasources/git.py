@@ -719,7 +719,7 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
     if "extras.job" in repository_record.provided_contents and not delete:
         found_jobs = False
         try:
-            jobs_data = get_jobs(repository_record=repository_record, job_result=job_result)
+            jobs_data = get_jobs(reload=True, repository_record=repository_record, job_result=job_result)
 
             for job_class_path, job_class in jobs_data.items():
                 if not job_class_path.startswith(f"{repository_record.slug}.jobs"):
@@ -742,13 +742,19 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                 installed_jobs.append(job_model)
 
             if not found_jobs:
-                msg = f"No jobs were successfully imported from the `{repository_record.slug}.jobs` submodule."
+                msg = (
+                    f"No jobs were registered on loading the `{repository_record.slug}.jobs` submodule. "
+                    "Did you miss a `register_jobs()` call? Or was there a syntax error or similar in your code?"
+                )
                 logger.warning(msg)
                 job_result.log(msg, grouping="jobs", level_choice=LogLevelChoices.LOG_WARNING)
         except Exception as exc:
             msg = f"Error in loading Jobs from Git repository: {exc}"
             logger.error(msg)
             job_result.log(msg, grouping="jobs", level_choice=LogLevelChoices.LOG_ERROR)
+    else:
+        # Flush this repository's job classes
+        get_jobs(reload=True)
 
     for job_model in Job.objects.filter(module_name__startswith=f"{repository_record.slug}."):
         if job_model.installed and job_model not in installed_jobs:
