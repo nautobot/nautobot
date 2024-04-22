@@ -1251,10 +1251,7 @@ class JobListView(generic.ObjectListView):
     filterset_form = forms.JobFilterForm
     action_buttons = ()
     non_filter_params = (
-        "export",
-        "page",
-        "per_page",
-        "sort",
+        *generic.ObjectListView.non_filter_params,
         "display",
     )
     template_name = "extras/job_list.html"
