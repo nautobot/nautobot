@@ -14,21 +14,19 @@ def _temporarily_add_to_sys_path(path):
     """
     Allow loading of modules and packages from within the provided directory by temporarily modifying `sys.path`.
 
-    On exit, it restores the original `sys.path` and `sys.modules` values.
+    On exit, it restores the original `sys.path` value.
     """
     old_sys_path = sys.path.copy()
-    old_sys_modules = sys.modules.copy()
     sys.path.insert(0, path)
     try:
         yield
     finally:
         sys.path = old_sys_path
-        sys.modules = old_sys_modules
 
 
 def import_modules_privately(path, module_path=None, should_raise=False):
     """
-    Import modules from the filesystem without adding them permanently to `sys.path` or `sys.modules`.
+    Import modules from the filesystem without adding the path permanently to `sys.path`.
 
     This is used for importing Jobs from `JOBS_ROOT` and `GIT_ROOT` in such a way that they remain relatively
     self-contained and can be easily discarded and reloaded on the fly.
@@ -58,7 +56,7 @@ def import_modules_privately(path, module_path=None, should_raise=False):
                 continue
             try:
                 existing_module = find_spec(discovered_module_name)
-            except ModuleNotFoundError:
+            except (ModuleNotFoundError, ValueError):
                 existing_module = None
             if existing_module is not None:
                 existing_module_path = os.path.realpath(existing_module.origin)
@@ -71,15 +69,21 @@ def import_modules_privately(path, module_path=None, should_raise=False):
                     )
                     continue
 
+            if discovered_module_name in sys.modules:
+                del sys.modules[discovered_module_name]
+
             try:
                 if not is_package:
                     spec = finder.find_spec(discovered_module_name)
                     if spec is None:
                         raise ValueError("Unable to find module spec")
                     module = module_from_spec(spec)
+                    sys.modules[discovered_module_name] = module
                     spec.loader.exec_module(module)
                 else:
-                    importlib.import_module(discovered_module_name)
+                    module = importlib.import_module(discovered_module_name)
+
+                importlib.reload(module)
             except Exception as exc:
                 logger.error("Unable to load module %s from %s: %s", discovered_module_name, path, exc)
                 if should_raise:

@@ -1,4 +1,4 @@
-from fail import TestFail
+from fail import TestFail  # pylint: disable=import-error
 
 from nautobot.apps.jobs import register_jobs
 
