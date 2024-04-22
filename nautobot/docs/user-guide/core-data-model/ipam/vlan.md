@@ -18,3 +18,17 @@ As with prefixes, each VLAN may also be assigned a functional role. Prefixes and
 
 +/- 2.2.0
     - Replaced `location` ForeignKey field with `locations` ManyToManyField, allowing a VLAN to be assigned to multiple Locations.
+
+## Modeling VLANs
+
+With the update to Nautobot 2.2 that introduced the ability to have a single VLAN be associated to multiple locations, there needs to be some _recommended_ methods to model VLANs with the new functionality.
+
+You should be looking to model VLANs in the same way that the layer 2 functionality is set up.
+
+### Multiple Locations Using Same VLAN ID
+
+In many organizations the use of cookiecutter like VLAN architecture is leveraged. In that a location may have VLAN30 be for the same purpose (ie Wireless, User, Voice) at each location. In this scenario, you should have a VLAN30 for each location. Do **not** create a single VLAN and then associate it with multiple locations. 
+
+### Multiple Locations, Stretched Layer 2
+
+Where you would want to take into account of the Many to Many capability where you can have a single VLAN that is associated with multiple locations is where the layer 2 environment is in fact stretched and devices within the VLAN are able to communicate via layer 2 mechanisms. Such designs include a campus network where you do have multiple locations but a shared VLAN across all of them for say wireless networks. Or in a data center fabric where the layer 2 is in fact stretched across the sites.
