@@ -1,1 +1,0 @@
-Fixed plugins not loading when using Gunicorn.
