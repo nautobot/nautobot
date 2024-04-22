@@ -1,0 +1,1 @@
+Fixed static media failure on `/graphql/` and `/admin/` pages.
