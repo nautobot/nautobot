@@ -27,7 +27,7 @@ You should be looking to model VLANs in the same way that the layer 2 functional
 
 ### Multiple Locations Using Same VLAN ID
 
-In many organizations the use of cookiecutter like VLAN architecture is leveraged. In that a location may have VLAN30 be for the same purpose (ie Wireless, User, Voice) at each location. In this scenario, you should have a VLAN30 for each location. Do **not** create a single VLAN and then associate it with multiple locations. 
+In many organizations the use of cookiecutter like VLAN architecture is leveraged. In that a location may have VLAN30 be for the same purpose (ie Wireless, User, Voice) at each location. In this scenario, you should have a VLAN30 for each location. Do **not** create a single VLAN and then associate it with multiple locations.
 
 ### Multiple Locations, Stretched Layer 2
 
