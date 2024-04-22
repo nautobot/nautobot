@@ -8,6 +8,7 @@
     <title>{% block title %}Home{% endblock %} - {{ settings.BRANDING_TITLE }}</title>
     {% include 'inc/media.html' %}
     {% block extra_styles %}{% endblock %}
+    {% if settings.CUSTOM_HEAD %}{{ settings.CUSTOM_HEAD | safe }}{% endif %}
 </head>
 <body>
     {% include 'inc/nav_menu.html' %}

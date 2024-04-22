@@ -50,6 +50,7 @@ add "&raw" to the end of the URL within a browser.
           onerror="window.location='{% url 'media_failure' %}?filename=graphiql-1.5.16/graphiql.min.js'"></script>
   <script src="{% static 'subscriptions-transport-ws-0.9.18/client.min.js' %}"
       onerror="window.location='{% url 'media_failure' %}?filename=subscriptions-transport-ws-0.9.18/client.min.js'"></script>
+      {% if settings.CUSTOM_HEAD %}{{ settings.CUSTOM_HEAD | safe }}{% endif %}
 </head>
 <body>
   <!-- Nautobot page contents -->

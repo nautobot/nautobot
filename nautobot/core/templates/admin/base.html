@@ -45,6 +45,7 @@
             width: 100%;
         }
     </style>
+    {% if settings.CUSTOM_HEAD %}{{ settings.CUSTOM_HEAD | safe }}{% endif %}
 </head>
 <body {% if is_popup %}style="padding-left: 0px;"{% endif %}>
 
