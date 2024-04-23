@@ -1123,13 +1123,28 @@ def get_job(class_path, reload=False):
 
 @nautobot_task(bind=True)
 def run_job(self, job_class_path, *args, **kwargs):
+    """
+    "Runner" function for execution of any Job class by a worker.
+
+    This calls the following Job APIs in the following order:
+
+    - `__init__()`
+    - `before_start()`
+    - `__call__()` (which calls `run()`)
+    - If no exceptions have been raised, `on_success()`, else `on_failure()`
+    - `after_return()`
+
+    Finally, it either returns the data returned from `run()` or re-raises any exception encountered.
+    """
     logger.debug("Running job %s", job_class_path)
 
     job_class = get_job(job_class_path, reload=True)
+    if job_class is None:
+        raise KeyError(f"Job class not found for class path {job_class_path}")
     job = job_class()
     job.request = self.request
-    job.before_start(self.request.id, args, kwargs)
     try:
+        job.before_start(self.request.id, args, kwargs)
         result = job(*args, **kwargs)
         job.on_success(result, self.request.id, args, kwargs)
         job.after_return(JobResultStatusChoices.STATUS_SUCCESS, result, self.request.id, args, kwargs, None)

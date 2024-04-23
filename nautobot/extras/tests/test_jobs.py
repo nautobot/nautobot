@@ -322,6 +322,19 @@ class JobTransactionTest(TransactionTestCase):
         name = "TestPass"
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(job_result.result, True)
+        logs = job_result.job_log_entries
+        self.assertGreater(logs.count(), 0)
+        try:
+            logs.get(message="before_start() was called as expected")
+            logs.get(message="Success")
+            logs.get(message="on_success() was called as expected")
+            logs.get(message="after_return() was called as expected")
+        except models.JobLogEntry.DoesNotExist:
+            for log in logs.all():
+                print(log.message)
+            print(job_result.traceback)
+            raise
 
     def test_job_result_manager_censor_sensitive_variables(self):
         """
@@ -343,6 +356,18 @@ class JobTransactionTest(TransactionTestCase):
         name = "TestFail"
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        logs = job_result.job_log_entries
+        self.assertGreater(logs.count(), 0)
+        try:
+            logs.get(message="before_start() was called as expected")
+            logs.get(message="I'm a test job that fails!")
+            logs.get(message="on_failure() was called as expected")
+            logs.get(message="after_return() was called as expected")
+        except models.JobLogEntry.DoesNotExist:
+            for log in logs.all():
+                print(log.message)
+            print(job_result.traceback)
+            raise
 
     def test_job_fail_with_sanitization(self):
         """
