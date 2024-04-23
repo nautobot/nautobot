@@ -767,6 +767,9 @@ class RelationshipAssociation(BaseModel):
     documentation_static_path = "docs/user-guide/platform-functionality/relationship.html"
     natural_key_field_names = ["relationship", "source_id", "destination_id"]
 
+    is_contact_associable_model = False
+    is_static_group_associable_model = False
+
     class Meta:
         unique_together = (
             "relationship",

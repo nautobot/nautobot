@@ -53,9 +53,17 @@ class BaseModel(models.Model):
         object_id_field="associated_object_id",
         related_query_name="associated_contacts_%(app_label)s_%(class)s",  # e.g. 'associated_contacts_dcim_device'
     )
+    # Likewise for StaticGroupAssociations
+    static_group_associations = GenericRelation(
+        "extras.StaticGroupAssociation",
+        content_type_field="associated_object_type",
+        object_id_field="associated_object_id",
+        related_query_name="static_group_associations_%(app_label)s_%(class)s",
+    )
 
     objects = BaseManager.from_queryset(RestrictedQuerySet)()
     is_contact_associable_model = True
+    is_static_group_associable_model = True
 
     class Meta:
         abstract = True
@@ -295,3 +303,7 @@ class BaseModel(models.Model):
                 f"expected no more than {len(natural_key_field_lookups)} but got {len(args)}."
             )
         return dict(zip(natural_key_field_lookups, args))
+
+    @property
+    def static_groups(self):
+        return [sga.static_group for sga in self.static_group_associations.all()]

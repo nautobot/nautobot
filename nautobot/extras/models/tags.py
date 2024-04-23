@@ -75,6 +75,9 @@ class Tag(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, Not
 class TaggedItem(BaseModel, GenericUUIDTaggedItemBase):
     tag = models.ForeignKey(to=Tag, related_name="%(app_label)s_%(class)s_items", on_delete=models.CASCADE)
 
+    is_contact_associable_model = False
+    is_static_group_associable_model = False
+
     documentation_static_path = "docs/user-guide/platform-functionality/tag.html"
 
     natural_key_field_names = ["pk"]

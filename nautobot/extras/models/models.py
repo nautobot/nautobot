@@ -551,6 +551,7 @@ class FileAttachment(BaseModel):
     filename = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     mimetype = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
 
+    is_static_group_associable_model = False
     natural_key_field_names = ["pk"]
 
     def __str__(self):
@@ -610,6 +611,8 @@ class FileProxy(BaseModel):
     file = models.FileField(upload_to=_upload_to, storage=_job_storage)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     job_result = models.ForeignKey(to=JobResult, null=True, blank=True, on_delete=models.CASCADE, related_name="files")
+
+    is_static_group_associable_model = False
 
     def __str__(self):
         return self.name
@@ -699,6 +702,9 @@ class GraphQLQuery(BaseModel, ChangeLoggedModel, NotesMixin):
 
 class HealthCheckTestModel(BaseModel):
     title = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+
+    is_contact_associable_model = False
+    is_static_group_associable_model = False
 
 
 #

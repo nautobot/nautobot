@@ -1,9 +1,10 @@
-"""Dynamic Groups Models."""
+"""Dynamic and Static Groups Models."""
 
 import logging
 import pickle
 
 from django import forms
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -17,14 +18,107 @@ from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import DynamicModelChoiceField
 from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.generics import OrganizationalModel
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGroupQuerySet
-from nautobot.extras.utils import extras_features
+from nautobot.extras.utils import extras_features, StaticGroupModelsQuery
 
 logger = logging.getLogger(__name__)
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class StaticGroup(PrimaryModel):
+    """A statically defined (as opposed to dynamically calculated) group of objects sharing a common content-type."""
+
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    content_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.CASCADE,
+        related_name="static_groups",
+        limit_choices_to=StaticGroupModelsQuery(),
+        help_text="The type of object contained in this Static Group.",
+    )
+
+    clone_fields = ["content_type"]
+    is_static_group_associable_model = False
+
+    class Meta:
+        ordering = ["content_type", "name"]
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def model(self):
+        """
+        Access to the underlying Model class for this group's `content_type`.
+
+        This class object is cached on the instance after the first time it is accessed.
+        """
+        if getattr(self, "_model", None) is None:
+            try:
+                self._model = self.content_type.model_class()
+            except models.ObjectDoesNotExist:
+                self._model = None
+        return self._model
+
+    @property
+    def members(self):
+        """Return the member objects for this group."""
+        return [sga.associated_object for sga in self.static_group_associations.all()]
+
+    def clean(self):
+        super().clean()
+
+        if self.present_in_database:
+            # Check immutable fields
+            database_object = self.__class__.objects.get(pk=self.pk)
+
+            if self.content_type != database_object.content_type:
+                raise ValidationError({"content_type": "ContentType cannot be changed once created"})
+
+
+@extras_features(
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class StaticGroupAssociation(OrganizationalModel):
+    """Intermediary model for associating an object to a StaticGroup."""
+
+    static_group = models.ForeignKey(to=StaticGroup, on_delete=models.CASCADE, related_name="static_group_associations")
+    associated_object_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.CASCADE,
+        related_name="static_group_associations",
+        limit_choices_to=StaticGroupModelsQuery(),
+    )
+    associated_object_id = models.UUIDField(db_index=True)
+    associated_object = GenericForeignKey(ct_field="associated_object_type", fk_field="associated_object_id")
+
+    is_static_group_associable_model = False
+
+    class Meta:
+        unique_together = ("static_group", "associated_object_type", "associated_object_id")
+
+    def __str__(self):
+        return "Association of {self.associated_object} to StaticGroup {self.static_group}"
+
+    def clean(self):
+        super().clean()
+
+        if self.associated_object_type != self.static_group.content_type:
+            raise ValidationError({"associated_object_type": "Must match the static_group.content_type"})
 
 
 @extras_features(
@@ -959,6 +1053,9 @@ class DynamicGroupMembership(BaseModel):
     objects = BaseManager.from_queryset(DynamicGroupMembershipQuerySet)()
 
     documentation_static_path = "docs/user-guide/platform-functionality/dynamicgroup.html"
+
+    is_contact_associable_model = False
+    is_static_group_associable_model = False
 
     class Meta:
         unique_together = ["group", "parent_group", "operator", "weight"]

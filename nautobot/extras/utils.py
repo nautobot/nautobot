@@ -212,6 +212,24 @@ class RoleModelsQuery(FeaturedQueryMixin):
         return model_classes
 
 
+@deconstructible
+class StaticGroupModelsQuery(FeaturedQueryMixin):
+    """
+    Helper class to get ContentType models that can be included in a StaticGroup.
+    """
+
+    def list_subclasses(self):
+        return [
+            _class
+            for _class in apps.get_models()
+            if (
+                hasattr(_class, "is_static_group_associable_model")
+                and _class.is_static_group_associable_model
+                and ".tests." not in _class.__module__  # avoid leakage from nautobot.core.tests.test_filters
+            )
+        ]
+
+
 def extras_features(*features):
     """
     Decorator used to register extras provided features to a model
