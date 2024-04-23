@@ -164,8 +164,6 @@ class BaseJob:
         Returns:
             (None): The return value of this handler is ignored.
         """
-        self.clear_cache()
-
         try:
             self.job_result
         except ObjectDoesNotExist as err:
@@ -280,6 +278,7 @@ class BaseJob:
     @final
     @classproperty
     def file_path(cls) -> str:  # pylint: disable=no-self-argument
+        """Deprecated as of Nautobot 2.2.3."""
         return inspect.getfile(cls)
 
     @final
@@ -503,24 +502,6 @@ class BaseJob:
                 field.disabled = True
 
         return form
-
-    def clear_cache(self):
-        """
-        Clear all cached properties on this instance without accessing them. This is required because
-        celery reuses task instances for multiple runs.
-        """
-        try:
-            del self.celery_kwargs
-        except AttributeError:
-            pass
-        try:
-            del self.job_result
-        except AttributeError:
-            pass
-        try:
-            del self.job_model
-        except AttributeError:
-            pass
 
     @functools.cached_property
     def job_model(self):
