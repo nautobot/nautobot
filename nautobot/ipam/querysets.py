@@ -6,6 +6,7 @@ import netaddr
 
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import merge_dicts_without_collision
+from nautobot.ipam.mixins import LocationToLocationsQuerySetMixin
 
 
 class RIRQuerySet(RestrictedQuerySet):
@@ -194,7 +195,7 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
         return ip, last_ip
 
 
-class PrefixQuerySet(BaseNetworkQuerySet):
+class PrefixQuerySet(LocationToLocationsQuerySetMixin, BaseNetworkQuerySet):
     """Queryset for `Prefix` objects."""
 
     def net_equals(self, *prefixes):
@@ -474,3 +475,7 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
             q |= Q(pk__in=pk_values)
 
         return super().filter(q)
+
+
+class VLANQuerySet(LocationToLocationsQuerySetMixin, RestrictedQuerySet):
+    """Queryset for `VLAN` objects."""
