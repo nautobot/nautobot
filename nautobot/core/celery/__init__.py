@@ -215,7 +215,7 @@ registry["jobs"] = {}
 
 def register_jobs(*jobs):
     """
-    Method to register jobs - with Celery in Nautobot 2.0 through 2.2.1, with Nautobot itself in 2.2.2 and later.
+    Method to register jobs - with Celery in Nautobot 2.0 through 2.2.2, with Nautobot itself in 2.2.3 and later.
     """
     for job in jobs:
         if job.class_path not in registry["jobs"]:
