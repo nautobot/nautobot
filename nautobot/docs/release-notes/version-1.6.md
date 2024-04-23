@@ -72,6 +72,16 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.19 (2024-04-23)
+
+### Security
+
+- [#5579](https://github.com/nautobot/nautobot/issues/5579) - Updated `sqlparse` to `0.5.0` to fix [GHSA-2m57-hf25-phgg](https://github.com/advisories/GHSA-2m57-hf25-phgg). This is not a direct dependency so it will not auto-update when upgrading Nautobot. Please be sure to update your local environment.
+
+### Fixed
+
+- [#5610](https://github.com/nautobot/nautobot/issues/5610) - Fixed static media failure on `/graphql/` and `/admin/` pages.
+
 ## v1.6.18 (2024-04-15)
 
 ### Security
