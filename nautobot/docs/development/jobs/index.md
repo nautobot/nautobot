@@ -136,7 +136,7 @@ As of Nautobot 2.2.3, the current list of reserved names (not including low-leve
 | `run`                     | [special method](#special-methods)                      |
 | `serialize_data`          | internal method                                         |
 | `soft_time_limit`         | [metadata property](#soft_time_limit)                   |
-| `supports_dryrun`         | [metadata property](#supports_dryrun)                   |
+| `supports_dryrun`         | class property                                          |
 | `task_queues`             | [metadata property](#task_queues)                       |
 | `template_name`           | [metadata property](#template_name)                     |
 | `time_limit`              | [metadata property](#time_limit)                        |
@@ -587,7 +587,7 @@ If either `before_start()` or `run()` raises any unhandled exception, the `on_fa
 
 #### The `after_return()` Method
 
-Regardless of the overall Job execution success or failure, the `after_return()` method will be called after `on_success()` or `on_failure()`. It has the signature `after_return(self, status, retval, task_id, args, kwargs, einfo)`; the `status` will indicate success or failure (using the `JobResultStatusChoices` enum), `retval` is _either_ the return value from `run()` (on success) or the exception raised (on failure), and once again `kwargs` contains the user variables.
+Regardless of the overall Job execution success or failure, the `after_return()` method will be called after `on_success()` or `on_failure()`. It has the signature `after_return(self, status, retval, task_id, args, kwargs, einfo)`; the `status` will indicate success or failure (using the `JobResultStatusChoices` enum), `retval` is *either* the return value from `run()` (on success) or the exception raised (on failure), and once again `kwargs` contains the user variables.
 
 ### Logging
 
