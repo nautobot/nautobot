@@ -31,4 +31,4 @@ In many organizations the use of cookiecutter like VLAN architecture is leverage
 
 ### Multiple Locations, Stretched Layer 2
 
-Where you would want to take into account of the Many to Many capability where you can have a single VLAN that is associated with multiple locations is where the layer 2 environment is in fact stretched and devices within the VLAN are able to communicate via layer 2 mechanisms. Such designs include a campus network where you do have multiple locations but a shared VLAN across all of them for say wireless networks. Or in a data center fabric where the layer 2 is in fact stretched across the sites.
+You would want to have a single VLAN that is associated with multiple Locations when the layer 2 environment is in fact stretched and devices within the VLAN are able to communicate via layer 2 mechanisms. Such designs include a campus network where you do have multiple Locations but a shared VLAN across all of them, for example wireless networks. Or in a data center fabric where the layer 2 is in fact stretched across the sites.
