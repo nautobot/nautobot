@@ -18,9 +18,18 @@ from django.views.generic import View
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.views.generic import GenericView
+from nautobot.core.views.mixins import (
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectEditViewMixin,
+    ObjectListViewMixin,
+)
 
+from .filters import SavedViewFilterSet
 from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, TokenForm
-from .models import Token
+from .models import SavedView, Token
+from .tables import SavedViewTable
 
 #
 # Login/logout
@@ -157,7 +166,7 @@ class UserConfigView(GenericView):
         user.save()
         messages.success(request, "Your preferences have been updated.")
 
-        return redirect("user:preferences")
+        return redirect("users:preferences")
 
 
 class ChangePasswordView(GenericView):
@@ -172,7 +181,7 @@ class ChangePasswordView(GenericView):
                 request,
                 self.RESTRICTED_NOTICE,
             )
-            return redirect("user:profile")
+            return redirect("users:profile")
 
         form = PasswordChangeForm(user=request.user)
 
@@ -193,14 +202,14 @@ class ChangePasswordView(GenericView):
                 request,
                 self.RESTRICTED_NOTICE,
             )
-            return redirect("user:profile")
+            return redirect("users:profile")
 
         form = PasswordChangeForm(user=request.user, data=request.POST)
         if form.is_valid():
             form.save()
             update_session_auth_hash(request, form.user)
             messages.success(request, "Your password has been changed successfully.")
-            return redirect("user:profile")
+            return redirect("users:profile")
 
         return render(
             request,
@@ -211,6 +220,23 @@ class ChangePasswordView(GenericView):
                 "is_django_auth_user": is_django_auth_user(request),
             },
         )
+
+
+#
+# Saved Views
+#
+
+
+class SavedViewUIViewSet(
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectEditViewMixin,
+    ObjectListViewMixin,
+):
+    queryset = SavedView.objects.all()
+    filterset_class = SavedViewFilterSet
+    table_class = SavedViewTable
 
 
 #
@@ -253,7 +279,7 @@ class TokenEditView(GenericView):
                 "obj": token,
                 "obj_type": token._meta.verbose_name,
                 "form": form,
-                "return_url": reverse("user:token_list"),
+                "return_url": reverse("users:token_list"),
                 "editing": token.present_in_database,
             },
         )
@@ -277,7 +303,7 @@ class TokenEditView(GenericView):
             if "_addanother" in request.POST:
                 return redirect(request.path)
             else:
-                return redirect("user:token_list")
+                return redirect("users:token_list")
 
         return render(
             request,
@@ -286,7 +312,7 @@ class TokenEditView(GenericView):
                 "obj": token,
                 "obj_type": token._meta.verbose_name,
                 "form": form,
-                "return_url": reverse("user:token_list"),
+                "return_url": reverse("users:token_list"),
                 "editing": token.present_in_database,
             },
         )
@@ -296,7 +322,7 @@ class TokenDeleteView(GenericView):
     def get(self, request, pk):
         token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
         initial_data = {
-            "return_url": reverse("user:token_list"),
+            "return_url": reverse("users:token_list"),
         }
         form = ConfirmationForm(initial=initial_data)
 
@@ -307,7 +333,7 @@ class TokenDeleteView(GenericView):
                 "obj": token,
                 "obj_type": token._meta.verbose_name,
                 "form": form,
-                "return_url": reverse("user:token_list"),
+                "return_url": reverse("users:token_list"),
             },
         )
 
@@ -317,7 +343,7 @@ class TokenDeleteView(GenericView):
         if form.is_valid():
             token.delete()
             messages.success(request, "Token deleted")
-            return redirect("user:token_list")
+            return redirect("users:token_list")
 
         return render(
             request,
@@ -326,7 +352,7 @@ class TokenDeleteView(GenericView):
                 "obj": token,
                 "obj_type": token._meta.verbose_name,
                 "form": form,
-                "return_url": reverse("user:token_list"),
+                "return_url": reverse("users:token_list"),
             },
         )
 
@@ -349,7 +375,7 @@ class AdvancedProfileSettingsEditView(GenericView):
             {
                 "form": form,
                 "active_tab": "advanced_settings",
-                "return_url": reverse("user:advanced_settings_edit"),
+                "return_url": reverse("users:advanced_settings_edit"),
                 "is_django_auth_user": is_django_auth_user(request),
             },
         )
@@ -375,7 +401,7 @@ class AdvancedProfileSettingsEditView(GenericView):
             {
                 "form": form,
                 "active_tab": "advanced_settings",
-                "return_url": reverse("user:advanced_settings_edit"),
+                "return_url": reverse("users:advanced_settings_edit"),
                 "is_django_auth_user": is_django_auth_user(request),
             },
         )

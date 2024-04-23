@@ -17,19 +17,19 @@ class PasswordUITest(TestCase):
         """
         Check that a Django-authentication-based user is allowed to change their password
         """
-        profile_response = self.client.get(reverse("user:profile"))
-        preferences_response = self.client.get(reverse("user:preferences"))
-        api_tokens_response = self.client.get(reverse("user:token_list"))
+        profile_response = self.client.get(reverse("users:profile"))
+        preferences_response = self.client.get(reverse("users:preferences"))
+        api_tokens_response = self.client.get(reverse("users:token_list"))
         for response in [profile_response, preferences_response, api_tokens_response]:
             self.assertIn("Change Password", str(response.content))
 
         # Check GET change_password functionality
-        get_response = self.client.get(reverse("user:change_password"))
+        get_response = self.client.get(reverse("users:change_password"))
         self.assertIn("New password confirmation", str(get_response.content))
 
         # Check POST change_password functionality
         post_response = self.client.post(
-            reverse("user:change_password"),
+            reverse("users:change_password"),
             data={
                 "old_password": "foo",
                 "new_password1": "bar",
@@ -73,15 +73,15 @@ class PasswordUITest(TestCase):
             self.client.force_login(sso_user, backend=settings.AUTHENTICATION_BACKENDS[0])
 
             # Check UI
-            profile_response = self.client.get(reverse("user:profile"))
-            preferences_response = self.client.get(reverse("user:preferences"))
-            api_tokens_response = self.client.get(reverse("user:token_list"))
+            profile_response = self.client.get(reverse("users:profile"))
+            preferences_response = self.client.get(reverse("users:preferences"))
+            api_tokens_response = self.client.get(reverse("users:token_list"))
             for response in [profile_response, preferences_response, api_tokens_response]:
                 self.assertNotIn("Change Password", str(response.content))
 
             # Check GET and POST change_password functionality
-            get_response = self.client.get(reverse("user:change_password"), follow=True)
-            post_response = self.client.post(reverse("user:change_password"), follow=True)
+            get_response = self.client.get(reverse("users:change_password"), follow=True)
+            post_response = self.client.post(reverse("users:change_password"), follow=True)
             for response in [get_response, post_response]:
                 self.assertNotIn("New password confirmation", str(response.content))
                 # Check redirect
@@ -104,7 +104,7 @@ class AdvancedProfileSettingsViewTest(TestCase):
         Check that a user can enable request profling on their session
         """
         # Simulate form submission with checkbox checked
-        response = self.client.post(reverse("user:advanced_settings_edit"), {"request_profiling": True})
+        response = self.client.post(reverse("users:advanced_settings_edit"), {"request_profiling": True})
         self.assertEqual(response.status_code, 200)
         # Check if the session has the correct value
         self.assertTrue(self.client.session["silk_record_requests"])
@@ -115,7 +115,7 @@ class AdvancedProfileSettingsViewTest(TestCase):
         Check that a user can disable request profling on their session
         """
         # Simulate form submission with checkbox unchecked
-        response = self.client.post(reverse("user:advanced_settings_edit"), {"request_profiling": False})
+        response = self.client.post(reverse("users:advanced_settings_edit"), {"request_profiling": False})
         self.assertEqual(response.status_code, 200)
         # Check if the session has the correct value
         self.assertFalse(self.client.session["silk_record_requests"])
@@ -126,7 +126,7 @@ class AdvancedProfileSettingsViewTest(TestCase):
         Check that a user cannot enable request profiling if ALLOW_REQUEST_PROFILING=False
         """
         # Simulate form submission with checkbox unchecked
-        response = self.client.post(reverse("user:advanced_settings_edit"), {"request_profiling": True})
+        response = self.client.post(reverse("users:advanced_settings_edit"), {"request_profiling": True})
 
         # Check if the form is in the response context and has errors
         self.assertTrue("form" in response.context)

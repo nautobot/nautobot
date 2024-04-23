@@ -15,10 +15,12 @@ from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMix
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.utils.data import flatten_dict
 from nautobot.extras.models.change_logging import ChangeLoggedModel
+from nautobot.extras.utils import extras_features
 
 __all__ = (
     "AdminGroup",
     "ObjectPermission",
+    "SavedView",
     "Token",
     "User",
 )
@@ -282,3 +284,65 @@ class ObjectPermission(BaseModel, ChangeLoggedModel):
         if not isinstance(self.constraints, list):
             return [self.constraints]
         return self.constraints
+
+
+#
+# SavedView
+#
+
+
+@extras_features(
+    "custom_validators",
+    "graphql",
+)
+class SavedView(BaseModel):
+    owner = models.ForeignKey(
+        to=User, blank=False, null=False, on_delete=models.CASCADE, help_text="The user that created this view"
+    )
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=False, null=False, help_text="The name of this view")
+    list_view_name = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=False,
+        null=False,
+        help_text="The name of the list view that the saved view is derived from, e.g. dcim:device_list",
+    )
+    table_config = models.JSONField(
+        encoder=DjangoJSONEncoder, blank=True, default=dict, help_text="Saved Table Config on this view"
+    )
+    pagination_count = models.IntegerField(default=50, blank=True, help_text="Pagination Count of this view")
+    filter_params = models.JSONField(
+        encoder=DjangoJSONEncoder, blank=True, default=dict, help_text="filter parameters that are applied to this view"
+    )
+    sort_order = models.JSONField(
+        encoder=DjangoJSONEncoder,
+        blank=True,
+        default=dict,
+        help_text="table column sort orders that are applied to this view",
+    )
+
+    class Meta:
+        ordering = ["owner", "name"]
+        unique_together = [["owner", "name"]]
+        verbose_name = "saved view"
+        verbose_name_plural = "saved views"
+
+    def __str__(self):
+        return f"{self.owner.username} - {self.list_view_name} - {self.name}"
+
+    @property
+    def view_config(self):
+        """Return a combined query strings of the config e.g. table_config, pagination_count, filter_params, sort_order stored on this SavedView"""
+        query_string = "?"
+        query_list = []
+        # TODO table_config
+        for key, value in self.filter_params.items():
+            for item in value:
+                query_list.append(f"{key}={item}")
+
+        query_list.append(f"per_page={self.pagination_count}")
+
+        for key, value in self.sort_order.items():
+            query_list.append(f"{key}={value}")
+
+        query_string += "&".join(query_list)
+        return query_string
