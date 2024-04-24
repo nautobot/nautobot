@@ -22,7 +22,7 @@ from nautobot.ipam import choices, constants
 from nautobot.virtualization.models import VMInterface
 
 from .fields import VarbinaryIPField
-from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet
+from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet, VLANQuerySet
 from .validators import DNSValidator
 
 __all__ = (
@@ -1380,6 +1380,7 @@ class VLAN(PrimaryModel):
     ]
 
     natural_key_field_names = ["pk"]
+    objects = BaseManager.from_queryset(VLANQuerySet)()
 
     class Meta:
         ordering = (
