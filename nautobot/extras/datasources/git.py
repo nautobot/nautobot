@@ -715,14 +715,15 @@ def delete_git_config_context_schemas(repository_record, job_result, preserve=()
 #
 
 
-def refresh_code_from_repository(repository_slug, skip_reimport=False, should_raise=False):
+def refresh_job_code_from_repository(repository_slug, skip_reimport=False, ignore_import_errors=True):
     """
     After cloning/updating/deleting a GitRepository on disk, call this function to reload and reregister its Python.
 
     Args:
         repository_slug (str): Repository directory in GIT_ROOT that was updated or deleted.
         skip_reimport (bool): If True, unload existing code from this repository but do not re-import it.
-        should_raise (bool): If True, any exceptions raised in the import will be re-raised.
+        ignore_import_errors (bool): If True, any exceptions raised in the import will be caught and logged.
+            If False, exceptions will be re-raised after logging.
     """
     # Unload any previous version of this module and its submodules if present
     for job_class_path in list(registry["jobs"]):
@@ -739,17 +740,16 @@ def refresh_code_from_repository(repository_slug, skip_reimport=False, should_ra
                 os.path.isdir(os.path.join(repository.filesystem_path, "jobs"))
                 or os.path.isfile(os.path.join(repository.filesystem_path, "jobs.py"))
             ):
-                if should_raise:
-                    raise FileNotFoundError(f"No `jobs` subdirectory or file found in Git repository {repository}")
-                else:
-                    logger.error("No `jobs` subdirectory or file found in Git repository %s", repository)
+                logger.error("No `jobs` submodule found in Git repository %s", repository)
+                if not ignore_import_errors:
+                    raise FileNotFoundError(f"No `jobs` submodule found in Git repository {repository}")
             else:
                 import_modules_privately(
-                    settings.GIT_ROOT, module_path=[repository_slug, "jobs"], should_raise=should_raise
+                    settings.GIT_ROOT, module_path=[repository_slug, "jobs"], ignore_import_errors=ignore_import_errors
                 )
     except GitRepository.DoesNotExist as exc:
         logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
-        if should_raise:
+        if not ignore_import_errors:
             raise
 
 
@@ -759,7 +759,7 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
     if "extras.job" in repository_record.provided_contents and not delete:
         found_jobs = False
         try:
-            refresh_code_from_repository(repository_record.slug, should_raise=True)
+            refresh_job_code_from_repository(repository_record.slug, ignore_import_errors=False)
 
             for job_class_path, job_class in registry["jobs"].items():
                 if not job_class_path.startswith(f"{repository_record.slug}.jobs."):
@@ -794,7 +794,7 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
             job_result.log(msg, grouping="jobs", level_choice=LogLevelChoices.LOG_ERROR)
     else:
         # Flush this repository's job classes
-        refresh_code_from_repository(repository_record.slug, skip_reimport=True)
+        refresh_job_code_from_repository(repository_record.slug, skip_reimport=True)
 
     for job_model in Job.objects.filter(module_name__startswith=f"{repository_record.slug}."):
         if job_model.installed and job_model not in installed_jobs:

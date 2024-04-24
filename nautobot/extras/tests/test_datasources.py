@@ -347,7 +347,7 @@ class GitTest(TransactionTestCase):
                 log_entries = JobLogEntry.objects.filter(job_result=job_result)
                 failure_logs = log_entries.filter(log_level=LogLevelChoices.LOG_ERROR)
                 try:
-                    failure_logs.get(grouping="jobs", message__contains="No `jobs` subdirectory or file found")
+                    failure_logs.get(grouping="jobs", message__contains="No `jobs` submodule found")
                 except JobLogEntry.DoesNotExist:
                     for log in log_entries:
                         print(log.message)

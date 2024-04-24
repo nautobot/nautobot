@@ -24,7 +24,7 @@ def _temporarily_add_to_sys_path(path):
         sys.path = old_sys_path
 
 
-def import_modules_privately(path, module_path=None, should_raise=False):
+def import_modules_privately(path, module_path=None, ignore_import_errors=True):
     """
     Import modules from the filesystem without adding the path permanently to `sys.path`.
 
@@ -37,7 +37,8 @@ def import_modules_privately(path, module_path=None, should_raise=False):
         path (str): Directory path possibly containing Python modules or packages to load.
         module_path (list): If set to a non-empty list, only modules matching the given chain of modules will be loaded.
             For example, `["my_git_repo", "jobs"]`.
-        should_raise (bool): Whether any exception raised in importing modules should be re-raised to the caller.
+        ignore_import_errors (bool): Exceptions raised while importing modules will be caught and logged.
+            If this is set as False, they will then be re-raised to be handled by the caller of this function.
     """
     if module_path is None:
         module_path = []
@@ -46,13 +47,11 @@ def import_modules_privately(path, module_path=None, should_raise=False):
         module_prefix = ".".join(module_path)
     with _temporarily_add_to_sys_path(path):
         for finder, discovered_module_name, is_package in pkgutil.walk_packages([path], onerror=logger.error):
-            # logger.debug("Discovered module %s", discovered_module_name)
             if module_prefix and not (
                 module_prefix.startswith(f"{discovered_module_name}.")  # my_repo/__init__.py
                 or discovered_module_name == module_prefix  # my_repo/jobs.py
                 or discovered_module_name.startswith(f"{module_prefix}.")  # my_repo/jobs/foobar.py
             ):
-                # logger.debug("Skipping module %s", discovered_module_name)
                 continue
             try:
                 existing_module = find_spec(discovered_module_name)
@@ -86,5 +85,5 @@ def import_modules_privately(path, module_path=None, should_raise=False):
                 importlib.reload(module)
             except Exception as exc:
                 logger.error("Unable to load module %s from %s: %s", discovered_module_name, path, exc)
-                if should_raise:
+                if not ignore_import_errors:
                     raise

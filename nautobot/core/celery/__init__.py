@@ -77,7 +77,10 @@ def _import_jobs_from_jobs_root():
         try:
             from nautobot.extras.models import GitRepository
 
-            if any(job_class_path.startswith(f"{repo.slug}.") for repo in GitRepository.objects.all()):
+            if any(
+                job_class_path.startswith(f"{repo.slug}.")
+                for repo in GitRepository.objects.filter(provided_contents__contains="extras.job")
+            ):
                 # Git provided job
                 continue
         except ProgrammingError:  # Database not ready yet, as may be the case on initial startup and migration
@@ -109,7 +112,7 @@ def _import_jobs_from_git_repositories():
             shutil.rmtree(filepath)
 
     # Make sure all GitRepository records that include Jobs have up-to-date git clones, and load their jobs
-    for repo in GitRepository.objects.all():
+    for repo in GitRepository.objects.filter(provided_contents__contains="extras.job"):
         refresh_git_repository(state=None, repository_pk=repo.pk, head=repo.current_head)
 
 
