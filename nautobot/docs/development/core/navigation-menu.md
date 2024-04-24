@@ -1,6 +1,6 @@
 # Populating the Navigation Menu
 
-Both core applications and plugins can contribute items to the navigation menu by defining `menu_items` inside of their app's `navigation.py`. Using the key and weight system, a developer can integrate amongst existing menu tabs, groups, items and buttons and/or create entirely new menus as desired.
+Both core applications and Apps can contribute items to the navigation menu by defining `menu_items` inside of their app's `navigation.py`. Using the key and weight system, a developer can integrate amongst existing menu tabs, groups, items and buttons and/or create entirely new menus as desired.
 
 ## Modifying Existing Menu
 
@@ -23,22 +23,22 @@ menu_tabs = (
                 weight=150,
                 items=(
                     NavMenuItem(
-                        link="plugins:example_plugin:examplemodel_list",
+                        link="plugins:example_app:examplemodel_list",
                         name="Example Model",
                         permissions=[
-                            "example_plugin.view_examplemodel"
+                            "example_app.view_examplemodel"
                         ],
                         buttons=(
                             NavMenuAddButton(
-                                link="plugins:example_plugin:examplemodel_add",
+                                link="plugins:example_app:examplemodel_add",
                                 permissions=[
-                                    "example_plugin.add_examplemodel",
+                                    "example_app.add_examplemodel",
                                 ],
                             ),
                             NavMenuImportButton(
-                                link="plugins:example_plugin:examplemodel_import",
+                                link="plugins:example_app:examplemodel_import",
                                 permissions=[
-                                    "example_plugin.add_examplemodel"
+                                    "example_app.add_examplemodel"
                                 ],
                             ),
                         ),
@@ -54,16 +54,16 @@ menu_tabs = (
 
 The code below shows how to add a new tab to the navbar. A tab is defined by a `NavMenuTab` object. Similarly a group is defined using `NavMenuGroup`. Both of these objects are used as containers for actual items.
 
-The position in the navigation menu is defined by the weight. The lower the weight the closer to the start of the menus the object will be. All core objects have weights in multiples of 100, meaning there is plenty of space around the objects for plugins to customize.
+The position in the navigation menu is defined by the weight. The lower the weight the closer to the start of the menus the object will be. All core objects have weights in multiples of 100, meaning there is plenty of space around the objects for Apps to customize.
 
-Below you can see `Example Tab` has a weight value of `150`. This means the tab will appear between `Organization` and `Devices`.
+Below you can see `Example Menu` has a weight value of `150`. This means the tab (menu) will appear between `Organization` (100) and `Devices` (200).
 
 ``` python
 from nautobot.core.apps import NavMenuAddButton, NavMenuGroup, NavMenuItem, NavMenuImportButton, NavMenuTab
 
 menu_items = (
     NavMenuTab(
-        name="Example Tab",
+        name="Example Menu",
         weight=150,
         groups=(
             NavMenuGroup(
@@ -71,22 +71,22 @@ menu_items = (
                 weight=100,
                 items=(
                     NavMenuItem(
-                        link="plugins:example_plugin:examplemodel_list",
+                        link="plugins:example_app:examplemodel_list",
                         link_text="Example Model",
                         permissions=[
-                            "example_plugin.view_examplemodel"
+                            "example_app.view_examplemodel"
                         ],
                         buttons=(
                             NavMenuAddButton(
-                                link="plugins:example_plugin:examplemodel_add",
+                                link="plugins:example_app:examplemodel_add",
                                 permissions=[
-                                    "example_plugin.add_examplemodel",
+                                    "example_app.add_examplemodel",
                                 ],
                             ),
                             NavMenuImportButton(
-                                link="plugins:example_plugin:examplemodel_import",
+                                link="plugins:example_app:examplemodel_import",
                                 permissions=[
-                                    "example_plugin.add_examplemodel"
+                                    "example_app.add_examplemodel"
                                 ],
                             ),
                         ),

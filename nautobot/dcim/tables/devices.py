@@ -13,6 +13,8 @@ from nautobot.core.tables import (
 from nautobot.dcim.models import (
     ConsolePort,
     ConsoleServerPort,
+    Controller,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceRedundancyGroup,
@@ -25,6 +27,8 @@ from nautobot.dcim.models import (
     PowerOutlet,
     PowerPort,
     RearPort,
+    SoftwareImageFile,
+    SoftwareVersion,
     VirtualChassis,
 )
 from nautobot.dcim.utils import cable_status_color_css
@@ -49,11 +53,14 @@ from .template_code import (
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
     REARPORT_BUTTONS,
+    TREE_LINK,
 )
 
 __all__ = (
     "ConsolePortTable",
     "ConsoleServerPortTable",
+    "ControllerTable",
+    "ControllerManagedDeviceGroupTable",
     "DeviceBayTable",
     "DeviceConsolePortTable",
     "DeviceConsoleServerPortTable",
@@ -76,6 +83,8 @@ __all__ = (
     "PowerOutletTable",
     "PowerPortTable",
     "RearPortTable",
+    "SoftwareImageFileTable",
+    "SoftwareVersionTable",
     "VirtualChassisTable",
 )
 
@@ -155,6 +164,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     device_redundancy_group_priority = tables.TemplateColumn(
         template_code="""{% if record.device_redundancy_group %}<span class="badge badge-default">{{ record.device_redundancy_group_priority|default:'None' }}</span>{% else %}—{% endif %}"""
     )
+    controller_managed_device_group = tables.Column(linkify=True)
     secrets_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:device_list")
 
@@ -183,6 +193,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "vc_priority",
             "device_redundancy_group",
             "device_redundancy_group_priority",
+            "controller_managed_device_group",
             "secrets_group",
             "tags",
         )
@@ -908,7 +919,7 @@ class VirtualChassisTable(BaseTable):
     master = tables.Column(linkify=True)
     member_count = LinkedCountColumn(
         viewname="dcim:device_list",
-        url_params={"virtual_chassis_id": "pk"},
+        url_params={"virtual_chassis": "pk"},
         verbose_name="Members",
     )
     tags = TagColumn(url_name="dcim:virtualchassis_list")
@@ -1017,3 +1028,185 @@ class InterfaceRedundancyGroupAssociationTable(BaseTable):
         )
 
         default_columns = ("priority", "actions")
+
+
+#
+# Software image files
+#
+
+
+class SoftwareImageFileTable(StatusTableMixin, BaseTable):
+    pk = ToggleColumn()
+    image_file_name = tables.Column(linkify=True)
+    software_version = tables.Column(linkify=True)
+    default_image = BooleanColumn()
+    device_type_count = LinkedCountColumn(
+        viewname="dcim:devicetype_list",
+        url_params={"software_image_files": "pk"},
+        verbose_name="Device Types",
+    )
+    tags = TagColumn(url_name="dcim:softwareimagefile_list")
+    actions = ButtonsColumn(SoftwareImageFile)
+
+    class Meta(BaseTable.Meta):
+        model = SoftwareImageFile
+        fields = (
+            "pk",
+            "image_file_name",
+            "status",
+            "software_version",
+            "default_image",
+            "image_file_checksum",
+            "hashing_algorithm",
+            "download_url",
+            "device_type_count",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "image_file_name",
+            "status",
+            "software_version",
+            "default_image",
+            "device_type_count",
+            "tags",
+            "actions",
+        )
+
+
+class SoftwareVersionTable(StatusTableMixin, BaseTable):
+    pk = ToggleColumn()
+    version = tables.Column(linkify=True)
+    software_image_file_count = LinkedCountColumn(
+        viewname="dcim:softwareimagefile_list",
+        url_params={"software_version": "pk"},
+        verbose_name="Software Image Files",
+    )
+    device_count = LinkedCountColumn(
+        viewname="dcim:device_list",
+        url_params={"software_version": "pk"},
+        verbose_name="Devices",
+    )
+    inventory_item_count = LinkedCountColumn(
+        viewname="dcim:inventoryitem_list",
+        url_params={"software_version": "pk"},
+        verbose_name="Inventory Items",
+    )
+    tags = TagColumn(url_name="dcim:softwareversion_list")
+    actions = ButtonsColumn(SoftwareVersion)
+
+    class Meta(BaseTable.Meta):
+        model = SoftwareVersion
+        fields = (
+            "pk",
+            "version",
+            "alias",
+            "status",
+            "platform",
+            "release_date",
+            "end_of_support_date",
+            "long_term_support",
+            "pre_release",
+            "documentation_url",
+            "software_image_file_count",
+            "device_count",
+            "inventory_item_count",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "version",
+            "alias",
+            "platform",
+            "status",
+            "release_date",
+            "end_of_support_date",
+            "software_image_file_count",
+            "device_count",
+            "inventory_item_count",
+            "tags",
+            "actions",
+        )
+
+
+class ControllerTable(BaseTable):
+    """Table for list view."""
+
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    status = ColoredLabelColumn()
+    location = tables.Column(linkify=True)
+    platform = tables.Column(linkify=True)
+    role = tables.Column(linkify=True)
+    tenant = TenantColumn()
+    external_integration = tables.Column(linkify=True)
+    controller_device = tables.Column(linkify=True)
+    controller_device_redundancy_group = tables.Column(linkify=True)
+    tags = TagColumn(url_name="dcim:controller_list")
+    actions = ButtonsColumn(Controller)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = Controller
+        fields = (
+            "pk",
+            "name",
+            "status",
+            "location",
+            "platform",
+            "role",
+            "tenant",
+            "external_integration",
+            "controller_device",
+            "controller_device_redundancy_group",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "status",
+            "location",
+            "platform",
+            "role",
+            "tenant",
+            "actions",
+        )
+
+
+class ControllerManagedDeviceGroupTable(BaseTable):
+    """Table for list view."""
+
+    pk = ToggleColumn()
+    name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
+    weight = tables.Column()
+    controller = tables.Column(linkify=True)
+    tags = TagColumn(url_name="dcim:controllermanageddevicegroup_list")
+    actions = ButtonsColumn(ControllerManagedDeviceGroup)
+    device_count = tables.TemplateColumn(template_code=LINKED_RECORD_COUNT, verbose_name="Devices")
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ControllerManagedDeviceGroup
+        fields = (
+            "pk",
+            "name",
+            "device_count",
+            "controller",
+            "weight",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "device_count",
+            "controller",
+            "weight",
+            "tags",
+            "actions",
+        )

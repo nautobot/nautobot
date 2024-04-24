@@ -21,6 +21,20 @@ class LocationStatusChoices(ChoiceSet):
     )
 
 
+class LocationDataToContactActionChoices(ChoiceSet):
+    ASSOCIATE_EXISTING_CONTACT = "associate existing contact"
+    ASSOCIATE_EXISTING_TEAM = "associate existing team"
+    CREATE_AND_ASSIGN_NEW_CONTACT = "create and assign new contact"
+    CREATE_AND_ASSIGN_NEW_TEAM = "create and assign new team"
+
+    CHOICES = (
+        (ASSOCIATE_EXISTING_CONTACT, "Associate to existing contact"),
+        (ASSOCIATE_EXISTING_TEAM, "Associate to existing team"),
+        (CREATE_AND_ASSIGN_NEW_CONTACT, "Create and assign new contact"),
+        (CREATE_AND_ASSIGN_NEW_TEAM, "Create and assign new team"),
+    )
+
+
 #
 # Racks
 #
@@ -1468,4 +1482,57 @@ class InterfaceRedundancyGroupProtocolChoices(ChoiceSet):
         (VRRP, "VRRP"),
         (GLBP, "GLBP"),
         (CARP, "CARP"),
+    )
+
+
+#
+# Software Image Files
+#
+
+
+class SoftwareImageFileHashingAlgorithmChoices(ChoiceSet):
+    MD5 = "md5"
+    SHA1 = "sha1"
+    SHA224 = "sha224"
+    SHA384 = "sha384"
+    SHA256 = "sha256"
+    SHA512 = "sha512"
+    SHA3 = "sha3"
+    BLAKE2 = "blake2"
+    BLAKE3 = "blake3"
+
+    CHOICES = (
+        (MD5, "MD5"),
+        (SHA1, "SHA1"),
+        (SHA224, "SHA224"),
+        (SHA384, "SHA384"),
+        (SHA256, "SHA256"),
+        (SHA512, "SHA512"),
+        (SHA3, "SHA3"),
+        (BLAKE2, "BLAKE2"),
+        (BLAKE3, "BLAKE3"),
+    )
+
+
+class SoftwareImageFileStatusChoices(ChoiceSet):
+    STATUS_ACTIVE = "active"
+    STATUS_EXTENDED_SUPPORT = "extended-support"
+    STATUS_END_OF_LIFE = "end-of-life"
+
+    CHOICES = (
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_EXTENDED_SUPPORT, "Extended Support"),
+        (STATUS_END_OF_LIFE, "End-of-Life"),
+    )
+
+
+class SoftwareVersionStatusChoices(ChoiceSet):
+    STATUS_ACTIVE = "active"
+    STATUS_EXTENDED_SUPPORT = "extended-support"
+    STATUS_END_OF_LIFE = "end-of-life"
+
+    CHOICES = (
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_EXTENDED_SUPPORT, "Extended Support"),
+        (STATUS_END_OF_LIFE, "End-of-Life"),
     )

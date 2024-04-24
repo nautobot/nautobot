@@ -1,0 +1,92 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>Software Version</strong>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover panel-body attr-table">
+                        <tr>
+                            <td>Status</td>
+                            <td>
+                                {{ object.status|hyperlinked_object_with_color }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Version</td>
+                            <td>{{ object.version }}</td>
+                        </tr>
+                        <tr>
+                            <td>Alias</td>
+                            <td>{{ object.alias|placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <td>Platform</td>
+                            <td>{{ object.platform|hyperlinked_object }}</td>
+                        </tr>
+                        <tr>
+                            <td>Release Date</td>
+                            <td>{{ object.release_date|placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <td>End of Support Date</td>
+                            <td>{{ object.end_of_support_date|placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <td>Long Term Support</td>
+                            <td>{{ object.long_term_support|render_boolean }}</td>
+                        </tr>
+                        <tr>
+                            <td>Pre-Release</td>
+                            <td>{{ object.pre_release|render_boolean }}</td>
+                        </tr>
+                        <tr>
+                            <td>Documentation URL</td>
+                            <td>
+                                {% if object.documentation_url %}
+                                <a href="{{ object.documentation_url }}" target="_blank">{{ object.documentation_url }}</a>
+                                {% else %}
+                                <span class="text-muted">&mdash;</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>Stats</strong>
+    </div>
+    <div class="panel-body">
+        <div class="col-md-4 text-center">
+            {% with software_image_file_count=object.software_image_files.count %}
+                <h2><a href="{% url 'dcim:softwareimagefile_list' %}?software_version={{ object.pk }}" class="btn {% if software_image_file_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ software_image_file_count }}</a></h2>
+                <p>Software Image Files</p>
+            {% endwith %}
+        </div>
+        <div class="col-md-4 text-center">
+            {% with device_count=object.devices.count %}
+                <h2><a href="{% url 'dcim:device_list' %}?software_version={{ object.pk }}" class="btn {% if device_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ device_count }}</a></h2>
+                <p>Devices</p>
+            {% endwith %}
+        </div>
+        <div class="col-md-4 text-center">
+            {% with inventory_item_count=object.inventory_items.count %}
+                <h2><a href="{% url 'dcim:inventoryitem_list' %}?software_version={{ object.pk }}" class="btn {% if inventory_item_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ inventory_item_count }}</a></h2>
+                <p>Inventory Items</p>
+            {% endwith %}
+        </div>
+        <div class="col-md-4 text-center">
+            {% with virtual_machine_count=object.virtual_machines.count %}
+                <h2><a href="{% url 'virtualization:virtualmachine_list' %}?software_version={{ object.pk }}" class="btn {% if virtual_machine_count %}btn-primary{% else %}btn-default{% endif %} btn-lg">{{ virtual_machine_count }}</a></h2>
+                <p>Virtual Machines</p>
+            {% endwith %}
+        </div>
+    </div>
+</div>
+{% endblock content_right_page %}

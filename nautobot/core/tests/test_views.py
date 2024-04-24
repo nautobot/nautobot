@@ -2,6 +2,7 @@ import re
 from unittest import mock
 import urllib.parse
 
+from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory
@@ -9,6 +10,7 @@ from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
 
+from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -70,6 +72,27 @@ class HomeViewTestCase(TestCase):
 
         response = self.client.get(f"{url}?{urllib.parse.urlencode(params)}")
         self.assertHttpStatus(response, 200)
+
+    def test_appropriate_models_included_in_global_search(self):
+        # Gather core app configs
+        existing_models = []
+        global_searchable_models = []
+        for app_name in ["circuits", "dcim", "extras", "ipam", "tenancy", "virtualization"]:
+            app_config = apps.get_app_config(app_name)
+            existing_models += [model._meta.model_name for model in app_config.get_models()]
+            global_searchable_models += app_config.searchable_models
+
+        # Remove those models that are not searchable
+        existing_models = [model for model in existing_models if model not in GLOBAL_SEARCH_EXCLUDE_LIST]
+        existing_models.sort()
+
+        # See if there are any models that are missing from global search
+        difference = [model for model in existing_models if model not in global_searchable_models]
+        if difference:
+            self.fail(
+                f'Existing model/models {",".join(difference)} are not included in the searchable_models attribute of the app config.\n'
+                'If you do not want the models to be searchable, please include them in the GLOBAL_SEARCH_EXCLUDE_LIST constant in nautobot.core.constants.'
+            )
 
     def make_request(self):
         url = reverse("home")
@@ -244,42 +267,32 @@ class ForceScriptNameTestcase(TestCase):
             self.assertTrue(url.startswith(prefix))
 
 
-class NavRestrictedUI(TestCase):
+class NavAppsUITestCase(TestCase):
     def setUp(self):
         super().setUp()
 
-        self.url = reverse("plugins:plugins_list")
+        self.url = reverse("apps:apps_list")
         self.item_weight = 100  # TODO: not easy to introspect from the nav menu struct, so hard-code it here for now
 
     def make_request(self):
         response = self.client.get(reverse("home"))
         return response.content.decode(response.charset)
 
-    def test_installed_apps_visible_to_staff(self):
-        """The "Installed Apps" menu item should be available to is_staff user."""
-        # Make user admin
-        self.user.is_staff = True
-        self.user.save()
-
+    def test_installed_apps_visible(self):
+        """The "Installed Apps" menu item should be available to an authenticated user regardless of permissions."""
         response_content = self.make_request()
         self.assertInHTML(
             f"""
             <a href="{self.url}"
                 data-item-weight="{self.item_weight}">
-                Installed Plugins
+                Installed Apps
             </a>
             """,
             response_content,
         )
 
-    def test_installed_apps_not_visible_to_non_staff_user_without_permission(self):
-        """The "Installed Apps" menu item should be hidden from a non-staff user without permission."""
-        response_content = self.make_request()
 
-        self.assertNotRegex(response_content, r"Installed\s+Plugins")
-
-
-class LoginUI(TestCase):
+class LoginUITestCase(TestCase):
     def setUp(self):
         super().setUp()
 
@@ -350,20 +363,20 @@ class MetricsViewTestCase(TestCase):
         return text_string_to_metric_families(page_content)
 
     def test_metrics_extensibility(self):
-        """Assert that the example metric from the example plugin shows up _exactly_ when the plugin is enabled."""
+        """Assert that the example metric from the Example App shows up _exactly_ when the app is enabled."""
         test_metric_name = "nautobot_example_metric_count"
-        metrics_with_plugin = self.query_and_parse_metrics()
-        metric_names_with_plugin = {metric.name for metric in metrics_with_plugin}
-        self.assertIn(test_metric_name, metric_names_with_plugin)
+        metrics_with_app = self.query_and_parse_metrics()
+        metric_names_with_app = {metric.name for metric in metrics_with_app}
+        self.assertIn(test_metric_name, metric_names_with_app)
         with override_settings(PLUGINS=[]):
             # Clear out the app metric registry because it is not updated when settings are changed but Nautobot is not
             # restarted.
             registry["app_metrics"].clear()
-            metrics_without_plugin = self.query_and_parse_metrics()
-            metric_names_without_plugin = {metric.name for metric in metrics_without_plugin}
-            self.assertNotIn(test_metric_name, metric_names_without_plugin)
-        metric_names_with_plugin.remove(test_metric_name)
-        self.assertSetEqual(metric_names_with_plugin, metric_names_without_plugin)
+            metrics_without_app = self.query_and_parse_metrics()
+            metric_names_without_app = {metric.name for metric in metrics_without_app}
+            self.assertNotIn(test_metric_name, metric_names_without_app)
+        metric_names_with_app.remove(test_metric_name)
+        self.assertSetEqual(metric_names_with_app, metric_names_without_app)
 
 
 class AuthenticateMetricsTestCase(APITestCase):

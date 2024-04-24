@@ -83,6 +83,24 @@ def hyperlinked_object(value, field="display"):
 
 @library.filter()
 @register.filter()
+def hyperlinked_email(value):
+    """Render an email address as a `mailto:` hyperlink."""
+    if not value:
+        return placeholder(value)
+    return format_html('<a href="mailto:{}">{}</a>', value, value)
+
+
+@library.filter()
+@register.filter()
+def hyperlinked_phone_number(value):
+    """Render a phone number as a `tel:` hyperlink."""
+    if not value:
+        return placeholder(value)
+    return format_html('<a href="tel:{}">{}</a>', value, value)
+
+
+@library.filter()
+@register.filter()
 def placeholder(value):
     """Render a muted placeholder if value is falsey, else render the value.
 
@@ -181,20 +199,32 @@ def render_markdown(value):
 
 @library.filter()
 @register.filter()
-def render_json(value):
+def render_json(value, syntax_highlight=True):
     """
     Render a dictionary as formatted JSON.
+
+    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a
+    `<code class="language-json>` HTML tag to flag it for syntax highlighting by highlight.js.
     """
-    return json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
+    rendered_json = json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
+    if syntax_highlight:
+        return format_html('<code class="language-json">{}</code>', rendered_json)
+    return rendered_json
 
 
 @library.filter()
 @register.filter()
-def render_yaml(value):
+def render_yaml(value, syntax_highlight=True):
     """
     Render a dictionary as formatted YAML.
+
+    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a
+    `<code class="language-yaml>` HTML tag to flag it for syntax highlighting by highlight.js.
     """
-    return yaml.dump(json.loads(json.dumps(value, ensure_ascii=False)), allow_unicode=True)
+    rendered_yaml = yaml.dump(json.loads(json.dumps(value, ensure_ascii=False)), allow_unicode=True)
+    if syntax_highlight:
+        return format_html('<code class="language-yaml">{}</code>', rendered_yaml)
+    return rendered_yaml
 
 
 @library.filter()
@@ -756,6 +786,24 @@ def versioned_static(file_path):
     """Returns a versioned static file URL with a query parameter containing the version number."""
     url = static(file_path)
     return add_nautobot_version_query_param_to_url(url)
+
+
+@register.simple_tag
+def tree_hierarchy_ui_representation(tree_depth, hide_hierarchy_ui):
+    """Generates a visual representation of a tree record hierarchy using dots.
+
+    Args:
+        tree_depth (range): A range representing the depth of the tree nodes.
+        hide_hierarchy_ui (bool): Indicates whether to hide the hierarchy UI.
+
+    Returns:
+        str: A string containing dots (representing hierarchy levels) if `hide_hierarchy_ui` is False,
+             otherwise an empty string.
+    """
+    if hide_hierarchy_ui or tree_depth == 0:
+        return ""
+    ui_representation = " ".join(['<i class="mdi mdi-circle-small"></i>' for _ in tree_depth])
+    return mark_safe(ui_representation)  # noqa: S308 # suspicious-mark-safe-usage, OK here since its just the `i` tag
 
 
 @library.filter()

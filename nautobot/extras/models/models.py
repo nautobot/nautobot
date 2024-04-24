@@ -20,6 +20,7 @@ from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaVali
 from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -75,7 +76,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     will be available to a Device in location A assigned to tenant B. Data is stored in JSON format.
     """
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
 
     # A ConfigContext *may* be owned by another model, such as a GitRepository, or it may be un-owned
     owner_content_type = models.ForeignKey(
@@ -94,7 +95,7 @@ class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationM
     )
 
     weight = models.PositiveSmallIntegerField(default=1000)
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     is_active = models.BooleanField(
         default=True,
     )
@@ -239,8 +240,8 @@ class ConfigContextSchema(OrganizationalModel):
     This model stores jsonschema documents where are used to optionally validate config context data payloads.
     """
 
-    name = models.CharField(max_length=200, unique=True)
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     data_schema = models.JSONField(
         help_text="A JSON Schema document which is used to validate a config context object."
     )
@@ -309,7 +310,7 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
         limit_choices_to=FeatureQuery("custom_links"),
         related_name="custom_links",
     )
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     text = models.CharField(
         max_length=500,
         help_text="Jinja2 template code for link text. "
@@ -324,7 +325,7 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
     )
     weight = models.PositiveSmallIntegerField(default=100)
     group_name = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         help_text="Links with the same group will appear as a dropdown menu",
     )
@@ -373,19 +374,19 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin
         limit_choices_to=FeatureQuery("export_templates"),
         related_name="export_templates",
     )
-    name = models.CharField(max_length=100)
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     template_code = models.TextField(
         help_text="The list of objects being exported is passed as a context variable named <code>queryset</code>."
     )
     mime_type = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         verbose_name="MIME type",
         help_text="Defaults to <code>text/plain</code>",
     )
     file_extension = models.CharField(
-        max_length=15,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         help_text="Extension to append to the rendered filename",
     )
@@ -440,7 +441,7 @@ class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin
 class ExternalIntegration(PrimaryModel):
     """Model for tracking integrations with external applications."""
 
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     remote_url = models.CharField(
         max_length=500,
         verbose_name="Remote URL",
@@ -481,7 +482,7 @@ class ExternalIntegration(PrimaryModel):
         help_text="Headers for the HTTP request",
     )
     ca_file_path = models.CharField(
-        max_length=255,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         verbose_name="CA file path",
     )
@@ -547,8 +548,8 @@ class FileAttachment(BaseModel):
     """
 
     bytes = models.BinaryField()
-    filename = models.CharField(max_length=255)
-    mimetype = models.CharField(max_length=255)
+    filename = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    mimetype = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
 
     natural_key_field_names = ["pk"]
 
@@ -605,7 +606,7 @@ class FileProxy(BaseModel):
     `delete()` on each one individually.
     """
 
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     file = models.FileField(upload_to=_upload_to, storage=_job_storage)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     job_result = models.ForeignKey(to=JobResult, null=True, blank=True, on_delete=models.CASCADE, related_name="files")
@@ -646,7 +647,7 @@ class FileProxy(BaseModel):
 
 @extras_features("graphql")
 class GraphQLQuery(BaseModel, ChangeLoggedModel, NotesMixin):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     query = models.TextField()
     variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
 
@@ -697,7 +698,7 @@ class GraphQLQuery(BaseModel, ChangeLoggedModel, NotesMixin):
 
 
 class HealthCheckTestModel(BaseModel):
-    title = models.CharField(max_length=128)
+    title = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
 
 
 #
@@ -716,7 +717,7 @@ class ImageAttachment(BaseModel):
     image = models.ImageField(upload_to=image_upload, height_field="image_height", width_field="image_width")
     image_height = models.PositiveSmallIntegerField()
     image_width = models.PositiveSmallIntegerField()
-    name = models.CharField(max_length=50, blank=True, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True)
     created = models.DateTimeField(auto_now_add=True)
 
     natural_key_field_names = ["pk"]
@@ -822,7 +823,7 @@ class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
         limit_choices_to=FeatureQuery("webhooks"),
         help_text="The object(s) to which this Webhook applies.",
     )
-    name = models.CharField(max_length=150, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     type_create = models.BooleanField(default=False, help_text="Call this webhook when a matching object is created.")
     type_update = models.BooleanField(default=False, help_text="Call this webhook when a matching object is updated.")
     type_delete = models.BooleanField(default=False, help_text="Call this webhook when a matching object is deleted.")
@@ -839,7 +840,7 @@ class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
         verbose_name="HTTP method",
     )
     http_content_type = models.CharField(
-        max_length=100,
+        max_length=CHARFIELD_MAX_LENGTH,
         default=HTTP_CONTENT_TYPE_JSON,
         verbose_name="HTTP content type",
         help_text="The complete list of official content types is available "
@@ -858,7 +859,7 @@ class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
         "<code>timestamp</code>, <code>username</code>, <code>request_id</code>, and <code>data</code>.",
     )
     secret = models.CharField(
-        max_length=255,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         help_text="When provided, the request will include a 'X-Hook-Signature' "
         "header containing a HMAC hex digest of the payload body using "

@@ -4,7 +4,7 @@ from django.urls import reverse
 
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE, VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT
 from nautobot.dcim.api.serializers import DeviceSerializer
-from nautobot.dcim.models.devices import Device, DeviceType
+from nautobot.dcim.models.devices import Controller, Device, DeviceType
 from nautobot.dcim.models.locations import Location
 from nautobot.extras.models.roles import Role
 from nautobot.extras.models.statuses import Status
@@ -25,6 +25,7 @@ class CSVParsingRelatedTestCase(TestCase):
         devicerole = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).first()
         tags = Tag.objects.get_for_model(Device).all()[:3]
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         self.device = Device.objects.create(
             device_type=devicetype,
@@ -63,10 +64,10 @@ class CSVParsingRelatedTestCase(TestCase):
                 "parent_bay__device__name",
                 "parent_bay__device__tenant__name",
                 "parent_bay__device__location__name",
-                "parent_bay__device__location__parent__name",
-                "parent_bay__device__location__parent__parent__name",
-                "parent_bay__device__location__parent__parent__parent__name",
-                "parent_bay__device__location__parent__parent__parent__parent__name",
+                *[
+                    f"parent_bay__device__location__{'parent__' * depth}name"
+                    for depth in range(1, Location.objects.max_tree_depth() + 1)
+                ],  # Location max_tree_depth is based on factory data so this has to be generated dynamically
                 "vc_master_for__name",
                 "local_config_context_schema__name",
                 "device_type__manufacturer__name",
@@ -76,24 +77,26 @@ class CSVParsingRelatedTestCase(TestCase):
                 "tenant__name",
                 "platform__name",
                 "location__name",
-                "location__parent__name",
-                "location__parent__parent__name",
-                "location__parent__parent__parent__name",
-                "location__parent__parent__parent__parent__name",
+                *[
+                    f"location__{'parent__' * depth}name" for depth in range(1, Location.objects.max_tree_depth() + 1)
+                ],  # Location max_tree_depth is based on factory data so this has to be generated dynamically
                 "rack__name",
                 "rack__rack_group__name",
                 "rack__rack_group__location__name",
-                "rack__rack_group__location__parent__name",
-                "rack__rack_group__location__parent__parent__name",
-                "rack__rack_group__location__parent__parent__parent__name",
-                "rack__rack_group__location__parent__parent__parent__parent__name",
+                *[
+                    f"rack__rack_group__location__{'parent__' * depth}name"
+                    for depth in range(1, Location.objects.max_tree_depth() + 1)
+                ],  # Location max_tree_depth is based on factory data so this has to be generated dynamically
                 "primary_ip4__parent__namespace__name",
                 "primary_ip4__host",
                 "primary_ip6__parent__namespace__name",
                 "primary_ip6__host",
                 "cluster__name",
                 "virtual_chassis__name",
+                "controller_managed_device_group__name",
                 "device_redundancy_group__name",
+                "software_version__platform__name",
+                "software_version__version",
                 "secrets_group__name",
             ]
             self.assertEqual(
@@ -117,6 +120,7 @@ class CSVParsingRelatedTestCase(TestCase):
                 "primary_ip6",
                 "cluster",
                 "virtual_chassis",
+                "controller_managed_device_group",
                 "device_redundancy_group",
                 "secrets_group",
             ]
@@ -145,14 +149,16 @@ class CSVParsingRelatedTestCase(TestCase):
         with self.subTest("Get the natural lookup field and its value"):
             # For Location
             location_lookup_value = serializer._get_natural_key_lookups_value_for_field("location", lookup_querysets[0])
+            expected_location_nested_lookup_values = {
+                f"location__{'parent__' * depth}name": CSV_NO_OBJECT
+                for depth in range(2, Location.objects.max_tree_depth() + 1)
+            }  # Location max_tree_depth is based on factory data so this has to be generated dynamically
             self.assertEqual(
                 location_lookup_value,
                 {
                     "location__name": device.location.name,
                     "location__parent__name": device.location.parent.name,
-                    "location__parent__parent__name": CSV_NO_OBJECT,
-                    "location__parent__parent__parent__name": CSV_NO_OBJECT,
-                    "location__parent__parent__parent__parent__name": CSV_NO_OBJECT,
+                    **expected_location_nested_lookup_values,
                 },
             )
 
@@ -162,20 +168,25 @@ class CSVParsingRelatedTestCase(TestCase):
 
             # For Rack, since `device.rack` does not exists, all rack natural_key_lookups should be `NoObject`
             rack_lookup_value = serializer._get_natural_key_lookups_value_for_field("rack", lookup_querysets[0])
+            expected_rack_group_nested_lookup_values = {
+                f"rack__rack_group__location__{'parent__' * depth}name": CSV_NO_OBJECT
+                for depth in range(1, Location.objects.max_tree_depth() + 1)
+            }  # Location max_tree_depth is based on factory data so this has to be generated dynamically
             self.assertEqual(
                 rack_lookup_value,
                 {
                     "rack__name": CSV_NO_OBJECT,
                     "rack__rack_group__location__name": CSV_NO_OBJECT,
-                    "rack__rack_group__location__parent__name": CSV_NO_OBJECT,
-                    "rack__rack_group__location__parent__parent__name": CSV_NO_OBJECT,
-                    "rack__rack_group__location__parent__parent__parent__name": CSV_NO_OBJECT,
-                    "rack__rack_group__location__parent__parent__parent__parent__name": CSV_NO_OBJECT,
+                    **expected_rack_group_nested_lookup_values,
                     "rack__rack_group__name": CSV_NO_OBJECT,
                 },
             )
 
         with self.subTest("To Serializer Representation"):
+            expected_parent_bay_nested_lookup_values = {
+                f"parent_bay__device__location__{'parent__' * depth}name": CSV_NO_OBJECT
+                for depth in range(1, Location.objects.max_tree_depth() + 1)
+            }  # Location max_tree_depth is based on factory data so this has to be generated dynamically
             expected_data = {
                 "id": str(device.pk),
                 "object_type": "dcim.device",
@@ -203,32 +214,27 @@ class CSVParsingRelatedTestCase(TestCase):
                 "platform__name": CSV_NO_OBJECT,
                 "location__name": device.location.name,
                 "location__parent__name": device.location.parent.name,
-                "location__parent__parent__name": CSV_NO_OBJECT,
-                "location__parent__parent__parent__name": CSV_NO_OBJECT,
-                "location__parent__parent__parent__parent__name": CSV_NO_OBJECT,
+                **expected_location_nested_lookup_values,
                 "rack__name": CSV_NO_OBJECT,
                 "rack__rack_group__name": CSV_NO_OBJECT,
                 "rack__rack_group__location__name": CSV_NO_OBJECT,
-                "rack__rack_group__location__parent__name": CSV_NO_OBJECT,
-                "rack__rack_group__location__parent__parent__name": CSV_NO_OBJECT,
-                "rack__rack_group__location__parent__parent__parent__name": CSV_NO_OBJECT,
-                "rack__rack_group__location__parent__parent__parent__parent__name": CSV_NO_OBJECT,
+                **expected_rack_group_nested_lookup_values,
                 "primary_ip4__parent__namespace__name": CSV_NO_OBJECT,
                 "primary_ip4__host": CSV_NO_OBJECT,
                 "primary_ip6__parent__namespace__name": CSV_NO_OBJECT,
                 "primary_ip6__host": CSV_NO_OBJECT,
                 "cluster__name": CSV_NO_OBJECT,
                 "virtual_chassis__name": CSV_NO_OBJECT,
+                "controller_managed_device_group__name": CSV_NO_OBJECT,
                 "device_redundancy_group__name": CSV_NO_OBJECT,
+                "software_version__platform__name": CSV_NO_OBJECT,
+                "software_version__version": CSV_NO_OBJECT,
                 "secrets_group__name": CSV_NO_OBJECT,
                 "parent_bay__name": CSV_NO_OBJECT,
                 "parent_bay__device__name": CSV_NO_OBJECT,
                 "parent_bay__device__tenant__name": CSV_NO_OBJECT,
                 "parent_bay__device__location__name": CSV_NO_OBJECT,
-                "parent_bay__device__location__parent__name": CSV_NO_OBJECT,
-                "parent_bay__device__location__parent__parent__name": CSV_NO_OBJECT,
-                "parent_bay__device__location__parent__parent__parent__name": CSV_NO_OBJECT,
-                "parent_bay__device__location__parent__parent__parent__parent__name": CSV_NO_OBJECT,
+                **expected_parent_bay_nested_lookup_values,
             }
             serializer_data = serializer.data
 
@@ -240,7 +246,6 @@ class CSVParsingRelatedTestCase(TestCase):
             serializer_data.pop("custom_fields")
             serializer_data.pop("created")
             serializer_data.pop("last_updated")
-
             self.assertEqual(expected_data, serializer_data)
 
     @override_settings(ALLOWED_HOSTS=["*"])

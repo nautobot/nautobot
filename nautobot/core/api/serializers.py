@@ -666,6 +666,8 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
                     data[key] = str(value)
                 elif value == constants.VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT:
                     data[key] = constants.CSV_NO_OBJECT
+                elif value == "":
+                    data[key] = value
                 elif not value:
                     data[key] = constants.CSV_NULL_TYPE
                 else:

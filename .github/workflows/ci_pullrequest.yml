@@ -324,7 +324,7 @@ jobs:
         ports:
           - "6379:6379"
       selenium:
-        image: "selenium/standalone-firefox:4.9.1"
+        image: "selenium/standalone-firefox:4.19"
         ports:
           - "4444:4444"
     steps:

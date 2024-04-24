@@ -54,8 +54,10 @@ from nautobot.core.views.utils import (
     import_csv_helper,
     prepare_cloned_fields,
 )
-from nautobot.extras.models import ExportTemplate
-from nautobot.extras.utils import remove_prefix_from_cf_key
+from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
+from nautobot.extras.models import ContactAssociation, ExportTemplate
+from nautobot.extras.tables import AssociatedContactsTable
+from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
 
 
 class GenericView(LoginRequiredMixin, View):
@@ -131,18 +133,31 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
             resp = {"tabs": plugin_tabs}
             return JsonResponse(resp)
         else:
-            return render(
-                request,
-                self.get_template_name(),
-                {
-                    "object": instance,
-                    "verbose_name": self.queryset.model._meta.verbose_name,
-                    "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                    "created_by": created_by,
-                    "last_updated_by": last_updated_by,
-                    **self.get_extra_context(request, instance),
-                },
-            )
+            content_type = ContentType.objects.get_for_model(self.queryset.model)
+            context = {
+                "object": instance,
+                "content_type": content_type,
+                "verbose_name": self.queryset.model._meta.verbose_name,
+                "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+                "created_by": created_by,
+                "last_updated_by": last_updated_by,
+                **self.get_extra_context(request, instance),
+            }
+            if instance.is_contact_associable_model:
+                paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+                associations = (
+                    ContactAssociation.objects.filter(
+                        associated_object_id=instance.id,
+                        associated_object_type=content_type,
+                    )
+                    .restrict(request.user, "view")
+                    .order_by("role__name")
+                )
+                associations_table = AssociatedContactsTable(associations, orderable=False)
+                RequestConfig(request, paginate).configure(associations_table)
+                associations_table.columns.show("pk")
+                context["associated_contacts_table"] = associations_table
+            return render(request, self.get_template_name(), context)
 
 
 class ObjectListView(ObjectPermissionRequiredMixin, View):
@@ -213,6 +228,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         display_filter_params = []
         dynamic_filter_form = None
         filter_form = None
+        hide_hierarchy_ui = False
 
         if self.filterset:
             filter_params = self.get_filter_params(request)
@@ -224,6 +240,12 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                     format_html("Invalid filters were specified: {}", filterset.errors),
                 )
                 self.queryset = self.queryset.none()
+
+            # If a valid filterset is applied, we have to hide the hierarchy indentation in the UI for tables that support hierarchy indentation.
+            # NOTE: An empty filterset query-param is also valid filterset and we dont want to hide hierarchy indentation if no filter query-param is provided
+            #      hence `filterset.data`.
+            if filterset.is_valid() and filterset.data:
+                hide_hierarchy_ui = True
 
             display_filter_params = [
                 check_filter_for_display(filterset.filters, field_name, values)
@@ -276,9 +298,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         table_config_form = None
         if self.table:
             # Construct the objects table
-            # Order By is needed in the table `__init__` method
-            order_by = self.request.GET.getlist("sort")
-            table = self.table(self.queryset, user=request.user, order_by=order_by)
+            if self.request.GET.getlist("sort"):
+                hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
+            table = self.table(self.queryset, user=request.user, hide_hierarchy_ui=hide_hierarchy_ui)
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
 
@@ -344,7 +366,7 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
     queryset = None
     model_form = None
-    template_name = "generic/object_edit.html"
+    template_name = "generic/object_create.html"
 
     def get_required_permission(self):
         # self._permission_action is set by dispatch() to either "add" or "change" depending on whether
@@ -726,7 +748,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                             field_name,
                             related_object_form,
                         ) in self.related_object_forms.items():
-                            logger.debug("Processing form for related objects: {related_object_form}")
+                            logger.debug(f"Processing form for related objects: {related_object_form}")
 
                             related_obj_pks = []
                             for i, rel_obj_data in enumerate(data.get(field_name, [])):
@@ -758,7 +780,7 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 except ObjectDoesNotExist:
                     msg = "Object creation failed due to object-level permissions violation"
                     logger.debug(msg)
-                    form.add_error(None, msg)
+                    model_form.add_error(None, msg)
 
             if not model_form.errors:
                 logger.info(f"Import object {obj} (PK: {obj.pk})")
@@ -801,9 +823,11 @@ class ObjectImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         )
 
 
-class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
+class BulkImportView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):  # 3.0 TODO: remove as it's no longer used
     """
     Import objects in bulk (CSV format).
+
+    Deprecated - replaced by ImportObjects system Job.
 
     queryset: Base queryset for the model
     table: The django-tables2 Table used to render the list of imported objects
@@ -933,6 +957,9 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         # For example, a parent object can be defined given some parameter from the request URL.
         return obj
 
+    def extra_post_save_action(self, obj, form):
+        """Extra actions after a form is saved"""
+
     def post(self, request, **kwargs):
         logger = logging.getLogger(__name__ + ".BulkEditView")
         model = self.queryset.model
@@ -962,7 +989,7 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 nullified_fields = request.POST.getlist("_nullify")
 
                 try:
-                    with transaction.atomic():
+                    with deferred_change_logging_for_bulk_operation():
                         updated_objects = []
                         for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
                             obj = self.alter_obj(obj, request, [], kwargs)
@@ -1014,6 +1041,8 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                             if hasattr(form, "save_note") and callable(form.save_note):
                                 form.save_note(instance=obj, user=request.user)
+
+                            self.extra_post_save_action(obj, form)
 
                         # Enforce object-level permissions
                         if self.queryset.filter(pk__in=[obj.pk for obj in updated_objects]).count() != len(
@@ -1224,13 +1253,12 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                 self.perform_pre_delete(request, queryset)
                 try:
-                    _, deleted_info = queryset.delete()
+                    _, deleted_info = bulk_delete_with_bulk_change_logging(queryset)
                     deleted_count = deleted_info[model._meta.label]
                 except ProtectedError as e:
                     logger.info("Caught ProtectedError while attempting to delete objects")
                     handle_protectederror(queryset, request, e)
                     return redirect(self.get_return_url(request))
-
                 msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
                 logger.info(msg)
                 messages.success(request, msg)
@@ -1302,7 +1330,7 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
     queryset = None
     form = None
     model_form = None
-    template_name = None
+    template_name = "dcim/device_component_add.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "add")

@@ -1,4 +1,5 @@
 """Schema module for GraphQL."""
+
 from collections import OrderedDict
 import logging
 
@@ -44,7 +45,7 @@ from nautobot.extras.graphql.types import DynamicGroupType, TagType
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import check_if_key_is_graphql_safe
-from nautobot.ipam.graphql.types import IPAddressType, PrefixType
+from nautobot.ipam.graphql.types import IPAddressType, PrefixType, VLANType
 from nautobot.virtualization.graphql.types import VirtualMachineType, VMInterfaceType
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,7 @@ registry["graphql_types"]["extras.tag"] = TagType
 registry["graphql_types"]["extras.dynamicgroup"] = DynamicGroupType
 registry["graphql_types"]["ipam.ipaddress"] = IPAddressType
 registry["graphql_types"]["ipam.prefix"] = PrefixType
+registry["graphql_types"]["ipam.vlan"] = VLANType
 registry["graphql_types"]["virtualization.virtualmachine"] = VirtualMachineType
 registry["graphql_types"]["virtualization.vminterface"] = VMInterfaceType
 

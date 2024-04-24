@@ -1,0 +1,1 @@
+Re-added `run_job` generic Celery task as a wrapper for execution of all Nautobot Jobs.

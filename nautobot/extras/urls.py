@@ -26,9 +26,12 @@ from nautobot.extras.models import (
 app_name = "extras"
 
 router = NautobotUIViewSetRouter()
+router.register("contacts", views.ContactUIViewSet)
+router.register("contact-associations", views.ContactAssociationUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("roles", views.RoleUIViewSet)
+router.register("teams", views.TeamUIViewSet)
 
 urlpatterns = [
     # Change logging
@@ -165,6 +168,14 @@ urlpatterns = [
         views.ObjectNotesView.as_view(),
         name="configcontextschema_notes",
         kwargs={"model": ConfigContextSchema},
+    ),
+    # contacts
+    path("contact-associations/add-new-contact/", views.ObjectNewContactView.as_view(), name="object_contact_add"),
+    path("contact-associations/add-new-team/", views.ObjectNewTeamView.as_view(), name="object_team_add"),
+    path(
+        "contact-associations/assign-contact-team/",
+        views.ObjectAssignContactOrTeamView.as_view(),
+        name="object_contact_team_assign",
     ),
     # Custom fields
     path("custom-fields/", views.CustomFieldListView.as_view(), name="customfield_list"),
@@ -317,7 +328,7 @@ urlpatterns = [
     ),
     path(
         "git-repositories/import/",
-        views.GitRepositoryBulkImportView.as_view(),
+        views.GitRepositoryBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="gitrepository_import",
     ),
     path(
@@ -445,6 +456,8 @@ urlpatterns = [
     ),
     path("jobs/<uuid:pk>/run/", views.JobRunView.as_view(), name="job_run"),
     path("jobs/<str:class_path>/run/", views.JobRunView.as_view(), name="job_run_by_class_path"),
+    path("jobs/edit/", views.JobBulkEditView.as_view(), name="job_bulk_edit"),
+    path("jobs/delete/", views.JobBulkDeleteView.as_view(), name="job_bulk_delete"),
     # Job hooks
     path("job-hooks/", views.JobHookListView.as_view(), name="jobhook_list"),
     path("job-hooks/add/", views.JobHookEditView.as_view(), name="jobhook_add"),
@@ -550,7 +563,7 @@ urlpatterns = [
     path("secrets/", views.SecretListView.as_view(), name="secret_list"),
     path("secrets/add/", views.SecretEditView.as_view(), name="secret_add"),
     path("secrets/delete/", views.SecretBulkDeleteView.as_view(), name="secret_bulk_delete"),
-    path("secrets/import/", views.SecretBulkImportView.as_view(), name="secret_import"),
+    path("secrets/import/", views.SecretBulkImportView.as_view(), name="secret_import"),  # 3.0 TODO: remove, unused
     path(
         "secrets/provider/<str:provider_slug>/form/",
         views.SecretProviderParametersFormView.as_view(),
@@ -598,7 +611,7 @@ urlpatterns = [
         views.StatusBulkDeleteView.as_view(),
         name="status_bulk_delete",
     ),
-    path("statuses/import/", views.StatusBulkImportView.as_view(), name="status_import"),
+    path("statuses/import/", views.StatusBulkImportView.as_view(), name="status_import"),  # 3.0 TODO: remove, unused
     path("statuses/<uuid:pk>/", views.StatusView.as_view(), name="status"),
     path("statuses/<uuid:pk>/edit/", views.StatusEditView.as_view(), name="status_edit"),
     path(
@@ -621,7 +634,7 @@ urlpatterns = [
     # Tags
     path("tags/", views.TagListView.as_view(), name="tag_list"),
     path("tags/add/", views.TagEditView.as_view(), name="tag_add"),
-    path("tags/import/", views.TagBulkImportView.as_view(), name="tag_import"),
+    path("tags/import/", views.TagBulkImportView.as_view(), name="tag_import"),  # 3.0 TODO: remove, unused
     path("tags/edit/", views.TagBulkEditView.as_view(), name="tag_bulk_edit"),
     path("tags/delete/", views.TagBulkDeleteView.as_view(), name="tag_bulk_delete"),
     path("tags/<uuid:pk>/", views.TagView.as_view(), name="tag"),

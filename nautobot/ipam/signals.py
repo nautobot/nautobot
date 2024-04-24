@@ -1,8 +1,18 @@
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.db.models.signals import m2m_changed, pre_delete, pre_save
 from django.dispatch import receiver
 
-from nautobot.ipam.models import IPAddressToInterface, VRF, VRFDeviceAssignment, VRFPrefixAssignment
+from nautobot.ipam.models import (
+    IPAddressToInterface,
+    Prefix,
+    PrefixLocationAssignment,
+    VLANLocationAssignment,
+    VRF,
+    VRFDeviceAssignment,
+    VRFPrefixAssignment,
+)
 
 
 @receiver(pre_save, sender=VRFDeviceAssignment)
@@ -87,3 +97,35 @@ def ip_address_to_interface_assignment_created(sender, instance, raw=False, **kw
         return
 
     instance.full_clean()
+
+
+@receiver(m2m_changed, sender=PrefixLocationAssignment)
+@receiver(m2m_changed, sender=VLANLocationAssignment)
+def assert_locations_content_types(sender, instance, action, reverse, model, pk_set, **kwargs):
+    if action != "pre_add":
+        return
+    if not reverse:
+        # Adding a Location to a Prefix or VLAN
+        # instance = the Prefix or VLAN
+        # model = Location class
+        instance_ct = ContentType.objects.get_for_model(instance)
+        invalid_locations = model.objects.select_related("location_type").filter(
+            Q(pk__in=pk_set), ~Q(location_type__content_types__in=[instance_ct])
+        )
+        if invalid_locations.exists():
+            invalid_location_types = {location.location_type.name for location in invalid_locations}
+            label = "Prefixes" if isinstance(instance, Prefix) else "VLANs"
+            raise ValidationError(
+                {"locations": f"{label} may not associate to Locations of types {list(invalid_location_types)}."}
+            )
+    else:
+        # Adding a Prefix or a VLAN to a Location
+        # instance = the Location
+        # model = Prefix or VLAN class
+        model_ct = ContentType.objects.get_for_model(model)
+        key = "prefixes" if model is Prefix else "vlans"
+        label = "Prefixes" if model is Prefix else "VLANs"
+        if model_ct not in instance.location_type.content_types.all():
+            raise ValidationError(
+                {key: f"{instance} is a {instance.location_type} and may not have {label} associated to it."}
+            )

@@ -2,7 +2,7 @@
 
 +++ 1.2.0
 
-Both core applications and plugins can contribute items to the Nautobot home page by defining `layout` inside of their app's `homepage.py`. Using a key and weight system, a developer can integrate amongst existing home page panels or can create entirely new panels as desired.
+Both core applications and Apps can contribute items to the Nautobot home page by defining `layout` inside of their app's `homepage.py`. Using a key and weight system, a developer can integrate amongst existing home page panels or can create entirely new panels as desired.
 
 ## Adding a new Home Page Panel
 
@@ -18,16 +18,16 @@ This is a single `HomePagePanel` (defined in `nautobot/dcim/homepage.py`) contai
 
 This is a `HomePagePanel` (defined in `nautobot/extras/homepage.py`) that uses a custom template to render content that doesn't fit into the `HomePageGroup`/`HomePageItem` pattern.
 
-The position of a panel in the home page is defined by its `weight`. The lower the weight the closer to the start (top/left) of the home page the object will be. All core objects have weights in multiples of 100, meaning there is plenty of space around the objects for plugins to customize.
+The initial position of a panel in the home page is defined by its `weight`. The lower the weight the closer to the start (top/left) of the home page the object will be. All core objects have weights in multiples of 100, meaning there is plenty of space around the objects for Apps to customize.
 
-In the below code example, you can see that the `Example Plugin` panel has a `weight` value of `150`. This means it will appear between `Organization` (weight `100`) and `DCIM` (weight `200`).
+In the below code example, you can see that the `Example App Custom Panel` panel has a `weight` value of `350`. This means it will appear between `Power` (weight `300`) and `IPAM` (weight `400`). (Since Nautobot 2.1, a user can drag-and-drop the panels to re-order them to their liking, but the `weight` still sets the initial position before the user does so.)
 
 !!! tip
     Weights for already existing items can be found in the Nautobot source code (in `nautobot/<app>/homepage.py`) or with a web session open to your Nautobot instance, you can inspect an element of the home page using the developer tools.
 
-Example of custom code being used in a panel can be seen in the `Custom Example Plugin` panel below. The attribute `custom_template` is used to refer to the filename of a template. Templates need to be stored in the templates `inc` folder for the plugin (`/example_plugin/templates/example_plugin/inc/`).
+Example of custom code being used in a panel can be seen in the `Example App Custom Panel` panel below. The attribute `custom_template` is used to refer to the filename of a template. Templates need to be stored in the templates `inc` folder for the App (`/example_app/templates/example_app/inc/`).
 
-If additional data is needed to render the custom template, callback functions can be used to collect this data. In the below example, the `Custom Example Plugin` panel is using the callback `get_example_data()` to dynamically populate the key `example_data` into the rendering context of this panel.
+If additional data is needed to render the custom template, callback functions can be used to collect this data. In the below example, the `Example App Custom Panel` panel is using the callback `get_example_data()` to dynamically populate the key `example_data` into the rendering context of this panel.
 
 ``` python
 from nautobot.core.apps import HomePageItem, HomePagePanel
@@ -40,23 +40,23 @@ def get_example_data(request):
 
 layout = (
     HomePagePanel(
-        name="Example Plugin",
-        weight=150,
+        name="Organization",
         items=(
             HomePageItem(
                 name="Example Models",
-                link="plugins:example_plugin:examplemodel_list",
-                description="List example plugin models.",
-                permissions=["example_plugin.view_examplemodel"],
-                weight=100,
+                model=ExampleModel,
+                weight=150,
+                link="plugins:example_app:examplemodel_list",
+                description="List Example App models.",
+                permissions=["example_app.view_examplemodel"],
             ),
         ),
     ),
     HomePagePanel(
-        name="Custom Example Plugin",
-        custom_template="panel_example_example.html",
+        name="Example App Custom Panel",
+        custom_template="panel_example.html",
         custom_data={"example_data": get_example_data},
-        permissions=["example_plugin.view_examplemodel"],
+        permissions=["example_app.view_examplemodel"],
         weight=350,
     ),
 )

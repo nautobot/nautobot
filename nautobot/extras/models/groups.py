@@ -12,6 +12,7 @@ from django.db import models
 from django.utils.functional import cached_property
 import django_filters
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import DynamicModelChoiceField
 from nautobot.core.forms.widgets import StaticSelect2
@@ -36,8 +37,8 @@ logger = logging.getLogger(__name__)
 class DynamicGroup(OrganizationalModel):
     """Dynamic Group Model."""
 
-    name = models.CharField(max_length=100, unique=True, help_text="Dynamic Group name")
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True, help_text="Dynamic Group name")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,

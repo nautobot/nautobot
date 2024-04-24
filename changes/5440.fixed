@@ -1,1 +1,0 @@
-Fixed "Cannot resolve keyword 'task_id' into field" when calling `nautobot-server celery result <task_id>`.

@@ -99,7 +99,7 @@ Factories for each Nautobot app's models are defined in the corresponding `nauto
 Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/testing/advanced/#defining-a-test-runner) class (`nautobot.core.tests.runner.NautobotTestRunner`) makes use of the various factories to pre-populate the test database with data before running any tests. This reduces the need for individual tests to define their own baseline data sets.
 
 !!! info
-    Because plugins also commonly use Nautobot's test runner, the base Nautobot `settings.py` currently defaults [`TEST_USE_FACTORIES`](../../user-guide/administration/configuration/optional-settings.md#test_use_factories) to `False` so as to not negatively impact plugin tests that may not be designed to account for the presence of pre-populated test data in the database. This configuration is overridden to `True` in `nautobot/core/tests/nautobot_config.py` for Nautobot's own tests.
+    Because Apps also commonly use Nautobot's test runner, the base Nautobot `settings.py` currently defaults [`TEST_USE_FACTORIES`](../../user-guide/administration/configuration/optional-settings.md#test_use_factories) to `False` so as to not negatively impact App tests that may not be designed to account for the presence of pre-populated test data in the database. This configuration is overridden to `True` in `nautobot/core/tests/nautobot_config.py` for Nautobot's own tests.
 
 ### Factory Caching
 
@@ -121,7 +121,7 @@ Once you install the package, you can do `invoke performance-test` or `invoke un
 `NautobotPerformanceTestRunner` which inherits from `DiscoverSlowestTestsRunner` will only be available when `django-slowtests` is installed. The runner measures the time to run unit tests against baselines stored in a designated .yml file (defaults to `nautobot/core/tests/performance_baselines.yml`) in addition to running the unit tests themselves.
 
 !!! warning
-    This functionality requires the installation of the [`django-slowtests`](https://pypi.org/project/django-slowtests/) Python package, which is present in Nautobot's own development environment, but is *not* an inherent dependency of the Nautobot package when installed otherwise, such as into a plugin's development environment.
+    This functionality requires the installation of the [`django-slowtests`](https://pypi.org/project/django-slowtests/) Python package, which is present in Nautobot's own development environment, but is *not* an inherent dependency of the Nautobot package when installed otherwise, such as into an App's development environment.
 
 !!! info
     `invoke performance-test` is enabled when `django-slowtests` is installed and when called, it will run and evaluate the performance of specific unit tests that are tagged with `performance` i.e. `@tag("performance")`. `invoke unittest --performance-report` and `invoke integration-test --performance-report` will also be enabled and when called, they will generate a performance report for all the tests ran in the terminal.
@@ -188,7 +188,7 @@ Example output of `invoke performance-test --performance-snapshot`:
 
 `TEST_PERFORMANCE_BASELINE_FILE` specifies the file in which performance baselines are stored, defaults to `nautobot/core/tests/performance_baselines.yml`. Currently, only baselines for those unit tests tagged with `performance` are stored.
 
-You can add baselines for your own test to `nautobot/core/tests/performance_baselines.yml` or have your own baseline yaml file for performance testing by specifying a different file path for  `TEST_PERFORMANCE_BASELINE_FILE` in plugin's development/test `nautobot_config.py`, and store the output of `invoke performance-test --performance-snapshot` in that file.
+You can add baselines for your own test to `nautobot/core/tests/performance_baselines.yml` or have your own baseline yaml file for performance testing by specifying a different file path for  `TEST_PERFORMANCE_BASELINE_FILE` in an App's development/test `nautobot_config.py`, and store the output of `invoke performance-test --performance-snapshot` in that file.
 `--performance-snapshot` flag will store the results of your performance test to a new `report.yml` and all you need to do is copy/paste the results to the file set by `TEST_PERFORMANCE_BASELINE_FILE`. Now you have baselines for your own tests!
 
 Example output of `invoke performance-test --performance-snapshot`:
@@ -231,7 +231,7 @@ Performance baseline for test_bulk_delete_objects (nautobot.circuits.tests.test_
     `django-slowtests` is only a *development* dependency of Nautobot. You cannot run performance tests in a production deployment of Nautobot unless you directly `pip install django-slowtests` into such a deployment.
 
 !!! info
-    Because plugins also commonly use Nautobot's default test runner `NautobotTestRunner`, in order to use `NautobotPerformanceTestRunner` you need to add `django-slowtests` as a part of your plugin dev dependencies.
+    Because Apps also commonly use Nautobot's default test runner `NautobotTestRunner`, in order to use `NautobotPerformanceTestRunner` you need to add `django-slowtests` as a part of your App dev dependencies.
 
 ## Test Code Style
 

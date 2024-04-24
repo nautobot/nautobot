@@ -1,35 +1,43 @@
 # Jobs
 
-TODO: Jobs authorship introduction
+Familiarity with the basic concepts of [Jobs](../../user-guide/platform-functionality/jobs/index.md), especially the distinction between Job classes (Python code) and Job records (Nautobot database records), is recommended before authoring your first Job.
+
+!!! tip
+    From a development standpoint, it's especially important to understand that the Job database record never stores the Job class code. It only describes the **existence** of a Job class. The actual Job class source code is loaded into memory only.
+
+!!! info
+    As an implementation detail in Nautobot 2.2.3 and later, all known Job **classes** are cached in the [application registry](../core/application-registry.md#jobs), which is refreshed at various times including Nautobot application startup and immediately prior to actually executing any given Job by a worker. This implementation detail should not be relied on directly; instead you should always use the `get_job()` and/or `get_jobs()` APIs to obtain a Job class when needed.
 
 ## Migrating Jobs from v1 to v2
 
 +/- 2.0.0
     See [Migrating Jobs From Nautobot v1](migration/from-v1.md) for more information on how to migrate your existing jobs to Nautobot v2.
 
-## Writing Jobs
+## Installing Jobs
 
 Jobs may be installed in one of three ways:
 
 * Manually installed as files in the [`JOBS_ROOT`](../../user-guide/administration/configuration/optional-settings.md#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`).
-    * This directory is added to Python's `sys.path` at runtime, so any Python modules placed in this directory will be imported in the root module namespace. For example, a job class named `MyJobClass` in `$JOBS_ROOT/my_job.py` will be loaded into Python as `my_job.MyJobClass`.
+    * Python files and subdirectories containing Python files will be dynamically loaded at Nautobot startup in order to discover and register available Job classes. For example, a job class named `MyJobClass` in `$JOBS_ROOT/my_job.py` will be loaded into Nautobot as `my_job.MyJobClass`.
     * All Python modules in this directory are imported by Nautobot and all worker processes at startup. If you have a `custom_jobs.py` and a `custom_jobs_module/__init__.py` file in your `JOBS_ROOT`, both of these files will be imported at startup.
 * Imported from an external [Git repository](../../user-guide/platform-functionality/gitrepository.md#jobs).
-    * Git repositories are loaded into the module namespace of the `GitRepository.slug` value at startup. For example, if your `slug` value is `my_git_jobs` your jobs will be loaded into Python as `my_git_jobs.jobs`.
+    * Git repositories are loaded into the module namespace of the `GitRepository.slug` value at startup. For example, if your `slug` value is `my_git_jobs` your jobs will be loaded into Python as `my_git_jobs.jobs.MyJobClass`.
     * All git repositories providing jobs must include a `__init__.py` file at the root of the repository.
     * Nautobot and all worker processes will import the git repository's `jobs` module at startup so a `jobs.py` or `jobs/__init__.py` file must exist in the root of the repository.
-* Packaged as part of a [plugin](../apps/api/platform-features/jobs.md).
-    * Jobs installed this way are part of the plugin module and can import code from elsewhere in the plugin or even have dependencies on other packages, if needed, via the standard Python packaging mechanisms.
+* Packaged as part of an [App](../apps/api/platform-features/jobs.md).
+    * Jobs installed this way are part of the App's Python module and can import code from elsewhere in the App or even have dependencies on other packages, if needed, via the standard Python packaging mechanisms.
 
-In any case, each module holds one or more Jobs (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
+In any case, each module holds one or more Job classes (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
 
 For example, we can create a module named `devices.py` to hold all of our jobs which pertain to devices in Nautobot. Within that module, we might define several jobs. Each job is defined as a Python class inheriting from `nautobot.apps.jobs.Job`, which provides the base functionality needed to accept user input and log activity.
 
 +/- 2.0.0
-    All job classes must now be registered with `nautobot.apps.jobs.register_jobs` on module import. For plugins providing jobs, the `register_jobs` method must called from the plugin's `jobs.py` file/submodule at import time. The `register_jobs` method accepts one or more job classes as arguments.
+    All job classes that are intended to be runnable must now be registered by a call to `nautobot.apps.jobs.register_jobs()` on module import. This allows for a module to, if desired, define "abstract" base Job classes that are defined in code but are not registered (and therefore are not runnable in Nautobot). The `register_jobs` method accepts one or more job classes as arguments.
+
+## Writing Jobs
 
 !!! warning
-    Make sure you are *not* inheriting `extras.jobs.models.Job` instead, otherwise Django will think you want to define a new database model.
+    Make sure your Job subclasses inherit from `nautobot.apps.Job` and *not* from `nautobot.extras.models.Job` instead; if you mistakenly inherit from the latter, Django will think you want to define a new database model.
 
 ```python
 from nautobot.apps.jobs import Job, register_jobs
@@ -50,14 +58,15 @@ Each job class will implement some or all of the following components:
 
 * Module and class attributes, providing for default behavior, documentation and discoverability
 * a set of variables for user input via the Nautobot UI (if your job requires any user inputs)
-* a `run()` method, which is the only required attribute on a Job class and receives the user input values, if any
+* a `run()` method, which is the only required attribute on a Job class and receives the user input values, if any, as keyword arguments.
+* Optionally, any of the special methods `before_start()`, `on_success()`, `on_failure()`, and/or `after_return()` (more on these later).
 
 It's important to understand that jobs execute on the server asynchronously as background tasks; they log messages and report their status to the database by updating [`JobResult`](../../user-guide/platform-functionality/jobs/models.md#job-results) records and creating [`JobLogEntry`](../../user-guide/platform-functionality/jobs/models.md#job-log-entry) records.
 
 !!! note
-    When actively developing a Job utilizing a development environment it's important to understand that the "automatically reload when code changes are detected" debugging functionality provided by `nautobot-server runserver` does **not** automatically restart the Celery `worker` process when code changes are made; therefore, it is required to restart the `worker` after each update to your Job source code or else it will continue to run the version of the Job code that was present when it first started.
+    When actively developing a Job utilizing a development environment it's important to understand that the "automatically reload when code changes are detected" debugging functionality provided by `nautobot-server runserver` does **not** automatically restart the Celery `worker` process when code changes are made; therefore, it is required to restart the `worker` after each update to your Job source code or else it will continue to run the version of the Job code that was present when it first started. In the Nautobot core development environment, we use `watchmedo auto-restart` as a helper tool to auto-restart the workers as well on code changes; you may wish to configure your local development environment similarly for convenience.
 
-    Additionally, as of Nautobot 1.3, the Job database records corresponding to installed Jobs are *not* automatically refreshed when the development server auto-restarts. If you make changes to any of the class and module metadata attributes described in the following sections, the database will be refreshed to reflect these changes only after running `nautobot-server migrate` or `nautobot-server post_upgrade` (recommended) or if you manually edit a Job database record to force it to be refreshed.
+    Additionally, as of Nautobot 1.3, the Job database records corresponding to installed Jobs are *not* automatically refreshed when the development server auto-restarts. If you make changes to any of the class and module metadata attributes described in the following sections, the database will be refreshed to reflect these changes only after running `nautobot-server migrate` or `nautobot-server post_upgrade` (recommended) or if you manually edit a Job database record to force it to be refreshed. The exception here is Git-repository-provided Jobs; resyncing the Git repository through Nautobot will also trigger a refresh of the Job records corresponding to this repository's contents.
 
 ### Job Registration
 
@@ -65,9 +74,9 @@ It's important to understand that jobs execute on the server asynchronously as b
 
 All Job classes, including `JobHookReceiver` and `JobButtonReceiver` classes must be registered at **import time** using the `nautobot.apps.jobs.register_jobs` method. This method accepts one or more job classes as arguments. You must account for how your jobs are imported when deciding where to call this method.
 
-#### Registering Jobs in JOBS_ROOT or Git Repositories
+#### Registering Jobs in `JOBS_ROOT` or Git Repositories
 
-Only top level module names within JOBS_ROOT are imported by Nautobot at runtime. This means that if you're using submodules, you need to ensure that your jobs are either registered in your top level `__init__.py` or that this file imports your submodules where the jobs are registered:
+Only top level module names within `JOBS_ROOT` are imported by Nautobot at runtime. This means that if you're using submodules, you need to ensure that your jobs are either registered in your top level `__init__.py` or that this file imports your submodules where the jobs are registered:
 
 ```py title="$JOBS_ROOT/my_jobs/__init__.py"
 from . import my_job_module
@@ -86,9 +95,61 @@ Similarly, only the `jobs` module is loaded from Git repositories. If you're usi
 
 If not using submodules, you should register your job in the file where your job is defined.
 
-#### Registering Jobs in a Plugin
+#### Registering Jobs in an App
 
-Plugins should register jobs in the module defined in their [`NautobotAppConfig.jobs`](../apps/api/nautobot-app-config.md#nautobotappconfig-code-location-attributes) property. This defaults to the `jobs` module of the plugin.
+Apps should register jobs in the module defined in their [`NautobotAppConfig.jobs`](../apps/api/nautobot-app-config.md#nautobotappconfig-code-location-attributes) property. This defaults to the `jobs` module of the App.
+
+### Reserved Attribute Names
+
+There are many attributes and methods of the Job class that serve as reserved names. You must be careful when implementing custom methods or defining the user input [variables](#variables) for your Job that you do not inadvertently "step on" one of these reserved attributes causing unexpected behavior or errors.
+
+!!! example
+    One classic pitfall here is the the reserved `name` metadata attribute - if you attempt to redefine `name` as a user input variable, your Job will not work.
+
+As of Nautobot 2.2.3, the current list of reserved names (not including low-level Python built-ins such as `__dict__` or `__str__` includes:
+
+| Reserved Name             | Purpose                                                 |
+| ------------------------- | ------------------------------------------------------- |
+| `after_return`            | [special method](#special-methods)                      |
+| `approval_required`       | [metadata property](#approval_required)                 |
+| `as_form`                 | class method                                            |
+| `as_form_class`           | class method                                            |
+| `before_start`            | [special method](#special-methods)                      |
+| `celery_kwargs`           | property                                                |
+| `class_path`              | class property                                          |
+| `class_path_dotted`       | deprecated class property                               |
+| `class_path_js_escaped`   | class property                                          |
+| `create_file`             | [helper method](#file-output)                           |
+| `description`             | [metadata property](#description)                       |
+| `description_first_line`  | [metadata property](#description)                       |
+| `deserialize_data`        | internal class method                                   |
+| `dryrun_default`          | [metadata property](#dryrun_default)                    |
+| `file_path`               | deprecated class property                               |
+| `field_order`             | [metadata property](#field_order)                       |
+| `grouping`                | [module metadata property](#module-metadata-attributes) |
+| `has_sensitive_variables` | [metadata property](#has_sensitive_variables)           |
+| `hidden`                  | [metadata property](#hidden)                            |
+| `job_model`               | property                                                |
+| `job_result`              | property                                                |
+| `load_json`               | [helper method](#reading-data-from-files)               |
+| `load_yaml`               | [helper method](#reading-data-from-files)               |
+| `name`                    | [metadata property](#name)                              |
+| `on_failure`              | [special method](#special-methods)                      |
+| `on_retry`                | reserved as a future [special method](#special-methods) |
+| `on_success`              | [special method](#special-methods)                      |
+| `prepare_job_kwargs`      | internal class method                                   |
+| `properties_dict`         | class property                                          |
+| `read_only`               | [metadata property](#read_only)                         |
+| `registered_name`         | deprecated class property                               |
+| `run`                     | [special method](#special-methods)                      |
+| `serialize_data`          | internal method                                         |
+| `soft_time_limit`         | [metadata property](#soft_time_limit)                   |
+| `supports_dryrun`         | class property                                          |
+| `task_queues`             | [metadata property](#task_queues)                       |
+| `template_name`           | [metadata property](#template_name)                     |
+| `time_limit`              | [metadata property](#time_limit)                        |
+| `user`                    | property                                                |
+| `validate_data`           | internal class method                                   |
 
 ### Module Metadata Attributes
 
@@ -259,7 +320,10 @@ A template can provide additional JavaScript, CSS, or even display HTML. A good 
 {% endblock javascript %}
 ```
 
-For another example checkout [the template used in example plugin](https://github.com/nautobot/nautobot/blob/next/examples/example_plugin/example_plugin/templates/example_plugin/example_with_custom_template.html) in the GitHub repo.
++++ 2.2.0
+    Added the `job_form` and `schedule_form` sub-blocks to `extras/job.html`, for use by Jobs that just want to override the rendered forms without replacing all of `{% block content %}`.
+
+For another example checkout [the template used in the Example App](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/templates/example_app/example_with_custom_template.html) in the GitHub repo.
 
 #### `time_limit`
 
@@ -480,9 +544,24 @@ An IPv4 or IPv6 network with a mask. Returns a `netaddr.IPNetwork` object. Two a
 * `min_prefix_length` - Minimum length of the mask
 * `max_prefix_length` - Maximum length of the mask
 
-### The `run()` Method
+### Special Methods
 
-The `run()` method must be implemented. After the `self` argument, it should accept keyword arguments for any variables defined on the job:
+Nautobot Jobs when executed will be instantiated by Nautobot, then Nautobot will call in order the special API methods `before_start()`, `run()`, `on_success()`/`on_failure()`, and `after_return()`. You must implement the `run()` method; the other methods have default implementations that do nothing.
+
+As Jobs are Python classes, you are of course free to define any number of other helper methods or functions that you call yourself from within any of the above special methods, but the above are the only ones that will be automatically called.
+
+--- 2.0.0
+    The NetBox backwards compatible `test_*()` and `post_run()` special methods have been removed.
+
+#### The `before_start()` Method
+
+The `before_start()` method may optionally be implemented to perform any appropriate Job-specific setup before the `run()` method is called. It has the signature `before_start(self, task_id, args, kwargs)` for historical reasons; the `task_id` parameter will always be identical to `self.request.id`, the `args` parameter will generally be empty, and any user-specified variables passed into the Job execution will be present in the `kwargs` parameter.
+
+The return value from `before_start()` is ignored, but if it raises any exception, the Job execution will be marked as a failure and `run()` will not be called.
+
+#### The `run()` Method
+
+The `run()` method is the primary worker of any Job, and must be implemented. After the `self` argument, it should accept keyword arguments for any variables defined on the job:
 
 ```python
 from nautobot.apps.jobs import Job, StringVar, IntegerVar, ObjectVar
@@ -492,7 +571,7 @@ class CreateDevices(Job):
     var2 = IntegerVar(...)
     var3 = ObjectVar(...)
 
-    def run(self, var1, var2, var3):
+    def run(self, *, var1, var2, var3):
         ...
 ```
 
@@ -504,8 +583,19 @@ Again, defining user variables is totally optional; you may create a job with a 
 !!! warning
     The Django ORM provides methods to create/edit many objects at once, namely `bulk_create()` and `update()`. These are best avoided in most cases as they bypass a model's built-in validation and can easily lead to database corruption if not used carefully.
 
---- 2.0.0
-    The NetBox backwards compatible `test_*()` and `post_run()` methods have been removed.
+If `run()` returns any value (even the implicit `None`), the Job execution will be marked as a success and the returned value will be stored in the associated JobResult database record. Conversely, if `run()` raises any exception, the Job execution will be marked as a failure and the traceback will be stored in the JobResult.
+
+#### The `on_success()` Method
+
+If both `before_start()` and `run()` are successful, the `on_success()` method will be called next, if implemented. It has the signature `on_success(self, retval, task_id, args, kwargs)`; as with `before_start()` the `task_id` and `args` parameters can generally be ignored, while `retval` is the return value from `run()`, and `kwargs` will contain the user-specified variables passed into the Job execution.
+
+#### The `on_failure()` Method
+
+If either `before_start()` or `run()` raises any unhandled exception, the `on_failure()` method will be called next, if implemented. It has the signature `on_failure(self, exc, task_id, args, kwargs, einfo)`; of these parameters, the `exc` will contain the exception that was raised, and `kwargs` will contain the user-specified variables passed into the Job.
+
+#### The `after_return()` Method
+
+Regardless of the overall Job execution success or failure, the `after_return()` method will be called after `on_success()` or `on_failure()`. It has the signature `after_return(self, status, retval, task_id, args, kwargs, einfo)`; the `status` will indicate success or failure (using the `JobResultStatusChoices` enum), `retval` is *either* the return value from `run()` (on success) or the exception raised (on failure), and once again `kwargs` contains the user variables.
 
 ### Logging
 
@@ -670,7 +760,7 @@ A full description on how to deal with the output of `cProfile` can be found in 
 ```python
 import pstats
 job_result_uuid = "66b70231-002f-412b-8cc4-1cc9609c2c9b"
-stats = pstats.Stats(f"/tmp/job-result-{job_result_uuid}.pstats")
+stats = pstats.Stats(f"/tmp/nautobot-jobresult-{job_result_uuid}.pstats")
 stats.sort_stats(pstats.SortKey.CUMULATIVE).print_stats(10)
 ```
 
@@ -691,7 +781,7 @@ These variables are presented as a web form to be completed by the user. Once su
 ```python
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.apps.jobs import Job, StringVar, IntegerVar, ObjectVar
+from nautobot.apps.jobs import Job, StringVar, IntegerVar, ObjectVar, register_jobs
 from nautobot.dcim.models import Location, LocationType, Device, Manufacturer, DeviceType
 from nautobot.extras.models import Status, Role
 
@@ -744,14 +834,17 @@ class NewBranch(Job):
             output.append(",".join(attrs))
 
         return "\n".join(output)
+
+
+register_jobs(NewBranch)
 ```
 
 ### Device validation
 
-A job to perform various validation of Device data in Nautobot. As this job does not require any user input, it does not define any variables, nor does it implement a `run()` method.
+A job to perform various validation of Device data in Nautobot. As this job does not require any user input, it does not define any variables.
 
 ```python
-from nautobot.apps.jobs import Job
+from nautobot.apps.jobs import Job, register_jobs
 from nautobot.dcim.models import ConsolePort, Device, PowerPort
 from nautobot.extras.models import Status
 
@@ -767,12 +860,6 @@ class DeviceConnectionsReport(Job):
             if console_port.connected_endpoint is None:
                 self.logger.error(
                     "No console connection defined for %s",
-                    console_port.name,
-                    extra={"object": console_port.device},
-                )
-            elif not console_port.connection_status:
-                self.logger.warning(
-                    "Console connection for %s marked as planned",
                     console_port.name,
                     extra={"object": console_port.device},
                 )
@@ -792,12 +879,6 @@ class DeviceConnectionsReport(Job):
             for power_port in PowerPort.objects.filter(device=device):
                 if power_port.connected_endpoint is not None:
                     connected_ports += 1
-                    if not power_port.connection_status:
-                        self.logger.warning(
-                            "Power connection for %s marked as planned",
-                            power_port.name,
-                            extra={"object": device},
-                        )
             if connected_ports < 2:
                 self.logger.error(
                     "%s connected power supplies found (2 needed)",
@@ -806,6 +887,13 @@ class DeviceConnectionsReport(Job):
                 )
             else:
                 self.logger.info("At least two connected power supplies found", extra={"object": device})
+
+    def run(self):
+        self.test_console_connection()
+        self.test_power_connections()
+
+
+register_jobs(DeviceConnectionsReport)
 ```
 
 ## Job Button Receivers
@@ -824,7 +912,7 @@ All `JobButtonReceiver` subclasses must implement a `receive_job_button()` metho
 ### Example Job Button Receiver
 
 ```py
-from nautobot.apps.jobs import JobButtonReceiver
+from nautobot.apps.jobs import JobButtonReceiver, register_jobs
 
 
 class ExampleSimpleJobButtonReceiver(JobButtonReceiver):
@@ -834,6 +922,9 @@ class ExampleSimpleJobButtonReceiver(JobButtonReceiver):
     def receive_job_button(self, obj):
         self.logger.info("Running Job Button Receiver.", extra={"object": obj})
         # Add job logic here
+
+
+register_jobs(ExampleSimpleJobButtonReceiver)
 ```
 
 ### Job Buttons for Multiple Types
@@ -841,7 +932,7 @@ class ExampleSimpleJobButtonReceiver(JobButtonReceiver):
 Since Job Buttons can be associated to multiple object types, it would be trivial to create a Job that can change what it runs based on the object type.
 
 ```py
-from nautobot.apps.jobs import JobButtonReceiver
+from nautobot.apps.jobs import JobButtonReceiver, register_jobs
 from nautobot.dcim.models import Device, Location
 
 
@@ -875,6 +966,8 @@ class ExampleComplexJobButtonReceiver(JobButtonReceiver):
             self.logger.error("Unable to run Job Button for type %s.", type(obj).__name__, extra={"object": obj})
             raise Exception("Job button called on unsupported object type.")
 
+
+register_jobs(ExampleComplexJobButtonReceiver)
 ```
 
 ## Job Hook Receivers
@@ -890,7 +983,7 @@ Job Hooks are only able to initiate a specific type of job called a **Job Hook R
 ### Example Job Hook Receiver
 
 ```py
-from nautobot.apps.jobs import JobHookReceiver
+from nautobot.apps.jobs import JobHookReceiver, register_jobs
 from nautobot.extras.choices import ObjectChangeActionChoices
 
 
@@ -921,6 +1014,9 @@ class ExampleJobHookReceiver(JobHookReceiver):
     def validate_serial(self, serial):
         # add business logic to validate serial
         return False
+
+
+register_jobs(ExampleJobHookReceiver)
 ```
 
 ### The `receive_job_hook()` Method

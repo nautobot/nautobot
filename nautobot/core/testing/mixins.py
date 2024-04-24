@@ -6,13 +6,13 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist
-from django.db.models import JSONField, ManyToManyField
+from django.db.models import JSONField, ManyToManyField, ManyToManyRel
 from django.forms.models import model_to_dict
 from netaddr import IPNetwork
 from rest_framework.test import APIClient, APIRequestFactory
 
-from nautobot.core import testing
 from nautobot.core.models import fields as core_fields
+from nautobot.core.testing import utils
 from nautobot.core.utils import permissions
 from nautobot.extras import management, models as extras_models
 from nautobot.users import models as users_models
@@ -105,12 +105,14 @@ class NautobotTestCaseMixin:
                 field = None
 
             # Handle ManyToManyFields
-            if value and isinstance(field, (ManyToManyField, core_fields.TagsField)):
+            if value and isinstance(field, (ManyToManyField, ManyToManyRel, core_fields.TagsField)):
                 # Only convert ContentType to <app_label>.<model> for API serializers/views
                 if api and field.related_model is ContentType:
                     model_dict[key] = sorted([f"{ct.app_label}.{ct.model}" for ct in value])
                 # Otherwise always convert object instances to pk
                 else:
+                    if isinstance(field, ManyToManyRel):
+                        value = value.all()
                     model_dict[key] = sorted([obj.pk for obj in value])
 
             if api:
@@ -167,7 +169,7 @@ class NautobotTestCaseMixin:
                 # REST API response; pass the response data through directly
                 err_message += f"\n{response.data}"
             # Attempt to extract form validation errors from the response HTML
-            form_errors = testing.extract_form_failures(response.content.decode(response.charset))
+            form_errors = utils.extract_form_failures(response.content.decode(response.charset))
             err_message += "\n" + str(form_errors or response.content.decode(response.charset) or "No data")
             if msg:
                 err_message = f"{msg}\n{err_message}"
@@ -197,6 +199,9 @@ class NautobotTestCaseMixin:
             elif k == "data_schema" and isinstance(v, str):
                 # Standardize the data_schema JSON, since the column is JSON and MySQL/dolt do not guarantee order
                 new_model_dict[k] = self.standardize_json(v)
+            elif hasattr(v, "all") and callable(v.all):
+                # Convert related manager to list of PKs
+                new_model_dict[k] = sorted(v.all().values_list("pk", flat=True))
             else:
                 new_model_dict[k] = v
 
@@ -210,6 +215,9 @@ class NautobotTestCaseMixin:
                 elif k == "data_schema" and isinstance(v, str):
                     # Standardize the data_schema JSON, since the column is JSON and MySQL/dolt do not guarantee order
                     relevant_data[k] = self.standardize_json(v)
+                elif hasattr(v, "all") and callable(v.all):
+                    # Convert related manager to list of PKs
+                    relevant_data[k] = sorted(v.all().values_list("pk", flat=True))
                 else:
                     relevant_data[k] = v
 

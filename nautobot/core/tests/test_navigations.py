@@ -44,13 +44,15 @@ class NavMenuTestCase(TestCase):
                                     expected_name = "Interfaces"
                                 elif expected_name == "Object Changes":
                                     expected_name = "Change Log"
+                                elif expected_name == "Controller Managed Device Groups":
+                                    expected_name = "Managed Device Groups"
                                 self.assertEqual(item_details["name"], expected_name)
                             if item_url == get_route_for_model(view_model, "list"):
                                 # Not assertEqual as some menu items have additional permissions defined.
                                 self.assertIn(get_permission_for_model(view_model, "view"), item_details["permissions"])
                         except AttributeError:
                             # Not a model view?
-                            self.assertIn(item_details["name"], {"Installed Plugins", "Interface Connections"})
+                            self.assertIn(item_details["name"], {"Installed Apps", "Interface Connections"})
 
                     for button, button_details in item_details["buttons"].items():
                         with self.subTest(f"{tab} > {group} > {item_url} > {button}"):
@@ -62,6 +64,29 @@ class NavMenuTestCase(TestCase):
                             self.assertEqual(button_details["link"], get_route_for_model(view_model, "add"))
                             self.assertEqual(button_details["button_class"], ButtonActionColorChoices.ADD)
                             self.assertEqual(button_details["icon_class"], ButtonActionIconChoices.ADD)
+
+    def test_permissions_rollup(self):
+        menus = registry["nav_menu"]
+        expected_perms = {}
+        for tab_name, tab_details in menus["tabs"].items():
+            expected_perms[tab_name] = set()
+            for group_name, group_details in tab_details["groups"].items():
+                expected_perms[f"{tab_name}:{group_name}"] = set()
+                for item_details in group_details["items"].values():
+                    item_perms = item_details["permissions"]
+                    # If any item has no permissions restriction, then the group has no permissions restriction
+                    if expected_perms[f"{tab_name}:{group_name}"] is None or not item_perms:
+                        expected_perms[f"{tab_name}:{group_name}"] = None
+                    else:
+                        expected_perms[f"{tab_name}:{group_name}"] |= item_perms
+                group_perms = group_details["permissions"]
+                self.assertEqual(expected_perms[f"{tab_name}:{group_name}"], group_perms)
+                # if any group has no permissions restriction, then the tab has no permissions restriction
+                if expected_perms[tab_name] is None or not group_perms:
+                    expected_perms[tab_name] = None
+                else:
+                    expected_perms[tab_name] |= group_perms
+            self.assertEqual(expected_perms[tab_name], tab_details["permissions"])
 
 
 @tag("unit")

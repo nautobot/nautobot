@@ -27,7 +27,7 @@ class AuthenticationEnforcedTestCase(TestCase):
                 # Is a view that *should* be open to unauthenticated users?
                 if url in [
                     "/admin/login/",
-                    "/api/plugins/example-plugin/webhook/",
+                    "/api/plugins/example-app/webhook/",
                     "/health/",
                     "/login/",
                     "/media-failure/",
@@ -54,9 +54,10 @@ class AuthenticationEnforcedTestCase(TestCase):
                         url.startswith(path)
                         for path in [
                             "/complete/",  # social auth
+                            "/health/string/",  # health-check
                             "/login/",  # social auth
                             "/media/",  # MEDIA_ROOT
-                            "/plugins/example-plugin/docs/",  # STATIC_ROOT
+                            "/plugins/example-app/docs/",  # STATIC_ROOT
                         ]
                     ):
                         self.assertEqual(response.status_code, 404)

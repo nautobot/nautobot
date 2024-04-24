@@ -114,7 +114,6 @@ class TreeModel(TreeNode):
         except self.DoesNotExist:
             # Expected to occur at times during bulk-delete operations
             pass
-        finally:
-            display_str += self.name
-            cache.set(cache_key, display_str, 5)
-            return display_str  # pylint: disable=lost-exception
+        display_str += self.name
+        cache.set(cache_key, display_str, 5)
+        return display_str

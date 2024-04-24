@@ -1,0 +1,83 @@
+{% load static %}
+
+<script type="text/javascript">
+
+    const software_version_image_container = document.querySelector('div#software_version_image_container');
+    const software_version_image_description = document.querySelector('span#software_version_image_description');
+    const software_version_image_list = document.querySelector('ul#software_version_image_list');
+    const software_image_url = '{% url 'dcim-api:softwareimagefile-list' %}';
+
+    function retrieve_software_images(url, params) {
+        $.ajax({
+            url: url,
+            method: "GET",
+            data: params,
+            context: this,
+            success: function(data) {
+                if (data.results.length === 0) {
+                    software_version_image_description.innerHTML = `
+                        No software images found for software version <b class="text-nowrap">${$('select#id_software_version').find(':selected')[0].text}</b>
+                    `;
+                } else {
+                    software_version_image_description.innerHTML = `
+                        Software version <b class="text-nowrap">${$('select#id_software_version').find(':selected')[0].text}</b> provides the following software images:
+                    `;
+                }
+
+                for (result of data.results) {
+                    let li = document.createElement('li');
+                    let a = document.createElement('a');
+                    let linkText = document.createTextNode(result.image_file_name);
+                    a.title = result.image_file_name;
+                    a.href = result.url.replace('api/', '');
+                    li.appendChild(a);
+                    a.appendChild(linkText);
+                    software_version_image_list.appendChild(li);
+                }
+            },
+            error: function() {
+                software_version_image_description.innerHTML = '<b>Error retrieving software image list</b>';
+            },
+        });
+    }
+
+    function clear_software_image_list() {
+        software_version_image_list.innerHTML = '';
+    }
+
+    function hide_software_image_container(){
+        software_version_image_container.style.display = 'none';
+        software_version_image_description.innerHTML = '';
+        clear_software_image_list();
+    }
+
+    function populate_software_image_list(version_id) {
+        clear_software_image_list();
+        software_version_image_description.innerHTML = '<img src="{% static 'img/ajax-loader.gif' %}">';
+        software_version_image_list.style.visibility = 'hidden'; // prevent flicker when changing values
+        software_version_image_container.style.display = 'block';
+        retrieve_software_images(software_image_url, {'software_version': version_id});
+        software_version_image_list.style.visibility = 'visible';
+    }
+
+    // on select
+    // jQuery required for triggering on select2 jQuery events
+    $('select#id_software_version').on('select2:select', function (e) {
+        populate_software_image_list(e.params.data.id);
+        console.log("tried to populate software image list")
+    });
+
+    // on unselect
+    // jQuery required for triggering on select2 jQuery events
+    $('select#id_software_version').on('select2:unselect', hide_software_image_container);
+
+    // initialize on document load
+    document.addEventListener("DOMContentLoaded", function() {
+        $('select#id_software_version').select2();
+        var selected_version = $('select#id_software_version').select2('data')[0].id;
+        if (selected_version) {
+            populate_software_image_list(selected_version);
+        }
+    });
+
+</script>

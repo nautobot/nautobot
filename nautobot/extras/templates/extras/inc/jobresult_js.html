@@ -2,7 +2,7 @@
 {% load static %}
 
 <script type="text/javascript">
-{% if not result.date_done %}
+{% if result.status != 'FAILURE' and result.status != 'REVOKED' and result.status != 'SUCCESS' %}
 var job_is_pending = true;
 {% else %}
 var job_is_pending = false;

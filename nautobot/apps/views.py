@@ -5,7 +5,7 @@ from nautobot.core.views.generic import (
     BulkCreateView,
     BulkDeleteView,
     BulkEditView,
-    BulkImportView,
+    BulkImportView,  # 3.0 TODO: deprecated, will be removed in 3.0
     BulkRenameView,
     ComponentCreateView,
     GenericView,
@@ -20,7 +20,7 @@ from nautobot.core.views.mixins import (
     ContentTypePermissionRequiredMixin,
     GetReturnURLMixin,
     NautobotViewSetMixin,
-    ObjectBulkCreateViewMixin,
+    ObjectBulkCreateViewMixin,  # 3.0 TODO: deprecated, will be removed in 3.0
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
     ObjectChangeLogViewMixin,
@@ -49,7 +49,7 @@ __all__ = (
     "BulkCreateView",
     "BulkDeleteView",
     "BulkEditView",
-    "BulkImportView",
+    "BulkImportView",  # 3.0 TODO: remove this
     "BulkRenameView",
     "check_and_call_git_repository_function",
     "check_filter_for_display",
@@ -66,7 +66,7 @@ __all__ = (
     "NautobotHTMLRenderer",
     "NautobotUIViewSet",
     "NautobotViewSetMixin",
-    "ObjectBulkCreateViewMixin",
+    "ObjectBulkCreateViewMixin",  # 3.0 TODO: remove this
     "ObjectBulkDestroyViewMixin",
     "ObjectBulkUpdateViewMixin",
     "ObjectChangeLogViewMixin",

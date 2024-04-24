@@ -28,7 +28,7 @@
             <ul class="nav navbar-nav">
                 {% if request.user.is_authenticated %}
                     {% for tab_name, tab_details in registry.nav_menu.tabs.items %}
-                        {% if request.user|has_one_or_more_perms:tab_details.permissions  %}
+                        {% if not tab_details.permissions or request.user|has_one_or_more_perms:tab_details.permissions %}
                             <li class="dropdown">
                                 <a href="#dropdownMenu{{ forloop.counter }}" class="dropdown-toggle" data-tab-weight="{{ tab_details.weight }}" data-toggle="collapse" role="button" aria-haspopup="true" aria-expanded="false">
                                     <img src="{% custom_branding_or_static 'nav_bullet' 'img/nautobot_chevron.svg' %}" height="20px" />
@@ -37,11 +37,11 @@
                                 </a>
                                 <ul class="collapse nav-dropdown-menu" id="dropdownMenu{{ forloop.counter }}">
                                     {% for group_name, group_details in tab_details.groups.items %}
-                                        {% if request.user|has_one_or_more_perms:group_details.permissions  %}
+                                        {% if not group_details.permissions or request.user|has_one_or_more_perms:group_details.permissions %}
                                             <li class="dropdown-header" data-group-weight="{{ group_details.weight }}">{{ group_name }}</li>
                                             {% for item_link, item_details in group_details.items.items %}
-                                                {% if request.user|has_one_or_more_perms:item_details.permissions  %}
-                                                    <li {% if not request.user|has_perms:item_details.permissions %} class="disabled"{% endif %}>
+                                                {% if not item_details.permissions or request.user|has_one_or_more_perms:item_details.permissions %}
+                                                    <li {% if item_details.permissions and not request.user|has_perms:item_details.permissions %} class="disabled"{% endif %}>
                                                         <a href="{{ item_link }}"
                                                             data-item-weight="{{ item_details.weight }}">
                                                             {{ item_details.name }}
@@ -49,7 +49,7 @@
                                                         {% if item_details.buttons.items|length > 0 %}
                                                             <div class="buttons">
                                                                 {% for button_title, button_details in item_details.buttons.items %}
-                                                                    {% if request.user|has_perms:button_details.permissions %}
+                                                                    {% if not button_details.permissions or request.user|has_perms:button_details.permissions %}
                                                                         {% comment %}
                                                                             Use 'url xxx as variable' so that an invalid
                                                                             link doesn't throw a NoReverseMatch exception.

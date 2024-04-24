@@ -20,7 +20,8 @@ html[data-theme="dark"] .label,                           /* Labels */
 html[data-theme="dark"] .color-block,                     /* Colored choices, like statuses */
 html[data-theme="dark"] .select2-selection__choice,       /* Colored choices, like statuses */
 html[data-theme="dark"] #select2-id_color-results,        /* Colored choices, like statuses */
-html[data-theme="dark"] #select2-id_color-container {     /* Colored choices, like statuses */
+html[data-theme="dark"] #select2-id_color-container,      /* Colored choices, like statuses */
+html[data-theme="dark"] .hljs {                           /* highlight.js maintains its own dark theme */
   filter: invert(1) hue-rotate(180deg);
 }
 
@@ -230,17 +231,17 @@ html[data-theme="dark"] .filter-container .filter-selection .filter-selection-ch
 /* List View Table and Tables in Detail Views */
 html[data-theme="dark"] .table-responsive>table>tbody>tr,
 html[data-theme="dark"] .table-headings>tbody>tr {
-    background: rgb(218, 218, 218);
+  background: rgb(218, 218, 218);
 }
 
 html[data-theme="dark"] .table-responsive>table>tbody>tr:hover,
 html[data-theme="dark"] .table-headings>tbody>tr:hover {
-    background: rgb(213, 213, 213) !important;
+  background: rgb(213, 213, 213) !important;
 }
 
 html[data-theme="dark"] .table-responsive>table>tbody>tr>td,
 html[data-theme="dark"] .table-headings>tbody>tr {
-    border-top: 1px solid rgb(195, 195, 195);
+  border-top: 1px solid rgb(195, 195, 195);
 }
 
 /* Make panel being dragged opaque */
@@ -254,4 +255,16 @@ html[data-theme="dark"] .nav-dropdown-menu, html[data-theme="dark"] .swagger-ui 
 }
 html[data-theme="dark"] .nav-dropdown-menu>li>a {
   color: rgb(51, 51, 51) !important;
+}
+
+/*
+ * Special diff block `<pre><code>...</code></pre>` backgrounds.
+ * `:has` is kind of optional here but it prevents displaying light background
+ * colors before `.hljs` class is added by syntax highlighting script.
+ */
+pre.diff-added:has(code.hljs) {
+  background-color: #25171c !important;
+}
+pre.diff-removed:has(code.hljs) {
+  background-color: #12261e !important;
 }

@@ -3,19 +3,6 @@
 {% load plugins %}
 {% load helpers %}
 
-{% block buttons %}
-        {% plugin_buttons object %}
-        {% if perms.extras.add_configcontextschema %}
-            {% clone_button object %}
-        {% endif %}
-        {% if perms.extras.change_configcontextschema %}
-            {% edit_button object key="pk" %}
-        {% endif %}
-        {% if perms.extras.delete_configcontextschema %}
-            {% delete_button object key="pk" %}
-        {% endif %}
-{% endblock buttons %}
-
 {% block extra_nav_tabs %}
     <li role="presentation"{% if active_tab == 'validation' %} class="active"{% endif %}>
         <a href="{% url 'extras:configcontextschema_object_validation' pk=object.pk %}">Validation</a>

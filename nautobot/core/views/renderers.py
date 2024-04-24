@@ -23,6 +23,7 @@ from nautobot.core.utils.requests import (
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import check_filter_for_display, get_csv_form_fields_from_serializer_class
 from nautobot.extras.models.change_logging import ObjectChange
+from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import get_base_template
 
 
@@ -64,10 +65,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         table_class = view.get_table_class()
         request = kwargs.get("request", view.request)
         queryset = view.alter_queryset(request)
+
         if view.action in ["list", "notes", "changelog"]:
             if view.action == "list":
                 permissions = kwargs.get("permissions", {})
-                table = table_class(queryset, user=request.user)
+                if view.request.GET.getlist("sort"):
+                    view.hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
+                table = table_class(queryset, user=request.user, hide_hierarchy_ui=view.hide_hierarchy_ui)
                 if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                     table.columns.show("pk")
             elif view.action == "notes":
@@ -193,7 +197,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     }
                     form = form_class(initial=initial)
                 table = self.construct_table(view, pk_list=pk_list)
-            elif view.action == "bulk_create":
+            elif view.action == "bulk_create":  # 3.0 TODO: remove, replaced by ImportObjects system Job
                 form = view.get_form()
                 if request.data:
                     table = data.get("table")
@@ -238,6 +242,15 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
             context["created_by"] = created_by
             context["last_updated_by"] = last_updated_by
+            if instance.is_contact_associable_model:
+                paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+                associations = instance.associated_contacts.restrict(request.user, "view").order_by("role__name")
+                associations_table = AssociatedContactsTable(associations, orderable=False)
+                RequestConfig(request, paginate).configure(associations_table)
+                associations_table.columns.show("pk")
+                context["associated_contacts_table"] = associations_table
+            else:
+                context["associated_contacts_table"] = None
             context.update(view.get_extra_context(request, instance))
         else:
             if view.action == "list":
@@ -256,7 +269,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                         "editing": instance.present_in_database,
                     }
                 )
-            elif view.action == "bulk_create":
+            elif view.action == "bulk_create":  # 3.0 TODO: remove, replaced by ImportObjects system Job
                 context.update(
                     {
                         "active_tab": view.bulk_create_active_tab if view.bulk_create_active_tab else "csv-data",

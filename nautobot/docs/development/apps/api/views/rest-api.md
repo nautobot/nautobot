@@ -58,7 +58,7 @@ urlpatterns = router.urls
 
 With these three components in place, we can request `/api/plugins/animal-sounds/animals/` to retrieve a list of all Animal objects defined.
 
-![Nautobot REST API app endpoint](../../../../media/plugins/plugin_rest_api_endpoint.png)
+![Nautobot REST API app endpoint](../../../../media/apps/app_rest_api_endpoint.png)
 
 !!! warning
     This example is provided as a minimal reference implementation only. It does not address authentication, performance, or the myriad of other concerns that app authors should have.

@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.html import format_html
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -404,13 +405,15 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 
 class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
-    label = models.CharField(max_length=100, unique=True, help_text="Label of the relationship as displayed to users")
+    label = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, unique=True, help_text="Label of the relationship as displayed to users"
+    )
     key = AutoSlugField(
         populate_from="label",
         slugify_function=slugify_dashes_to_underscores,
         help_text="Internal relationship key. Please use underscores rather than dashes in this key.",
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     type = models.CharField(
         max_length=50,
         choices=RelationshipTypeChoices,
@@ -438,7 +441,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="The source object type to which this relationship applies.",
     )
     source_label = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         verbose_name="Source Label",
         help_text="Label for related destination objects, as displayed on the source object.",
@@ -467,7 +470,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         help_text="The destination object type to which this relationship applies.",
     )
     destination_label = models.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         verbose_name="Destination Label",
         help_text="Label for related source objects, as displayed on the destination object.",
@@ -531,7 +534,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
         if side == RelationshipSideChoices.SIDE_SOURCE:
             destination_model = self.destination_type.model_class()
-            if not destination_model:  # perhaps a plugin was uninstalled?
+            if not destination_model:  # perhaps an App was uninstalled?
                 return str(self)
             if self.type in (
                 RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -544,7 +547,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
         elif side == RelationshipSideChoices.SIDE_DESTINATION:
             source_model = self.source_type.model_class()
-            if not source_model:  # perhaps a plugin was uninstalled?
+            if not source_model:  # perhaps an App was uninstalled?
                 return str(self)
             if self.type in (
                 RelationshipTypeChoices.TYPE_MANY_TO_MANY,
@@ -595,7 +598,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         model_class = object_type.model_class()
         if model_class:
             queryset = model_class.objects.all()
-        else:  # maybe a relationship to a model that no longer exists, such as a removed plugin?
+        else:  # maybe a relationship to a model that no longer exists, such as a removed App?
             queryset = None
 
         field_class = None
@@ -633,7 +636,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
 
             filter_ = getattr(self, f"{side}_filter")
             side_model = getattr(self, f"{side}_type").model_class()
-            if not side_model:  # can happen if for example a plugin providing the model was uninstalled
+            if not side_model:  # can happen if for example an App providing the model was uninstalled
                 raise ValidationError({f"{side}_type": "Unable to locate model class"})
             model_name = side_model._meta.label
             if not isinstance(filter_, dict):
@@ -724,7 +727,7 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
         be skipped or not when validating required relationships.
         It will skip when any of the following conditions are True:
          - a relationship is marked as symmetric
-         - if a required model class is None (if it doesn't exist yet -- unimplemented/uninstalled plugins for instance)
+         - if a required model class is None (if it doesn't exist yet -- unimplemented/uninstalled Apps for instance)
 
         Args:
             referenced_instance_or_class: model instance or class
@@ -738,8 +741,8 @@ class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
             return True
 
         required_model_class = getattr(self, f"{RelationshipSideChoices.OPPOSITE[side]}_type").model_class()
-        # Handle the case where required_model_class is None (e.g., relationship to a plugin
-        # model for a plugin that's not installed at present):
+        # Handle the case where required_model_class is None (e.g., relationship to an App model for
+        # an App that's not installed at present):
         if required_model_class is None:
             logger.info("Relationship enforcement skipped as required model class doesn't exist yet.")
             return True
@@ -781,7 +784,7 @@ class RelationshipAssociation(BaseModel):
         """
         Backend for get_source and get_destination methods.
 
-        In the case where we have a RelationshipAssociation to a plugin-provided model, but the plugin is
+        In the case where we have a RelationshipAssociation to an App-provided model, but the App is
         not presently installed/enabled, dereferencing the peer GenericForeignKey will throw an AttributeError:
             AttributeError: 'NoneType' object has no attribute '_base_manager'
         because ContentType.model_class() returned None unexpectedly.
@@ -794,7 +797,7 @@ class RelationshipAssociation(BaseModel):
             return getattr(self, name)
         except AttributeError:
             logger.error(
-                "Unable to locate RelationshipAssociation %s (of type %s). Perhaps a plugin is missing?",
+                "Unable to locate RelationshipAssociation %s (of type %s). Perhaps an App is missing?",
                 name,
                 getattr(self, f"{name}_type"),
             )

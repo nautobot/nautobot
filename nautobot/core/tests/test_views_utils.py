@@ -76,7 +76,7 @@ class CheckFilterForDisplayTest(TestCase):
                 expected_output,
             )
 
-        # TODO(glenn): We need some filters that *aren't* getting updated to the new pattern - maybe in example_plugin?
+        # TODO(glenn): We need some filters that *aren't* getting updated to the new pattern - maybe in example_app?
         # with self.subTest("Test get value display (also legacy filter ModelMultipleChoiceFilter)"):
         #     example_obj = DeviceType.objects.first()
         #     expected_output = {

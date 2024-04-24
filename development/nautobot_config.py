@@ -1,4 +1,5 @@
 """Nautobot development configuration file."""
+
 import os
 
 from nautobot.core.settings import *  # noqa: F403  # undefined-local-with-import-star
@@ -42,7 +43,7 @@ LOGGING["loggers"]["nautobot"]["level"] = LOG_LEVEL  # noqa: F405
 #
 
 PLUGINS = [
-    "example_plugin",
+    "example_app",
 ]
 
 CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]
@@ -73,5 +74,6 @@ if is_truthy(os.getenv("ENABLE_OIDC", "False")):
 
 METRICS_ENABLED = True
 METRICS_AUTHENTICATED = False
+METRICS_DISABLED_APPS = []
 
 CELERY_WORKER_PROMETHEUS_PORTS = [8080]

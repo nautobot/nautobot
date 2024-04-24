@@ -2,7 +2,7 @@
 
 +++ 1.4.0
 
-New in Nautobot 1.4 is the debut of `NautobotUIViewSet`: A powerful app development tool that can save app developer hundreds of lines of code compared to using legacy `generic.views`. Using it to gain access to default functionalities previous provided by `generic.views` such as `create()`, `bulk_create()`, `update()`, `partial_update()`, `bulk_update()`, `destroy()`, `bulk_destroy()`, `retrieve()` and `list()` actions.
+New in Nautobot 1.4 is the debut of `NautobotUIViewSet`: A powerful app development tool that can save app developer hundreds of lines of code compared to using legacy `generic.views`. Using it to gain access to default functionalities previous provided by `generic.views` such as `create()`, `update()`, `partial_update()`, `bulk_update()`, `destroy()`, `bulk_destroy()`, `retrieve()` and `list()` actions.
 
 Note that this ViewSet is catered specifically to the UI, not the API.
 
@@ -137,10 +137,12 @@ Template naming is very intuitive in NautobotUIViewSet. In `templates/yourapp` f
 | ObjectEditViewMixin        | create/update|
 | ObjectDestroyViewMixin     | destroy      |
 | ObjectBulkDestroyViewMixin | bulk_destroy |
-| ObjectBulkCreateViewMixin  | bulk_create  |
 | ObjectBulkUpdateViewMixin  | bulk_update  |
 
-For example, for a DetailView template for `YourAppModel`, the template name will be `yourapp/yourappmodel_retrieve.html`, for a BulkCreateView template for `yourappmodel`, the template name will be `yourapp/yourappmodel_bulk_create.html` and etc.
+--- 2.2.0
+    ObjectBulkCreateViewMixin is deprecated as its functionality has been replaced by a system Job. It will be removed from the code base entirely in Nautobot 3.0.
+
+For example, for a DetailView template for `YourAppModel`, the template name will be `yourapp/yourappmodel_retrieve.html`, for a BulkUpdateView template for `yourappmodel`, the template name will be `yourapp/yourappmodel_bulk_update.html` and etc.
 
 If you do not provide your own templates in the `yourapp/templates/yourapp` folder, `NautobotUIViewSet` will fall back to `generic/object_{self.action}.html`.
 

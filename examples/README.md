@@ -1,3 +1,3 @@
 # Nautobot Examples
 
-This directory contains examples of extending Nautobot using plugins or other exciting features!
+This directory contains examples of extending Nautobot using Apps or other exciting features!

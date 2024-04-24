@@ -36,7 +36,6 @@ JOB_OVERRIDABLE_FIELDS = (
 
 # Job field length limits
 JOB_MAX_NAME_LENGTH = 100  # TODO(Glenn): this should really be a more general-purpose constant, like NAME_MAX_LENGTH
-JOB_MAX_GROUPING_LENGTH = 255
 
 
 # JobLogEntry Truncation Length

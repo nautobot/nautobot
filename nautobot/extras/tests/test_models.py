@@ -18,7 +18,6 @@ from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
 from nautobot.circuits.models import CircuitType
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import TestCase
-from nautobot.core.testing.mixins import NautobotTestCaseMixin
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import (
     Device,
@@ -66,6 +65,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models.statuses import StatusModel
+from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant
@@ -75,6 +75,8 @@ from nautobot.virtualization.models import (
     ClusterType,
     VirtualMachine,
 )
+
+from example_app.jobs import ExampleJob
 
 
 class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
@@ -1056,49 +1058,53 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         # JobModel instances are automatically instantiated at startup, so we just need to look them up.
         cls.local_job = JobModel.objects.get(job_class_name="TestPass")
         cls.job_containing_sensitive_variables = JobModel.objects.get(job_class_name="ExampleLoggingJob")
-        cls.plugin_job = JobModel.objects.get(job_class_name="ExampleJob")
+        cls.app_job = JobModel.objects.get(job_class_name="ExampleJob")
 
     def test_job_class(self):
         self.assertEqual(self.local_job.job_class.description, "Validate job import")
 
-        from example_plugin.jobs import ExampleJob
-
-        self.assertEqual(self.plugin_job.job_class, ExampleJob)
+        self.assertEqual(self.app_job.job_class, ExampleJob)
 
     def test_class_path(self):
         self.assertEqual(self.local_job.class_path, "pass.TestPass")
         self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
 
-        self.assertEqual(self.plugin_job.class_path, "example_plugin.jobs.ExampleJob")
-        self.assertEqual(self.plugin_job.class_path, self.plugin_job.job_class.class_path)
+        self.assertEqual(self.app_job.class_path, "example_app.jobs.ExampleJob")
+        self.assertEqual(self.app_job.class_path, self.app_job.job_class.class_path)
 
     def test_latest_result(self):
         self.assertEqual(self.local_job.latest_result, None)
-        self.assertEqual(self.plugin_job.latest_result, None)
+        self.assertEqual(self.app_job.latest_result, None)
         # TODO(Glenn): create some JobResults and test that this works correctly for them as well.
 
     def test_defaults(self):
         """Verify that defaults for discovered JobModel instances are as expected."""
         for job_model in JobModel.objects.all():
-            self.assertTrue(job_model.installed)
-            # System jobs should be enabled by default, all others are disabled by default
-            if job_model.module_name.startswith("nautobot."):
-                self.assertTrue(job_model.enabled)
-            else:
-                self.assertFalse(job_model.enabled)
-            for field_name in JOB_OVERRIDABLE_FIELDS:
-                if field_name == "name" and "duplicate_name" in job_model.job_class.__module__:
-                    pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
-                else:
-                    self.assertFalse(
-                        getattr(job_model, f"{field_name}_override"),
-                        (field_name, getattr(job_model, field_name), getattr(job_model.job_class, field_name)),
-                    )
-                    self.assertEqual(
-                        getattr(job_model, field_name),
-                        getattr(job_model.job_class, field_name),
-                        field_name,
-                    )
+            with self.subTest(class_path=job_model.class_path):
+                try:
+                    self.assertTrue(job_model.installed)
+                    # System jobs should be enabled by default, all others are disabled by default
+                    if job_model.module_name.startswith("nautobot."):
+                        self.assertTrue(job_model.enabled)
+                    else:
+                        self.assertFalse(job_model.enabled)
+                    for field_name in JOB_OVERRIDABLE_FIELDS:
+                        if field_name == "name" and "duplicate_name" in job_model.job_class.__module__:
+                            pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
+                        else:
+                            self.assertFalse(
+                                getattr(job_model, f"{field_name}_override"),
+                                (field_name, getattr(job_model, field_name), getattr(job_model.job_class, field_name)),
+                            )
+                            self.assertEqual(
+                                getattr(job_model, field_name),
+                                getattr(job_model.job_class, field_name),
+                                field_name,
+                            )
+                except AssertionError:
+                    print(list(JobModel.objects.all()))
+                    print(registry["jobs"])
+                    raise
 
     def test_duplicate_job_name(self):
         self.assertTrue(JobModel.objects.filter(name="TestDuplicateNameNoMeta").exists())
@@ -1271,7 +1277,7 @@ class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual("", log.absolute_url)
 
 
-class RoleTest(NautobotTestCaseMixin, ModelTestCases.BaseModelTestCase):
+class RoleTest(ModelTestCases.BaseModelTestCase):
     """Tests for `Role` model class."""
 
     model = Role

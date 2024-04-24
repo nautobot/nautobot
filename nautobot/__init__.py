@@ -1,5 +1,8 @@
 from importlib import metadata
 import logging
+import os
+
+import django
 
 # Primary package version
 __version__ = metadata.version(__name__)
@@ -10,33 +13,23 @@ __initialized = False
 logger = logging.getLogger(__name__)
 
 
-def setup():
-    """
-    Used to configure the settings for Nautobot so the app may run.
+def setup(config_path=None):
+    """Similar to `django.setup()`, this configures Django with the appropriate Nautobot settings data."""
+    from nautobot.core.cli import get_config_path, load_settings
 
-    This should be called before any settings are loaded as it handles all of
-    the file loading, conditional settings, and settings overlays required to
-    load Nautobot settings from anywhere using environment or config path.
-
-    This pattern is inspired by `django.setup()`.
-    """
     global __initialized
 
     if __initialized:
-        logger.info("Nautobot NOT initialized (because it already was)!")
         return
 
-    from nautobot.core import cli
-    from nautobot.core.runner import configure_app
+    if config_path is None:
+        config_path = get_config_path()
 
-    configure_app(
-        project="nautobot",
-        default_config_path=cli.DEFAULT_CONFIG_PATH,
-        default_settings=cli.DEFAULT_SETTINGS,
-        settings_initializer=cli.generate_settings,
-        settings_envvar=cli.SETTINGS_ENVVAR,
-        initializer=cli._configure_settings,
-    )
+    # Point Django to our 'nautobot_config' pseudo-module that we'll load from the provided config path
+    os.environ["DJANGO_SETTINGS_MODULE"] = "nautobot_config"
+
+    load_settings(config_path)
+    django.setup()
+
     logger.info("Nautobot initialized!")
-
     __initialized = True

@@ -1,0 +1,78 @@
+{% load helpers %}
+
+{% block extra_styles %}
+    <style>
+        .panel.panel-default {
+            border: none;
+            box-shadow: none;
+        }
+
+        .table-responsive {
+            overflow: visible;
+        }
+    </style>
+{% endblock %}
+
+<div class="tiles">
+    {% for row in table.page.object_list|default:table.rows %}
+        <article class="tile{% if not perms.extras.run_job or not row.record.runnable %} disabled{% endif %}">
+            <header class="tile-header">
+                <h3>{{ row.record.grouping|bettertitle }}</h3>
+
+                <a href="{% url 'extras:job_run' pk=row.record.pk %}" class="btn btn-primary btn-xs" title="Run/Schedule" {% if not perms.extras.run_job or not row.record.runnable %}disabled="disabled"{% endif %}>
+                    <i class="mdi mdi-play" aria-hidden="true"></i>
+                </a>
+
+                {% comment "TODO(norbert-mieczkowski-codilime): use the same buttons (actions) in tables and tiles when tables support dropdown menus" %}
+                    {% for item in row.items %}
+                        {% if item.0.name == "actions" %}
+                            {{ item.1 }}
+                        {% endif %}
+                    {% endfor %}
+                {% endcomment %}
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Actions">
+                        <i class="mdi mdi-dots-horizontal"></i>
+                    </button>
+                    {% with request.path|add:"?display=tiles"|urlencode as return_url %}
+                        <ul class="dropdown-menu dropdown-menu-right context-menu">
+                            <li><a href="{% url 'extras:job' pk=row.record.pk %}"><i class="mdi mdi-information-outline text-muted"></i>Details</a></li>
+                            <li><a href="{% url 'extras:job_changelog' pk=row.record.pk %}"><i class="mdi mdi-history text-muted"></i>Change log</a></li>
+                            {% if perms.extras.change_job %}
+                                <li><a href="{% url 'extras:job_edit' pk=row.record.pk %}?return_url={{return_url}}"><i class="mdi mdi-pencil text-muted"></i>Edit</a></li>
+                            {% endif %}
+                            {% if perms.extras.delete_job %}
+                                <li role="separator" class="divider"></li>
+                                <li><a href="{% url 'extras:job_delete' pk=row.record.pk %}?return_url={{return_url}}"><i class="mdi mdi-trash-can-outline text-danger"></i><span class="text-danger">Delete</span></a></li>
+                            {% endif %}
+                        </ul>
+                    {% endwith %}
+                </div>
+            </header>
+
+            <h2>{{ row.record.name }}</h2>
+
+            <div class="tile-description">{{ row.record.description|render_markdown }}</div>
+
+            <footer class="tile-footer">
+                <div style="flex: 1;">
+                    Last run:
+                    {% if row.record.latest_result %}
+                        <a href="{{ row.record.latest_result.get_absolute_url }}">{{ row.record.latest_result.date_created }} by {{ row.record.latest_result.user }}</a>
+                    {% else %}
+                        <span class="text-muted">Never</span>
+                    {% endif %}
+                </div>
+
+                <div>
+                    Last status:
+                    {% include 'extras/inc/job_label.html' with result=row.record.latest_result %}
+                </div>
+            </footer>
+        </article>
+    {% empty %}
+        {% if table.empty_text %}
+            <div class="text-center text-muted">&mdash; {{ table.empty_text }} &mdash;</div>
+        {% endif %}
+    {% endfor %}
+</div>

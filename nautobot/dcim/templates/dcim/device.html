@@ -61,6 +61,11 @@
                                         </td>
                                     </tr>
                                     <tr>
+                                        <td>Device Family</td>
+                                        <td>{{ object.device_type.device_family|hyperlinked_object }}</td>
+                                        </td>
+                                    </tr>
+                                    <tr>
                                         <td>Device Type</td>
                                         <td>
                                             <span><a href="{% url 'dcim:devicetype' pk=object.device_type.pk %}">{{ object.device_type.display }}</a> ({{ object.device_type.u_height }}U)</span>
@@ -200,6 +205,20 @@
                                             {% endif %}
                                         </td>
                                     </tr>
+                                    <tr>
+                                        <td>Controller Managed Device Group</td>
+                                        <td>
+                                            {{ object.controller_managed_device_group|hyperlinked_object }}
+                                        </td>
+                                    </tr>
+                                    {% if object.controller_managed_device_group %}
+                                        <tr>
+                                            <td>Managed by Controller</td>
+                                            <td>
+                                                {{ object.controller_managed_device_group.controller|hyperlinked_object }}
+                                            </td>
+                                        </tr>
+                                    {% endif %}
                                     {% if object.cluster %}
                                         <tr>
                                             <td>Cluster</td>
@@ -211,6 +230,7 @@
                                             </td>
                                         </tr>
                                     {% endif %}
+                                    {% include 'dcim/inc/detail_softwareversion_softwareimagefile_rows.html' %}
                                 </table>
                             </div>
                             {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_basic computed_fields_advanced_ui=False %}
@@ -340,5 +360,49 @@
         </div>
     </div>
   </div>
+{% if object.is_contact_associable_model %}
+    <div id="contacts" role="tabpanel" class="tab-pane {% if request.GET.tab == 'contacts' %}active{% else %}fade{% endif %}">
+        <div class="row">
+            <div class="col-md-12">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <strong>Contact Associations</strong>
+                        </div>
+                        <div class="pull-right noprint">
+                            <!-- Insert table config button here -->
+                        </div>
+                        <div class="table-responsive">
+                            {% render_table associated_contacts_table 'inc/table.html' %}
+                        </div>
+                        {% with request.path|add:"?tab=contacts"|urlencode as return_url %}
+                            <div class="panel-footer noprint">
+                                {% if perms.extras.change_contactassociation %}
+                                    <button type="submit" name="_edit" formaction="{% url 'extras:contactassociation_bulk_edit' %}?return_url={{return_url}}" class="btn btn-warning btn-xs">
+                                        <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
+                                    </button>
+                                {% endif %}
+                                {% if perms.extras.delete_contactassociation %}
+                                    <button type="submit" formaction="{% url 'extras:contactassociation_bulk_delete' %}?return_url={{return_url}}" class="btn btn-danger btn-xs">
+                                        <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete
+                                    </button>
+                                {% endif %}
+                                    {% if perms.extras.add_contactassociation %}
+                                        <div class="pull-right">
+                                        <a href="{% url 'extras:object_contact_team_assign' %}?return_url={{return_url}}&associated_object_id={{object.id}}&associated_object_type={{content_type.id}}" class="btn btn-primary btn-xs">
+                                            <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Contact
+                                        </a>
+                                    </div>
+                                {% endif %}
+                                <div class="clearfix"></div>
+                            </div>
+                        {% endwith %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
+{% endif %}
 {% endblock content %}

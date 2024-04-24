@@ -1,9 +1,11 @@
 """Nautobot custom health checks."""
+
 from typing import Optional
 from urllib.parse import urlparse
 
 from django.conf import settings
-from django.db import connection, DatabaseError, IntegrityError
+from django.db import connection, connections, DatabaseError, DEFAULT_DB_ALIAS, IntegrityError
+from django.db.migrations.executor import MigrationExecutor
 from health_check.backends import BaseHealthCheckBackend
 from health_check.exceptions import ServiceReturnedUnexpectedResult, ServiceUnavailable
 from prometheus_client import Gauge
@@ -65,10 +67,32 @@ class DatabaseBackend(NautobotHealthCheckBackend):
                 obj.title = "newtest"
                 obj.save()
                 obj.delete()
-        except IntegrityError:
-            raise ServiceReturnedUnexpectedResult("Integrity Error")
-        except DatabaseError:
-            raise ServiceUnavailable("Database error")
+        except IntegrityError as e:
+            self.add_error(ServiceReturnedUnexpectedResult("Integrity Error"), e)
+        except DatabaseError as e:
+            self.add_error(ServiceUnavailable("Database error"), e)
+
+
+class MigrationsBackend(NautobotHealthCheckBackend):
+    """Check whether all migrations have been applied."""
+
+    metric = Gauge(
+        "health_check_migrations_info",
+        "State of migrations backend",
+        multiprocess_mode=NautobotHealthCheckBackend.MULTIPROCESS_MODE,
+    )
+
+    def check_status(self):
+        db_alias = getattr(settings, "HEALTHCHECK_MIGRATIONS_DB", DEFAULT_DB_ALIAS)
+        try:
+            executor = MigrationExecutor(connections[db_alias])
+            plan = executor.migration_plan(executor.loader.graph.leaf_nodes())
+            if plan:
+                self.add_error(ServiceUnavailable("There are migrations not yet applied"))
+        except DatabaseError as e:
+            self.add_error(ServiceUnavailable("Database is not ready"), e)
+        except Exception as e:
+            self.add_error(ServiceUnavailable("Unknown error"), e)
 
 
 class RedisHealthCheck(NautobotHealthCheckBackend):

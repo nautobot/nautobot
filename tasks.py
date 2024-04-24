@@ -535,7 +535,7 @@ def loaddata(context, filepath="db_output.json"):
 def build_and_check_docs(context):
     """Build docs for use within Nautobot."""
     build_nautobot_docs(context)
-    build_example_plugin_docs(context)
+    build_example_app_docs(context)
 
 
 def build_nautobot_docs(context):
@@ -544,15 +544,15 @@ def build_nautobot_docs(context):
     run_command(context, command)
 
 
-def build_example_plugin_docs(context):
-    """Build Example Plugin docs."""
+def build_example_app_docs(context):
+    """Build Example App docs."""
     command = "mkdocs build --no-directory-urls --strict"
     if is_truthy(context.nautobot.local):
-        local_command = f"cd examples/example_plugin && {command}"
+        local_command = f"cd examples/example_app && {command}"
         print_command(local_command)
         context.run(local_command, pty=True)
     else:
-        docker_command = f"run --rm --workdir='/source/examples/example_plugin' --entrypoint '{command}' nautobot"
+        docker_command = f"run --rm --workdir='/source/examples/example_app' --entrypoint '{command}' nautobot"
         docker_compose(context, docker_command, pty=True)
 
 
@@ -570,18 +570,15 @@ def build_example_plugin_docs(context):
 )
 def pylint(context, target=None, recursive=False):
     """Perform static analysis of Nautobot code."""
+    base_command = 'pylint --verbose --init-hook "import nautobot; nautobot.setup()" '
     if not target:
         # Lint everything
-        # Lint the installed nautobot package and the file tasks.py in the current directory
-        command = "nautobot-server pylint nautobot tasks.py"
-        run_command(context, command)
-        # Lint Python files discovered recursively in the development/ and examples/ directories
-        command = "nautobot-server pylint --recursive development/ examples/"
+        command = base_command + "--recursive=y nautobot tasks.py development/ examples/"
         run_command(context, command)
     else:
-        command = "nautobot-server pylint "
+        command = base_command
         if recursive:
-            command += "--recursive "
+            command += "--recursive=y "
         command += " ".join(target)
         run_command(context, command)
 
@@ -594,7 +591,7 @@ def pylint(context, target=None, recursive=False):
     },
     iterable=["target"],
 )
-def ruff(context, fix=False, target=None, output_format="text"):
+def ruff(context, fix=False, target=None, output_format="concise"):
     """Run ruff to perform code formatting and linting."""
     if not target:
         target = ["development", "examples", "nautobot", "tasks.py"]
@@ -623,7 +620,7 @@ def ruff(context, fix=False, target=None, output_format="text"):
 def yamllint(context):
     """Run yamllint to validate formatting applies to YAML standards."""
     # TODO: enable for directories other than nautobot/docs and fix all warnings
-    command = "yamllint nautobot/docs --format standard"
+    command = "yamllint nautobot/docs nautobot/core/settings.yaml --format standard"
     run_command(context, command)
 
 

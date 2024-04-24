@@ -18,23 +18,23 @@ from nautobot.extras.choices import WebhookHttpMethodChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import Status, Webhook
 
-from example_plugin.models import ExampleModel
+from example_app.models import ExampleModel
 
 
-class PluginWebhookTest(SeleniumTestCase):
+class AppWebhookTest(SeleniumTestCase):
     """
-    This test case proves that plugins can use the webhook functions when making changes on a model.
+    This test case proves that Apps can use the webhook functions when making changes on a model.
     """
 
     def setUp(self):
         super().setUp()
         tempdir = tempfile.gettempdir()
         for f in os.listdir(tempdir):
-            if f.startswith("test_plugin_webhook_"):
+            if f.startswith("test_app_webhook_"):
                 os.remove(os.path.join(tempdir, f))
 
         self.url = f"http://localhost:{self.server_thread.port}" + reverse(
-            "plugins-api:example_plugin-api:examplemodel_webhook"
+            "plugins-api:example_app-api:examplemodel_webhook"
         )
         self.webhook = Webhook.objects.create(
             name="ExampleModel",
@@ -57,52 +57,52 @@ class PluginWebhookTest(SeleniumTestCase):
         self.webhook.validated_save()
 
     @override_settings(ALLOWED_HOSTS=["localhost"])
-    def test_plugin_webhook_create(self):
+    def test_app_webhook_create(self):
         """
-        Test that webhooks are correctly triggered by a plugin model create.
+        Test that webhooks are correctly triggered by an App model create.
         """
-        self.update_headers("test_plugin_webhook_create")
+        self.update_headers("test_app_webhook_create")
         # Make change to model
         with web_request_context(self.user):
             ExampleModel.objects.create(name="foo", number=100)
-        self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_create")))
-        os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_create"))
+        self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_app_webhook_create")))
+        os.remove(os.path.join(tempfile.gettempdir(), "test_app_webhook_create"))
 
     @override_settings(ALLOWED_HOSTS=["localhost"])
-    def test_plugin_webhook_update(self):
+    def test_app_webhook_update(self):
         """
-        Test that webhooks are correctly triggered by a plugin model update.
+        Test that webhooks are correctly triggered by an App model update.
         """
-        self.update_headers("test_plugin_webhook_update")
+        self.update_headers("test_app_webhook_update")
         obj = ExampleModel.objects.create(name="foo", number=100)
 
         # Make change to model
         with web_request_context(self.user):
             obj.number = 200
             obj.validated_save()
-        self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_update")))
-        os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_update"))
+        self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_app_webhook_update")))
+        os.remove(os.path.join(tempfile.gettempdir(), "test_app_webhook_update"))
 
     @override_settings(ALLOWED_HOSTS=["localhost"])
-    def test_plugin_webhook_delete(self):
+    def test_app_webhook_delete(self):
         """
-        Test that webhooks are correctly triggered by a plugin model delete.
+        Test that webhooks are correctly triggered by an App model delete.
         """
-        self.update_headers(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_delete"))
+        self.update_headers(os.path.join(tempfile.gettempdir(), "test_app_webhook_delete"))
         obj = ExampleModel.objects.create(name="foo", number=100)
 
         # Make change to model
         with web_request_context(self.user):
             obj.delete()
-        self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_delete")))
-        os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_delete"))
+        self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_app_webhook_delete")))
+        os.remove(os.path.join(tempfile.gettempdir(), "test_app_webhook_delete"))
 
     @override_settings(ALLOWED_HOSTS=["localhost"])
-    def test_plugin_webhook_with_body(self):
+    def test_app_webhook_with_body(self):
         """
         Verify that webhook body_template is correctly used.
         """
-        self.update_headers("test_plugin_webhook_with_body")
+        self.update_headers("test_app_webhook_with_body")
 
         self.webhook.body_template = '{"message": "{{ event }}"}'
         self.webhook.save()
@@ -111,15 +111,15 @@ class PluginWebhookTest(SeleniumTestCase):
         with web_request_context(self.user):
             ExampleModel.objects.create(name="bar", number=100)
 
-        self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_with_body")))
-        with open(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_with_body"), "r") as f:
+        self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_app_webhook_with_body")))
+        with open(os.path.join(tempfile.gettempdir(), "test_app_webhook_with_body"), "r") as f:
             self.assertEqual(json.loads(f.read()), {"message": "created"})
-        os.remove(os.path.join(tempfile.gettempdir(), "test_plugin_webhook_with_body"))
+        os.remove(os.path.join(tempfile.gettempdir(), "test_app_webhook_with_body"))
 
 
-class PluginDocumentationTest(SeleniumTestCase):
+class AppDocumentationTest(SeleniumTestCase):
     """
-    Integration tests for ensuring plugin provided docs are supported.
+    Integration tests for ensuring App provided docs are supported.
     """
 
     def setUp(self):
@@ -134,20 +134,20 @@ class PluginDocumentationTest(SeleniumTestCase):
 
     def test_object_edit_help_provided(self):
         """The ExampleModel object provides model documentation, this test ensures the help link is rendered."""
-        self.browser.visit(f'{self.live_server_url}{reverse("plugins:example_plugin:examplemodel_add")}')
+        self.browser.visit(f'{self.live_server_url}{reverse("plugins:example_app:examplemodel_add")}')
 
-        self.assertTrue(self.browser.links.find_by_partial_href("example_plugin/docs/models/examplemodel.html"))
+        self.assertTrue(self.browser.links.find_by_partial_href("example_app/docs/models/examplemodel.html"))
 
     def test_object_edit_help_not_provided(self):
         """The AnotherExampleModel object doesn't provide model documentation, this test ensures no help link is provided."""
-        self.browser.visit(f'{self.live_server_url}{reverse("plugins:example_plugin:anotherexamplemodel_add")}')
+        self.browser.visit(f'{self.live_server_url}{reverse("plugins:example_app:anotherexamplemodel_add")}')
 
-        self.assertFalse(self.browser.links.find_by_partial_href("example_plugin/docs/models/anotherexamplemodel.html"))
+        self.assertFalse(self.browser.links.find_by_partial_href("example_app/docs/models/anotherexamplemodel.html"))
 
 
-class PluginReturnUrlTestCase(SeleniumTestCase):
+class AppReturnUrlTestCase(SeleniumTestCase):
     """
-    Integration tests for reversing plugin return urls.
+    Integration tests for reversing App return urls.
     """
 
     def setUp(self):
@@ -156,20 +156,18 @@ class PluginReturnUrlTestCase(SeleniumTestCase):
         self.user.save()
         self.login(self.user.username, self.password)
 
-    def test_plugin_return_url(self):
-        """This test ensures that plugins return url for new objects is the list view."""
-        self.browser.visit(f'{self.live_server_url}{reverse("plugins:example_plugin:examplemodel_add")}')
+    def test_app_return_url(self):
+        """This test ensures that Apps return url for new objects is the list view."""
+        self.browser.visit(f'{self.live_server_url}{reverse("plugins:example_app:examplemodel_add")}')
 
         form = self.browser.find_by_tag("form")
 
         # Check that the Cancel button is a link to the examplemodel_list view.
         element = form.first.links.find_by_text("Cancel").first
-        self.assertEqual(
-            element["href"], f'{self.live_server_url}{reverse("plugins:example_plugin:examplemodel_list")}'
-        )
+        self.assertEqual(element["href"], f'{self.live_server_url}{reverse("plugins:example_app:examplemodel_list")}')
 
 
-class PluginTabsTestCase(SeleniumTestCase):
+class AppTabsTestCase(SeleniumTestCase):
     """
     Integration tests for extra object detail UI tabs.
     """
@@ -201,13 +199,13 @@ class PluginTabsTestCase(SeleniumTestCase):
         self.browser.links.find_by_partial_text("Example App Tab")[0].click()
         self.assertTrue(
             self.browser.is_text_present(
-                f"I am some content for the example plugin's circuit ({circuit.pk!s}) detail tab."
+                f"I am some content for the Example App's circuit ({circuit.pk!s}) detail tab."
             )
         )
 
     def test_device_detail_tab(self):
         """
-        This test checks that both plugin device tabs from the example plugin are visible and render correctly.
+        This test checks that both app device tabs from the Example App are visible and render correctly.
         """
         # Set up the required objects:
         device = create_test_device("Test Device")
@@ -219,6 +217,6 @@ class PluginTabsTestCase(SeleniumTestCase):
             self.browser.links.find_by_partial_text(f"Example App Tab {tab_i}")[0].click()
             self.assertTrue(
                 self.browser.is_text_present(
-                    f"I am some content for the example plugin's device ({device.pk!s}) detail tab {tab_i}."
+                    f"I am some content for the Example App's device ({device.pk!s}) detail tab {tab_i}."
                 )
             )

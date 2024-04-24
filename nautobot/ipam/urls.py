@@ -25,7 +25,7 @@ urlpatterns = [
     # VRFs
     path("vrfs/", views.VRFListView.as_view(), name="vrf_list"),
     path("vrfs/add/", views.VRFEditView.as_view(), name="vrf_add"),
-    path("vrfs/import/", views.VRFBulkImportView.as_view(), name="vrf_import"),
+    path("vrfs/import/", views.VRFBulkImportView.as_view(), name="vrf_import"),  # 3.0 TODO: remove, unused
     path("vrfs/edit/", views.VRFBulkEditView.as_view(), name="vrf_bulk_edit"),
     path("vrfs/delete/", views.VRFBulkDeleteView.as_view(), name="vrf_bulk_delete"),
     path("vrfs/<uuid:pk>/", views.VRFView.as_view(), name="vrf"),
@@ -52,7 +52,7 @@ urlpatterns = [
     ),
     path(
         "route-targets/import/",
-        views.RouteTargetBulkImportView.as_view(),
+        views.RouteTargetBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="routetarget_import",
     ),
     path(
@@ -91,7 +91,7 @@ urlpatterns = [
     # RIRs
     path("rirs/", views.RIRListView.as_view(), name="rir_list"),
     path("rirs/add/", views.RIREditView.as_view(), name="rir_add"),
-    path("rirs/import/", views.RIRBulkImportView.as_view(), name="rir_import"),
+    path("rirs/import/", views.RIRBulkImportView.as_view(), name="rir_import"),  # 3.0 TODO: remove, unused
     path("rirs/delete/", views.RIRBulkDeleteView.as_view(), name="rir_bulk_delete"),
     path("rirs/<uuid:pk>/", views.RIRView.as_view(), name="rir"),
     path("rirs/<uuid:pk>/edit/", views.RIREditView.as_view(), name="rir_edit"),
@@ -127,7 +127,7 @@ urlpatterns = [
     # Prefixes
     path("prefixes/", views.PrefixListView.as_view(), name="prefix_list"),
     path("prefixes/add/", views.PrefixEditView.as_view(), name="prefix_add"),
-    path("prefixes/import/", views.PrefixBulkImportView.as_view(), name="prefix_import"),
+    path("prefixes/import/", views.PrefixBulkImportView.as_view(), name="prefix_import"),  # 3.0 TODO: remove, unused
     path("prefixes/edit/", views.PrefixBulkEditView.as_view(), name="prefix_bulk_edit"),
     path(
         "prefixes/delete/",
@@ -179,7 +179,7 @@ urlpatterns = [
     ),
     path(
         "ip-addresses/import/",
-        views.IPAddressBulkImportView.as_view(),
+        views.IPAddressBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="ipaddress_import",
     ),
     path(
@@ -246,7 +246,7 @@ urlpatterns = [
     path("vlan-groups/add/", views.VLANGroupEditView.as_view(), name="vlangroup_add"),
     path(
         "vlan-groups/import/",
-        views.VLANGroupBulkImportView.as_view(),
+        views.VLANGroupBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="vlangroup_import",
     ),
     path(
@@ -280,7 +280,7 @@ urlpatterns = [
     # VLANs
     path("vlans/", views.VLANListView.as_view(), name="vlan_list"),
     path("vlans/add/", views.VLANEditView.as_view(), name="vlan_add"),
-    path("vlans/import/", views.VLANBulkImportView.as_view(), name="vlan_import"),
+    path("vlans/import/", views.VLANBulkImportView.as_view(), name="vlan_import"),  # 3.0 TODO: remove, unused
     path("vlans/edit/", views.VLANBulkEditView.as_view(), name="vlan_bulk_edit"),
     path("vlans/delete/", views.VLANBulkDeleteView.as_view(), name="vlan_bulk_delete"),
     path("vlans/<uuid:pk>/", views.VLANView.as_view(), name="vlan"),
@@ -311,7 +311,7 @@ urlpatterns = [
     # Services
     path("services/", views.ServiceListView.as_view(), name="service_list"),
     path("services/add/", views.ServiceEditView.as_view(), name="service_add"),
-    path("services/import/", views.ServiceBulkImportView.as_view(), name="service_import"),
+    path("services/import/", views.ServiceBulkImportView.as_view(), name="service_import"),  # 3.0 TODO: remove, unused
     path("services/edit/", views.ServiceBulkEditView.as_view(), name="service_bulk_edit"),
     path(
         "services/delete/",

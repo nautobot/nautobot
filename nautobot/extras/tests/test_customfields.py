@@ -16,11 +16,13 @@ from nautobot.core.tables import CustomFieldColumn
 from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.testing.utils import post_data
+from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.filters import LocationFilterSet
 from nautobot.dcim.forms import RackFilterForm
 from nautobot.dcim.models import Device, Location, LocationType, Rack
 from nautobot.dcim.tables import LocationTable
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
+from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
 from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import VirtualMachine
@@ -573,10 +575,9 @@ class CustomFieldDataAPITest(APITestCase):
             self.cf_json,
         ]
 
-        if "example_plugin" in settings.PLUGINS:
-            self.cf_plugin_field = CustomField.objects.get(key="example_plugin_auto_custom_field")
+        if "example_app" in settings.PLUGINS:
+            self.cf_plugin_field = CustomField.objects.get(key="example_app_auto_custom_field")
             self.all_cfs.append(self.cf_plugin_field)
-
         self.statuses = Status.objects.get_for_model(Location)
 
         # Create some locations
@@ -598,7 +599,7 @@ class CustomFieldDataAPITest(APITestCase):
             self.cf_markdown.key: "### Hello world!\n\n- Item 1\n- Item 2\n- Item 3",
             self.cf_json.key: {"hello": "world"},
         }
-        if "example_plugin" in settings.PLUGINS:
+        if "example_app" in settings.PLUGINS:
             self.locations[1]._custom_field_data[self.cf_plugin_field.key] = "Custom value"
         self.locations[1].validated_save()
         self.list_url = reverse("dcim-api:location-list")
@@ -673,8 +674,8 @@ class CustomFieldDataAPITest(APITestCase):
                 self.cf_json.key: {"foo": "bar"},
             },
         }
-        if "example_plugin" in settings.PLUGINS:
-            data["custom_fields"]["example_plugin_auto_custom_field"] = "Custom value"
+        if "example_app" in settings.PLUGINS:
+            data["custom_fields"]["example_app_auto_custom_field"] = "Custom value"
         response = self.client.post(self.list_url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
@@ -746,8 +747,9 @@ class CustomFieldDataAPITest(APITestCase):
             self.cf_markdown.key: "### Heading",
             self.cf_json.key: {"dict1": {"dict2": {}}},
         }
-        if "example_plugin" in settings.PLUGINS:
-            custom_field_data["example_plugin_auto_custom_field"] = "Custom value"
+        if "example_app" in settings.PLUGINS:
+            self.cf_plugin_field = CustomField.objects.get(key="example_app_auto_custom_field")
+            custom_field_data[self.cf_plugin_field.key] = "Custom Value"
         data = (
             {
                 "name": "Location 3",
@@ -1117,6 +1119,7 @@ class CustomFieldImportTest(TestCase):
                 "cf_url",
                 "cf_select",
                 "cf_multiselect",
+                "cf_example_app_auto_custom_field",
             ],
             [
                 "Location 1",
@@ -1129,6 +1132,7 @@ class CustomFieldImportTest(TestCase):
                 "http://example.com/1",
                 "Choice A",
                 "Choice A",
+                "Custom value",
             ],
             [
                 "Location 2",
@@ -1141,14 +1145,10 @@ class CustomFieldImportTest(TestCase):
                 "http://example.com/2",
                 "Choice B",
                 '"Choice A,Choice B"',
+                "Another custom value",
             ],
-            ["Location 3", "Test Root", location_status.name, "", "", "", "", "", "", ""],
+            ["Location 3", "Test Root", location_status.name, "", "", "", "", "", "", "", ""],
         )
-        if "example_plugin" in settings.PLUGINS:
-            data[0].append("cf_example_plugin_auto_custom_field")
-            data[1].append("Custom value")
-            data[2].append("Another custom value")
-            data[3].append("")
         csv_data = "\n".join(",".join(row) for row in data)
         response = self.client.post(reverse("dcim:location_import"), {"csv_data": csv_data})
         self.assertEqual(response.status_code, 200)
@@ -1158,10 +1158,7 @@ class CustomFieldImportTest(TestCase):
             location1 = Location.objects.get(name="Location 1")
         except Location.DoesNotExist:
             self.fail(str(response.content))
-        if "example_plugin" in settings.PLUGINS:
-            self.assertEqual(len(location1.cf), 8)
-        else:
-            self.assertEqual(len(location1.cf), 7)
+        self.assertEqual(len(location1.cf), 8)
         self.assertEqual(location1.cf["text"], "ABC")
         self.assertEqual(location1.cf["integer"], 123)
         self.assertEqual(location1.cf["boolean"], True)
@@ -1169,15 +1166,11 @@ class CustomFieldImportTest(TestCase):
         self.assertEqual(location1.cf["url"], "http://example.com/1")
         self.assertEqual(location1.cf["select"], "Choice A")
         self.assertEqual(location1.cf["multiselect"], ["Choice A"])
-        if "example_plugin" in settings.PLUGINS:
-            self.assertEqual(location1.cf["example_plugin_auto_custom_field"], "Custom value")
+        self.assertEqual(location1.cf["example_app_auto_custom_field"], "Custom value")
 
         # Validate data for location 2
         location2 = Location.objects.get(name="Location 2")
-        if "example_plugin" in settings.PLUGINS:
-            self.assertEqual(len(location2.cf), 8)
-        else:
-            self.assertEqual(len(location2.cf), 7)
+        self.assertEqual(len(location2.cf), 8)
         self.assertEqual(location2.cf["text"], "DEF")
         self.assertEqual(location2.cf["integer"], 456)
         self.assertEqual(location2.cf["boolean"], False)
@@ -1185,8 +1178,7 @@ class CustomFieldImportTest(TestCase):
         self.assertEqual(location2.cf["url"], "http://example.com/2")
         self.assertEqual(location2.cf["select"], "Choice B")
         self.assertEqual(location2.cf["multiselect"], ["Choice A", "Choice B"])
-        if "example_plugin" in settings.PLUGINS:
-            self.assertEqual(location2.cf["example_plugin_auto_custom_field"], "Another custom value")
+        self.assertEqual(location2.cf["example_app_auto_custom_field"], "Another custom value")
 
         # No custom field data should be set for location 3
         location3 = Location.objects.get(name="Location 3")
@@ -1547,8 +1539,10 @@ class CustomFieldFilterTest(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        CustomFieldChoice.objects.create(custom_field=cf, value="Foo")
-        CustomFieldChoice.objects.create(custom_field=cf, value="Bar")
+        cls.select_choices = (
+            CustomFieldChoice.objects.create(custom_field=cf, value="Foo"),
+            CustomFieldChoice.objects.create(custom_field=cf, value="Bar"),
+        )
 
         # Multi-select filtering
         cf = CustomField(
@@ -1558,8 +1552,11 @@ class CustomFieldFilterTest(TestCase):
         cf.save()
         cf.content_types.set([obj_type])
 
-        CustomFieldChoice.objects.create(custom_field=cf, value="Foo")
-        CustomFieldChoice.objects.create(custom_field=cf, value="Bar")
+        cls.multiselect_choices = (
+            CustomFieldChoice.objects.create(custom_field=cf, value="Foo"),
+            CustomFieldChoice.objects.create(custom_field=cf, value="Bar"),
+        )
+
         cls.location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
         Location.objects.create(
@@ -1854,6 +1851,10 @@ class CustomFieldFilterTest(TestCase):
             self.filterset({"cf_cf8": ["Foo", "AR"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf8__in=["Foo", "AR"]),
         )
+        self.assertQuerysetEqualAndNotEmpty(  # https://github.com/nautobot/nautobot/issues/5009
+            self.filterset({"cf_cf8": [str(choice.pk) for choice in self.select_choices]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf8__in=[choice.value for choice in self.select_choices]),
+        )
         self.assertQuerysetEqual(
             self.filterset({"cf_cf8__n": ["Foo"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf8="Foo")
@@ -1923,6 +1924,10 @@ class CustomFieldFilterTest(TestCase):
             self.filterset({"cf_cf9": "Bar"}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf9__contains="Bar"),
         )
+        self.assertQuerysetEqualAndNotEmpty(  # https://github.com/nautobot/nautobot/issues/5009
+            self.filterset({"cf_cf9": str(self.multiselect_choices[0].pk)}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf9__contains=self.multiselect_choices[0].value),
+        )
 
 
 class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
@@ -1969,10 +1974,7 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
 
     def test_custom_choice_deleted_with_field(self):
         self.cf.delete()
-        if "example_plugin" in settings.PLUGINS:
-            self.assertEqual(CustomField.objects.count(), 1)  # custom field automatically added by the plugin
-        else:
-            self.assertEqual(CustomField.objects.count(), 0)
+        self.assertEqual(CustomField.objects.count(), 1)  # custom field automatically added by the Example App
         self.assertEqual(CustomFieldChoice.objects.count(), 0)
 
     def test_regex_validation(self):
@@ -2029,29 +2031,63 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
         self.assertEqual(location.cf["cf1"], "Foo")
 
+        with web_request_context(self.user):
+            cf = CustomField(label="CF2", type=CustomFieldTypeChoices.TYPE_TEXT, default="Bar")
+            cf.save()
+            cf.content_types.set([obj_type])
+
+            location.refresh_from_db()
+
+            self.assertEqual(location.cf["cf2"], "Bar")
+
+        oc_list = get_changes_for_model(location).order_by("pk")
+        self.assertEqual(len(oc_list), 1)
+        self.assertEqual(oc_list[0].changed_object, location)
+        self.assertEqual(oc_list[0].change_context_detail, "provision custom field data for new content types")
+        self.assertEqual(oc_list[0].user, self.user)
+
     def test_delete_custom_field_data_task(self):
         obj_type = ContentType.objects.get_for_model(Location)
-        cf = CustomField(
+        cf_1 = CustomField(
             label="CF1",
             type=CustomFieldTypeChoices.TYPE_TEXT,
         )
-        cf.save()
-        cf.content_types.set([obj_type])
+        cf_1.save()
+        cf_1.content_types.set([obj_type])
+        cf_2 = CustomField(
+            label="CF2",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+        )
+        cf_2.save()
+        cf_2.content_types.set([obj_type])
         location_type = LocationType.objects.create(name="Root Type 2")
         location_status = Status.objects.get_for_model(Location).first()
         location = Location(
             name="Location 1",
             location_type=location_type,
             status=location_status,
-            _custom_field_data={"cf1": "foo"},
+            _custom_field_data={"cf1": "foo", "cf2": "bar"},
         )
         location.save()
 
-        cf.delete()
+        cf_1.delete()
 
         location.refresh_from_db()
 
         self.assertTrue("cf1" not in location.cf)
+
+        with web_request_context(self.user):
+            cf_2.delete()
+
+            location.refresh_from_db()
+
+            self.assertTrue("cf2" not in location.cf)
+
+        oc_list = get_changes_for_model(location).order_by("pk")
+        self.assertEqual(len(oc_list), 1)
+        self.assertEqual(oc_list[0].changed_object, location)
+        self.assertEqual(oc_list[0].change_context_detail, "delete custom field data")
+        self.assertEqual(oc_list[0].user, self.user)
 
     def test_update_custom_field_choice_data_task(self):
         obj_type = ContentType.objects.get_for_model(Location)
@@ -2080,6 +2116,20 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         location.refresh_from_db()
 
         self.assertEqual(location.cf["cf1"], "Bar")
+
+        with web_request_context(self.user):
+            choice.value = "FizzBuzz"
+            choice.save()
+
+            location.refresh_from_db()
+
+            self.assertEqual(location.cf["cf1"], "FizzBuzz")
+
+        oc_list = get_changes_for_model(location).order_by("pk")
+        self.assertEqual(len(oc_list), 1)
+        self.assertEqual(oc_list[0].changed_object, location)
+        self.assertEqual(oc_list[0].change_context_detail, "update custom field choice data")
+        self.assertEqual(oc_list[0].user, self.user)
 
 
 class CustomFieldTableTest(TestCase):

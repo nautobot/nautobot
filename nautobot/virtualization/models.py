@@ -2,6 +2,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager
 from nautobot.core.models.fields import NaturalOrderingField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -40,8 +41,8 @@ class ClusterType(OrganizationalModel):
     A type of Cluster.
     """
 
-    name = models.CharField(max_length=100, unique=True)
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
         ordering = ["name"]
@@ -64,8 +65,8 @@ class ClusterGroup(OrganizationalModel):
     An organizational group of Clusters.
     """
 
-    name = models.CharField(max_length=100, unique=True)
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
         ordering = ["name"]
@@ -93,7 +94,7 @@ class Cluster(PrimaryModel):
     A cluster of VirtualMachines. Each Cluster may optionally be associated with one or more Devices.
     """
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     cluster_type = models.ForeignKey(to=ClusterType, on_delete=models.PROTECT, related_name="clusters")
     cluster_group = models.ForeignKey(
         to=ClusterGroup,
@@ -198,7 +199,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel):
         blank=True,
         null=True,
     )
-    name = models.CharField(max_length=64, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     status = StatusField(blank=False, null=False)
     role = RoleField(blank=True, null=True)
     primary_ip4 = models.ForeignKey(
@@ -221,6 +222,21 @@ class VirtualMachine(PrimaryModel, ConfigContextModel):
     memory = models.PositiveIntegerField(blank=True, null=True, verbose_name="Memory (MB)")
     disk = models.PositiveIntegerField(blank=True, null=True, verbose_name="Disk (GB)")
     comments = models.TextField(blank=True)
+    software_version = models.ForeignKey(
+        to="dcim.SoftwareVersion",
+        on_delete=models.PROTECT,
+        related_name="virtual_machines",
+        blank=True,
+        null=True,
+        help_text="The software version installed on this virtual machine",
+    )
+    software_image_files = models.ManyToManyField(
+        to="dcim.SoftwareImageFile",
+        related_name="virtual_machines",
+        blank=True,
+        verbose_name="Software Image Files",
+        help_text="Override the software image files associated with the software version for this virtual machine",
+    )
 
     objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
 
@@ -330,11 +346,15 @@ class VMInterface(PrimaryModel, BaseInterface):
         on_delete=models.CASCADE,
         related_name="interfaces",
     )
-    name = models.CharField(max_length=64, db_index=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     _name = NaturalOrderingField(
-        target_field="name", naturalize_function=naturalize_interface, max_length=100, blank=True, db_index=True
+        target_field="name",
+        naturalize_function=naturalize_interface,
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True,
+        db_index=True,
     )
-    description = models.CharField(max_length=200, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     untagged_vlan = models.ForeignKey(
         to="ipam.VLAN",
         on_delete=models.SET_NULL,

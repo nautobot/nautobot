@@ -88,11 +88,11 @@ add "&raw" to the end of the URL within a browser.
                         <div class="buttons pull-right">
                             <a class="btn btn-xs btn-warning" onclick="save()"><i class="mdi mdi-content-save-edit"></i> Save Changes</a>
                         </div>
-                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">
+                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">
                             <strong>{{ query.name }}</strong>
                         </a>
                     {% else %}
-                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json|urlencode }}')">{{ query.name }}</a>
+                        <a href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">{{ query.name }}</a>
                     {% endif %}
                 </li>
               {% endfor %}

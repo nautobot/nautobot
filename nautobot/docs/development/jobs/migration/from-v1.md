@@ -25,7 +25,7 @@ The package name for Jobs provided by Nautobot Apps has not changed.
 
 #### Jobs in `JOBS_ROOT`
 
-[`JOBS_ROOT`](../../../user-guide/administration/configuration/optional-settings.md#jobs_root) is added to `sys.path` and all modules in that directory will be imported. The package name for Jobs in `JOBS_ROOT` will be `<job_file>`, where `<job_file>` is the name of the Job file without the `.py` extension. If desired, submodules may be used in `JOBS_ROOT` like any normal Python package. For example, a Job class called `AddJob` in `$JOBS_ROOT/my_jobs/math.py` would be imported as `my_jobs.math.AddJob`.
+All Python modules in [`JOBS_ROOT`](../../../user-guide/administration/configuration/optional-settings.md#jobs_root) will be imported when loading Jobs. The package name for Jobs in `JOBS_ROOT` will be `<job_file>`, where `<job_file>` is the name of the Job file without the `.py` extension. If desired, submodules may be used in `JOBS_ROOT` like any normal Python package. For example, a Job class called `AddJob` in `$JOBS_ROOT/my_jobs/math.py` would be imported as `my_jobs.math.AddJob`.
 
 !!! caution
     Take care to avoid naming collisions with existing Python packages when naming Job files in `JOBS_ROOT`.
@@ -135,9 +135,9 @@ Similarly, only the `jobs` module is loaded from Git repositories. If you're usi
 
 If not using submodules, you should register your job in the file where your job is defined.
 
-#### Registering Jobs in a Plugin
+#### Registering Jobs in an App
 
-Plugins should register jobs in the module defined in their [`NautobotAppConfig.jobs`](../../apps/api/nautobot-app-config.md#nautobotappconfig-code-location-attributes) property. This defaults to the `jobs` module of the plugin.
+Apps should register jobs in the module defined in their [`NautobotAppConfig.jobs`](../../apps/api/nautobot-app-config.md#nautobotappconfig-code-location-attributes) property. This defaults to the `jobs` module of the App.
 
 ### Job Logging
 

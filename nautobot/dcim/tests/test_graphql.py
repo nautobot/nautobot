@@ -4,12 +4,22 @@ from django.test import override_settings
 from nautobot.core.graphql import execute_query
 from nautobot.core.testing import create_test_user, TestCase
 from nautobot.dcim.choices import InterfaceTypeChoices
-from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer, Platform
+from nautobot.dcim.models import (
+    Controller,
+    Device,
+    DeviceType,
+    Interface,
+    Location,
+    LocationType,
+    Manufacturer,
+    Platform,
+)
 from nautobot.extras.models import DynamicGroup, Role, Status
 
 
 class GraphQLTestCase(TestCase):
     def setUp(self):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         self.user = create_test_user("graphql_testuser")
         self.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()

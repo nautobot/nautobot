@@ -9,7 +9,6 @@ from django.urls import NoReverseMatch, reverse
 import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
-from nautobot.core.celery import app
 from nautobot.core.testing import APIViewTestCases, disable_warnings, extract_page_body, TestCase, ViewTestCases
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.dcim.tests.test_views import create_test_device
@@ -26,19 +25,15 @@ from nautobot.tenancy.forms import TenantFilterForm
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.users.models import ObjectPermission
 
-from example_plugin import config as example_config
-from example_plugin.datasources import refresh_git_text_files
-from example_plugin.models import ExampleModel
+from example_app import config as example_config
+from example_app.datasources import refresh_git_text_files
+from example_app.models import ExampleModel
 
 
-@skipIf(
-    "example_plugin" not in settings.PLUGINS,
-    "example_plugin not in settings.PLUGINS",
-)
-class PluginTest(TestCase):
+class AppTest(TestCase):
     def test_config(self):
         self.assertIn(
-            "example_plugin.ExamplePluginConfig",
+            "example_app.ExampleAppConfig",
             settings.INSTALLED_APPS,
         )
 
@@ -54,30 +49,30 @@ class PluginTest(TestCase):
 
     def test_admin(self):
         # Test admin view URL resolution
-        url = reverse("admin:example_plugin_examplemodel_add")
-        self.assertEqual(url, "/admin/example_plugin/examplemodel/add/")
+        url = reverse("admin:example_app_examplemodel_add")
+        self.assertEqual(url, "/admin/example_app/examplemodel/add/")
 
     def test_banner_registration(self):
         """
-        Check that plugin Banner is registered.
+        Check that App Banner is registered.
         """
-        from example_plugin.banner import banner
+        from example_app.banner import banner
 
         self.assertIn(banner, registry["plugin_banners"])
 
     def test_template_extensions_registration(self):
         """
-        Check that plugin TemplateExtensions are registered.
+        Check that App TemplateExtensions are registered.
         """
-        from example_plugin.template_content import LocationContent
+        from example_app.template_content import LocationContent
 
         self.assertIn(LocationContent, registry["plugin_template_extensions"]["dcim.location"])
 
     def test_custom_validators_registration(self):
         """
-        Check that plugin custom validators are registered correctly.
+        Check that App CustomValidators are registered correctly.
         """
-        from example_plugin.custom_validators import LocationCustomValidator, RelationshipAssociationCustomValidator
+        from example_app.custom_validators import LocationCustomValidator, RelationshipAssociationCustomValidator
 
         self.assertIn(LocationCustomValidator, registry["plugin_custom_validators"]["dcim.location"])
         self.assertIn(
@@ -87,9 +82,9 @@ class PluginTest(TestCase):
 
     def test_jinja_filter_registration(self):
         """
-        Check that plugin custom jinja filters are registered correctly.
+        Check that App custom Jinja filters are registered correctly.
         """
-        from example_plugin.jinja_filters import leet_speak
+        from example_app.jinja_filters import leet_speak
 
         rendering_engine = engines["jinja"]
 
@@ -97,61 +92,60 @@ class PluginTest(TestCase):
 
     def test_graphql_types_registration(self):
         """
-        Check that plugin GraphQL Types are registered.
+        Check that App GraphQL Types are registered.
         """
-        from example_plugin.graphql.types import AnotherExampleModelType
+        from example_app.graphql.types import AnotherExampleModelType
 
         self.assertIn(AnotherExampleModelType, registry["plugin_graphql_types"])
 
     def test_extras_features_graphql(self):
         """
-        Check that plugin GraphQL Types are registered.
+        Check that App GraphQL Types are registered.
         """
         registered_models = registry.get("model_features", {}).get("graphql", {})
 
-        self.assertIn("example_plugin", registered_models.keys())
-        self.assertIn("examplemodel", registered_models["example_plugin"])
+        self.assertIn("example_app", registered_models.keys())
+        self.assertIn("examplemodel", registered_models["example_app"])
 
     def test_jobs_registration(self):
         """
-        Check that plugin jobs are registered correctly and discoverable.
+        Check that App Jobs are registered correctly and discoverable.
         """
-        from example_plugin.jobs import ExampleJob
+        from example_app.jobs import ExampleJob
 
-        self.assertIn(ExampleJob, registry.get("plugin_jobs", []))
-        self.assertEqual(ExampleJob, get_job("example_plugin.jobs.ExampleJob"))
-        self.assertIn("example_plugin.jobs.ExampleJob", app.tasks)
+        self.assertIn(ExampleJob.class_path, registry.get("jobs", {}))
+        self.assertEqual(ExampleJob, get_job("example_app.jobs.ExampleJob"))
 
     def test_git_datasource_contents_registration(self):
         """
-        Check that plugin DatasourceContents are registered.
+        Check that App DatasourceContents are registered.
         """
         registered_datasources = registry.get("datasource_contents", {}).get("extras.gitrepository", [])
 
-        plugin_datasource = DatasourceContent(
+        app_datasource = DatasourceContent(
             name="text files",
-            content_identifier="example_plugin.textfile",
+            content_identifier="example_app.textfile",
             icon="mdi-note-text",
             weight=1000,
             callback=refresh_git_text_files,
         )
 
         for datasource in registered_datasources:
-            if datasource.name == plugin_datasource.name:
-                self.assertEqual(datasource.content_identifier, plugin_datasource.content_identifier)
-                self.assertEqual(datasource.icon, plugin_datasource.icon)
-                self.assertEqual(datasource.weight, plugin_datasource.weight)
-                self.assertEqual(datasource.callback, plugin_datasource.callback)
+            if datasource.name == app_datasource.name:
+                self.assertEqual(datasource.content_identifier, app_datasource.content_identifier)
+                self.assertEqual(datasource.icon, app_datasource.icon)
+                self.assertEqual(datasource.weight, app_datasource.weight)
+                self.assertEqual(datasource.callback, app_datasource.callback)
                 break
         else:
-            self.fail(f"Datasource {plugin_datasource.name} not found in registered_datasources!")
+            self.fail(f"Datasource {app_datasource.name} not found in registered_datasources!")
 
     def test_middleware(self):
         """
-        Check that plugin middleware is registered.
+        Check that App middleware is registered.
         """
         self.assertIn(
-            "example_plugin.middleware.ExampleMiddleware",
+            "example_app.middleware.ExampleMiddleware",
             settings.MIDDLEWARE,
         )
 
@@ -229,13 +223,13 @@ class PluginTest(TestCase):
 
     def test_installed_apps(self):
         """
-        Validate that plugin installed apps and dependencies are are registered.
+        Validate that App installed Django apps and dependencies are are registered.
         """
         self.assertIn(
-            "example_plugin.ExamplePluginConfig",
+            "example_app.ExampleAppConfig",
             settings.INSTALLED_APPS,
         )
-        self.assertIn("nautobot.extras.tests.example_plugin_dependency", settings.INSTALLED_APPS)
+        self.assertIn("nautobot.extras.tests.example_app_dependency", settings.INSTALLED_APPS)
 
         # Establish example config to have invalid installed_apps (tuple)
         class ExampleConfigWithInstalledApps(example_config):
@@ -247,25 +241,25 @@ class PluginTest(TestCase):
 
     def test_registry_nav_menu_dict(self):
         """
-        Validate that example plugin is adding new items to `registry["nav_menu"]`.
+        Validate that Example App is adding new items to `registry["nav_menu"]`.
         """
         self.assertIn("Example Group 1", registry["nav_menu"]["tabs"]["Example Menu"]["groups"])
 
     def test_nautobot_database_ready_signal(self):
         """
-        Validate that the plugin's registered callback for the `nautobot_database_ready` signal got called,
+        Validate that the App's registered callback for the `nautobot_database_ready` signal got called,
         creating a custom field definition in the database.
         """
-        cf = CustomField.objects.get(key="example_plugin_auto_custom_field")
+        cf = CustomField.objects.get(key="example_app_auto_custom_field")
         self.assertEqual(cf.type, CustomFieldTypeChoices.TYPE_TEXT)
-        self.assertEqual(cf.label, "Example Plugin Automatically Added Custom Field")
+        self.assertEqual(cf.label, "Example App Automatically Added Custom Field")
         self.assertEqual(list(cf.content_types.all()), [ContentType.objects.get_for_model(Location)])
 
     def test_secrets_provider(self):
         """
-        Validate that a plugin can provide a custom Secret provider and it will be used.
+        Validate that an App can provide a custom Secret provider and it will be used.
         """
-        # The "constant-value" provider is implemented by the plugin
+        # The "constant-value" provider is implemented by the Example App
         secret = Secret.objects.create(
             name="Constant Secret",
             provider="constant-value",
@@ -275,11 +269,7 @@ class PluginTest(TestCase):
         self.assertEqual(secret.get_value(obj=secret), secret.parameters["constant"])
 
 
-@skipIf(
-    "example_plugin" not in settings.PLUGINS,
-    "example_plugin not in settings.PLUGINS",
-)
-class PluginGenericViewTest(ViewTestCases.PrimaryObjectViewTestCase):
+class AppGenericViewTest(ViewTestCases.PrimaryObjectViewTestCase):
     model = ExampleModel
 
     @classmethod
@@ -307,7 +297,7 @@ class PluginGenericViewTest(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
 
-class PluginListViewTest(TestCase):
+class AppListViewTest(TestCase):
     def test_list_plugins_anonymous(self):
         # Make the request as an unauthenticated user
         self.client.logout()
@@ -315,50 +305,34 @@ class PluginListViewTest(TestCase):
         # Redirects to the login page
         self.assertHttpStatus(response, 302)
 
-    def test_list_plugins_authenticated_superuser(self):
-        self.user.is_superuser = True
-        self.user.save()
-
+    def test_list_plugins_authenticated(self):
         response = self.client.get(reverse("plugins:plugins_list"))
         self.assertHttpStatus(response, 200)
 
         response_body = extract_page_body(response.content.decode(response.charset)).lower()
         self.assertIn("example app", response_body, msg=response_body)
 
-    def test_list_plugins_authenticated_not_admin(self):
-        response = self.client.get(reverse("plugins:plugins_list"))
-        # Access Denied
-        self.assertHttpStatus(response, 403)
 
-
-@skipIf(
-    "example_plugin" not in settings.PLUGINS,
-    "example_plugin not in settings.PLUGINS",
-)
 class PluginDetailViewTest(TestCase):
     def test_view_detail_anonymous(self):
         # Make the request as an unauthenticated user
         self.client.logout()
-        response = self.client.get(reverse("plugins:plugin_detail", kwargs={"plugin": "example_plugin"}))
+        response = self.client.get(reverse("plugins:plugin_detail", kwargs={"plugin": "example_app"}))
         # Redirects to the login page
         self.assertHttpStatus(response, 302)
 
     def test_view_detail_authenticated(self):
-        response = self.client.get(reverse("plugins:plugin_detail", kwargs={"plugin": "example_plugin"}))
+        response = self.client.get(reverse("plugins:plugin_detail", kwargs={"plugin": "example_app"}))
         self.assertHttpStatus(response, 200)
 
         response_body = extract_page_body(response.content.decode(response.charset))
-        # plugin verbose name
+        # App verbose name
         self.assertIn("Example Nautobot App", response_body, msg=response_body)
-        # plugin description
+        # App description
         self.assertIn("For testing purposes only", response_body, msg=response_body)
 
 
-@skipIf(
-    "example_plugin" not in settings.PLUGINS,
-    "example_plugin not in settings.PLUGINS",
-)
-class PluginAPITest(APIViewTestCases.APIViewTestCase):
+class AppAPITest(APIViewTestCases.APIViewTestCase):
     model = ExampleModel
     bulk_update_data = {
         "number": 2600,
@@ -389,12 +363,12 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_api_urls(self):
         # Test list URL resolution
-        list_url = reverse("plugins-api:example_plugin-api:examplemodel-list")
+        list_url = reverse("plugins-api:example_app-api:examplemodel-list")
         self.assertEqual(list_url, self._get_list_url())
 
         # Test detail URL resolution
         instance = ExampleModel.objects.first()
-        detail_url = reverse("plugins-api:example_plugin-api:examplemodel-detail", kwargs={"pk": instance.pk})
+        detail_url = reverse("plugins-api:example_app-api:examplemodel-detail", kwargs={"pk": instance.pk})
         self.assertEqual(detail_url, self._get_detail_url(instance))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -444,11 +418,7 @@ class PluginAPITest(APIViewTestCases.APIViewTestCase):
         pass
 
 
-@skipIf(
-    "example_plugin" not in settings.PLUGINS,
-    "example_plugin not in settings.PLUGINS",
-)
-class PluginCustomValidationTest(TestCase):
+class AppCustomValidationTest(TestCase):
     def setUp(self):
         # When creating a fresh test DB, wrapping model clean methods fails, which is normal.
         # This always occurs during the first run of migrations, however, During testing we
@@ -484,10 +454,6 @@ class PluginCustomValidationTest(TestCase):
             relationship_assoc.clean()
 
 
-@skipIf(
-    "example_plugin" not in settings.PLUGINS,
-    "example_plugin not in settings.PLUGINS",
-)
 class ExampleModelCustomActionViewTest(TestCase):
     """Test for custom action view `all_names` added to Example App"""
 
@@ -498,7 +464,7 @@ class ExampleModelCustomActionViewTest(TestCase):
         ExampleModel.objects.create(name="Example 1", number=100)
         ExampleModel.objects.create(name="Example 2", number=200)
         ExampleModel.objects.create(name="Example 3", number=300)
-        cls.custom_view_url = reverse("plugins:example_plugin:examplemodel_all_names")
+        cls.custom_view_url = reverse("plugins:example_app:examplemodel_all_names")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_custom_action_view_anonymous(self):
@@ -640,45 +606,45 @@ class FilterExtensionTest(TestCase):
         """
         Test that adding a custom filter, filters correctly.
         """
-        params = {"example_plugin_description": ["tenant-1.nautobot.com"]}
+        params = {"example_app_description": ["tenant-1.nautobot.com"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_added_lookup(self):
         """
-        Test that the dynamically created filters work on plugin created filters as well.
+        Test that the dynamically created filters work on App created filters as well.
         """
-        params = {"example_plugin_description__ic": ["tenant-1.nautobot"]}
+        params = {"example_app_description__ic": ["tenant-1.nautobot"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_nested_lookup(self):
         """
         Test that filters work against nested filters.
         """
-        params = {"example_plugin_dtype": ["Model 1"]}
+        params = {"example_app_dtype": ["Model 1"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-        params = {"example_plugin_dtype": ["Model 2"]}
+        params = {"example_app_dtype": ["Model 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
     def test_filter_method_param(self):
         """
         Test that a custom filter works if a valid callable `method` is provided.
         """
-        params = {"example_plugin_sdescrip": ["tenant-1"]}
+        params = {"example_app_sdescrip": ["tenant-1"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_filter_form(self):
         """
-        Test that filter forms work when added via a plugin.
+        Test that filter forms work when added via an App.
         """
         form = TenantFilterForm(
             data={
-                "example_plugin_description": "tenant-1.nautobot.com",
-                "example_plugin_dtype": "model-1",
-                "example_plugin_sdescrip": "tenant-1",
+                "example_app_description": "tenant-1.nautobot.com",
+                "example_app_dtype": "model-1",
+                "example_app_sdescrip": "tenant-1",
             }
         )
         self.assertTrue(form.is_valid())
-        self.assertIn("example_plugin_description", form.fields.keys())
+        self.assertIn("example_app_description", form.fields.keys())
 
 
 class LoadPluginTest(TestCase):
@@ -692,20 +658,20 @@ class LoadPluginTest(TestCase):
     def test_load_plugin(self):
         """Test `load_plugin`."""
 
-        plugin_name = "bad.plugin"  # Start with a bogus plugin name
+        app_name = "bad.plugin"  # Start with a bogus App name
 
         # FIXME(jathan): We're expecting a PluginNotFound to be raised, but
         # unittest doesn't appear to let that happen and we only see the
         # original ModuleNotFoundError, so this will have to do for now.
         with self.assertRaises(ModuleNotFoundError):
-            load_plugin(plugin_name, settings)
+            load_plugin(app_name, settings)
 
-        # Move to the example plugin. No errors should be raised (which is good).
-        plugin_name = "example_plugin"
-        load_plugin(plugin_name, settings)
+        # Move to the example app. No errors should be raised (which is good).
+        app_name = "example_app"
+        load_plugin(app_name, settings)
 
 
-class TestPluginCoreViewOverrides(TestCase):
+class TestAppCoreViewOverrides(TestCase):
     """
     Validate that overridden core views work as expected.
 
@@ -727,16 +693,16 @@ class TestPluginCoreViewOverrides(TestCase):
         self.user.save()
 
     def test_views_are_overridden(self):
-        response = self.client.get(reverse("plugins:example_plugin:view_to_be_overridden"))
+        response = self.client.get(reverse("plugins:example_app:view_to_be_overridden"))
         self.assertEqual(b"Hello world! I'm an overridden view.", response.content)
 
         response = self.client.get(
-            f'{reverse("plugins:plugin_detail", kwargs={"plugin": "example_plugin_with_view_override"})}'
+            f'{reverse("plugins:plugin_detail", kwargs={"plugin": "example_app_with_view_override"})}'
         )
         self.assertIn(
             (
-                b"plugins:example_plugin:view_to_be_overridden <code>"
-                b"example_plugin_with_view_override.views.ViewOverride</code>"
+                b"plugins:example_app:view_to_be_overridden <code>"
+                b"example_app_with_view_override.views.ViewOverride</code>"
             ),
             response.content,
         )
