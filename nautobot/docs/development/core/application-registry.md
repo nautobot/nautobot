@@ -87,6 +87,32 @@ A dictionary holding information about the layout of Nautobot's homepage. Each a
 }
 ```
 
+### `jobs`
+
++++ 2.2.3
+
+A dictionary of registered [Job classes](../jobs/index.md), indexed by their [class path](../../user-guide/platform-functionality/jobs/index.md#jobs-and-class_path). For example:
+
+```python
+{
+    "nautobot.core.jobs.ExportObjectList": <class "nautobot.core.jobs.ExportObjectList">,
+    "nautobot.core.jobs.GitRepositorySync": <class "nautobot.core.jobs.GitRepositorySync">,
+    "nautobot.core.jobs.GitRepositoryDryRun": <class "nautobot.core.jobs.GitRepositoryDryRun">,
+    "nautobot.core.jobs.ImportObjects": <class "nautobot.core.jobs.ImportObjects">,
+    "example_app.jobs.ExampleDryRunJob": <class "example_app.jobs.ExampleDryRunJob">,
+    "example_app.jobs.ExampleJob": <class "example_app.jobs.ExampleJob">,
+    "example_app.jobs.ExampleHiddenJob": <class "example_app.jobs.ExampleHiddenJob">,
+    "example_app.jobs.ExampleLoggingJob": <class "example_app.jobs.ExampleLoggingJob">,
+    "example_app.jobs.ExampleFileInputOutputJob": <class "example_app.jobs.ExampleFileInputOutputJob">,
+    "example_app.jobs.ExampleJobHookReceiver": <class "example_app.jobs.ExampleJobHookReceiver">,
+    "example_app.jobs.ExampleSimpleJobButtonReceiver": <class "example_app.jobs.ExampleSimpleJobButtonReceiver">,
+    "example_app.jobs.ExampleComplexJobButtonReceiver": <class "example_app.jobs.ExampleComplexJobButtonReceiver">
+}
+```
+
+!!! caution
+    This registry entry should be treated as a cache and as an implementation detail; in general you should prefer the use of the `nautobot.apps.get_jobs()` and/or `nautobot.apps.get_job()` APIs in order to retrieve specific Job classes.
+
 ### `model_features`
 
 A dictionary of particular features (e.g. custom fields) mapped to the Nautobot models which support them, arranged by app. For example:

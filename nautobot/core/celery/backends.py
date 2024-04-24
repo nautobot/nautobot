@@ -37,6 +37,7 @@ class NautobotDatabaseBackend(DatabaseBackend):
             "worker": None,
         }
         if request and self.app.conf.find_value_for_key("extended", "result"):
+            task_name = getattr(request, "task", None)
             # do not encode args/kwargs as we store these in a JSONField instead of TextField
             task_args = getattr(request, "args", None)
             task_kwargs = getattr(request, "kwargs", None)
@@ -54,6 +55,13 @@ class NautobotDatabaseBackend(DatabaseBackend):
             if traceback is not None:
                 traceback = sanitize(traceback)
 
+            # Preserve the JobResult data behavior from Nautobot 2.0 through 2.2 (wherein the Job itself was the task)
+            # by manipulating `task_name` and `task_args` to hide the fact that we are now calling
+            # `run_job.apply(args=[JobClass.class_path, ...])` instead of `JobClass.apply(args=[...])`.
+            if task_name == "nautobot.extras.jobs.run_job" and task_args:
+                task_name = task_args[0]
+                task_args = task_args[1:]
+
             extended_props.update(
                 {
                     "task_args": task_args,
@@ -61,7 +69,7 @@ class NautobotDatabaseBackend(DatabaseBackend):
                     "celery_kwargs": celery_kwargs,
                     "job_model_id": properties.get("nautobot_job_job_model_id", None),
                     "scheduled_job_id": properties.get("nautobot_job_scheduled_job_id", None),
-                    "task_name": getattr(request, "task", None),
+                    "task_name": task_name,
                     "traceback": traceback,
                     "user_id": properties.get("nautobot_job_user_id", None),
                     "worker": getattr(request, "hostname", None),

@@ -5,6 +5,7 @@ from datetime import timedelta
 import logging
 
 from celery import schedules
+from celery.exceptions import NotRegistered
 from celery.utils.log import get_logger, LoggingProxy
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -22,7 +23,6 @@ from nautobot.core.celery import (
     NautobotKombuJSONEncoder,
     setup_nautobot_job_logging,
 )
-from nautobot.core.celery.control import refresh_git_repository
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField
@@ -236,10 +236,12 @@ class Job(PrimaryModel):
     @cached_property
     def job_class(self):
         """Get the Job class (source code) associated with this Job model."""
+        from nautobot.extras.jobs import get_job
+
         if not self.installed:
             return None
         try:
-            return self.job_task.__class__
+            return get_job(self.class_path)
         except Exception as exc:
             logger.error(str(exc))
             return None
@@ -278,13 +280,13 @@ class Job(PrimaryModel):
 
     @property
     def job_task(self):
-        """Get the registered Celery task, refreshing it if necessary."""
-        if self.git_repository is not None:
-            # If this Job comes from a Git repository, make sure we have the correct version of said code.
-            refresh_git_repository(
-                state=None, repository_pk=self.git_repository.pk, head=self.git_repository.current_head
-            )
-        return app.tasks[f"{self.module_name}.{self.job_class_name}"]
+        """Get an instance of the associated Job class, refreshing it if necessary."""
+        from nautobot.extras.jobs import get_job
+
+        try:
+            return get_job(self.class_path, reload=True)()
+        except TypeError as err:  # keep 2.0-2.2.2 exception behavior
+            raise NotRegistered from err
 
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
@@ -623,6 +625,8 @@ class JobResult(BaseModel, CustomFieldModel):
         Returns:
             JobResult instance
         """
+        from nautobot.extras.jobs import run_job  # TODO circular import
+
         if schedule is not None and synchronous:
             raise ValueError("Scheduled jobs cannot be run synchronously")
 
@@ -666,8 +670,11 @@ class JobResult(BaseModel, CustomFieldModel):
             redirect_logger = get_logger("celery.redirected")
             proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
             with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
-                eager_result = job_model.job_task.apply(
-                    args=job_args, kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs
+                eager_result = run_job.apply(
+                    args=[job_model.class_path, *job_args],
+                    kwargs=job_kwargs,
+                    task_id=str(job_result.id),
+                    **job_celery_kwargs,
                 )
 
             # copy fields from eager result to job result
@@ -687,8 +694,11 @@ class JobResult(BaseModel, CustomFieldModel):
         else:
             # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
             transaction.on_commit(
-                lambda: job_model.job_task.apply_async(
-                    args=job_args, kwargs=job_kwargs, task_id=str(job_result.id), **job_celery_kwargs
+                lambda: run_job.apply_async(
+                    args=[job_model.class_path, *job_args],
+                    kwargs=job_kwargs,
+                    task_id=str(job_result.id),
+                    **job_celery_kwargs,
                 )
             )
 

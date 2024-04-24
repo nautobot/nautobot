@@ -26,4 +26,4 @@ register_jobs(*jobs)
 ```
 
 +/- 2.0.0
-    Because Jobs are now proper Celery tasks, you now must call `register_jobs()` from within your `jobs.py` file when it is imported; any jobs not included in this call will not be available for Celery to schedule and execute.
+    You now must call `register_jobs()` from within your `jobs.py` file when it is imported; any jobs not included in this call will not be available for Nautobot to schedule and execute.
