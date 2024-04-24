@@ -903,7 +903,7 @@ class SecretsGroupSerializer(NautobotModelSerializer):
 #
 
 
-class StaticGroupSerializer(NautobotModelSerializer):
+class StaticGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     content_type = ContentTypeField(queryset=StaticGroupModelsQuery().as_queryset())
 
     class Meta:
