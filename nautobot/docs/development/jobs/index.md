@@ -1,18 +1,24 @@
 # Jobs
 
-TODO: Jobs authorship introduction
+Familiarity with the basic concepts of (Jobs)[../../user-guide/platform-functionality/jobs/index.md], especially the distinction between Job classes (Python code) and Job records (Nautobot database records), is recommended before authoring your first Job.
+
+!!! tip
+    From a development standpoint, it's especially important to understand that the Job database record never stores the Job class code. It only describes the **existence** of a Job class. The actual Job class source code is loaded into memory only.
+
+!!! info
+    As an implementation detail in Nautobot 2.2.3 and later, all known Job **classes** are cached in the [application registry](../core/application-registry.md#jobs), which is refreshed at various times including Nautobot application startup and immediately prior to actually executing any given Job by a worker. This implementation detail should not be relied on directly; instead you should always use the `get_job()` and/or `get_jobs()` APIs to obtain a Job class when needed.
 
 ## Migrating Jobs from v1 to v2
 
 +/- 2.0.0
     See [Migrating Jobs From Nautobot v1](migration/from-v1.md) for more information on how to migrate your existing jobs to Nautobot v2.
 
-## Writing Jobs
+## Installing Jobs
 
 Jobs may be installed in one of three ways:
 
 * Manually installed as files in the [`JOBS_ROOT`](../../user-guide/administration/configuration/optional-settings.md#jobs_root) path (which defaults to `$NAUTOBOT_ROOT/jobs/`).
-    * Python files and subdirectories containing Python files will be dynamically loaded at Nautobot startup in order to discover available Job classes. For example, a job class named `MyJobClass` in `$JOBS_ROOT/my_job.py` will be loaded into Nautobot as `my_job.MyJobClass`.
+    * Python files and subdirectories containing Python files will be dynamically loaded at Nautobot startup in order to discover and register available Job classes. For example, a job class named `MyJobClass` in `$JOBS_ROOT/my_job.py` will be loaded into Nautobot as `my_job.MyJobClass`.
     * All Python modules in this directory are imported by Nautobot and all worker processes at startup. If you have a `custom_jobs.py` and a `custom_jobs_module/__init__.py` file in your `JOBS_ROOT`, both of these files will be imported at startup.
 * Imported from an external [Git repository](../../user-guide/platform-functionality/gitrepository.md#jobs).
     * Git repositories are loaded into the module namespace of the `GitRepository.slug` value at startup. For example, if your `slug` value is `my_git_jobs` your jobs will be loaded into Python as `my_git_jobs.jobs.MyJobClass`.
@@ -21,12 +27,14 @@ Jobs may be installed in one of three ways:
 * Packaged as part of an [App](../apps/api/platform-features/jobs.md).
     * Jobs installed this way are part of the App's Python module and can import code from elsewhere in the App or even have dependencies on other packages, if needed, via the standard Python packaging mechanisms.
 
-In any case, each module holds one or more Jobs (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
+In any case, each module holds one or more Job classes (Python classes), each of which serves a specific purpose. The logic of each job can be split into a number of distinct methods, each of which performs a discrete portion of the overall job logic.
 
 For example, we can create a module named `devices.py` to hold all of our jobs which pertain to devices in Nautobot. Within that module, we might define several jobs. Each job is defined as a Python class inheriting from `nautobot.apps.jobs.Job`, which provides the base functionality needed to accept user input and log activity.
 
 +/- 2.0.0
-    All job classes must now be registered with `nautobot.apps.jobs.register_jobs` on module import. For Apps providing jobs, the `register_jobs` method must called from the App's `jobs.py` file/submodule at import time. The `register_jobs` method accepts one or more job classes as arguments.
+    All job classes that are intended to be runnable must now be registered by a call to `nautobot.apps.jobs.register_jobs()` on module import. This allows for a module to, if desired, define "abstract" base Job classes that are defined in code but are not registered (and therefore are not runnable in Nautobot). The `register_jobs` method accepts one or more job classes as arguments.
+
+## Writing Jobs
 
 !!! warning
     Make sure your Job subclasses inherit from `nautobot.apps.Job` and *not* from `nautobot.extras.models.Job` instead; if you mistakenly inherit from the latter, Django will think you want to define a new database model.
@@ -58,7 +66,7 @@ It's important to understand that jobs execute on the server asynchronously as b
 !!! note
     When actively developing a Job utilizing a development environment it's important to understand that the "automatically reload when code changes are detected" debugging functionality provided by `nautobot-server runserver` does **not** automatically restart the Celery `worker` process when code changes are made; therefore, it is required to restart the `worker` after each update to your Job source code or else it will continue to run the version of the Job code that was present when it first started. In the Nautobot core development environment, we use `watchmedo auto-restart` as a helper tool to auto-restart the workers as well on code changes; you may wish to configure your local development environment similarly for convenience.
 
-    Additionally, as of Nautobot 1.3, the Job database records corresponding to installed Jobs are *not* automatically refreshed when the development server auto-restarts. If you make changes to any of the class and module metadata attributes described in the following sections, the database will be refreshed to reflect these changes only after running `nautobot-server migrate` or `nautobot-server post_upgrade` (recommended) or if you manually edit a Job database record to force it to be refreshed.
+    Additionally, as of Nautobot 1.3, the Job database records corresponding to installed Jobs are *not* automatically refreshed when the development server auto-restarts. If you make changes to any of the class and module metadata attributes described in the following sections, the database will be refreshed to reflect these changes only after running `nautobot-server migrate` or `nautobot-server post_upgrade` (recommended) or if you manually edit a Job database record to force it to be refreshed. The exception here is Git-repository-provided Jobs; resyncing the Git repository through Nautobot will also trigger a refresh of the Job records corresponding to this repository's contents.
 
 ### Job Registration
 
@@ -66,9 +74,9 @@ It's important to understand that jobs execute on the server asynchronously as b
 
 All Job classes, including `JobHookReceiver` and `JobButtonReceiver` classes must be registered at **import time** using the `nautobot.apps.jobs.register_jobs` method. This method accepts one or more job classes as arguments. You must account for how your jobs are imported when deciding where to call this method.
 
-#### Registering Jobs in JOBS_ROOT or Git Repositories
+#### Registering Jobs in `JOBS_ROOT` or Git Repositories
 
-Only top level module names within JOBS_ROOT are imported by Nautobot at runtime. This means that if you're using submodules, you need to ensure that your jobs are either registered in your top level `__init__.py` or that this file imports your submodules where the jobs are registered:
+Only top level module names within `JOBS_ROOT` are imported by Nautobot at runtime. This means that if you're using submodules, you need to ensure that your jobs are either registered in your top level `__init__.py` or that this file imports your submodules where the jobs are registered:
 
 ```py title="$JOBS_ROOT/my_jobs/__init__.py"
 from . import my_job_module
