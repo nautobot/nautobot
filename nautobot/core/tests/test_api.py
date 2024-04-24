@@ -1,20 +1,20 @@
 import csv
-from io import BytesIO, StringIO
 import json
 import os
+from io import BytesIO, StringIO
 from unittest import skip
 
+import yaml
 from constance import config
 from constance.test import override_config
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.test import override_settings, RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.exceptions import ParseError
 from rest_framework.settings import api_settings
-import yaml
 
 from nautobot.circuits.models import Provider
 from nautobot.core import testing
@@ -26,9 +26,11 @@ from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
-from nautobot.extras import choices, models as extras_models
+from nautobot.extras import choices
+from nautobot.extras import models as extras_models
 from nautobot.ipam import models as ipam_models
-from nautobot.ipam.api import serializers as ipam_serializers, views as ipam_api_views
+from nautobot.ipam.api import serializers as ipam_serializers
+from nautobot.ipam.api import views as ipam_api_views
 from nautobot.tenancy import models as tenancy_models
 
 User = get_user_model()
@@ -1007,7 +1009,7 @@ class NautobotGetViewNameTest(TestCase):
     @override_settings(ALLOWED_HOSTS=["*"])
     def test_get(self):
         """Assert that the proper view name is displayed for the correct view."""
-        viewset = ipam_api_views.PrefixViewSet()
+        viewset = ipam_api_views.PrefixViewSet
         # We need to get a specific view, so we need to set the class kwargs
         view_kwargs = {
             "Prefixes": {"suffix": "List", "basename": "prefix", "detail": False},
@@ -1017,4 +1019,4 @@ class NautobotGetViewNameTest(TestCase):
             "Notes": {"name": "Notes"},
         }
         for view_name, view_kwarg in view_kwargs.items():
-            self.assertEqual(view_name, get_view_name(viewset.__class__(**view_kwarg)))
+            self.assertEqual(view_name, get_view_name(viewset(**view_kwarg)))
