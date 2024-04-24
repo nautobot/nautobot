@@ -285,7 +285,7 @@ class Job(PrimaryModel):
 
         try:
             return get_job(self.class_path, reload=True)()
-        except TypeError as err:  # keep 2.0-2.2.1 exception behavior
+        except TypeError as err:  # keep 2.0-2.2.2 exception behavior
             raise NotRegistered from err
 
     def clean(self):
