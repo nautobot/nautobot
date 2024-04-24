@@ -237,7 +237,7 @@ class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
 #
 
 
-@extras_features("cable_terminations", "custom_validators", "graphql", "webhooks")
+@extras_features("custom_links", "cable_terminations", "custom_validators", "graphql", "webhooks")
 class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
     """
     A physical port within a Device (typically a designated console server) which provides access to ConsolePorts.
@@ -266,7 +266,6 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
 
 @extras_features(
     "cable_terminations",
-    "custom_fields",
     "custom_links",
     "custom_validators",
     "export_templates",
