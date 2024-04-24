@@ -22,11 +22,13 @@ class NautobotScheduleEntry(ModelEntry):
         """Initialize the model entry."""
         self.app = app or current_app._get_current_object()
         self.name = f"{model.name}_{model.pk}"
-        self.task = model.task
+        self.task = "nautobot.extras.jobs.run_job"
         try:
             # Nautobot scheduled jobs pass args/kwargs as constructed objects,
             # but Celery built-in jobs such as celery.backend_cleanup pass them as JSON to be parsed
-            self.args = model.args if isinstance(model.args, (tuple, list)) else loads(model.args or "[]")
+            self.args = [model.task] + (
+                model.args if isinstance(model.args, (tuple, list)) else loads(model.args or "[]")
+            )
             self.kwargs = model.kwargs if isinstance(model.kwargs, dict) else loads(model.kwargs or "{}")
         except (TypeError, ValueError) as exc:
             logger.exception("Removing schedule %s for argument deserialization error: %s", self.name, exc)
