@@ -1077,14 +1077,10 @@ def get_jobs(*, reload=False):
     Compile a dictionary of all Job classes available at this time.
 
     Args:
-        reload (bool): If true, reimport Jobs from JOBS_ROOT and all applicable GitRepositories.
+        reload (bool): If True, reimport Jobs from `JOBS_ROOT` and all applicable GitRepositories.
 
     Returns:
-        {
-            <class_path>: <job_class>,
-            <class_path>: <job_class>,
-            ...
-        }
+        (dict): `{"class_path.Job1": <job_class>, "class_path.Job2": <job_class>, ...}`
     """
     if reload:
         import_jobs()

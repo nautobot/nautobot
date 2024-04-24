@@ -1,6 +1,6 @@
 # Jobs
 
-Familiarity with the basic concepts of (Jobs)[../../user-guide/platform-functionality/jobs/index.md], especially the distinction between Job classes (Python code) and Job records (Nautobot database records), is recommended before authoring your first Job.
+Familiarity with the basic concepts of [Jobs](../../user-guide/platform-functionality/jobs/index.md), especially the distinction between Job classes (Python code) and Job records (Nautobot database records), is recommended before authoring your first Job.
 
 !!! tip
     From a development standpoint, it's especially important to understand that the Job database record never stores the Job class code. It only describes the **existence** of a Job class. The actual Job class source code is loaded into memory only.
