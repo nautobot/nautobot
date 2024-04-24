@@ -60,6 +60,8 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroup,
+    StaticGroupAssociation,
     Status,
     Tag,
     Webhook,
@@ -1671,6 +1673,14 @@ class SecretsGroupTest(ModelTestCases.BaseModelTestCase):
             ),
             "supersecretvalue",
         )
+
+
+class StaticGroupTest(ModelTestCases.BaseModelTestCase):
+    model = StaticGroup
+
+
+class StaticGroupAssociationTest(ModelTestCases.BaseModelTestCase):
+    model = StaticGroupAssociation
 
 
 class StatusTest(ModelTestCases.BaseModelTestCase):

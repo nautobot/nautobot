@@ -1143,6 +1143,12 @@ class StaticGroupAssociationFilterSet(NautobotFilterSet):
         }
     )
 
+    static_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=StaticGroup.objects.all(),
+        to_field_name="name",
+        label="Static group (name or PK)",
+    )
+
     class Meta:
         model = StaticGroupAssociation
         fields = "__all__"
