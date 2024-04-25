@@ -20,7 +20,7 @@ article ul li {
 
 - Implement model in `nautobot.<app>.models` module
     - Use appropriate [base class](best-practices.md#base-classes) and mixin(s)
-    - Use appropriate `@extras_features` decorator values
+    - Use appropriate [`@extras_features`](#extras-features) decorator values
     - Define appropriate uniqueness constraint(s)
     - Define appropriate `__str__()` logic
     - _optional_ Define appropriate additional [`clean()`](best-practices.md#model-validation) logic
@@ -44,11 +44,14 @@ article ul li {
 - `dynamic_groups`: Models that can be assigned to a `DynamicGroup`, used for limiting the choices for the `DynamicGroup.content_type` form field
 - `export_template_owners`: Models that can be assigned to the `owner` GenericForeignKey field on an `ExportTemplate`
 - `export_templates`: Models that can be exported using an `ExportTemplate`, used for limiting the choices for the `ExportTemplate.content_type` field
+- `graphql`: Models that should be exposed through GraphQL API, used to build the list of registered models to build the GraphQL schema
 - `job_results`: No longer used.
 - `locations`: Models that support a foreign key to `Location`, used for limiting the choices for the `LocationType.content_types` field
 - `relationships`: (DEPRECATED - Uses [Model Features Registry](model-features.md)) Models that support custom relationships
 - `statuses`: Models that support a foreign key to `Status`, used for limiting the choices for the `Status.content_types` field
 - `webhooks`: Models that can be used to trigger webhooks, used for limiting the choices for the `Webhook.content_types` field
+
+Most new models should use the `custom_links`, `custom_validators`, `export_templates`, `graphql`, and `webhooks` features at minimum.
 
 ### REST API
 
