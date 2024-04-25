@@ -199,7 +199,13 @@ class ModelViewSetMixin:
         # If using brief mode, clear all prefetches from the queryset and append only brief_prefetch_fields (if any)
         if self.brief:
             # v2 TODO(jathan): Replace prefetch_related with select_related
-            return super().get_queryset().prefetch_related(None).prefetch_related(*self.brief_prefetch_fields)
+            return (
+                super()
+                .get_queryset()
+                .select_related(None)
+                .prefetch_related(None)
+                .prefetch_related(*self.brief_prefetch_fields)
+            )
 
         return super().get_queryset()
 
