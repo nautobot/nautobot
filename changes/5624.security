@@ -1,0 +1,1 @@
+Updated `social-auth-app-django` dependency to `~5.4.1` to address `CVE-2024-32879`.

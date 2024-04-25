@@ -132,7 +132,7 @@ PyYAML = "~6.0"
 # Social authentication core
 social-auth-core = {version = "~4.5.3", optional = true, extras = ["saml"]}
 # Social authentication/registration with support for many auth providers
-social-auth-app-django = "~5.4.0"
+social-auth-app-django = "~5.4.1"
 # Rendering of SVG images (for rack elevations, etc.)
 svgwrite = "~1.4.2"
 
