@@ -319,6 +319,7 @@ class SavedView(BaseModel):
         default=dict,
         help_text="table column sort orders that are applied to this view",
     )
+    is_saved_view_model = False
 
     class Meta:
         ordering = ["owner", "name"]
@@ -342,7 +343,8 @@ class SavedView(BaseModel):
         query_list.append(f"per_page={self.pagination_count}")
 
         for key, value in self.sort_order.items():
-            query_list.append(f"{key}={value}")
+            for item in value:
+                query_list.append(f"{key}={item}")
 
         query_string += "&".join(query_list)
         return query_string

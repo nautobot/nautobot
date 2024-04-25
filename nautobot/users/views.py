@@ -22,6 +22,7 @@ from nautobot.core.views.mixins import (
     ObjectBulkDestroyViewMixin,
     ObjectChangeLogViewMixin,
     ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
     ObjectEditViewMixin,
     ObjectListViewMixin,
 )
@@ -228,6 +229,7 @@ class ChangePasswordView(GenericView):
 
 
 class SavedViewUIViewSet(
+    ObjectDetailViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectChangeLogViewMixin,
     ObjectDestroyViewMixin,
@@ -237,6 +239,16 @@ class SavedViewUIViewSet(
     queryset = SavedView.objects.all()
     filterset_class = SavedViewFilterSet
     table_class = SavedViewTable
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        The detail view for a saved view should the related ObjectListView
+        with saved configurations applied
+        """
+        instance = self.get_object()
+        query_string = instance.view_config
+        list_view_url = reverse(instance.list_view_name) + query_string + f"&saved_view_pk={instance.pk}"
+        return redirect(list_view_url)
 
 
 #

@@ -58,6 +58,7 @@ from nautobot.extras.context_managers import deferred_change_logging_for_bulk_op
 from nautobot.extras.models import ContactAssociation, ExportTemplate
 from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
+from nautobot.users.models import SavedView
 
 
 class GenericView(LoginRequiredMixin, View):
@@ -184,6 +185,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
+        "saved_view_pk",
     )
 
     def get_filter_params(self, request):
@@ -324,6 +326,10 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         valid_actions = self.validate_action_buttons(request)
 
+        # Query SavedViews for dropdown button
+        list_url = validated_viewname(model, "list")
+        saved_views = SavedView.objects.filter(list_view_name=list_url).restrict(request.user, "view").order_by("name")
+
         context = {
             "content_type": content_type,
             "table": table,
@@ -334,8 +340,10 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "filter_form": filter_form,
             "dynamic_filter_form": dynamic_filter_form,
             "search_form": search_form,
-            "list_url": validated_viewname(model, "list"),
+            "list_url": list_url,
             "title": bettertitle(model._meta.verbose_name_plural),
+            "saved_views": saved_views,
+            "model": model,
         }
 
         # `extra_context()` would require `request` access, however `request` parameter cannot simply be

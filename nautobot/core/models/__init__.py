@@ -56,6 +56,7 @@ class BaseModel(models.Model):
 
     objects = BaseManager.from_queryset(RestrictedQuerySet)()
     is_contact_associable_model = True
+    is_saved_view_model = True
 
     class Meta:
         abstract = True
