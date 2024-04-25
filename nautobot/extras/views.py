@@ -31,7 +31,9 @@ from nautobot.core.views.mixins import (
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
     ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
     ObjectEditViewMixin,
+    ObjectListViewMixin,
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
@@ -87,6 +89,8 @@ from .models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroup,
+    StaticGroupAssociation,
     Status,
     Tag,
     TaggedItem,
@@ -2370,6 +2374,48 @@ class SecretsGroupBulkDeleteView(generic.BulkDeleteView):
     queryset = SecretsGroup.objects.all()
     filterset = filters.SecretsGroupFilterSet
     table = tables.SecretsGroupTable
+
+
+#
+# Static Groups
+#
+
+
+class StaticGroupUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.StaticGroupBulkEditForm
+    filterset_class = filters.StaticGroupFilterSet
+    filterset_form_class = forms.StaticGroupFilterForm
+    form_class = forms.StaticGroupForm
+    queryset = StaticGroup.objects.all()
+    serializer_class = serializers.StaticGroupSerializer
+    table_class = tables.StaticGroupTable
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            members_table_class = get_table_for_model(instance.model)
+            members_table = members_table_class(instance.members, orderable=False)
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(members_table)
+            context["members_table"] = members_table
+
+        return context
+
+
+class StaticGroupAssociationUIViewSet(
+    ObjectBulkDestroyViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    # TODO anything else?
+):
+    filterset_class = filters.StaticGroupAssociationFilterSet
+    queryset = StaticGroupAssociation.objects.all()
+    serializer_class = serializers.StaticGroupAssociationSerializer
+    table_class = tables.StaticGroupAssociationTable
 
 
 #

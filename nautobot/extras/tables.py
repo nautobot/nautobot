@@ -44,6 +44,8 @@ from .models import (
     ScheduledJob,
     Secret,
     SecretsGroup,
+    StaticGroup,
+    StaticGroupAssociation,
     Status,
     Tag,
     TaggedItem,
@@ -1030,6 +1032,38 @@ class SecretsGroupTable(BaseTable):
             "name",
             "description",
         )
+
+
+#
+# Static Groups
+#
+
+
+class StaticGroupTable(BaseTable):
+    """Table for list view of `StaticGroup` objects."""
+
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    # TODO members_count column
+    tags = TagColumn(url_name="extras:staticgroup_list")
+    actions = ButtonsColumn(StaticGroup)
+
+    class Meta(BaseTable.Meta):
+        model = StaticGroup
+        fields = ["pk", "name", "content_type", "description", "tags", "actions"]
+
+
+class StaticGroupAssociationTable(BaseTable):
+    """Table for list view of `StaticGroupAssociation` objects."""
+
+    pk = ToggleColumn()
+    static_group = tables.Column(linkify=True)
+    associated_object = tables.Column(linkify=True)
+    actions = ButtonsColumn(StaticGroupAssociation)
+
+    class Meta(BaseTable.Meta):
+        model = StaticGroupAssociation
+        fields = ["pk", "static_group", "associated_object", "tags", "actions"]
 
 
 #

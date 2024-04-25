@@ -80,6 +80,11 @@ class StaticGroup(PrimaryModel):
             pk__in=self.static_group_associations.values_list("associated_object_id", flat=True)
         )
 
+    @property
+    def count(self):
+        """Return the number of member objects in this group."""
+        return self.members.count()
+
     def clean(self):
         super().clean()
 

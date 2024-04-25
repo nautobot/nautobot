@@ -72,12 +72,20 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroup,
+    StaticGroupAssociation,
     Status,
     Tag,
     Webhook,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
+from nautobot.extras.utils import (
+    ChangeLoggedModelsQuery,
+    FeatureQuery,
+    RoleModelsQuery,
+    StaticGroupModelsQuery,
+    TaggableClassesQuery,
+)
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 
@@ -151,6 +159,12 @@ __all__ = (
     "SecretsGroupForm",
     "SecretsGroupFilterForm",
     "SecretsGroupAssociationFormSet",
+    "StaticGroupBulkEditForm",
+    "StaticGroupFilterForm",
+    "StaticGroupForm",
+    "StaticGroupAssociationBulkEditForm",
+    "StaticGroupAssociationFilterForm",
+    "StaticGroupAssociationForm",
     "StatusForm",
     "StatusFilterForm",
     "StatusBulkEditForm",
@@ -1497,6 +1511,63 @@ class SecretsGroupForm(NautobotModelForm):
 class SecretsGroupFilterForm(NautobotFilterForm):
     model = SecretsGroup
     q = forms.CharField(required=False, label="Search")
+
+
+#
+# Static Groups
+#
+
+
+class StaticGroupForm(NautobotModelForm):
+    """Generic create/update form for `StaticGroup` objects."""
+
+    # TODO: we should use a DynamicModelChoiceField here but then need the ability to filter ContentType API by feature
+    content_type = forms.ModelChoiceField(queryset=StaticGroupModelsQuery().as_queryset())
+
+    class Meta:
+        model = StaticGroup
+        fields = (
+            "name",
+            "content_type",
+            "description",
+            "tags",
+        )
+
+
+class StaticGroupFilterForm(NautobotFilterForm):
+    model = StaticGroup
+    q = forms.CharField(required=False, label="Search")
+    content_type = CSVContentTypeField(queryset=StaticGroupModelsQuery().as_queryset(), required=False)
+    tags = TagFilterField(model)
+
+
+class StaticGroupBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(
+        queryset=StaticGroup.objects.all(),
+        widget=forms.MultipleHiddenInput(),
+    )
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+
+class StaticGroupAssociationForm(NautobotModelForm):
+    static_group = DynamicModelChoiceField(queryset=StaticGroup.objects.all())
+    # TODO how to handle GenericForeignKey population via form? Do we even need/want this?
+
+    class Meta:
+        model = StaticGroupAssociation
+        fields = ("static_group",)
+
+
+class StaticGroupAssociationFilterForm(NautobotFilterForm):
+    model = StaticGroupAssociation
+    q = forms.CharField(required=False, label="Search")
+    static_group = DynamicModelMultipleChoiceField(queryset=StaticGroup.objects.all(), required=False)
+    assigned_object_type = CSVContentTypeField(queryset=StaticGroupModelsQuery().as_queryset(), required=False)
+
+
+# TODO do we need a StaticGroupAssociationBulkEditForm at all?
+class StaticGroupAssociationBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=StaticGroupAssociation.objects.all(), widget=forms.MultipleHiddenInput)
 
 
 #
