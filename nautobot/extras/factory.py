@@ -39,7 +39,13 @@ from nautobot.extras.models import (
     Tag,
     Team,
 )
-from nautobot.extras.utils import change_logged_models_queryset, FeatureQuery, RoleModelsQuery, StaticGroupModelsQuery, TaggableClassesQuery
+from nautobot.extras.utils import (
+    change_logged_models_queryset,
+    FeatureQuery,
+    RoleModelsQuery,
+    StaticGroupModelsQuery,
+    TaggableClassesQuery,
+)
 
 
 class ContactFactory(PrimaryModelFactory):
@@ -341,6 +347,7 @@ class StaticGroupAssociationFactory(OrganizationalModelFactory):
         if queryset.exists():
             return factory.random.randgen.choice(queryset).pk
         return faker.Faker().uuid4()
+
 
 class StatusFactory(OrganizationalModelFactory):
     """Status isn't technically an OrganizationalModel, but it has all of its features **except** dynamic-groups."""

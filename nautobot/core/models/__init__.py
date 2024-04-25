@@ -54,11 +54,11 @@ class BaseModel(models.Model):
         related_query_name="associated_contacts_%(app_label)s_%(class)s",  # e.g. 'associated_contacts_dcim_device'
     )
     # Likewise for StaticGroupAssociations
-    static_group_associations = GenericRelation(
+    associated_static_groups = GenericRelation(
         "extras.StaticGroupAssociation",
         content_type_field="associated_object_type",
         object_id_field="associated_object_id",
-        related_query_name="static_group_associations_%(app_label)s_%(class)s",
+        related_query_name="associated_static_groups_%(app_label)s_%(class)s",  # 'associated_static_groups_dcim_device'
     )
 
     objects = BaseManager.from_queryset(RestrictedQuerySet)()
@@ -306,4 +306,4 @@ class BaseModel(models.Model):
 
     @property
     def static_groups(self):
-        return [sga.static_group for sga in self.static_group_associations.all()]
+        return self.associated_static_groups.values_list("static_group", flat=True)

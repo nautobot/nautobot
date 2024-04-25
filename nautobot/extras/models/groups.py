@@ -74,7 +74,11 @@ class StaticGroup(PrimaryModel):
     @property
     def members(self):
         """Return the member objects for this group."""
-        return [sga.associated_object for sga in self.static_group_associations.all()]
+        # Since associated_object is a GenericForeignKey, we can't just do:
+        #     return self.static_group_associations.values_list("associated_object", flat=True)
+        return self.content_type.model_class().objects.filter(
+            pk__in=self.static_group_associations.values_list("associated_object_id", flat=True)
+        )
 
     def clean(self):
         super().clean()

@@ -3533,7 +3533,17 @@ class StaticGroupTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
     def test_get_members(self):
-        pass  # TODO
+        """Test that the `/members/` API endpoint returns what is expected."""
+        self.add_permissions("extras.view_staticgroup")
+        instance = StaticGroup.objects.filter(static_group_associations__isnull=False).distinct().first()
+        self.assertIsNotNone(instance)
+        member_count = instance.members.count()
+        url = reverse("extras-api:staticgroup-members", kwargs={"pk": instance.pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(member_count, len(response.json()["results"]))
+        # TODO: assert that members are serialized correctly?
+
 
 class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
     model = StaticGroupAssociation
