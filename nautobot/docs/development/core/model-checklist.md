@@ -44,7 +44,7 @@ article ul li {
 - `dynamic_groups`: Models that can be assigned to a `DynamicGroup`, used for limiting the choices for the `DynamicGroup.content_type` form field
 - `export_template_owners`: Models that can be assigned to the `owner` GenericForeignKey field on an `ExportTemplate`
 - `export_templates`: Models that can be exported using an `ExportTemplate`, used for limiting the choices for the `ExportTemplate.content_type` field
-- `graphql`: Models that should be exposed through the GraphQL API, used to build the list of registered models to build the GraphQL schema
+- `graphql`: Models that should be exposed through the [GraphQL API](../apps/api/models/graphql.md), used to build the list of registered models to build the GraphQL schema
 - `job_results`: No longer used.
 - `locations`: Models that support a foreign key to `Location`, used for limiting the choices for the `LocationType.content_types` field
 - `relationships`: (DEPRECATED - Uses `nautobot.extras.utils.populate_model_features_registry` to populate [Model Features Registry](model-features.md)) Models that support custom relationships
