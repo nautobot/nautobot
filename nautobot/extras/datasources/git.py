@@ -7,7 +7,6 @@ import mimetypes
 import os
 from pathlib import Path
 import re
-import sys
 from urllib.parse import quote
 
 from django.conf import settings
@@ -17,8 +16,8 @@ from django.db import transaction
 from git import InvalidGitRepositoryError, Repo
 import yaml
 
-from nautobot.core.celery import app as celery_app
 from nautobot.core.utils.git import GitRepo
+from nautobot.core.utils.module_loading import import_modules_privately
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     LogLevelChoices,
@@ -36,7 +35,7 @@ from nautobot.extras.models import (
     Role,
     Tag,
 )
-from nautobot.extras.registry import DatasourceContent, register_datasource_contents
+from nautobot.extras.registry import DatasourceContent, register_datasource_contents, registry
 from nautobot.extras.utils import refresh_job_model_from_job_class
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
@@ -186,7 +185,7 @@ def ensure_git_repository(repository_record, logger=None, head=None):  # pylint:
 def git_repository_dry_run(repository_record, logger):  # pylint: disable=redefined-outer-name
     """Log the difference between local branch and remote branch files.
     Args:
-        repository_record (GitRepository): The GitRepostiory instance to diff.
+        repository_record (GitRepository): The GitRepository instance to diff.
         logger (logging.Logger): Logger to log results to.
     """
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
@@ -716,56 +715,41 @@ def delete_git_config_context_schemas(repository_record, job_result, preserve=()
 #
 
 
-def refresh_code_from_repository(repository_slug, consumer=None, skip_reimport=False):
+def refresh_job_code_from_repository(repository_slug, skip_reimport=False, ignore_import_errors=True):
     """
-    After cloning/updating a GitRepository on disk, call this function to reload and reregister the repo's Python code.
+    After cloning/updating/deleting a GitRepository on disk, call this function to reload and reregister its Python.
 
     Args:
-        repository_slug (str): Repository directory in GIT_ROOT that was refreshed.
-        consumer (celery.worker.Consumer): Celery Consumer to update as well
+        repository_slug (str): Repository directory in GIT_ROOT that was updated or deleted.
         skip_reimport (bool): If True, unload existing code from this repository but do not re-import it.
+        ignore_import_errors (bool): If True, any exceptions raised in the import will be caught and logged.
+            If False, exceptions will be re-raised after logging.
     """
-    if settings.GIT_ROOT not in sys.path:
-        sys.path.append(settings.GIT_ROOT)
-
-    app = consumer.app if consumer is not None else celery_app
-    # TODO: This is ugly, but when app.use_fast_trace_task is set (true by default), Celery calls
-    # celery.app.trace.fast_trace_task(...) which assumes that all tasks are cached and have a valid `__trace__()`
-    # function defined. In theory consumer.update_strategies() (below) should ensure this, but it doesn't
-    # go far enough (possibly a discrepancy between the main worker process and the prefork executors?)
-    # as we can and do still encounter errors where `task.__trace__` is unexpectedly None.
-    # For now, simply disabling use_fast_trace_task forces the task trace function to be rebuilt each time,
-    # which avoids the issue at the cost of very slight overhead.
-    app.use_fast_trace_task = False
-
     # Unload any previous version of this module and its submodules if present
-    for module_name in list(sys.modules):
-        if module_name == repository_slug or module_name.startswith(f"{repository_slug}."):
-            logger.debug("Unloading module %s", module_name)
-            if module_name in app.loader.task_modules:
-                app.loader.task_modules.remove(module_name)
-            if module_name in sys.modules:
-                del sys.modules[module_name]
+    for job_class_path in list(registry["jobs"]):
+        if job_class_path.startswith(f"{repository_slug}."):
+            del registry["jobs"][job_class_path]
 
-    # Unregister any previous Celery tasks from this module
-    for task_name in list(app.tasks):
-        if task_name.startswith(f"{repository_slug}."):
-            logger.debug("Unregistering Celery task %s", task_name)
-            app.tasks.unregister(task_name)
-            if consumer is not None and task_name in consumer.strategies:
-                del consumer.strategies[task_name]
+    if skip_reimport:
+        return
 
-    if not skip_reimport:
-        try:
-            repository = GitRepository.objects.get(slug=repository_slug)
-            if "extras.job" in repository.provided_contents:
-                # Re-import Celery tasks from this module
-                logger.debug("Importing Jobs from %s.jobs in GIT_ROOT", repository_slug)
-                app.loader.import_task_module(f"{repository_slug}.jobs")
-                if consumer is not None:
-                    consumer.update_strategies()
-        except GitRepository.DoesNotExist as exc:
-            logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
+    try:
+        repository = GitRepository.objects.get(slug=repository_slug)
+        if "extras.job" in repository.provided_contents:
+            if not (
+                os.path.isdir(os.path.join(repository.filesystem_path, "jobs"))
+                or os.path.isfile(os.path.join(repository.filesystem_path, "jobs.py"))
+            ):
+                logger.error("No `jobs` submodule found in Git repository %s", repository)
+                if not ignore_import_errors:
+                    raise FileNotFoundError(f"No `jobs` submodule found in Git repository {repository}")
+            else:
+                import_modules_privately(
+                    settings.GIT_ROOT, module_path=[repository_slug, "jobs"], ignore_import_errors=ignore_import_errors
+                )
+    except GitRepository.DoesNotExist as exc:
+        logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
+        if not ignore_import_errors:
             raise
 
 
@@ -775,13 +759,13 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
     if "extras.job" in repository_record.provided_contents and not delete:
         found_jobs = False
         try:
-            refresh_code_from_repository(repository_record.slug)
+            refresh_job_code_from_repository(repository_record.slug, ignore_import_errors=False)
 
-            for task_name, task in celery_app.tasks.items():
-                if not task_name.startswith(f"{repository_record.slug}."):
+            for job_class_path, job_class in registry["jobs"].items():
+                if not job_class_path.startswith(f"{repository_record.slug}.jobs."):
                     continue
                 found_jobs = True
-                job_model, created = refresh_job_model_from_job_class(Job, task.__class__)
+                job_model, created = refresh_job_model_from_job_class(Job, job_class)
 
                 if job_model is None:
                     msg = "Failed to create Job record; check Nautobot logs for details"
@@ -790,15 +774,18 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
                     continue
 
                 if created:
-                    message = "Created Job record"
+                    message = f"Created Job record for {job_class_path}"
                 else:
-                    message = "Refreshed Job record"
+                    message = f"Refreshed Job record for {job_class_path}"
                 logger.info(message)
                 job_result.log(message=message, obj=job_model, grouping="jobs", level_choice=LogLevelChoices.LOG_INFO)
                 installed_jobs.append(job_model)
 
             if not found_jobs:
-                msg = "No jobs were registered on loading the `jobs` submodule. Did you miss a `register_jobs()` call?"
+                msg = (
+                    f"No jobs were registered on loading the `{repository_record.slug}.jobs` submodule. "
+                    "Did you miss a `register_jobs()` call? Or was there a syntax error or similar in your code?"
+                )
                 logger.warning(msg)
                 job_result.log(msg, grouping="jobs", level_choice=LogLevelChoices.LOG_WARNING)
         except Exception as exc:
@@ -806,8 +793,8 @@ def refresh_git_jobs(repository_record, job_result, delete=False):
             logger.error(msg)
             job_result.log(msg, grouping="jobs", level_choice=LogLevelChoices.LOG_ERROR)
     else:
-        # Unload code from this repository, do not reimport it
-        refresh_code_from_repository(repository_record.slug, skip_reimport=True)
+        # Flush this repository's job classes
+        refresh_job_code_from_repository(repository_record.slug, skip_reimport=True)
 
     for job_model in Job.objects.filter(module_name__startswith=f"{repository_record.slug}."):
         if job_model.installed and job_model not in installed_jobs:
