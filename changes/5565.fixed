@@ -1,0 +1,1 @@
+Fixes optional dependency on `social-auth-core` by removing an extras related to openidconnect that no longer exists.
