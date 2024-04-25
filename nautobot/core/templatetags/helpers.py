@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.staticfiles.finders import find
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify as django_slugify
 from django_jinja import library
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 @library.filter()
 @register.filter()
-def hyperlinked_object(value, field="display", **kwargs):
+def hyperlinked_object(value, field="display", target="", rel=""):
     """Render and link to a Django model instance, if any, or render a placeholder if not.
 
     Uses the specified object field if available, otherwise uses the string representation of the object.
@@ -53,7 +53,8 @@ def hyperlinked_object(value, field="display", **kwargs):
     Args:
         value (Union[django.db.models.Model, None]): Instance of a Django model or None.
         field (Optional[str]): Name of the field to use for the display value. Defaults to "display".
-        **kwargs: HTML attributes to use inside the href element.
+        target (Optional[str]): Location to open the linked document.  Defaults to "" which is _self.
+        rel (Optional[str]): Relationship between current document and linked document. Defaults to "".
 
     Returns:
         (str): String representation of the value (hyperlinked if it defines get_absolute_url()) or a placeholder.
@@ -74,16 +75,18 @@ def hyperlinked_object(value, field="display", **kwargs):
     """
     if value is None:
         return placeholder(value)
-    attributes = []
-    for k, v in kwargs.items():
-        if v is not None:
-            attributes.append(f'{k}="{v}"')
+
+    attributes = {}
     display = getattr(value, field) if hasattr(value, field) else str(value)
     if hasattr(value, "get_absolute_url"):
-        attributes.insert(0, f'href="{value.get_absolute_url()}"')
+        attributes["href"] = value.get_absolute_url()
         if hasattr(value, "description") and value.description:
-            attributes.insert(1, f'title="{value.description}"')
-        return format_html("<a{}>{}</a>", mark_safe(" ".join(["", *attributes])), display)  # noqa: S308 # suspicious-mark-safe-usage Safe attributes
+            attributes["title"] = value.description
+        if target:
+            attributes["target"] = target
+        if rel:
+            attributes["rel"] = rel
+        return format_html("<a {}>{}</a>", format_html_join(" ", '{}="{}"', attributes.items()), display)
     return format_html("{}", display)
 
 
