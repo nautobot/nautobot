@@ -46,6 +46,46 @@
     {% if filter_form or dynamic_filter_form %}
         <button type="button" class="btn btn-default" data-toggle="modal" data-target="#FilterForm_modal" title="Add filters" id="id__filterbtn"><i class="mdi mdi-filter"></i> Filter</button>
     {% endif %}
+    {% if model.is_saved_view_model %}
+        <div class="btn-group">
+            <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <span class="mdi mdi-view-compact" aria-hidden="true"></span> Saved Views <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu">
+                {% if perms.users.view_savedview %}
+                    {% for saved_view in saved_views %}
+                        <li><a href="{{ saved_view.get_absolute_url }}"><span class="mdi mdi-view-compact" aria-hidden="true"></span> {{saved_view.name}}</a></li>
+                    {% endfor %}
+                {% endif %}
+                {% if request.GET.saved_view_pk %}
+                    {% if perms.users.change_savedview %}
+                        <li>
+                            <a href="{% url 'users:savedview_edit' pk=request.GET.saved_view_pk %}?{{request.GET.urlencode}}">
+                                <span class="mdi mdi-content-save" aria-hidden="true"></span>
+                                Update Current View
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+                {% if perms.users.add_savedview %}
+                    <li>
+                        <a href="" data-toggle="modal" data-target="#saved_view_modal" title="Save Current View As">
+                            <span class="mdi mdi-content-save" aria-hidden="true"></span>
+                            Save Current View
+                        </a>
+                    </li>
+                {% endif %}
+                {% if request.GET.saved_view_pk %}
+                    <li>
+                        <a href="{% url 'users:savedview' pk=request.GET.saved_view_pk %}">
+                            <span class="mdi mdi-arrow-u-right-bottom" aria-hidden="true"></span>
+                            Reset Current View
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    {% endif %}
     {% if permissions.add and 'add' in action_buttons %}
         {% add_button content_type.model_class|validated_viewname:"add" %}
     {% endif %}
@@ -158,6 +198,7 @@
 </div>
 {% if table %}{% table_config_form table table_name="ObjectTable" %}{% endif %}
 {% filter_form_modal filter_form dynamic_filter_form model_plural_name=title %}
+{% saved_view_modal saved_view_form %}
 {% endblock %}
 
 {% block javascript %}

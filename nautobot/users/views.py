@@ -250,6 +250,42 @@ class SavedViewUIViewSet(
         list_view_url = reverse(instance.list_view_name) + query_string + f"&saved_view_pk={instance.pk}"
         return redirect(list_view_url)
 
+    def update(self, request, *args, **kwargs):
+        """
+        request.GET: render the ObjectEditForm which is passed to NautobotHTMLRenderer as Response.
+        request.POST: call perform_update() which validates the form and perform the action of update/partial_update of an existing object.
+        Override to add more variables to Response.
+        """
+        sv = SavedView.objects.get(pk=request.GET.get("saved_view_pk", None))
+        pagination_count = request.GET.get("per_page", None)
+        if pagination_count is not None:
+            sv.pagination_count = int(pagination_count)
+        sort_order = request.GET.get("sort", None)
+        if sort_order is not None:
+            sv.sort_order = {"sort": [sort_order]}
+
+        new_filter_params = []
+        for key, value in request.GET.items():
+            if key in self.non_filter_params:
+                continue
+            else:
+                if isinstance(value, list):
+                    sv.filter_params[key] = value
+                else:
+                    sv.filter_params[key] = [value]
+                new_filter_params.append(key)
+
+        # delete filter params that are no longer in use
+        for param in list(sv.filter_params.keys()):
+            if param not in new_filter_params:
+                sv.filter_params.pop(param)
+
+        sv.validated_save()
+        query_string = sv.view_config
+        list_view_url = reverse(sv.list_view_name) + query_string + f"&saved_view_pk={sv.pk}"
+        messages.success(request, f"Successfully updated current view {sv.name}")
+        return redirect(list_view_url)
+
 
 #
 # API tokens

@@ -651,6 +651,22 @@ function initializeDynamicFilterForm(context){
         e.preventDefault()
         let dynamic_form = $("#dynamic-filter-form");
         dynamic_form.find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
+        const urlParams = new URLSearchParams(window.location.search);
+        const saved_view_pk = urlParams.get('saved_view_pk');
+        var saved_view_pk_query_string = ""
+        if (saved_view_pk != null){
+            saved_view_pk_query_string = "&saved_view_pk=" + saved_view_pk
+        }
+        const sort_order = urlParams.get('sort');
+        var sort_order_query_string = ""
+        if (sort_order != null){
+            sort_order_query_string = "&sort=" + sort_order
+        }
+        const per_page = urlParams.get('per_page');
+        var per_page_query_string = ""
+        if (per_page != null) {
+            per_page_query_string = "&per_page=" + per_page
+        }
         // Append q form field to dynamic filter form via hidden input
         let q_field = $('#id_q')
         let q_field_phantom = $('<input type="hidden" name="q" />')
@@ -662,7 +678,7 @@ function initializeDynamicFilterForm(context){
         let default_filter_form_query = $("#default-filter form").serialize().split("&").filter(params => params.split("=")[1]?.length || 0 )
         // Union Operation
         let search_query = [...new Set([...default_filter_form_query, ...dynamic_filter_form_query])].join("&")
-        location.replace("?" + search_query)
+        location.replace("?" + search_query + sort_order_query_string + per_page_query_string + saved_view_pk_query_string)
     })
 
     // On submit of filter search form
@@ -671,6 +687,31 @@ function initializeDynamicFilterForm(context){
         e.preventDefault()
         $("#dynamic-filter-form").submit()
     })
+
+    // On clear of filter form
+    this_context.find("#dynamic-filter-form, #default-filter form").on("reset", function(e){
+        console.log("hello")
+        e.preventDefault()
+        const urlParams = new URLSearchParams(window.location.search);
+        const saved_view_pk = urlParams.get('saved_view_pk');
+        var saved_view_pk_query_string = ""
+        if (saved_view_pk != null){
+            saved_view_pk_query_string = "&saved_view_pk=" + saved_view_pk
+        }
+        const sort_order = urlParams.get('sort');
+        var sort_order_query_string = ""
+        if (sort_order != null){
+            sort_order_query_string = "&sort=" + sort_order
+        }
+        const per_page = urlParams.get('per_page');
+        var per_page_query_string = ""
+        if (per_page_query_string != null) {
+            per_page_query_string = "&per_page=" + per_page
+        }
+        // clear filter params info and retain other information
+        location.replace("?" + sort_order_query_string + per_page_query_string + saved_view_pk_query_string)
+    })
+
 
     // Clear new row values upon creation
     this_context.find(".dynamic-filterform-add .add-row").click(function(){

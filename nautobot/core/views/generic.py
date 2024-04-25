@@ -58,6 +58,7 @@ from nautobot.extras.context_managers import deferred_change_logging_for_bulk_op
 from nautobot.extras.models import ContactAssociation, ExportTemplate
 from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
+from nautobot.users.forms import SavedViewForm
 from nautobot.users.models import SavedView
 
 
@@ -339,6 +340,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "filter_params": display_filter_params,
             "filter_form": filter_form,
             "dynamic_filter_form": dynamic_filter_form,
+            "saved_view_form": SavedViewForm(),
             "search_form": search_form,
             "list_url": list_url,
             "title": bettertitle(model._meta.verbose_name_plural),
