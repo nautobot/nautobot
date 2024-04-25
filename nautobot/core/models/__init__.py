@@ -306,4 +306,6 @@ class BaseModel(models.Model):
 
     @property
     def static_groups(self):
-        return self.associated_static_groups.values_list("static_group", flat=True)
+        from nautobot.extras.models import StaticGroup
+
+        return StaticGroup.objects.filter(pk__in=self.associated_static_groups.values_list("static_group", flat=True))

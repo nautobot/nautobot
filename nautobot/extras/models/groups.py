@@ -90,6 +90,31 @@ class StaticGroup(PrimaryModel):
             if self.content_type != database_object.content_type:
                 raise ValidationError({"content_type": "ContentType cannot be changed once created"})
 
+    def check_valid_member(self, member):
+        if not isinstance(member, self.content_type.model_class()):
+            raise TypeError(f"{member} is not a {self.content_type.model_class()._meta.label_lower}")
+
+    def add_members(self, objects_to_add):
+        for obj in objects_to_add:
+            self.check_valid_member(obj)
+
+        for obj in objects_to_add:
+            # We don't use `.bulk_create()` currently because we want change logging for these creates.
+            # Might be a good future performance improvement though.
+            StaticGroupAssociation.objects.get_or_create(
+                static_group=self, associated_object_type=self.content_type, associated_object_id=obj.pk
+            )
+
+    def remove_members(self, objects_to_remove):
+        pks_to_remove = set()
+        for obj in objects_to_remove:
+            self.check_valid_member(obj)
+            pks_to_remove.add(obj.pk)
+
+        StaticGroupAssociation.objects.filter(
+            static_group=self, associated_object_type=self.content_type, associated_object_id__in=pks_to_remove
+        ).delete()
+
 
 @extras_features(
     "custom_validators",

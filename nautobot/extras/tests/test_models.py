@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db.models import ProtectedError
+from django.db.models import ProtectedError, QuerySet
 from django.db.utils import IntegrityError
 from django.test import override_settings
 from django.test.utils import isolate_apps
@@ -68,7 +68,8 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.models.statuses import StatusModel
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
-from nautobot.ipam.models import IPAddress
+from nautobot.ipam.models import IPAddress, Prefix
+from nautobot.ipam.querysets import PrefixQuerySet
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import (
     Cluster,
@@ -1677,6 +1678,37 @@ class SecretsGroupTest(ModelTestCases.BaseModelTestCase):
 
 class StaticGroupTest(ModelTestCases.BaseModelTestCase):
     model = StaticGroup
+
+    def test_member_operations(self):
+        sg = StaticGroup.objects.create(name="All Prefixes", content_type=ContentType.objects.get_for_model(Prefix))
+        self.assertIsInstance(sg.members, PrefixQuerySet)
+        self.assertEqual(sg.members.count(), 0)
+        # test type validation
+        with self.assertRaises(TypeError):
+            sg.add_members([IPAddress.objects.first()])
+        # test bulk addition
+        sg.add_members(Prefix.objects.filter(ip_version=4))
+        self.assertIsInstance(sg.members, PrefixQuerySet)
+        self.assertEqual(sg.members.count(), Prefix.objects.filter(ip_version=4).count())
+        # test duplicate objects aren't re-added
+        sg.add_members(Prefix.objects.all())
+        self.assertEqual(sg.members.count(), Prefix.objects.all().count())
+        self.assertEqual(sg.static_group_associations.count(), Prefix.objects.all().count())
+        # test idempotence
+        sg.add_members(Prefix.objects.all())
+        self.assertEqual(sg.members.count(), Prefix.objects.all().count())
+        self.assertEqual(sg.static_group_associations.count(), Prefix.objects.all().count())
+        # test bulk removal
+        sg.remove_members(Prefix.objects.filter(ip_version=4))
+        self.assertEqual(sg.members.count(), Prefix.objects.filter(ip_version=6).count())
+        self.assertEqual(sg.static_group_associations.count(), Prefix.objects.filter(ip_version=6).count())
+        # test idempotence
+        sg.remove_members(Prefix.objects.filter(ip_version=4))
+        self.assertEqual(sg.members.count(), Prefix.objects.filter(ip_version=6).count())
+        self.assertEqual(sg.static_group_associations.count(), Prefix.objects.filter(ip_version=6).count())
+
+        self.assertIsInstance(Prefix.objects.filter(ip_version=6).first().static_groups, QuerySet)
+        self.assertEqual(list(Prefix.objects.filter(ip_version=6).first().static_groups), [sg])
 
 
 class StaticGroupAssociationTest(ModelTestCases.BaseModelTestCase):
