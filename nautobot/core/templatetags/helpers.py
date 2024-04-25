@@ -724,8 +724,14 @@ def filter_form_modal(
 @register.inclusion_tag("utilities/templatetags/saved_view_modal.html")
 def saved_view_modal(
     form,
+    params,
+    list_view_name,
 ):
-    return {"form": form}
+    return {
+        "form": form,
+        "params": params,
+        "list_view_name": list_view_name,
+    }
 
 
 @register.inclusion_tag("utilities/templatetags/modal_form_as_dialog.html")

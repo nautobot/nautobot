@@ -23,11 +23,6 @@ class PasswordChangeForm(BootstrapMixin, DjangoPasswordChangeForm):
 
 
 class SavedViewForm(BootstrapMixin, forms.ModelForm):
-    name = forms.CharField(
-        required=True,
-        help_text="Name for this new Saved View",
-    )
-
     class Meta:
         model = SavedView
         fields = ["name"]

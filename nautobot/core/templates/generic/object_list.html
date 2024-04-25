@@ -60,7 +60,7 @@
                 {% if request.GET.saved_view_pk %}
                     {% if perms.users.change_savedview %}
                         <li>
-                            <a href="{% url 'users:savedview_edit' pk=request.GET.saved_view_pk %}?{{request.GET.urlencode}}">
+                            <a href="{% url 'users:savedview_edit' pk=request.GET.saved_view_pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
                                 <span class="mdi mdi-content-save" aria-hidden="true"></span>
                                 Update Current View
                             </a>
@@ -198,7 +198,7 @@
 </div>
 {% if table %}{% table_config_form table table_name="ObjectTable" %}{% endif %}
 {% filter_form_modal filter_form dynamic_filter_form model_plural_name=title %}
-{% saved_view_modal saved_view_form %}
+{% saved_view_modal saved_view_form request.GET.urlencode list_url %}
 {% endblock %}
 
 {% block javascript %}

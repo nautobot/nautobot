@@ -7,6 +7,8 @@ from django.contrib.auth import (
     logout as auth_logout,
     update_session_auth_hash,
 )
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -265,14 +267,11 @@ class SavedViewUIViewSet(
             sv.sort_order = {"sort": [sort_order]}
 
         new_filter_params = []
-        for key, value in request.GET.items():
+        for key, _ in request.GET.items():
             if key in self.non_filter_params:
                 continue
             else:
-                if isinstance(value, list):
-                    sv.filter_params[key] = value
-                else:
-                    sv.filter_params[key] = [value]
+                sv.filter_params[key] = request.GET.getlist(key)
                 new_filter_params.append(key)
 
         # delete filter params that are no longer in use
@@ -285,6 +284,56 @@ class SavedViewUIViewSet(
         list_view_url = reverse(sv.list_view_name) + query_string + f"&saved_view_pk={sv.pk}"
         messages.success(request, f"Successfully updated current view {sv.name}")
         return redirect(list_view_url)
+
+    def create(self, request, *args, **kwargs):
+        """
+        request.GET: render the ObjectForm which is passed to NautobotHTMLRenderer as Response.
+        request.POST: call perform_create() which validates the form and perform the action of create.
+        Override to add more variables to Response.
+        """
+        name = request.POST.get("name")
+        list_view_name = request.GET.get("list_view_name")
+        derived_view_pk = request.GET.get("saved_view_pk", None)
+        try:
+            sv = SavedView.objects.create(name=name, owner=request.user, list_view_name=list_view_name)
+        except IntegrityError:
+            messages.error(
+                request, f"Integrity Error: User {request.user.username} already has a Saved View named {name}"
+            )
+            if derived_view_pk:
+                instance = SavedView.objects.get(pk=derived_view_pk)
+                return redirect(self.get_return_url(request, obj=instance))
+            else:
+                return redirect(reverse(list_view_name))
+        pagination_count = request.GET.get("per_page", None)
+        if pagination_count is not None:
+            sv.pagination_count = int(pagination_count)
+        sort_order = request.GET.get("sort", None)
+        if sort_order is not None:
+            sv.sort_order = {"sort": [sort_order]}
+
+        new_filter_params = []
+        for key, value in request.GET.items():
+            if key in [*self.non_filter_params, "list_view_name"]:
+                continue
+            else:
+                sv.filter_params[key] = request.GET.getlist(key)
+                new_filter_params.append(key)
+
+        # delete filter params that are no longer in use
+        for param in list(sv.filter_params.keys()):
+            if param not in new_filter_params:
+                sv.filter_params.pop(param)
+
+        try:
+            sv.validated_save()
+            query_string = sv.view_config
+            list_view_url = reverse(sv.list_view_name) + query_string + f"&saved_view_pk={sv.pk}"
+            messages.success(request, f"Successfully created new Saved View {sv.name}")
+            return redirect(list_view_url)
+        except ValidationError as e:
+            messages.error(request, e)
+            return redirect(self.get_return_url())
 
 
 #
