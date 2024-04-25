@@ -1148,6 +1148,9 @@ class StaticGroupAssociationFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Static group (name or PK)",
     )
+    associated_object_type = ContentTypeMultipleChoiceFilter(
+        choices=StaticGroupModelsQuery().get_choices, conjoined=False
+    )
 
     class Meta:
         model = StaticGroupAssociation
