@@ -77,7 +77,7 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
     serializer_class = serializers.ExampleModelSerializer
     table_class = tables.ExampleModelTable
 
-    @action(detail=False, methods=["get"], url_path="all-names", url_name="all_names")
+    @action(detail=False, name="All Names", methods=["get"], url_path="all-names", url_name="all_names")
     def all_names(self, request):
         """
         Returns a list of all the example model names.

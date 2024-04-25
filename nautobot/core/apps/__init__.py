@@ -918,9 +918,9 @@ class CoreConfig(NautobotConfig):
         super().ready()
 
         # Register jobs last after everything else has been done.
-        from nautobot.core.celery import app, import_jobs_as_celery_tasks
+        from nautobot.core.celery import import_jobs
 
-        import_jobs_as_celery_tasks(app, database_ready=False)
+        import_jobs()
 
 
 class NautobotConstanceConfig(ConstanceConfig):
