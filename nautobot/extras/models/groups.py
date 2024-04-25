@@ -76,7 +76,7 @@ class StaticGroup(PrimaryModel):
         """Return the member objects for this group."""
         # Since associated_object is a GenericForeignKey, we can't just do:
         #     return self.static_group_associations.values_list("associated_object", flat=True)
-        return self.content_type.model_class().objects.filter(
+        return self.model.objects.filter(
             pk__in=self.static_group_associations.values_list("associated_object_id", flat=True)
         )
 
@@ -90,13 +90,14 @@ class StaticGroup(PrimaryModel):
             if self.content_type != database_object.content_type:
                 raise ValidationError({"content_type": "ContentType cannot be changed once created"})
 
-    def check_valid_member(self, member):
-        if not isinstance(member, self.content_type.model_class()):
-            raise TypeError(f"{member} is not a {self.content_type.model_class()._meta.label_lower}")
+    def _check_valid_member(self, member):
+        if not isinstance(member, self.model):
+            raise TypeError(f"{member} is not a {self.model._meta.label_lower}")
 
     def add_members(self, objects_to_add):
+        """Add the given list or QuerySet of objects to this Static Group."""
         for obj in objects_to_add:
-            self.check_valid_member(obj)
+            self._check_valid_member(obj)
 
         for obj in objects_to_add:
             # We don't use `.bulk_create()` currently because we want change logging for these creates.
@@ -106,9 +107,10 @@ class StaticGroup(PrimaryModel):
             )
 
     def remove_members(self, objects_to_remove):
+        """Remove the given list or QuerySet of objects from this Static Group."""
         pks_to_remove = set()
         for obj in objects_to_remove:
-            self.check_valid_member(obj)
+            self._check_valid_member(obj)
             pks_to_remove.add(obj.pk)
 
         StaticGroupAssociation.objects.filter(
