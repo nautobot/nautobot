@@ -38,16 +38,16 @@ article ul li {
 
 - `cable_terminations`: Models that can be connected to another model with a `Cable`
 - `config_context_owners`: Models that can be assigned to the `owner` GenericForeignKey field on a `ConfigContext`
-- `custom_fields`: (DEPRECATED - Uses [Model Features Registry](model-features.md)) Models that support ComputedFields and CustomFields, used for limiting the choices for the `CustomField.content_types` and `ComputedField.content_type` fields
+- `custom_fields`: (DEPRECATED - Uses `nautobot.extras.utils.populate_model_features_registry` to populate [Model Features Registry](model-features.md)) Models that support ComputedFields and CustomFields, used for limiting the choices for the `CustomField.content_types` and `ComputedField.content_type` fields
 - `custom_links`: Models that can display `CustomLinks` on the object's detail view (by default, all models that use `generic/object_retrieve.html` as a base template support custom links)
 - `custom_validators`: Models that can support custom `clean` logic by implementing a [`CustomValidator`](../apps/api/platform-features/custom-validators.md)
 - `dynamic_groups`: Models that can be assigned to a `DynamicGroup`, used for limiting the choices for the `DynamicGroup.content_type` form field
 - `export_template_owners`: Models that can be assigned to the `owner` GenericForeignKey field on an `ExportTemplate`
 - `export_templates`: Models that can be exported using an `ExportTemplate`, used for limiting the choices for the `ExportTemplate.content_type` field
-- `graphql`: Models that should be exposed through GraphQL API, used to build the list of registered models to build the GraphQL schema
+- `graphql`: Models that should be exposed through the GraphQL API, used to build the list of registered models to build the GraphQL schema
 - `job_results`: No longer used.
 - `locations`: Models that support a foreign key to `Location`, used for limiting the choices for the `LocationType.content_types` field
-- `relationships`: (DEPRECATED - Uses [Model Features Registry](model-features.md)) Models that support custom relationships
+- `relationships`: (DEPRECATED - Uses `nautobot.extras.utils.populate_model_features_registry` to populate [Model Features Registry](model-features.md)) Models that support custom relationships
 - `statuses`: Models that support a foreign key to `Status`, used for limiting the choices for the `Status.content_types` field
 - `webhooks`: Models that can be used to trigger webhooks, used for limiting the choices for the `Webhook.content_types` field
 
