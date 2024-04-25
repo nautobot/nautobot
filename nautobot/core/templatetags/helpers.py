@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 @library.filter()
 @register.filter()
-def hyperlinked_object(value, field="display"):
+def hyperlinked_object(value, field="display", **kwargs):
     """Render and link to a Django model instance, if any, or render a placeholder if not.
 
     Uses the specified object field if available, otherwise uses the string representation of the object.
@@ -53,6 +53,7 @@ def hyperlinked_object(value, field="display"):
     Args:
         value (Union[django.db.models.Model, None]): Instance of a Django model or None.
         field (Optional[str]): Name of the field to use for the display value. Defaults to "display".
+        **kwargs: HTML attributes to use inside the href element.
 
     Returns:
         (str): String representation of the value (hyperlinked if it defines get_absolute_url()) or a placeholder.
@@ -73,11 +74,16 @@ def hyperlinked_object(value, field="display"):
     """
     if value is None:
         return placeholder(value)
+    attributes = []
+    for k, v in kwargs.items():
+        if v is not None:
+            attributes.append(f'{k}="{v}"')
     display = getattr(value, field) if hasattr(value, field) else str(value)
     if hasattr(value, "get_absolute_url"):
+        attributes.insert(0, f'href="{value.get_absolute_url()}"')
         if hasattr(value, "description") and value.description:
-            return format_html('<a href="{}" title="{}">{}</a>', value.get_absolute_url(), value.description, display)
-        return format_html('<a href="{}">{}</a>', value.get_absolute_url(), display)
+            attributes.insert(1, f'title="{value.description}"')
+        return format_html("<a{}>{}</a>", mark_safe(" ".join(["", *attributes])), display)  # noqa: S308 # suspicious-mark-safe-usage Safe attributes
     return format_html("{}", display)
 
 
@@ -822,3 +828,38 @@ def queryset_to_pks(obj):
     result = list(obj.values_list("pk", flat=True)) if obj else []
     result = [str(entry) for entry in result]
     return ",".join(result)
+
+
+@library.filter()
+@register.filter()
+def hyperlinked_object_open_new_tab(value, field="display"):
+    """Render and link to a Django model instance, if any, or render a placeholder if not.
+
+    Calls the hyperlinked_object function, but passes attributes needed to open the link in new tab.
+
+    Uses the specified object field if available, otherwise uses the string representation of the object.
+    If the object defines `get_absolute_url()` this will be used to hyperlink the displayed object;
+    additionally if there is an `object.description` this will be used as the title of the hyperlink.
+
+    Args:
+        value (Union[django.db.models.Model, None]): Instance of a Django model or None.
+        field (Optional[str]): Name of the field to use for the display value. Defaults to "display".
+
+    Returns:
+        (str): String representation of the value (hyperlinked if it defines get_absolute_url()) or a placeholder.
+
+    Examples:
+        >>> hyperlinked_object_open_new_tab(device)
+        '<a href="/dcim/devices/3faafe8c-bdd6-4317-88dc-f791e6988caa/" target="_blank" rel="noreferrer">Device 1</a>'
+        >>> hyperlinked_object_open_new_tab(device_role)
+        '<a href="/dcim/device-roles/router/" title="Devices that are routers, not switches" target="_blank" rel="noreferrer">Router</a>'
+        >>> hyperlinked_object_open_new_tab(None)
+        '<span class="text-muted">&mdash;</span>'
+        >>> hyperlinked_object_open_new_tab("Hello")
+        'Hello'
+        >>> hyperlinked_object_open_new_tab(location)
+        '<a href="/dcim/locations/leaf/" target="_blank" rel="noreferrer">Root → Intermediate → Leaf</a>'
+        >>> hyperlinked_object_open_new_tab(location, "name")
+        '<a href="/dcim/locations/leaf/" target="_blank" rel="noreferrer">Leaf</a>'
+    """
+    return hyperlinked_object(value, field, target="_blank", rel="noreferrer")
