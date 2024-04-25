@@ -115,6 +115,17 @@ OBJECTCHANGE_REQUEST_ID = """
 <a href="{% url 'extras:objectchange_list' %}?request_id={{ value }}">{{ value }}</a>
 """
 
+MEMBERS_COUNT = """
+{% load helpers %}
+{% with urlname=record.model|validated_viewname:"list" %}
+{% if urlname %}
+    <a href="{% url urlname %}?static_group={{ record.name }}">{{ record.count }}</a>
+{% else %}
+    {{ record.count }}
+{% endif %}
+{% endwith %}
+"""
+
 # TODO: Webhook content_types in table order_by
 WEBHOOK_CONTENT_TYPES = """
 {{ value.all|join:", "|truncatewords:15 }}
@@ -1044,13 +1055,13 @@ class StaticGroupTable(BaseTable):
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    # TODO members_count column
+    count = tables.TemplateColumn(MEMBERS_COUNT, verbose_name="Group Members")
     tags = TagColumn(url_name="extras:staticgroup_list")
     actions = ButtonsColumn(StaticGroup)
 
     class Meta(BaseTable.Meta):
         model = StaticGroup
-        fields = ["pk", "name", "content_type", "description", "tags", "actions"]
+        fields = ["pk", "name", "content_type", "count", "description", "tags", "actions"]
 
 
 class StaticGroupAssociationTable(BaseTable):

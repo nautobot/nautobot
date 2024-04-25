@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from copy import deepcopy
 import logging
 import uuid
@@ -705,8 +704,8 @@ class BaseFilterSet(django_filters.FilterSet):
     def get_fields(cls):
         fields = super().get_fields()
         if "id" not in fields and (cls._meta.exclude is None or "id" not in cls._meta.exclude):
-            # Add "id" as the first key in the `fields` OrderedDict
-            fields = OrderedDict(id=[django_filters.conf.settings.DEFAULT_LOOKUP_EXPR], **fields)
+            # Add "id" as the first key in the `fields` dict
+            fields = dict(id=[django_filters.conf.settings.DEFAULT_LOOKUP_EXPR], **fields)
         return fields
 
     @classmethod
@@ -715,6 +714,21 @@ class BaseFilterSet(django_filters.FilterSet):
         Override filter generation to support dynamic lookup expressions for certain filter types.
         """
         filters = super().get_filters()
+
+        if (
+            "static_group" not in filters
+            and hasattr(cls._meta.model, "is_static_group_associable_model")
+            and cls._meta.model.is_static_group_associable_model
+        ):
+            # Add "static_group" field as the last key
+            from nautobot.extras.models import StaticGroup
+
+            filters["static_group"] = NaturalKeyOrPKMultipleChoiceFilter(
+                queryset=StaticGroup.objects.all(),
+                field_name="associated_static_groups__static_group",
+                to_field_name="name",
+                label="Static group",
+            )
 
         # django-filters has no concept of "abstract" filtersets, so we have to fake it
         if cls._meta.model is not None:
