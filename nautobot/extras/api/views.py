@@ -951,7 +951,13 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
         responses={"200": serializers.JobResultSerializer},
         request=None,
     )
-    @action(detail=True, url_path="dry-run", methods=["post"], permission_classes=[ScheduledJobViewPermissions])
+    @action(
+        detail=True,
+        name="Dry Run",
+        url_path="dry-run",
+        methods=["post"],
+        permission_classes=[ScheduledJobViewPermissions],
+    )
     def dry_run(self, request, pk):
         scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
         job_model = scheduled_job.job_model
