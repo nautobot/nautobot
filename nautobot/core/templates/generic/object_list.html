@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load buttons %}
 {% load helpers %}
+{% load perms %}
 {% load plugins %}
 {% load static %}
 
@@ -106,6 +107,7 @@
             <form method="post" class="form form-horizontal">
                 {% csrf_token %}
                 <input type="hidden" name="return_url" value="{% if return_url %}{{ return_url }}{% else %}{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}{% endif %}" />
+                <input type="hidden" name="content_type" value="{{ content_type.pk }}">
                 {% if table.paginator.num_pages > 1 %}
                 <div class="table-responsive">
                     <div id="select_all_box" class="hidden panel panel-default noprint">
@@ -135,6 +137,11 @@
                 {% include table_template|default:'panel_table.html' %}
                 <div class="pull-left noprint">
                     {% block bulk_buttons %}{% endblock %}
+                    {% if content_type.model_class.is_static_group_associable_model and perms.extras.add_staticgroupassociation %}
+                        <button type="submit" name="_add_to_static_group" formaction="{% url 'extras:staticgroup_add' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-primary btn-sm">
+                            <span class="mdi mdi-group" aria-hidden="true"></span> Add Selected to Static Group
+                        </button>
+                    {% endif %}
                     {% if bulk_edit_url and permissions.change %}
                         <button type="submit" name="_edit" formaction="{% url bulk_edit_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-warning btn-sm">
                             <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit Selected

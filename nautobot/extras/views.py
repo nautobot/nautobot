@@ -42,6 +42,7 @@ from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, Device, Interface, Location, Rack
 from nautobot.dcim.tables import ControllerTable, DeviceTable, InterfaceTable, RackTable
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
+from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.signals import change_context_state
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_worker_count
@@ -2416,6 +2417,99 @@ class StaticGroupAssociationUIViewSet(
     queryset = StaticGroupAssociation.objects.all()
     serializer_class = serializers.StaticGroupAssociationSerializer
     table_class = tables.StaticGroupAssociationTable
+
+
+class StaticGroupAssociationBulkAssignView(ObjectPermissionRequiredMixin, View):
+    queryset = StaticGroupAssociation.objects.all()
+    form = None  # TODO
+    template_name = "extras/staticgroupassociation_bulk_create.html"
+
+    def get_required_permission(self):
+        return get_permission_for_model(self.queryset.model, "add")
+
+    def get(self, request):
+        return redirect(self.get_return_url(request))
+
+    def post(self, request, **kwargs):
+        """
+        Like BulkEditView, expect the user to POST twice - once to provide the list of object PKs, once to confirm.
+        """
+        if request.POST.get("_all"):
+            if self.filterset is not None:
+                pk_list = list(self.filterset(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True))
+            else:
+                pk_list = list(model.objects.all().values_list("pk", flat=True))
+        else:
+            pk_list = request.POST.getlist("pk")
+
+        if "_apply" in request.POST:
+            form = self.form(self.queryset.model, request.POST)
+            restrict_form_fields(form, request.user)
+            content_type = getattr(form, "content_type")
+
+            if form.is_valid():
+                logger.debug("Form validation was successful")
+                try:
+                    with deferred_change_logging_for_bulk_operation():
+                        associations = []
+                        for pk in pk_list:
+                            association, _ = StaticGroupAssociation.objects.get_or_create(
+                                static_group=form.cleaned_data["static_group"],
+                                associated_object_type=content_type,
+                                associated_object_id=pk,
+                            )
+                            association.validated_save()
+                            associations.append(association)
+                            logger.debug("Saved %s for PK %s", association, pk)
+
+                        # Enforce object-level permissions
+                        if self.queryset.filter(pk__in=[assoc.pk for assoc in associations]).count() != len(associations):
+                            raise StaticGroupAssociation.DoesNotExist
+
+                    if associations:
+                        msg = "Associated {len(associations)} {content_type.model_class().verbose_name_plural} to static group {form.cleaned_data['static_group']}"
+                        logger.info(msg)
+                        messages.success(self.request, msg)
+                        return redirect(self.get_return_url(request))
+
+                except ValidationError as e:
+                    messages.error(self.request, f"{association} failed validation: {e}")
+                except StaticGroupAssociation.DoesNotExist:
+                    msg = "Static group association failed due to object-level permissions violation"
+                    logger.warning(msg)
+                    form.add_error(None, msg)
+
+            else:
+                logger.debug("Form validation failed")
+
+        else:
+            # Include the PK list as initial data for the form
+            initial_data = {"pk": pk_list, "content_type": request.GET.get("content_type")}
+            form = self.form(model, initial=initial_data)
+            restrict_form_fields(form, request.user)
+
+        # TODO error handling
+        content_type = getattr(form, "content_type")
+        # TODO verify that provided content_type is_static_group_associable_model
+        table_class = get_table_for_model(content_type.model_class())
+        table = table_class(content_type.objects.filter(pk__in=pk_list), orderable=False)
+        if not table.rows:
+            messages.warning(request, f"No {content_type.model._meta.verbose_name_plural} were selected.")
+            return redirect(self.get_return_url(request))
+
+        # Hide actions column if present
+        if "actions" in table.columns:
+            table.columns.hide("actions")
+
+        context = {
+            "form": form,
+            "table": table,
+            "obj_type_plural": content_type.model_class().meta.verbose_name_plural,
+            "return_url": self.get_return_url(request),
+        }
+        return render(request, self.template_name, context)
+
+
 
 
 #
