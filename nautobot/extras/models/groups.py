@@ -152,7 +152,8 @@ class StaticGroupAssociation(OrganizationalModel):
     is_static_group_associable_model = False
 
     class Meta:
-        unique_together = ("static_group", "associated_object_type", "associated_object_id")
+        unique_together = [["static_group", "associated_object_type", "associated_object_id"]]
+        ordering = ["static_group"]
 
     def __str__(self):
         return f"{self.associated_object} as a member of {self.static_group}"

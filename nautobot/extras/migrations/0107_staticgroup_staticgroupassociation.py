@@ -90,6 +90,7 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={
+                "ordering": ["static_group"],
                 "unique_together": {("static_group", "associated_object_type", "associated_object_id")},
             },
             bases=(
