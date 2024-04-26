@@ -155,7 +155,7 @@ class StaticGroupAssociation(OrganizationalModel):
         unique_together = ("static_group", "associated_object_type", "associated_object_id")
 
     def __str__(self):
-        return f"{self.associated_object} ∈ {self.static_group}"
+        return f"{self.associated_object} as a member of {self.static_group}"
 
     def clean(self):
         super().clean()
