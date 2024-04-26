@@ -52,7 +52,7 @@ class StaticGroup(PrimaryModel):
     is_static_group_associable_model = False
 
     class Meta:
-        ordering = ["content_type", "name"]
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
