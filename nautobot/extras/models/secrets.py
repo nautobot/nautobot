@@ -126,9 +126,6 @@ class SecretsGroupAssociation(BaseModel):
     access_type = models.CharField(max_length=32, choices=SecretsGroupAccessTypeChoices)
     secret_type = models.CharField(max_length=32, choices=SecretsGroupSecretTypeChoices)
 
-    is_contact_associable_model = False
-    is_static_group_associable_model = False
-
     natural_key_field_names = ["secrets_group", "access_type", "secret_type", "secret"]
 
     documentation_static_path = "docs/user-guide/platform-functionality/secret.html"

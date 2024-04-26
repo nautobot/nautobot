@@ -43,7 +43,6 @@ from nautobot.extras.utils import (
     change_logged_models_queryset,
     FeatureQuery,
     RoleModelsQuery,
-    StaticGroupModelsQuery,
     TaggableClassesQuery,
 )
 
@@ -315,7 +314,9 @@ class StaticGroupFactory(PrimaryModelFactory):
         exclude = ("color", "has_description")
 
     color = factory.Faker("safe_color_name")
-    content_type = random_instance(lambda: StaticGroupModelsQuery().as_queryset(), allow_null=False)
+    content_type = random_instance(
+        lambda: ContentType.objects.filter(FeatureQuery("static_groups").get_query()), allow_null=False
+    )
     name = factory.LazyAttribute(
         lambda o: f"{o.color.title()} {bettertitle(o.content_type.model_class()._meta.verbose_name_plural)}"
     )

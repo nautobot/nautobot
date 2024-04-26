@@ -38,7 +38,7 @@ class Migration(migrations.Migration):
                 (
                     "content_type",
                     models.ForeignKey(
-                        limit_choices_to=nautobot.extras.utils.StaticGroupModelsQuery(),
+                        limit_choices_to=nautobot.extras.utils.FeatureQuery("static_groups"),
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="static_groups",
                         to="contenttypes.contenttype",
@@ -74,7 +74,7 @@ class Migration(migrations.Migration):
                 (
                     "associated_object_type",
                     models.ForeignKey(
-                        limit_choices_to=nautobot.extras.utils.StaticGroupModelsQuery(),
+                        limit_choices_to=nautobot.extras.utils.FeatureQuery("static_groups"),
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="static_group_associations",
                         to="contenttypes.contenttype",

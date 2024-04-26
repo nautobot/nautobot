@@ -111,9 +111,6 @@ class DeviceTypeToSoftwareImageFile(BaseModel, ChangeLoggedModel):
         "dcim.SoftwareImageFile", on_delete=models.PROTECT, related_name="device_type_mappings"
     )
 
-    is_contact_associable_model = False
-    is_static_group_associable_model = False
-
     class Meta:
         unique_together = [
             ["device_type", "software_image_file"],

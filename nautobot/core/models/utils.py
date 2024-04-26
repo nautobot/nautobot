@@ -150,7 +150,7 @@ def serialize_object_v2(obj):
     return data
 
 
-def find_models_with_matching_fields(app_models, field_names, field_attributes=None):
+def find_models_with_matching_fields(app_models, field_names, field_attributes=None, additional_constraints=None):
     """
     Find all models that have fields with the specified names, and return them grouped by app.
 
@@ -158,18 +158,23 @@ def find_models_with_matching_fields(app_models, field_names, field_attributes=N
         app_models (list[BaseModel]): A list of model classes to search through.
         field_names (list[str]): A list of names of fields that must be present in order for the model to be considered
         field_attributes (dict): Optional dictionary of attributes to filter the fields by.
+        additional_constraints (dict): Optional dictionary of `{field: value}` to further filter the models by.
 
     Return:
         (dict): A dictionary where the keys are app labels and the values are sets of model names.
     """
     registry_items = {}
     field_attributes = field_attributes or {}
+    additional_constraints = additional_constraints or {}
     for model_class in app_models:
         app_label, model_name = model_class._meta.label_lower.split(".")
         for field_name in field_names:
             try:
                 field = model_class._meta.get_field(field_name)
-                if all((getattr(field, item, None) == value for item, value in field_attributes.items())):
+                if all((getattr(field, item, None) == value for item, value in field_attributes.items())) and all(
+                    getattr(model_class, additional_field, None) == additional_value
+                    for additional_field, additional_value in additional_constraints.items()
+                ):
                     registry_items.setdefault(app_label, set()).add(model_name)
             except FieldDoesNotExist:
                 pass

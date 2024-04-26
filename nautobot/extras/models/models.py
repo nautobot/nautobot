@@ -32,7 +32,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, NotesMixin, StaticGroupMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
@@ -69,7 +69,9 @@ def limit_dynamic_group_choices():
 
 
 @extras_features("graphql")
-class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin, NotesMixin):
+class ConfigContext(
+    ChangeLoggedModel, ConfigContextSchemaValidationMixin, ContactMixin, NotesMixin, StaticGroupMixin, BaseModel
+):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
     qualifiers (location, tenant, etc.). For example, the data stored in a ConfigContext assigned to location A and tenant B
@@ -298,10 +300,11 @@ class ConfigContextSchema(OrganizationalModel):
 
 
 @extras_features("graphql")
-class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
+class CustomLink(ChangeLoggedModel, ContactMixin, NotesMixin, StaticGroupMixin, BaseModel):
     """
-    A custom link to an external representation of a Nautobot object. The link text and URL fields accept Jinja2 template
-    code to be rendered with an object as context.
+    A custom link to an external representation of a Nautobot object.
+
+    The link text and URL fields accept Jinja2 template code to be rendered with an object as context.
     """
 
     content_type = models.ForeignKey(
@@ -352,7 +355,7 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
 @extras_features(
     "graphql",
 )
-class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin):
+class ExportTemplate(ChangeLoggedModel, ContactMixin, RelationshipModel, NotesMixin, StaticGroupMixin, BaseModel):
     # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
     owner_content_type = models.ForeignKey(
         to=ContentType,
@@ -551,7 +554,6 @@ class FileAttachment(BaseModel):
     filename = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     mimetype = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
 
-    is_static_group_associable_model = False
     natural_key_field_names = ["pk"]
 
     def __str__(self):
@@ -612,8 +614,6 @@ class FileProxy(BaseModel):
     uploaded_at = models.DateTimeField(auto_now_add=True)
     job_result = models.ForeignKey(to=JobResult, null=True, blank=True, on_delete=models.CASCADE, related_name="files")
 
-    is_static_group_associable_model = False
-
     def __str__(self):
         return self.name
 
@@ -649,7 +649,7 @@ class FileProxy(BaseModel):
 
 
 @extras_features("graphql")
-class GraphQLQuery(BaseModel, ChangeLoggedModel, NotesMixin):
+class GraphQLQuery(ChangeLoggedModel, ContactMixin, NotesMixin, StaticGroupMixin, BaseModel):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     query = models.TextField()
     variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
@@ -702,9 +702,6 @@ class GraphQLQuery(BaseModel, ChangeLoggedModel, NotesMixin):
 
 class HealthCheckTestModel(BaseModel):
     title = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
-
-    is_contact_associable_model = False
-    is_static_group_associable_model = False
 
 
 #
@@ -776,7 +773,7 @@ class ImageAttachment(BaseModel):
 
 
 @extras_features("graphql", "webhooks")
-class Note(BaseModel, ChangeLoggedModel):
+class Note(ChangeLoggedModel, BaseModel):
     """
     Notes allow anyone with proper permissions to add a note to an object.
     """
@@ -815,7 +812,7 @@ class Note(BaseModel, ChangeLoggedModel):
 
 
 @extras_features("graphql")
-class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
+class Webhook(ChangeLoggedModel, ContactMixin, NotesMixin, StaticGroupMixin, BaseModel):
     """
     A Webhook defines a request that will be sent to a remote application when an object is created, updated, and/or
     delete in Nautobot. The request will contain a representation of the object, which the remote application can act on.

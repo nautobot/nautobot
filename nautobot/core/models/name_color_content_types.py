@@ -12,7 +12,7 @@ from nautobot.extras.models.change_logging import ChangeLoggedModel
 # Importing CustomFieldModel, ChangeLoggedModel, RelationshipModel from  nautobot.extras.models
 # caused circular import error
 from nautobot.extras.models.customfields import CustomFieldModel
-from nautobot.extras.models.mixins import DynamicGroupMixin, NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupMixin, NotesMixin, StaticGroupMixin
 from nautobot.extras.models.relationships import RelationshipModel
 
 
@@ -39,12 +39,14 @@ class ContentTypeRelatedQuerySet(RestrictedQuerySet):
 
 # TODO(timizuo): Inheriting from OrganizationalModel here causes partial import error
 class NameColorContentTypesModel(
-    BaseModel,
     ChangeLoggedModel,
+    ContactMixin,
     CustomFieldModel,
-    RelationshipModel,
-    NotesMixin,
     DynamicGroupMixin,
+    NotesMixin,
+    RelationshipModel,
+    StaticGroupMixin,
+    BaseModel,
 ):
     """
     This abstract base properties model contains fields and functionality that are

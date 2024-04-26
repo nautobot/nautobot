@@ -87,7 +87,6 @@ from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     FeatureQuery,
     RoleModelsQuery,
-    StaticGroupModelsQuery,
     TaggableClassesQuery,
 )
 
@@ -904,7 +903,9 @@ class SecretsGroupSerializer(NautobotModelSerializer):
 
 
 class StaticGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    content_type = ContentTypeField(queryset=StaticGroupModelsQuery().as_queryset())
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
+    )
 
     class Meta:
         model = StaticGroup
@@ -912,7 +913,9 @@ class StaticGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin)
 
 
 class StaticGroupAssociationSerializer(NautobotModelSerializer):
-    associated_object_type = ContentTypeField(queryset=StaticGroupModelsQuery().as_queryset())
+    associated_object_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
+    )
     associated_object = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
@@ -923,7 +926,7 @@ class StaticGroupAssociationSerializer(NautobotModelSerializer):
         PolymorphicProxySerializer(
             component_name="StaticGroupAssociatedObject",
             resource_type_field_name="object_type",
-            serializers=lambda: nested_serializers_for_models(StaticGroupModelsQuery().list_subclasses()),
+            serializers=lambda: nested_serializers_for_models(FeatureQuery("static_groups").list_subclasses()),
         )
     )
     def get_associated_object(self, obj):

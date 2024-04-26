@@ -1,7 +1,6 @@
 import uuid
 
 from django.conf import settings
-from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist
@@ -46,24 +45,9 @@ class BaseModel(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
 
-    # Reverse relation so that deleting a BaseModel automatically deletes any ContactAssociations related to it.
-    associated_contacts = GenericRelation(
-        "extras.ContactAssociation",
-        content_type_field="associated_object_type",
-        object_id_field="associated_object_id",
-        related_query_name="associated_contacts_%(app_label)s_%(class)s",  # e.g. 'associated_contacts_dcim_device'
-    )
-    # Likewise for StaticGroupAssociations
-    associated_static_groups = GenericRelation(
-        "extras.StaticGroupAssociation",
-        content_type_field="associated_object_type",
-        object_id_field="associated_object_id",
-        related_query_name="associated_static_groups_%(app_label)s_%(class)s",  # 'associated_static_groups_dcim_device'
-    )
-
     objects = BaseManager.from_queryset(RestrictedQuerySet)()
-    is_contact_associable_model = True
-    is_static_group_associable_model = True
+    is_contact_associable_model = False  # ContactMixin overrides this to default True
+    is_static_group_associable_model = False  # StaticGroupMixin overrides this to default True
 
     class Meta:
         abstract = True
@@ -303,9 +287,3 @@ class BaseModel(models.Model):
                 f"expected no more than {len(natural_key_field_lookups)} but got {len(args)}."
             )
         return dict(zip(natural_key_field_lookups, args))
-
-    @property
-    def static_groups(self):
-        from nautobot.extras.models import StaticGroup
-
-        return StaticGroup.objects.filter(pk__in=self.associated_static_groups.values_list("static_group", flat=True))

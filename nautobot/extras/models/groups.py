@@ -23,7 +23,7 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGroupQuerySet
-from nautobot.extras.utils import extras_features, StaticGroupModelsQuery
+from nautobot.extras.utils import extras_features, FeatureQuery
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ class StaticGroup(PrimaryModel):
         to=ContentType,
         on_delete=models.CASCADE,
         related_name="static_groups",
-        limit_choices_to=StaticGroupModelsQuery(),
+        limit_choices_to=FeatureQuery("static_groups"),
         help_text="The type of object contained in this Static Group.",
     )
 
@@ -132,11 +132,12 @@ class StaticGroupAssociation(OrganizationalModel):
         to=ContentType,
         on_delete=models.CASCADE,
         related_name="static_group_associations",
-        limit_choices_to=StaticGroupModelsQuery(),
+        limit_choices_to=FeatureQuery("static_groups"),
     )
     associated_object_id = models.UUIDField(db_index=True)
     associated_object = GenericForeignKey(ct_field="associated_object_type", fk_field="associated_object_id")
 
+    is_contact_associable_model = False
     is_static_group_associable_model = False
 
     class Meta:
@@ -1084,9 +1085,6 @@ class DynamicGroupMembership(BaseModel):
     objects = BaseManager.from_queryset(DynamicGroupMembershipQuerySet)()
 
     documentation_static_path = "docs/user-guide/platform-functionality/dynamicgroup.html"
-
-    is_contact_associable_model = False
-    is_static_group_associable_model = False
 
     class Meta:
         unique_together = ["group", "parent_group", "operator", "weight"]

@@ -12,6 +12,7 @@ from .jobs import (
     ScheduledJob,
     ScheduledJobs,
 )
+from .mixins import ContactMixin, StaticGroupMixin
 from .models import (
     ConfigContext,
     ConfigContextModel,
@@ -41,6 +42,7 @@ __all__ = (
     "ConfigContextSchema",
     "Contact",
     "ContactAssociation",
+    "ContactMixin",
     "CustomField",
     "CustomFieldChoice",
     "CustomFieldModel",
@@ -74,6 +76,7 @@ __all__ = (
     "SecretsGroupAssociation",
     "StaticGroup",
     "StaticGroupAssociation",
+    "StaticGroupMixin",
     "Status",
     "StatusField",
     "StatusModel",

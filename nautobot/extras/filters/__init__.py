@@ -92,7 +92,6 @@ from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     FeatureQuery,
     RoleModelsQuery,
-    StaticGroupModelsQuery,
     TaggableClassesQuery,
 )
 from nautobot.tenancy.models import Tenant, TenantGroup
@@ -1126,7 +1125,7 @@ class StaticGroupFilterSet(NautobotFilterSet):
             "content_type__model": "icontains",
         },
     )
-    content_type = ContentTypeMultipleChoiceFilter(choices=StaticGroupModelsQuery().get_choices, conjoined=False)
+    content_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("static_groups").get_choices, conjoined=False)
 
     class Meta:
         model = StaticGroup
@@ -1149,7 +1148,7 @@ class StaticGroupAssociationFilterSet(NautobotFilterSet):
         label="Static group (name or ID)",
     )
     associated_object_type = ContentTypeMultipleChoiceFilter(
-        choices=StaticGroupModelsQuery().get_choices, conjoined=False
+        choices=FeatureQuery("static_groups").get_choices, conjoined=False
     )
 
     class Meta:

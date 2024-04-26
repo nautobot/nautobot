@@ -878,9 +878,6 @@ class InterfaceRedundancyGroupAssociation(BaseModel, ChangeLoggedModel):
     )
     priority = models.PositiveSmallIntegerField()
 
-    is_contact_associable_model = False
-    is_static_group_associable_model = False
-
     class Meta:
         """Meta class."""
 
