@@ -24,10 +24,12 @@ from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.tables import ButtonsColumn
-from nautobot.core.utils.lookup import get_table_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_table_for_model
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.mixins import (
+    GetReturnURLMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
     ObjectDestroyViewMixin,
@@ -2419,10 +2421,10 @@ class StaticGroupAssociationUIViewSet(
     table_class = tables.StaticGroupAssociationTable
 
 
-class StaticGroupAssociationBulkAssignView(ObjectPermissionRequiredMixin, View):
+class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     queryset = StaticGroupAssociation.objects.all()
-    form = None  # TODO
-    template_name = "extras/staticgroupassociation_bulk_create.html"
+    form_class = forms.StaticGroupBulkAssignForm
+    template_name = "extras/staticgroup_bulk_assign.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "add")
@@ -2434,18 +2436,22 @@ class StaticGroupAssociationBulkAssignView(ObjectPermissionRequiredMixin, View):
         """
         Like BulkEditView, expect the user to POST twice - once to provide the list of object PKs, once to confirm.
         """
+        # TODO error handling
+        content_type = ContentType.objects.get(pk=request.POST.get("content_type"))
+        model = content_type.model_class()
+        filterset_class = get_filterset_for_model(model)
+
         if request.POST.get("_all"):
-            if self.filterset is not None:
-                pk_list = list(self.filterset(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True))
+            if filterset_class is not None:
+                pk_list = list(filterset_class(request.POST, model.objects.only("pk")).qs.values_list("pk", flat=True))
             else:
                 pk_list = list(model.objects.all().values_list("pk", flat=True))
         else:
             pk_list = request.POST.getlist("pk")
 
         if "_apply" in request.POST:
-            form = self.form(self.queryset.model, request.POST)
+            form = self.form_class(model, request.POST)
             restrict_form_fields(form, request.user)
-            content_type = getattr(form, "content_type")
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
@@ -2453,21 +2459,22 @@ class StaticGroupAssociationBulkAssignView(ObjectPermissionRequiredMixin, View):
                     with deferred_change_logging_for_bulk_operation():
                         associations = []
                         for pk in pk_list:
-                            association, _ = StaticGroupAssociation.objects.get_or_create(
-                                static_group=form.cleaned_data["static_group"],
-                                associated_object_type=content_type,
-                                associated_object_id=pk,
-                            )
-                            association.validated_save()
-                            associations.append(association)
-                            logger.debug("Saved %s for PK %s", association, pk)
+                            for static_group in form.cleaned_data["static_groups"]:
+                                association, _ = StaticGroupAssociation.objects.get_or_create(
+                                    static_group=static_group,
+                                    associated_object_type=content_type,
+                                    associated_object_id=pk,
+                                )
+                                association.validated_save()
+                                associations.append(association)
+                                logger.debug("Saved %s for PK %s", association, pk)
 
                         # Enforce object-level permissions
                         if self.queryset.filter(pk__in=[assoc.pk for assoc in associations]).count() != len(associations):
                             raise StaticGroupAssociation.DoesNotExist
 
                     if associations:
-                        msg = "Associated {len(associations)} {content_type.model_class().verbose_name_plural} to static group {form.cleaned_data['static_group']}"
+                        msg = f"Associated {len(associations)} {model._meta.verbose_name_plural} to static groups {form.cleaned_data['static_groups']}"
                         logger.info(msg)
                         messages.success(self.request, msg)
                         return redirect(self.get_return_url(request))
@@ -2484,17 +2491,15 @@ class StaticGroupAssociationBulkAssignView(ObjectPermissionRequiredMixin, View):
 
         else:
             # Include the PK list as initial data for the form
-            initial_data = {"pk": pk_list, "content_type": request.GET.get("content_type")}
-            form = self.form(model, initial=initial_data)
+            initial_data = {"pk": pk_list, "content_type": request.POST.get("content_type")}
+            form = self.form_class(model, initial=initial_data)
             restrict_form_fields(form, request.user)
 
-        # TODO error handling
-        content_type = getattr(form, "content_type")
         # TODO verify that provided content_type is_static_group_associable_model
-        table_class = get_table_for_model(content_type.model_class())
-        table = table_class(content_type.objects.filter(pk__in=pk_list), orderable=False)
+        table_class = get_table_for_model(model)
+        table = table_class(model.objects.filter(pk__in=pk_list), orderable=False)
         if not table.rows:
-            messages.warning(request, f"No {content_type.model._meta.verbose_name_plural} were selected.")
+            messages.warning(request, f"No {model._meta.verbose_name_plural} were selected.")
             return redirect(self.get_return_url(request))
 
         # Hide actions column if present
@@ -2504,7 +2509,7 @@ class StaticGroupAssociationBulkAssignView(ObjectPermissionRequiredMixin, View):
         context = {
             "form": form,
             "table": table,
-            "obj_type_plural": content_type.model_class().meta.verbose_name_plural,
+            "obj_type_plural": model._meta.verbose_name_plural,
             "return_url": self.get_return_url(request),
         }
         return render(request, self.template_name, context)

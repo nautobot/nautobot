@@ -83,7 +83,6 @@ from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     FeatureQuery,
     RoleModelsQuery,
-    StaticGroupModelsQuery,
     TaggableClassesQuery,
 )
 from nautobot.tenancy.models import Tenant, TenantGroup
@@ -159,6 +158,7 @@ __all__ = (
     "SecretsGroupForm",
     "SecretsGroupFilterForm",
     "SecretsGroupAssociationFormSet",
+    "StaticGroupBulkAssignForm",
     "StaticGroupBulkEditForm",
     "StaticGroupFilterForm",
     "StaticGroupForm",
@@ -1522,7 +1522,9 @@ class StaticGroupForm(NautobotModelForm):
     """Generic create/update form for `StaticGroup` objects."""
 
     # TODO: we should use a DynamicModelChoiceField here but then need the ability to filter ContentType API by feature
-    content_type = forms.ModelChoiceField(queryset=StaticGroupModelsQuery().as_queryset())
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
+    )
 
     class Meta:
         model = StaticGroup
@@ -1537,7 +1539,10 @@ class StaticGroupForm(NautobotModelForm):
 class StaticGroupFilterForm(NautobotFilterForm):
     model = StaticGroup
     q = forms.CharField(required=False, label="Search")
-    content_type = CSVContentTypeField(queryset=StaticGroupModelsQuery().as_queryset(), required=False)
+    content_type = CSVContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
+        required=False,
+    )
     tags = TagFilterField(model)
 
 
@@ -1547,6 +1552,25 @@ class StaticGroupBulkEditForm(NautobotBulkEditForm):
         widget=forms.MultipleHiddenInput(),
     )
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+
+class StaticGroupBulkAssignForm(BulkEditForm):
+    content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
+        widget=forms.HiddenInput(),
+    )
+    new_static_group_name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    def __init__(self, model, *args, **kwargs):
+        super().__init__(model, *args, **kwargs)
+        self.fields["pk"] = ModelMultipleChoiceField(
+            queryset=model.objects.all(),
+            widget=forms.MultipleHiddenInput(),
+        )
+        self.fields["static_groups"] = DynamicModelMultipleChoiceField(queryset=StaticGroup.objects.all(), required=False, query_params={"content_type": model._meta.label_lower})
+
+    class Meta:
+        nullable_fields = []
 
 
 class StaticGroupAssociationForm(NautobotModelForm):
@@ -1562,7 +1586,10 @@ class StaticGroupAssociationFilterForm(NautobotFilterForm):
     model = StaticGroupAssociation
     q = forms.CharField(required=False, label="Search")
     static_group = DynamicModelMultipleChoiceField(queryset=StaticGroup.objects.all(), required=False)
-    assigned_object_type = CSVContentTypeField(queryset=StaticGroupModelsQuery().as_queryset(), required=False)
+    assigned_object_type = CSVContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
+        required=False,
+    )
 
 
 # TODO do we need a StaticGroupAssociationBulkEditForm at all?
