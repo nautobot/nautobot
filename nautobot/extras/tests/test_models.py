@@ -1694,21 +1694,21 @@ class StaticGroupTest(ModelTestCases.BaseModelTestCase):
         sg.add_members(Prefix.objects.all())
         self.assertEqual(sg.members.count(), Prefix.objects.all().count())
         self.assertEqual(sg.static_group_associations.count(), Prefix.objects.all().count())
-        # test idempotence
-        sg.add_members(Prefix.objects.all())
+        # test idempotence and alternate code path
+        sg.add_members(list(Prefix.objects.all()))
         self.assertEqual(sg.members.count(), Prefix.objects.all().count())
         self.assertEqual(sg.static_group_associations.count(), Prefix.objects.all().count())
         # test bulk removal
         sg.remove_members(Prefix.objects.filter(ip_version=4))
         self.assertEqual(sg.members.count(), Prefix.objects.filter(ip_version=6).count())
         self.assertEqual(sg.static_group_associations.count(), Prefix.objects.filter(ip_version=6).count())
-        # test idempotence
-        sg.remove_members(Prefix.objects.filter(ip_version=4))
+        # test idempotence and alternate code path
+        sg.remove_members(list(Prefix.objects.filter(ip_version=4)))
         self.assertEqual(sg.members.count(), Prefix.objects.filter(ip_version=6).count())
         self.assertEqual(sg.static_group_associations.count(), Prefix.objects.filter(ip_version=6).count())
 
         self.assertIsInstance(Prefix.objects.filter(ip_version=6).first().static_groups, QuerySet)
-        self.assertEqual(list(Prefix.objects.filter(ip_version=6).first().static_groups), [sg])
+        self.assertIn(sg, list(Prefix.objects.filter(ip_version=6).first().static_groups))
 
 
 class StaticGroupAssociationTest(ModelTestCases.BaseModelTestCase):

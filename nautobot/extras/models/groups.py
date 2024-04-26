@@ -91,13 +91,16 @@ class StaticGroup(PrimaryModel):
                 raise ValidationError({"content_type": "ContentType cannot be changed once created"})
 
     def _check_valid_member(self, member):
-        if not isinstance(member, self.model):
+        if not (isinstance(member, self.model) or issubclass(member, self.model)):
             raise TypeError(f"{member} is not a {self.model._meta.label_lower}")
 
     def add_members(self, objects_to_add):
         """Add the given list or QuerySet of objects to this Static Group."""
-        for obj in objects_to_add:
-            self._check_valid_member(obj)
+        if isinstance(objects_to_add, models.QuerySet):
+            self._check_valid_member(objects_to_add.model)
+        else:
+            for obj in objects_to_add:
+                self._check_valid_member(obj)
 
         for obj in objects_to_add:
             # We don't use `.bulk_create()` currently because we want change logging for these creates.
@@ -108,14 +111,22 @@ class StaticGroup(PrimaryModel):
 
     def remove_members(self, objects_to_remove):
         """Remove the given list or QuerySet of objects from this Static Group."""
-        pks_to_remove = set()
-        for obj in objects_to_remove:
-            self._check_valid_member(obj)
-            pks_to_remove.add(obj.pk)
+        if isinstance(objects_to_remove, models.QuerySet):
+            self._check_valid_member(objects_to_remove.model)
+            StaticGroupAssociation.objects.filter(
+                static_group=self,
+                associated_object_type=self.content_type,
+                associated_object_id__in=objects_to_remove.values_list("pk", flat=True),
+            ).delete()
+        else:
+            pks_to_remove = set()
+            for obj in objects_to_remove:
+                self._check_valid_member(obj)
+                pks_to_remove.add(obj.pk)
 
-        StaticGroupAssociation.objects.filter(
-            static_group=self, associated_object_type=self.content_type, associated_object_id__in=pks_to_remove
-        ).delete()
+            StaticGroupAssociation.objects.filter(
+                static_group=self, associated_object_type=self.content_type, associated_object_id__in=pks_to_remove
+            ).delete()
 
 
 @extras_features(
