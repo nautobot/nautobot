@@ -265,7 +265,7 @@ class ViewTestCases:
             response = self.client.get(url)
             self.assertHttpStatus(response, 200)
             response_data = response.content.decode(response.charset)
-            if type(obj) not in [extras_models.Contact, extras_models.Team]:
+            if getattr(obj, "is_contact_associable_model", False):
                 self.assertInHTML(
                     f'<a href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">Contacts</a>',
                     response_data,
@@ -284,7 +284,7 @@ class ViewTestCases:
                 response = self.client.get(url)
                 self.assertHttpStatus(response, 200)
                 response_data = response.content.decode(response.charset)
-                if type(obj) not in [extras_models.Contact, extras_models.Team]:
+                if getattr(obj, "is_contact_associable_model", False):
                     self.assertInHTML(
                         f'<a href="{obj.get_absolute_url()}#contacts" onclick="switch_tab(this.href)" aria-controls="contacts" role="tab" data-toggle="tab">Contacts</a>',
                         response_data,
