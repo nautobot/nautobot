@@ -33,4 +33,4 @@ From a given record of any object type that can be a member of a Static Group, t
 * `object.associated_static_groups` - returns a `QuerySet` of `StaticGroupAssociation` records representing the assignment of this object to static groups
 
 !!! tip
-    By default, all models inheriting from Nautobot's `BaseModel` class are assumed to be a viable object type for Static Groups to contain. Individual models that do not wish to be assignable to Static Groups can declare the flag `is_static_group_associable_model = False` on their model definition.
+    By default, all models inheriting from Nautobot's `OrganizationalModel` or `PrimaryModel` classes are assumed to be a viable object type for Static Groups to contain. Individual models that do not wish to be assignable to Static Groups can declare the flag `is_static_group_associable_model = False` on their model definition.

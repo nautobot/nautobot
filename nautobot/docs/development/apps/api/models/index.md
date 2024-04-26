@@ -27,7 +27,7 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
     Support for Contact and Team assignment was removed from `django.db.models.Model` and `BaseModel`. The mixin class `ContactMixin` was added to be usable by `BaseModel` subclasses that want to be assignable to Contacts and Teams.
 
 +++ 2.3.0
-    Support for Static Groups was added to `OrganizationalModel` and `PrimaryModel`. The mixin class `StaticGroupMixin` was added to be usable by `BaseModel` subclasses that want to be assignable to Static Groups
+    Support for Static Groups was added to `OrganizationalModel` and `PrimaryModel`. The mixin class `StaticGroupMixin` was added to be usable by `BaseModel` subclasses that want to be assignable to Static Groups.
 
 Below is an example `models.py` file containing a basic model with two character fields:
 
