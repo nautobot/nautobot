@@ -190,6 +190,35 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "table_changes_pending",
     )
 
+    def new_changes_not_applied(self, request, current_saved_view):
+        """
+        Compare request.GET's query dict with the configuration stored on the current saved view
+        If there is any configuration different, return True
+        If every configuration is the same, return False
+        """
+        if current_saved_view is None:
+            return False
+        query_dict = request.GET.dict()
+
+        if query_dict.get("table_changes_pending", None):
+            return True
+        if int(query_dict.get("per_page")) != current_saved_view.pagination_count:
+            return True
+        if (query_dict.get("sort", [])) != current_saved_view.sort_order.get("sort", []):
+            return True
+        query_dict_keys = sorted(list(query_dict.keys()))
+        for param in self.non_filter_params:
+            if param in query_dict_keys:
+                query_dict_keys.remove(param)
+        filter_param_keys = sorted(list(current_saved_view.filter_params.keys()))
+
+        if query_dict_keys != filter_param_keys:
+            return True
+        for key in filter_param_keys:
+            if sorted(current_saved_view.filter_params.get(key)) != sorted(request.GET.getlist(key)):
+                return True
+        return False
+
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
         filter_params = request.GET.copy()
@@ -304,16 +333,16 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             # Construct the objects table
             if self.request.GET.getlist("sort"):
                 hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
-            saved_view_pk = self.request.GET.get("saved_view_pk", None)
+            current_saved_view_pk = self.request.GET.get("saved_view_pk", None)
             table_changes_pending = self.request.GET.get("table_changes_pending", False)
-            if saved_view_pk:
-                saved_view_name = SavedView.objects.get(pk=saved_view_pk).name
+            if current_saved_view_pk:
+                current_saved_view = SavedView.objects.get(pk=current_saved_view_pk)
             else:
-                saved_view_name = ""
+                current_saved_view = None
             table = self.table(
                 self.queryset,
                 table_changes_pending=table_changes_pending,
-                saved_view_pk=saved_view_pk,
+                saved_view_pk=current_saved_view_pk,
                 user=request.user,
                 hide_hierarchy_ui=hide_hierarchy_ui,
             )
@@ -347,6 +376,8 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             .restrict(request.user, "view")
             .order_by("list_view_name", "name")
         )
+        new_changes_not_applied = self.new_changes_not_applied(request, current_saved_view)
+        print(new_changes_not_applied)
 
         context = {
             "content_type": content_type,
@@ -361,7 +392,8 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "search_form": search_form,
             "list_url": list_url,
             "title": bettertitle(model._meta.verbose_name_plural),
-            "saved_view_name": saved_view_name,
+            "new_changes_not_applied": new_changes_not_applied,
+            "current_saved_view": current_saved_view,
             "saved_views": saved_views,
             "model": model,
         }

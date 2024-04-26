@@ -37,6 +37,36 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
     # Log error messages within NautobotHTMLRenderer
     logger = logging.getLogger(__name__)
 
+    def new_changes_not_applied(self, view, current_saved_view):
+        """
+        Compare request.GET's query dict with the configuration stored on the current saved view
+        If there is any configuration different, return True
+        If every configuration is the same, return False
+        """
+        request = view.request
+        if current_saved_view is None:
+            return False
+        query_dict = request.GET.dict()
+
+        if query_dict.get("table_changes_pending", None):
+            return True
+        if int(query_dict.get("per_page")) != current_saved_view.pagination_count:
+            return True
+        if (query_dict.get("sort", [])) != current_saved_view.sort_order.get("sort", []):
+            return True
+        query_dict_keys = sorted(list(query_dict.keys()))
+        for param in view.non_filter_params:
+            if param in query_dict_keys:
+                query_dict_keys.remove(param)
+        filter_param_keys = sorted(list(current_saved_view.filter_params.keys()))
+
+        if query_dict_keys != filter_param_keys:
+            return True
+        for key in filter_param_keys:
+            if sorted(current_saved_view.filter_params.get(key)) != sorted(request.GET.getlist(key)):
+                return True
+        return False
+
     def get_dynamic_filter_form(self, view, request, *args, filterset_class=None, **kwargs):
         """
         Helper function to obtain the filter_form_class,
@@ -273,16 +303,19 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     .restrict(request.user, "view")
                     .order_by("list_view_name", "name")
                 )
-                saved_view_pk = request.GET.get("saved_view_pk", None)
-                if saved_view_pk:
-                    saved_view_name = SavedView.objects.get(pk=saved_view_pk).name
+                current_saved_view_pk = request.GET.get("saved_view_pk", None)
+                if current_saved_view_pk:
+                    current_saved_view = SavedView.objects.get(pk=current_saved_view_pk)
                 else:
-                    saved_view_name = ""
+                    current_saved_view = None
+
+                new_changes_not_applied = self.new_changes_not_applied(view, current_saved_view)
                 context.update(
                     {
                         "model": model,
                         "saved_view_form": SavedViewForm(),
-                        "saved_view_name": saved_view_name,
+                        "current_saved_view": current_saved_view,
+                        "new_changes_not_applied": new_changes_not_applied,
                         "action_buttons": valid_actions,
                         "list_url": list_url,
                         "saved_views": saved_views,

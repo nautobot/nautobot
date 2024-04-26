@@ -266,6 +266,7 @@ class SavedViewUIViewSet(
         Override to add more variables to Response.
         """
         sv = SavedView.objects.get(pk=request.GET.get("saved_view_pk", None))
+        table_changes_pending = request.GET.get("table_changes_pending", False)
         pagination_count = request.GET.get("per_page", None)
         if pagination_count is not None:
             sv.pagination_count = int(pagination_count)
@@ -285,8 +286,9 @@ class SavedViewUIViewSet(
         for param in list(sv.filter_params.keys()):
             if param not in new_filter_params:
                 sv.filter_params.pop(param)
-        table_class = self.get_table_class_string_from_list_view_name(sv.list_view_name)
-        sv.table_config[f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
+        if table_changes_pending:
+            table_class = self.get_table_class_string_from_list_view_name(sv.list_view_name)
+            sv.table_config[f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
         sv.validated_save()
         query_string = sv.view_config
         list_view_url = reverse(sv.list_view_name) + query_string + f"&saved_view_pk={sv.pk}"
@@ -302,6 +304,9 @@ class SavedViewUIViewSet(
         name = request.POST.get("name")
         list_view_name = request.GET.get("list_view_name")
         derived_view_pk = request.GET.get("saved_view_pk", None)
+        if derived_view_pk:
+            derived_instance = SavedView.objects.get(pk=derived_view_pk)
+        table_changes_pending = request.GET.get("table_changes_pending", False)
         try:
             sv = SavedView.objects.create(name=name, owner=request.user, list_view_name=list_view_name)
         except IntegrityError:
@@ -309,8 +314,7 @@ class SavedViewUIViewSet(
                 request, f"Integrity Error: User {request.user.username} already has a Saved View named {name}"
             )
             if derived_view_pk:
-                instance = SavedView.objects.get(pk=derived_view_pk)
-                return redirect(self.get_return_url(request, obj=instance))
+                return redirect(self.get_return_url(request, obj=derived_instance))
             else:
                 return redirect(reverse(list_view_name))
         pagination_count = request.GET.get("per_page", None)
@@ -333,7 +337,10 @@ class SavedViewUIViewSet(
             if param not in new_filter_params:
                 sv.filter_params.pop(param)
         table_class = self.get_table_class_string_from_list_view_name(list_view_name)
-        sv.table_config[f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
+        if table_changes_pending:
+            sv.table_config[f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
+        else:
+            sv.table_config[f"{table_class}"] = derived_instance.table_config[f"{table_class}"]
         try:
             sv.validated_save()
             query_string = sv.view_config
