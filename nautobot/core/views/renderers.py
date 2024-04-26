@@ -25,6 +25,8 @@ from nautobot.core.views.utils import check_filter_for_display, get_csv_form_fie
 from nautobot.extras.models.change_logging import ObjectChange
 from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import get_base_template
+from nautobot.users.forms import SavedViewForm
+from nautobot.users.models import SavedView
 
 
 class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
@@ -256,10 +258,20 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             if view.action == "list":
                 # Construct valid actions for list view.
                 valid_actions = self.validate_action_buttons(view, request)
+                # Query SavedViews for dropdown button
+                list_url = validated_viewname(model, "list")
+                saved_views = (
+                    SavedView.objects.filter(list_view_name=list_url)
+                    .restrict(request.user, "view")
+                    .order_by("list_view_name", "name")
+                )
                 context.update(
                     {
+                        "model": model,
+                        "saved_view_form": SavedViewForm(),
                         "action_buttons": valid_actions,
-                        "list_url": validated_viewname(model, "list"),
+                        "list_url": list_url,
+                        "saved_views": saved_views,
                         "title": bettertitle(model._meta.verbose_name_plural),
                     }
                 )

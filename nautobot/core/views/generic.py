@@ -329,7 +329,11 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         # Query SavedViews for dropdown button
         list_url = validated_viewname(model, "list")
-        saved_views = SavedView.objects.filter(list_view_name=list_url).restrict(request.user, "view").order_by("name")
+        saved_views = (
+            SavedView.objects.filter(list_view_name=list_url)
+            .restrict(request.user, "view")
+            .order_by("list_view_name", "name")
+        )
 
         context = {
             "content_type": content_type,

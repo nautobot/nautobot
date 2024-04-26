@@ -1,5 +1,7 @@
 import binascii
 import os
+import urllib
+import urllib.parse
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, Group, UserManager as UserManager_
@@ -295,7 +297,7 @@ class ObjectPermission(BaseModel, ChangeLoggedModel):
     "custom_validators",
     "graphql",
 )
-class SavedView(BaseModel):
+class SavedView(BaseModel, ChangeLoggedModel):
     owner = models.ForeignKey(
         to=User, blank=False, null=False, on_delete=models.CASCADE, help_text="The user that created this view"
     )
@@ -338,7 +340,7 @@ class SavedView(BaseModel):
         # TODO table_config
         for key, value in self.filter_params.items():
             for item in value:
-                query_list.append(f"{key}={item}")
+                query_list.append(f"{key}={urllib.parse.quote_plus(item)}")
 
         query_list.append(f"per_page={self.pagination_count}")
 
