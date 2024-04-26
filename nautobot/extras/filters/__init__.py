@@ -1146,7 +1146,7 @@ class StaticGroupAssociationFilterSet(NautobotFilterSet):
     static_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=StaticGroup.objects.all(),
         to_field_name="name",
-        label="Static group (name or PK)",
+        label="Static group (name or ID)",
     )
     associated_object_type = ContentTypeMultipleChoiceFilter(
         choices=StaticGroupModelsQuery().get_choices, conjoined=False

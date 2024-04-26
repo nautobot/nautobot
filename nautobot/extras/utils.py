@@ -223,8 +223,7 @@ class StaticGroupModelsQuery(FeaturedQueryMixin):
             _class
             for _class in apps.get_models()
             if (
-                hasattr(_class, "is_static_group_associable_model")
-                and _class.is_static_group_associable_model
+                getattr(_class, "is_static_group_associable_model", False)
                 and ".tests." not in _class.__module__  # avoid leakage from nautobot.core.tests.test_filters
             )
         ]
