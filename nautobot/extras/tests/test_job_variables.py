@@ -3,26 +3,32 @@ from django.test import TestCase
 from netaddr import IPAddress, IPNetwork
 
 from nautobot.dcim.models import Device
-from nautobot.extras.models import Role
-from nautobot.extras.test_jobs.job_variables import (
-    BooleanVarJob,
-    ChoiceVarJob,
-    FileVarJob,
-    IntegerVarJob,
-    IPAddressVarJob,
-    IPAddressWithMaskVarJob,
-    IPNetworkVarJob,
-    JSONVarJob,
-    MultiChoiceVarJob,
-    MultiObjectVarJob,
-    ObjectVarJob,
-    StringVarJob,
-    TextVarJob,
+from nautobot.extras.jobs import (
+    BooleanVar,
+    ChoiceVar,
+    FileVar,
+    IntegerVar,
+    IPAddressVar,
+    IPAddressWithMaskVar,
+    IPNetworkVar,
+    Job,
+    JSONVar,
+    MultiChoiceVar,
+    MultiObjectVar,
+    ObjectVar,
+    StringVar,
+    TextVar,
 )
+from nautobot.extras.models import Role
+
+CHOICES = (("ff0000", "Red"), ("00ff00", "Green"), ("0000ff", "Blue"))
 
 
 class JobVariablesTest(TestCase):
     def test_stringvar(self):
+        class StringVarJob(Job):
+            var1 = StringVar(min_length=3, max_length=3, regex=r"[a-z]+")
+
         # Validate min_length enforcement
         data = {"var1": "xx"}
         form = StringVarJob().as_form(data)
@@ -48,6 +54,9 @@ class JobVariablesTest(TestCase):
         self.assertEqual(form.cleaned_data["var1"], data["var1"])
 
     def test_textvar(self):
+        class TextVarJob(Job):
+            var1 = TextVar()
+
         # Validate valid data
         data = {"var1": "This is a test string"}
         form = TextVarJob().as_form(data)
@@ -55,6 +64,9 @@ class JobVariablesTest(TestCase):
         self.assertEqual(form.cleaned_data["var1"], data["var1"])
 
     def test_integervar(self):
+        class IntegerVarJob(Job):
+            var1 = IntegerVar(min_value=5, max_value=10)
+
         # Validate min_value enforcement
         data = {"var1": 4}
         form = IntegerVarJob().as_form(data)
@@ -74,6 +86,9 @@ class JobVariablesTest(TestCase):
         self.assertEqual(form.cleaned_data["var1"], data["var1"])
 
     def test_booleanvar(self):
+        class BooleanVarJob(Job):
+            var1 = BooleanVar()
+
         # Validate True
         data = {"var1": True}
         form = BooleanVarJob().as_form(data)
@@ -87,6 +102,9 @@ class JobVariablesTest(TestCase):
         self.assertEqual(form.cleaned_data["var1"], False)
 
     def test_choicevar(self):
+        class ChoiceVarJob(Job):
+            var1 = ChoiceVar(choices=CHOICES)
+
         # Validate valid choice
         data = {"var1": "ff0000"}
         form = ChoiceVarJob().as_form(data)
@@ -100,6 +118,9 @@ class JobVariablesTest(TestCase):
         self.assertIn("var1", form.errors)
 
     def test_multichoicevar(self):
+        class MultiChoiceVarJob(Job):
+            var1 = MultiChoiceVar(choices=CHOICES)
+
         # Validate single choice
         data = {"var1": ["ff0000"]}
         form = MultiChoiceVarJob().as_form(data)
@@ -119,6 +140,9 @@ class JobVariablesTest(TestCase):
         self.assertIn("var1", form.errors)
 
     def test_objectvar(self):
+        class ObjectVarJob(Job):
+            var1 = ObjectVar(model=Role)
+
         # Validate valid data
         data = {"var1": Role.objects.get_for_model(Device).first().pk}
         form = ObjectVarJob().as_form(data)
@@ -126,6 +150,9 @@ class JobVariablesTest(TestCase):
         self.assertEqual(form.cleaned_data["var1"].pk, data["var1"])
 
     def test_multiobjectvar(self):
+        class MultiObjectVarJob(Job):
+            var1 = MultiObjectVar(model=Role)
+
         # Validate valid data
         data = {"var1": [role.pk for role in Role.objects.all()[:3]]}
         form = MultiObjectVarJob().as_form(data)
@@ -135,6 +162,9 @@ class JobVariablesTest(TestCase):
         self.assertEqual(form.cleaned_data["var1"][2].pk, data["var1"][2])
 
     def test_filevar(self):
+        class FileVarJob(Job):
+            var1 = FileVar()
+
         # Test file
         testfile = SimpleUploadedFile(name="test_file.txt", content=b"This is an test file for testing")
 
@@ -145,6 +175,9 @@ class JobVariablesTest(TestCase):
         self.assertEqual(form.cleaned_data["var1"], testfile)
 
     def test_ipaddressvar(self):
+        class IPAddressVarJob(Job):
+            var1 = IPAddressVar()
+
         # Validate IP network enforcement
         data = {"var1": "1.2.3"}
         form = IPAddressVarJob().as_form(data)
@@ -164,6 +197,9 @@ class JobVariablesTest(TestCase):
         self.assertEqual(form.cleaned_data["var1"], IPAddress(data["var1"]))
 
     def test_ipaddresswithmaskvar(self):
+        class IPAddressWithMaskVarJob(Job):
+            var1 = IPAddressWithMaskVar()
+
         # Validate IP network enforcement
         data = {"var1": "1.2.3"}
         form = IPAddressWithMaskVarJob().as_form(data)
@@ -183,6 +219,9 @@ class JobVariablesTest(TestCase):
         self.assertEqual(form.cleaned_data["var1"], IPNetwork(data["var1"]))
 
     def test_ipnetworkvar(self):
+        class IPNetworkVarJob(Job):
+            var1 = IPNetworkVar()
+
         # Validate IP network enforcement
         data = {"var1": "1.2.3"}
         form = IPNetworkVarJob().as_form(data)
@@ -202,6 +241,9 @@ class JobVariablesTest(TestCase):
         self.assertEqual(form.cleaned_data["var1"], IPNetwork(data["var1"]))
 
     def test_jsonvar(self):
+        class JSONVarJob(Job):
+            var1 = JSONVar()
+
         # Valid JSON value as dictionary
         data = {"var1": {"key1": "value1"}}
         form = JSONVarJob().as_form(data)

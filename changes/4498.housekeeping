@@ -1,0 +1,1 @@
+Removed redundant `nautobot.extras.plugins.register_jobs` function.

@@ -13,12 +13,11 @@ from rest_framework import status
 from rest_framework.relations import ManyRelatedField
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
-from nautobot.core import testing
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.models import fields as core_fields
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags.helpers import bettertitle
-from nautobot.core.testing import mixins, views
+from nautobot.core.testing import mixins, utils, views
 from nautobot.core.utils import lookup
 from nautobot.core.utils.data import is_uuid
 from nautobot.extras import choices as extras_choices, models as extras_models, registry
@@ -111,7 +110,7 @@ class APIViewTestCases:
                 self.model._meta.model_name,
             ) in settings.EXEMPT_EXCLUDE_MODELS:
                 # Models listed in EXEMPT_EXCLUDE_MODELS should not be accessible to anonymous users
-                with testing.disable_warnings("django.request"):
+                with utils.disable_warnings("django.request"):
                     self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_403_FORBIDDEN)
             else:
                 response = self.client.get(url, **self.header)
@@ -125,7 +124,7 @@ class APIViewTestCases:
             url = self._get_detail_url(self._get_queryset().first())
 
             # Try GET without permission
-            with testing.disable_warnings("django.request"):
+            with utils.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_403_FORBIDDEN)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -303,7 +302,7 @@ class APIViewTestCases:
                 self.model._meta.model_name,
             ) in settings.EXEMPT_EXCLUDE_MODELS:
                 # Models listed in EXEMPT_EXCLUDE_MODELS should not be accessible to anonymous users
-                with testing.disable_warnings("django.request"):
+                with utils.disable_warnings("django.request"):
                     self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_403_FORBIDDEN)
             else:
                 # TODO(Glenn): if we're passing **self.header, we are *by definition* **NOT** anonymous!!
@@ -389,7 +388,7 @@ class APIViewTestCases:
             url = self._get_list_url()
 
             # Try GET without permission
-            with testing.disable_warnings("django.request"):
+            with utils.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_403_FORBIDDEN)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -490,7 +489,7 @@ class APIViewTestCases:
             GET a list of objects with an unknown filter parameter and strict filtering, expect a 400 response.
             """
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
-            with testing.disable_warnings("django.request"):
+            with utils.disable_warnings("django.request"):
                 response = self.client.get(f"{self._get_list_url()}?ice_cream_flavor=rocky-road", **self.header)
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
             self.assertIsInstance(response.data, dict)
@@ -606,7 +605,7 @@ class APIViewTestCases:
             url = self._get_list_url()
 
             # Try POST without permission
-            with testing.disable_warnings("django.request"):
+            with utils.disable_warnings("django.request"):
                 response = self.client.post(url, self.create_data[0], format="json", **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
@@ -679,7 +678,7 @@ class APIViewTestCases:
                 instance = self.get_deletable_object()
             else:
                 # try to do it ourselves
-                instance = testing.get_deletable_objects(self.model, self._get_queryset()).first()
+                instance = utils.get_deletable_objects(self.model, self._get_queryset()).first()
             if instance is None:
                 self.fail("Couldn't find a single deletable object!")
 
@@ -776,7 +775,7 @@ class APIViewTestCases:
             update_data = self.update_data or getattr(self, "create_data")[0]
 
             # Try PATCH without permission
-            with testing.disable_warnings("django.request"):
+            with utils.disable_warnings("django.request"):
                 response = self.client.patch(url, update_data, format="json", **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
@@ -983,7 +982,7 @@ class APIViewTestCases:
             For some models this may just be any random object, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            instance = testing.get_deletable_objects(self.model, self._get_queryset()).first()
+            instance = utils.get_deletable_objects(self.model, self._get_queryset()).first()
             if instance is None:
                 self.fail("Couldn't find a single deletable object!")
             return instance
@@ -995,7 +994,7 @@ class APIViewTestCases:
             For some models this may just be any random objects, but when we have FKs with `on_delete=models.PROTECT`
             (as is often the case) we need to find or create an instance that doesn't have such entanglements.
             """
-            instances = testing.get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
+            instances = utils.get_deletable_objects(self.model, self._get_queryset()).values_list("pk", flat=True)[:3]
             if len(instances) < 3:
                 self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
             return instances
@@ -1007,7 +1006,7 @@ class APIViewTestCases:
             url = self._get_detail_url(self.get_deletable_object())
 
             # Try DELETE without permission
-            with testing.disable_warnings("django.request"):
+            with utils.disable_warnings("django.request"):
                 response = self.client.delete(url, **self.header)
                 self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 

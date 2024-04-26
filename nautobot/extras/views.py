@@ -1257,11 +1257,9 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         job_model = self._get_job_model_or_404(class_path, pk)
 
         try:
-            try:
-                job_class = job_model.job_class
-            except TypeError as exc:
-                # job_class may be None
-                raise RuntimeError("Job code for this job is not currently installed or loadable") from exc
+            job_class = job_model.job_class
+            if job_class is None:
+                raise RuntimeError("Job code for this job is not currently installed or loadable")
             initial = normalize_querydict(request.GET, form_class=job_class.as_form_class())
             if "kwargs_from_job_result" in initial:
                 job_result_pk = initial.pop("kwargs_from_job_result")
@@ -1374,7 +1372,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                 celery_kwargs = {"nautobot_job_profile": profile, "queue": task_queue}
                 scheduled_job = ScheduledJob(
                     name=schedule_name,
-                    task=job_model.job_class.registered_name,
+                    task=job_model.class_path,
                     job_model=job_model,
                     start_time=schedule_datetime,
                     description=f"Nautobot job {schedule_name} scheduled by {request.user} for {schedule_datetime}",
@@ -1649,7 +1647,7 @@ class ScheduledJobView(generic.ObjectView):
             for name, var in job_class._get_vars().items():
                 field = var.as_field()
                 if field.label:
-                    labels[name] = var
+                    labels[name] = field.label
                 else:
                     labels[name] = pretty_name(name)
         return {"labels": labels, "job_class_found": (job_class is not None)}
