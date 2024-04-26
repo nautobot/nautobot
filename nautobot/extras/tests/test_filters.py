@@ -1839,7 +1839,9 @@ class StaticGroupAssociationTestCase(FilterTestCases.FilterTestCase):
         ct = StaticGroup.objects.filter(static_group_associations__isnull=False).first().content_type
         params = {"associated_object_type": [ct.model_class()._meta.label_lower]}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, StaticGroupAssociation.objects.filter(associated_object_type=ct)
+            self.filterset(params, self.queryset).qs,
+            StaticGroupAssociation.objects.filter(associated_object_type=ct),
+            ordered=False,
         )
 
 

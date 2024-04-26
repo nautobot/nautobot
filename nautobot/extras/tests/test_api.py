@@ -3549,6 +3549,10 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
     model = StaticGroupAssociation
     choices_fields = ["associated_object_type"]
 
+    # StaticGroupAssociation records created for SoftwareImageFile records will contain a `hashing_algorithm` key;
+    # presence of strings like "md5" and "sha256" in the API response for StaticGroupAssociation is *not* a failure
+    VERBOTEN_STRINGS = ("password",)
+
     @classmethod
     def setUpTestData(cls):
         cls.sg1 = StaticGroup.objects.create(name="Locations", content_type=ContentType.objects.get_for_model(Location))
