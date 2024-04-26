@@ -1,0 +1,1 @@
+Fixed some cases where stale Job code might be present when Jobs are sourced from `JOBS_ROOT` or a Git repository.
