@@ -187,6 +187,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
         "saved_view_pk",
+        "table_changes_pending",
     )
 
     def get_filter_params(self, request):
@@ -303,7 +304,19 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             # Construct the objects table
             if self.request.GET.getlist("sort"):
                 hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
-            table = self.table(self.queryset, user=request.user, hide_hierarchy_ui=hide_hierarchy_ui)
+            saved_view_pk = self.request.GET.get("saved_view_pk", None)
+            table_changes_pending = self.request.GET.get("table_changes_pending", False)
+            if saved_view_pk:
+                saved_view_name = SavedView.objects.get(pk=saved_view_pk).name
+            else:
+                saved_view_name = ""
+            table = self.table(
+                self.queryset,
+                table_changes_pending=table_changes_pending,
+                saved_view_pk=saved_view_pk,
+                user=request.user,
+                hide_hierarchy_ui=hide_hierarchy_ui,
+            )
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
 
@@ -348,6 +361,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "search_form": search_form,
             "list_url": list_url,
             "title": bettertitle(model._meta.verbose_name_plural),
+            "saved_view_name": saved_view_name,
             "saved_views": saved_views,
             "model": model,
         }

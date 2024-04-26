@@ -100,7 +100,7 @@
         {% endblock export_button %}
     {% endif %}
 </div>
-<h1>{% block title %}{{ title }}{% endblock %}</h1>
+<h1>{% block title %}{{ title }}{% if saved_view_name %} - {{ saved_view_name }}{% endif %}{% endblock %}</h1>
 {% block header_extra %}{% endblock %}
 {% if filter_params %}
 <div class="filters-applied">

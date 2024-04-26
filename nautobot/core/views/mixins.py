@@ -615,6 +615,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
         "saved_view_pk",
+        "table_changes_pending",
     )
 
     def filter_queryset(self, queryset):

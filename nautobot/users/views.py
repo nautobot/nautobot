@@ -1,5 +1,6 @@
 import logging
 
+from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth import (
     BACKEND_SESSION_KEY,
@@ -242,6 +243,12 @@ class SavedViewUIViewSet(
     filterset_class = SavedViewFilterSet
     table_class = SavedViewTable
 
+    def get_table_class_string_from_list_view_name(self, list_view_name):
+        app_label, model_name = list_view_name.split(":")
+        model_name = model_name.replace("_list", "")
+        model = apps.get_model(app_label=app_label, model_name=model_name)
+        return f"{model.__name__}Table"
+
     def retrieve(self, request, *args, **kwargs):
         """
         The detail view for a saved view should the related ObjectListView
@@ -278,7 +285,8 @@ class SavedViewUIViewSet(
         for param in list(sv.filter_params.keys()):
             if param not in new_filter_params:
                 sv.filter_params.pop(param)
-
+        table_class = self.get_table_class_string_from_list_view_name(sv.list_view_name)
+        sv.table_config[f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
         sv.validated_save()
         query_string = sv.view_config
         list_view_url = reverse(sv.list_view_name) + query_string + f"&saved_view_pk={sv.pk}"
@@ -324,7 +332,8 @@ class SavedViewUIViewSet(
         for param in list(sv.filter_params.keys()):
             if param not in new_filter_params:
                 sv.filter_params.pop(param)
-
+        table_class = self.get_table_class_string_from_list_view_name(list_view_name)
+        sv.table_config[f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
         try:
             sv.validated_save()
             query_string = sv.view_config

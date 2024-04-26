@@ -66,6 +66,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         """
         table_class = view.get_table_class()
         request = kwargs.get("request", view.request)
+        saved_view_pk = request.GET.get("saved_view_pk", None)
+        table_changes_pending = request.GET.get("table_changes_pending", False)
         queryset = view.alter_queryset(request)
 
         if view.action in ["list", "notes", "changelog"]:
@@ -73,7 +75,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 permissions = kwargs.get("permissions", {})
                 if view.request.GET.getlist("sort"):
                     view.hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
-                table = table_class(queryset, user=request.user, hide_hierarchy_ui=view.hide_hierarchy_ui)
+                table = table_class(
+                    queryset,
+                    table_changes_pending=table_changes_pending,
+                    saved_view_pk=saved_view_pk,
+                    user=request.user,
+                    hide_hierarchy_ui=view.hide_hierarchy_ui,
+                )
                 if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                     table.columns.show("pk")
             elif view.action == "notes":
@@ -265,10 +273,16 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     .restrict(request.user, "view")
                     .order_by("list_view_name", "name")
                 )
+                saved_view_pk = request.GET.get("saved_view_pk", None)
+                if saved_view_pk:
+                    saved_view_name = SavedView.objects.get(pk=saved_view_pk).name
+                else:
+                    saved_view_name = ""
                 context.update(
                     {
                         "model": model,
                         "saved_view_form": SavedViewForm(),
+                        "saved_view_name": saved_view_name,
                         "action_buttons": valid_actions,
                         "list_url": list_url,
                         "saved_views": saved_views,
