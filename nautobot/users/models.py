@@ -302,7 +302,7 @@ class SavedView(BaseModel, ChangeLoggedModel):
         to=User, blank=False, null=False, on_delete=models.CASCADE, help_text="The user that created this view"
     )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=False, null=False, help_text="The name of this view")
-    list_view_name = models.CharField(
+    view = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         blank=False,
         null=False,
@@ -330,7 +330,7 @@ class SavedView(BaseModel, ChangeLoggedModel):
         verbose_name_plural = "saved views"
 
     def __str__(self):
-        return f"{self.owner.username} - {self.list_view_name} - {self.name}"
+        return f"{self.owner.username} - {self.view} - {self.name}"
 
     @property
     def view_config(self):
@@ -344,9 +344,8 @@ class SavedView(BaseModel, ChangeLoggedModel):
 
         query_list.append(f"per_page={self.pagination_count}")
 
-        for key, value in self.sort_order.items():
-            for item in value:
-                query_list.append(f"{key}={item}")
+        for value in self.sort_order:
+            query_list.append(f"sort={value}")
 
         query_string += "&".join(query_list)
         return query_string

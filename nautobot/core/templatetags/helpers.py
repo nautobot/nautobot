@@ -725,12 +725,12 @@ def filter_form_modal(
 def saved_view_modal(
     form,
     params,
-    list_view_name,
+    view,
 ):
     return {
         "form": form,
         "params": params,
-        "list_view_name": list_view_name,
+        "view": view,
     }
 
 

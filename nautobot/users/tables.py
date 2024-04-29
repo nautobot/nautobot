@@ -8,7 +8,7 @@ class SavedViewTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     owner = tables.Column()
-    list_view_name = tables.Column()
+    view = tables.Column()
     actions = ButtonsColumn(SavedView, buttons=("changelog", "delete"))
 
     class Meta(BaseTable.Meta):
@@ -17,7 +17,7 @@ class SavedViewTable(BaseTable):
             "pk",
             "name",
             "owner",
-            "list_view_name",
+            "view",
             "table_config",
             "pagination_count",
             "filter_params",
@@ -28,6 +28,6 @@ class SavedViewTable(BaseTable):
             "pk",
             "name",
             "owner",
-            "list_view_name",
+            "view",
             "actions",
         )

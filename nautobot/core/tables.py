@@ -84,50 +84,34 @@ class BaseTable(django_tables2.Table):
 
         # Apply custom column ordering for SavedView if it is available
         # Takes precedence before user config
+        columns = []
         if not table_changes_pending and saved_view is not None:
             view_table_config = saved_view.table_config.get(f"{self.__class__.__name__}", None)
             if view_table_config is not None:
                 columns = view_table_config.get("columns", [])
-                if columns:
-                    pk = self.base_columns.pop("pk", None)
-                    actions = self.base_columns.pop("actions", None)
-
-                    for name, column in self.base_columns.items():
-                        if name in columns:
-                            self.columns.show(name)
-                        else:
-                            self.columns.hide(name)
-                    self.sequence = [c for c in columns if c in self.base_columns]
-
-                    # Always include PK and actions column, if defined on the table
-                    if pk:
-                        self.base_columns["pk"] = pk
-                        self.sequence.insert(0, "pk")
-                    if actions:
-                        self.base_columns["actions"] = actions
-                        self.sequence.append("actions")
         else:
             # Apply custom column ordering for user
             if user is not None and not isinstance(user, AnonymousUser):
                 columns = user.get_config(f"tables.{self.__class__.__name__}.columns")
-                if columns:
-                    pk = self.base_columns.pop("pk", None)
-                    actions = self.base_columns.pop("actions", None)
 
-                    for name, column in self.base_columns.items():
-                        if name in columns:
-                            self.columns.show(name)
-                        else:
-                            self.columns.hide(name)
-                    self.sequence = [c for c in columns if c in self.base_columns]
+        if columns:
+            pk = self.base_columns.pop("pk", None)
+            actions = self.base_columns.pop("actions", None)
 
-                    # Always include PK and actions column, if defined on the table
-                    if pk:
-                        self.base_columns["pk"] = pk
-                        self.sequence.insert(0, "pk")
-                    if actions:
-                        self.base_columns["actions"] = actions
-                        self.sequence.append("actions")
+            for name, column in self.base_columns.items():
+                if name in columns:
+                    self.columns.show(name)
+                else:
+                    self.columns.hide(name)
+            self.sequence = [c for c in columns if c in self.base_columns]
+
+            # Always include PK and actions column, if defined on the table
+            if pk:
+                self.base_columns["pk"] = pk
+                self.sequence.insert(0, "pk")
+            if actions:
+                self.base_columns["actions"] = actions
+                self.sequence.append("actions")
 
         # Dynamically update the table's QuerySet to ensure related fields are pre-fetched
         if isinstance(self.data, TableQuerysetData):

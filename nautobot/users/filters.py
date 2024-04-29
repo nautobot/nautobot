@@ -43,7 +43,7 @@ class SavedViewFilterSet(BaseFilterSet):
             "id",
             "owner",
             "name",
-            "list_view_name",
+            "view",
         ]
 
 

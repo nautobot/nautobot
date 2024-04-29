@@ -53,6 +53,7 @@ from nautobot.core.views.utils import (
     handle_protectederror,
     import_csv_helper,
     prepare_cloned_fields,
+    view_changes_not_saved,
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.models import ContactAssociation, ExportTemplate
@@ -189,35 +190,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "saved_view",
         "table_changes_pending",
     )
-
-    def new_changes_not_applied(self, request, current_saved_view):
-        """
-        Compare request.GET's query dict with the configuration stored on the current saved view
-        If there is any configuration different, return True
-        If every configuration is the same, return False
-        """
-        if current_saved_view is None:
-            return False
-        query_dict = request.GET.dict()
-
-        if query_dict.get("table_changes_pending", None):
-            return True
-        if int(query_dict.get("per_page")) != current_saved_view.pagination_count:
-            return True
-        if (query_dict.get("sort", [])) != current_saved_view.sort_order.get("sort", []):
-            return True
-        query_dict_keys = sorted(list(query_dict.keys()))
-        for param in self.non_filter_params:
-            if param in query_dict_keys:
-                query_dict_keys.remove(param)
-        filter_param_keys = sorted(list(current_saved_view.filter_params.keys()))
-
-        if query_dict_keys != filter_param_keys:
-            return True
-        for key in filter_param_keys:
-            if sorted(current_saved_view.filter_params.get(key)) != sorted(request.GET.getlist(key)):
-                return True
-        return False
 
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
@@ -371,13 +343,8 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         # Query SavedViews for dropdown button
         list_url = validated_viewname(model, "list")
-        saved_views = (
-            SavedView.objects.filter(list_view_name=list_url)
-            .restrict(request.user, "view")
-            .order_by("list_view_name", "name")
-        )
-        new_changes_not_applied = self.new_changes_not_applied(request, current_saved_view)
-        print(new_changes_not_applied)
+        saved_views = SavedView.objects.filter(view=list_url).restrict(request.user, "view").order_by("view", "name")
+        new_changes_not_applied = view_changes_not_saved(request, self, current_saved_view)
 
         context = {
             "content_type": content_type,

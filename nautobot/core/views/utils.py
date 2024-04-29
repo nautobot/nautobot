@@ -273,3 +273,33 @@ def prepare_cloned_fields(instance):
     param_string = "&".join([f"{k}={v}" for k, v in params])
 
     return param_string
+
+
+def view_changes_not_saved(request, view, current_saved_view):
+    """
+    Compare request.GET's query dict with the configuration stored on the current saved view
+    If there is any configuration different, return True
+    If every configuration is the same, return False
+    """
+    if current_saved_view is None:
+        return False
+    query_dict = request.GET.dict()
+
+    if query_dict.get("table_changes_pending", None):
+        return True
+    if int(query_dict.get("per_page")) != current_saved_view.pagination_count:
+        return True
+    if (request.GET.getlist("sort", [])) != current_saved_view.sort_order:
+        return True
+    query_dict_keys = sorted(list(query_dict.keys()))
+    for param in view.non_filter_params:
+        if param in query_dict_keys:
+            query_dict_keys.remove(param)
+    filter_param_keys = sorted(list(current_saved_view.filter_params.keys()))
+
+    if query_dict_keys != filter_param_keys:
+        return True
+    for key in filter_param_keys:
+        if sorted(current_saved_view.filter_params.get(key)) != sorted(request.GET.getlist(key)):
+            return True
+    return False

@@ -18,7 +18,7 @@
                 <h4 class="modal-title">New Saved View</h4>
             </div>
             <div class="modal-body">
-                <form action="{% url 'users:savedview_add' %}?list_view_name={{list_view_name}}&{{params}}" method="post">
+                <form action="{% url 'users:savedview_add' %}?view={{view}}&{{params}}" method="post">
                     {% csrf_token %}
                     <div class="form-group">
                         {% render_field form.name %}

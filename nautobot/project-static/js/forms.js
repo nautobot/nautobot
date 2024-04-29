@@ -638,7 +638,7 @@ function initializeDynamicFilterForm(context){
         let query_string = location.search.substr(1).split("&");
 
         if (type === "parent") {
-            query_string = query_string.filter(item => item.search(field_value) < 0);
+            query_string = query_string.filter(item => item.split("=")[0].search(field_value) < 0);
         } else {
             let parent = $(this).attr("data-field-parent");
             query_string = query_string.filter(item => item.search(parent + "=" + field_value) < 0)
@@ -657,15 +657,23 @@ function initializeDynamicFilterForm(context){
         if (saved_view_pk != null){
             saved_view_pk_query_string = "&saved_view=" + saved_view_pk
         }
-        const sort_order = urlParams.get('sort');
+        const sort_order = urlParams.getAll('sort');
         var sort_order_query_string = ""
         if (sort_order != null){
-            sort_order_query_string = "&sort=" + sort_order
+            for (var i = 0; i < sort_order.length; i++){
+                appendage = "&sort=" + sort_order[i]
+                sort_order_query_string += appendage
+            }
         }
         const per_page = urlParams.get('per_page');
         var per_page_query_string = ""
         if (per_page != null) {
             per_page_query_string = "&per_page=" + per_page
+        }
+        const table_changes = urlParams.get('table_changes_pending');
+        var table_changes_query_string = ""
+        if (table_changes != null) {
+            table_changes_query_string = "&table_changes_pending=" + table_changes
         }
         // Append q form field to dynamic filter form via hidden input
         let q_field = $('#id_q')
@@ -678,7 +686,7 @@ function initializeDynamicFilterForm(context){
         let default_filter_form_query = $("#default-filter form").serialize().split("&").filter(params => params.split("=")[1]?.length || 0 )
         // Union Operation
         let search_query = [...new Set([...default_filter_form_query, ...dynamic_filter_form_query])].join("&")
-        location.replace("?" + search_query + sort_order_query_string + per_page_query_string + saved_view_pk_query_string)
+        location.replace("?" + search_query + sort_order_query_string + per_page_query_string + saved_view_pk_query_string + table_changes_query_string)
     })
 
     // On submit of filter search form
@@ -698,18 +706,26 @@ function initializeDynamicFilterForm(context){
         if (saved_view_pk != null){
             saved_view_pk_query_string = "&saved_view=" + saved_view_pk
         }
-        const sort_order = urlParams.get('sort');
+        const sort_order = urlParams.getAll('sort');
         var sort_order_query_string = ""
         if (sort_order != null){
-            sort_order_query_string = "&sort=" + sort_order
+            for (var i = 0; i < sort_order.length; i++){
+                appendage = "&sort=" + sort_order[i]
+                sort_order_query_string += appendage
+            }
         }
         const per_page = urlParams.get('per_page');
         var per_page_query_string = ""
         if (per_page_query_string != null) {
-            per_page_query_string = "&per_page=" + per_page
+            per_page_query_string = "per_page=" + per_page
+        }
+        const table_changes = urlParams.get('table_changes_pending');
+        var table_changes_query_string = ""
+        if (table_changes_query_string != null) {
+            table_changes_query_string = "&table_changes_pending=" + table_changes
         }
         // clear filter params info and retain other information
-        location.replace("?" + sort_order_query_string + per_page_query_string + saved_view_pk_query_string)
+        location.replace("?" + per_page_query_string + sort_order_query_string + saved_view_pk_query_string + table_changes_query_string)
     })
 
 
