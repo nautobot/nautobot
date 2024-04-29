@@ -36,7 +36,7 @@ class BaseTable(django_tables2.Table):
         }
 
     def __init__(
-        self, *args, table_changes_pending=False, saved_view_pk=None, user=None, hide_hierarchy_ui=False, **kwargs
+        self, *args, table_changes_pending=False, saved_view=None, user=None, hide_hierarchy_ui=False, **kwargs
     ):
         # Add custom field columns
         model = self._meta.model
@@ -84,9 +84,8 @@ class BaseTable(django_tables2.Table):
 
         # Apply custom column ordering for SavedView if it is available
         # Takes precedence before user config
-        if not table_changes_pending and saved_view_pk is not None:
-            sv = SavedView.objects.get(pk=saved_view_pk)
-            view_table_config = sv.table_config.get(f"{self.__class__.__name__}", None)
+        if not table_changes_pending and saved_view is not None:
+            view_table_config = saved_view.table_config.get(f"{self.__class__.__name__}", None)
             if view_table_config is not None:
                 columns = view_table_config.get("columns", [])
                 if columns:

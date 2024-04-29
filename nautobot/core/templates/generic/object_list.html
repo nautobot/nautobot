@@ -48,33 +48,36 @@
     {% endif %}
     {% if model.is_saved_view_model %}
         <div class="btn-group">
-            <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <span class="mdi mdi-view-compact" aria-hidden="true"></span> Saved Views <span class="caret"></span>
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span> Saved Views <span class="caret"></span>
             </button>
             <ul class="dropdown-menu">
                 {% if perms.users.view_savedview %}
                     {% for saved_view in saved_views %}
                         <li>
                             <a href="{{ saved_view.get_absolute_url }}">
-                                {% if saved_view.pk == current_saved_view.pk %}
-                                    <span class="mdi mdi-check-outline" aria-hidden="true"></span> 
+                                {% if saved_view == current_saved_view %}
+                                        <i class="mdi mdi-view-compact-outline text-bold" aria-hidden="true"></i>
+                                    <strong>
+                                        {{saved_view.name}}
+                                    </strong>
                                 {% else %}
-                                    <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span> 
+                                    <i class="mdi mdi-view-compact-outline text-muted" aria-hidden="true"></i>
+                                    {{saved_view.name}}
                                 {% endif %}
-                                {{saved_view.name}}
                             </a>
                         </li>
                     {% endfor %}
+                    {% if saved_views %}
+                        <li role="separator" class="divider"></li>
+                    {% endif %}
                 {% endif %}
-                {% if saved_views %}
-                    <li role="separator" class="divider"></li>
-                {% endif %}
-                {% if request.GET.saved_view_pk %}
+                {% if request.GET.saved_view %}
                     {% if perms.users.change_savedview %}
                         <li>
-                            <a href="{% url 'users:savedview_edit' pk=request.GET.saved_view_pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
-                                <span class="mdi mdi-content-save-outline" aria-hidden="true"></span>
-                                Update Current View
+                            <a href="{% url 'users:savedview_edit' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                                <i class="mdi mdi-content-save-outline text-muted" aria-hidden="true"></i>
+                                <span>Update Current View</span>
                             </a>
                         </li>
                     {% endif %}
@@ -82,16 +85,16 @@
                 {% if perms.users.add_savedview %}
                     <li>
                         <a href="" data-toggle="modal" data-target="#saved_view_modal" title="Save Current View As">
-                            <span class="mdi mdi-content-save-plus-outline" aria-hidden="true"></span>
-                            Save As New View
+                            <i class="mdi mdi-content-save-plus-outline text-muted" aria-hidden="true"></i>
+                            <span>Save As New View</span>
                         </a>
                     </li>
                 {% endif %}
-                {% if request.GET.saved_view_pk %}
+                {% if request.GET.saved_view %}
                     <li>
-                        <a href="{% url 'users:savedview' pk=request.GET.saved_view_pk %}">
-                            <span class="mdi mdi-arrow-u-right-bottom" aria-hidden="true"></span>
-                            Clear View
+                        <a href="{% url 'users:savedview' pk=request.GET.saved_view %}">
+                            <i class="mdi mdi-arrow-u-right-bottom text-danger" aria-hidden="true"></i>
+                            <span class="text-danger">Clear View</span>
                         </a>
                     </li>
                 {% endif %}
@@ -115,9 +118,9 @@
 <h1>{% block title %}
     {{ title }}
         {% if current_saved_view %}
-            - {{ current_saved_view.name }}
+            — {{ current_saved_view.name }}
             {% if new_changes_not_applied %}
-                *
+                <sup>*</sup>
             {% endif %}
         {% endif %}
     {% endblock %}

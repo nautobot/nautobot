@@ -186,7 +186,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
-        "saved_view_pk",
+        "saved_view",
         "table_changes_pending",
     )
 
@@ -333,7 +333,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             # Construct the objects table
             if self.request.GET.getlist("sort"):
                 hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
-            current_saved_view_pk = self.request.GET.get("saved_view_pk", None)
+            current_saved_view_pk = self.request.GET.get("saved_view", None)
             table_changes_pending = self.request.GET.get("table_changes_pending", False)
             if current_saved_view_pk:
                 current_saved_view = SavedView.objects.get(pk=current_saved_view_pk)
@@ -342,7 +342,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             table = self.table(
                 self.queryset,
                 table_changes_pending=table_changes_pending,
-                saved_view_pk=current_saved_view_pk,
+                saved_view=current_saved_view,
                 user=request.user,
                 hide_hierarchy_ui=hide_hierarchy_ui,
             )

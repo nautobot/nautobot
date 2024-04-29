@@ -614,7 +614,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
-        "saved_view_pk",
+        "saved_view",
         "table_changes_pending",
     )
 

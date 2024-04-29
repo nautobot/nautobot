@@ -9,12 +9,12 @@ from nautobot.core.apps import (
 
 menu_items = (
     NavMenuTab(
-        name="Users",
-        weight=1000,
+        name="Extensibility",
+        weight=900,
         groups=(
             NavMenuGroup(
                 name="Users",
-                weight=100,
+                weight=150,
                 items=(
                     NavMenuItem(
                         link="users:savedview_list",

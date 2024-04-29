@@ -9,7 +9,7 @@ class SavedViewTable(BaseTable):
     name = tables.Column(linkify=True)
     owner = tables.Column()
     list_view_name = tables.Column()
-    actions = ButtonsColumn(SavedView)
+    actions = ButtonsColumn(SavedView, buttons=("changelog", "delete"))
 
     class Meta(BaseTable.Meta):
         model = SavedView

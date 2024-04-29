@@ -242,6 +242,7 @@ class SavedViewUIViewSet(
     queryset = SavedView.objects.all()
     filterset_class = SavedViewFilterSet
     table_class = SavedViewTable
+    action_buttons = ("export",)
 
     def get_table_class_string_from_list_view_name(self, list_view_name):
         app_label, model_name = list_view_name.split(":")
@@ -256,7 +257,7 @@ class SavedViewUIViewSet(
         """
         instance = self.get_object()
         query_string = instance.view_config
-        list_view_url = reverse(instance.list_view_name) + query_string + f"&saved_view_pk={instance.pk}"
+        list_view_url = reverse(instance.list_view_name) + query_string + f"&saved_view={instance.pk}"
         return redirect(list_view_url)
 
     def update(self, request, *args, **kwargs):
@@ -265,7 +266,7 @@ class SavedViewUIViewSet(
         request.POST: call perform_update() which validates the form and perform the action of update/partial_update of an existing object.
         Override to add more variables to Response.
         """
-        sv = SavedView.objects.get(pk=request.GET.get("saved_view_pk", None))
+        sv = self.get_queryset().get(pk=request.GET.get("saved_view", None))
         table_changes_pending = request.GET.get("table_changes_pending", False)
         pagination_count = request.GET.get("per_page", None)
         if pagination_count is not None:
@@ -291,7 +292,7 @@ class SavedViewUIViewSet(
             sv.table_config[f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
         sv.validated_save()
         query_string = sv.view_config
-        list_view_url = reverse(sv.list_view_name) + query_string + f"&saved_view_pk={sv.pk}"
+        list_view_url = reverse(sv.list_view_name) + query_string + f"&saved_view={sv.pk}"
         messages.success(request, f"Successfully updated current view {sv.name}")
         return redirect(list_view_url)
 
@@ -303,9 +304,10 @@ class SavedViewUIViewSet(
         """
         name = request.POST.get("name")
         list_view_name = request.GET.get("list_view_name")
-        derived_view_pk = request.GET.get("saved_view_pk", None)
+        derived_view_pk = request.GET.get("saved_view", None)
+        derived_instance = None
         if derived_view_pk:
-            derived_instance = SavedView.objects.get(pk=derived_view_pk)
+            derived_instance = self.get_queryset().get(pk=derived_view_pk)
         table_changes_pending = request.GET.get("table_changes_pending", False)
         try:
             sv = SavedView.objects.create(name=name, owner=request.user, list_view_name=list_view_name)
@@ -337,14 +339,14 @@ class SavedViewUIViewSet(
             if param not in new_filter_params:
                 sv.filter_params.pop(param)
         table_class = self.get_table_class_string_from_list_view_name(list_view_name)
-        if table_changes_pending:
+        if table_changes_pending or derived_instance is None:
             sv.table_config[f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
         else:
             sv.table_config[f"{table_class}"] = derived_instance.table_config[f"{table_class}"]
         try:
             sv.validated_save()
             query_string = sv.view_config
-            list_view_url = reverse(sv.list_view_name) + query_string + f"&saved_view_pk={sv.pk}"
+            list_view_url = reverse(sv.list_view_name) + query_string + f"&saved_view={sv.pk}"
             messages.success(request, f"Successfully created new Saved View {sv.name}")
             return redirect(list_view_url)
         except ValidationError as e:

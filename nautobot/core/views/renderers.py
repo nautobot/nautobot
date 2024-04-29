@@ -96,7 +96,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         """
         table_class = view.get_table_class()
         request = kwargs.get("request", view.request)
-        saved_view_pk = request.GET.get("saved_view_pk", None)
+        saved_view_pk = request.GET.get("saved_view", None)
         table_changes_pending = request.GET.get("table_changes_pending", False)
         queryset = view.alter_queryset(request)
 
@@ -105,10 +105,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 permissions = kwargs.get("permissions", {})
                 if view.request.GET.getlist("sort"):
                     view.hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
+                saved_view = None
+                if saved_view_pk is not None:
+                    saved_view = SavedView.objects.get(pk=saved_view_pk)
                 table = table_class(
                     queryset,
                     table_changes_pending=table_changes_pending,
-                    saved_view_pk=saved_view_pk,
+                    saved_view=saved_view,
                     user=request.user,
                     hide_hierarchy_ui=view.hide_hierarchy_ui,
                 )
@@ -303,7 +306,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     .restrict(request.user, "view")
                     .order_by("list_view_name", "name")
                 )
-                current_saved_view_pk = request.GET.get("saved_view_pk", None)
+                current_saved_view_pk = request.GET.get("saved_view", None)
                 if current_saved_view_pk:
                     current_saved_view = SavedView.objects.get(pk=current_saved_view_pk)
                 else:

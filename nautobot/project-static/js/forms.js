@@ -652,10 +652,10 @@ function initializeDynamicFilterForm(context){
         let dynamic_form = $("#dynamic-filter-form");
         dynamic_form.find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
         const urlParams = new URLSearchParams(window.location.search);
-        const saved_view_pk = urlParams.get('saved_view_pk');
+        const saved_view_pk = urlParams.get('saved_view');
         var saved_view_pk_query_string = ""
         if (saved_view_pk != null){
-            saved_view_pk_query_string = "&saved_view_pk=" + saved_view_pk
+            saved_view_pk_query_string = "&saved_view=" + saved_view_pk
         }
         const sort_order = urlParams.get('sort');
         var sort_order_query_string = ""
@@ -693,10 +693,10 @@ function initializeDynamicFilterForm(context){
         console.log("hello")
         e.preventDefault()
         const urlParams = new URLSearchParams(window.location.search);
-        const saved_view_pk = urlParams.get('saved_view_pk');
+        const saved_view_pk = urlParams.get('saved_view');
         var saved_view_pk_query_string = ""
         if (saved_view_pk != null){
-            saved_view_pk_query_string = "&saved_view_pk=" + saved_view_pk
+            saved_view_pk_query_string = "&saved_view=" + saved_view_pk
         }
         const sort_order = urlParams.get('sort');
         var sort_order_query_string = ""
