@@ -66,6 +66,47 @@ The CSV import functionality for all models has been changed from a synchronous 
 Model CharFields' `max_length` attributes have been standardized globally to have at least 255 characters except where a shorter `max_length` is explicitly justified.
 
 <!-- towncrier release notes start -->
+## v2.2.3 (2024-04-29)
+
+### Security
+
+- [#5624](https://github.com/nautobot/nautobot/issues/5624) - Updated `social-auth-app-django` dependency to `~5.4.1` to address `CVE-2024-32879`.
+
+### Added
+
+- [#2946](https://github.com/nautobot/nautobot/issues/2946) - Added custom link support for interfaces, console ports, console server ports, power ports, power outlets, front ports, rear ports, device bays, and inventory items.
+- [#5034](https://github.com/nautobot/nautobot/issues/5034) - Added a view to convert location contact information to contacts or teams.
+- [#5537](https://github.com/nautobot/nautobot/issues/5537) - Re-added `run_job` generic Celery task as a wrapper for execution of all Nautobot Jobs.
+- [#5560](https://github.com/nautobot/nautobot/issues/5560) - Added a template tag which creates a hyperlink that opens in a new tab.
+- [#5586](https://github.com/nautobot/nautobot/issues/5586) - Added `nautobot.apps.jobs.get_jobs()` API.
+
+### Changed
+
+- [#5498](https://github.com/nautobot/nautobot/issues/5498) - Changed the `nautobot.extras.jobs.Job` class to no longer be a subclass of `celery.tasks.Task`.
+
+### Fixed
+
+- [#5513](https://github.com/nautobot/nautobot/issues/5513) - Fixed missing `location` field in `Prefix` and `VLAN` GraphQL schema.
+- [#5513](https://github.com/nautobot/nautobot/issues/5513) - Restored ability to filter Prefix and VLAN objects at the ORM level by `location`.
+- [#5565](https://github.com/nautobot/nautobot/issues/5565) - Fixes optional dependency on `social-auth-core` by removing an extras related to openidconnect that no longer exists.
+- [#5586](https://github.com/nautobot/nautobot/issues/5586) - Fixed incorrect rendering of Job variables in the ScheduledJob detail view.
+- [#5594](https://github.com/nautobot/nautobot/issues/5594) - Fixed Job tiles view not understanding the `per_page` and `page` query parameters.
+- [#5595](https://github.com/nautobot/nautobot/issues/5595) - Fixed bug where API Extra Actions weren't displaying the proper name.
+- [#5603](https://github.com/nautobot/nautobot/issues/5603) - Fixed config contexts loaded from Git repositories not populating Device Redundancy Group information.
+
+### Documentation
+
+- [#5094](https://github.com/nautobot/nautobot/issues/5094) - Added "Reserved Attribute Names" section to the Jobs developer documentation.
+- [#5608](https://github.com/nautobot/nautobot/issues/5608) - Updated VLAN documentation with a recommendation for modeling of VLANs with respect to Locations.
+- [#5626](https://github.com/nautobot/nautobot/issues/5626) - Added extras features docs to core developer new model checklist.
+- [#5635](https://github.com/nautobot/nautobot/issues/5635) - Added borders to tabbed sections of mkdocs.
+
+### Housekeeping
+
+- [#4498](https://github.com/nautobot/nautobot/issues/4498) - Removed redundant `nautobot.extras.plugins.register_jobs` function.
+- [#5586](https://github.com/nautobot/nautobot/issues/5586) - Fixed an intermittent ImportError when running tests with certain options.
+- [#5605](https://github.com/nautobot/nautobot/issues/5605) - Added prerelease and release workflow to deploy sandbox environments automatically.
+
 ## v2.2.2 (2024-04-18)
 
 ### Security
