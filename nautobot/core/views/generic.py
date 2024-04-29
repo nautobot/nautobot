@@ -301,6 +301,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         table = None
         table_config_form = None
+        current_saved_view = None
         if self.table:
             # Construct the objects table
             if self.request.GET.getlist("sort"):
@@ -309,8 +310,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             table_changes_pending = self.request.GET.get("table_changes_pending", False)
             if current_saved_view_pk:
                 current_saved_view = SavedView.objects.get(pk=current_saved_view_pk)
-            else:
-                current_saved_view = None
             table = self.table(
                 self.queryset,
                 table_changes_pending=table_changes_pending,
