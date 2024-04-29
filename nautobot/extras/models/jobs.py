@@ -627,7 +627,7 @@ class JobResult(BaseModel, CustomFieldModel):
             schedule (ScheduledJob, optional): ScheduledJob instance to link to the JobResult. Cannot be used with synchronous=True.
             task_queue (str, optional): The celery queue to send the job to. If not set, use the default celery queue.
             synchronous (bool, optional): If True, run the job in the current process, blocking until the job completes.
-            *job_args: positional args passed to the job task
+            *job_args: positional args passed to the job task (UNUSED)
             **job_kwargs: keyword args passed to the job task
 
         Returns:
