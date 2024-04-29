@@ -18,7 +18,6 @@ from tree_queries.models import TreeNode
 from nautobot.core.templatetags import helpers
 from nautobot.core.utils import lookup
 from nautobot.extras import choices, models
-from nautobot.users.models import SavedView
 
 logger = logging.getLogger(__name__)
 
