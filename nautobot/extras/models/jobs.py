@@ -233,9 +233,14 @@ class Job(PrimaryModel):
     def __str__(self):
         return self.name
 
-    @cached_property
+    @property
     def job_class(self):
-        """Get the Job class (source code) associated with this Job model."""
+        """
+        Get the Job class (source code) associated with this Job model.
+
+        CAUTION: if the Job is provided by a Git Repository or is installed in JOBS_ROOT, you may need or wish to
+        call `get_job(self.class_path, reload=True)` to ensure that you have the latest Job code...
+        """
         from nautobot.extras.jobs import get_job
 
         if not self.installed:
@@ -290,10 +295,13 @@ class Job(PrimaryModel):
 
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
-        if self.job_class is not None:
+        from nautobot.extras.jobs import get_job
+
+        job_class = get_job(self.class_path, reload=True)
+        if job_class is not None:
             for field_name in JOB_OVERRIDABLE_FIELDS:
                 if not getattr(self, f"{field_name}_override", False):
-                    setattr(self, field_name, getattr(self.job_class, field_name))
+                    setattr(self, field_name, getattr(job_class, field_name))
 
         # Protect against invalid input when auto-creating Job records
         if len(self.module_name) > JOB_MAX_NAME_LENGTH:
@@ -619,7 +627,7 @@ class JobResult(BaseModel, CustomFieldModel):
             schedule (ScheduledJob, optional): ScheduledJob instance to link to the JobResult. Cannot be used with synchronous=True.
             task_queue (str, optional): The celery queue to send the job to. If not set, use the default celery queue.
             synchronous (bool, optional): If True, run the job in the current process, blocking until the job completes.
-            *job_args: positional args passed to the job task
+            *job_args: positional args passed to the job task (UNUSED)
             **job_kwargs: keyword args passed to the job task
 
         Returns:

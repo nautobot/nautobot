@@ -33,6 +33,7 @@ from nautobot.core.models.querysets import count_related
 from nautobot.extras import filters
 from nautobot.extras.choices import JobExecutionType
 from nautobot.extras.filters import RoleFilterSet
+from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
@@ -520,7 +521,7 @@ class JobViewSetBase(
     def variables(self, request, *args, **kwargs):
         """Get details of the input variables that may/must be specified to run a particular Job."""
         job_model = self.get_object()
-        job_class = job_model.job_class
+        job_class = get_job(job_model.class_path, reload=True)
         if job_class is None:
             raise Http404
         variables_dict = job_class._get_vars()
@@ -602,7 +603,7 @@ class JobViewSetBase(
                     "One of these two flags must be removed before this job can be scheduled or run."
                 )
 
-        job_class = job_model.job_class
+        job_class = get_job(job_model.class_path, reload=True)
         if job_class is None:
             raise MethodNotAllowed(
                 request.method, detail="This job's source code could not be located and cannot be run"
@@ -669,7 +670,7 @@ class JobViewSetBase(
         cleaned_data = None
         try:
             cleaned_data = job_class.validate_data(data, files=files)
-            cleaned_data = job_model.job_class.prepare_job_kwargs(cleaned_data)
+            cleaned_data = job_class.prepare_job_kwargs(cleaned_data)
 
         except FormsValidationError as e:
             # message_dict can only be accessed if ValidationError got a dict
@@ -969,13 +970,14 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
             raise PermissionDenied("You do not have permission to run this job.")
 
         # Immediately enqueue the job
-        job_kwargs = job_model.job_class.prepare_job_kwargs(scheduled_job.kwargs.get("data", {}))
+        job_class = get_job(job_model.class_path, reload=True)
+        job_kwargs = job_class.prepare_job_kwargs(scheduled_job.kwargs or {})
         job_kwargs["dryrun"] = True
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,
             celery_kwargs=scheduled_job.celery_kwargs or {},
-            **job_model.job_class.serialize_data(job_kwargs),
+            **job_class.serialize_data(job_kwargs),
         )
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})
 

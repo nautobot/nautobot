@@ -1093,7 +1093,18 @@ def get_job(class_path, reload=False):
     Retrieve a specific job class by its class_path (`<module_name>.<JobClassName>`).
 
     May return None if the job can't be imported.
+
+    Args:
+        reload (bool): If True, **and** the given class_path describes a JOBS_ROOT or GitRepository Job,
+            then refresh **all** such Jobs before retrieving the job class.
     """
+    if reload:
+        if class_path.startswith("nautobot."):
+            # System job - not reloadable
+            reload = False
+        if any(class_path.startswith(f"{app_name}.") for app_name in settings.PLUGINS):
+            # App provided job - not reloadable
+            reload = False
     jobs = get_jobs(reload=reload)
     return jobs.get(class_path, None)
 
