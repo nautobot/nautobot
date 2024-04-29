@@ -93,6 +93,9 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5594](https://github.com/nautobot/nautobot/issues/5594) - Fixed Job tiles view not understanding the `per_page` and `page` query parameters.
 - [#5595](https://github.com/nautobot/nautobot/issues/5595) - Fixed bug where API Extra Actions weren't displaying the proper name.
 - [#5603](https://github.com/nautobot/nautobot/issues/5603) - Fixed config contexts loaded from Git repositories not populating Device Redundancy Group information.
+- [#5640](https://github.com/nautobot/nautobot/issues/5640) - Fixed bug in generating the URL parameters for cloning objects.
+- [#5642](https://github.com/nautobot/nautobot/issues/5642) - Fixed some cases where stale Job code might be present when Jobs are sourced from `JOBS_ROOT` or a Git repository.
+- [#5642](https://github.com/nautobot/nautobot/issues/5642) - Fixed incorrect handling of Job `kwargs` when dry-running a job approval request via the REST API.
 
 ### Documentation
 
