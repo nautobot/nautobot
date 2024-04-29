@@ -36,6 +36,7 @@ from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
+from nautobot.users.models import SavedViewMixin
 
 # Avoid breaking backward compatibility on anything that might expect these to still be defined here:
 from .jobs import Job, JOB_LOGS, JobLogEntry, JobResult, ScheduledJob, ScheduledJobs  # noqa: F401  # unused-import
@@ -69,7 +70,13 @@ def limit_dynamic_group_choices():
 
 
 @extras_features("graphql")
-class ConfigContext(BaseModel, ChangeLoggedModel, ConfigContextSchemaValidationMixin, NotesMixin):
+class ConfigContext(
+    ChangeLoggedModel,
+    ConfigContextSchemaValidationMixin,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
     """
     A ConfigContext represents a set of arbitrary data available to any Device or VirtualMachine matching its assigned
     qualifiers (location, tenant, etc.). For example, the data stored in a ConfigContext assigned to location A and tenant B
@@ -298,7 +305,12 @@ class ConfigContextSchema(OrganizationalModel):
 
 
 @extras_features("graphql")
-class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
+class CustomLink(
+    ChangeLoggedModel,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
     """
     A custom link to an external representation of a Nautobot object. The link text and URL fields accept Jinja2 template
     code to be rendered with an object as context.
@@ -352,7 +364,13 @@ class CustomLink(BaseModel, ChangeLoggedModel, NotesMixin):
 @extras_features(
     "graphql",
 )
-class ExportTemplate(BaseModel, ChangeLoggedModel, RelationshipModel, NotesMixin):
+class ExportTemplate(
+    ChangeLoggedModel,
+    NotesMixin,
+    RelationshipModel,
+    SavedViewMixin,
+    BaseModel,
+):
     # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
     owner_content_type = models.ForeignKey(
         to=ContentType,
@@ -646,7 +664,12 @@ class FileProxy(BaseModel):
 
 
 @extras_features("graphql")
-class GraphQLQuery(BaseModel, ChangeLoggedModel, NotesMixin):
+class GraphQLQuery(
+    ChangeLoggedModel,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     query = models.TextField()
     variables = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
@@ -809,7 +832,12 @@ class Note(BaseModel, ChangeLoggedModel):
 
 
 @extras_features("graphql")
-class Webhook(BaseModel, ChangeLoggedModel, NotesMixin):
+class Webhook(
+    ChangeLoggedModel,
+    NotesMixin,
+    SavedViewMixin,
+    BaseModel,
+):
     """
     A Webhook defines a request that will be sent to a remote application when an object is created, updated, and/or
     delete in Nautobot. The request will contain a representation of the object, which the remote application can act on.

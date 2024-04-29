@@ -19,6 +19,7 @@ from nautobot.dcim.choices import (
 from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
 from nautobot.extras.models import ChangeLoggedModel, CustomField, CustomFieldModel, RelationshipModel, Status
 from nautobot.extras.utils import extras_features
+from nautobot.users.models import SavedViewMixin
 
 from .device_components import (
     ConsolePort,
@@ -43,7 +44,13 @@ __all__ = (
 )
 
 
-class ComponentTemplateModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+class ComponentTemplateModel(
+    ChangeLoggedModel,
+    CustomFieldModel,
+    RelationshipModel,
+    SavedViewMixin,
+    BaseModel,
+):
     device_type = ForeignKeyWithAutoRelatedName(to="dcim.DeviceType", on_delete=models.CASCADE)
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True)

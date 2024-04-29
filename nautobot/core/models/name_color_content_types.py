@@ -14,6 +14,7 @@ from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.mixins import DynamicGroupMixin, NotesMixin
 from nautobot.extras.models.relationships import RelationshipModel
+from nautobot.users.models import SavedViewMixin
 
 
 class ContentTypeRelatedQuerySet(RestrictedQuerySet):
@@ -39,12 +40,13 @@ class ContentTypeRelatedQuerySet(RestrictedQuerySet):
 
 # TODO(timizuo): Inheriting from OrganizationalModel here causes partial import error
 class NameColorContentTypesModel(
-    BaseModel,
     ChangeLoggedModel,
     CustomFieldModel,
-    RelationshipModel,
-    NotesMixin,
     DynamicGroupMixin,
+    NotesMixin,
+    RelationshipModel,
+    SavedViewMixin,
+    BaseModel,
 ):
     """
     This abstract base properties model contains fields and functionality that are

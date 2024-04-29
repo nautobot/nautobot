@@ -293,6 +293,15 @@ class ObjectPermission(BaseModel, ChangeLoggedModel):
 #
 
 
+class SavedViewMixin(models.Model):
+    """Abstract mixin for enabling Saved View functionality to a given model class."""
+
+    class Meta:
+        abstract = True
+
+    is_saved_view_model = True
+
+
 @extras_features(
     "custom_validators",
     "graphql",
@@ -321,7 +330,6 @@ class SavedView(BaseModel, ChangeLoggedModel):
         default=dict,
         help_text="table column sort orders that are applied to this view",
     )
-    is_saved_view_model = False
 
     class Meta:
         ordering = ["owner", "name"]
