@@ -52,6 +52,7 @@ __all__ = (
     "InterfaceRedundancyGroup",
     "InterfaceRedundancyGroupAssociation",
     "InventoryItem",
+    "ModuleBay",
     "PathEndpoint",
     "PowerOutlet",
     "PowerPort",
@@ -92,6 +93,15 @@ class ComponentModel(PrimaryModel):
             device = None
 
         return super().to_objectchange(action, related_object=device, **kwargs)
+
+
+class ModularComponentMixin:
+    module = ForeignKeyWithAutoRelatedName(
+        to="dcim.Module",
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+    )
 
 
 class CableTermination(models.Model):
@@ -211,9 +221,9 @@ class PathEndpoint(models.Model):
     "graphql",
     "webhooks",
 )
-class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
+class ConsolePort(ModularComponentMixin, CableTermination, PathEndpoint, ComponentModel):
     """
-    A physical console port within a Device. ConsolePorts connect to ConsoleServerPorts.
+    A physical console port within a Device or Module. ConsolePorts connect to ConsoleServerPorts.
     """
 
     type = models.CharField(
@@ -238,9 +248,9 @@ class ConsolePort(CableTermination, PathEndpoint, ComponentModel):
 
 
 @extras_features("cable_terminations", "custom_validators", "graphql", "webhooks")
-class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
+class ConsoleServerPort(ModularComponentMixin, CableTermination, PathEndpoint, ComponentModel):
     """
-    A physical port within a Device (typically a designated console server) which provides access to ConsolePorts.
+    A physical port within a Device or Module (typically a designated console server) which provides access to ConsolePorts.
     """
 
     type = models.CharField(
@@ -271,9 +281,9 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ComponentModel):
     "graphql",
     "webhooks",
 )
-class PowerPort(CableTermination, PathEndpoint, ComponentModel):
+class PowerPort(ModularComponentMixin, CableTermination, PathEndpoint, ComponentModel):
     """
-    A physical power supply (intake) port within a Device. PowerPorts connect to PowerOutlets.
+    A physical power supply (intake) port within a Device or Module. PowerPorts connect to PowerOutlets.
     """
 
     type = models.CharField(
@@ -382,9 +392,9 @@ class PowerPort(CableTermination, PathEndpoint, ComponentModel):
 
 
 @extras_features("cable_terminations", "custom_validators", "graphql", "webhooks")
-class PowerOutlet(CableTermination, PathEndpoint, ComponentModel):
+class PowerOutlet(ModularComponentMixin, CableTermination, PathEndpoint, ComponentModel):
     """
-    A physical power outlet (output) within a Device which provides power to a PowerPort.
+    A physical power outlet (output) within a Device or Module which provides power to a PowerPort.
     """
 
     type = models.CharField(
@@ -498,9 +508,9 @@ class BaseInterface(RelationshipModel):
     "statuses",
     "webhooks",
 )
-class Interface(CableTermination, PathEndpoint, ComponentModel, BaseInterface):
+class Interface(ModularComponentMixin, CableTermination, PathEndpoint, ComponentModel, BaseInterface):
     """
-    A network interface within a Device. A physical Interface can connect to exactly one other Interface.
+    A network interface within a Device or Module. A physical Interface can connect to exactly one other Interface.
     """
 
     # Override ComponentModel._name to specify naturalize_interface function
@@ -895,9 +905,9 @@ class InterfaceRedundancyGroupAssociation(BaseModel, ChangeLoggedModel):
 
 
 @extras_features("cable_terminations", "custom_validators", "graphql", "webhooks")
-class FrontPort(CableTermination, ComponentModel):
+class FrontPort(ModularComponentMixin, CableTermination, ComponentModel):
     """
-    A pass-through port on the front of a Device.
+    A pass-through port on the front of a Device or Module.
     """
 
     type = models.CharField(max_length=50, choices=PortTypeChoices)
@@ -939,9 +949,9 @@ class FrontPort(CableTermination, ComponentModel):
 
 
 @extras_features("cable_terminations", "custom_validators", "graphql", "webhooks")
-class RearPort(CableTermination, ComponentModel):
+class RearPort(ModularComponentMixin, CableTermination, ComponentModel):
     """
-    A pass-through port on the rear of a Device.
+    A pass-through port on the rear of a Device or Module.
     """
 
     type = models.CharField(max_length=50, choices=PortTypeChoices)
@@ -1070,7 +1080,8 @@ class InventoryItem(TreeModel, ComponentModel):
         related_name="inventory_items",
         blank=True,
         null=True,
-        verbose_name="The software version installed on this inventory item",
+        verbose_name="Software Version",
+        help_text="The software version installed on this inventory item",
     )
     software_image_files = models.ManyToManyField(
         to="dcim.SoftwareImageFile",
@@ -1092,3 +1103,75 @@ class InventoryItem(TreeModel, ComponentModel):
         For the time being we just use the PK as a natural key.
         """
         return ["pk"]
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class ModuleBay(PrimaryModel):
+    """
+    A slot in a Device or Module which can contain Modules.
+    """
+
+    device = models.ForeignKey(
+        to="dcim.Device",
+        on_delete=models.CASCADE,
+        related_name="module_bays",
+        blank=True,
+        null=True,
+    )
+    module = models.ForeignKey(
+        to="dcim.Module",
+        on_delete=models.CASCADE,
+        related_name="module_bays",
+        blank=True,
+        null=True,
+    )
+    position = models.CharField(
+        blank=False,
+        null=False,
+        max_length=CHARFIELD_MAX_LENGTH,
+        help_text="The position of the module bay within the parent device/module",
+    )
+    label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+
+    clone_fields = ["parent"]
+
+    class Meta:
+        ordering = ("device", "module", "position")
+        unique_together = (("device", "position"), ("module", "position"))
+
+    @property
+    def parent(self):
+        return self.device if self.device else self.module
+
+    def __str__(self):
+        return f"{self.parent} ({self.position})"
+
+    def to_objectchange(self, action, **kwargs):
+        """
+        Return a new ObjectChange with the `related_object` pinned to the parent `device` or `module`.
+        """
+        # Annotate the parent
+        try:
+            parent = self.parent
+        except ObjectDoesNotExist:
+            # The parent has already been deleted
+            parent = None
+
+        return super().to_objectchange(action, related_object=parent, **kwargs)
+
+    def clean(self):
+        super().clean()
+
+        # Validate that a Device or Module is set, but not both
+        if self.device and self.module:
+            raise ValidationError("Only one of device or module must be set")
+
+        if not (self.device or self.module):
+            raise ValidationError("Either device or module must be set")

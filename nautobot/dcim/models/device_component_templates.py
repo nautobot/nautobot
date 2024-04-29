@@ -26,6 +26,7 @@ from .device_components import (
     DeviceBay,
     FrontPort,
     Interface,
+    ModuleBay,
     PowerOutlet,
     PowerPort,
     RearPort,
@@ -37,6 +38,7 @@ __all__ = (
     "DeviceBayTemplate",
     "FrontPortTemplate",
     "InterfaceTemplate",
+    "ModuleBayTemplate",
     "PowerOutletTemplate",
     "PowerPortTemplate",
     "RearPortTemplate",
@@ -100,6 +102,59 @@ class ComponentTemplateModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Rel
             _custom_field_data=custom_field_data,
             **kwargs,
         )
+
+
+class ModularComponentTemplateModel(ComponentTemplateModel):
+    """Component Template that supports assignment to a DeviceType or a ModuleType."""
+
+    device_type = ForeignKeyWithAutoRelatedName(
+        to="dcim.DeviceType",
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+    )
+    module_type = ForeignKeyWithAutoRelatedName(
+        to="dcim.ModuleType",
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+    )
+
+    class Meta:
+        abstract = True
+
+    def to_objectchange(self, action, **kwargs):
+        """
+        Return a new ObjectChange with the `related_object` pinned to the `device_type` or `module_type`.
+        """
+        related_object = None
+        try:
+            related_object = self.device_type
+        except ObjectDoesNotExist:
+            # The parent DeviceType may have already been deleted
+            pass
+
+        try:
+            related_object = self.module_type
+        except ObjectDoesNotExist:
+            # The parent ModuleType may have already been deleted
+            pass
+
+        return super().to_objectchange(action, related_object=related_object, **kwargs)
+
+    def get_absolute_url(self, api=False):
+        if not api:
+            if self.device_type:
+                return self.device_type.get_absolute_url(api=api)
+            if self.module_type:
+                return self.module_type.get_absolute_url(api=api)
+        return super().get_absolute_url(api=api)
+
+    def instantiate_model(self, model, device, module, **kwargs):
+        """
+        Helper method to self.instantiate().
+        """
+        return super().instantiate_model(model, device, module, **kwargs)
 
 
 @extras_features(
@@ -376,3 +431,94 @@ class DeviceBayTemplate(ComponentTemplateModel):
             raise ValidationError(
                 f'Subdevice role of device type ({self.device_type}) must be set to "parent" to allow device bays.'
             )
+
+
+@extras_features("custom_validators")
+class ModuleBayTemplate(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+    device_type = models.ForeignKey(
+        to="dcim.DeviceType",
+        on_delete=models.CASCADE,
+        related_name="module_bay_templates",
+        blank=True,
+        null=True,
+    )
+    module_type = models.ForeignKey(
+        to="dcim.ModuleType",
+        on_delete=models.CASCADE,
+        related_name="module_bay_templates",
+        blank=True,
+        null=True,
+    )
+    position = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=False,
+        null=False,
+        help_text="The position of the module bay within the device",
+    )
+    label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+
+    class Meta:
+        ordering = ("device_type", "module_type", "position")
+        unique_together = (("device_type", "position"), ("module_type", "position"))
+
+    @property
+    def parent(self):
+        return self.device_type if self.device_type else self.module_type
+
+    def __str__(self):
+        return f"{self.parent} ({self.position})"
+
+    def instantiate(self, parent):
+        from nautobot.dcim.models.devices import Device, Module
+
+        custom_field_data = {}
+        content_type = ContentType.objects.get_for_model(ModuleBay)
+        fields = CustomField.objects.filter(content_types=content_type)
+        for field in fields:
+            custom_field_data[field.key] = field.default
+
+        device = None
+        module = None
+        if isinstance(parent, Device):
+            device = parent
+        elif isinstance(parent, Module):
+            module = parent
+        else:
+            raise TypeError("Parent must be a Device or Module")
+
+        return ModuleBay(
+            device=device,
+            module=module,
+            position=self.position,
+            label=self.label,
+            description=self.description,
+            _custom_field_data=custom_field_data,
+        )
+
+    def to_objectchange(self, action, **kwargs):
+        """
+        Return a new ObjectChange with the `related_object` pinned to the `device_type` by default.
+        """
+        try:
+            device_type = self.device_type
+        except ObjectDoesNotExist:
+            # The parent DeviceType has already been deleted
+            device_type = None
+
+        return super().to_objectchange(action, related_object=device_type, **kwargs)
+
+    def get_absolute_url(self, api=False):
+        if not api:
+            return self.parent.get_absolute_url(api=api)
+        return super().get_absolute_url(api=api)
+
+    def clean(self):
+        super().clean()
+
+        # Validate that a DeviceType or ModuleType is set, but not both
+        if self.device_type and self.module_type:
+            raise ValidationError("Only one of device_type or module_type must be set")
+
+        if not (self.device_type or self.module_type):
+            raise ValidationError("Either device_type or module_type must be set")

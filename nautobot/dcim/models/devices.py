@@ -36,6 +36,7 @@ from .device_components import (
     FrontPort,
     Interface,
     InventoryItem,
+    ModuleBay,
     PowerOutlet,
     PowerPort,
     RearPort,
@@ -295,6 +296,15 @@ class DeviceType(PrimaryModel):
                     "name": c.name,
                 }
                 for c in self.device_bay_templates.all()
+            ]
+        if self.module_bay_templates.exists():
+            data["module-bays"] = [
+                {
+                    "position": c.position,
+                    "label": c.label,
+                    "description": c.description,
+                }
+                for c in self.module_bay_templates.all()
             ]
 
         return yaml.dump(dict(data), sort_keys=False, allow_unicode=True)
@@ -850,6 +860,7 @@ class Device(PrimaryModel, ConfigContextModel):
             (RearPort, self.device_type.rear_port_templates.all()),
             (FrontPort, self.device_type.front_port_templates.all()),
             (DeviceBay, self.device_type.device_bay_templates.all()),
+            (ModuleBay, self.device_type.module_bay_templates.all()),
         ]
         instantiated_components = []
         for model, templates in component_models:
@@ -1375,3 +1386,244 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
             raise ValidationError(
                 {"controller": "Controller device group must have the same controller as the parent group."}
             )
+
+
+#
+# Modules
+#
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class ModuleType(PrimaryModel):
+    """
+    A ModuleType represents a particular make (Manufacturer) and model of module.
+
+    ModuleType implements a subset of the features of DeviceType.
+
+    Each ModuleType can have an arbitrary number of component templates assigned to it,
+    which define console, power, and interface objects. For example, a Cisco WS-SUP720-3B
+    ModuleType would have:
+
+      * 1 ConsolePortTemplate
+      * 2 InterfaceTemplates
+
+    When a new Module of this type is created, the appropriate console, power, and interface
+    objects (as defined by the ModuleType) are automatically created as well.
+    """
+
+    manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="module_types")
+    device_family = models.ForeignKey(
+        to="dcim.DeviceFamily",
+        on_delete=models.PROTECT,
+        related_name="module_types",
+        blank=True,
+        null=True,
+    )
+    model = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    part_number = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Discrete part number (optional)"
+    )
+    front_image = models.ImageField(upload_to="devicetype-images", blank=True)
+    rear_image = models.ImageField(upload_to="devicetype-images", blank=True)
+    # TODO: implement software images for modules
+    comments = models.TextField(blank=True)
+
+    clone_fields = [
+        "manufacturer",
+        "device_family",
+    ]
+
+    class Meta:
+        ordering = ["manufacturer", "model"]
+        unique_together = [
+            ["manufacturer", "model"],
+        ]
+
+    def __str__(self):
+        return self.model
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Save references to the original front/rear images
+        self._original_front_image = self.front_image if self.present_in_database else None
+        self._original_rear_image = self.rear_image if self.present_in_database else None
+
+    def to_yaml(self):
+        data = OrderedDict(
+            (
+                ("manufacturer", self.manufacturer.name),
+                ("model", self.model),
+                ("part_number", self.part_number),
+                ("u_height", self.u_height),
+                ("is_full_depth", self.is_full_depth),
+                ("subdevice_role", self.subdevice_role),
+                ("comments", self.comments),
+            )
+        )
+
+        # Component templates
+        if self.console_port_templates.exists():
+            data["console-ports"] = [
+                {
+                    "name": c.name,
+                    "type": c.type,
+                }
+                for c in self.console_port_templates.all()
+            ]
+        if self.console_server_port_templates.exists():
+            data["console-server-ports"] = [
+                {
+                    "name": c.name,
+                    "type": c.type,
+                }
+                for c in self.console_server_port_templates.all()
+            ]
+        if self.power_port_templates.exists():
+            data["power-ports"] = [
+                {
+                    "name": c.name,
+                    "type": c.type,
+                    "maximum_draw": c.maximum_draw,
+                    "allocated_draw": c.allocated_draw,
+                }
+                for c in self.power_port_templates.all()
+            ]
+        if self.power_outlet_templates.exists():
+            data["power-outlets"] = [
+                {
+                    "name": c.name,
+                    "type": c.type,
+                    "power_port": c.power_port_template.name if c.power_port_template else None,
+                    "feed_leg": c.feed_leg,
+                }
+                for c in self.power_outlet_templates.all()
+            ]
+        if self.interface_templates.exists():
+            data["interfaces"] = [
+                {
+                    "name": c.name,
+                    "type": c.type,
+                    "mgmt_only": c.mgmt_only,
+                }
+                for c in self.interface_templates.all()
+            ]
+        if self.front_port_templates.exists():
+            data["front-ports"] = [
+                {
+                    "name": c.name,
+                    "type": c.type,
+                    "rear_port": c.rear_port_template.name,
+                    "rear_port_position": c.rear_port_position,
+                }
+                for c in self.front_port_templates.all()
+            ]
+        if self.rear_port_templates.exists():
+            data["rear-ports"] = [
+                {
+                    "name": c.name,
+                    "type": c.type,
+                    "positions": c.positions,
+                }
+                for c in self.rear_port_templates.all()
+            ]
+        if self.device_bay_templates.exists():
+            data["device-bays"] = [
+                {
+                    "name": c.name,
+                }
+                for c in self.device_bay_templates.all()
+            ]
+        if self.module_bay_templates.exists():
+            data["module-bays"] = [
+                {
+                    "position": c.position,
+                    "label": c.label,
+                    "description": c.description,
+                }
+                for c in self.module_bay_templates.all()
+            ]
+
+        return yaml.dump(dict(data), sort_keys=False, allow_unicode=True)
+
+    def clean(self):
+        super().clean()
+
+        # If editing an existing ModuleType to have a larger u_height, first validate that *all* instances of it have
+        # room to expand within their racks. This validation will impose a very high performance penalty when there are
+        # many instances to check, but increasing the u_height of a ModuleType should be a very rare occurrence.
+        if self.present_in_database and self.u_height > self._original_u_height:
+            for d in Device.objects.filter(device_type=self, position__isnull=False):
+                face_required = None if self.is_full_depth else d.face
+                u_available = d.rack.get_available_units(
+                    u_height=self.u_height, rack_face=face_required, exclude=[d.pk]
+                )
+                if d.position not in u_available:
+                    raise ValidationError(
+                        {
+                            "u_height": f"Device {d} in rack {d.rack} does not have sufficient space to accommodate a height of {self.u_height}U"
+                        }
+                    )
+
+        # If modifying the height of an existing ModuleType to 0U, check for any instances assigned to a rack position.
+        elif self.present_in_database and self._original_u_height > 0 and self.u_height == 0:
+            racked_instance_count = Device.objects.filter(device_type=self, position__isnull=False).count()
+            if racked_instance_count:
+                url = f"{reverse('dcim:device_list')}?manufacturer={self.manufacturer_id}&device_type={self.pk}"
+                raise ValidationError(
+                    {
+                        "u_height": format_html(
+                            "Unable to set 0U height: "
+                            'Found <a href="{}">{} instances</a> already mounted within racks.',
+                            url,
+                            racked_instance_count,
+                        )
+                    }
+                )
+
+        if (self.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT) and self.device_bay_templates.count():
+            raise ValidationError(
+                {
+                    "subdevice_role": "Must delete all device bay templates associated with this device before "
+                    "declassifying it as a parent device."
+                }
+            )
+
+        if self.u_height and self.subdevice_role == SubdeviceRoleChoices.ROLE_CHILD:
+            raise ValidationError({"u_height": "Child device types must be 0U."})
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        # Delete any previously uploaded image files that are no longer in use
+        if self._original_front_image and self.front_image != self._original_front_image:
+            self._original_front_image.delete(save=False)
+        if self._original_rear_image and self.rear_image != self._original_rear_image:
+            self._original_rear_image.delete(save=False)
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+
+        # Delete any uploaded image files
+        if self.front_image:
+            self.front_image.delete(save=False)
+        if self.rear_image:
+            self.rear_image.delete(save=False)
+
+    @property
+    def display(self):
+        return f"{self.manufacturer.name} {self.model}"
+
+    @property
+    def is_parent_device(self):
+        return self.subdevice_role == SubdeviceRoleChoices.ROLE_PARENT
+
+    @property
+    def is_child_device(self):
+        return self.subdevice_role == SubdeviceRoleChoices.ROLE_CHILD
