@@ -304,7 +304,6 @@ class SavedViewMixin(models.Model):
 
 @extras_features(
     "custom_validators",
-    "graphql",
 )
 class SavedView(BaseModel, ChangeLoggedModel):
     owner = models.ForeignKey(

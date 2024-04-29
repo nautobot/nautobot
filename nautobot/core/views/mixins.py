@@ -614,8 +614,8 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
-        "saved_view",
-        "table_changes_pending",
+        "saved_view",  # saved_view indicator pk or composite keys
+        "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
     )
 
     def filter_queryset(self, queryset):

@@ -34,7 +34,7 @@ navigation = (
         groups=(
             NavGrouping(
                 name="Users",
-                weight=400,
+                weight=500,
                 items=(
                     NavItem(
                         link="users:savedview_list",

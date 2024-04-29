@@ -135,7 +135,7 @@ class ExportObjectList(Job):
         #       such that they never are even seen here.
         query_params = QueryDict(query_string)
         self.logger.debug("Parsed query_params: `%s`", query_params.dict())
-        default_non_filter_params = ("export", "page", "per_page", "sort")
+        default_non_filter_params = ("export", "page", "per_page", "sort", "saved_view", "table_changes_pending")
         filter_params = get_filterable_params_from_filter_params(
             query_params, default_non_filter_params, filterset_class()
         )
