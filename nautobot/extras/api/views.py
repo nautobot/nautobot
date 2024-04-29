@@ -971,7 +971,7 @@ class ScheduledJobViewSet(ReadOnlyModelViewSet):
 
         # Immediately enqueue the job
         job_class = get_job(job_model.class_path, reload=True)
-        job_kwargs = job_class.prepare_job_kwargs(scheduled_job.kwargs.get("data", {}))
+        job_kwargs = job_class.prepare_job_kwargs(scheduled_job.kwargs or {})
         job_kwargs["dryrun"] = True
         job_result = JobResult.enqueue_job(
             job_model,
