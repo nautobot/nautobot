@@ -72,6 +72,16 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.20 (2024-04-30)
+
+### Security
+
+- [#5647](https://github.com/nautobot/nautobot/issues/5647) - Fixed a reflected-XSS vulnerability ([GHSA-jxgr-gcj5-cqqg](https://github.com/nautobot/nautobot/security/advisories/GHSA-jxgr-gcj5-cqqg)) in object-list view rendering of user-provided query parameters.
+
+### Fixed
+
+- [#5626](https://github.com/nautobot/nautobot/issues/5626) - Increased performance of `brief=true` in API endpoints by eliminating unnecessary database joins.
+
 ## v1.6.19 (2024-04-23)
 
 ### Security
