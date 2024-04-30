@@ -70,6 +70,9 @@ class ComponentTemplateModel(BaseModel, ChangeLoggedModel, CustomFieldModel, Rel
         """
         Return a new ObjectChange with the `related_object` pinned to the `device_type` by default.
         """
+        if "related_object" in kwargs:
+            return super().to_objectchange(action, **kwargs)
+
         try:
             device_type = self.device_type
         except ObjectDoesNotExist:
@@ -127,17 +130,14 @@ class ModularComponentTemplateModel(ComponentTemplateModel):
         """
         Return a new ObjectChange with the `related_object` pinned to the `device_type` or `module_type`.
         """
+        if "related_object" in kwargs:
+            return super().to_objectchange(action, **kwargs)
+
         related_object = None
         try:
-            related_object = self.device_type
+            related_object = self.device_type if self.device_type else self.module_type
         except ObjectDoesNotExist:
             # The parent DeviceType may have already been deleted
-            pass
-
-        try:
-            related_object = self.module_type
-        except ObjectDoesNotExist:
-            # The parent ModuleType may have already been deleted
             pass
 
         return super().to_objectchange(action, related_object=related_object, **kwargs)
@@ -150,17 +150,17 @@ class ModularComponentTemplateModel(ComponentTemplateModel):
                 return self.module_type.get_absolute_url(api=api)
         return super().get_absolute_url(api=api)
 
-    def instantiate_model(self, model, device, module, **kwargs):
+    def instantiate_model(self, model, device, module=None, **kwargs):
         """
         Helper method to self.instantiate().
         """
-        return super().instantiate_model(model, device, module, **kwargs)
+        return super().instantiate_model(model, device, module=module, **kwargs)
 
 
 @extras_features(
     "custom_validators",
 )
-class ConsolePortTemplate(ComponentTemplateModel):
+class ConsolePortTemplate(ModularComponentTemplateModel):
     """
     A template for a ConsolePort to be created for a new Device.
     """
@@ -171,14 +171,14 @@ class ConsolePortTemplate(ComponentTemplateModel):
         ordering = ("device_type", "_name")
         unique_together = ("device_type", "name")
 
-    def instantiate(self, device):
-        return self.instantiate_model(model=ConsolePort, device=device, type=self.type)
+    def instantiate(self, device, module=None):
+        return self.instantiate_model(model=ConsolePort, device=device, module=module, type=self.type)
 
 
 @extras_features(
     "custom_validators",
 )
-class ConsoleServerPortTemplate(ComponentTemplateModel):
+class ConsoleServerPortTemplate(ModularComponentTemplateModel):
     """
     A template for a ConsoleServerPort to be created for a new Device.
     """
@@ -189,14 +189,14 @@ class ConsoleServerPortTemplate(ComponentTemplateModel):
         ordering = ("device_type", "_name")
         unique_together = ("device_type", "name")
 
-    def instantiate(self, device):
-        return self.instantiate_model(model=ConsoleServerPort, device=device, type=self.type)
+    def instantiate(self, device, module=None):
+        return self.instantiate_model(model=ConsoleServerPort, device=device, module=module, type=self.type)
 
 
 @extras_features(
     "custom_validators",
 )
-class PowerPortTemplate(ComponentTemplateModel):
+class PowerPortTemplate(ModularComponentTemplateModel):
     """
     A template for a PowerPort to be created for a new Device.
     """
@@ -219,10 +219,11 @@ class PowerPortTemplate(ComponentTemplateModel):
         ordering = ("device_type", "_name")
         unique_together = ("device_type", "name")
 
-    def instantiate(self, device):
+    def instantiate(self, device, module=None):
         return self.instantiate_model(
             model=PowerPort,
             device=device,
+            module=module,
             type=self.type,
             maximum_draw=self.maximum_draw,
             allocated_draw=self.allocated_draw,
@@ -241,7 +242,7 @@ class PowerPortTemplate(ComponentTemplateModel):
 @extras_features(
     "custom_validators",
 )
-class PowerOutletTemplate(ComponentTemplateModel):
+class PowerOutletTemplate(ModularComponentTemplateModel):
     """
     A template for a PowerOutlet to be created for a new Device.
     """
@@ -272,7 +273,7 @@ class PowerOutletTemplate(ComponentTemplateModel):
         if self.power_port_template and self.power_port_template.device_type != self.device_type:
             raise ValidationError(f"Parent power port ({self.power_port_template}) must belong to the same device type")
 
-    def instantiate(self, device):
+    def instantiate(self, device, module=None):
         if self.power_port_template:
             power_port = PowerPort.objects.get(device=device, name=self.power_port_template.name)
         else:
@@ -280,6 +281,7 @@ class PowerOutletTemplate(ComponentTemplateModel):
         return self.instantiate_model(
             model=PowerOutlet,
             device=device,
+            module=module,
             type=self.type,
             power_port=power_port,
             feed_leg=self.feed_leg,
@@ -289,7 +291,7 @@ class PowerOutletTemplate(ComponentTemplateModel):
 @extras_features(
     "custom_validators",
 )
-class InterfaceTemplate(ComponentTemplateModel):
+class InterfaceTemplate(ModularComponentTemplateModel):
     """
     A template for a physical data interface on a new Device.
     """
@@ -308,7 +310,7 @@ class InterfaceTemplate(ComponentTemplateModel):
         ordering = ("device_type", "_name")
         unique_together = ("device_type", "name")
 
-    def instantiate(self, device):
+    def instantiate(self, device, module=None):
         try:
             status = Status.objects.get_for_model(Interface).get(name="Active")
         except Status.DoesNotExist:
@@ -316,6 +318,7 @@ class InterfaceTemplate(ComponentTemplateModel):
         return self.instantiate_model(
             model=Interface,
             device=device,
+            module=module,
             type=self.type,
             mgmt_only=self.mgmt_only,
             status=status,
@@ -325,7 +328,7 @@ class InterfaceTemplate(ComponentTemplateModel):
 @extras_features(
     "custom_validators",
 )
-class FrontPortTemplate(ComponentTemplateModel):
+class FrontPortTemplate(ModularComponentTemplateModel):
     """
     Template for a pass-through port on the front of a new Device.
     """
@@ -367,14 +370,15 @@ class FrontPortTemplate(ComponentTemplateModel):
                 )
             )
 
-    def instantiate(self, device):
+    def instantiate(self, device, module=None):
         if self.rear_port_template:
-            rear_port = RearPort.objects.get(device=device, name=self.rear_port_template.name)
+            rear_port = RearPort.objects.get(device=device, module=module, name=self.rear_port_template.name)
         else:
             rear_port = None
         return self.instantiate_model(
             model=FrontPort,
             device=device,
+            module=module,
             type=self.type,
             rear_port=rear_port,
             rear_port_position=self.rear_port_position,
@@ -384,7 +388,7 @@ class FrontPortTemplate(ComponentTemplateModel):
 @extras_features(
     "custom_validators",
 )
-class RearPortTemplate(ComponentTemplateModel):
+class RearPortTemplate(ModularComponentTemplateModel):
     """
     Template for a pass-through port on the rear of a new Device.
     """
@@ -402,10 +406,11 @@ class RearPortTemplate(ComponentTemplateModel):
         ordering = ("device_type", "_name")
         unique_together = ("device_type", "name")
 
-    def instantiate(self, device):
+    def instantiate(self, device, module=None):
         return self.instantiate_model(
             model=RearPort,
             device=device,
+            module=module,
             type=self.type,
             positions=self.positions,
         )
@@ -469,23 +474,12 @@ class ModuleBayTemplate(BaseModel, ChangeLoggedModel, CustomFieldModel, Relation
     def __str__(self):
         return f"{self.parent} ({self.position})"
 
-    def instantiate(self, parent):
-        from nautobot.dcim.models.devices import Device, Module
-
+    def instantiate(self, device, module=None):
         custom_field_data = {}
         content_type = ContentType.objects.get_for_model(ModuleBay)
         fields = CustomField.objects.filter(content_types=content_type)
         for field in fields:
             custom_field_data[field.key] = field.default
-
-        device = None
-        module = None
-        if isinstance(parent, Device):
-            device = parent
-        elif isinstance(parent, Module):
-            module = parent
-        else:
-            raise TypeError("Parent must be a Device or Module")
 
         return ModuleBay(
             device=device,
@@ -498,15 +492,15 @@ class ModuleBayTemplate(BaseModel, ChangeLoggedModel, CustomFieldModel, Relation
 
     def to_objectchange(self, action, **kwargs):
         """
-        Return a new ObjectChange with the `related_object` pinned to the `device_type` by default.
+        Return a new ObjectChange with the `related_object` pinned to the parent `device_type` or `module_type`.
         """
         try:
-            device_type = self.device_type
+            parent = self.parent
         except ObjectDoesNotExist:
-            # The parent DeviceType has already been deleted
-            device_type = None
+            # The parent has already been deleted
+            parent = None
 
-        return super().to_objectchange(action, related_object=device_type, **kwargs)
+        return super().to_objectchange(action, related_object=parent, **kwargs)
 
     def get_absolute_url(self, api=False):
         if not api:

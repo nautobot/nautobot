@@ -85,6 +85,9 @@ class ComponentModel(PrimaryModel):
         """
         Return a new ObjectChange with the `related_object` pinned to the `device` by default.
         """
+        if "related_object" in kwargs:
+            return super().to_objectchange(action, **kwargs)
+
         # Annotate the parent Device
         try:
             device = self.device
@@ -95,13 +98,50 @@ class ComponentModel(PrimaryModel):
         return super().to_objectchange(action, related_object=device, **kwargs)
 
 
-class ModularComponentMixin:
+class ModularComponentModel(ComponentModel):
+    device = ForeignKeyWithAutoRelatedName(
+        to="dcim.Device",
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+    )
     module = ForeignKeyWithAutoRelatedName(
         to="dcim.Module",
         on_delete=models.CASCADE,
         blank=True,
         null=True,
     )
+
+    natural_key_field_names = ["name", "device", "module"]
+
+    class Meta:
+        abstract = True
+
+    def to_objectchange(self, action, **kwargs):
+        """
+        Return a new ObjectChange with the `related_object` pinned to the parent `device` or `module`.
+        """
+        if "related_object" in kwargs:
+            return super().to_objectchange(action, **kwargs)
+
+        # Annotate the parent
+        try:
+            parent = self.device if self.device else self.module
+        except ObjectDoesNotExist:
+            # The parent has already been deleted
+            parent = None
+
+        return super().to_objectchange(action, related_object=parent, **kwargs)
+
+    def clean(self):
+        super().clean()
+
+        # Validate that a Device or Module is set, but not both
+        if self.device and self.module:
+            raise ValidationError("Only one of device or module must be set")
+
+        if not (self.device or self.module):
+            raise ValidationError("Either device or module must be set")
 
 
 class CableTermination(models.Model):
@@ -221,7 +261,7 @@ class PathEndpoint(models.Model):
     "graphql",
     "webhooks",
 )
-class ConsolePort(ModularComponentMixin, CableTermination, PathEndpoint, ComponentModel):
+class ConsolePort(CableTermination, PathEndpoint, ModularComponentModel):
     """
     A physical console port within a Device or Module. ConsolePorts connect to ConsoleServerPorts.
     """
@@ -248,7 +288,7 @@ class ConsolePort(ModularComponentMixin, CableTermination, PathEndpoint, Compone
 
 
 @extras_features("cable_terminations", "custom_validators", "graphql", "webhooks")
-class ConsoleServerPort(ModularComponentMixin, CableTermination, PathEndpoint, ComponentModel):
+class ConsoleServerPort(CableTermination, PathEndpoint, ModularComponentModel):
     """
     A physical port within a Device or Module (typically a designated console server) which provides access to ConsolePorts.
     """
@@ -281,7 +321,7 @@ class ConsoleServerPort(ModularComponentMixin, CableTermination, PathEndpoint, C
     "graphql",
     "webhooks",
 )
-class PowerPort(ModularComponentMixin, CableTermination, PathEndpoint, ComponentModel):
+class PowerPort(CableTermination, PathEndpoint, ModularComponentModel):
     """
     A physical power supply (intake) port within a Device or Module. PowerPorts connect to PowerOutlets.
     """
@@ -392,7 +432,7 @@ class PowerPort(ModularComponentMixin, CableTermination, PathEndpoint, Component
 
 
 @extras_features("cable_terminations", "custom_validators", "graphql", "webhooks")
-class PowerOutlet(ModularComponentMixin, CableTermination, PathEndpoint, ComponentModel):
+class PowerOutlet(CableTermination, PathEndpoint, ModularComponentModel):
     """
     A physical power outlet (output) within a Device or Module which provides power to a PowerPort.
     """
@@ -508,7 +548,7 @@ class BaseInterface(RelationshipModel):
     "statuses",
     "webhooks",
 )
-class Interface(ModularComponentMixin, CableTermination, PathEndpoint, ComponentModel, BaseInterface):
+class Interface(CableTermination, PathEndpoint, ModularComponentModel, BaseInterface):
     """
     A network interface within a Device or Module. A physical Interface can connect to exactly one other Interface.
     """
@@ -905,7 +945,7 @@ class InterfaceRedundancyGroupAssociation(BaseModel, ChangeLoggedModel):
 
 
 @extras_features("cable_terminations", "custom_validators", "graphql", "webhooks")
-class FrontPort(ModularComponentMixin, CableTermination, ComponentModel):
+class FrontPort(CableTermination, ModularComponentModel):
     """
     A pass-through port on the front of a Device or Module.
     """
@@ -949,7 +989,7 @@ class FrontPort(ModularComponentMixin, CableTermination, ComponentModel):
 
 
 @extras_features("cable_terminations", "custom_validators", "graphql", "webhooks")
-class RearPort(ModularComponentMixin, CableTermination, ComponentModel):
+class RearPort(CableTermination, ModularComponentModel):
     """
     A pass-through port on the rear of a Device or Module.
     """
@@ -1124,7 +1164,7 @@ class ModuleBay(PrimaryModel):
         blank=True,
         null=True,
     )
-    module = models.ForeignKey(
+    parent_module = models.ForeignKey(
         to="dcim.Module",
         on_delete=models.CASCADE,
         related_name="module_bays",
@@ -1140,15 +1180,20 @@ class ModuleBay(PrimaryModel):
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
-    clone_fields = ["parent"]
+    clone_fields = ["device", "parent_module"]
 
     class Meta:
-        ordering = ("device", "module", "position")
-        unique_together = (("device", "position"), ("module", "position"))
+        # TODO: Ordering by parent_module.id is not correct but prevents an infinite loop
+        ordering = (
+            "device",
+            "parent_module__id",
+            "position",
+        )
+        unique_together = (("device", "position"), ("parent_module", "position"))
 
     @property
     def parent(self):
-        return self.device if self.device else self.module
+        return self.device if self.device else self.parent_module
 
     def __str__(self):
         return f"{self.parent} ({self.position})"
@@ -1170,8 +1215,8 @@ class ModuleBay(PrimaryModel):
         super().clean()
 
         # Validate that a Device or Module is set, but not both
-        if self.device and self.module:
-            raise ValidationError("Only one of device or module must be set")
+        if self.device and self.parent_module:
+            raise ValidationError("Only one of device or parent_module must be set")
 
-        if not (self.device or self.module):
-            raise ValidationError("Either device or module must be set")
+        if not (self.device or self.parent_module):
+            raise ValidationError("Either device or parent_module must be set")

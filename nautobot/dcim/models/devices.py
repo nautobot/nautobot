@@ -850,7 +850,7 @@ class Device(PrimaryModel, ConfigContextModel):
         """Create device components from the device type definition."""
         # The order of these is significant as
         # - PowerOutlet depends on PowerPort
-        # - FrontPort depends on FrontPort
+        # - FrontPort depends on RearPort
         component_models = [
             (ConsolePort, self.device_type.console_port_templates.all()),
             (ConsoleServerPort, self.device_type.console_server_port_templates.all()),
@@ -864,7 +864,7 @@ class Device(PrimaryModel, ConfigContextModel):
         ]
         instantiated_components = []
         for model, templates in component_models:
-            model.objects.bulk_create([x.instantiate(self) for x in templates])
+            model.objects.bulk_create([x.instantiate(device=self) for x in templates])
         return instantiated_components
 
     @property
@@ -1402,7 +1402,8 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
 )
 class ModuleType(PrimaryModel):
     """
-    A ModuleType represents a particular make (Manufacturer) and model of module.
+    A ModuleType represents a particular make (Manufacturer) and model of Module. A Module can represent
+    a line card, supervisor, or other interchangeable hardware component within a ModuleBay.
 
     ModuleType implements a subset of the features of DeviceType.
 
@@ -1440,9 +1441,9 @@ class ModuleType(PrimaryModel):
     ]
 
     class Meta:
-        ordering = ["manufacturer", "model"]
+        ordering = ("manufacturer", "model")
         unique_together = [
-            ["manufacturer", "model"],
+            ("manufacturer", "model"),
         ]
 
     def __str__(self):
@@ -1461,9 +1462,6 @@ class ModuleType(PrimaryModel):
                 ("manufacturer", self.manufacturer.name),
                 ("model", self.model),
                 ("part_number", self.part_number),
-                ("u_height", self.u_height),
-                ("is_full_depth", self.is_full_depth),
-                ("subdevice_role", self.subdevice_role),
                 ("comments", self.comments),
             )
         )
@@ -1533,13 +1531,6 @@ class ModuleType(PrimaryModel):
                 }
                 for c in self.rear_port_templates.all()
             ]
-        if self.device_bay_templates.exists():
-            data["device-bays"] = [
-                {
-                    "name": c.name,
-                }
-                for c in self.device_bay_templates.all()
-            ]
         if self.module_bay_templates.exists():
             data["module-bays"] = [
                 {
@@ -1551,52 +1542,6 @@ class ModuleType(PrimaryModel):
             ]
 
         return yaml.dump(dict(data), sort_keys=False, allow_unicode=True)
-
-    def clean(self):
-        super().clean()
-
-        # If editing an existing ModuleType to have a larger u_height, first validate that *all* instances of it have
-        # room to expand within their racks. This validation will impose a very high performance penalty when there are
-        # many instances to check, but increasing the u_height of a ModuleType should be a very rare occurrence.
-        if self.present_in_database and self.u_height > self._original_u_height:
-            for d in Device.objects.filter(device_type=self, position__isnull=False):
-                face_required = None if self.is_full_depth else d.face
-                u_available = d.rack.get_available_units(
-                    u_height=self.u_height, rack_face=face_required, exclude=[d.pk]
-                )
-                if d.position not in u_available:
-                    raise ValidationError(
-                        {
-                            "u_height": f"Device {d} in rack {d.rack} does not have sufficient space to accommodate a height of {self.u_height}U"
-                        }
-                    )
-
-        # If modifying the height of an existing ModuleType to 0U, check for any instances assigned to a rack position.
-        elif self.present_in_database and self._original_u_height > 0 and self.u_height == 0:
-            racked_instance_count = Device.objects.filter(device_type=self, position__isnull=False).count()
-            if racked_instance_count:
-                url = f"{reverse('dcim:device_list')}?manufacturer={self.manufacturer_id}&device_type={self.pk}"
-                raise ValidationError(
-                    {
-                        "u_height": format_html(
-                            "Unable to set 0U height: "
-                            'Found <a href="{}">{} instances</a> already mounted within racks.',
-                            url,
-                            racked_instance_count,
-                        )
-                    }
-                )
-
-        if (self.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT) and self.device_bay_templates.count():
-            raise ValidationError(
-                {
-                    "subdevice_role": "Must delete all device bay templates associated with this device before "
-                    "declassifying it as a parent device."
-                }
-            )
-
-        if self.u_height and self.subdevice_role == SubdeviceRoleChoices.ROLE_CHILD:
-            raise ValidationError({"u_height": "Child device types must be 0U."})
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -1620,10 +1565,172 @@ class ModuleType(PrimaryModel):
     def display(self):
         return f"{self.manufacturer.name} {self.model}"
 
-    @property
-    def is_parent_device(self):
-        return self.subdevice_role == SubdeviceRoleChoices.ROLE_PARENT
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "dynamic_groups",
+    "export_templates",
+    "graphql",
+    "locations",
+    "statuses",
+    "webhooks",
+)
+class Module(PrimaryModel):
+    """
+    A Module represents a line card, supervisor, or other interchangeable hardware component within a ModuleBay.
+    Each Module is assigned a ModuleType, Role, and (optionally) a Platform.
+
+    Each Module must be assigned to either a ModuleBay or a Location.
+
+    When a new Module is created, console/power/interface/device bay components are created along with it as dictated
+    by the component templates assigned to its ModuleType. Components can also be added, modified, or deleted after the
+    creation of a Module.
+    """
+
+    module_type = models.ForeignKey(to="dcim.ModuleType", on_delete=models.PROTECT, related_name="modules")
+    parent_module_bay = models.OneToOneField(
+        to="dcim.ModuleBay",
+        on_delete=models.SET_NULL,
+        related_name="installed_module",
+        blank=True,
+        null=True,
+    )
+    status = StatusField()
+    role = RoleField(blank=True, null=True)
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="modules",
+        blank=True,
+        null=True,
+    )
+    serial = models.CharField(  # noqa: DJ001  # django-nullable-model-string-field -- intentional
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True,
+        null=True,
+        verbose_name="Serial number",
+        db_index=True,
+    )
+    asset_tag = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True,
+        null=True,
+        unique=True,
+        verbose_name="Asset tag",
+        help_text="A unique tag used to identify this module",
+    )
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="modules",
+        blank=True,
+        null=True,
+    )
+    # TODO: add software support for Modules
+
+    clone_fields = [
+        "module_type",
+        "role",
+        "tenant",
+        "location",
+        "status",
+    ]
+
+    class Meta:
+        ordering = ("parent_module_bay", "location", "module_type", "asset_tag", "serial")
+        unique_together = (("module_type", "serial"),)
+
+    def __str__(self):
+        serial = f" (Serial: {self.serial})" if self.serial else ""
+        asset_tag = f" (Asset Tag: {self.asset_tag})" if self.asset_tag else ""
+        display = str(self.module_type) + serial + asset_tag
+        if self.location:
+            return f"{display} at location {self.location}"
+        else:
+            return f"{display} installed in {self.parent_module_bay}"
 
     @property
-    def is_child_device(self):
-        return self.subdevice_role == SubdeviceRoleChoices.ROLE_CHILD
+    def device(self):
+        # TODO
+        pass
+
+    def clean(self):
+        super().clean()
+
+        # Validate that the Module is associated with a Location or a ModuleBay
+        if self.parent_module_bay is None and self.location is None:
+            raise ValidationError("One of location or parent_module_bay must be set")
+
+        # Validate location
+        if self.location is not None:
+            if self.parent_module_bay is not None:
+                raise ValidationError("Only one of location or parent_module_bay must be set")
+
+            if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
+                raise ValidationError(
+                    {"location": f'Modules may not associate to locations of type "{self.location.location_type}".'}
+                )
+
+    def save(self, *args, **kwargs):
+        is_new = not self.present_in_database
+
+        if self.serial == "":
+            self.serial = None
+        if self.asset_tag == "":
+            self.asset_tag = None
+
+        super().save(*args, **kwargs)
+
+        # If this is a new Module, instantiate all related components per the ModuleType definition
+        if is_new:
+            self.create_components()
+
+    def create_components(self):
+        """Create module components from the module type definition."""
+        # The order of these is significant as
+        # - PowerOutlet depends on PowerPort
+        # - FrontPort depends on RearPort
+        component_models = [
+            (ConsolePort, self.module_type.console_port_templates.all()),
+            (ConsoleServerPort, self.module_type.console_server_port_templates.all()),
+            (PowerPort, self.module_type.power_port_templates.all()),
+            (PowerOutlet, self.module_type.power_outlet_templates.all()),
+            (Interface, self.module_type.interface_templates.all()),
+            (RearPort, self.module_type.rear_port_templates.all()),
+            (FrontPort, self.module_type.front_port_templates.all()),
+            (ModuleBay, self.module_type.module_bay_templates.all()),
+        ]
+        instantiated_components = []
+        for model, templates in component_models:
+            model.objects.bulk_create([x.instantiate(device=None, module=self) for x in templates])
+        return instantiated_components
+
+    def get_cables(self, pk_list=False):
+        """
+        Return a QuerySet or PK list matching all Cables connected to a component of this Module.
+        """
+        from .cables import Cable
+
+        cable_pks = []
+        for component_model in [
+            ConsolePort,
+            ConsoleServerPort,
+            PowerPort,
+            PowerOutlet,
+            Interface,
+            FrontPort,
+            RearPort,
+        ]:
+            cable_pks += component_model.objects.filter(module=self, cable__isnull=False).values_list(
+                "cable", flat=True
+            )
+        if pk_list:
+            return cable_pks
+        return Cable.objects.filter(pk__in=cable_pks)
+
+    def get_children(self):
+        """
+        Return the set of child Modules installed in ModuleBays within this Module.
+        """
+        return Module.objects.filter(parent_module_bay__parent_module=self.pk)
