@@ -1,0 +1,1 @@
+Increased performance of `brief=true` in API endpoints by eliminating unnecessary database joins.
