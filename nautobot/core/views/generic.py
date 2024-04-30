@@ -308,8 +308,17 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
             current_saved_view_pk = self.request.GET.get("saved_view", None)
             table_changes_pending = self.request.GET.get("table_changes_pending", False)
+            list_url = validated_viewname(model, "list")
+            saved_views = (
+                SavedView.objects.filter(view=list_url)
+                .restrict(request.user, "view")
+                .order_by("name")
+                .only("pk", "name")
+            )
             if current_saved_view_pk:
-                current_saved_view = SavedView.objects.get(pk=current_saved_view_pk)
+                current_saved_view = SavedView.objects.restrict(request.user, "view").get(
+                    view=list_url, pk=current_saved_view_pk
+                )
             table = self.table(
                 self.queryset,
                 table_changes_pending=table_changes_pending,
@@ -341,8 +350,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         valid_actions = self.validate_action_buttons(request)
 
         # Query SavedViews for dropdown button
-        list_url = validated_viewname(model, "list")
-        saved_views = SavedView.objects.filter(view=list_url).restrict(request.user, "view").order_by("view", "name")
         new_changes_not_applied = view_changes_not_saved(request, self, current_saved_view)
 
         context = {

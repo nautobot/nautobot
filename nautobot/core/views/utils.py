@@ -295,11 +295,11 @@ def view_changes_not_saved(request, view, current_saved_view):
     for param in view.non_filter_params:
         if param in query_dict_keys:
             query_dict_keys.remove(param)
-    filter_param_keys = sorted(list(current_saved_view.filter_params.keys()))
+    filter_params = current_saved_view.filter_params
 
-    if query_dict_keys != filter_param_keys:
+    if set(query_dict_keys) != set(filter_params.keys()):
         return True
-    for key in filter_param_keys:
-        if sorted(current_saved_view.filter_params.get(key)) != sorted(request.GET.getlist(key)):
+    for key, value in filter_params.items():
+        if set(value) != set(request.GET.getlist(key)):
             return True
     return False

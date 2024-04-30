@@ -1,6 +1,5 @@
 import logging
 
-from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth import (
     BACKEND_SESSION_KEY,
@@ -20,6 +19,7 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
 from nautobot.core.forms import ConfirmationForm
+from nautobot.core.utils.lookup import get_model_for_view_name, get_table_for_model
 from nautobot.core.views.generic import GenericView
 from nautobot.core.views.mixins import (
     ObjectBulkDestroyViewMixin,
@@ -245,10 +245,11 @@ class SavedViewUIViewSet(
     action_buttons = ("export",)
 
     def get_table_class_string_from_view_name(self, view_name):
-        app_label, model_name = view_name.split(":")
-        model_name = model_name.replace("_list", "")
-        model = apps.get_model(app_label=app_label, model_name=model_name)
-        return f"{model.__name__}Table"
+        model = get_model_for_view_name(view_name)
+        if model:
+            return get_table_for_model(model)
+        else:
+            return None
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -266,7 +267,7 @@ class SavedViewUIViewSet(
         request.POST: call perform_update() which validates the form and perform the action of update/partial_update of an existing object.
         Override to add more variables to Response.
         """
-        sv = self.get_queryset().get(pk=request.GET.get("saved_view", None))
+        sv = get_object_or_404(SavedView, pk=request.GET.get("saved_view", None))
         table_changes_pending = request.GET.get("table_changes_pending", False)
         pagination_count = request.GET.get("per_page", None)
         if pagination_count is not None:
@@ -274,23 +275,18 @@ class SavedViewUIViewSet(
         sort_order = request.GET.getlist("sort", [])
         sv.sort_order = sort_order
 
-        new_filter_params = []
-        for key, _ in request.GET.items():
+        sv.filter_params = {}
+        for key in request.GET:
             if key in self.non_filter_params:
                 continue
             sv.filter_params[key] = request.GET.getlist(key)
-            new_filter_params.append(key)
 
-        # delete filter params that are no longer in use
-        for param in list(sv.filter_params.keys()):
-            if param not in new_filter_params:
-                sv.filter_params.pop(param)
         if table_changes_pending:
             table_class = self.get_table_class_string_from_view_name(sv.view)
-            sv.table_config[f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
+            if table_class:
+                sv.table_config[f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
         sv.validated_save()
-        query_string = sv.view_config
-        list_view_url = reverse(sv.view) + query_string + f"&saved_view={sv.pk}"
+        list_view_url = sv.get_absolute_url()
         messages.success(request, f"Successfully updated current view {sv.name}")
         return redirect(list_view_url)
 
@@ -310,9 +306,7 @@ class SavedViewUIViewSet(
         try:
             sv = SavedView.objects.create(name=name, owner=request.user, view=view_name)
         except IntegrityError:
-            messages.error(
-                request, f"Integrity Error: User {request.user.username} already has a Saved View named {name}"
-            )
+            messages.error(request, f"You already have a Saved View named {name}")
             if derived_view_pk:
                 return redirect(self.get_return_url(request, obj=derived_instance))
             else:
@@ -323,26 +317,20 @@ class SavedViewUIViewSet(
         sort_order = request.GET.getlist("sort", [])
         sv.sort_order = sort_order
 
-        new_filter_params = []
-        for key, _ in request.GET.items():
-            if key in [*self.non_filter_params, "view"]:
+        for key in request.GET:
+            if key in self.non_filter_params:
                 continue
             sv.filter_params[key] = request.GET.getlist(key)
-            new_filter_params.append(key)
 
-        # delete filter params that are no longer in use
-        for param in list(sv.filter_params.keys()):
-            if param not in new_filter_params:
-                sv.filter_params.pop(param)
         table_class = self.get_table_class_string_from_view_name(view_name)
-        if table_changes_pending or derived_instance is None:
-            sv.table_config[f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
-        else:
-            sv.table_config[f"{table_class}"] = derived_instance.table_config[f"{table_class}"]
+        if table_class:
+            if table_changes_pending or derived_instance is None:
+                sv.table_config[f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
+            else:
+                sv.table_config[f"{table_class}"] = derived_instance.table_config[f"{table_class}"]
         try:
             sv.validated_save()
-            query_string = sv.view_config
-            list_view_url = reverse(sv.view) + query_string + f"&saved_view={sv.pk}"
+            list_view_url = sv.get_absolute_url()
             messages.success(request, f"Successfully created new Saved View {sv.name}")
             return redirect(list_view_url)
         except ValidationError as e:

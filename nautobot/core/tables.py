@@ -84,7 +84,7 @@ class BaseTable(django_tables2.Table):
         # Apply custom column ordering for SavedView if it is available
         # Takes precedence before user config
         columns = []
-        if not table_changes_pending and saved_view is not None:
+        if saved_view is not None and not table_changes_pending:
             view_table_config = saved_view.table_config.get(f"{self.__class__.__name__}", None)
             if view_table_config is not None:
                 columns = view_table_config.get("columns", [])

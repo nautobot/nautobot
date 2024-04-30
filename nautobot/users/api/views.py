@@ -43,7 +43,7 @@ class GroupViewSet(ModelViewSet):
 
 
 class SavedViewViewSet(ModelViewSet):
-    queryset = RestrictedQuerySet(model=SavedView).select_related("owner").order_by("owner")
+    queryset = SavedView.objects.select_related("owner")
     serializer_class = serializers.SavedViewSerializer
     filterset_class = filters.SavedViewFilterSet
 

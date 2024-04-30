@@ -81,7 +81,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     view.hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
                 saved_view = None
                 if saved_view_pk is not None:
-                    saved_view = SavedView.objects.get(pk=saved_view_pk)
+                    SavedView.objects.restrict(request.user, "view").get(pk=saved_view_pk)
                 table = table_class(
                     queryset,
                     table_changes_pending=table_changes_pending,
@@ -276,11 +276,16 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 # Query SavedViews for dropdown button
                 list_url = validated_viewname(model, "list")
                 saved_views = (
-                    SavedView.objects.filter(view=list_url).restrict(request.user, "view").order_by("view", "name")
+                    SavedView.objects.filter(view=list_url)
+                    .restrict(request.user, "view")
+                    .order_by("name")
+                    .only("pk", "name")
                 )
                 current_saved_view_pk = request.GET.get("saved_view", None)
                 if current_saved_view_pk:
-                    current_saved_view = SavedView.objects.get(pk=current_saved_view_pk)
+                    current_saved_view = SavedView.objects.restrict(request.user, "view").get(
+                        view=list_url, pk=current_saved_view_pk
+                    )
                 else:
                     current_saved_view = None
 
