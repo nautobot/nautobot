@@ -3541,7 +3541,7 @@ class StaticGroupTest(APIViewTestCases.APIViewTestCase):
         url = reverse("extras-api:staticgroup-members", kwargs={"pk": instance.pk})
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertEqual(member_count, len(response.json()["results"]))
+        self.assertEqual(member_count, response.json()["count"])
         # TODO: assert that members are serialized correctly?
 
 

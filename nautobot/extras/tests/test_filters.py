@@ -1810,7 +1810,6 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
 class StaticGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = StaticGroup.objects.all()
     filterset = StaticGroupFilterSet
-    maxDiff = None
 
     generic_filter_tests = (
         ["description"],

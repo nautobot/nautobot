@@ -90,17 +90,15 @@ class StaticGroup(PrimaryModel):
             if self.content_type != database_object.content_type:
                 raise ValidationError({"content_type": "ContentType cannot be changed once created"})
 
-    def _check_valid_member(self, member):
-        if not (isinstance(member, self.model) or issubclass(member, self.model)):
-            raise TypeError(f"{member} is not a {self.model._meta.label_lower}")
-
     def add_members(self, objects_to_add):
         """Add the given list or QuerySet of objects to this Static Group."""
         if isinstance(objects_to_add, models.QuerySet):
-            self._check_valid_member(objects_to_add.model)
+            if objects_to_add.model != self.model:
+                raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
         else:
             for obj in objects_to_add:
-                self._check_valid_member(obj)
+                if not isinstance(obj, self.model):
+                    raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
 
         for obj in objects_to_add:
             # We don't use `.bulk_create()` currently because we want change logging for these creates.
@@ -112,7 +110,8 @@ class StaticGroup(PrimaryModel):
     def remove_members(self, objects_to_remove):
         """Remove the given list or QuerySet of objects from this Static Group."""
         if isinstance(objects_to_remove, models.QuerySet):
-            self._check_valid_member(objects_to_remove.model)
+            if objects_to_remove.model != self.model:
+                raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
             StaticGroupAssociation.objects.filter(
                 static_group=self,
                 associated_object_type=self.content_type,
@@ -121,7 +120,8 @@ class StaticGroup(PrimaryModel):
         else:
             pks_to_remove = set()
             for obj in objects_to_remove:
-                self._check_valid_member(obj)
+                if not isinstance(obj, self.model):
+                    raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
                 pks_to_remove.add(obj.pk)
 
             StaticGroupAssociation.objects.filter(
