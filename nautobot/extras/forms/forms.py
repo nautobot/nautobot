@@ -844,8 +844,10 @@ class JobEditForm(NautobotModelForm):
         """
         For all overridable fields, if they aren't marked as overridden, revert them to the underlying value if known.
         """
+        from nautobot.extras.jobs import get_job  # avoid circular import
+
         cleaned_data = super().clean() or self.cleaned_data
-        job_class = self.instance.job_class
+        job_class = get_job(self.instance.class_path, reload=True)
         if job_class is not None:
             for field_name in JOB_OVERRIDABLE_FIELDS:
                 if not cleaned_data.get(f"{field_name}_override", False):
