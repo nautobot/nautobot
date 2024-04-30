@@ -66,11 +66,12 @@ The CSV import functionality for all models has been changed from a synchronous 
 Model CharFields' `max_length` attributes have been standardized globally to have at least 255 characters except where a shorter `max_length` is explicitly justified.
 
 <!-- towncrier release notes start -->
-## v2.2.3 (2024-04-29)
+## v2.2.3 (2024-04-30)
 
 ### Security
 
 - [#5624](https://github.com/nautobot/nautobot/issues/5624) - Updated `social-auth-app-django` dependency to `~5.4.1` to address `CVE-2024-32879`.
+- [#5646](https://github.com/nautobot/nautobot/issues/5646) - Fixed a reflected-XSS vulnerability ([GHSA-jxgr-gcj5-cqqg](https://github.com/nautobot/nautobot/security/advisories/GHSA-jxgr-gcj5-cqqg)) in object-list view rendering of user-provided query parameters.
 
 ### Added
 
