@@ -1,0 +1,1 @@
+Fixed a reflected-XSS vulnerability ([GHSA-jxgr-gcj5-cqqg](https://github.com/nautobot/nautobot/security/advisories/GHSA-jxgr-gcj5-cqqg)) in object-list view rendering of user-provided query parameters.
