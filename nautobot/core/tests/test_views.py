@@ -242,6 +242,25 @@ class FilterFormsTestCase(TestCase):
         self.assertInHTML(locations[0].name, response_content)
         self.assertInHTML(locations[1].name, response_content)
 
+    def test_filtering_crafted_query_params(self):
+        """Test for reflected-XSS vulnerability GHSA-jxgr-gcj5-cqqg."""
+        self.add_permissions("dcim.view_location")
+        query_param = "?location_type=1 onmouseover=alert('hi') foo=bar"
+        url = reverse("dcim:location_list") + query_param
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_content = response.content.decode(response.charset)
+        # The important thing here is that the data-field-parent and data-field-value are correctly quoted
+        self.assertInHTML(
+            """
+<span class="filter-selection-choice-remove remove-filter-param"
+      data-field-type="child"
+      data-field-parent="location_type"
+      data-field-value="1 onmouseover=alert(&#x27;hi&#x27;) foo=bar"
+>×</span>""",  # noqa: RUF001 - ambiguous-unicode-character-string
+            response_content,
+        )
+
 
 class ForceScriptNameTestcase(TestCase):
     """Basic test to assert that `settings.FORCE_SCRIPT_NAME` works as intended."""
