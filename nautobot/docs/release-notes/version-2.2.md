@@ -89,7 +89,7 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 
 - [#5513](https://github.com/nautobot/nautobot/issues/5513) - Fixed missing `location` field in `Prefix` and `VLAN` GraphQL schema.
 - [#5513](https://github.com/nautobot/nautobot/issues/5513) - Restored ability to filter Prefix and VLAN objects at the ORM level by `location`.
-- [#5565](https://github.com/nautobot/nautobot/issues/5565) - Fixes optional dependency on `social-auth-core` by removing an extras related to openidconnect that no longer exists.
+- [#5565](https://github.com/nautobot/nautobot/issues/5565) - Fixed optional dependency on `social-auth-core` by removing an extras related to `openidconnect` that no longer exists.
 - [#5586](https://github.com/nautobot/nautobot/issues/5586) - Fixed incorrect rendering of Job variables in the ScheduledJob detail view.
 - [#5594](https://github.com/nautobot/nautobot/issues/5594) - Fixed Job tiles view not understanding the `per_page` and `page` query parameters.
 - [#5595](https://github.com/nautobot/nautobot/issues/5595) - Fixed bug where API Extra Actions weren't displaying the proper name.
