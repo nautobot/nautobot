@@ -1,2 +1,0 @@
-Fixed missing `location` field in `Prefix` and `VLAN` GraphQL schema.
-Restored ability to filter Prefix and VLAN objects at the ORM level by `location`.
