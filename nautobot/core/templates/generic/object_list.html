@@ -197,7 +197,7 @@
             let parent = $(this).attr("data-field-parent");
             query_params.delete(parent, field_value);
         }
-        location.replace("?" + query_params);
+        location.assign("?" + query_params);
     })
 
     // On submit of filter form
@@ -221,7 +221,8 @@
         default_query.forEach((value, key) => {
             if (value != "" && !search_query.has(key, value)) { search_query.append(key, value); }
         });
-        location.replace("?" + search_query);
+        $("#FilterForm_modal").modal("hide");
+        location.assign("?" + search_query);
     })
 
     // On submit of filter search form
