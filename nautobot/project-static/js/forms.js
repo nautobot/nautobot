@@ -644,7 +644,7 @@ function initializeDynamicFilterForm(context){
             let parent = $(this).attr("data-field-parent");
             query_params.delete(parent, field_value);
         }
-        location.replace("?" + query_params);
+        location.assign("?" + query_params);
     })
 
     // On submit of filter form
@@ -660,7 +660,7 @@ function initializeDynamicFilterForm(context){
 
         // Get the serialized data from the forms and:
         // 1) filter out query_params which values are empty e.g ?sam=&dan=2 becomes dan=2
-        // 2) combine the two forms into a single form without duplicate entries
+        // 2) combine the two forms into a single set of data without duplicate entries
         let search_query = new URLSearchParams();
         let dynamic_query = new URLSearchParams(new FormData(document.getElementById("dynamic-filter-form")));
         dynamic_query.forEach((value, key) => { if (value != "") { search_query.append(key, value); }});
@@ -668,8 +668,8 @@ function initializeDynamicFilterForm(context){
         default_query.forEach((value, key) => {
             if (value != "" && !search_query.has(key, value)) { search_query.append(key, value); }
         });
-        // Union Operation
-        location.replace("?" + search_query)
+        $("#FilterForm_modal").modal("hide");
+        location.assign("?" + search_query);
     })
 
     // On submit of filter search form
