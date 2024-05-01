@@ -1,6 +1,8 @@
 # Installation
 
-This set of documents will help you get Nautobot up and running.  As an alternative, you can also [run Nautobot in Docker](./docker.md).
+There are three primary methods of deploying Nautobot with regular updates, two with Docker and native Python. Docker containers are available via [Docker Hub](https://hub.docker.com/r/networktocode/nautobot) and [GitHub Container Registry](https://github.com/nautobot/nautobot/pkgs/container/nautobot) for use within a containerized environment. Docker Compose instructions and Helm Charts are available. The instructions here are written for installation on a [RHEL (Red Hat Enterprise Linux)](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux) or [Ubuntu](https://ubuntu.com/) virtual machine.
+
+For more information about the Docker tags, Docker configurations, or using container images for your own development environemnt checkout these docs on [Nautobot in Docker](./docker.md).
 
 ## About Dependencies
 
@@ -84,7 +86,7 @@ Nautobot was designed to be a cross-platform application that can run on nearly 
 - Debian/Ubuntu flavors of Linux including Ubuntu 20.04+ and Debian 11+ are supported.
 
 !!! info
-    Nautobot should work on any POSIX-compliant system including practically any flavor of Linux, BSD, or even macOS, but those are not *officially* supported at this time.
+    Nautobot _should_ work on any POSIX-compliant system including practically any flavor of Linux, BSD, or even macOS, but those are not *officially* supported at this time.
 
 To begin with installing Nautobot dependencies on a supported platform, see [the next page of the documentation](install_system.md).
 

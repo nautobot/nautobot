@@ -57,7 +57,7 @@ As root, we're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nau
     sudo -u nautobot python3 -m venv /opt/nautobot
     ```
 
-=== "CentOS/RHEL8"
+=== "RHEL8"
 
     ```no-highlight
     sudo -u nautobot python3.8 -m venv /opt/nautobot
@@ -89,11 +89,11 @@ Observe also that you can now echo the value of the `NAUTOBOT_ROOT` environment 
 echo $NAUTOBOT_ROOT
 ```
 
-Example output:
+??? example "Example NAUTOBOT_ROOT output"
 
-```no-highlight
-/opt/nautobot
-```
+    ```no-highlight
+    /opt/nautobot
+    ```
 
 !!! warning
     Unless explicitly stated, all remaining steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
@@ -108,11 +108,11 @@ Because the `nautobot` user was created with `NAUTOBOT_ROOT` set as its home dir
     echo $PATH
     ```
 
-    Example output:
+    ??? example "Example path output"
 
-    ```no-highlight
-    /opt/nautobot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
-    ```
+        ```no-highlight
+        /opt/nautobot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+        ```
 
 === "RHEL8 flavors"
 
@@ -120,11 +120,11 @@ Because the `nautobot` user was created with `NAUTOBOT_ROOT` set as its home dir
     echo $PATH
     ```
 
-    Example output:
+    ??? example "Example path output"
 
-    ```no-highlight
-    /opt/nautobot/.local/bin:/opt/nautobot/bin:/opt/nautobot/.local/bin:/opt/nautobot/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin
-    ```
+        ```no-highlight
+        /opt/nautobot/.local/bin:/opt/nautobot/bin:/opt/nautobot/.local/bin:/opt/nautobot/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin
+        ```
 
 Therefore, any commands executed by the `nautobot` user will always check `$NAUTOBOT_ROOT/bin` first.
 
@@ -136,7 +136,7 @@ As the `nautobot` user, you may use `which pip3` to confirm that you are using t
 which pip3
 ```
 
-Example output:
+??? example "Example which pip output"
 
 ```no-highlight
 /opt/nautobot/bin/pip3
@@ -200,15 +200,15 @@ However, because we've set the `NAUTOBOT_ROOT`, this command will automatically 
 nautobot-server init
 ```
 
-Example output:
+??? example "Example nautobot-server init output"
 
-```no-highlight
-Nautobot would like to send anonymized installation metrics to the project's maintainers.
-These metrics include the installed Nautobot version, the Python version in use, an anonymous "deployment ID", and a list of one-way-hashed names of enabled Nautobot Apps and their versions.
-Allow Nautobot to send these metrics? [y/n]: y
-Installation metrics will be sent when running 'nautobot-server post_upgrade'. Thank you!
-Configuration file created at /opt/nautobot/nautobot_config.py
-```
+    ```no-highlight
+    Nautobot would like to send anonymized installation metrics to the project's maintainers.
+    These metrics include the installed Nautobot version, the Python version in use, an anonymous "deployment ID", and a list of one-way-hashed names of enabled Nautobot Apps and their versions.
+    Allow Nautobot to send these metrics? [y/n]: y
+    Installation metrics will be sent when running 'nautobot-server post_upgrade'. Thank you!
+    Configuration file created at /opt/nautobot/nautobot_config.py
+    ```
 
 +++ 1.6.0
     The `nautobot-server init` command will now prompt you to set the initial value for the [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled) setting. See the [send_installation_metrics](../tools/nautobot-server.md#send_installation_metrics) command for more information about the feature that this setting toggles.
@@ -344,12 +344,14 @@ Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on
 !!! important
     Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background Celery worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server celery worker` separately. For production use, Nautobot and the worker processes should be managed by `systemd` rather than started manually, as described in the next section of this documentation.
 
-Unauthenticated users will be presented with a login page:
+??? "Screenshot Examples"
 
-![Nautobot UI as seen by a non-authenticated user](../../../media/installation/nautobot_ui_login.png)
+    Unauthenticated users will be presented with a login page:
 
-Try logging in using the superuser account we just created. Once authenticated, you'll be able to access all areas of the UI:
+    ![Nautobot UI as seen by a non-authenticated user](../../../media/installation/nautobot_ui_login.png)
 
-![Nautobot UI as seen by an administrator](../../../media/installation/nautobot_ui_admin.png)
+    Try logging in using the superuser account we just created. Once authenticated, you'll be able to access all areas of the UI:
 
-Type `Ctrl-C` to stop the development server. Now you're ready to proceed to [starting Nautobot as a system service](services.md).
+    ![Nautobot UI as seen by an administrator](../../../media/installation/nautobot_ui_admin.png)
+
+    Type `Ctrl-C` to stop the development server. Now you're ready to proceed to [starting Nautobot as a system service](services.md).

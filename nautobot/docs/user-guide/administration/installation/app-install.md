@@ -50,43 +50,49 @@ After installing or upgrading a app, you should always run [`nautobot-server pos
 * Collecting any static files provided by the app
 * Etc.
 
-```no-highlight
-# nautobot-server post_upgrade
-Performing database migrations...
-Operations to perform:
-  Apply all migrations: admin, auth, circuits, contenttypes, db, dcim, extras, ipam,
-nautobot_app_example, sessions, social_django, taggit, tenancy, users, virtualization
-Running migrations:
-  No migrations to apply.
-
-Generating cable paths...
-Found no missing circuit termination paths; skipping
-Found no missing console port paths; skipping
-Found no missing console server port paths; skipping
-Found no missing interface paths; skipping
-Found no missing power feed paths; skipping
-Found no missing power outlet paths; skipping
-Found no missing power port paths; skipping
-Finished.
-
-Collecting static files...
-
-0 static files copied to '/opt/nautobot/static', 972 unmodified.
-
-Removing stale content types...
-
-Removing expired sessions...
-
-Invalidating cache...
-
 ```
+nautobot-server post_upgrade
+```
+
+??? example "Example post_upgrade output"
+
+    ```no-highlight
+    # nautobot-server post_upgrade
+    Performing database migrations...
+    Operations to perform:
+      Apply all migrations: admin, auth, circuits, contenttypes, db, dcim, extras, ipam,
+    nautobot_app_example, sessions, social_django, taggit, tenancy, users, virtualization
+    Running migrations:
+      No migrations to apply.
+
+    Generating cable paths...
+    Found no missing circuit termination paths; skipping
+    Found no missing console port paths; skipping
+    Found no missing console server port paths; skipping
+    Found no missing interface paths; skipping
+    Found no missing power feed paths; skipping
+    Found no missing power outlet paths; skipping
+    Found no missing power port paths; skipping
+    Finished.
+
+    Collecting static files...
+
+    0 static files copied to '/opt/nautobot/static', 972 unmodified.
+
+    Removing stale content types...
+
+    Removing expired sessions...
+
+    Invalidating cache...
+
+    ```
 
 ## Restart the WSGI Service
 
 Restart the WSGI service to load the new app:
 
 ```no-highlight
-# sudo systemctl restart nautobot nautobot-worker
+sudo systemctl restart nautobot nautobot-worker nautobot-scheduler
 ```
 
 ## Verify that the App is Installed

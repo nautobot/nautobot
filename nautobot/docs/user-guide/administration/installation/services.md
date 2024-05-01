@@ -38,7 +38,25 @@ You may want to deploy multiple workers and/or multiple queues. For more informa
 
 ## Configuration
 
-As the `nautobot` user, copy and paste the following into `$NAUTOBOT_ROOT/uwsgi.ini`:
+As the `nautobot` user, copy and paste the following into the file:
+
+=== "Base"
+
+    ```no-highlight
+    $NAUTOBOT_ROOT/uwsgi.ini
+    ```
+
+=== "Vim"
+
+    ```no-highlight
+    vim $NAUTOBOT_ROOT/uwsgi.ini
+    ```
+
+=== "Nano"
+
+    ```no-highlight
+    nano $NAUTOBOT_ROOT/uwsgi.ini
+    ```
 
 ```ini
 [uwsgi]
@@ -112,7 +130,29 @@ We'll use `systemd` to control both uWSGI and Nautobot's background worker proce
 
 ### Nautobot Service
 
-First, we'll establish the `systemd` unit file for the Nautobot web service. Copy and paste the following into `/etc/systemd/system/nautobot.service`:
+First, we'll establish the `systemd` unit file for the Nautobot web service. Copy and paste the following into the file
+
+```
+/etc/systemd/system/nautobot.service
+```
+
+=== "Base"
+
+    ```no-highlight
+    /etc/systemd/system/nautobot.service
+    ```
+
+=== "Vim"
+
+    ```no-highlight
+    sudo vim /etc/systemd/system/nautobot.service
+    ```
+
+=== "Nano"
+
+    ```no-highlight
+    sudo nano /etc/systemd/system/nautobot.service
+    ```
 
 ```ini
 [Unit]
@@ -160,7 +200,29 @@ The Celery worker service consumes tasks from background task queues and is requ
 Nautobot features including [Jobs](../../platform-functionality/jobs/index.md), [Custom
 Fields](../../platform-functionality/customfield.md), and [Git Repositories](../../platform-functionality/gitrepository.md), among others.
 
-To establish the `systemd` unit file for the Celery worker, copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
+To establish the `systemd` unit file for the Celery worker, copy and paste the following into the file
+
+```
+/etc/systemd/system/nautobot-worker.service
+```
+
+=== "Base"
+
+    ```no-highlight
+    /etc/systemd/system/nautobot-worker.service
+    ```
+
+=== "Vim"
+
+    ```no-highlight
+    sudo vim /etc/systemd/system/nautobot-worker.service
+    ```
+
+=== "Nano"
+
+    ```no-highlight
+    sudo nano /etc/systemd/system/nautobot-worker.service
+    ```
 
 ```ini
 [Unit]
@@ -198,7 +260,29 @@ advantage of the [job scheduling and approval](../../platform-functionality/jobs
 !!! warning
     It's important that the [`TIME_ZONE`](../configuration/optional-settings.md#time_zone) setting on your Nautobot servers and Celery Beat server match to prevent scheduled jobs from running at the wrong time. See the [time zones](../configuration/time-zones.md) documentation for more information.
 
-To establish the `systemd` unit file for the Celery Beat scheduler, copy and paste the following into `/etc/systemd/system/nautobot-scheduler.service`:
+To establish the `systemd` unit file for the Celery Beat scheduler, copy and paste the following into the file
+
+```
+/etc/systemd/system/nautobot-scheduler.service
+```
+
+=== "Base"
+
+    ```no-highlight
+    /etc/systemd/system/nautobot-scheduler.service
+    ```
+
+=== "Vim"
+
+    ```no-highlight
+    sudo vim /etc/systemd/system/nautobot-scheduler.service
+    ```
+
+=== "Nano"
+
+    ```no-highlight
+    sudo nano /etc/systemd/system/nautobot-scheduler.service
+    ```
 
 ```ini
 [Unit]

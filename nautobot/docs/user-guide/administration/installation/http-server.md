@@ -22,7 +22,7 @@ Two files will be created: the public certificate (`nautobot.crt`) and the priva
       -out /etc/ssl/certs/nautobot.crt
     ```
 
-=== "CentOS/RHEL8"
+=== "RHEL8"
 
     ```no-highlight
     sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
@@ -60,13 +60,34 @@ Begin by installing NGINX:
 
 #### Configure NGINX
 
-Once NGINX is installed, copy and paste the following NGINX configuration into
-`/etc/nginx/sites-available/nautobot.conf` for Ubuntu or `/etc/nginx/conf.d/nautobot.conf` for CentOS/RHEL:
-
 !!! note
     If the file location of SSL certificates had to be changed in the [Obtain an SSL Certificate](#obtain-an-ssl-certificate) step above, then the location will need to be changed in the NGINX configuration below.
 
 === "Ubuntu/Debian"
+    Once NGINX is installed, copy and paste the following NGINX configuration into
+    
+    ```
+    /etc/nginx/sites-available/nautobot.conf
+    ```
+
+    === "Base"
+
+        ```no-highlight
+        /etc/nginx/sites-available/nautobot.conf
+        ```
+
+    === "Vim"
+
+        ```no-highlight
+        vim /etc/nginx/sites-available/nautobot.conf
+        ```
+
+    === "Nano"
+
+        ```no-highlight
+        nano /etc/nginx/sites-available/nautobot.conf
+        ```
+
     ```nginxconf
     server {
         listen 443 ssl http2 default_server;
@@ -111,7 +132,30 @@ Once NGINX is installed, copy and paste the following NGINX configuration into
     }
     ```
 
-=== "CentOS/RHEL8"
+=== "RHEL8"
+    Once NGINX is installed, copy and paste the following NGINX configuration into
+    
+    ```
+    /etc/nginx/conf.d/nautobot.conf
+    ```
+
+    === "Base"
+
+        ```no-highlight
+        /etc/nginx/conf.d/nautobot.conf
+        ```
+
+    === "Vim"
+
+        ```no-highlight
+        vim /etc/nginx/conf.d/nautobot.conf
+        ```
+
+    === "Nano"
+
+        ```no-highlight
+        nano /etc/nginx/conf.d/nautobot.conf
+        ```
 
     ```nginxconf
     server {
@@ -169,7 +213,7 @@ Once NGINX is installed, copy and paste the following NGINX configuration into
     sudo ln -s /etc/nginx/sites-available/nautobot.conf /etc/nginx/sites-enabled/nautobot.conf
     ```
 
-=== "CentOS/RHEL8"
+=== "RHEL8"
 
     Run the following command to disable the default site that comes with the `nginx` package:
 
