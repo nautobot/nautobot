@@ -47,6 +47,9 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
+    Module,
+    ModuleBay,
+    ModuleType,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -837,3 +840,28 @@ class ControllerManagedDeviceGroupViewSet(NautobotModelViewSet):
 
     serializer_class = serializers.ControllerManagedDeviceGroupSerializer
     filterset_class = filters.ControllerManagedDeviceGroupFilterSet
+
+
+#
+# Modules
+#
+
+
+class ModuleViewSet(NautobotModelViewSet):
+    queryset = Module.objects.select_related(
+        "parent_module_bay", "module_type", "tenant", "role", "location"
+    ).prefetch_related("module_bays", "tags")
+    serializer_class = serializers.ModuleSerializer
+    filterset_class = filters.ModuleFilterSet
+
+
+class ModuleBayViewSet(NautobotModelViewSet):
+    queryset = ModuleBay.objects.select_related("device", "parent_module").prefetch_related("installed_module", "tags")
+    serializer_class = serializers.ModuleBaySerializer
+    # filterset_class = filters.ModuleBayFilterSet
+
+
+class ModuleTypeViewSet(NautobotModelViewSet):
+    queryset = ModuleType.objects.select_related("device_family", "manufacturer").prefetch_related("tags", "modules")
+    serializer_class = serializers.ModuleTypeSerializer
+    # filterset_class = filters.ModuleTypeFilterSet
