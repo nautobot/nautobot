@@ -59,7 +59,6 @@ from nautobot.extras.context_managers import deferred_change_logging_for_bulk_op
 from nautobot.extras.models import ContactAssociation, ExportTemplate
 from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
-from nautobot.users.forms import SavedViewForm
 from nautobot.users.models import SavedView
 
 
@@ -313,9 +312,13 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                 hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
             table_changes_pending = self.request.GET.get("table_changes_pending", False)
             if current_saved_view_pk:
-                current_saved_view = SavedView.objects.restrict(request.user, "view").get(
-                    view=list_url, pk=current_saved_view_pk
-                )
+                try:
+                    current_saved_view = SavedView.objects.restrict(request.user, "view").get(
+                        view=list_url, pk=current_saved_view_pk
+                    )
+                except ObjectDoesNotExist:
+                    pass
+
             table = self.table(
                 self.queryset,
                 table_changes_pending=table_changes_pending,
@@ -358,7 +361,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "filter_params": display_filter_params,
             "filter_form": filter_form,
             "dynamic_filter_form": dynamic_filter_form,
-            "saved_view_form": SavedViewForm(),
             "search_form": search_form,
             "list_url": list_url,
             "title": bettertitle(model._meta.verbose_name_plural),

@@ -2,6 +2,7 @@ import logging
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django_tables2 import RequestConfig
 from rest_framework import renderers
@@ -29,7 +30,6 @@ from nautobot.core.views.utils import (
 from nautobot.extras.models.change_logging import ObjectChange
 from nautobot.extras.tables import AssociatedContactsTable
 from nautobot.extras.utils import get_base_template
-from nautobot.users.forms import SavedViewForm
 from nautobot.users.models import SavedView
 
 
@@ -40,6 +40,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
     # Log error messages within NautobotHTMLRenderer
     logger = logging.getLogger(__name__)
+    saved_view = None
 
     def get_dynamic_filter_form(self, view, request, *args, filterset_class=None, **kwargs):
         """
@@ -81,7 +82,10 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     view.hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
                 saved_view = None
                 if saved_view_pk is not None:
-                    SavedView.objects.restrict(request.user, "view").get(pk=saved_view_pk)
+                    try:
+                        self.saved_view = SavedView.objects.restrict(request.user, "view").get(pk=saved_view_pk)
+                    except ObjectDoesNotExist:
+                        pass
                 table = table_class(
                     queryset,
                     table_changes_pending=table_changes_pending,
@@ -281,20 +285,12 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     .order_by("name")
                     .only("pk", "name")
                 )
-                current_saved_view_pk = request.GET.get("saved_view", None)
-                if current_saved_view_pk:
-                    current_saved_view = SavedView.objects.restrict(request.user, "view").get(
-                        view=list_url, pk=current_saved_view_pk
-                    )
-                else:
-                    current_saved_view = None
 
-                new_changes_not_applied = view_changes_not_saved(request, view, current_saved_view)
+                new_changes_not_applied = view_changes_not_saved(request, view, self.saved_view)
                 context.update(
                     {
                         "model": model,
-                        "saved_view_form": SavedViewForm(),
-                        "current_saved_view": current_saved_view,
+                        "current_saved_view": self.saved_view,
                         "new_changes_not_applied": new_changes_not_applied,
                         "action_buttons": valid_actions,
                         "list_url": list_url,

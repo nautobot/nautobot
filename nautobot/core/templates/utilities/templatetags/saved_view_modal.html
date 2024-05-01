@@ -1,37 +1,28 @@
 {% load form_helpers %}
 
-{% block extra_styles %}
-<style>
-    #saved_view_modal {
-        position: absolute;
-        top: 30%;
-    }
-</style>
-{% endblock %}
-
 <div class="modal fade" tabindex="-1" id="saved_view_modal">
-    <div class="modal-dialog modal-lg" style="width: 50% !important;">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 <h4 class="modal-title">New Saved View</h4>
             </div>
-            <div class="modal-body">
-                <form action="{% url 'users:savedview_add' %}?view={{view}}&{{params}}" method="post">
+            <form action="{% url 'users:savedview_add' %}?view={{view}}&{{params}}" method="post">
+                <div class="modal-body">
                     {% csrf_token %}
                     <div class="form-group">
                         {% render_field form.name %}
                     </div>
-                    <div class="text-right noprint">
-                        <button type="submit" class="btn btn-primary">
-                            <span class="mdi mdi-content-save-plus-outline" aria-hidden="true"></span> Save
-                        </button>
-                        <button class="btn btn-default" data-dismiss="modal">
-                            <span class="mdi mdi-close-thick" aria-hidden="true"></span> Cancel
-                        </button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">
+                        <span class="mdi mdi-content-save-plus-outline" aria-hidden="true"></span> Save
+                    </button>
+                    <button class="btn btn-default" data-dismiss="modal">
+                        <span class="mdi mdi-close-thick" aria-hidden="true"></span> Cancel
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

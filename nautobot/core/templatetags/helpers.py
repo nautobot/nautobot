@@ -19,6 +19,7 @@ from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
+from nautobot.users.forms import SavedViewForm
 
 # S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
 HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
@@ -728,12 +729,11 @@ def filter_form_modal(
 
 @register.inclusion_tag("utilities/templatetags/saved_view_modal.html")
 def saved_view_modal(
-    form,
     params,
     view,
 ):
     return {
-        "form": form,
+        "form": SavedViewForm(),
         "params": params,
         "view": view,
     }

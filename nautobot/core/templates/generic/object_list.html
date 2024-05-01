@@ -56,7 +56,7 @@
                     {% for saved_view in saved_views %}
                         <li>
                             <a href="{{ saved_view.get_absolute_url }}">
-                                {% if saved_view == current_saved_view %}
+                                {% if saved_view.pk == current_saved_view %}
                                     <i class="mdi mdi-view-compact-outline text-bold" aria-hidden="true"></i>
                                     <strong>
                                         {{saved_view.name}}
@@ -72,7 +72,7 @@
                         <li role="separator" class="divider"></li>
                     {% endif %}
                 {% endif %}
-                {% if request.GET.saved_view %}
+                {% if current_saved_view %}
                     {% if perms.users.change_savedview %}
                         <li>
                             <a href="{% url 'users:savedview_edit' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
@@ -90,7 +90,7 @@
                         </a>
                     </li>
                 {% endif %}
-                {% if request.GET.saved_view %}
+                {% if current_saved_view %}
                     <li>
                         <a href="{% url 'users:savedview' pk=request.GET.saved_view %}">
                             <i class="mdi mdi-arrow-u-right-bottom text-danger" aria-hidden="true"></i>
@@ -222,7 +222,7 @@
 </div>
 {% if table %}{% table_config_form table table_name="ObjectTable" %}{% endif %}
 {% filter_form_modal filter_form dynamic_filter_form model_plural_name=title %}
-{% saved_view_modal saved_view_form request.GET.urlencode list_url %}
+{% saved_view_modal request.GET.urlencode list_url %}
 {% endblock %}
 
 {% block javascript %}
