@@ -2306,6 +2306,7 @@ class JobApprovalTest(APITestCase):
             name="test dryrun",
             task="dry_run.TestDryRun",
             job_model=cls.dryrun_job_model,
+            kwargs={"value": 1},
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=cls.additional_user,
             approval_required=True,
@@ -2445,6 +2446,8 @@ class JobApprovalTest(APITestCase):
         url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.dryrun_scheduled_job.pk})
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
+        # The below fails because JobResult.task_kwargs doesn't get set until *after* the task begins executing.
+        # self.assertEqual(response.data["task_kwargs"], {"dryrun": True, "value": 1}, response.data)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_dry_run_not_supported(self):

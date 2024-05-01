@@ -167,3 +167,15 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: "${{ secrets.SLACK_WEBHOOK_URL }}"
           SLACK_WEBHOOK_TYPE: "INCOMING_WEBHOOK"
+
+  deploy-sandbox:
+    if: startsWith(github.event.release.tag_name, 'v2.')
+    needs:
+      - "publish_python"
+      - "publish_containers"
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Call deploy sandbox workflow for next.demo.nautobot.com
+        run: gh workflow run deploy_sandbox.yml -R nautobot/sandboxes -f sandbox_environment=next.demo
+        env:
+          GH_TOKEN: ${{ secrets.GH_NAUTOBOT_BOT_TOKEN }}

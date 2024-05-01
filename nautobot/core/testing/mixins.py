@@ -11,8 +11,8 @@ from django.forms.models import model_to_dict
 from netaddr import IPNetwork
 from rest_framework.test import APIClient, APIRequestFactory
 
-from nautobot.core import testing
 from nautobot.core.models import fields as core_fields
+from nautobot.core.testing import utils
 from nautobot.core.utils import permissions
 from nautobot.extras import management, models as extras_models
 from nautobot.users import models as users_models
@@ -170,7 +170,7 @@ class NautobotTestCaseMixin:
                 # REST API response; pass the response data through directly
                 err_message += f"\n{response.data}"
             # Attempt to extract form validation errors from the response HTML
-            form_errors = testing.extract_form_failures(response.content.decode(response.charset))
+            form_errors = utils.extract_form_failures(response.content.decode(response.charset))
             err_message += "\n" + str(form_errors or response.content.decode(response.charset) or "No data")
             if msg:
                 err_message = f"{msg}\n{err_message}"
