@@ -4,7 +4,7 @@ from nautobot.core.models import BaseModel
 from nautobot.core.models.fields import TagsField
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.models.customfields import CustomFieldModel
-from nautobot.extras.models.mixins import DynamicGroupMixin, NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupMixin, NotesMixin, StaticGroupMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.users.models import SavedViewMixin
 
@@ -18,6 +18,7 @@ class OrganizationalModel(
     NotesMixin,
     RelationshipModel,
     SavedViewMixin,
+    StaticGroupMixin,
     BaseModel,
 ):
     """
@@ -36,11 +37,13 @@ class OrganizationalModel(
 
 class PrimaryModel(
     ChangeLoggedModel,
+    ContactMixin,
     CustomFieldModel,
     DynamicGroupMixin,
     NotesMixin,
     RelationshipModel,
     SavedViewMixin,
+    StaticGroupMixin,
     BaseModel,
 ):
     """

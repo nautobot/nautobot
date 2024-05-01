@@ -91,6 +91,9 @@ class ContactAssociation(OrganizationalModel):
     role = RoleField(blank=False, null=False)
     status = StatusField(blank=False, null=False)
 
+    is_contact_associable_model = False
+    is_static_group_associable_model = False
+
     class Meta:
         unique_together = (
             ("contact", "associated_object_type", "associated_object_id", "role"),

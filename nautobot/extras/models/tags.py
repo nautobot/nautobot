@@ -13,7 +13,7 @@ from nautobot.users.models import SavedViewMixin
 # These imports are in this particular order because of circular import problems
 from .change_logging import ChangeLoggedModel
 from .customfields import CustomFieldModel
-from .mixins import NotesMixin
+from .mixins import ContactMixin, NotesMixin, StaticGroupMixin
 from .relationships import RelationshipModel
 
 #
@@ -37,10 +37,12 @@ class TagQuerySet(RestrictedQuerySet):
 )
 class Tag(
     ChangeLoggedModel,
+    ContactMixin,
     CustomFieldModel,
     NotesMixin,
     RelationshipModel,
     SavedViewMixin,
+    StaticGroupMixin,
     BaseModel,
 ):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)

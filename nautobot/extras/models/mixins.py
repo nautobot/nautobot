@@ -2,9 +2,28 @@
 Class-modifying mixins that need to be standalone to avoid circular imports.
 """
 
+from django.contrib.contenttypes.fields import GenericRelation
+from django.db import models
 from django.urls import NoReverseMatch, reverse
 
 from nautobot.core.utils.lookup import get_route_for_model
+
+
+class ContactMixin(models.Model):
+    """Abstract mixin for enabling Contact/Team association to a given model class."""
+
+    class Meta:
+        abstract = True
+
+    is_contact_associable_model = True
+
+    # Reverse relation so that deleting a ContactMixin automatically deletes any ContactAssociations related to it.
+    associated_contacts = GenericRelation(
+        "extras.ContactAssociation",
+        content_type_field="associated_object_type",
+        object_id_field="associated_object_id",
+        related_query_name="associated_contacts_%(app_label)s_%(class)s",  # e.g. 'associated_contacts_dcim_device'
+    )
 
 
 class DynamicGroupMixin:
@@ -141,3 +160,26 @@ class NotesMixin:
                 continue
 
         return None
+
+
+class StaticGroupMixin(models.Model):
+    """Abstract mixin for enabling StaticGroup association to a given model class."""
+
+    class Meta:
+        abstract = True
+
+    is_static_group_associable_model = True
+
+    # Reverse relation so that deleting a StaticGroupMixin automatically deletes any related StaticGroupAssociations
+    associated_static_groups = GenericRelation(
+        "extras.StaticGroupAssociation",
+        content_type_field="associated_object_type",
+        object_id_field="associated_object_id",
+        related_query_name="associated_static_groups_%(app_label)s_%(class)s",  # 'associated_static_groups_dcim_device'
+    )
+
+    @property
+    def static_groups(self):
+        from nautobot.extras.models.groups import StaticGroup
+
+        return StaticGroup.objects.filter(pk__in=self.associated_static_groups.values_list("static_group", flat=True))

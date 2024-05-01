@@ -1,0 +1,1 @@
+Added `ContactMixin` and `StaticGroupMixin` abstract model mixin classes. Models that inherit from `OrganizationalModel` or `PrimaryModel` will automatically include these mixins.

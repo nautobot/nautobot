@@ -32,7 +32,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, NotesMixin, StaticGroupMixin
 from nautobot.extras.models.relationships import RelationshipModel
 from nautobot.extras.querysets import ConfigContextQuerySet, NotesQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery, image_upload
@@ -73,8 +73,10 @@ def limit_dynamic_group_choices():
 class ConfigContext(
     ChangeLoggedModel,
     ConfigContextSchemaValidationMixin,
+    ContactMixin,
     NotesMixin,
     SavedViewMixin,
+    StaticGroupMixin,
     BaseModel,
 ):
     """
@@ -307,13 +309,16 @@ class ConfigContextSchema(OrganizationalModel):
 @extras_features("graphql")
 class CustomLink(
     ChangeLoggedModel,
+    ContactMixin,
     NotesMixin,
     SavedViewMixin,
+    StaticGroupMixin,
     BaseModel,
 ):
     """
-    A custom link to an external representation of a Nautobot object. The link text and URL fields accept Jinja2 template
-    code to be rendered with an object as context.
+    A custom link to an external representation of a Nautobot object.
+
+    The link text and URL fields accept Jinja2 template code to be rendered with an object as context.
     """
 
     content_type = models.ForeignKey(
@@ -366,9 +371,11 @@ class CustomLink(
 )
 class ExportTemplate(
     ChangeLoggedModel,
-    NotesMixin,
+    ContactMixin,
     RelationshipModel,
+    NotesMixin,
     SavedViewMixin,
+    StaticGroupMixin,
     BaseModel,
 ):
     # An ExportTemplate *may* be owned by another model, such as a GitRepository, or it may be un-owned
@@ -666,8 +673,10 @@ class FileProxy(BaseModel):
 @extras_features("graphql")
 class GraphQLQuery(
     ChangeLoggedModel,
+    ContactMixin,
     NotesMixin,
     SavedViewMixin,
+    StaticGroupMixin,
     BaseModel,
 ):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
@@ -793,7 +802,7 @@ class ImageAttachment(BaseModel):
 
 
 @extras_features("graphql", "webhooks")
-class Note(BaseModel, ChangeLoggedModel):
+class Note(ChangeLoggedModel, BaseModel):
     """
     Notes allow anyone with proper permissions to add a note to an object.
     """
@@ -834,8 +843,10 @@ class Note(BaseModel, ChangeLoggedModel):
 @extras_features("graphql")
 class Webhook(
     ChangeLoggedModel,
+    ContactMixin,
     NotesMixin,
     SavedViewMixin,
+    StaticGroupMixin,
     BaseModel,
 ):
     """

@@ -241,8 +241,12 @@ plugins:
         'models/extras/jobhook.md': 'user-guide/platform-functionality/jobs/jobhook.md'
         'models/extras/joblogentry.md': 'user-guide/platform-functionality/jobs/models.md'
         'models/extras/jobresult.md': 'user-guide/platform-functionality/jobs/models.md'
+        'models/extras/role.md': 'user-guide/platform-functionality/role.md'
         'models/extras/secret.md': 'user-guide/platform-functionality/secret.md'
         'models/extras/secretsgroup.md': 'user-guide/platform-functionality/secret.md'
+        'models/extras/staticgroup.md': 'user-guide/platform-functionality/staticgroup.md'
+        'models/extras/staticgroupassociation.md': 'user-guide/platform-functionality/staticgroupassociation.md'
+        'models/extras/status.md': 'user-guide/platform-functionality/status.md'
         'models/extras/team.md': 'user-guide/core-data-model/extras/team.md'
         'models/ipam/ipaddress.md': 'user-guide/core-data-model/ipam/ipaddress.md'
         'models/ipam/prefix.md': 'user-guide/core-data-model/ipam/prefix.md'
@@ -455,6 +459,9 @@ nav:
         - UI Endpoints: "user-guide/platform-functionality/rest-api/ui-related-endpoints.md"
       - Roles: "user-guide/platform-functionality/role.md"
       - Secrets: "user-guide/platform-functionality/secret.md"
+      - Static Groups:
+          - "user-guide/platform-functionality/staticgroup.md"
+          - Static Group Associations: "user-guide/platform-functionality/staticgroupassociation.md"
       - Statuses: "user-guide/platform-functionality/status.md"
       - Tags: "user-guide/platform-functionality/tag.md"
       - Template Filters: "user-guide/platform-functionality/template-filters.md"

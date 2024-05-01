@@ -1,0 +1,1 @@
+Changed behavior of models that inherit directly from `BaseModel` (not `OrganizationalModel` or `PrimaryModel`) to default to `is_contact_associable_model = False`.

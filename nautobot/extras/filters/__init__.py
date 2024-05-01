@@ -81,12 +81,19 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroup,
+    StaticGroupAssociation,
     Status,
     Tag,
     Team,
     Webhook,
 )
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
+from nautobot.extras.utils import (
+    ChangeLoggedModelsQuery,
+    FeatureQuery,
+    RoleModelsQuery,
+    TaggableClassesQuery,
+)
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup
 
@@ -1102,6 +1109,51 @@ class SecretsGroupAssociationFilterSet(BaseFilterSet):
     class Meta:
         model = SecretsGroupAssociation
         fields = ("id",)
+
+
+#
+# StaticGroups
+#
+
+
+class StaticGroupFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+            "content_type__app_label": "icontains",
+            "content_type__model": "icontains",
+        },
+    )
+    content_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("static_groups").get_choices, conjoined=False)
+
+    class Meta:
+        model = StaticGroup
+        fields = "__all__"
+
+
+class StaticGroupAssociationFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "static_group__name": "icontains",
+            "static_group__description": "icontains",
+            "associated_object_type__app_label": "icontains",
+            "associated_object_type__model": "icontains",
+        }
+    )
+
+    static_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=StaticGroup.objects.all(),
+        to_field_name="name",
+        label="Static group (name or ID)",
+    )
+    associated_object_type = ContentTypeMultipleChoiceFilter(
+        choices=FeatureQuery("static_groups").get_choices, conjoined=False
+    )
+
+    class Meta:
+        model = StaticGroupAssociation
+        fields = "__all__"
 
 
 #

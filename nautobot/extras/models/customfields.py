@@ -38,7 +38,7 @@ from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, NotesMixin, StaticGroupMixin
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
 from nautobot.users.models import SavedViewMixin
@@ -67,9 +67,11 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 @extras_features("graphql")
 class ComputedField(
+    ContactMixin,
     ChangeLoggedModel,
     NotesMixin,
     SavedViewMixin,
+    StaticGroupMixin,
     BaseModel,
 ):
     """
@@ -339,9 +341,11 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 @extras_features("webhooks")
 class CustomField(
+    ContactMixin,
     ChangeLoggedModel,
     NotesMixin,
     SavedViewMixin,
+    StaticGroupMixin,
     BaseModel,
 ):
     content_types = models.ManyToManyField(

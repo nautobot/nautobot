@@ -64,6 +64,8 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroup,
+    StaticGroupAssociation,
     Status,
     Tag,
     TaggedItem,
@@ -1089,6 +1091,43 @@ class SecretsGroupAssociationViewSet(ModelViewSet):
     queryset = SecretsGroupAssociation.objects.all()
     serializer_class = serializers.SecretsGroupAssociationSerializer
     filterset_class = filters.SecretsGroupAssociationFilterSet
+
+
+#
+# Static groups
+#
+
+
+class StaticGroupViewSet(NautobotModelViewSet):
+    """
+    Manage Static Groups through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = StaticGroup.objects.select_related("content_type")
+    serializer_class = serializers.StaticGroupSerializer
+    filterset_class = filters.StaticGroupFilterSet
+
+    @action(detail=True, methods=["get"])
+    def members(self, request, pk, *args, **kwargs):
+        """List member objects of this static group."""
+        instance = get_object_or_404(self.queryset, pk=pk)
+
+        # Retrieve the serializer for the content_type and paginate the results
+        member_model_class = instance.content_type.model_class()
+        member_serializer_class = get_serializer_for_model(member_model_class)
+        members = self.paginate_queryset(instance.members)
+        member_serializer = member_serializer_class(members, many=True, context={"request": request})
+        return self.get_paginated_response(member_serializer.data)
+
+
+class StaticGroupAssociationViewSet(NautobotModelViewSet):
+    """
+    Manage Static Group Associations through DELETE, GET, POST, PUT, and PATCH requests.
+    """
+
+    queryset = StaticGroupAssociation.objects.select_related("associated_object_type", "static_group")
+    serializer_class = serializers.StaticGroupAssociationSerializer
+    filterset_class = filters.StaticGroupAssociationFilterSet
 
 
 #

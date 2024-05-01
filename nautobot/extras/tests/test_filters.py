@@ -52,6 +52,8 @@ from nautobot.extras.filters import (
     SecretFilterSet,
     SecretsGroupAssociationFilterSet,
     SecretsGroupFilterSet,
+    StaticGroupAssociationFilterSet,
+    StaticGroupFilterSet,
     StatusFilterSet,
     TagFilterSet,
     TeamFilterSet,
@@ -83,6 +85,8 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroup,
+    StaticGroupAssociation,
     Status,
     Tag,
     Team,
@@ -1801,6 +1805,43 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
     def test_secret_type(self):
         params = {"secret_type": [SecretsGroupSecretTypeChoices.TYPE_PASSWORD]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
+class StaticGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
+    queryset = StaticGroup.objects.all()
+    filterset = StaticGroupFilterSet
+
+    generic_filter_tests = (
+        ["description"],
+        ["name"],
+    )
+
+    def test_content_type(self):
+        ct = StaticGroup.objects.first().content_type
+        params = {"content_type": [ct.model_class()._meta.label_lower]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, StaticGroup.objects.filter(content_type=ct)
+        )
+
+
+class StaticGroupAssociationTestCase(FilterTestCases.FilterTestCase):
+    queryset = StaticGroupAssociation.objects.all()
+    filterset = StaticGroupAssociationFilterSet
+
+    generic_filter_tests = (
+        ["static_group", "static_group__id"],
+        ["static_group", "static_group__name"],
+        ["associated_object_id"],
+    )
+
+    def test_associated_object_type(self):
+        ct = StaticGroup.objects.filter(static_group_associations__isnull=False).first().content_type
+        params = {"associated_object_type": [ct.model_class()._meta.label_lower]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            StaticGroupAssociation.objects.filter(associated_object_type=ct),
+            ordered=False,
+        )
 
 
 class StatusTestCase(FilterTestCases.NameOnlyFilterTestCase):
