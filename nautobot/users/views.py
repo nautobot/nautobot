@@ -279,20 +279,24 @@ class SavedViewUIViewSet(
         table_changes_pending = request.GET.get("table_changes_pending", False)
         pagination_count = request.GET.get("per_page", None)
         if pagination_count is not None:
-            sv.pagination_count = int(pagination_count)
+            sv.config["pagination_count"] = int(pagination_count)
         sort_order = request.GET.getlist("sort", [])
-        sv.sort_order = sort_order
+        sv.config["sort_order"] = sort_order
 
-        sv.filter_params = {}
+        filter_params = {}
         for key in request.GET:
             if key in self.non_filter_params:
                 continue
-            sv.filter_params[key] = request.GET.getlist(key)
+            filter_params[key] = request.GET.getlist(key)
+        sv.config["filter_params"] = filter_params
 
         if table_changes_pending:
             table_class = self.get_table_class_string_from_view_name(sv.view)
             if table_class:
-                sv.table_config[f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
+                if sv.config.get("table_config", None):
+                    sv.config["table_config"] = {}
+                sv.config["table_config"][f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
+
         sv.validated_save()
         list_view_url = sv.get_absolute_url()
         messages.success(request, f"Successfully updated current view {sv.name}")
@@ -318,23 +322,24 @@ class SavedViewUIViewSet(
                 return redirect(self.get_return_url(request, obj=derived_instance))
             else:
                 return redirect(reverse(view_name))
-        pagination_count = request.GET.get("per_page", None)
-        if pagination_count is not None:
-            sv.pagination_count = int(pagination_count)
+        pagination_count = request.GET.get("per_page", 50)
+        sv.config["pagination_count"] = int(pagination_count)
         sort_order = request.GET.getlist("sort", [])
-        sv.sort_order = sort_order
+        sv.config["sort_order"] = sort_order
 
+        sv.config["filter_params"] = {}
         for key in request.GET:
             if key in [*self.non_filter_params, "view"]:
                 continue
-            sv.filter_params[key] = request.GET.getlist(key)
+            sv.config["filter_params"][key] = request.GET.getlist(key)
 
         table_class = self.get_table_class_string_from_view_name(view_name)
+        sv.config["table_config"] = {}
         if table_class:
             if table_changes_pending or derived_instance is None:
-                sv.table_config[f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
+                sv.config["table_config"][f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
             else:
-                sv.table_config[f"{table_class}"] = derived_instance.table_config[f"{table_class}"]
+                sv.config["table_config"][f"{table_class}"] = derived_instance.config["table_config"][f"{table_class}"]
         try:
             sv.validated_save()
             list_view_url = sv.get_absolute_url()

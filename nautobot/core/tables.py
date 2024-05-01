@@ -85,7 +85,7 @@ class BaseTable(django_tables2.Table):
         # Takes precedence before user config
         columns = []
         if saved_view is not None and not table_changes_pending:
-            view_table_config = saved_view.table_config.get(f"{self.__class__.__name__}", None)
+            view_table_config = saved_view.config.get("table_config", {}).get(f"{self.__class__.__name__}", None)
             if view_table_config is not None:
                 columns = view_table_config.get("columns", [])
         else:

@@ -17,10 +17,7 @@ class SavedViewTable(BaseTable):
             "name",
             "owner",
             "view",
-            "table_config",
-            "pagination_count",
-            "filter_params",
-            "sort_order",
+            "config",
             "actions",
         )
         default_columns = (

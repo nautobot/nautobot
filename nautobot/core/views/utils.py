@@ -287,15 +287,15 @@ def view_changes_not_saved(request, view, current_saved_view):
 
     if query_dict.get("table_changes_pending", None):
         return True
-    if int(query_dict.get("per_page")) != current_saved_view.pagination_count:
+    if int(query_dict.get("per_page")) != current_saved_view.config.get("pagination_count", 50):
         return True
-    if (request.GET.getlist("sort", [])) != current_saved_view.sort_order:
+    if (request.GET.getlist("sort", [])) != current_saved_view.config.get("sort_order", []):
         return True
     query_dict_keys = sorted(list(query_dict.keys()))
     for param in view.non_filter_params:
         if param in query_dict_keys:
             query_dict_keys.remove(param)
-    filter_params = current_saved_view.filter_params
+    filter_params = current_saved_view.config.get("filter_params", {})
 
     if set(query_dict_keys) != set(filter_params.keys()):
         return True
