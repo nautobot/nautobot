@@ -116,6 +116,13 @@ class ModularComponentModel(ComponentModel):
 
     class Meta:
         abstract = True
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(device__isnull=False, module__isnull=True)
+                | models.Q(device__isnull=True, module__isnull=False),
+                name="%(app_label)s_%(class)s_device_xor_module",
+            )
+        ]
 
     def to_objectchange(self, action, **kwargs):
         """
@@ -1157,7 +1164,7 @@ class ModuleBay(PrimaryModel):
     A slot in a Device or Module which can contain Modules.
     """
 
-    device = models.ForeignKey(
+    parent_device = models.ForeignKey(
         to="dcim.Device",
         on_delete=models.CASCADE,
         related_name="module_bays",
@@ -1180,20 +1187,41 @@ class ModuleBay(PrimaryModel):
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
-    clone_fields = ["device", "parent_module"]
+    clone_fields = ["parent_device", "parent_module"]
 
     class Meta:
         # TODO: Ordering by parent_module.id is not correct but prevents an infinite loop
         ordering = (
-            "device",
+            "parent_device",
             "parent_module__id",
             "position",
         )
-        unique_together = (("device", "position"), ("parent_module", "position"))
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(parent_device__isnull=False, parent_module__isnull=True)
+                | models.Q(parent_device__isnull=True, parent_module__isnull=False),
+                name="dcim_modulebay_parent_device_xor_parent_module",
+            ),
+            models.UniqueConstraint(
+                fields=["parent_device", "position"],
+                name="dcim_modulebay_parent_device_position_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["parent_module", "position"],
+                name="dcim_modulebay_parent_module_position_unique",
+            ),
+        ]
 
     @property
     def parent(self):
-        return self.device if self.device else self.parent_module
+        return self.parent_device if self.parent_device else self.parent_module
+
+    @property
+    def device(self):
+        """Walk up parent chain to find the Device that this ModuleBay is installed in, if one exists."""
+        if self.parent_device:
+            return self.parent_device
+        return self.parent_module.device
 
     def __str__(self):
         return f"{self.parent} ({self.position})"
@@ -1215,8 +1243,8 @@ class ModuleBay(PrimaryModel):
         super().clean()
 
         # Validate that a Device or Module is set, but not both
-        if self.device and self.parent_module:
-            raise ValidationError("Only one of device or parent_module must be set")
+        if self.parent_device and self.parent_module:
+            raise ValidationError("Only one of parent_device or parent_module must be set")
 
-        if not (self.device or self.parent_module):
-            raise ValidationError("Either device or parent_module must be set")
+        if not (self.parent_device or self.parent_module):
+            raise ValidationError("Either parent_device or parent_module must be set")

@@ -441,6 +441,7 @@ class LocationTypeFactory(OrganizationalModelFactory):
                     ContentType.objects.get_for_model(Controller),
                     ContentType.objects.get_for_model(CircuitTermination),
                     ContentType.objects.get_for_model(Device),
+                    ContentType.objects.get_for_model(Module),
                     ContentType.objects.get_for_model(PowerPanel),
                     ContentType.objects.get_for_model(Rack),
                     ContentType.objects.get_for_model(RackGroup),
@@ -719,16 +720,9 @@ class ControllerManagedDeviceGroupFactory(PrimaryModelFactory):
 class ModuleTypeFactory(PrimaryModelFactory):
     class Meta:
         model = ModuleType
-        exclude = (
-            "has_comments",
-            "has_device_family",
-            "has_part_number",
-        )
+        exclude = ("has_part_number",)
 
-    has_device_family = NautobotBoolIterator()
-    device_family = factory.Maybe("has_device_family", random_instance(DeviceFamily), None)
-
-    manufacturer = random_instance(Manufacturer)
+    manufacturer = random_instance(Manufacturer, allow_null=False)
 
     model = factory.LazyAttributeSequence(lambda o, n: f"{o.manufacturer.name} ModuleType {n + 1}")
 
@@ -746,17 +740,21 @@ class ModuleBayFactory(PrimaryModelFactory):
         )
 
     has_parent_module = False
-    device = factory.Maybe("has_parent_module", None, random_instance(Device, allow_null=False))
+    parent_device = factory.Maybe("has_parent_module", None, random_instance(Device, allow_null=False))
     parent_module = factory.Maybe("has_parent_module", random_instance(Module, allow_null=False), None)
 
-    position = factory.Faker("pyint", min_value=1, max_value=10)
+    position = factory.Maybe(
+        "has_parent_module",
+        factory.LazyAttribute(lambda o: o.parent_module.module_bays.count() + 1),
+        factory.LazyAttribute(lambda o: o.parent_device.module_bays.count() + 1),
+    )
     has_label = NautobotBoolIterator()
     label = factory.Maybe(
         "has_label",
         factory.Maybe(
             "has_parent_module",
             factory.LazyAttribute(lambda o: f"{o.parent_module!s} Bay {o.position}"),
-            factory.LazyAttribute(lambda o: f"{o.device!s} Bay {o.position}"),
+            factory.LazyAttribute(lambda o: f"{o.parent_device!s} Bay {o.position}"),
         ),
         "",
     )
@@ -770,7 +768,9 @@ class ModuleFactory(PrimaryModelFactory):
         exclude = (
             "has_asset_tag",
             "has_parent_module_bay",
+            "has_role",
             "has_serial",
+            "has_tenant",
         )
 
     module_type = random_instance(ModuleType, allow_null=False)
@@ -792,9 +792,15 @@ class ModuleFactory(PrimaryModelFactory):
             allow_null=False,
         ),
     )
-    role = random_instance(lambda: Role.objects.get_for_model(Module))
+    has_role = NautobotBoolIterator()
+    role = factory.Maybe(
+        "has_role",
+        random_instance(lambda: Role.objects.get_for_model(Module)),
+        None,
+    )
     has_asset_tag = NautobotBoolIterator()
     asset_tag = factory.Maybe("has_asset_tag", UniqueFaker("uuid4"), None)
     has_serial = NautobotBoolIterator()
     serial = factory.Maybe("has_serial", factory.Faker("ean", length=8), "")
-    tenant = random_instance(Tenant)
+    has_tenant = NautobotBoolIterator()
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant, allow_null=False), None)

@@ -3,6 +3,7 @@ from decimal import Decimal
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.test import TestCase
 from django.test.utils import override_settings
 
@@ -40,6 +41,10 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
+    Module,
+    ModuleBay,
+    ModuleBayTemplate,
+    ModuleType,
     Platform,
     PowerOutlet,
     PowerOutletTemplate,
@@ -952,6 +957,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         ).save()
 
         DeviceBayTemplate(device_type=self.device_type, name="Device Bay 1").save()
+        ModuleBayTemplate.objects.create(device_type=self.device_type, position="1")
 
         self.device = Device(
             location=self.location_3,
@@ -1029,6 +1035,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         )
 
         DeviceBay.objects.get(device=self.device, name="Device Bay 1")
+        ModuleBay.objects.get(parent_device=self.device, position="1")
 
     def test_multiple_unnamed_devices(self):
         device1 = Device(
@@ -1994,3 +2001,414 @@ class ControllerManagedDeviceGroupTestCase(ModelTestCases.BaseModelTestCase):
             controller2,
             "Child group 2 controller should have been updated",
         )
+
+
+class ModuleBayTestCase(ModelTestCases.BaseModelTestCase):
+    model = ModuleBay
+
+    # TODO: should this be a helper method (cascade_delete?) on the ModuleBay model?
+    # This works around the relationship between ModuleBay and its installed Module being protected
+    @classmethod
+    def _delete_module_bays(cls, obj):
+        for module_bay in obj.module_bays.all():
+            if hasattr(module_bay, "installed_module"):
+                cls._delete_module_bays(module_bay.installed_module)
+                module_bay.installed_module.delete()
+            module_bay.delete()
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device = Device.objects.first()
+        cls._delete_module_bays(cls.device)
+        cls.module = Module.objects.first()
+        cls._delete_module_bays(cls.module)
+
+    def test_parent_validation_device_and_module(self):
+        """Assert that a module bay must have a parent device or parent module but not both."""
+        module_bay = ModuleBay(
+            parent_device=self.device,
+            parent_module=self.module,
+            position="1",
+        )
+
+        with self.assertRaises(ValidationError):
+            module_bay.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            module_bay.save()
+
+    def test_parent_validation_no_device_or_module(self):
+        """Assert that a module bay must have a parent device or parent module but not both."""
+        module_bay = ModuleBay(
+            position="1",
+        )
+
+        with self.assertRaises(ValidationError):
+            module_bay.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            module_bay.save()
+
+    def test_parent_validation_succeeds(self):
+        """Assert that a module bay must have a parent device or parent module but not both."""
+        with self.subTest("Module bay with a parent device"):
+            module_bay = ModuleBay(
+                parent_device=self.device,
+                position="2",
+            )
+
+            module_bay.full_clean()
+            module_bay.save()
+
+        with self.subTest("Module bay with a parent module"):
+            module_bay = ModuleBay(
+                parent_module=self.module,
+                position="2",
+            )
+
+            module_bay.full_clean()
+            module_bay.save()
+
+    def test_device_property(self):
+        """Assert that the device property walks up the inheritance tree of Device -> ModuleBay -> Module -> ModuleBay."""
+        module_type = ModuleType.objects.first()
+        status = Status.objects.get_for_model(Module).first()
+
+        parent_module_bay = ModuleBay.objects.create(
+            parent_device=self.device,
+            position="1",
+        )
+        module = Module.objects.create(
+            module_type=module_type,
+            parent_module_bay=parent_module_bay,
+            status=status,
+        )
+        child_module_bay = ModuleBay.objects.create(
+            parent_module=module,
+            position="1",
+        )
+        child_module = Module.objects.create(
+            module_type=module_type,
+            parent_module_bay=child_module_bay,
+            status=status,
+        )
+        grandchild_module_bay = ModuleBay.objects.create(
+            parent_module=child_module,
+            position="1",
+        )
+
+        self.assertEqual(parent_module_bay.device, self.device)
+        self.assertEqual(child_module_bay.device, self.device)
+        self.assertEqual(grandchild_module_bay.device, self.device)
+
+        # Remove the module from the module bay and put it in storage
+        module.parent_module_bay = None
+        module.location = Location.objects.get_for_model(Module).first()
+        module.save()
+
+        self.assertEqual(parent_module_bay.device, self.device)
+        self.assertIsNone(child_module_bay.device)
+        self.assertIsNone(grandchild_module_bay.device)
+
+    def test_uniqueness_parent_device(self):
+        """Assert that the combination of parent device and position is unique."""
+        module_bay = ModuleBay(
+            parent_device=self.device,
+            position="1",
+        )
+
+        module_bay.full_clean()
+        module_bay.save()
+
+        # same device, different position works
+        module_bay = ModuleBay(
+            parent_device=self.device,
+            position="2",
+        )
+
+        module_bay.full_clean()
+        module_bay.save()
+
+        module_bay = ModuleBay(
+            parent_device=self.device,
+            position="1",
+        )
+
+        with self.assertRaises(ValidationError):
+            module_bay.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            module_bay.save()
+
+    def test_uniqueness_parent_module(self):
+        """Assert that the combination of parent module and position is unique."""
+        module_bay = ModuleBay(
+            parent_module=self.module,
+            position="1",
+        )
+
+        module_bay.full_clean()
+        module_bay.save()
+
+        # same module, different position works
+        module_bay = ModuleBay(
+            parent_module=self.module,
+            position="2",
+        )
+
+        module_bay.full_clean()
+        module_bay.save()
+
+        module_bay = ModuleBay(
+            parent_module=self.module,
+            position="1",
+        )
+
+        with self.assertRaises(ValidationError):
+            module_bay.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            module_bay.save()
+
+    def test_parent_property(self):
+        module_type = ModuleType.objects.first()
+        status = Status.objects.get_for_model(Module).first()
+
+        parent_module_bay = ModuleBay.objects.create(
+            parent_device=self.device,
+            position="1",
+        )
+        module = Module.objects.create(
+            module_type=module_type,
+            parent_module_bay=parent_module_bay,
+            status=status,
+        )
+        child_module_bay = ModuleBay.objects.create(
+            parent_module=module,
+            position="1",
+        )
+        self.assertEqual(parent_module_bay.parent, self.device)
+        self.assertEqual(child_module_bay.parent, module)
+
+
+class ModuleTestCase(ModelTestCases.BaseModelTestCase):
+    model = Module
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device = Device.objects.filter(module_bays__isnull=True).first()
+        cls.module_type = ModuleType.objects.first()
+        cls.module_bay = ModuleBay.objects.filter(installed_module__isnull=True).first()
+        cls.location = Location.objects.get_for_model(Module).first()
+        cls.status = Status.objects.get_for_model(Module).first()
+
+        # Create ModuleType components
+        ConsolePortTemplate.objects.create(module_type=cls.module_type, name="Console Port 1")
+        ConsoleServerPortTemplate.objects.create(module_type=cls.module_type, name="Console Server Port 1")
+
+        ppt = PowerPortTemplate.objects.create(
+            module_type=cls.module_type,
+            name="Power Port 1",
+            maximum_draw=1000,
+            allocated_draw=500,
+        )
+
+        PowerOutletTemplate.objects.create(
+            module_type=cls.module_type,
+            name="Power Outlet 1",
+            power_port_template=ppt,
+            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
+        )
+
+        InterfaceTemplate.objects.create(
+            module_type=cls.module_type,
+            name="Interface 1",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mgmt_only=True,
+        )
+
+        rpt = RearPortTemplate.objects.create(
+            module_type=cls.module_type,
+            name="Rear Port 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            positions=8,
+        )
+
+        FrontPortTemplate.objects.create(
+            module_type=cls.module_type,
+            name="Front Port 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=rpt,
+            rear_port_position=2,
+        )
+
+        ModuleBayTemplate.objects.create(
+            module_type=cls.module_type,
+            position="1",
+        )
+
+    def test_parent_validation_module_bay_and_location(self):
+        """Assert that a module must have a parent module bay or location but not both."""
+        module = Module(
+            module_type=self.module_type,
+            parent_module_bay=self.module_bay,
+            location=self.location,
+            status=self.status,
+        )
+
+        with self.assertRaises(ValidationError):
+            module.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            module.save()
+
+    def test_parent_validation_no_module_bay_or_location(self):
+        """Assert that a module must have a parent module bay or location but not both."""
+        module = Module(
+            module_type=self.module_type,
+            status=self.status,
+        )
+
+        with self.assertRaises(ValidationError):
+            module.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            module.save()
+
+    def test_parent_validation_succeeds(self):
+        """Assert that a module must have a parent module bay or location but not both."""
+        with self.subTest("Module with a parent module bay"):
+            module = Module(
+                module_type=self.module_type,
+                parent_module_bay=self.module_bay,
+                status=self.status,
+            )
+
+            module.full_clean()
+            module.save()
+
+        with self.subTest("Module with a parent location"):
+            module = Module(
+                module_type=self.module_type,
+                location=self.location,
+                status=self.status,
+            )
+
+            module.full_clean()
+            module.save()
+
+    def test_device_property(self):
+        """Assert that the device property walks up the inheritance tree of Device -> ModuleBay -> Module -> ModuleBay."""
+        parent_module_bay = ModuleBay.objects.create(
+            parent_device=self.device,
+            position="1",
+        )
+        parent_module = Module.objects.create(
+            module_type=self.module_type,
+            parent_module_bay=parent_module_bay,
+            status=self.status,
+        )
+        child_module_bay = parent_module.module_bays.first()
+        child_module = Module.objects.create(
+            module_type=self.module_type,
+            parent_module_bay=child_module_bay,
+            status=self.status,
+        )
+        grandchild_module_bay = child_module.module_bays.first()
+        grandchild_module = Module.objects.create(
+            module_type=self.module_type,
+            parent_module_bay=grandchild_module_bay,
+            status=self.status,
+        )
+
+        self.assertEqual(parent_module.device, self.device)
+        self.assertEqual(child_module.device, self.device)
+        self.assertEqual(grandchild_module.device, self.device)
+
+        # Remove the module from the module bay and put it in storage
+        parent_module.parent_module_bay = None
+        parent_module.location = self.location
+        parent_module.save()
+
+        self.assertIsNone(parent_module.device)
+        self.assertIsNone(child_module.device)
+        self.assertIsNone(grandchild_module.device)
+
+    def test_null_serial_asset_tag(self):
+        """Assert that the serial and asset_tag fields are converted to None if a blank string is supplied."""
+        module = Module.objects.create(
+            module_type=self.module_type,
+            status=self.status,
+            parent_module_bay=self.module_bay,
+            serial="",
+            asset_tag="",
+        )
+
+        module.refresh_from_db()
+
+        self.assertIsNone(module.serial)
+        self.assertIsNone(module.asset_tag)
+
+        module.delete()
+        module = Module.objects.create(
+            module_type=self.module_type,
+            status=self.status,
+            parent_module_bay=self.module_bay,
+        )
+
+        module.refresh_from_db()
+
+        self.assertIsNone(module.serial)
+        self.assertIsNone(module.asset_tag)
+
+    def test_module_components_created(self):
+        module = Module(
+            location=self.location,
+            module_type=self.module_type,
+            status=self.status,
+        )
+        module.validated_save()
+        self.assertEqual(module.console_ports.count(), 1)
+        self.assertEqual(module.console_server_ports.count(), 1)
+        self.assertEqual(module.power_ports.count(), 1)
+        self.assertEqual(module.power_outlets.count(), 1)
+        self.assertEqual(module.interfaces.count(), 1)
+        self.assertEqual(module.front_ports.count(), 1)
+        self.assertEqual(module.rear_ports.count(), 1)
+        self.assertEqual(module.module_bays.count(), 1)
+
+        ConsolePort.objects.get(module=module, name="Console Port 1")
+
+        ConsoleServerPort.objects.get(module=module, name="Console Server Port 1")
+
+        pp = PowerPort.objects.get(module=module, name="Power Port 1", maximum_draw=1000, allocated_draw=500)
+
+        PowerOutlet.objects.get(
+            module=module,
+            name="Power Outlet 1",
+            power_port=pp,
+            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
+        )
+
+        Interface.objects.get(
+            module=module,
+            name="Interface 1",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mgmt_only=True,
+        )
+
+        rp = RearPort.objects.get(module=module, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C, positions=8)
+
+        FrontPort.objects.get(
+            module=module,
+            name="Front Port 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=rp,
+            rear_port_position=2,
+        )
+
+        ModuleBay.objects.get(parent_module=module, position="1")
+
+
+class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
+    model = ModuleType

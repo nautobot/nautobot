@@ -2919,12 +2919,11 @@ class ModuleTestCase(APIViewTestCases.APIViewTestCase):
             model="Test Module Type",
         )
         module_bay = ModuleBay.objects.create(
-            device=Device.objects.first(),
+            parent_device=Device.objects.first(),
             position="0",
         )
         status = Status.objects.get_for_model(Module).first()
-        location = Location.objects.first()
-        location.location_type.content_types.add(ContentType.objects.get_for_model(Module))
+        location = Location.objects.get_for_model(Module).first()
         cls.create_data = [
             {
                 "module_type": mt.pk,

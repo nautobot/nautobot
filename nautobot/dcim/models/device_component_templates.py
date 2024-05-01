@@ -275,7 +275,7 @@ class PowerOutletTemplate(ModularComponentTemplateModel):
 
     def instantiate(self, device, module=None):
         if self.power_port_template:
-            power_port = PowerPort.objects.get(device=device, name=self.power_port_template.name)
+            power_port = PowerPort.objects.get(device=device, module=module, name=self.power_port_template.name)
         else:
             power_port = None
         return self.instantiate_model(
@@ -482,8 +482,8 @@ class ModuleBayTemplate(BaseModel, ChangeLoggedModel, CustomFieldModel, Relation
             custom_field_data[field.key] = field.default
 
         return ModuleBay(
-            device=device,
-            module=module,
+            parent_device=device,
+            parent_module=module,
             position=self.position,
             label=self.label,
             description=self.description,

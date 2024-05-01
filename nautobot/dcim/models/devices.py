@@ -1419,24 +1419,13 @@ class ModuleType(PrimaryModel):
     """
 
     manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="module_types")
-    device_family = models.ForeignKey(
-        to="dcim.DeviceFamily",
-        on_delete=models.PROTECT,
-        related_name="module_types",
-        blank=True,
-        null=True,
-    )
     model = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     part_number = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Discrete part number (optional)"
     )
-    front_image = models.ImageField(upload_to="devicetype-images", blank=True)
-    rear_image = models.ImageField(upload_to="devicetype-images", blank=True)
-    # TODO: implement software images for modules
 
     clone_fields = [
         "manufacturer",
-        "device_family",
     ]
 
     class Meta:
@@ -1568,7 +1557,6 @@ class ModuleType(PrimaryModel):
 @extras_features(
     "custom_links",
     "custom_validators",
-    "dynamic_groups",
     "export_templates",
     "graphql",
     "locations",
@@ -1590,13 +1578,14 @@ class Module(PrimaryModel):
     module_type = models.ForeignKey(to="dcim.ModuleType", on_delete=models.PROTECT, related_name="modules")
     parent_module_bay = models.OneToOneField(
         to="dcim.ModuleBay",
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name="installed_module",
         blank=True,
         null=True,
     )
     status = StatusField()
     role = RoleField(blank=True, null=True)
+    # TODO: add to new model checklist: all new models should have tenant field
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -1636,9 +1625,21 @@ class Module(PrimaryModel):
         "status",
     ]
 
+    natural_key_field_names = ["location", "module_type", "parent_module_bay", "serial"]
+
     class Meta:
         ordering = ("parent_module_bay", "location", "module_type", "asset_tag", "serial")
-        unique_together = (("module_type", "serial"),)
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(parent_module_bay__isnull=False, location__isnull=True)
+                | models.Q(parent_module_bay__isnull=True, location__isnull=False),
+                name="dcim_module_parent_module_bay_xor_location",
+            ),
+            models.UniqueConstraint(
+                fields=["module_type", "serial"],
+                name="dcim_module_unique_module_type_serial",
+            ),
+        ]
 
     def __str__(self):
         serial = f" (Serial: {self.serial})" if self.serial else ""
@@ -1651,8 +1652,10 @@ class Module(PrimaryModel):
 
     @property
     def device(self):
-        # TODO
-        pass
+        """Walk up parent chain to find the Device that this Module is installed in, if one exists."""
+        if self.parent_module_bay is None:
+            return None
+        return self.parent_module_bay.device
 
     def clean(self):
         super().clean()

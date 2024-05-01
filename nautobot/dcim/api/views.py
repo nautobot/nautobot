@@ -856,12 +856,12 @@ class ModuleViewSet(NautobotModelViewSet):
 
 
 class ModuleBayViewSet(NautobotModelViewSet):
-    queryset = ModuleBay.objects.select_related("device", "parent_module").prefetch_related("tags")
+    queryset = ModuleBay.objects.select_related("device", "parent_module").prefetch_related("installed_module", "tags")
     serializer_class = serializers.ModuleBaySerializer
     # filterset_class = filters.ModuleBayFilterSet
 
 
 class ModuleTypeViewSet(NautobotModelViewSet):
-    queryset = ModuleType.objects.select_related("manufacturer").prefetch_related("tags", "modules")
+    queryset = ModuleType.objects.select_related("device_family", "manufacturer").prefetch_related("tags", "modules")
     serializer_class = serializers.ModuleTypeSerializer
     # filterset_class = filters.ModuleTypeFilterSet
