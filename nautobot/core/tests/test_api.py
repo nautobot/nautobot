@@ -20,7 +20,7 @@ from nautobot.circuits.models import Provider
 from nautobot.core import testing
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
-from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.utils import get_serializer_for_model, get_view_name
 from nautobot.core.api.versioning import NautobotAPIVersioning
 from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
 from nautobot.core.utils.lookup import get_route_for_model
@@ -28,7 +28,7 @@ from nautobot.dcim import models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
 from nautobot.extras import choices, models as extras_models
 from nautobot.ipam import models as ipam_models
-from nautobot.ipam.api import serializers as ipam_serializers
+from nautobot.ipam.api import serializers as ipam_serializers, views as ipam_api_views
 from nautobot.tenancy import models as tenancy_models
 
 User = get_user_model()
@@ -997,3 +997,24 @@ class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, expected_response)
+
+
+class NautobotGetViewNameTest(TestCase):
+    """
+    Some unit tests for the get_view_name() functionality.
+    """
+
+    @override_settings(ALLOWED_HOSTS=["*"])
+    def test_get(self):
+        """Assert that the proper view name is displayed for the correct view."""
+        viewset = ipam_api_views.PrefixViewSet
+        # We need to get a specific view, so we need to set the class kwargs
+        view_kwargs = {
+            "Prefixes": {"suffix": "List", "basename": "prefix", "detail": False},
+            "Prefix": {"suffix": "Instance", "basename": "prefix", "detail": True},
+            "Available IPs": {"name": "Available IPs"},
+            "Available Prefixes": {"name": "Available Prefixes"},
+            "Notes": {"name": "Notes"},
+        }
+        for view_name, view_kwarg in view_kwargs.items():
+            self.assertEqual(view_name, get_view_name(viewset(**view_kwarg)))
