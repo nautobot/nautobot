@@ -144,17 +144,23 @@ class FeatureQuery:
         # `registry` record being used by `FeatureQuery`.
 
         populate_model_features_registry()
-        query = Q()
-        for app_label, models in self.as_dict():
-            query |= Q(app_label=app_label, model__in=models)
+        entries = self.as_dict()
+        if entries: 
+            query = Q()
+            for app_label, models in entries:
+                query |= Q(app_label=app_label, model__in=models)
+        else:
+            query = Q(pk__in=[])
 
         return query
 
     def as_dict(self):
         """
-        Given an extras feature, return a dict of app_label: [models] for content type lookup
+        Given an extras feature, return a iterable of app_label: [models] for content type lookup.
+
+        Mis-named, as it returns an iterable of (key, value) (i.e. dict.items()) rather than an actual dict.
         """
-        return registry["model_features"][self.feature].items()
+        return registry["model_features"].get(self.feature, {}).items()
 
     def get_choices(self):
         """

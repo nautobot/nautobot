@@ -162,9 +162,7 @@ __all__ = (
     "StaticGroupBulkEditForm",
     "StaticGroupFilterForm",
     "StaticGroupForm",
-    "StaticGroupAssociationBulkEditForm",
     "StaticGroupAssociationFilterForm",
-    "StaticGroupAssociationForm",
     "StatusForm",
     "StatusFilterForm",
     "StatusBulkEditForm",
@@ -1521,9 +1519,9 @@ class SecretsGroupFilterForm(NautobotFilterForm):
 class StaticGroupForm(NautobotModelForm):
     """Generic create/update form for `StaticGroup` objects."""
 
-    # TODO: we should use a DynamicModelChoiceField here but then need the ability to filter ContentType API by feature
-    content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
+    content_type = DynamicModelChoiceField(
+        queryset=ContentType.objects.all(),
+        query_params={"feature": "static_groups"},
     )
 
     class Meta:
@@ -1567,19 +1565,12 @@ class StaticGroupBulkAssignForm(BulkEditForm):
             queryset=model.objects.all(),
             widget=forms.MultipleHiddenInput(),
         )
-        self.fields["static_groups"] = DynamicModelMultipleChoiceField(queryset=StaticGroup.objects.all(), required=False, query_params={"content_type": model._meta.label_lower})
+        self.fields["static_groups"] = DynamicModelMultipleChoiceField(
+            queryset=StaticGroup.objects.all(), required=False, query_params={"content_type": model._meta.label_lower}
+        )
 
     class Meta:
         nullable_fields = []
-
-
-class StaticGroupAssociationForm(NautobotModelForm):
-    static_group = DynamicModelChoiceField(queryset=StaticGroup.objects.all())
-    # TODO how to handle GenericForeignKey population via form? Do we even need/want this?
-
-    class Meta:
-        model = StaticGroupAssociation
-        fields = ("static_group",)
 
 
 class StaticGroupAssociationFilterForm(NautobotFilterForm):
@@ -1590,11 +1581,6 @@ class StaticGroupAssociationFilterForm(NautobotFilterForm):
         queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
         required=False,
     )
-
-
-# TODO do we need a StaticGroupAssociationBulkEditForm at all?
-class StaticGroupAssociationBulkEditForm(NautobotBulkEditForm):
-    pk = forms.ModelMultipleChoiceField(queryset=StaticGroupAssociation.objects.all(), widget=forms.MultipleHiddenInput)
 
 
 #

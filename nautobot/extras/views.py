@@ -2403,7 +2403,13 @@ class StaticGroupUIViewSet(NautobotUIViewSet):
                 "per_page": get_paginate_count(request),
             }
             RequestConfig(request, paginate).configure(members_table)
+            members_table.columns.show("pk")  # TODO why is this needed?
             context["members_table"] = members_table
+            context["members_table_permissions"] = {
+                "add": request.user.has_perm(get_permission_for_model(StaticGroupAssociation, "add")),
+                "change": request.user.has_perm(get_permission_for_model(StaticGroupAssociation, "change")),
+                "delete": request.user.has_perm(get_permission_for_model(StaticGroupAssociation, "delete")),
+            }
 
         return context
 

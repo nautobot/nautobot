@@ -1,1 +1,4 @@
 {% extends 'generic/object_bulk_update.html' %}
+{% load helpers %}
+
+{% block title %}Updating Static Groups for {{ table.rows|length }} {{ obj_type_plural|bettertitle }}{% endblock %}

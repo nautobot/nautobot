@@ -355,6 +355,7 @@ class ContentTypeFilterSet(BaseFilterSet):
     has_serializer = django_filters.BooleanFilter(
         method="_has_serializer", label="A REST API serializer exists for this type"
     )
+    feature = django_filters.CharFilter(method="_feature", label="Objects of this type support the named feature")
 
     class Meta:
         model = ContentType
@@ -398,6 +399,9 @@ class ContentTypeFilterSet(BaseFilterSet):
             return queryset.filter(pk__in=ct_pks)
         else:
             return queryset.exclude(pk__in=ct_pks)
+
+    def _feature(self, queryset, name, value):
+        return queryset.filter(FeatureQuery(value).get_query())
 
 
 # TODO: remove in 2.2

@@ -120,8 +120,12 @@
                             </div>
                             <div class="pull-right">
                                 {% if content_type.model_class.is_static_group_associable_model and perms.extras.add_staticgroupassociation %}
-                                    <button type="submit" name="_add_to_static_group" formaction="{% url 'extras:staticgroup_bulk_assign' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-primary btn-sm" disabled="disabled">
-                                        <span class="mdi mdi-group" aria-hidden="true"></span> Add All to Static Group
+                                    <button type="submit"
+                                            name="_add_to_static_group"
+                                            formaction="{% url 'extras:staticgroup_bulk_assign' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+                                            class="btn btn-primary btn-sm"
+                                            disabled="disabled">
+                                        <span class="mdi mdi-group" aria-hidden="true"></span> Update Static Groups for All
                                     </button>
                                 {% endif %}
                                 {% if bulk_edit_url and permissions.change %}
@@ -143,8 +147,11 @@
                 <div class="pull-left noprint">
                     {% block bulk_buttons %}{% endblock %}
                     {% if content_type.model_class.is_static_group_associable_model and perms.extras.add_staticgroupassociation %}
-                        <button type="submit" name="_add_to_static_group" formaction="{% url 'extras:staticgroup_bulk_assign' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-primary btn-sm">
-                            <span class="mdi mdi-group" aria-hidden="true"></span> Add Selected to Static Group
+                        <button type="submit"
+                                name="_add_to_static_group"
+                                formaction="{% url 'extras:staticgroup_bulk_assign' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+                                class="btn btn-primary btn-sm">
+                            <span class="mdi mdi-group" aria-hidden="true"></span> Update Static Groups
                         </button>
                     {% endif %}
                     {% if bulk_edit_url and permissions.change %}

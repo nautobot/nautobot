@@ -13,7 +13,7 @@
     <div id="members" role="tabpanel" class="tab-pane{% if request.GET.tab == 'members' %} active{% else %} fade{% endif %}">
         <div class="row">
             <div class="col-md-12">
-                {% include 'utilities/obj_table.html' with table=members_table table_template='panel_table.html' heading='Static Group members' %}
+                {% include 'utilities/obj_table.html' with table=members_table table_template='panel_table.html' heading='Static Group members' content_type=object.content_type permissions=members_table_permissions %}
             </div>
         </div>
     </div>

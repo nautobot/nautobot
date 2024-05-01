@@ -715,11 +715,7 @@ class BaseFilterSet(django_filters.FilterSet):
         """
         filters = super().get_filters()
 
-        if (
-            "static_group" not in filters
-            and hasattr(cls._meta.model, "is_static_group_associable_model")
-            and cls._meta.model.is_static_group_associable_model
-        ):
+        if ("static_group" not in filters and getattr(cls._meta.model, "is_static_group_associable_model", False)):
             # Add "static_group" field as the last key
             from nautobot.extras.models import StaticGroup
 
