@@ -333,15 +333,15 @@ class SavedView(BaseModel, ChangeLoggedModel):
     def view_config(self):
         """Return a combined query strings of the config e.g. table_config, pagination_count, filter_params, sort_order stored on this SavedView"""
         query_string = "?"
-        query_list = []
+        params = []
         for key, value in self.config.get("filter_params", {}).items():
             for item in value:
-                query_list.append(f"{key}={urllib.parse.quote_plus(item)}")
+                params.append((key, item))
 
-        query_list.append(f"per_page={self.config.get('pagination_count', 50)}")
+        params.append(("per_page", self.config.get("pagination_count", 50)))
 
         for value in self.config.get("sort", []):
-            query_list.append(f"sort={value}")
+            params.append(("sort", value))
 
-        query_string += "&".join(query_list)
+        query_string += urllib.parse.urlencode(params)
         return query_string
