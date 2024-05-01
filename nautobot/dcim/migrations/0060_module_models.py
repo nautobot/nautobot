@@ -228,7 +228,6 @@ class Migration(migrations.Migration):
                 ("part_number", models.CharField(blank=True, max_length=255)),
                 ("front_image", models.ImageField(blank=True, upload_to="devicetype-images")),
                 ("rear_image", models.ImageField(blank=True, upload_to="devicetype-images")),
-                ("comments", models.TextField(blank=True)),
                 (
                     "device_family",
                     models.ForeignKey(

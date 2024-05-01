@@ -34,6 +34,9 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
+    Module,
+    ModuleBay,
+    ModuleType,
     Platform,
     PowerPanel,
     Rack,
@@ -711,3 +714,87 @@ class ControllerManagedDeviceGroupFactory(PrimaryModelFactory):
         lambda o: o.parent.controller if o.parent else Controller.objects.order_by("?").first()
     )
     weight = factory.Faker("pyint", min_value=1, max_value=1000)
+
+
+class ModuleTypeFactory(PrimaryModelFactory):
+    class Meta:
+        model = ModuleType
+        exclude = (
+            "has_comments",
+            "has_device_family",
+            "has_part_number",
+        )
+
+    has_device_family = NautobotBoolIterator()
+    device_family = factory.Maybe("has_device_family", random_instance(DeviceFamily), None)
+
+    manufacturer = random_instance(Manufacturer)
+
+    model = factory.LazyAttributeSequence(lambda o, n: f"{o.manufacturer.name} ModuleType {n + 1}")
+
+    has_part_number = NautobotBoolIterator()
+    part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
+
+
+class ModuleBayFactory(PrimaryModelFactory):
+    class Meta:
+        model = ModuleBay
+        exclude = (
+            "has_description",
+            "has_label",
+            "has_parent_module",
+        )
+
+    has_parent_module = False
+    device = factory.Maybe("has_parent_module", None, random_instance(Device, allow_null=False))
+    parent_module = factory.Maybe("has_parent_module", random_instance(Module, allow_null=False), None)
+
+    position = factory.Faker("pyint", min_value=1, max_value=10)
+    has_label = NautobotBoolIterator()
+    label = factory.Maybe(
+        "has_label",
+        factory.Maybe(
+            "has_parent_module",
+            factory.LazyAttribute(lambda o: f"{o.parent_module!s} Bay {o.position}"),
+            factory.LazyAttribute(lambda o: f"{o.device!s} Bay {o.position}"),
+        ),
+        "",
+    )
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("sentence", nb_words=5), "")
+
+
+class ModuleFactory(PrimaryModelFactory):
+    class Meta:
+        model = Module
+        exclude = (
+            "has_asset_tag",
+            "has_parent_module_bay",
+            "has_serial",
+        )
+
+    module_type = random_instance(ModuleType, allow_null=False)
+    status = random_instance(
+        lambda: Status.objects.get_for_model(Module),
+        allow_null=False,
+    )
+    has_parent_module_bay = NautobotBoolIterator()
+    parent_module_bay = factory.Maybe(
+        "has_parent_module_bay",
+        random_instance(lambda: ModuleBay.objects.filter(installed_module__isnull=True), allow_null=False),
+        None,
+    )
+    location = factory.Maybe(
+        "has_parent_module_bay",
+        None,
+        random_instance(
+            lambda: Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(Module)),
+            allow_null=False,
+        ),
+    )
+    role = random_instance(lambda: Role.objects.get_for_model(Module))
+    has_asset_tag = NautobotBoolIterator()
+    asset_tag = factory.Maybe("has_asset_tag", UniqueFaker("uuid4"), None)
+    has_serial = NautobotBoolIterator()
+    serial = factory.Maybe("has_serial", factory.Faker("ean", length=8), "")
+    tenant = random_instance(Tenant)

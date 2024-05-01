@@ -852,7 +852,7 @@ class ModuleViewSet(NautobotModelViewSet):
         "parent_module_bay", "module_type", "tenant", "role", "location"
     ).prefetch_related("module_bays", "tags")
     serializer_class = serializers.ModuleSerializer
-    # filterset_class = filters.ModuleFilterSet
+    filterset_class = filters.ModuleFilterSet
 
 
 class ModuleBayViewSet(NautobotModelViewSet):

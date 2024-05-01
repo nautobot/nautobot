@@ -1433,7 +1433,6 @@ class ModuleType(PrimaryModel):
     front_image = models.ImageField(upload_to="devicetype-images", blank=True)
     rear_image = models.ImageField(upload_to="devicetype-images", blank=True)
     # TODO: implement software images for modules
-    comments = models.TextField(blank=True)
 
     clone_fields = [
         "manufacturer",
