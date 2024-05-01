@@ -168,28 +168,31 @@ def is_api_request(request):
     return request.path_info.startswith(api_path)
 
 
-def get_view_name(view, suffix=None):
+def get_view_name(view):
     """
     Derive the view name from its associated model, if it has one. Fall back to DRF's built-in `get_view_name`.
     """
-    if hasattr(view, "queryset"):
+    if hasattr(view, "name") and view.name:
+        return view.name
+    elif hasattr(view, "queryset"):
         # Determine the model name from the queryset.
-        name = view.queryset.model._meta.verbose_name
+        if hasattr(view, "detail") and view.detail:
+            name = view.queryset.model._meta.verbose_name
+        else:
+            name = view.queryset.model._meta.verbose_name_plural
         name = " ".join([w[0].upper() + w[1:] for w in name.split()])  # Capitalize each word
 
     else:
         # Replicate DRF's built-in behavior.
-        name = getattr(view, "name", None)
-        if name is not None:
-            return view.name
-
         name = view.__class__.__name__
         name = formatting.remove_trailing_string(name, "View")
         name = formatting.remove_trailing_string(name, "ViewSet")
         name = formatting.camelcase_to_spaces(name)
 
-    if suffix:
-        name += " " + suffix
+        # Suffix may be set by some Views, such as a ViewSet.
+        suffix = getattr(view, "suffix", None)
+        if suffix:
+            name += " " + suffix
 
     return name
 

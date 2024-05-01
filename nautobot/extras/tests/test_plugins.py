@@ -9,7 +9,6 @@ from django.urls import NoReverseMatch, reverse
 import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
-from nautobot.core.celery import app
 from nautobot.core.testing import APIViewTestCases, disable_warnings, extract_page_body, TestCase, ViewTestCases
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.dcim.tests.test_views import create_test_device
@@ -114,9 +113,8 @@ class AppTest(TestCase):
         """
         from example_app.jobs import ExampleJob
 
-        self.assertIn(ExampleJob, registry.get("plugin_jobs", []))
+        self.assertIn(ExampleJob.class_path, registry.get("jobs", {}))
         self.assertEqual(ExampleJob, get_job("example_app.jobs.ExampleJob"))
-        self.assertIn("example_app.jobs.ExampleJob", app.tasks)
 
     def test_git_datasource_contents_registration(self):
         """

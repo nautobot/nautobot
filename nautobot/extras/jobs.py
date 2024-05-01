@@ -6,18 +6,14 @@ import inspect
 import json
 import logging
 import os
+import sys
 import tempfile
 from textwrap import dedent
 from typing import final
 import warnings
 
-from billiard.einfo import ExceptionInfo, ExceptionWithTraceback
-from celery import states
-from celery.exceptions import NotRegistered, Retry
-from celery.result import EagerResult
-from celery.utils.functional import maybe_list
+from billiard.einfo import ExceptionInfo
 from celery.utils.log import get_task_logger
-from celery.utils.nodenames import gethostname
 from db_file_storage.form_widgets import DBClearableFileInput
 from django import forms
 from django.conf import settings
@@ -30,12 +26,10 @@ from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.forms import ValidationError
 from django.utils.functional import classproperty
-from kombu.utils.uuid import uuid
 import netaddr
 import yaml
 
-from nautobot.core.celery import app as celery_app
-from nautobot.core.celery.task import Task
+from nautobot.core.celery import import_jobs, nautobot_task
 from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
@@ -53,6 +47,7 @@ from nautobot.extras.models import (
     JobResult,
     ObjectChange,
 )
+from nautobot.extras.registry import registry
 from nautobot.extras.utils import change_logged_models_queryset, task_queues_as_choices
 from nautobot.ipam.formfields import IPAddressFormField, IPNetworkFormField
 from nautobot.ipam.validators import (
@@ -88,7 +83,7 @@ class RunJobTaskFailed(Exception):
     """Celery task failed for some reason."""
 
 
-class BaseJob(Task):
+class BaseJob:
     """Base model for jobs.
 
     Users can subclass this directly if they want to provide their own base class for implementing multiple jobs
@@ -158,38 +153,6 @@ class BaseJob(Task):
 
     # See https://github.com/PyCQA/pylint-django/issues/240 for why we have a pylint disable on each classproperty below
 
-    # TODO(jathan): Could be interesting for custom stuff when the Job is
-    # enabled in the database and then therefore registered in Celery
-    @classmethod
-    def on_bound(cls, app):
-        """Called when the task is bound to an app.
-
-        Note:
-            This class method can be defined to do additional actions when
-            the task class is bound to an app.
-        """
-
-    # TODO(jathan): Could be interesting for showing the Job's class path as the
-    # shadow name vs. the Celery task_name?
-    def shadow_name(self, args, kwargs, options):
-        """Override for custom task name in worker logs/monitoring.
-
-        Example:
-                from celery.utils.imports import qualname
-
-                def shadow_name(task, args, kwargs, options):
-                    return qualname(args[0])
-
-                @app.task(shadow_name=shadow_name, serializer='pickle')
-                def apply_function_async(fun, *args, **kwargs):
-                    return fun(*args, **kwargs)
-
-        Arguments:
-            args (Tuple): Task positional arguments.
-            kwargs (Dict): Task keyword arguments.
-            options (Dict): Task execution options.
-        """
-
     def before_start(self, task_id, args, kwargs):
         """Handler called before the task starts.
 
@@ -201,8 +164,6 @@ class BaseJob(Task):
         Returns:
             (None): The return value of this handler is ignored.
         """
-        self.clear_cache()
-
         try:
             self.job_result
         except ObjectDoesNotExist as err:
@@ -234,7 +195,7 @@ class BaseJob(Task):
                 extra={"grouping": "initialization"},
             )
 
-        self.logger.info("Running job", extra={"grouping": "initialization"})
+        self.logger.info("Running job", extra={"grouping": "initialization", "object": self.job_model})
 
     def run(self, *args, **kwargs):
         """
@@ -314,84 +275,10 @@ class BaseJob(Task):
         if status == JobResultStatusChoices.STATUS_SUCCESS:
             self.logger.info("Job completed", extra={"grouping": "post_run"})
 
-        # TODO(gary): document this in job author docs
-        # Super.after_return must be called for chords to function properly
-        super().after_return(status, retval, task_id, args, kwargs, einfo=einfo)
-
-    def apply(
-        self,
-        args=None,
-        kwargs=None,
-        link=None,
-        link_error=None,
-        task_id=None,
-        retries=None,
-        throw=None,
-        logfile=None,
-        loglevel=None,
-        headers=None,
-        **options,
-    ):
-        """Fix celery's apply method to propagate options to the task result"""
-        # trace imports Task, so need to import inline.
-        from celery.app.trace import build_tracer
-
-        app = self._get_app()
-        args = args or ()
-        kwargs = kwargs or {}
-        task_id = task_id or uuid()
-        retries = retries or 0
-        if throw is None:
-            throw = app.conf.task_eager_propagates
-
-        # Make sure we get the task instance, not class.
-        task = app._tasks[self.name]
-
-        request = {
-            "id": task_id,
-            "retries": retries,
-            "is_eager": True,
-            "logfile": logfile,
-            "loglevel": loglevel or 0,
-            "hostname": gethostname(),
-            "callbacks": maybe_list(link),
-            "errbacks": maybe_list(link_error),
-            "headers": headers,
-            "ignore_result": options.get("ignore_result", False),
-            "delivery_info": {
-                "is_eager": True,
-                "exchange": options.get("exchange"),
-                "routing_key": options.get("routing_key"),
-                "priority": options.get("priority"),
-            },
-            "properties": options,  # one line fix to overloaded method
-        }
-        if "stamped_headers" in options:
-            request["stamped_headers"] = maybe_list(options["stamped_headers"])
-            request["stamps"] = {header: maybe_list(options.get(header, [])) for header in request["stamped_headers"]}
-
-        tb = None
-        tracer = build_tracer(
-            task.name,
-            task,
-            eager=True,
-            propagate=throw,
-            app=self._get_app(),
-        )
-        ret = tracer(task_id, args, kwargs, request)
-        retval = ret.retval
-        if isinstance(retval, ExceptionInfo):
-            retval, tb = retval.exception, retval.traceback
-            if isinstance(retval, ExceptionWithTraceback):
-                retval = retval.exc
-        if isinstance(retval, Retry) and retval.sig is not None:
-            return retval.sig.apply(retries=retries + 1)
-        state = states.SUCCESS if ret.info is None else ret.info.state
-        return EagerResult(task_id, retval, state, traceback=tb)
-
     @final
     @classproperty
     def file_path(cls) -> str:  # pylint: disable=no-self-argument
+        """Deprecated as of Nautobot 2.2.3."""
         return inspect.getfile(cls)
 
     @final
@@ -430,7 +317,7 @@ class BaseJob(Task):
     @classproperty
     def grouping(cls) -> str:  # pylint: disable=no-self-argument
         module = inspect.getmodule(cls)
-        return getattr(module, "name", module.__name__)
+        return getattr(module, "name", cls.__module__)
 
     @final
     @classmethod
@@ -530,6 +417,7 @@ class BaseJob(Task):
     @final
     @classproperty
     def registered_name(cls) -> str:  # pylint: disable=no-self-argument
+        """Deprecated - use class_path classproperty instead."""
         return f"{cls.__module__}.{cls.__name__}"
 
     @classmethod
@@ -545,7 +433,10 @@ class BaseJob(Task):
         base_classes = reversed(inspect.getmro(cls))
         attr_names = [name for base in base_classes for name in base.__dict__.keys()]
         for name in attr_names:
-            attr_class = getattr(cls, name, None).__class__
+            try:
+                attr_class = getattr(cls, name, None).__class__
+            except TypeError:
+                pass
             if name not in cls_vars and issubclass(attr_class, ScriptVariable):
                 cls_vars[name] = getattr(cls, name)
 
@@ -612,27 +503,9 @@ class BaseJob(Task):
 
         return form
 
-    def clear_cache(self):
-        """
-        Clear all cached properties on this instance without accessing them. This is required because
-        celery reuses task instances for multiple runs.
-        """
-        try:
-            del self.celery_kwargs
-        except AttributeError:
-            pass
-        try:
-            del self.job_result
-        except AttributeError:
-            pass
-        try:
-            del self.job_model
-        except AttributeError:
-            pass
-
     @functools.cached_property
     def job_model(self):
-        return JobModel.objects.get(module_name=self.__module__, job_class_name=self.__name__)
+        return JobModel.objects.get(module_name=self.__module__, job_class_name=self.__class__.__name__)
 
     @functools.cached_property
     def job_result(self):
@@ -1199,16 +1072,76 @@ def is_variable(obj):
     return isinstance(obj, ScriptVariable)
 
 
-def get_job(class_path):
+def get_jobs(*, reload=False):
+    """
+    Compile a dictionary of all Job classes available at this time.
+
+    Args:
+        reload (bool): If True, reimport Jobs from `JOBS_ROOT` and all applicable GitRepositories.
+
+    Returns:
+        (dict): `{"class_path.Job1": <job_class>, "class_path.Job2": <job_class>, ...}`
+    """
+    if reload:
+        import_jobs()
+
+    return registry["jobs"]
+
+
+def get_job(class_path, reload=False):
     """
     Retrieve a specific job class by its class_path (`<module_name>.<JobClassName>`).
 
-    May return None if the job isn't properly registered with Celery at this time.
+    May return None if the job can't be imported.
+
+    Args:
+        reload (bool): If True, **and** the given class_path describes a JOBS_ROOT or GitRepository Job,
+            then refresh **all** such Jobs before retrieving the job class.
     """
+    if reload:
+        if class_path.startswith("nautobot."):
+            # System job - not reloadable
+            reload = False
+        if any(class_path.startswith(f"{app_name}.") for app_name in settings.PLUGINS):
+            # App provided job - not reloadable
+            reload = False
+    jobs = get_jobs(reload=reload)
+    return jobs.get(class_path, None)
+
+
+@nautobot_task(bind=True)
+def run_job(self, job_class_path, *args, **kwargs):
+    """
+    "Runner" function for execution of any Job class by a worker.
+
+    This calls the following Job APIs in the following order:
+
+    - `__init__()`
+    - `before_start()`
+    - `__call__()` (which calls `run()`)
+    - If no exceptions have been raised, `on_success()`, else `on_failure()`
+    - `after_return()`
+
+    Finally, it either returns the data returned from `run()` or re-raises any exception encountered.
+    """
+    logger.debug("Running job %s", job_class_path)
+
+    job_class = get_job(job_class_path, reload=True)
+    if job_class is None:
+        raise KeyError(f"Job class not found for class path {job_class_path}")
+    job = job_class()
+    job.request = self.request
     try:
-        return celery_app.tasks[class_path].__class__
-    except NotRegistered:
-        return None
+        job.before_start(self.request.id, args, kwargs)
+        result = job(*args, **kwargs)
+        job.on_success(result, self.request.id, args, kwargs)
+        job.after_return(JobResultStatusChoices.STATUS_SUCCESS, result, self.request.id, args, kwargs, None)
+        return result
+    except Exception as exc:
+        einfo = ExceptionInfo(sys.exc_info())
+        job.on_failure(exc, self.request.id, args, kwargs, einfo)
+        job.after_return(JobResultStatusChoices.STATUS_FAILURE, exc, self.request.id, args, kwargs, einfo)
+        raise
 
 
 def enqueue_job_hooks(object_change):

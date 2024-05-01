@@ -67,6 +67,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models.statuses import StatusModel
+from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress, Prefix
 from nautobot.ipam.querysets import PrefixQuerySet
@@ -1082,25 +1083,31 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
     def test_defaults(self):
         """Verify that defaults for discovered JobModel instances are as expected."""
         for job_model in JobModel.objects.all():
-            self.assertTrue(job_model.installed)
-            # System jobs should be enabled by default, all others are disabled by default
-            if job_model.module_name.startswith("nautobot."):
-                self.assertTrue(job_model.enabled)
-            else:
-                self.assertFalse(job_model.enabled)
-            for field_name in JOB_OVERRIDABLE_FIELDS:
-                if field_name == "name" and "duplicate_name" in job_model.job_class.__module__:
-                    pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
-                else:
-                    self.assertFalse(
-                        getattr(job_model, f"{field_name}_override"),
-                        (field_name, getattr(job_model, field_name), getattr(job_model.job_class, field_name)),
-                    )
-                    self.assertEqual(
-                        getattr(job_model, field_name),
-                        getattr(job_model.job_class, field_name),
-                        field_name,
-                    )
+            with self.subTest(class_path=job_model.class_path):
+                try:
+                    self.assertTrue(job_model.installed)
+                    # System jobs should be enabled by default, all others are disabled by default
+                    if job_model.module_name.startswith("nautobot."):
+                        self.assertTrue(job_model.enabled)
+                    else:
+                        self.assertFalse(job_model.enabled)
+                    for field_name in JOB_OVERRIDABLE_FIELDS:
+                        if field_name == "name" and "duplicate_name" in job_model.job_class.__module__:
+                            pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
+                        else:
+                            self.assertFalse(
+                                getattr(job_model, f"{field_name}_override"),
+                                (field_name, getattr(job_model, field_name), getattr(job_model.job_class, field_name)),
+                            )
+                            self.assertEqual(
+                                getattr(job_model, field_name),
+                                getattr(job_model.job_class, field_name),
+                                field_name,
+                            )
+                except AssertionError:
+                    print(list(JobModel.objects.all()))
+                    print(registry["jobs"])
+                    raise
 
     def test_duplicate_job_name(self):
         self.assertTrue(JobModel.objects.filter(name="TestDuplicateNameNoMeta").exists())

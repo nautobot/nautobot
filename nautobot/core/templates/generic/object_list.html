@@ -138,7 +138,7 @@
                     class="remove-filter-param"
                     title="Remove all items"
                     data-field-type="parent"
-                    data-field-value={{ field.name }}
+                    data-field-value="{{ field.name }}"
             >×</span>
             <ul class="filter-selection-rendered">
                 {% for value in field.values %}
@@ -149,8 +149,8 @@
                     <span
                             class="filter-selection-choice-remove remove-filter-param"
                             data-field-type="child"
-                            data-field-parent={{ field.name }}
-                            data-field-value={{ value.name }}
+                            data-field-parent="{{ field.name }}"
+                            data-field-value="{{ value.name }}"
                     >×</span>{{ value.display }}
                 </li>
                 {% endfor %}
