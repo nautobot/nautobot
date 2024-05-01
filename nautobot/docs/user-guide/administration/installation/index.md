@@ -2,7 +2,7 @@
 
 There are three primary methods of deploying Nautobot with regular updates, two with Docker and native Python. Docker containers are available via [Docker Hub](https://hub.docker.com/r/networktocode/nautobot) and [GitHub Container Registry](https://github.com/nautobot/nautobot/pkgs/container/nautobot) for use within a containerized environment. Docker Compose instructions and Helm Charts are available. The instructions here are written for installation on a [RHEL (Red Hat Enterprise Linux)](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux) or [Ubuntu](https://ubuntu.com/) virtual machine.
 
-For more information about the Docker tags, Docker configurations, or using container images for your own development environemnt checkout these docs on [Nautobot in Docker](./docker.md).
+For more information about the Docker tags, Docker configurations, or using container images for your own development environemnt checkout these docs on [Nautobot in Docker](../installation_extras/docker.md).
 
 ## About Dependencies
 
@@ -15,7 +15,7 @@ The [installation instructions](#installing-nautobot-dependencies) below will gu
 The following minimum versions are required for Nautobot to operate:
 
 | Dependency | Role         | Minimum Version |
-|------------|--------------|-----------------|
+| ---------- | ------------ | --------------- |
 | Python     | Application  | 3.8             |
 | PostgreSQL | Database     | 12.0            |
 | MySQL      | Database     | 8.0             |

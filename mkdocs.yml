@@ -18,6 +18,7 @@ theme:
       example: "fontawesome/solid/flask"
   features:
     - "content.code.copy"
+    - "content.tabs.link"
     - "navigation.footer"
     - "navigation.tabs"
     - "navigation.tabs.sticky"
