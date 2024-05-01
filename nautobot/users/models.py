@@ -316,23 +316,13 @@ class SavedView(BaseModel, ChangeLoggedModel):
         null=False,
         help_text="The name of the list view that the saved view is derived from, e.g. dcim:device_list",
     )
-    table_config = models.JSONField(
-        encoder=DjangoJSONEncoder, blank=True, default=dict, help_text="Saved Table Config on this view"
-    )
-    pagination_count = models.IntegerField(default=50, blank=True, help_text="Pagination Count of this view")
-    filter_params = models.JSONField(
-        encoder=DjangoJSONEncoder, blank=True, default=dict, help_text="filter parameters that are applied to this view"
-    )
-    sort_order = models.JSONField(
-        encoder=DjangoJSONEncoder,
-        blank=True,
-        default=dict,
-        help_text="table column sort orders that are applied to this view",
+    config = models.JSONField(
+        encoder=DjangoJSONEncoder, blank=True, default=dict, help_text="Saved Configuration on this view"
     )
 
     class Meta:
         ordering = ["owner", "name"]
-        unique_together = [["owner", "name"]]
+        unique_together = [["owner", "name", "view"]]
         verbose_name = "saved view"
         verbose_name_plural = "saved views"
 
@@ -344,7 +334,6 @@ class SavedView(BaseModel, ChangeLoggedModel):
         """Return a combined query strings of the config e.g. table_config, pagination_count, filter_params, sort_order stored on this SavedView"""
         query_string = "?"
         query_list = []
-        # TODO table_config
         for key, value in self.filter_params.items():
             for item in value:
                 query_list.append(f"{key}={urllib.parse.quote_plus(item)}")

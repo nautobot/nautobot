@@ -245,16 +245,26 @@ class SavedViewUIViewSet(
     action_buttons = ("export",)
 
     def get_table_class_string_from_view_name(self, view_name):
+        """Return the name of the TableClass name associated with the view_name
+
+        e.g. returns `LocationTable` for view_name `dcim:location_list`
+
+        Args:
+            view_name (String): The name of the view e.g. dcim:location_list, circuits:circuit_list
+
+        Returns:
+            table_class_name (String): The name of the model table class or None e.g. LocationTable, CircuitTable
+        """
         model = get_model_for_view_name(view_name)
         if model:
-            return get_table_for_model(model)
-        else:
-            return None
+            table_class = get_table_for_model(model)
+            if table_class:
+                return table_class.__name__
+        return None
 
     def retrieve(self, request, *args, **kwargs):
         """
-        The detail view for a saved view should the related ObjectListView
-        with saved configurations applied
+        The detail view for a saved view should the related ObjectListView with saved configurations applied
         """
         instance = self.get_object()
         query_string = instance.view_config
@@ -263,9 +273,7 @@ class SavedViewUIViewSet(
 
     def update(self, request, *args, **kwargs):
         """
-        request.GET: render the ObjectEditForm which is passed to NautobotHTMLRenderer as Response.
-        request.POST: call perform_update() which validates the form and perform the action of update/partial_update of an existing object.
-        Override to add more variables to Response.
+        This method will extract filter_params, pagination and sort_order from request.GET and apply it to the SavedView specified
         """
         sv = get_object_or_404(SavedView, pk=request.GET.get("saved_view", None))
         table_changes_pending = request.GET.get("table_changes_pending", False)
@@ -292,9 +300,8 @@ class SavedViewUIViewSet(
 
     def create(self, request, *args, **kwargs):
         """
-        request.GET: render the ObjectForm which is passed to NautobotHTMLRenderer as Response.
-        request.POST: call perform_create() which validates the form and perform the action of create.
-        Override to add more variables to Response.
+        This method will extract filter_params, pagination and sort_order from request.GET
+        and the name of the new SavedView from request.POST to create a new SavedView.
         """
         name = request.POST.get("name")
         view_name = request.GET.get("view")
@@ -306,7 +313,7 @@ class SavedViewUIViewSet(
         try:
             sv = SavedView.objects.create(name=name, owner=request.user, view=view_name)
         except IntegrityError:
-            messages.error(request, f"You already have a Saved View named {name}")
+            messages.error(request, f"You already have a Saved View named '{name}' for this view '{view_name}'")
             if derived_view_pk:
                 return redirect(self.get_return_url(request, obj=derived_instance))
             else:
@@ -318,7 +325,7 @@ class SavedViewUIViewSet(
         sv.sort_order = sort_order
 
         for key in request.GET:
-            if key in self.non_filter_params:
+            if key in [*self.non_filter_params, "view"]:
                 continue
             sv.filter_params[key] = request.GET.getlist(key)
 

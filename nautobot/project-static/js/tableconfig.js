@@ -41,7 +41,7 @@ $(document).ready(function() {
             // Reload the page
             if (window.location.href.includes("saved_view=")){
                 var new_url = window.location.href+"&table_changes_pending=true";
-                window.location.replace(new_url);
+                window.location.assign(new_url);
             } else {
                 window.location.reload(true);
             }

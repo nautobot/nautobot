@@ -643,7 +643,7 @@ function initializeDynamicFilterForm(context){
             let parent = $(this).attr("data-field-parent");
             query_string = query_string.filter(item => item.search(parent + "=" + field_value) < 0)
         }
-        location.replace("?" + query_string.join("&"))
+        location.assign("?" + query_string.join("&"))
     })
 
     // On submit of filter form
@@ -686,7 +686,7 @@ function initializeDynamicFilterForm(context){
         let default_filter_form_query = $("#default-filter form").serialize().split("&").filter(params => params.split("=")[1]?.length || 0 )
         // Union Operation
         let search_query = [...new Set([...default_filter_form_query, ...dynamic_filter_form_query])].join("&")
-        location.replace("?" + search_query + sort_order_query_string + per_page_query_string + saved_view_pk_query_string + table_changes_query_string)
+        location.assign("?" + search_query + sort_order_query_string + per_page_query_string + saved_view_pk_query_string + table_changes_query_string)
     })
 
     // On submit of filter search form
@@ -698,34 +698,19 @@ function initializeDynamicFilterForm(context){
 
     // On clear of filter form
     this_context.find("#dynamic-filter-form, #default-filter form").on("reset", function(e){
-        console.log("hello")
         e.preventDefault()
+        // make two copies of url params
         const urlParams = new URLSearchParams(window.location.search);
-        const saved_view_pk = urlParams.get('saved_view');
-        var saved_view_pk_query_string = ""
-        if (saved_view_pk != null){
-            saved_view_pk_query_string = "&saved_view=" + saved_view_pk
-        }
-        const sort_order = urlParams.getAll('sort');
-        var sort_order_query_string = ""
-        if (sort_order != null){
-            for (var i = 0; i < sort_order.length; i++){
-                appendage = "&sort=" + sort_order[i]
-                sort_order_query_string += appendage
+        const newUrlParams = new URLSearchParams(window.location.search);
+        // every query string that is non-filter-related
+        const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending"]
+        for (const [key, value] of urlParams.entries()) {
+            // remove filter params
+            if (non_filter_params.includes(key) === false) {
+                newUrlParams.delete(key, value)
             }
         }
-        const per_page = urlParams.get('per_page');
-        var per_page_query_string = ""
-        if (per_page_query_string != null) {
-            per_page_query_string = "per_page=" + per_page
-        }
-        const table_changes = urlParams.get('table_changes_pending');
-        var table_changes_query_string = ""
-        if (table_changes_query_string != null) {
-            table_changes_query_string = "&table_changes_pending=" + table_changes
-        }
-        // clear filter params info and retain other information
-        location.replace("?" + per_page_query_string + sort_order_query_string + saved_view_pk_query_string + table_changes_query_string)
+        location.assign("?" + urlParams.toString())
     })
 
 
