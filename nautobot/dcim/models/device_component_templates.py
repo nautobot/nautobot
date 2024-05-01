@@ -17,7 +17,15 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
-from nautobot.extras.models import ChangeLoggedModel, CustomField, CustomFieldModel, RelationshipModel, Status
+from nautobot.extras.models import (
+    ChangeLoggedModel,
+    ContactMixin,
+    CustomField,
+    CustomFieldModel,
+    RelationshipModel,
+    StaticGroupMixin,
+    Status,
+)
 from nautobot.extras.utils import extras_features
 
 from .device_components import (
@@ -43,7 +51,10 @@ __all__ = (
 )
 
 
-class ComponentTemplateModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+# TODO: Changing ComponentTemplateModel to an OrganizationalModel would just involve adding Notes support...
+class ComponentTemplateModel(
+    ContactMixin, ChangeLoggedModel, CustomFieldModel, RelationshipModel, StaticGroupMixin, BaseModel
+):
     device_type = ForeignKeyWithAutoRelatedName(to="dcim.DeviceType", on_delete=models.CASCADE)
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True)

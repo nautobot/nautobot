@@ -26,6 +26,7 @@ article ul li {
     - _optional_ Define appropriate additional [`clean()`](best-practices.md#model-validation) logic
         - Be sure to always call `super().clean()` as well!
     - _optional_ Define appropriate `verbose_name`/`verbose_name_plural` if defaults aren't optimal
+    - _optional_ Opt the model out of contact/team association (`is_contact_associable_model = False`) or static-group association (`is_static_group_associable_model = False`) -- only if there is a strong justification for doing so.
 - Generate database schema migration(s) with `invoke makemigrations <app> -n <migration_name>`
 - _optional_ Add [data migration(s)](https://docs.djangoproject.com/en/stable/topics/migrations/#data-migrations) to populate default records, migrate data from existing models, etc.
     - Remember: data migrations must not share a file with schema migrations or vice versa!

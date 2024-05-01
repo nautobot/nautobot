@@ -179,6 +179,7 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
     "secretsgroupassociation",
     "service",
     "softwareimagefile",
+    "staticgroupassociation",
     "status",
     "tag",
     "taggeditem",

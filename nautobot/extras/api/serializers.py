@@ -75,13 +75,20 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroup,
+    StaticGroupAssociation,
     Status,
     Tag,
     Team,
     Webhook,
 )
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.extras.utils import ChangeLoggedModelsQuery, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
+from nautobot.extras.utils import (
+    ChangeLoggedModelsQuery,
+    FeatureQuery,
+    RoleModelsQuery,
+    TaggableClassesQuery,
+)
 
 from .fields import MultipleChoiceJSONField
 
@@ -888,6 +895,50 @@ class SecretsGroupSerializer(NautobotModelSerializer):
         extra_kwargs = {
             "secrets": {"source": "secrets_group_associations", "read_only": True},
         }
+
+
+#
+# StaticGroup
+#
+
+
+class StaticGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
+    )
+
+    class Meta:
+        model = StaticGroup
+        fields = "__all__"
+
+
+class StaticGroupAssociationSerializer(NautobotModelSerializer):
+    associated_object_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
+    )
+    associated_object = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = StaticGroupAssociation
+        fields = "__all__"
+
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="StaticGroupAssociatedObject",
+            resource_type_field_name="object_type",
+            serializers=lambda: nested_serializers_for_models(FeatureQuery("static_groups").list_subclasses()),
+        )
+    )
+    def get_associated_object(self, obj):
+        if obj.associated_object is None:
+            return None
+        try:
+            depth = get_nested_serializer_depth(self)
+            return return_nested_serializer_data_based_on_depth(
+                self, depth, obj, obj.associated_object, "associated_object"
+            )
+        except SerializerNotFound:
+            return None
 
 
 #

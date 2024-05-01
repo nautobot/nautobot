@@ -147,6 +147,7 @@ def nested_serializers_for_models(models, prefix=""):
             class NautobotNestedSerializer(serializer_class):
                 class Meta(serializer_class.Meta):
                     fields = ["id", "object_type", "url"]
+                    exclude = None
 
                 def get_field_names(self, declared_fields, info):
                     """Don't auto-add any other fields to the field_names!"""

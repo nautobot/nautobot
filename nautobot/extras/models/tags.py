@@ -12,7 +12,7 @@ from nautobot.extras.utils import extras_features, TaggableClassesQuery
 # These imports are in this particular order because of circular import problems
 from .change_logging import ChangeLoggedModel
 from .customfields import CustomFieldModel
-from .mixins import NotesMixin
+from .mixins import ContactMixin, NotesMixin, StaticGroupMixin
 from .relationships import RelationshipModel
 
 #
@@ -34,7 +34,9 @@ class TagQuerySet(RestrictedQuerySet):
 @extras_features(
     "custom_validators",
 )
-class Tag(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel, NotesMixin):
+class Tag(
+    ChangeLoggedModel, ContactMixin, CustomFieldModel, NotesMixin, RelationshipModel, StaticGroupMixin, BaseModel
+):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     content_types = models.ManyToManyField(
         to=ContentType,

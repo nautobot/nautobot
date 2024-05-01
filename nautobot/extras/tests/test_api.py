@@ -69,6 +69,8 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroup,
+    StaticGroupAssociation,
     Status,
     Tag,
     Team,
@@ -80,6 +82,7 @@ from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMix
 from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
+from nautobot.virtualization.models import VirtualMachine
 
 User = get_user_model()
 
@@ -3473,6 +3476,149 @@ class SecretsGroupAssociationTest(APIViewTestCases.APIViewTestCase):
                 "secret": secrets[2].pk,
             },
         ]
+
+
+class StaticGroupTest(APIViewTestCases.APIViewTestCase):
+    model = StaticGroup
+    choices_fields = ["content_type"]
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sg1 = StaticGroup.objects.create(
+            name="Locations",
+            description="Static group of Locations",
+            content_type=ContentType.objects.get_for_model(Location),
+        )
+        cls.sg2 = StaticGroup.objects.create(
+            name="IPAddresses",
+            description="Static group of IPAddresses",
+            content_type=ContentType.objects.get_for_model(IPAddress),
+        )
+        cls.sg3 = StaticGroup.objects.create(
+            name="VirtualMachines",
+            description="Static group of VirtualMachines",
+            content_type=ContentType.objects.get_for_model(VirtualMachine),
+        )
+        cls.create_data = [
+            {
+                "name": "Group of Locations",
+                "description": "A group containing dcim.location objects",
+                "content_type": "dcim.location",
+                "tags": [tag.pk for tag in Tag.objects.get_for_model(StaticGroup)],
+            },
+            {
+                "name": "Group of Devices",
+                "content_type": "dcim.device",
+            },
+            {
+                "name": "Group of Circuits",
+                "content_type": "circuits.circuit",
+                "tags": [],
+            },
+        ]
+        cls.update_data = {
+            "name": "Group of something unknown",
+            "description": "It is a mystery",
+        }
+        cls.bulk_update_data = {
+            "description": "New description",
+        }
+
+    def test_changing_content_type_not_allowed(self):
+        self.add_permissions("extras.change_staticgroup")
+        data = {
+            "content_type": "circuits.circuittermination",
+        }
+        response = self.client.patch(self._get_detail_url(self.sg1), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_get_members(self):
+        """Test that the `/members/` API endpoint returns what is expected."""
+        self.add_permissions("extras.view_staticgroup")
+        instance = StaticGroup.objects.filter(static_group_associations__isnull=False).distinct().first()
+        self.assertIsNotNone(instance)
+        member_count = instance.members.count()
+        url = reverse("extras-api:staticgroup-members", kwargs={"pk": instance.pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(member_count, response.json()["count"])
+        # TODO: assert that members are serialized correctly?
+
+
+class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
+    model = StaticGroupAssociation
+    choices_fields = ["associated_object_type"]
+
+    # StaticGroupAssociation records created for SoftwareImageFile records will contain a `hashing_algorithm` key;
+    # presence of strings like "md5" and "sha256" in the API response for StaticGroupAssociation is *not* a failure
+    VERBOTEN_STRINGS = ("password",)
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sg1 = StaticGroup.objects.create(name="Locations", content_type=ContentType.objects.get_for_model(Location))
+        cls.sg2 = StaticGroup.objects.create(name="Devices", content_type=ContentType.objects.get_for_model(Device))
+        cls.sg3 = StaticGroup.objects.create(name="VLANs", content_type=ContentType.objects.get_for_model(VLAN))
+        location_pks = list(Location.objects.values_list("pk", flat=True)[:4])
+        device_pks = list(Device.objects.values_list("pk", flat=True)[:4])
+        StaticGroupAssociation.objects.create(
+            static_group=cls.sg1,
+            associated_object_type=ContentType.objects.get_for_model(Location),
+            associated_object_id=location_pks[0],
+        )
+        StaticGroupAssociation.objects.create(
+            static_group=cls.sg1,
+            associated_object_type=ContentType.objects.get_for_model(Location),
+            associated_object_id=location_pks[1],
+        )
+        StaticGroupAssociation.objects.create(
+            static_group=cls.sg2,
+            associated_object_type=ContentType.objects.get_for_model(Device),
+            associated_object_id=device_pks[0],
+        )
+        StaticGroupAssociation.objects.create(
+            static_group=cls.sg2,
+            associated_object_type=ContentType.objects.get_for_model(Device),
+            associated_object_id=device_pks[1],
+        )
+
+        cls.create_data = [
+            {
+                "static_group": cls.sg1.pk,
+                "associated_object_type": "dcim.location",
+                "associated_object_id": location_pks[2],
+            },
+            {
+                "static_group": cls.sg1.pk,
+                "associated_object_type": "dcim.location",
+                "associated_object_id": location_pks[3],
+            },
+            {
+                "static_group": cls.sg2.pk,
+                "associated_object_type": "dcim.device",
+                "associated_object_id": device_pks[2],
+            },
+            {
+                "static_group": cls.sg2.pk,
+                "associated_object_type": "dcim.device",
+                "associated_object_id": device_pks[3],
+            },
+        ]
+        # TODO: this isn't really valid since we're changing the associated_object_type but not the associated_object_id
+        # Should we disallow bulk-updates of StaticGroupAssociation? Or maybe skip the bulk-update tests at least?
+        cls.bulk_update_data = {
+            "static_group": cls.sg3.pk,
+            "associated_object_type": "ipam.vlan",
+        }
+
+    def test_content_type_mismatch(self):
+        self.add_permissions("extras.add_staticgroupassociation")
+        data = {
+            "static_group": self.sg1.pk,
+            "associated_object_type": "ipam.ipaddress",
+            "associated_object_id": IPAddress.objects.first().pk,
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
 
 class StatusTest(APIViewTestCases.APIViewTestCase):
