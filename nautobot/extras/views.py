@@ -2440,7 +2440,7 @@ class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin
 
     def post(self, request, **kwargs):
         """
-        Like BulkEditView, expect the user to POST twice - once to provide the list of object PKs, once to confirm.
+        Unlike BulkEditView, this takes a single POST rather than two to perform its operation.
         """
         # TODO error handling
         content_type = ContentType.objects.get(pk=request.POST.get("content_type"))
@@ -2455,73 +2455,56 @@ class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin
         else:
             pk_list = request.POST.getlist("pk")
 
-        if "_apply" in request.POST:
-            form = self.form_class(model, request.POST)
-            restrict_form_fields(form, request.user)
+        form = self.form_class(model, request.POST)
+        restrict_form_fields(form, request.user)
 
-            if form.is_valid():
-                logger.debug("Form validation was successful")
-                try:
-                    with deferred_change_logging_for_bulk_operation():
-                        associations = []
-                        for pk in pk_list:
-                            for static_group in form.cleaned_data["static_groups"]:
-                                association, _ = StaticGroupAssociation.objects.get_or_create(
-                                    static_group=static_group,
-                                    associated_object_type=content_type,
-                                    associated_object_id=pk,
-                                )
-                                association.validated_save()
-                                associations.append(association)
-                                logger.debug("Saved %s for PK %s", association, pk)
+        if form.is_valid():
+            logger.debug("Form validation was successful")
+            try:
+                with deferred_change_logging_for_bulk_operation():
+                    associations = []
+                    for pk in pk_list:
+                        for static_group in form.cleaned_data["add_to_groups"]:
+                            association, _ = StaticGroupAssociation.objects.get_or_create(
+                                static_group=static_group,
+                                associated_object_type=content_type,
+                                associated_object_id=pk,
+                            )
+                            association.validated_save()
+                            associations.append(association)
+                            logger.debug("Saved %s for PK %s", association, pk)
 
-                        # Enforce object-level permissions
-                        if self.queryset.filter(pk__in=[assoc.pk for assoc in associations]).count() != len(associations):
-                            raise StaticGroupAssociation.DoesNotExist
+                    # Enforce object-level permissions
+                    if self.queryset.filter(pk__in=[assoc.pk for assoc in associations]).count() != len(associations):
+                        raise StaticGroupAssociation.DoesNotExist
 
-                    if associations:
-                        msg = f"Associated {len(associations)} {model._meta.verbose_name_plural} to static groups {form.cleaned_data['static_groups']}"
-                        logger.info(msg)
-                        messages.success(self.request, msg)
-                        return redirect(self.get_return_url(request))
+                if associations:
+                    msg = f"Associated {len(associations)} {model._meta.verbose_name_plural} to static groups {form.cleaned_data['add_to_groups']}"
+                    logger.info(msg)
+                    messages.success(self.request, msg)
 
-                except ValidationError as e:
-                    messages.error(self.request, f"{association} failed validation: {e}")
-                except StaticGroupAssociation.DoesNotExist:
-                    msg = "Static group association failed due to object-level permissions violation"
-                    logger.warning(msg)
-                    form.add_error(None, msg)
+                if form.cleaned_data["remove_from_groups"]:
+                    for static_group in form.cleaned_data["remove_from_groups"]:
+                        StaticGroupAssociation.objects.restrict(request.user, "delete").filter(
+                            static_group=static_group,
+                            associated_object_type=content_type,
+                            associated_object_id__in=pk_list,
+                        ).delete()
 
-            else:
-                logger.debug("Form validation failed")
+                    msg = f"Removed {len(pk_list)} {model._meta.verbose_name_plural} from static groups {form.cleaned_data['remove_from_groups']}"
+                    logger.info(msg)
+                    messages.success(self.request, msg)
+            except ValidationError as e:
+                messages.error(self.request, f"{association} failed validation: {e}")
+            except StaticGroupAssociation.DoesNotExist:
+                msg = "Static group association failed due to object-level permissions violation"
+                logger.warning(msg)
+                form.add_error(None, msg)
 
         else:
-            # Include the PK list as initial data for the form
-            initial_data = {"pk": pk_list, "content_type": request.POST.get("content_type")}
-            form = self.form_class(model, initial=initial_data)
-            restrict_form_fields(form, request.user)
+            logger.debug("Form validation failed")
 
-        # TODO verify that provided content_type is_static_group_associable_model
-        table_class = get_table_for_model(model)
-        table = table_class(model.objects.filter(pk__in=pk_list), orderable=False)
-        if not table.rows:
-            messages.warning(request, f"No {model._meta.verbose_name_plural} were selected.")
-            return redirect(self.get_return_url(request))
-
-        # Hide actions column if present
-        if "actions" in table.columns:
-            table.columns.hide("actions")
-
-        context = {
-            "form": form,
-            "table": table,
-            "obj_type_plural": model._meta.verbose_name_plural,
-            "return_url": self.get_return_url(request),
-        }
-        return render(request, self.template_name, context)
-
-
-
+        return redirect(self.get_return_url(request))
 
 #
 # Custom statuses
