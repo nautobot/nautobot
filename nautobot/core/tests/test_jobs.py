@@ -6,7 +6,7 @@ import yaml
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.dcim.models import DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.models import Contact, ContactAssociation, ExportTemplate, JobLogEntry, Status
+from nautobot.extras.models import Contact, ContactAssociation, ExportTemplate, JobLogEntry, Role, Status
 from nautobot.users.models import ObjectPermission
 
 
@@ -266,6 +266,12 @@ class ImportObjectsTestCase(TransactionTestCase):
                 "ContactAssignmentImportTestLocationType,ContactAssignmentImportTestLocation2,Active",
             ]
         )
+        roles_csv = "\n".join(
+            [
+                "name,content_types",
+                "ContactAssignmentImportTestLocation-On Site,extras.contactassociation",
+            ]
+        )
         contacts_csv = "\n".join(["name,email", "Bob-ContactAssignmentImportTestLocation,bob@example.com"])
 
         location_types_job_result = create_job_result_and_run_job(
@@ -301,15 +307,29 @@ class ImportObjectsTestCase(TransactionTestCase):
         contact_count = Contact.objects.filter(name="Bob-ContactAssignmentImportTestLocation").count()
         self.assertEqual(contact_count, 1, f"Unexpected number of contacts {contact_count}")
 
+        roles_job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            content_type=ContentType.objects.get_for_model(Role).pk,
+            csv_data=roles_csv,
+        )
+        self.assertEqual(roles_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+
+        role_count = Role.objects.filter(name="ContactAssignmentImportTestLocation-On Site").count()
+        self.assertEqual(role_count, 1, f"Unexpected number of role values {role_count}")
+
         associations = ["associated_object_id,associated_object_type,status__name,role__name,contact__name"]
         for location in Location.objects.filter(location_type__name="ContactAssignmentImportTestLocationType"):
-            associations.append(f"{location.pk},dcim.location,Active,On Site,Bob-ContactAssignmentImportTestLocation")
-        assocations_csv = "\n".join(associations)
+            associations.append(
+                f"{location.pk},dcim.location,Active,ContactAssignmentImportTestLocation-On Site,Bob-ContactAssignmentImportTestLocation"
+            )
+        associations_csv = "\n".join(associations)
 
-        assocations_job_result = create_job_result_and_run_job(
+        associations_job_result = create_job_result_and_run_job(
             "nautobot.core.jobs",
             "ImportObjects",
             content_type=ContentType.objects.get_for_model(ContactAssociation).pk,
-            csv_data=assocations_csv,
+            csv_data=associations_csv,
         )
-        self.assertEqual(assocations_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+
+        self.assertEqual(associations_job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
