@@ -302,19 +302,16 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         table = None
         table_config_form = None
         current_saved_view = None
+        current_saved_view_pk = self.request.GET.get("saved_view", None)
+        list_url = validated_viewname(model, "list")
+        saved_views = (
+            SavedView.objects.filter(view=list_url).restrict(request.user, "view").order_by("name").only("pk", "name")
+        )
         if self.table:
             # Construct the objects table
             if self.request.GET.getlist("sort"):
                 hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
-            current_saved_view_pk = self.request.GET.get("saved_view", None)
             table_changes_pending = self.request.GET.get("table_changes_pending", False)
-            list_url = validated_viewname(model, "list")
-            saved_views = (
-                SavedView.objects.filter(view=list_url)
-                .restrict(request.user, "view")
-                .order_by("name")
-                .only("pk", "name")
-            )
             if current_saved_view_pk:
                 current_saved_view = SavedView.objects.restrict(request.user, "view").get(
                     view=list_url, pk=current_saved_view_pk
