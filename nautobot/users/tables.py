@@ -28,17 +28,7 @@ class SavedViewTable(BaseTable):
             "actions",
         )
 
-    def render_table_config(self, record):
-        if record.table_config:
-            return render_json(record.table_config)
-        return self.default
-
-    def render_filter_params(self, record):
-        if record.filter_params:
-            return render_json(record.filter_params)
-        return self.default
-
-    def render_sort_order(self, record):
-        if record.sort_order:
-            return render_json(record.sort_order)
+    def render_config(self, record):
+        if record.config:
+            return render_json(record.config, pretty_print=True)
         return self.default

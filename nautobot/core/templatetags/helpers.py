@@ -199,7 +199,7 @@ def render_markdown(value):
 
 @library.filter()
 @register.filter()
-def render_json(value, syntax_highlight=True):
+def render_json(value, syntax_highlight=True, pretty_print=False):
     """
     Render a dictionary as formatted JSON.
 
@@ -207,8 +207,13 @@ def render_json(value, syntax_highlight=True):
     `<code class="language-json>` HTML tag to flag it for syntax highlighting by highlight.js.
     """
     rendered_json = json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
+    html_string = '<code class="language-json">{}</code>'
+    if pretty_print:
+        html_string = "<pre>" + html_string + "</pre>"
+
     if syntax_highlight:
-        return format_html('<code class="language-json">{}</code>', rendered_json)
+        return format_html(html_string, rendered_json)
+
     return rendered_json
 
 
