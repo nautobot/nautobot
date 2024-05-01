@@ -285,6 +285,9 @@ plugins:
         # Post 2.x redirects
         "development/apps/api/ui-extensions/object-detail-views.md": "development/apps/api/ui-extensions/object-views.md"
         "development/core/extending-models.md": "development/core/model-checklist.md"
+        "administration/installation/docker.md": "administration/installation_extras/docker.md"
+        "administration/installation/health-checks.md": "administration/installation_extras/health-checks.md"
+        "administration/installation/selinux-troubleshooting.md": "administration/installation_extras/selinux-troubleshooting.md"
 
 nav:
   - Overview: "index.md"
@@ -297,11 +300,13 @@ nav:
               - Installing Nautobot: "user-guide/administration/installation/nautobot.md"
               - Deploying Nautobot Services: "user-guide/administration/installation/services.md"
               - Configuring an HTTP Server: "user-guide/administration/installation/http-server.md"
-              - External Authentication (Optional): "user-guide/administration/installation/external-authentication.md"
               - Installing and Using Plugins: "user-guide/administration/installation/app-install.md"
-              - Nautobot Docker Images: "user-guide/administration/installation/docker.md"
-              - Health Checks: "user-guide/administration/installation/health-checks.md"
-              - SELinux Troubleshooting: "user-guide/administration/installation/selinux-troubleshooting.md"
+              - External Authentication (Optional): "user-guide/administration/installation/external-authentication.md"
+          - Installation Extras:
+              - Nautobot Docker Images: "user-guide/administration/installation_extras/docker.md"
+              - Health Checks: "user-guide/administration/installation_extras/health-checks.md"
+              - SELinux Troubleshooting: "user-guide/administration/installation_extras/selinux-troubleshooting.md"
+
           - Upgrading:
               - Database Backup: "user-guide/administration/upgrading/database-backup.md"
               - Upgrading Nautobot: "user-guide/administration/upgrading/upgrading.md"
