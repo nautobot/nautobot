@@ -43,9 +43,6 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
-    Module,
-    ModuleBay,
-    ModuleType,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -2906,47 +2903,4 @@ class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
         ]
         cls.bulk_update_data = {
             "weight": 300,
-        }
-
-
-class ModuleTestCase(APIViewTestCases.APIViewTestCase):
-    model = Module
-
-    @classmethod
-    def setUpTestData(cls):
-        mt = ModuleType.objects.create(
-            manufacturer=Manufacturer.objects.first(),
-            model="Test Module Type",
-        )
-        module_bay = ModuleBay.objects.create(
-            parent_device=Device.objects.first(),
-            position="0",
-        )
-        status = Status.objects.get_for_model(Module).first()
-        location = Location.objects.get_for_model(Module).first()
-        cls.create_data = [
-            {
-                "module_type": mt.pk,
-                "parent_module_bay": module_bay.pk,
-                "serial": None,
-                "asset_tag": None,
-                "status": status.pk,
-            },
-            {
-                "module_type": mt.pk,
-                "location": location.pk,
-                "serial": "xyz",
-                "asset_tag": None,
-                "status": status.pk,
-            },
-            {
-                "module_type": mt.pk,
-                "location": location.pk,
-                "serial": None,
-                "asset_tag": "Test Module 1",
-                "status": status.pk,
-            },
-        ]
-        cls.bulk_update_data = {
-            "tenant": Tenant.objects.first().pk,
         }

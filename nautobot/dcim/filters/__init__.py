@@ -60,10 +60,6 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
-    Module,
-    ModuleBay,
-    ModuleBayTemplate,
-    ModuleType,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -1929,30 +1925,3 @@ class ControllerManagedDeviceGroupFilterSet(NautobotFilterSet):
         """FilterSet method for getting Groups that are or are descended from a given ControllerManagedDeviceGroup(s)."""
         params = self.generate_query__subtree(value)
         return queryset.filter(params)
-
-
-class ModuleFilterSet(NautobotFilterSet):
-    q = SearchFilter(
-        filter_predicates={
-            "asset_tag": {
-                "lookup_expr": "icontains",
-                "preprocessor": str.strip,
-            },
-            "serial": {
-                "lookup_expr": "icontains",
-                "preprocessor": str.strip,
-            },
-            "module_type__manufacturer__name": {
-                "lookup_expr": "icontains",
-                "preprocessor": str.strip,
-            },
-            "module_type__device_family__name": {
-                "lookup_expr": "icontains",
-                "preprocessor": str.strip,
-            },
-        }
-    )
-
-    class Meta:
-        model = Module
-        fields = "__all__"

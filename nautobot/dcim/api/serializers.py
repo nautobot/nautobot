@@ -73,10 +73,6 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
-    Module,
-    ModuleBay,
-    ModuleBayTemplate,
-    ModuleType,
     PathEndpoint,
     Platform,
     PowerFeed,
@@ -1056,33 +1052,4 @@ class ControllerSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 class ControllerManagedDeviceGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = ControllerManagedDeviceGroup
-        fields = "__all__"
-
-
-#
-# Modules
-#
-
-
-class ModuleBaySerializer(NautobotModelSerializer):
-    class Meta:
-        model = ModuleBay
-        fields = "__all__"
-
-
-class ModuleBayTemplateSerializer(NautobotModelSerializer):
-    class Meta:
-        model = ModuleBayTemplate
-        fields = "__all__"
-
-
-class ModuleSerializer(NautobotModelSerializer):
-    class Meta:
-        model = Module
-        fields = "__all__"
-
-
-class ModuleTypeSerializer(NautobotModelSerializer):
-    class Meta:
-        model = ModuleType
         fields = "__all__"
