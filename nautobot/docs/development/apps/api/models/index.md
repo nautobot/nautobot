@@ -13,10 +13,21 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 | [Object permissions](../../../../user-guide/administration/guides/permissions.md) | ❌ | ✅ | ✅ | ✅ |
 | [`validated_save()`](../../../core/best-practices.md#model-validation) | ❌ | ✅ | ✅ | ✅ |
 | [Change logging](../../../../user-guide/platform-functionality/change-logging.md) | ❌ | ❌ | ✅ | ✅ |
+| [Contacts](../../../../user-guide/core-data-model/extras/contact.md) and [Teams](../../../../user-guide/core-data-model/extras/team.md) | ❌ | ❌ | ✅ | ✅ |
 | [Custom fields](../../../../user-guide/platform-functionality/customfield.md) | ❌ | ❌ | ✅ | ✅ |
+| [Notes](../../../../user-guide/platform-functionality/note.md) | ❌ | ❌ | ✅ | ✅ |
 | [Relationships](../../../../user-guide/platform-functionality/relationship.md) | ❌ | ❌ | ✅ | ✅ |
-| [Note](../../../../user-guide/platform-functionality/note.md) | ❌ | ❌ | ✅ | ✅ |
+| [Static Groups](../../../../user-guide/platform-functionality/staticgroup.md) | ❌ | ❌ | ✅ | ✅ |
 | [Tags](../../../../user-guide/platform-functionality/tag.md) | ❌ | ❌ | ❌ | ✅ |
+
++++ 2.2.0
+    Support for Contact and Team assignment to all model types was added.
+
++/- 2.3.0
+    Default support for Contact and Team assignment was removed from `django.db.models.Model` and `BaseModel`. The mixin class `ContactMixin` has been added to be used by `BaseModel` subclasses that want to be assignable to Contacts and Teams. All subclasses of `OrganizationalModel` and `PrimaryModel` include this mixin and therefore default to supporting Contact and Team assignment.
+
++++ 2.3.0
+    Support for Static Groups was added to `OrganizationalModel` and `PrimaryModel`. The mixin class `StaticGroupMixin` (included in both of those base classes) has been added to be used by `BaseModel` subclasses that want to be assignable to Static Groups.
 
 Below is an example `models.py` file containing a basic model with two character fields:
 

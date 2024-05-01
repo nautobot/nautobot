@@ -248,8 +248,10 @@ def populate_model_features_registry(refresh=False):
                             useful to narrow down the search for fields that match certain criteria. For example, if
                             `field_attributes` is set to {"related_model": RelationshipAssociation}, only fields with
                             a related model of RelationshipAssociation will be considered.
+        - 'additional_constraints': Optional dictionary of additional `{field: value}` constraints that can be checked.
     - Looks up all the models in the installed apps.
-    - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have fields with the names given in the dictionary.
+    - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have
+      fields with the names given in the dictionary.
     - Groups the results by app and updates the registry model features for each app.
     """
     if registry.get("populate_model_features_registry_called", False) and not refresh:
@@ -259,6 +261,11 @@ def populate_model_features_registry(refresh=False):
 
     lookup_confs = [
         {
+            "feature_name": "contacts",
+            "field_names": ["associated_contacts"],
+            "additional_constraints": {"is_contact_associable_model": True},
+        },
+        {
             "feature_name": "custom_fields",
             "field_names": ["_custom_field_data"],
         },
@@ -266,6 +273,11 @@ def populate_model_features_registry(refresh=False):
             "feature_name": "relationships",
             "field_names": ["source_for_associations", "destination_for_associations"],
             "field_attributes": {"related_model": RelationshipAssociation},
+        },
+        {
+            "feature_name": "static_groups",
+            "field_names": ["associated_static_groups"],
+            "additional_constraints": {"is_static_group_associable_model": True},
         },
     ]
 
@@ -275,6 +287,7 @@ def populate_model_features_registry(refresh=False):
             app_models=app_models,
             field_names=lookup_conf["field_names"],
             field_attributes=lookup_conf.get("field_attributes"),
+            additional_constraints=lookup_conf.get("additional_constraints"),
         )
         feature_name = lookup_conf["feature_name"]
         registry["model_features"][feature_name] = registry_items

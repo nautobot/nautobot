@@ -25,7 +25,7 @@ from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, NotesMixin, StaticGroupMixin
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
 
 logger = logging.getLogger(__name__)
@@ -404,7 +404,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
         )
 
 
-class Relationship(BaseModel, ChangeLoggedModel, NotesMixin):
+class Relationship(ChangeLoggedModel, ContactMixin, NotesMixin, StaticGroupMixin, BaseModel):
     label = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, unique=True, help_text="Label of the relationship as displayed to users"
     )

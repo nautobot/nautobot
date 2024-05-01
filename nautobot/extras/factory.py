@@ -16,6 +16,7 @@ from nautobot.core.factory import (
     random_instance,
     UniqueFaker,
 )
+from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.extras.choices import (
     JobResultStatusChoices,
     LogLevelChoices,
@@ -32,11 +33,18 @@ from nautobot.extras.models import (
     JobResult,
     ObjectChange,
     Role,
+    StaticGroup,
+    StaticGroupAssociation,
     Status,
     Tag,
     Team,
 )
-from nautobot.extras.utils import change_logged_models_queryset, FeatureQuery, RoleModelsQuery, TaggableClassesQuery
+from nautobot.extras.utils import (
+    change_logged_models_queryset,
+    FeatureQuery,
+    RoleModelsQuery,
+    TaggableClassesQuery,
+)
 
 
 class ContactFactory(PrimaryModelFactory):
@@ -296,6 +304,50 @@ class RoleFactory(OrganizationalModelFactory):
                 self.content_types.set(extracted)
             else:
                 self.content_types.set(get_random_instances(lambda: RoleModelsQuery().as_queryset(), minimum=1))
+
+
+class StaticGroupFactory(PrimaryModelFactory):
+    """StaticGroup model factory."""
+
+    class Meta:
+        model = StaticGroup
+        exclude = ("color", "has_description")
+
+    color = factory.Faker("safe_color_name")
+    content_type = random_instance(
+        lambda: ContentType.objects.filter(FeatureQuery("static_groups").get_query()), allow_null=False
+    )
+    name = factory.LazyAttribute(
+        lambda o: f"{o.color.title()} {bettertitle(o.content_type.model_class()._meta.verbose_name_plural)}"
+    )
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
+
+    @factory.post_generation
+    def members(self, created, extracted, **kwargs):
+        if extracted:
+            return
+        if not created:
+            return
+        for member in get_random_instances(self.content_type.model_class().objects.all()):
+            StaticGroupAssociationFactory.create(static_group=self, associated_object_id=member.pk)
+
+
+class StaticGroupAssociationFactory(OrganizationalModelFactory):
+    """StaticGroupAssociation model factory."""
+
+    class Meta:
+        model = StaticGroupAssociation
+
+    static_group = random_instance(StaticGroup, allow_null=False)
+    associated_object_type = factory.LazyAttribute(lambda o: o.static_group.content_type)
+
+    @factory.lazy_attribute
+    def associated_object_id(self):
+        queryset = self.associated_object_type.model_class().objects.all()
+        if queryset.exists():
+            return factory.random.randgen.choice(queryset).pk
+        return faker.Faker().uuid4()
 
 
 class StatusFactory(OrganizationalModelFactory):

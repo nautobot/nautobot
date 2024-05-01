@@ -283,3 +283,35 @@ class NautobotTemplatetagsHelperTest(TestCase):
                     helpers.support_message(),
                     "<p>Settings <strong>support</strong> message:</p><ul><li>Item 1</li><li>Item 2</li></ul>",
                 )
+
+    def test_hyperlinked_object_target_new_tab(self):
+        # None gives a placeholder
+        self.assertEqual(helpers.hyperlinked_object_target_new_tab(None), helpers.placeholder(None))
+        # An object without get_absolute_url gives a string
+        self.assertEqual(helpers.hyperlinked_object_target_new_tab("hello"), "hello")
+        # An object with get_absolute_url gives a hyperlink
+        location = models.Location.objects.first()
+        # Initially remove description if any
+        location.description = ""
+        location.save()
+        self.assertEqual(
+            helpers.hyperlinked_object_target_new_tab(location),
+            f'<a href="/dcim/locations/{location.pk}/" target="_blank" rel="noreferrer">{location.name}</a>',
+        )
+        # An object with get_absolute_url and a description gives a titled hyperlink
+        location.description = "An important location"
+        location.save()
+        self.assertEqual(
+            helpers.hyperlinked_object_target_new_tab(location),
+            f'<a href="/dcim/locations/{location.pk}/" title="An important location" target="_blank" rel="noreferrer">{location.name}</a>',
+        )
+        # Optionally you can request a field other than the object's display string
+        self.assertEqual(
+            helpers.hyperlinked_object_target_new_tab(location, "name"),
+            f'<a href="/dcim/locations/{location.pk}/" title="An important location" target="_blank" rel="noreferrer">{location.name}</a>',
+        )
+        # If you request a nonexistent field, it defaults to the string representation
+        self.assertEqual(
+            helpers.hyperlinked_object_target_new_tab(location, "foo"),
+            f'<a href="/dcim/locations/{location.pk}/" title="An important location" target="_blank" rel="noreferrer">{location!s}</a>',
+        )

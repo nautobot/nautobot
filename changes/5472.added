@@ -1,0 +1,1 @@
+Added `StaticGroup` and `StaticGroupAssociation` data models, used for statically defining groups of Nautobot objects.

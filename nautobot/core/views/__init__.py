@@ -7,6 +7,7 @@ import time
 from db_file_storage.views import get_file
 from django.apps import apps
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
@@ -14,7 +15,7 @@ from django.http import HttpResponseForbidden, HttpResponseServerError, JsonResp
 from django.shortcuts import get_object_or_404, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
-from django.urls import resolve, reverse
+from django.urls import NoReverseMatch, resolve, reverse
 from django.utils.encoding import smart_str
 from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.decorators.csrf import requires_csrf_token
@@ -177,28 +178,31 @@ class SearchView(AccessMixin, View):
                 # corresponding to that URL, and finally the queryset, filterset, and table classes needed
                 # to find and display the model search results.
                 url = get_route_for_model(f"{label}.{modelname}", "list")
-                view_func = resolve(reverse(url)).func
-                # For a UIViewSet, view_func.cls gets what we need; for an ObjectListView, view_func.view_class is it.
-                view_or_viewset = getattr(view_func, "cls", getattr(view_func, "view_class", None))
-                queryset = view_or_viewset.queryset.restrict(request.user, "view")
-                # For a UIViewSet, .filterset_class, for an ObjectListView, .filterset.
-                filterset = getattr(view_or_viewset, "filterset_class", getattr(view_or_viewset, "filterset", None))
-                # For a UIViewSet, .table_class, for an ObjectListView, .table.
-                table = getattr(view_or_viewset, "table_class", getattr(view_or_viewset, "table", None))
+                try:
+                    view_func = resolve(reverse(url)).func
+                    # For UIViewSet, view_func.cls gets what we need; for an ObjectListView, view_func.view_class is it.
+                    view_or_viewset = getattr(view_func, "cls", getattr(view_func, "view_class", None))
+                    queryset = view_or_viewset.queryset.restrict(request.user, "view")
+                    # For a UIViewSet, .filterset_class, for an ObjectListView, .filterset.
+                    filterset = getattr(view_or_viewset, "filterset_class", getattr(view_or_viewset, "filterset", None))
+                    # For a UIViewSet, .table_class, for an ObjectListView, .table.
+                    table = getattr(view_or_viewset, "table_class", getattr(view_or_viewset, "table", None))
 
-                # Construct the results table for this object type
-                filtered_queryset = filterset({"q": form.cleaned_data["q"]}, queryset=queryset).qs
-                table = table(filtered_queryset, orderable=False)
-                table.paginate(per_page=SEARCH_MAX_RESULTS)
+                    # Construct the results table for this object type
+                    filtered_queryset = filterset({"q": form.cleaned_data["q"]}, queryset=queryset).qs
+                    table = table(filtered_queryset, orderable=False)
+                    table.paginate(per_page=SEARCH_MAX_RESULTS)
 
-                if table.page:
-                    results.append(
-                        {
-                            "name": queryset.model._meta.verbose_name_plural,
-                            "table": table,
-                            "url": f"{reverse(url)}?q={form.cleaned_data.get('q')}",
-                        }
-                    )
+                    if table.page:
+                        results.append(
+                            {
+                                "name": queryset.model._meta.verbose_name_plural,
+                                "table": table,
+                                "url": f"{reverse(url)}?q={form.cleaned_data.get('q')}",
+                            }
+                        )
+                except NoReverseMatch:
+                    messages.error(request, f'Missing URL "{url}" - unable to show search results for {modelname}.')
 
         return render(
             request,

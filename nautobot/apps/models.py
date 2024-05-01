@@ -43,7 +43,7 @@ from nautobot.extras.models import (
     StatusField,
     StatusModel,
 )
-from nautobot.extras.models.mixins import DynamicGroupMixin, NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, DynamicGroupMixin, NotesMixin, StaticGroupMixin
 from nautobot.extras.models.models import ConfigContextSchemaValidationMixin
 from nautobot.extras.plugins import CustomValidator
 from nautobot.extras.utils import extras_features
@@ -64,6 +64,7 @@ __all__ = (
     "ConfigContextSchemaValidationMixin",
     "construct_composite_key",
     "construct_natural_slug",
+    "ContactMixin",
     "ContentTypeRelatedQuerySet",
     "count_related",
     "CustomFieldModel",
@@ -99,6 +100,7 @@ __all__ = (
     "serialize_object",
     "slugify_dashes_to_underscores",
     "slugify_dots_to_dashes",
+    "StaticGroupMixin",
     "StatusField",
     "StatusModel",
     "TagsField",

@@ -232,15 +232,15 @@ class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "vrf": cls.vrfs[2].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[2].namespace)[0].pk,
+                "prefix": cls.prefixes.filter(namespace=cls.vrfs[2].namespace).exclude(vrfs__in=[cls.vrfs[2]])[0].pk,
             },
             {
                 "vrf": cls.vrfs[3].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[3].namespace)[0].pk,
+                "prefix": cls.prefixes.filter(namespace=cls.vrfs[3].namespace).exclude(vrfs__in=[cls.vrfs[3]])[0].pk,
             },
             {
                 "vrf": cls.vrfs[4].pk,
-                "prefix": cls.prefixes.filter(namespace=cls.vrfs[4].namespace)[0].pk,
+                "prefix": cls.prefixes.filter(namespace=cls.vrfs[4].namespace).exclude(vrfs__in=[cls.vrfs[4]])[0].pk,
             },
         ]
 
@@ -626,26 +626,27 @@ class PrefixLocationAssignmentTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.prefixes = Prefix.objects.filter(locations__isnull=False)
+        cls.prefixes = Prefix.objects.all()
         cls.locations = Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(Prefix))
-        locations_without_prefix = cls.locations.exclude(prefixes__in=[cls.prefixes[0], cls.prefixes[1]])
+        locations_without_prefix_0 = cls.locations.exclude(prefixes__in=[cls.prefixes[0]])
+        locations_without_prefix_1 = cls.locations.exclude(prefixes__in=[cls.prefixes[1]])
 
         cls.create_data = [
             {
                 "prefix": cls.prefixes[0].pk,
-                "location": locations_without_prefix[1].pk,
+                "location": locations_without_prefix_0[0].pk,
             },
             {
                 "prefix": cls.prefixes[0].pk,
-                "location": locations_without_prefix[2].pk,
+                "location": locations_without_prefix_0[1].pk,
             },
             {
                 "prefix": cls.prefixes[1].pk,
-                "location": locations_without_prefix[3].pk,
+                "location": locations_without_prefix_1[0].pk,
             },
             {
                 "prefix": cls.prefixes[1].pk,
-                "location": locations_without_prefix[4].pk,
+                "location": locations_without_prefix_1[1].pk,
             },
         ]
 

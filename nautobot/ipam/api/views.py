@@ -160,7 +160,13 @@ class PrefixViewSet(NautobotModelViewSet):
 
     @extend_schema(methods=["get"], responses={200: serializers.AvailablePrefixSerializer(many=True)})
     @extend_schema(methods=["post"], responses={201: serializers.PrefixSerializer(many=False)})
-    @action(detail=True, url_path="available-prefixes", methods=["get", "post"], filterset_class=None)
+    @action(
+        detail=True,
+        name="Available Prefixes",
+        url_path="available-prefixes",
+        methods=["get", "post"],
+        filterset_class=None,
+    )
     def available_prefixes(self, request, pk=None):
         """
         A convenience method for returning available child prefixes within a parent.
@@ -237,6 +243,7 @@ class PrefixViewSet(NautobotModelViewSet):
     )
     @action(
         detail=True,
+        name="Available IPs",
         url_path="available-ips",
         methods=["get", "post"],
         queryset=IPAddress.objects.all(),
