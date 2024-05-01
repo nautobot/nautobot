@@ -51,7 +51,8 @@ class GitRepositorySync(Job):
             # Given that the above succeeded, tell all workers (including ourself) to call ensure_git_repository()
             app.control.broadcast("refresh_git_repository", repository_pk=repository.pk, head=repository.current_head)
         finally:
-            self.logger.info(f"Repository synchronization completed in {job_result.duration}")
+            if job_result.duration:
+                self.logger.info("Repository synchronization completed in %s", job_result.duration)
 
 
 class GitRepositoryDryRun(Job):

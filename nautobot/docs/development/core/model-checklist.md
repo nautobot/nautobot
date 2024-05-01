@@ -20,7 +20,7 @@ article ul li {
 
 - Implement model in `nautobot.<app>.models` module
     - Use appropriate [base class](best-practices.md#base-classes) and mixin(s)
-    - Use appropriate `@extras_features` decorator values
+    - Use appropriate [`@extras_features`](#extras-features) decorator values
     - Define appropriate uniqueness constraint(s)
     - Define appropriate `__str__()` logic
     - _optional_ Define appropriate additional [`clean()`](best-practices.md#model-validation) logic
@@ -34,6 +34,25 @@ article ul li {
 - _optional_ Enhance `ConfigContext` if the new model can be used as a filter criteria for assigning Devices or Virtual Machines to Config Contexts
     - Update ConfigContextQuerySet, ConfigContextFilterSet, ConfigContext forms, edit and detail views and HTML templates
 - _optional_ Expose any new relevant Python APIs in `nautobot.apps` namespace for App consumption
+
+#### Extras Features
+
+- `cable_terminations`: Models that can be connected to another model with a `Cable`
+- `config_context_owners`: Models that can be assigned to the `owner` GenericForeignKey field on a `ConfigContext`
+- `custom_fields`: (DEPRECATED - Uses `nautobot.extras.utils.populate_model_features_registry` to populate [Model Features Registry](model-features.md)) Models that support ComputedFields and CustomFields, used for limiting the choices for the `CustomField.content_types` and `ComputedField.content_type` fields
+- `custom_links`: Models that can display `CustomLinks` on the object's detail view (by default, all models that use `generic/object_retrieve.html` as a base template support custom links)
+- `custom_validators`: Models that can support custom `clean` logic by implementing a [`CustomValidator`](../apps/api/platform-features/custom-validators.md)
+- `dynamic_groups`: Models that can be assigned to a `DynamicGroup`, used for limiting the choices for the `DynamicGroup.content_type` form field
+- `export_template_owners`: Models that can be assigned to the `owner` GenericForeignKey field on an `ExportTemplate`
+- `export_templates`: Models that can be exported using an `ExportTemplate`, used for limiting the choices for the `ExportTemplate.content_type` field
+- `graphql`: Models that should be exposed through the [GraphQL API](../apps/api/models/graphql.md), used to build the list of registered models to build the GraphQL schema
+- `job_results`: No longer used.
+- `locations`: Models that support a foreign key to `Location`, used for limiting the choices for the `LocationType.content_types` field
+- `relationships`: (DEPRECATED - Uses `nautobot.extras.utils.populate_model_features_registry` to populate [Model Features Registry](model-features.md)) Models that support custom relationships
+- `statuses`: Models that support a foreign key to `Status`, used for limiting the choices for the `Status.content_types` field
+- `webhooks`: Models that can be used to trigger webhooks, used for limiting the choices for the `Webhook.content_types` field
+
+Most new models should use the `custom_links`, `custom_validators`, `export_templates`, `graphql`, and `webhooks` features at minimum.
 
 ### REST API
 

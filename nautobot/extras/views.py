@@ -1199,7 +1199,10 @@ class JobListView(generic.ObjectListView):
     filterset = filters.JobFilterSet
     filterset_form = forms.JobFilterForm
     action_buttons = ()
-    non_filter_params = ("display",)
+    non_filter_params = (
+        *generic.ObjectListView.non_filter_params,
+        "display",
+    )
     template_name = "extras/job_list.html"
 
     def alter_queryset(self, request):
@@ -1254,11 +1257,9 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         job_model = self._get_job_model_or_404(class_path, pk)
 
         try:
-            try:
-                job_class = job_model.job_class
-            except TypeError as exc:
-                # job_class may be None
-                raise RuntimeError("Job code for this job is not currently installed or loadable") from exc
+            job_class = get_job(job_model.class_path, reload=True)
+            if job_class is None:
+                raise RuntimeError("Job code for this job is not currently installed or loadable")
             initial = normalize_querydict(request.GET, form_class=job_class.as_form_class())
             if "kwargs_from_job_result" in initial:
                 job_result_pk = initial.pop("kwargs_from_job_result")
@@ -1306,7 +1307,8 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
     def post(self, request, class_path=None, pk=None):
         job_model = self._get_job_model_or_404(class_path, pk)
 
-        job_form = job_model.job_class.as_form(request.POST, request.FILES) if job_model.job_class is not None else None
+        job_class = get_job(job_model.class_path, reload=True)
+        job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
         schedule_form = forms.JobScheduleForm(request.POST)
         task_queue = request.POST.get("_task_queue")
 
@@ -1319,7 +1321,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         # Allow execution only if a worker process is running and the job is runnable.
         if not get_worker_count(queue=task_queue):
             messages.error(request, "Unable to run or schedule job: Celery worker process not running.")
-        elif not job_model.installed or job_model.job_class is None:
+        elif not job_model.installed or job_class is None:
             messages.error(request, "Unable to run or schedule job: Job is not presently installed.")
         elif not job_model.enabled:
             messages.error(request, "Unable to run or schedule job: Job is not enabled to be run.")
@@ -1371,11 +1373,11 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                 celery_kwargs = {"nautobot_job_profile": profile, "queue": task_queue}
                 scheduled_job = ScheduledJob(
                     name=schedule_name,
-                    task=job_model.job_class.registered_name,
+                    task=job_model.class_path,
                     job_model=job_model,
                     start_time=schedule_datetime,
                     description=f"Nautobot job {schedule_name} scheduled by {request.user} for {schedule_datetime}",
-                    kwargs=job_model.job_class.serialize_data(job_form.cleaned_data),
+                    kwargs=job_class.serialize_data(job_form.cleaned_data),
                     celery_kwargs=celery_kwargs,
                     interval=schedule_type,
                     one_off=schedule_type == JobExecutionType.TYPE_FUTURE,
@@ -1395,13 +1397,13 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
             else:
                 # Enqueue job for immediate execution
-                job_kwargs = job_model.job_class.prepare_job_kwargs(job_form.cleaned_data)
+                job_kwargs = job_class.prepare_job_kwargs(job_form.cleaned_data)
                 job_result = JobResult.enqueue_job(
                     job_model,
                     request.user,
                     profile=profile,
                     task_queue=task_queue,
-                    **job_model.job_class.serialize_data(job_kwargs),
+                    **job_class.serialize_data(job_kwargs),
                 )
 
                 if return_url:
@@ -1420,10 +1422,10 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             return redirect(return_url)
 
         template_name = "extras/job.html"
-        if job_model.job_class is not None and hasattr(job_model.job_class, "template_name"):
+        if job_class is not None and hasattr(job_class, "template_name"):
             try:
-                get_template(job_model.job_class.template_name)
-                template_name = job_model.job_class.template_name
+                get_template(job_class.template_name)
+                template_name = job_class.template_name
             except TemplateDoesNotExist as err:
                 messages.error(request, f'Unable to render requested custom job template "{template_name}": {err}')
 
@@ -1504,7 +1506,7 @@ class JobApprovalRequestView(generic.ObjectView):
         """
         job_model = instance.job_model
         if job_model is not None:
-            job_class = job_model.job_class
+            job_class = get_job(job_model.class_path, reload=True)
         else:
             # 2.0 TODO: remove this fallback?
             job_class = get_job(instance.job_class)
@@ -1540,6 +1542,7 @@ class JobApprovalRequestView(generic.ObjectView):
         dry_run = "_dry_run" in post_data
 
         job_model = scheduled_job.job_model
+        job_class = get_job(job_model.class_path, reload=True)
 
         if dry_run:
             # To dry-run a job, a user needs the same permissions that would be needed to run the job directly
@@ -1553,13 +1556,13 @@ class JobApprovalRequestView(generic.ObjectView):
                 messages.error(request, "This job does not support dryrun")
             else:
                 # Immediately enqueue the job and send the user to the normal JobResult view
-                job_kwargs = job_model.job_class.prepare_job_kwargs(scheduled_job.kwargs or {})
+                job_kwargs = job_class.prepare_job_kwargs(scheduled_job.kwargs or {})
                 job_kwargs["dryrun"] = True
                 job_result = JobResult.enqueue_job(
                     job_model,
                     request.user,
                     celery_kwargs=scheduled_job.celery_kwargs,
-                    **job_model.job_class.serialize_data(job_kwargs),
+                    **job_class.serialize_data(job_kwargs),
                 )
 
                 return redirect("extras:jobresult", pk=job_result.pk)
@@ -1646,7 +1649,7 @@ class ScheduledJobView(generic.ObjectView):
             for name, var in job_class._get_vars().items():
                 field = var.as_field()
                 if field.label:
-                    labels[name] = var
+                    labels[name] = field.label
                 else:
                     labels[name] = pretty_name(name)
         return {"labels": labels, "job_class_found": (job_class is not None)}

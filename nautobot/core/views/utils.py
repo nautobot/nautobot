@@ -1,5 +1,6 @@
 import datetime
 from io import BytesIO
+import urllib.parse
 
 from django.contrib import messages
 from django.core.exceptions import FieldError, ValidationError
@@ -269,7 +270,7 @@ def prepare_cloned_fields(instance):
         for tag in instance.tags.all():
             params.append(("tags", tag.pk))
 
-    # Concatenate parameters into a URL query string
-    param_string = "&".join([f"{k}={v}" for k, v in params])
+    # Encode the parameters into a URL query string
+    param_string = urllib.parse.urlencode(params)
 
     return param_string
