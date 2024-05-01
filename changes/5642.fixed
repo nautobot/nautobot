@@ -1,2 +1,0 @@
-Fixed some cases where stale Job code might be present when Jobs are sourced from `JOBS_ROOT` or a Git repository.
-Fixed incorrect handling of Job `kwargs` when dry-running a job approval request via the REST API.
