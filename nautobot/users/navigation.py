@@ -17,7 +17,7 @@ menu_items = (
                 weight=150,
                 items=(
                     NavMenuItem(
-                        link="users:savedview_list",
+                        link="user:savedview_list",
                         name="Saved Views",
                         weight=100,
                         permissions=["users.view_savedviews"],
@@ -37,7 +37,7 @@ navigation = (
                 weight=500,
                 items=(
                     NavItem(
-                        link="users:savedview_list",
+                        link="user:savedview_list",
                         name="Saved Views",
                         weight=100,
                         permissions=["users.view_savedviews"],

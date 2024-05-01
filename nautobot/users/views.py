@@ -170,7 +170,7 @@ class UserConfigView(GenericView):
         user.save()
         messages.success(request, "Your preferences have been updated.")
 
-        return redirect("users:preferences")
+        return redirect("user:preferences")
 
 
 class ChangePasswordView(GenericView):
@@ -185,7 +185,7 @@ class ChangePasswordView(GenericView):
                 request,
                 self.RESTRICTED_NOTICE,
             )
-            return redirect("users:profile")
+            return redirect("user:profile")
 
         form = PasswordChangeForm(user=request.user)
 
@@ -206,14 +206,14 @@ class ChangePasswordView(GenericView):
                 request,
                 self.RESTRICTED_NOTICE,
             )
-            return redirect("users:profile")
+            return redirect("user:profile")
 
         form = PasswordChangeForm(user=request.user, data=request.POST)
         if form.is_valid():
             form.save()
             update_session_auth_hash(request, form.user)
             messages.success(request, "Your password has been changed successfully.")
-            return redirect("users:profile")
+            return redirect("user:profile")
 
         return render(
             request,
@@ -390,7 +390,7 @@ class TokenEditView(GenericView):
                 "obj": token,
                 "obj_type": token._meta.verbose_name,
                 "form": form,
-                "return_url": reverse("users:token_list"),
+                "return_url": reverse("user:token_list"),
                 "editing": token.present_in_database,
             },
         )
@@ -414,7 +414,7 @@ class TokenEditView(GenericView):
             if "_addanother" in request.POST:
                 return redirect(request.path)
             else:
-                return redirect("users:token_list")
+                return redirect("user:token_list")
 
         return render(
             request,
@@ -423,7 +423,7 @@ class TokenEditView(GenericView):
                 "obj": token,
                 "obj_type": token._meta.verbose_name,
                 "form": form,
-                "return_url": reverse("users:token_list"),
+                "return_url": reverse("user:token_list"),
                 "editing": token.present_in_database,
             },
         )
@@ -433,7 +433,7 @@ class TokenDeleteView(GenericView):
     def get(self, request, pk):
         token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
         initial_data = {
-            "return_url": reverse("users:token_list"),
+            "return_url": reverse("user:token_list"),
         }
         form = ConfirmationForm(initial=initial_data)
 
@@ -444,7 +444,7 @@ class TokenDeleteView(GenericView):
                 "obj": token,
                 "obj_type": token._meta.verbose_name,
                 "form": form,
-                "return_url": reverse("users:token_list"),
+                "return_url": reverse("user:token_list"),
             },
         )
 
@@ -454,7 +454,7 @@ class TokenDeleteView(GenericView):
         if form.is_valid():
             token.delete()
             messages.success(request, "Token deleted")
-            return redirect("users:token_list")
+            return redirect("user:token_list")
 
         return render(
             request,
@@ -463,7 +463,7 @@ class TokenDeleteView(GenericView):
                 "obj": token,
                 "obj_type": token._meta.verbose_name,
                 "form": form,
-                "return_url": reverse("users:token_list"),
+                "return_url": reverse("user:token_list"),
             },
         )
 
@@ -486,7 +486,7 @@ class AdvancedProfileSettingsEditView(GenericView):
             {
                 "form": form,
                 "active_tab": "advanced_settings",
-                "return_url": reverse("users:advanced_settings_edit"),
+                "return_url": reverse("user:advanced_settings_edit"),
                 "is_django_auth_user": is_django_auth_user(request),
             },
         )
@@ -512,7 +512,7 @@ class AdvancedProfileSettingsEditView(GenericView):
             {
                 "form": form,
                 "active_tab": "advanced_settings",
-                "return_url": reverse("users:advanced_settings_edit"),
+                "return_url": reverse("user:advanced_settings_edit"),
                 "is_django_auth_user": is_django_auth_user(request),
             },
         )
