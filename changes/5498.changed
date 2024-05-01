@@ -1,1 +1,0 @@
-Changed the `nautobot.extras.jobs.Job` class to no longer be a subclass of `celery.tasks.Task`.
