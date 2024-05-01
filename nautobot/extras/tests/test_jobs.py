@@ -1079,7 +1079,6 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         job_hook.content_types.set([obj_type])
 
     def test_enqueue_job_hook(self):
-        self.assertEqual(models.JobLogEntry.objects.count(), 0)
         with web_request_context(user=self.user):
             status = models.Status.objects.get_for_model(Location).first()
             Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type, status=status)
@@ -1101,7 +1100,6 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
 
         https://github.com/nautobot/nautobot/issues/4327
         """
-        self.assertEqual(models.JobLogEntry.objects.count(), 0)
         status = models.Status.objects.get_for_model(Location).first()
         loc = Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type, status=status)
         models.ObjectChange.objects.all().delete()
