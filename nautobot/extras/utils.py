@@ -145,7 +145,7 @@ class FeatureQuery:
 
         populate_model_features_registry()
         entries = self.as_dict()
-        if entries: 
+        if entries:
             query = Q()
             for app_label, models in entries:
                 query |= Q(app_label=app_label, model__in=models)

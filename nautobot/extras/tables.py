@@ -1056,12 +1056,13 @@ class StaticGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     count = tables.TemplateColumn(MEMBERS_COUNT, verbose_name="Group Members")
+    tenant = tables.Column(linkify=True)
     tags = TagColumn(url_name="extras:staticgroup_list")
     actions = ButtonsColumn(StaticGroup)
 
     class Meta(BaseTable.Meta):
         model = StaticGroup
-        fields = ["pk", "name", "content_type", "count", "description", "tags", "actions"]
+        fields = ["pk", "name", "content_type", "count", "description", "tenant", "tags", "actions"]
 
 
 class StaticGroupAssociationTable(BaseTable):

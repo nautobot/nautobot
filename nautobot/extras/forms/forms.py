@@ -1557,7 +1557,11 @@ class StaticGroupBulkAssignForm(BulkEditForm):
         queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
         widget=forms.HiddenInput(),
     )
-    create_and_assign_to_new_group_name = forms.CharField(required=False, label="Add to new group", help_text="Create a new group with this name and assign the selected objects to it.")
+    create_and_assign_to_new_group_name = forms.CharField(
+        required=False,
+        label="Add to new group",
+        help_text="Create a new group with this name and assign the selected objects to it.",
+    )
 
     def __init__(self, model, *args, **kwargs):
         super().__init__(model, *args, **kwargs)
@@ -1568,10 +1572,16 @@ class StaticGroupBulkAssignForm(BulkEditForm):
             required=False,
         )
         self.fields["add_to_groups"] = DynamicModelMultipleChoiceField(
-            queryset=StaticGroup.objects.all(), required=False, query_params={"content_type": model._meta.label_lower}, label="Add to existing group(s)",
+            queryset=StaticGroup.objects.all(),
+            required=False,
+            query_params={"content_type": model._meta.label_lower},
+            label="Add to existing group(s)",
         )
         self.fields["remove_from_groups"] = DynamicModelMultipleChoiceField(
-                queryset=StaticGroup.objects.all(), required=False, query_params={"content_type": model._meta.label_lower}, label="Remove from group(s)",
+            queryset=StaticGroup.objects.all(),
+            required=False,
+            query_params={"content_type": model._meta.label_lower},
+            label="Remove from group(s)",
         )
 
     class Meta:

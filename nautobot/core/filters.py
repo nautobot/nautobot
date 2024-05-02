@@ -715,7 +715,7 @@ class BaseFilterSet(django_filters.FilterSet):
         """
         filters = super().get_filters()
 
-        if ("static_group" not in filters and getattr(cls._meta.model, "is_static_group_associable_model", False)):
+        if "static_group" not in filters and getattr(cls._meta.model, "is_static_group_associable_model", False):
             # Add "static_group" field as the last key
             from nautobot.extras.models import StaticGroup
 
@@ -723,11 +723,15 @@ class BaseFilterSet(django_filters.FilterSet):
                 queryset=StaticGroup.objects.all(),
                 field_name="associated_static_groups__static_group",
                 to_field_name="name",
+                query_params={"content_type": cls._meta.model._meta.label_lower},
                 label="Static group",
             )
 
         # django-filters has no concept of "abstract" filtersets, so we have to fake it
         if cls._meta.model is not None:
+            if "tags" in filters and isinstance(filters["tags"], TagFilter):
+                filters["tags"].extra["query_params"] = {"content_types": [cls._meta.model._meta.label_lower]}
+
             new_filters = {}
             for existing_filter_name, existing_filter in filters.items():
                 new_filters.update(

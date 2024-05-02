@@ -4,7 +4,7 @@
 {% block extra_nav_tabs %}
     <li role="presentation"{% if request.GET.tab == 'members' %} class="active"{% endif %}>
         <a href="{{ object.get_absolute_url }}#members" onclick="switch_tab(this.href, reload=true)" aria-controls="members" role="tab" data-toggle="tab">
-            Members {% badge object.count %}
+            Members {% badge object.count True%}
         </a>
     </li>
 {% endblock extra_nav_tabs %}
@@ -13,7 +13,7 @@
     <div id="members" role="tabpanel" class="tab-pane{% if request.GET.tab == 'members' %} active{% else %} fade{% endif %}">
         <div class="row">
             <div class="col-md-12">
-                {% include 'utilities/obj_table.html' with table=members_table table_template='panel_table.html' heading='Static Group members' content_type=object.content_type permissions=members_table_permissions %}
+                {% include 'utilities/obj_table.html' with table=members_table table_template='panel_table.html' heading='Static Group members' %}
             </div>
         </div>
     </div>
@@ -36,6 +36,10 @@
             <tr>
                 <td>Content Type</td>
                 <td>{{ object.content_type }}</td>
+            </tr>
+            <tr>
+                <td>Tenant</td>
+                <td>{{ object.tenant|hyperlinked_object }}</td>
             </tr>
         </table>
     </div>

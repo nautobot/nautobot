@@ -47,8 +47,15 @@ class StaticGroup(PrimaryModel):
         limit_choices_to=FeatureQuery("static_groups"),
         help_text="The type of object contained in this Static Group.",
     )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="static_groups",
+        blank=True,
+        null=True,
+    )
 
-    clone_fields = ["content_type"]
+    clone_fields = ["content_type", "tenant"]
     is_static_group_associable_model = False
 
     class Meta:

@@ -15,6 +15,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
         ("extras", "0106_populate_default_statuses_and_roles_for_contact_associations"),
+        ("tenancy", "0001_initial"),
     ]
 
     operations = [
@@ -42,6 +43,16 @@ class Migration(migrations.Migration):
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="static_groups",
                         to="contenttypes.contenttype",
+                    ),
+                ),
+                (
+                    "tenant",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="static_groups",
+                        to="tenancy.tenant",
                     ),
                 ),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),

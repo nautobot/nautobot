@@ -2440,7 +2440,10 @@ class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin
 
     def post(self, request, **kwargs):
         """
-        Unlike BulkEditView, this takes a single POST rather than two to perform its operation.
+        Update the static group assignments of the provided `pk_list` (or `_all`) of the given `content_type`.
+
+        Unlike BulkEditView, this takes a single POST rather than two to perform its operation as
+        there's no separate confirmation step involved.
         """
         # TODO error handling
         content_type = ContentType.objects.get(pk=request.POST.get("content_type"))
@@ -2449,7 +2452,7 @@ class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin
 
         if request.POST.get("_all"):
             if filterset_class is not None:
-                pk_list = list(filterset_class(request.POST, model.objects.only("pk")).qs.values_list("pk", flat=True))
+                pk_list = list(filterset_class(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True))
             else:
                 pk_list = list(model.objects.all().values_list("pk", flat=True))
         else:
@@ -2461,41 +2464,70 @@ class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin
         if form.is_valid():
             logger.debug("Form validation was successful")
             try:
+                add_to_groups = list(form.cleaned_data["add_to_groups"])
+                new_group_name = form.cleaned_data["create_and_assign_to_new_group_name"]
+                if new_group_name:
+                    if not request.user.has_perm("extras.add_staticgroup"):
+                        pass  # TODO
+                    else:
+                        new_group = StaticGroup(name=new_group_name, content_type=content_type)
+                        new_group.validated_save()
+                        add_to_groups.append(new_group)
+                        msg = f"Created static group {new_group.name}"
+                        logger.info(msg)
+                        messages.success(self.request, msg)
+
                 with deferred_change_logging_for_bulk_operation():
                     associations = []
+                    total_added = 0
                     for pk in pk_list:
-                        for static_group in form.cleaned_data["add_to_groups"]:
-                            association, _ = StaticGroupAssociation.objects.get_or_create(
+                        for static_group in add_to_groups:
+                            association, created = StaticGroupAssociation.objects.get_or_create(
                                 static_group=static_group,
                                 associated_object_type=content_type,
                                 associated_object_id=pk,
                             )
                             association.validated_save()
                             associations.append(association)
-                            logger.debug("Saved %s for PK %s", association, pk)
+                            if created:
+                                logger.debug("Created %s", association)
+                                total_added += 1
 
                     # Enforce object-level permissions
                     if self.queryset.filter(pk__in=[assoc.pk for assoc in associations]).count() != len(associations):
                         raise StaticGroupAssociation.DoesNotExist
 
                 if associations:
-                    msg = f"Associated {len(associations)} {model._meta.verbose_name_plural} to static groups {form.cleaned_data['add_to_groups']}"
+                    msg = (
+                        f"Included {len(pk_list)} {model._meta.verbose_name_plural} "
+                        f"into {len(add_to_groups)} static group(s) ({total_added} new associations)."
+                    )
                     logger.info(msg)
                     messages.success(self.request, msg)
 
                 if form.cleaned_data["remove_from_groups"]:
+                    total_deleted = 0
                     for static_group in form.cleaned_data["remove_from_groups"]:
-                        StaticGroupAssociation.objects.restrict(request.user, "delete").filter(
-                            static_group=static_group,
-                            associated_object_type=content_type,
-                            associated_object_id__in=pk_list,
-                        ).delete()
+                        deleted_count, _ = (
+                            StaticGroupAssociation.objects.restrict(request.user, "delete")
+                            .filter(
+                                static_group=static_group,
+                                associated_object_type=content_type,
+                                associated_object_id__in=pk_list,
+                            )
+                            .delete()
+                        )
+                        total_deleted += deleted_count
 
-                    msg = f"Removed {len(pk_list)} {model._meta.verbose_name_plural} from static groups {form.cleaned_data['remove_from_groups']}"
+                    msg = (
+                        f"Excluded {len(pk_list)} {model._meta.verbose_name_plural} from "
+                        f"{len(form.cleaned_data['remove_from_groups'])} static group(s) "
+                        f"({total_deleted} deleted associations)."
+                    )
                     logger.info(msg)
                     messages.success(self.request, msg)
             except ValidationError as e:
-                messages.error(self.request, f"{association} failed validation: {e}")
+                messages.error(self.request, e)
             except StaticGroupAssociation.DoesNotExist:
                 msg = "Static group association failed due to object-level permissions violation"
                 logger.warning(msg)
@@ -2505,6 +2537,7 @@ class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin
             logger.debug("Form validation failed")
 
         return redirect(self.get_return_url(request))
+
 
 #
 # Custom statuses

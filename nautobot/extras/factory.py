@@ -45,6 +45,7 @@ from nautobot.extras.utils import (
     RoleModelsQuery,
     TaggableClassesQuery,
 )
+from nautobot.tenancy.models import Tenant
 
 
 class ContactFactory(PrimaryModelFactory):
@@ -311,7 +312,7 @@ class StaticGroupFactory(PrimaryModelFactory):
 
     class Meta:
         model = StaticGroup
-        exclude = ("color", "has_description")
+        exclude = ("color", "has_description", "has_tenant")
 
     color = factory.Faker("safe_color_name")
     content_type = random_instance(
@@ -322,6 +323,8 @@ class StaticGroupFactory(PrimaryModelFactory):
     )
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
+    has_tenant = NautobotBoolIterator()
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant))
 
     @factory.post_generation
     def members(self, created, extracted, **kwargs):
