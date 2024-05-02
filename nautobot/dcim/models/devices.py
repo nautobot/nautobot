@@ -1437,13 +1437,6 @@ class ModuleType(PrimaryModel):
     def __str__(self):
         return self.model
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Save references to the original front/rear images
-        self._original_front_image = self.front_image if self.present_in_database else None
-        self._original_rear_image = self.rear_image if self.present_in_database else None
-
     def to_yaml(self):
         data = OrderedDict(
             (
@@ -1530,24 +1523,6 @@ class ModuleType(PrimaryModel):
             ]
 
         return yaml.dump(dict(data), sort_keys=False, allow_unicode=True)
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-
-        # Delete any previously uploaded image files that are no longer in use
-        if self._original_front_image and self.front_image != self._original_front_image:
-            self._original_front_image.delete(save=False)
-        if self._original_rear_image and self.rear_image != self._original_rear_image:
-            self._original_rear_image.delete(save=False)
-
-    def delete(self, *args, **kwargs):
-        super().delete(*args, **kwargs)
-
-        # Delete any uploaded image files
-        if self.front_image:
-            self.front_image.delete(save=False)
-        if self.rear_image:
-            self.rear_image.delete(save=False)
 
     @property
     def display(self):
