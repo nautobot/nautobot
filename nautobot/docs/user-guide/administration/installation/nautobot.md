@@ -160,7 +160,7 @@ By default, Pip will now install Python packages as wheels. In most cases this i
 
 ## Install Nautobot
 
-=== "PostgreSQL (Ubuntu and RHEL Flavors)"
+=== "PostgreSQL"
 
     Use Pip to install Nautobot:
 
@@ -168,7 +168,7 @@ By default, Pip will now install Python packages as wheels. In most cases this i
     pip3 install --no-binary=pyuwsgi nautobot
     ```
 
-=== "MySQL (Ubuntu and RHEL Flavors)"
+=== "MySQL"
 
     Use Pip to install Nautobot with the MySQL client:
 
