@@ -224,8 +224,9 @@ def get_created_and_last_updated_usernames_for_model(instance):
     created_by = None
     last_updated_by = None
     try:
-        created_by_record = object_change_records.get(action=ObjectChangeActionChoices.ACTION_CREATE)
-        created_by = created_by_record.user_name
+        created_by_record = object_change_records.filter(action=ObjectChangeActionChoices.ACTION_CREATE).first()
+        if created_by_record is not None:
+            created_by = created_by_record.user_name
     except ObjectChange.DoesNotExist:
         pass
 

@@ -1130,6 +1130,12 @@ class StaticGroupFilterSet(NautobotFilterSet):
         },
     )
     content_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("static_groups").get_choices, conjoined=False)
+    tenant = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="tenant",
+        queryset=Tenant.objects.all(),
+        label="Tenant (ID or name)",
+        to_field_name="name",
+    )
 
     class Meta:
         model = StaticGroup

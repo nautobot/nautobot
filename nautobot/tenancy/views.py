@@ -5,6 +5,7 @@ from nautobot.core.models.querysets import count_related
 from nautobot.core.views import generic
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.dcim.models import Device, Location, Rack, RackReservation
+from nautobot.extras.models import StaticGroup
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
 from nautobot.virtualization.models import Cluster, VirtualMachine
 
@@ -82,22 +83,23 @@ class TenantView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         stats = {
+            "circuit_count": Circuit.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            "cluster_count": Cluster.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            "device_count": Device.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            "ipaddress_count": IPAddress.objects.restrict(request.user, "view").filter(tenant=instance).count(),
             # TODO: Should we include child locations of the filtered locations in the location_count below?
             "location_count": Location.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            "prefix_count": Prefix.objects.restrict(request.user, "view").filter(tenant=instance).count(),
             "rack_count": Rack.objects.restrict(request.user, "view").filter(tenant=instance).count(),
             "rackreservation_count": RackReservation.objects.restrict(request.user, "view")
             .filter(tenant=instance)
             .count(),
-            "device_count": Device.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "vrf_count": VRF.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "prefix_count": Prefix.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "ipaddress_count": IPAddress.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "vlan_count": VLAN.objects.restrict(request.user, "view").filter(tenant=instance).count(),
-            "circuit_count": Circuit.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            "staticgroup_count": StaticGroup.objects.restrict(request.user, "view").filter(tenant=instance).count(),
             "virtualmachine_count": VirtualMachine.objects.restrict(request.user, "view")
             .filter(tenant=instance)
             .count(),
-            "cluster_count": Cluster.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            "vlan_count": VLAN.objects.restrict(request.user, "view").filter(tenant=instance).count(),
+            "vrf_count": VRF.objects.restrict(request.user, "view").filter(tenant=instance).count(),
         }
 
         return {
