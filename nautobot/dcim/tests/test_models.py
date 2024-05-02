@@ -2009,19 +2009,9 @@ class ModuleBayTestCase(ModelTestCases.BaseModelTestCase):
     @classmethod
     def setUpTestData(cls):
         cls.device = Device.objects.first()
-        cls._delete_module_bays(cls.device)
+        cls.device.module_bays.all().delete()
         cls.module = Module.objects.first()
-        cls._delete_module_bays(cls.module)
-
-    # TODO: should this be a helper method (cascade_delete?) on the ModuleBay model?
-    # This works around the relationship between ModuleBay and its installed Module being protected
-    @classmethod
-    def _delete_module_bays(cls, obj):
-        for module_bay in obj.module_bays.all():
-            if hasattr(module_bay, "installed_module"):
-                cls._delete_module_bays(module_bay.installed_module)
-                module_bay.installed_module.delete()
-            module_bay.delete()
+        cls.module.module_bays.all().delete()
 
     def test_parent_validation_device_and_module(self):
         """Assert that a module bay must have a parent device or parent module but not both."""
