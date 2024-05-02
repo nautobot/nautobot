@@ -1578,7 +1578,7 @@ class Module(PrimaryModel):
     module_type = models.ForeignKey(to="dcim.ModuleType", on_delete=models.PROTECT, related_name="modules")
     parent_module_bay = models.OneToOneField(
         to="dcim.ModuleBay",
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name="installed_module",
         blank=True,
         null=True,
