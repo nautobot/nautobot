@@ -1,0 +1,1 @@
+Made the uniqueness constraints between the ContactAssociation model and the related API serializer consistent.
