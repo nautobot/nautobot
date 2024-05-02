@@ -5,7 +5,7 @@ The documentation assumes that you are running one of the following:
 - Ubuntu 20.04+
 - Debian 11+
 - RHEL/CentOS 8.2+
-    - Also includes other derivatives of RHEL such as RockyLinux or AlmaLinux
+    - Also includes other derivatives of RHEL such as RockyLinux or AlmaLinux, and will be delimited by `RHEL8` tabs in the docs.
 
 ## Install System Packages
 
@@ -48,7 +48,7 @@ Please follow the steps for your selected database backend below.
 
         This will install the PostgreSQL database server and client.
 
-        ```no-highlight
+        ```no-highlight title="Install Postgres"
         sudo apt install -y postgresql
         ```
 
@@ -60,7 +60,7 @@ Please follow the steps for your selected database backend below.
         !!! danger
             **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
 
-        ```no-highlight
+        ```no-highlight title="Enter into Postgres"
         sudo -u postgres psql
         ```
 

@@ -114,7 +114,7 @@ Because the `nautobot` user was created with `NAUTOBOT_ROOT` set as its home dir
         /opt/nautobot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
         ```
 
-=== "RHEL8 flavors"
+=== "RHEL8"
 
     ```no-highlight
     echo $PATH

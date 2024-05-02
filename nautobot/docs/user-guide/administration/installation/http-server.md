@@ -52,7 +52,7 @@ Begin by installing NGINX:
     sudo apt install -y nginx
     ```
 
-=== "CentOS/RHEL8"
+=== "RHEL8"
 
     ```no-highlight
     sudo dnf install -y nginx
