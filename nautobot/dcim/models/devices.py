@@ -1686,7 +1686,7 @@ class Module(PrimaryModel):
 
     def get_cables(self, pk_list=False):
         """
-        Return a QuerySet or PK list matching all Cables connected to a component of this Module.
+        Return a QuerySet or PK list matching all Cables connected to any component of this Module.
         """
         from .cables import Cable
 
