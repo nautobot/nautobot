@@ -56,7 +56,7 @@ from nautobot.core.views.utils import (
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.models import ContactAssociation, ExportTemplate
-from nautobot.extras.tables import AssociatedContactsTable
+from nautobot.extras.tables import AssociatedContactsTable, StaticGroupTable
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
 
 
@@ -157,6 +157,14 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
                 RequestConfig(request, paginate).configure(associations_table)
                 associations_table.columns.show("pk")
                 context["associated_contacts_table"] = associations_table
+            if instance.is_static_group_associable_model:
+                paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+                static_groups = instance.static_groups.restrict(request.user, "view")
+                static_groups_table = StaticGroupTable(static_groups, orderable=False)
+                RequestConfig(request, paginate).configure(static_groups_table)
+                static_groups_table.columns.show("pk")
+                context["associated_static_groups_table"] = static_groups_table
+
             return render(request, self.get_template_name(), context)
 
 

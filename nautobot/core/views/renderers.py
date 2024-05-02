@@ -23,7 +23,7 @@ from nautobot.core.utils.requests import (
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import check_filter_for_display, get_csv_form_fields_from_serializer_class
 from nautobot.extras.models.change_logging import ObjectChange
-from nautobot.extras.tables import AssociatedContactsTable
+from nautobot.extras.tables import AssociatedContactsTable, StaticGroupTable
 from nautobot.extras.utils import get_base_template
 
 
@@ -251,6 +251,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 context["associated_contacts_table"] = associations_table
             else:
                 context["associated_contacts_table"] = None
+            if instance.is_static_group_associable_model:
+                paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+                static_groups = instance.static_groups.restrict(request.user, "view")
+                static_groups_table = StaticGroupTable(static_groups, orderable=False)
+                RequestConfig(request, paginate).configure(static_groups_table)
+                static_groups_table.columns.show("pk")
+                context["associated_static_groups_table"] = static_groups_table
             context.update(view.get_extra_context(request, instance))
         else:
             if view.action == "list":
