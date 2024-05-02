@@ -1541,13 +1541,13 @@ class ModuleType(PrimaryModel):
 class Module(PrimaryModel):
     """
     A Module represents a line card, supervisor, or other interchangeable hardware component within a ModuleBay.
-    Each Module is assigned a ModuleType, Role, and (optionally) a Platform.
+    Each Module is assigned a ModuleType and Status, and optionally a Role and/or Tenant.
 
-    Each Module must be assigned to either a ModuleBay or a Location.
+    Each Module must be assigned to either a ModuleBay or a Location, but not both.
 
-    When a new Module is created, console/power/interface/device bay components are created along with it as dictated
-    by the component templates assigned to its ModuleType. Components can also be added, modified, or deleted after the
-    creation of a Module.
+    When a new Module is created, console, power and interface components are created along with it as dictated
+    by the component templates assigned to its ModuleType. Components can also be added, modified, or deleted after
+    the creation of a Module.
     """
 
     module_type = models.ForeignKey(to="dcim.ModuleType", on_delete=models.PROTECT, related_name="modules")

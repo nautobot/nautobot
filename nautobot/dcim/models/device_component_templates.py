@@ -451,6 +451,8 @@ class DeviceBayTemplate(ComponentTemplateModel):
 
 @extras_features("custom_validators")
 class ModuleBayTemplate(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+    """Template for a slot in a Device or Module which can contain Modules."""
+
     device_type = models.ForeignKey(
         to="dcim.DeviceType",
         on_delete=models.CASCADE,
