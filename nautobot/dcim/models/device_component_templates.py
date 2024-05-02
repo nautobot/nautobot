@@ -476,7 +476,16 @@ class ModuleBayTemplate(BaseModel, ChangeLoggedModel, CustomFieldModel, Relation
 
     class Meta:
         ordering = ("device_type", "module_type", "position")
-        unique_together = (("device_type", "position"), ("module_type", "position"))
+        constraints = [
+            models.UniqueConstraint(
+                fields=["device_type", "position"],
+                name="dcim_modulebaytemplate_device_type_position_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["module_type", "position"],
+                name="dcim_modulebaytemplate_module_type_position_unique",
+            ),
+        ]
 
     @property
     def parent(self):

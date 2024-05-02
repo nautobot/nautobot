@@ -1637,7 +1637,7 @@ class Module(PrimaryModel):
             ),
             models.UniqueConstraint(
                 fields=["module_type", "serial"],
-                name="dcim_module_unique_module_type_serial",
+                name="dcim_module_module_type_serial_unique",
             ),
         ]
 
