@@ -102,7 +102,7 @@ echo $NAUTOBOT_ROOT
 
 Because the `nautobot` user was created with `NAUTOBOT_ROOT` set as its home directory and we had you set the shell to `/bin/bash`, the binary path `$NAUTOBOT_ROOT/bin` is automatically added to the beginning of the `$PATH` environment variable:
 
-=== "Ubuntu 20.04"
+=== "Ubuntu/Debian"
 
     ```no-highlight
     echo $PATH
