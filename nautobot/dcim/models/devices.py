@@ -1630,6 +1630,7 @@ class Module(PrimaryModel):
     class Meta:
         ordering = ("parent_module_bay", "location", "module_type", "asset_tag", "serial")
         constraints = [
+            # Database constraint to make the parent_model_bay and location fields mutually exclusive
             models.CheckConstraint(
                 check=models.Q(parent_module_bay__isnull=False, location__isnull=True)
                 | models.Q(parent_module_bay__isnull=True, location__isnull=False),
