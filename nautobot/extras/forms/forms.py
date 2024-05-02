@@ -1523,6 +1523,7 @@ class StaticGroupForm(NautobotModelForm):
         queryset=ContentType.objects.all(),
         query_params={"feature": "static_groups"},
     )
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all())
 
     class Meta:
         model = StaticGroup
@@ -1530,6 +1531,7 @@ class StaticGroupForm(NautobotModelForm):
             "name",
             "content_type",
             "description",
+            "tenant",
             "tags",
         )
 
@@ -1541,6 +1543,7 @@ class StaticGroupFilterForm(NautobotFilterForm):
         queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
         required=False,
     )
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     tags = TagFilterField(model)
 
 
@@ -1550,6 +1553,10 @@ class StaticGroupBulkEditForm(NautobotBulkEditForm):
         widget=forms.MultipleHiddenInput(),
     )
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+
+    class Meta:
+        nullable_fields = ["tenant"]
 
 
 class StaticGroupBulkAssignForm(BulkEditForm):

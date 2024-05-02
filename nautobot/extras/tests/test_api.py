@@ -81,6 +81,7 @@ from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import VirtualMachine
 
@@ -3508,6 +3509,7 @@ class StaticGroupTest(APIViewTestCases.APIViewTestCase):
                 "description": "A group containing dcim.location objects",
                 "content_type": "dcim.location",
                 "tags": [tag.pk for tag in Tag.objects.get_for_model(StaticGroup)],
+                "tenant": Tenant.objects.first().pk,
             },
             {
                 "name": "Group of Devices",
@@ -3525,6 +3527,7 @@ class StaticGroupTest(APIViewTestCases.APIViewTestCase):
         }
         cls.bulk_update_data = {
             "description": "New description",
+            "tenant": Tenant.objects.last().pk,
         }
 
     def test_changing_content_type_not_allowed(self):

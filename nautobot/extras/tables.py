@@ -1071,11 +1071,11 @@ class StaticGroupAssociationTable(BaseTable):
     pk = ToggleColumn()
     static_group = tables.Column(linkify=True)
     associated_object = tables.Column(linkify=True)
-    actions = ButtonsColumn(StaticGroupAssociation)
+    actions = ButtonsColumn(StaticGroupAssociation, buttons=["changelog", "delete"])
 
     class Meta(BaseTable.Meta):
         model = StaticGroupAssociation
-        fields = ["pk", "static_group", "associated_object", "tags", "actions"]
+        fields = ["pk", "static_group", "associated_object", "actions"]
 
 
 #

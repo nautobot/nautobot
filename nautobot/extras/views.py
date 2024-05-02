@@ -32,6 +32,7 @@ from nautobot.core.views.mixins import (
     GetReturnURLMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
+    ObjectChangeLogViewMixin,
     ObjectDestroyViewMixin,
     ObjectDetailViewMixin,
     ObjectEditViewMixin,
@@ -2416,15 +2417,18 @@ class StaticGroupUIViewSet(NautobotUIViewSet):
 
 class StaticGroupAssociationUIViewSet(
     ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
     ObjectDestroyViewMixin,
     ObjectDetailViewMixin,
     ObjectListViewMixin,
     # TODO anything else?
 ):
     filterset_class = filters.StaticGroupAssociationFilterSet
+    filterset_form_class = forms.StaticGroupAssociationFilterForm
     queryset = StaticGroupAssociation.objects.all()
     serializer_class = serializers.StaticGroupAssociationSerializer
     table_class = tables.StaticGroupAssociationTable
+    action_buttons = ("export",)
 
 
 class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):

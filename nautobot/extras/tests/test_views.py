@@ -65,6 +65,8 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroup,
+    StaticGroupAssociation,
     Status,
     Tag,
     Team,
@@ -75,6 +77,7 @@ from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
 # Use the proper swappable User model
@@ -2766,7 +2769,48 @@ class RelationshipAssociationTestCase(
         self.assertNotIn(instance2.destination.name, content, msg=content)
 
 
+class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = StaticGroup
+
+    @classmethod
+    def setUpTestData(cls):
+        content_type = ContentType.objects.get_for_model(Device)
+
+        cls.form_data = {
+            "name": "The Best Devices",
+            "description": "No really!",
+            "content_type": content_type.pk,
+            "tenant": Tenant.objects.first().pk,
+        }
+
+        cls.bulk_edit_data = {
+            "description": "Is anyone there?",
+            "tenant": Tenant.objects.last().pk,
+        }
+
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
+        super().test_edit_object_with_permission()
+
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
+        super().test_edit_object_with_constrained_permission()
+
+
+class StaticGroupAssociationTestCase(
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = StaticGroupAssociation
+
+
 class StatusTestCase(
+    # TODO? ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,

@@ -1814,6 +1814,8 @@ class StaticGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
     generic_filter_tests = (
         ["description"],
         ["name"],
+        ["tenant", "tenant__id"],
+        ["tenant", "tenant__name"],
     )
 
     def test_content_type(self):
