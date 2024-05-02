@@ -50,7 +50,7 @@ After installing or upgrading a app, you should always run [`nautobot-server pos
 * Collecting any static files provided by the app
 * Etc.
 
-```
+```no-highlight
 nautobot-server post_upgrade
 ```
 

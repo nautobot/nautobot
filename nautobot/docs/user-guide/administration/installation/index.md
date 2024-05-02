@@ -86,7 +86,7 @@ Nautobot was designed to be a cross-platform application that can run on nearly 
 - Debian/Ubuntu flavors of Linux including Ubuntu 20.04+ and Debian 11+ are supported.
 
 !!! info
-    Nautobot _should_ work on any POSIX-compliant system including practically any flavor of Linux, BSD, or even macOS, but those are not *officially* supported at this time.
+    Nautobot *should* work on any POSIX-compliant system including practically any flavor of Linux, BSD, or even macOS, but those are not *officially* supported at this time.
 
 To begin with installing Nautobot dependencies on a supported platform, see [the next page of the documentation](install_system.md).
 

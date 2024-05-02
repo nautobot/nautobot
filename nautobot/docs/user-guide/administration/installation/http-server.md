@@ -65,8 +65,8 @@ Begin by installing NGINX:
 
 === "Ubuntu/Debian"
     Once NGINX is installed, copy and paste the following NGINX configuration into
-    
-    ```
+
+    ```no-highlight
     /etc/nginx/sites-available/nautobot.conf
     ```
 
@@ -134,8 +134,8 @@ Begin by installing NGINX:
 
 === "RHEL8"
     Once NGINX is installed, copy and paste the following NGINX configuration into
-    
-    ```
+
+    ```no-highlight
     /etc/nginx/conf.d/nautobot.conf
     ```
 

@@ -132,7 +132,7 @@ We'll use `systemd` to control both uWSGI and Nautobot's background worker proce
 
 First, we'll establish the `systemd` unit file for the Nautobot web service. Copy and paste the following into the file
 
-```
+```no-highlight
 /etc/systemd/system/nautobot.service
 ```
 
@@ -202,7 +202,7 @@ Fields](../../platform-functionality/customfield.md), and [Git Repositories](../
 
 To establish the `systemd` unit file for the Celery worker, copy and paste the following into the file
 
-```
+```no-highlight
 /etc/systemd/system/nautobot-worker.service
 ```
 
@@ -262,7 +262,7 @@ advantage of the [job scheduling and approval](../../platform-functionality/jobs
 
 To establish the `systemd` unit file for the Celery Beat scheduler, copy and paste the following into the file
 
-```
+```no-highlight
 /etc/systemd/system/nautobot-scheduler.service
 ```
 
