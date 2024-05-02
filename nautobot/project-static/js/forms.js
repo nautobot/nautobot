@@ -635,8 +635,6 @@ function initializeDynamicFilterForm(context){
         let query_params = new URLSearchParams(location.search);
         let type = $(this).attr("data-field-type");
         let field_value = $(this).attr("data-field-value");
-        field_value = field_value.replace("#", "%23")
-        let query_string = location.search.substr(1).split("&");
 
         if (type === "parent") {
             // Remove all instances of this query param

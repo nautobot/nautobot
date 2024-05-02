@@ -68,7 +68,6 @@ class BaseModel(models.Model):
 
             for action in actions:
                 route = get_route_for_model(self, action, api=api)
-                route = route.replace("users:", "user:")
 
                 try:
                     return reverse(route, kwargs={field: getattr(self, field)})

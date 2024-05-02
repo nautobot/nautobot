@@ -73,7 +73,6 @@ def get_route_for_model(model, action, api=False):
         >>> get_route_for_model(ExampleModel, "list", api=True)
         "plugins-api:example_app-api:examplemodel-list"
     """
-    from nautobot.users.models import SavedView  # Circular Import
 
     if isinstance(model, str):
         model = get_model_from_name(model)
@@ -95,10 +94,6 @@ def get_route_for_model(model, action, api=False):
 
     if apps.get_app_config(app_label).name in settings.PLUGINS:
         viewname = f"plugins{suffix}:{viewname}"
-
-    if model is SavedView:
-        new_viewname = viewname.replace("users:", "user:")
-        return new_viewname
 
     return viewname
 

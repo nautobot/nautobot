@@ -4,6 +4,7 @@ from nautobot.core.views.routers import NautobotUIViewSetRouter
 
 from . import views
 
+# TODO: deprecate this app_name and use users
 app_name = "user"
 
 router = NautobotUIViewSetRouter()

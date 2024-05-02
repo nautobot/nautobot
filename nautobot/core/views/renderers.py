@@ -80,7 +80,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 permissions = kwargs.get("permissions", {})
                 if view.request.GET.getlist("sort"):
                     view.hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
-                saved_view = None
+                self.saved_view = None
                 if saved_view_pk is not None:
                     try:
                         self.saved_view = SavedView.objects.restrict(request.user, "view").get(pk=saved_view_pk)
@@ -89,7 +89,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 table = table_class(
                     queryset,
                     table_changes_pending=table_changes_pending,
-                    saved_view=saved_view,
+                    saved_view=self.saved_view,
                     user=request.user,
                     hide_hierarchy_ui=view.hide_hierarchy_ui,
                 )
