@@ -1437,13 +1437,6 @@ class ModuleType(PrimaryModel):
     def __str__(self):
         return self.model
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Save references to the original front/rear images
-        self._original_front_image = self.front_image if self.present_in_database else None
-        self._original_rear_image = self.rear_image if self.present_in_database else None
-
     def to_yaml(self):
         data = OrderedDict(
             (
@@ -1531,24 +1524,6 @@ class ModuleType(PrimaryModel):
 
         return yaml.dump(dict(data), sort_keys=False, allow_unicode=True)
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-
-        # Delete any previously uploaded image files that are no longer in use
-        if self._original_front_image and self.front_image != self._original_front_image:
-            self._original_front_image.delete(save=False)
-        if self._original_rear_image and self.rear_image != self._original_rear_image:
-            self._original_rear_image.delete(save=False)
-
-    def delete(self, *args, **kwargs):
-        super().delete(*args, **kwargs)
-
-        # Delete any uploaded image files
-        if self.front_image:
-            self.front_image.delete(save=False)
-        if self.rear_image:
-            self.rear_image.delete(save=False)
-
     @property
     def display(self):
         return f"{self.manufacturer.name} {self.model}"
@@ -1566,19 +1541,19 @@ class ModuleType(PrimaryModel):
 class Module(PrimaryModel):
     """
     A Module represents a line card, supervisor, or other interchangeable hardware component within a ModuleBay.
-    Each Module is assigned a ModuleType, Role, and (optionally) a Platform.
+    Each Module is assigned a ModuleType and Status, and optionally a Role and/or Tenant.
 
-    Each Module must be assigned to either a ModuleBay or a Location.
+    Each Module must be assigned to either a ModuleBay or a Location, but not both.
 
-    When a new Module is created, console/power/interface/device bay components are created along with it as dictated
-    by the component templates assigned to its ModuleType. Components can also be added, modified, or deleted after the
-    creation of a Module.
+    When a new Module is created, console, power and interface components are created along with it as dictated
+    by the component templates assigned to its ModuleType. Components can also be added, modified, or deleted after
+    the creation of a Module.
     """
 
     module_type = models.ForeignKey(to="dcim.ModuleType", on_delete=models.PROTECT, related_name="modules")
     parent_module_bay = models.OneToOneField(
         to="dcim.ModuleBay",
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name="installed_module",
         blank=True,
         null=True,
@@ -1630,6 +1605,7 @@ class Module(PrimaryModel):
     class Meta:
         ordering = ("parent_module_bay", "location", "module_type", "asset_tag", "serial")
         constraints = [
+            # Database constraint to make the parent_model_bay and location fields mutually exclusive
             models.CheckConstraint(
                 check=models.Q(parent_module_bay__isnull=False, location__isnull=True)
                 | models.Q(parent_module_bay__isnull=True, location__isnull=False),
@@ -1637,7 +1613,7 @@ class Module(PrimaryModel):
             ),
             models.UniqueConstraint(
                 fields=["module_type", "serial"],
-                name="dcim_module_unique_module_type_serial",
+                name="dcim_module_module_type_serial_unique",
             ),
         ]
 
@@ -1710,7 +1686,7 @@ class Module(PrimaryModel):
 
     def get_cables(self, pk_list=False):
         """
-        Return a QuerySet or PK list matching all Cables connected to a component of this Module.
+        Return a QuerySet or PK list matching all Cables connected to any component of this Module.
         """
         from .cables import Cable
 

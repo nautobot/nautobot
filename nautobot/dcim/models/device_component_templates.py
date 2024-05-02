@@ -451,6 +451,8 @@ class DeviceBayTemplate(ComponentTemplateModel):
 
 @extras_features("custom_validators")
 class ModuleBayTemplate(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
+    """Template for a slot in a Device or Module which can contain Modules."""
+
     device_type = models.ForeignKey(
         to="dcim.DeviceType",
         on_delete=models.CASCADE,
@@ -474,9 +476,26 @@ class ModuleBayTemplate(BaseModel, ChangeLoggedModel, CustomFieldModel, Relation
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
+    natural_key_field_names = ["device_type", "module_type", "position"]
+
     class Meta:
         ordering = ("device_type", "module_type", "position")
-        unique_together = (("device_type", "position"), ("module_type", "position"))
+        constraints = [
+            # Database constraint to make the device_type and module_type fields mutually exclusive
+            models.CheckConstraint(
+                check=models.Q(device_type__isnull=False, module_type__isnull=True)
+                | models.Q(device_type__isnull=True, module_type__isnull=False),
+                name="dcim_modulebaytemplate_device_type_xor_module_type",
+            ),
+            models.UniqueConstraint(
+                fields=["device_type", "position"],
+                name="dcim_modulebaytemplate_device_type_position_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["module_type", "position"],
+                name="dcim_modulebaytemplate_module_type_position_unique",
+            ),
+        ]
 
     @property
     def parent(self):

@@ -117,6 +117,7 @@ class ModularComponentModel(ComponentModel):
     class Meta:
         abstract = True
         constraints = [
+            # Database constraint to make the device and module fields mutually exclusive
             models.CheckConstraint(
                 check=models.Q(device__isnull=False, module__isnull=True)
                 | models.Q(device__isnull=True, module__isnull=False),
@@ -1201,6 +1202,7 @@ class ModuleBay(PrimaryModel):
             "position",
         )
         constraints = [
+            # Database constraint to make the parent_device and parent_module fields mutually exclusive
             models.CheckConstraint(
                 check=models.Q(parent_device__isnull=False, parent_module__isnull=True)
                 | models.Q(parent_device__isnull=True, parent_module__isnull=False),
