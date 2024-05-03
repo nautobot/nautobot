@@ -119,7 +119,7 @@ MEMBERS_COUNT = """
 {% load helpers %}
 {% with urlname=record.model|validated_viewname:"list" %}
 {% if urlname %}
-    <a href="{% url urlname %}?static_group={{ record.name }}">{{ record.count }}</a>
+    <a href="{% url urlname %}?static_groups={{ record.name }}">{{ record.count }}</a>
 {% else %}
     {{ record.count }}
 {% endif %}

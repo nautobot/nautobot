@@ -42,7 +42,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         limit_choices_to=nautobot.extras.utils.FeatureQuery("static_groups"),
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="static_groups",
+                        related_name="static_groups_set",
                         to="contenttypes.contenttype",
                     ),
                 ),
@@ -52,7 +52,7 @@ class Migration(migrations.Migration):
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.PROTECT,
-                        related_name="static_groups",
+                        related_name="static_groups_set",
                         to="tenancy.tenant",
                     ),
                 ),

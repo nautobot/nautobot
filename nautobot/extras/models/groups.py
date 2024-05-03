@@ -63,14 +63,14 @@ class StaticGroup(PrimaryModel):
     content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
-        related_name="static_groups",
+        related_name="static_groups_set",
         limit_choices_to=FeatureQuery("static_groups"),
         help_text="The type of object contained in this Static Group.",
     )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
-        related_name="static_groups",
+        related_name="static_groups_set",  # "static_groups" would clash with StaticGroupMixin.static_groups property
         blank=True,
         null=True,
     )
