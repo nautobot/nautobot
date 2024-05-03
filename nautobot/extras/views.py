@@ -2483,7 +2483,6 @@ class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin
 
                 with deferred_change_logging_for_bulk_operation():
                     associations = []
-                    total_added = 0
                     for pk in pk_list:
                         for static_group in add_to_groups:
                             association, created = StaticGroupAssociation.objects.get_or_create(
@@ -2495,7 +2494,6 @@ class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin
                             associations.append(association)
                             if created:
                                 logger.debug("Created %s", association)
-                                total_added += 1
 
                     # Enforce object-level permissions
                     if self.queryset.filter(pk__in=[assoc.pk for assoc in associations]).count() != len(associations):
@@ -2503,16 +2501,15 @@ class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin
 
                 if associations:
                     msg = (
-                        f"Included {len(pk_list)} {model._meta.verbose_name_plural} "
-                        f"into {len(add_to_groups)} static group(s) ({total_added} new associations)."
+                        f"Added {len(pk_list)} {model._meta.verbose_name_plural} "
+                        f"to {len(add_to_groups)} static group(s)."
                     )
                     logger.info(msg)
                     messages.success(self.request, msg)
 
                 if form.cleaned_data["remove_from_groups"]:
-                    total_deleted = 0
                     for static_group in form.cleaned_data["remove_from_groups"]:
-                        deleted_count, _ = (
+                        (
                             StaticGroupAssociation.objects.restrict(request.user, "delete")
                             .filter(
                                 static_group=static_group,
@@ -2521,12 +2518,10 @@ class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin
                             )
                             .delete()
                         )
-                        total_deleted += deleted_count
 
                     msg = (
-                        f"Excluded {len(pk_list)} {model._meta.verbose_name_plural} from "
-                        f"{len(form.cleaned_data['remove_from_groups'])} static group(s) "
-                        f"({total_deleted} deleted associations)."
+                        f"Removed {len(pk_list)} {model._meta.verbose_name_plural} from "
+                        f"{len(form.cleaned_data['remove_from_groups'])} static group(s)."
                     )
                     logger.info(msg)
                     messages.success(self.request, msg)

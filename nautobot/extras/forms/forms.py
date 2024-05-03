@@ -1523,7 +1523,7 @@ class StaticGroupForm(NautobotModelForm):
         queryset=ContentType.objects.all(),
         query_params={"feature": "static_groups"},
     )
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all())
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
 
     class Meta:
         model = StaticGroup

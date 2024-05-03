@@ -52,7 +52,7 @@ class Migration(migrations.Migration):
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.PROTECT,
-                        related_name="static_groups_set",
+                        related_name="managed_static_groups",
                         to="tenancy.tenant",
                     ),
                 ),

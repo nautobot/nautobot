@@ -70,7 +70,7 @@ class StaticGroup(PrimaryModel):
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
-        related_name="static_groups_set",  # "static_groups" would clash with StaticGroupMixin.static_groups property
+        related_name="managed_static_groups",  # "static_groups" clash with StaticGroupMixin.static_groups property
         blank=True,
         null=True,
     )
