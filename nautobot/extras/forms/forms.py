@@ -1559,7 +1559,7 @@ class StaticGroupBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ["tenant"]
 
 
-class StaticGroupBulkAssignForm(BulkEditForm):
+class StaticGroupBulkAssignForm(BootstrapMixin, BulkEditForm):
     content_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
         widget=forms.HiddenInput(),
