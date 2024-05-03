@@ -11,7 +11,7 @@ You must be **absolutely** sure to install the app within Nautobot's virtual env
 
 Download and install the app package per its installation instructions. Apps published via PyPI are typically installed using `pip3`.
 
-```no-highlight
+```no-highlight title="Pip install the package"
 pip3 install <package>
 ```
 
@@ -23,7 +23,7 @@ If you are developing a app and want to install it only temporarily, run `python
 
 In your `nautobot_config.py`, add the app's name to the `PLUGINS` list:
 
-```python
+```python title="Plugins list in nautobot_config.py"
 PLUGINS = [
     'app_name',
 ]
@@ -33,7 +33,7 @@ PLUGINS = [
 
 If the app requires any configuration, define it in `nautobot_config.py` under the `PLUGINS_CONFIG` parameter. The available configuration parameters should be detailed in the app's README file.
 
-```python
+```python title="PLUGINS_CONFIG in nautobot_config.py"
 PLUGINS_CONFIG = {
     'app_name': {
         'foo': 'bar',
@@ -50,7 +50,7 @@ After installing or upgrading a app, you should always run [`nautobot-server pos
 * Collecting any static files provided by the app
 * Etc.
 
-```no-highlight
+```no-highlight title="Run the post upgrade command"
 nautobot-server post_upgrade
 ```
 
@@ -91,7 +91,7 @@ nautobot-server post_upgrade
 
 Restart the WSGI service to load the new app:
 
-```no-highlight
+```no-highlight title="Restart Nautobot services"
 sudo systemctl restart nautobot nautobot-worker nautobot-scheduler
 ```
 

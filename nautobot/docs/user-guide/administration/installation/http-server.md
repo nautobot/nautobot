@@ -16,7 +16,7 @@ Two files will be created: the public certificate (`nautobot.crt`) and the priva
 
 === "Ubuntu/Debian"
 
-    ```no-highlight
+    ```no-highlight title="Create SSL certificate"
     sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
       -keyout /etc/ssl/private/nautobot.key \
       -out /etc/ssl/certs/nautobot.crt
@@ -24,7 +24,7 @@ Two files will be created: the public certificate (`nautobot.crt`) and the priva
 
 === "RHEL8"
 
-    ```no-highlight
+    ```no-highlight title="Create SSL certificate"
     sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
       -keyout /etc/pki/tls/private/nautobot.key \
       -out /etc/pki/tls/certs/nautobot.crt
@@ -48,13 +48,13 @@ Begin by installing NGINX:
 
 === "Ubuntu/Debian"
 
-    ```no-highlight
+    ```no-highlight title="Install NGINX"
     sudo apt install -y nginx
     ```
 
 === "RHEL8"
 
-    ```no-highlight
+    ```no-highlight title="Install NGINX"
     sudo dnf install -y nginx
     ```
 
@@ -64,31 +64,21 @@ Begin by installing NGINX:
     If the file location of SSL certificates had to be changed in the [Obtain an SSL Certificate](#obtain-an-ssl-certificate) step above, then the location will need to be changed in the NGINX configuration below.
 
 === "Ubuntu/Debian"
-    Once NGINX is installed, copy and paste the following NGINX configuration into
-
-    ```no-highlight
-    /etc/nginx/sites-available/nautobot.conf
-    ```
-
-    === "Base"
-
-        ```no-highlight
-        /etc/nginx/sites-available/nautobot.conf
-        ```
+    Once NGINX is installed, copy and paste the following NGINX configuration into 
 
     === "Vim"
 
-        ```no-highlight
+        ```no-highlight title="Vim open NGINX config"
         vim /etc/nginx/sites-available/nautobot.conf
         ```
 
     === "Nano"
 
-        ```no-highlight
+        ```no-highlight title="Nano open NGINX config"
         nano /etc/nginx/sites-available/nautobot.conf
         ```
 
-    ```nginxconf
+    ```nginxconf title="/etc/nginx/sites-available/nautobot.conf"
     server {
         listen 443 ssl http2 default_server;
         listen [::]:443 ssl http2 default_server;
@@ -133,31 +123,21 @@ Begin by installing NGINX:
     ```
 
 === "RHEL8"
-    Once NGINX is installed, copy and paste the following NGINX configuration into
-
-    ```no-highlight
-    /etc/nginx/conf.d/nautobot.conf
-    ```
-
-    === "Base"
-
-        ```no-highlight
-        /etc/nginx/conf.d/nautobot.conf
-        ```
+    Once NGINX is installed, copy and paste the following NGINX configuration for the Nautobot NGINX site.
 
     === "Vim"
 
-        ```no-highlight
+        ```no-highlight title="Vim nautobot site config"
         vim /etc/nginx/conf.d/nautobot.conf
         ```
 
     === "Nano"
 
-        ```no-highlight
+        ```no-highlight title="Nano nautobot site config"
         nano /etc/nginx/conf.d/nautobot.conf
         ```
 
-    ```nginxconf
+    ```nginxconf title="/etc/nginx/sites-available/nautobot.conf"
     server {
         listen 443 ssl http2 default_server;
         listen [::]:443 ssl http2 default_server;
@@ -208,7 +188,7 @@ Begin by installing NGINX:
     To enable the Nautobot site, you'll need to delete `/etc/nginx/sites-enabled/default` and create a symbolic link in the
     `sites-enabled` directory to the configuration file you just created:
 
-    ```no-highlight
+    ```no-highlight title="Link Nautobot NGINX site config"
     sudo rm -f /etc/nginx/sites-enabled/default
     sudo ln -s /etc/nginx/sites-available/nautobot.conf /etc/nginx/sites-enabled/nautobot.conf
     ```
@@ -217,7 +197,7 @@ Begin by installing NGINX:
 
     Run the following command to disable the default site that comes with the `nginx` package:
 
-    ```no-highlight
+    ```no-highlight title="Link Nautobot NGINX site config"
     sudo sed -i 's@ default_server@@' /etc/nginx/nginx.conf
     ```
 
@@ -225,7 +205,7 @@ Begin by installing NGINX:
 
 Finally, restart the `nginx` service to use the new configuration.
 
-```no-highlight
+```no-highlight title="Restart NGINX"
 sudo systemctl restart nginx
 ```
 
@@ -237,7 +217,7 @@ sudo systemctl restart nginx
 Ensure that the `NAUTOBOT_ROOT` permissions are set to `755`.
 If permissions need to be changed, as the `nautobot` user run:
 
-```no-highlight
+```no-highlight title="Update all permissions to 755 in Nautobot Root"
 chmod 755 $NAUTOBOT_ROOT
 ```
 
@@ -266,51 +246,53 @@ If you get a *Static Media Failure; The following static media file failed to lo
 
 Example of correct permissions (at the `[root@localhost ~]#` prompt)
 
-```no-highlight
+```no-highlight title="List /opt/ files"
 ls -l /opt/
 ```
 
-Example output:
+??? example "Output of list files"
 
-```no-highlight
-total 4
-drwxr-xr-x. 11 nautobot nautobot 4096 Apr  5 11:24 nautobot
-[root@localhost ~]#
-```
+    ```no-highlight title="Example output of list"
+    total 4
+    drwxr-xr-x. 11 nautobot nautobot 4096 Apr  5 11:24 nautobot
+    [root@localhost ~]#
+    ```
 
 If the permissions are not correct, modify them accordingly.
 
 Example of modifying the permissions:
 
-```no-highlight
+```no-highlight title="List /opt/ files"
 ls -l /opt/
 ```
 
-Example output:
+??? example "Output of list files in /opt`
 
-```no-highlight
-total 4
-drwx------. 11 nautobot nautobot 4096 Apr  5 10:00 nautobot
-```
+    ```no-highlight title="Example output of list"
+    total 4
+    drwx------. 11 nautobot nautobot 4096 Apr  5 10:00 nautobot
+    ```
 
 At the prompt `[nautobot@localhost ~]$` execute:
 
-```no-highlight
+```no-highlight title="Change permissions on NAUTOBOT files"
 chmod 755 $NAUTOBOT
 ```
 
 Then to verify that the user has the permissions to the directory execute at the `[nautobot@localhost ~]$` prompt:
 
-```no-highlight
+```no-highlight title="List files of /opt/"
 ls -l /opt/
 ```
 
-Example output shows that the user and group are both `nautobot` below:
+??? example "Example output"
 
-```no-highlight
-total 4
-drwxr-xr-x. 11 nautobot nautobot 4096 Apr  5 11:24 nautobot
-```
+    Example output shows that the user and group are both `nautobot` below:
+
+    ```no-highlight title="Example output of ls"
+    total 4
+    drwxr-xr-x. 11 nautobot nautobot 4096 Apr  5 11:24 nautobot
+    ```
 
 ### 502 Bad Gateway
 

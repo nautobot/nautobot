@@ -20,14 +20,14 @@ This will install:
 
 === "Ubuntu/Debian"
 
-    ```bash
+    ```bash title="Install system dependencies"
     sudo apt update -y
     sudo apt install -y git python3 python3-pip python3-venv python3-dev redis-server
     ```
 
 === "RHEL8"
 
-    ```bash
+    ```bash title="Install system dependencies"
     sudo dnf check-update
     sudo dnf install -y git python38 python38-devel python38-pip redis
     ```
@@ -66,14 +66,14 @@ Please follow the steps for your selected database backend below.
 
         ??? example "Entering Postgres DB"
 
-            ```no-highlight
+            ```no-highlight title="Entering Postgres DB"
             psql (12.5 (Ubuntu 12.5-0ubuntu0.20.04.1))
             Type "help" for help.
 
             postgres=#
             ```
 
-        ```no-highlight
+        ```no-highlight title="Create the Nautobot DB"
         CREATE DATABASE nautobot;
         CREATE USER nautobot WITH PASSWORD 'insecure_password';
         GRANT ALL PRIVILEGES ON DATABASE nautobot TO nautobot;
@@ -83,7 +83,7 @@ Please follow the steps for your selected database backend below.
         ```
 
         ??? example "Example Postgres DB Creation Output"
-            ```no-highlight
+            ```no-highlight title="Example output of creating the DB"
             postgres=# CREATE DATABASE nautobot;
             CREATE DATABASE
             postgres=# CREATE USER nautobot WITH PASSWORD 'insecure_password';
@@ -103,13 +103,13 @@ Please follow the steps for your selected database backend below.
 
         If successful, you will enter a `nautobot` prompt. Type `\conninfo` to confirm your connection, or type `\q` to exit.
 
-        ```no-highlight
+        ```no-highlight title="Connect to the Nautobot DB"
         psql --username nautobot --password --host localhost nautobot
         ```
 
         ??? example "Example Postgres connection output"
 
-            ```no-highlight
+            ```no-highlight title="Example output"
             Password for user nautobot:
             psql (12.5 (Ubuntu 12.5-0ubuntu0.20.04.1))
             SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
@@ -127,7 +127,7 @@ Please follow the steps for your selected database backend below.
 
         This will install the MySQL database server and client. Additionally, MySQL requires that the MySQL development libraries are installed so that we may compile the Python `mysqlclient` library during the Nautobot installation steps.
 
-        ```no-highlight
+        ```no-highlight title="Install MySQL required packages"
         sudo apt install -y libmysqlclient-dev mysql-server
         ```
 
@@ -144,11 +144,11 @@ Please follow the steps for your selected database backend below.
         !!! danger
             **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
 
-        ```no-highlight
+        ```no-highlight title="Connect to MySQL"
         sudo -u root mysql
         ```
 
-        ```no-highlight
+        ```no-highlight title="Create the Nautobot DB"
         CREATE DATABASE nautobot;
         CREATE USER 'nautobot'@'localhost' IDENTIFIED BY 'insecure_password';
         GRANT ALL ON nautobot.* TO 'nautobot'@'localhost';
@@ -157,7 +157,7 @@ Please follow the steps for your selected database backend below.
 
         ??? example "MySQL Example output"
 
-            ```no-highlight
+            ```no-highlight title="Example MySQL DB creation output."
             Welcome to the MySQL monitor.  Commands end with ; or \g.
             Your MySQL connection id is 11
             Server version: 8.0.25-0ubuntu0.20.04.1 (Ubuntu)
@@ -192,13 +192,13 @@ Please follow the steps for your selected database backend below.
         !!! note
             Replace `localhost` below with your database server if using a remote database.
 
-        ```no-highlight
+        ```no-highlight title="Test the MySQL DB connection"
         mysql --user nautobot --password --host localhost nautobot
         ```
 
         ??? example "Example Verification of MySQL datbase"
 
-            ```no-highlight
+            ```no-highlight title="Example test output"
             Enter password:
             Welcome to the MySQL monitor.  Commands end with ; or \g.
             Your MySQL connection id is 13
@@ -249,7 +249,7 @@ Please follow the steps for your selected database backend below.
 
         This will install the PostgreSQL database server and client.
 
-        ```no-highlight
+        ```no-highlight title="Install Postgres"
         sudo dnf install -y postgresql-server
         ```
 
@@ -257,7 +257,7 @@ Please follow the steps for your selected database backend below.
 
         CentOS/RHEL requires a manual step to generate the initial configurations required by PostgreSQL.
 
-        ```no-highlight
+        ```no-highlight title="Setup initial required configurations"
         sudo postgresql-setup --initdb
         ```
 
@@ -269,7 +269,7 @@ Please follow the steps for your selected database backend below.
 
         Before:
 
-        ```no-highlight
+        ```no-highlight title="Before /var/lib/pgsql/data/pg_hba.conf"
         # IPv4 local connections:
         host    all             all             127.0.0.1/32            ident
         # IPv6 local connections:
@@ -278,7 +278,7 @@ Please follow the steps for your selected database backend below.
 
         After:
 
-        ```no-highlight
+        ```no-highlight title="After /var/lib/pgsql/data/pg_hba.conf"
         # IPv4 local connections:
         host    all             all             127.0.0.1/32            md5
         # IPv6 local connections:
@@ -289,7 +289,7 @@ Please follow the steps for your selected database backend below.
 
         Start the service and enable it to run at system startup:
 
-        ```no-highlight
+        ```no-highlight title="Start and enable the Postgres service at start up"
         sudo systemctl enable --now postgresql
         ```
 
@@ -301,13 +301,13 @@ Please follow the steps for your selected database backend below.
         !!! danger
             **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
 
-        ```no-highlight
+        ```no-highlight title="Enter into Postgres"
         sudo -u postgres psql
         ```
 
         Create the database and grant permissions to the Nautobot user.
 
-        ```no-highlight
+        ```no-highlight title="Create Nautobot DB"
         CREATE DATABASE nautobot;
         CREATE USER nautobot WITH PASSWORD 'insecure_password';
         GRANT ALL PRIVILEGES ON DATABASE nautobot TO nautobot;
@@ -316,7 +316,7 @@ Please follow the steps for your selected database backend below.
 
         ??? example "Example Database creation output."
         
-            ```no-highlight
+            ```no-highlight title="Example DB creation output"
             postgres=# CREATE DATABASE nautobot;
             CREATE DATABASE
             postgres=# CREATE USER nautobot WITH PASSWORD 'insecure_password';
@@ -336,7 +336,7 @@ Please follow the steps for your selected database backend below.
 
         If successful, you will enter a `nautobot` prompt. Type `\conninfo` to confirm your connection, or type `\q` to exit.
 
-        ```no-highlight
+        ```no-highlight title="Test connection to Nautobot DB"
         psql --username nautobot --password --host localhost nautobot
         ```
 
@@ -358,7 +358,7 @@ Please follow the steps for your selected database backend below.
 
         This will install the MySQL database server and client. Additionally, MySQL requires that `gcc` and the MySQL development libraries are installed so that we may compile the Python `mysqlclient` library during the Nautobot installation steps.
 
-        ```no-highlight
+        ```no-highlight title="Install MySQL packages"
         sudo dnf install -y gcc mysql-server mysql-devel
         ```
 
@@ -366,7 +366,7 @@ Please follow the steps for your selected database backend below.
 
         Start the service and enable it to run at system startup:
 
-        ```no-highlight
+        ```no-highlight title="Start and enable at start up of the MySQL service"
         sudo systemctl enable --now mysql
         ```
 
@@ -380,13 +380,13 @@ Please follow the steps for your selected database backend below.
         !!! danger
             **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
 
-        ```no-highlight
+        ```no-highlight title="Connect to MySQL"
         sudo -u root mysql
         ```
 
         Create the MySQL Database.
 
-        ```no-highlight
+        ```no-highlight title="Create Nautobot DB"
         CREATE DATABASE nautobot;
         CREATE USER 'nautobot'@'localhost' IDENTIFIED BY 'insecure_password';
         GRANT ALL ON nautobot.* TO 'nautobot'@'localhost';
@@ -395,7 +395,7 @@ Please follow the steps for your selected database backend below.
 
         ??? example "Creation of MySQL DB"
 
-            ```no-highlight
+            ```no-highlight title="Example output creation of DB"
             Welcome to the MySQL monitor.  Commands end with ; or \g.
             Your MySQL connection id is 8
             Server version: 8.0.21 Source distribution
@@ -491,13 +491,13 @@ Django requires the database encoding for PostgreSQL databases to be set to UTF-
 
     Since Redis was already installed, let's just verify that it's working using `redis-cli`:
 
-    ```no-highlight
+    ```no-highlight title="Test Redis connection"
     redis-cli ping
     ```
 
     ??? example "Example Redis check output"
 
-        ```no-highlight
+        ```no-highlight title="
         PONG
         ```
 
@@ -507,7 +507,7 @@ Django requires the database encoding for PostgreSQL databases to be set to UTF-
 
     Start the service and enable it to run at system startup:
 
-    ```no-highlight
+    ```no-highlight title="Enable Redis to start on boot and starts Redis"
     sudo systemctl enable --now redis
     ```
 
@@ -515,7 +515,7 @@ Django requires the database encoding for PostgreSQL databases to be set to UTF-
 
     Use the `redis-cli` utility to ensure the Redis service is functional:
 
-    ```no-highlight
+    ```no-highlight title="Test Redis connection"
     redis-cli ping
     ```
 
