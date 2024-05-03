@@ -15,6 +15,7 @@ from django.utils import timezone
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin
 from nautobot.core.models.fields import JSONArrayField
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import flatten_dict
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.utils import extras_features
@@ -338,7 +339,7 @@ class SavedView(BaseModel, ChangeLoggedModel):
             for item in value:
                 params.append((key, item))
 
-        params.append(("per_page", self.config.get("pagination_count", 50)))
+        params.append(("per_page", self.config.get("pagination_count", get_settings_or_config("PAGINATE_COUNT"))))
 
         for value in self.config.get("sort", []):
             params.append(("sort", value))

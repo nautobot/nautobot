@@ -19,6 +19,7 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
 from nautobot.core.forms import ConfirmationForm
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_model_for_view_name, get_table_for_model
 from nautobot.core.views.generic import GenericView
 from nautobot.core.views.mixins import (
@@ -322,7 +323,7 @@ class SavedViewUIViewSet(
                 return redirect(self.get_return_url(request, obj=derived_instance))
             else:
                 return redirect(reverse(view_name))
-        pagination_count = request.GET.get("per_page", 50)
+        pagination_count = request.GET.get("per_page", get_settings_or_config("PAGINATE_COUNT"))
         sv.config["pagination_count"] = int(pagination_count)
         sort_order = request.GET.getlist("sort", [])
         sv.config["sort_order"] = sort_order

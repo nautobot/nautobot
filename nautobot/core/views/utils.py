@@ -12,6 +12,7 @@ from rest_framework import exceptions, serializers
 from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.models.utils import is_taggable
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_filter_field_label
 from nautobot.core.utils.lookup import get_form_for_model
@@ -288,7 +289,9 @@ def view_changes_not_saved(request, view, current_saved_view):
 
     if query_dict.get("table_changes_pending", None):
         return True
-    if int(query_dict.get("per_page")) != current_saved_view.config.get("pagination_count", 50):
+    if int(query_dict.get("per_page", get_settings_or_config("PAGINATE_COUNT"))) != current_saved_view.config.get(
+        "pagination_count", get_settings_or_config("PAGINATE_COUNT")
+    ):
         return True
     if (request.GET.getlist("sort", [])) != current_saved_view.config.get("sort_order", []):
         return True
