@@ -6,9 +6,9 @@ Static Groups provide a way to organize objects (of a single Content Type). They
 
 A given Static Group may contain any number of objects of the appropriate type as members, and an object may belong to any number of Static Groups of the appropriate content-type as a member of each.
 
-When creating a Static Group, you must provide a unique name for the group and define the Content Type of objects that it contains, for example `dcim.device`. You can also optionally provide a description for the group and apply [Tags](tag.md) to it.
+When creating a Static Group, you must provide a unique name for the group and define the Content Type of objects that it contains, for example `dcim.device`. You can also optionally provide a description for the group, assign it to a [Tenant](../core-data-model/tenancy/tenant.md) and/or apply [Tags](tag.md) to it.
 
-Once created, the Content Type for a Static Group may not be changed, as doing so would invalidate any existing members of this group. The name, description, and tags may be updated if desired.
+Once created, the Content Type for a Static Group may not be changed, as doing so would invalidate any existing members of this group. The name, description, tenant, and tags may be updated if desired.
 
 Each association of a given object into a given Static Group is recorded by a [Static Group Association](staticgroupassociation.md) database record.
 
