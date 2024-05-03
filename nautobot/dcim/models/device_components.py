@@ -97,6 +97,10 @@ class ComponentModel(PrimaryModel):
 
         return super().to_objectchange(action, related_object=device, **kwargs)
 
+    @property
+    def parent(self):
+        return self.device
+
 
 class ModularComponentModel(ComponentModel):
     device = ForeignKeyWithAutoRelatedName(
@@ -125,6 +129,12 @@ class ModularComponentModel(ComponentModel):
             )
         ]
 
+    @property
+    def parent(self):
+        """Device that this component belongs to, walking up module inheritance if necessary."""
+        # TODO 3.0: We should rename this to parent_device and parent should return device or module
+        return self.module.device if self.module else self.device
+
     def to_objectchange(self, action, **kwargs):
         """
         Return a new ObjectChange with the `related_object` pinned to the parent `device` or `module`.
@@ -136,7 +146,7 @@ class ModularComponentModel(ComponentModel):
         try:
             parent = self.device if self.device else self.module
         except ObjectDoesNotExist:
-            # The parent has already been deleted
+            # The parent may have already been deleted
             parent = None
 
         return super().to_objectchange(action, related_object=parent, **kwargs)
@@ -270,7 +280,7 @@ class PathEndpoint(models.Model):
     "graphql",
     "webhooks",
 )
-class ConsolePort(CableTermination, PathEndpoint, ModularComponentModel):
+class ConsolePort(ModularComponentModel, CableTermination, PathEndpoint):
     """
     A physical console port within a Device or Module. ConsolePorts connect to ConsoleServerPorts.
     """
@@ -286,10 +296,6 @@ class ConsolePort(CableTermination, PathEndpoint, ModularComponentModel):
         ordering = ("device", "_name")
         unique_together = ("device", "name")
 
-    @property
-    def parent(self):
-        return self.device
-
 
 #
 # Console server ports
@@ -297,7 +303,7 @@ class ConsolePort(CableTermination, PathEndpoint, ModularComponentModel):
 
 
 @extras_features("custom_links", "cable_terminations", "custom_validators", "graphql", "webhooks")
-class ConsoleServerPort(CableTermination, PathEndpoint, ModularComponentModel):
+class ConsoleServerPort(ModularComponentModel, CableTermination, PathEndpoint):
     """
     A physical port within a Device or Module (typically a designated console server) which provides access to ConsolePorts.
     """
@@ -313,10 +319,6 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ModularComponentModel):
         ordering = ("device", "_name")
         unique_together = ("device", "name")
 
-    @property
-    def parent(self):
-        return self.device
-
 
 #
 # Power ports
@@ -331,7 +333,7 @@ class ConsoleServerPort(CableTermination, PathEndpoint, ModularComponentModel):
     "graphql",
     "webhooks",
 )
-class PowerPort(CableTermination, PathEndpoint, ModularComponentModel):
+class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
     """
     A physical power supply (intake) port within a Device or Module. PowerPorts connect to PowerOutlets.
     """
@@ -358,10 +360,6 @@ class PowerPort(CableTermination, PathEndpoint, ModularComponentModel):
     class Meta:
         ordering = ("device", "_name")
         unique_together = ("device", "name")
-
-    @property
-    def parent(self):
-        return self.device
 
     def clean(self):
         super().clean()
@@ -442,7 +440,7 @@ class PowerPort(CableTermination, PathEndpoint, ModularComponentModel):
 
 
 @extras_features("cable_terminations", "custom_links", "custom_validators", "graphql", "webhooks")
-class PowerOutlet(CableTermination, PathEndpoint, ModularComponentModel):
+class PowerOutlet(ModularComponentModel, CableTermination, PathEndpoint):
     """
     A physical power outlet (output) within a Device or Module which provides power to a PowerPort.
     """
@@ -472,15 +470,11 @@ class PowerOutlet(CableTermination, PathEndpoint, ModularComponentModel):
         ordering = ("device", "_name")
         unique_together = ("device", "name")
 
-    @property
-    def parent(self):
-        return self.device
-
     def clean(self):
         super().clean()
 
         # Validate power port assignment
-        if self.power_port and self.power_port.device != self.device:
+        if self.power_port and self.parent and self.power_port.parent != self.parent:
             raise ValidationError(f"Parent power port ({self.power_port}) must belong to the same device")
 
 
@@ -559,7 +553,7 @@ class BaseInterface(RelationshipModel):
     "statuses",
     "webhooks",
 )
-class Interface(CableTermination, PathEndpoint, ModularComponentModel, BaseInterface):
+class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInterface):
     """
     A network interface within a Device or Module. A physical Interface can connect to exactly one other Interface.
     """
@@ -626,7 +620,7 @@ class Interface(CableTermination, PathEndpoint, ModularComponentModel, BaseInter
         super().clean()
 
         # VRF validation
-        if self.vrf and self.vrf not in self.device.vrfs.all():
+        if self.vrf and self.parent and self.vrf not in self.parent.vrfs.all():
             # TODO(jathan): Or maybe we automatically add the VRF to the device?
             raise ValidationError({"vrf": "VRF must be assigned to same Device."})
 
@@ -637,19 +631,23 @@ class Interface(CableTermination, PathEndpoint, ModularComponentModel, BaseInter
                 raise ValidationError({"lag": "A LAG interface cannot be its own parent."})
 
             # An interface's LAG must belong to the same device or virtual chassis
-            if self.lag.device_id != self.device_id:
-                if self.device.virtual_chassis is None:
+            if self.parent and self.lag.parent != self.parent:
+                if self.lag.parent is None:
+                    raise ValidationError(
+                        {"lag": f"The selected LAG interface ({self.lag}) does not belong to a device."}
+                    )
+                elif self.parent.virtual_chassis is None:
                     raise ValidationError(
                         {
-                            "lag": f"The selected LAG interface ({self.lag}) belongs to a different device ({self.lag.device})."
+                            "lag": f"The selected LAG interface ({self.lag}) belongs to a different device ({self.lag.parent})."
                         }
                     )
-                elif self.lag.device.virtual_chassis_id != self.device.virtual_chassis_id:
+                elif self.lag.parent.virtual_chassis_id != self.parent.virtual_chassis_id:
                     raise ValidationError(
                         {
                             "lag": (
-                                f"The selected LAG interface ({self.lag}) belongs to {self.lag.device}, which is not part "
-                                f"of virtual chassis {self.device.virtual_chassis}."
+                                f"The selected LAG interface ({self.lag}) belongs to {self.lag.parent}, which is not part "
+                                f"of virtual chassis {self.parent.virtual_chassis}."
                             )
                         }
                     )
@@ -682,19 +680,19 @@ class Interface(CableTermination, PathEndpoint, ModularComponentModel, BaseInter
                 )
 
             # An interface's parent must belong to the same device or virtual chassis
-            if self.parent_interface.device != self.device:
-                if getattr(self.device, "virtual_chassis", None) is None:
+            if self.parent and self.parent_interface.parent != self.parent:
+                if getattr(self.parent, "virtual_chassis", None) is None:
                     raise ValidationError(
                         {
                             "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to a different device "
-                            f"({self.parent_interface.device})."
+                            f"({self.parent_interface.parent})."
                         }
                     )
-                elif self.parent_interface.device.virtual_chassis != self.device.virtual_chassis:
+                elif self.parent_interface.parent.virtual_chassis != self.parent.virtual_chassis:
                     raise ValidationError(
                         {
-                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to {self.parent_interface.device}, which "
-                            f"is not part of virtual chassis {self.device.virtual_chassis}."
+                            "parent_interface": f"The selected parent interface ({self.parent_interface}) belongs to {self.parent_interface.parent}, which "
+                            f"is not part of virtual chassis {self.parent.virtual_chassis}."
                         }
                     )
 
@@ -704,7 +702,8 @@ class Interface(CableTermination, PathEndpoint, ModularComponentModel, BaseInter
         if (
             self.untagged_vlan
             and self.untagged_vlan.locations.exists()
-            and not self.untagged_vlan.locations.filter(id=self.device.location_id).exists()
+            and self.parent
+            and not self.untagged_vlan.locations.filter(id=self.parent.location_id).exists()
         ):
             raise ValidationError(
                 {
@@ -722,22 +721,22 @@ class Interface(CableTermination, PathEndpoint, ModularComponentModel, BaseInter
                 raise ValidationError({"bridge": "An interface cannot be bridged to itself."})
 
             # A bridged interface belong to the same device or virtual chassis
-            if self.bridge.device.id != self.device.id:
-                if getattr(self.device, "virtual_chassis", None) is None:
+            if self.parent and self.bridge.parent != self.parent:
+                if getattr(self.parent, "virtual_chassis", None) is None:
                     raise ValidationError(
                         {
                             "bridge": (
                                 f"The selected bridge interface ({self.bridge}) belongs to a different device "
-                                f"({self.bridge.device})."
+                                f"({self.bridge.parent})."
                             )
                         }
                     )
-                elif self.bridge.device.virtual_chassis_id != self.device.virtual_chassis_id:
+                elif self.bridge.parent.virtual_chassis_id != self.parent.virtual_chassis_id:
                     raise ValidationError(
                         {
                             "bridge": (
-                                f"The selected bridge interface ({self.bridge}) belongs to {self.bridge.device}, which "
-                                f"is not part of virtual chassis {self.device.virtual_chassis}."
+                                f"The selected bridge interface ({self.bridge}) belongs to {self.bridge.parent}, which "
+                                f"is not part of virtual chassis {self.parent.virtual_chassis}."
                             )
                         }
                     )
@@ -824,10 +823,6 @@ class Interface(CableTermination, PathEndpoint, ModularComponentModel, BaseInter
     @property
     def ip_address_count(self):
         return self.ip_addresses.count()
-
-    @property
-    def parent(self):
-        return self.device
 
 
 @extras_features(
@@ -947,7 +942,7 @@ class InterfaceRedundancyGroupAssociation(BaseModel, ChangeLoggedModel):
 
     def __str__(self):
         """Return a string representation of the instance."""
-        return f"{self.interface_redundancy_group}: {self.interface.device} {self.interface}: {self.priority}"
+        return f"{self.interface_redundancy_group}: {self.interface.device or self.interface.module} {self.interface}: {self.priority}"
 
 
 #
@@ -956,7 +951,7 @@ class InterfaceRedundancyGroupAssociation(BaseModel, ChangeLoggedModel):
 
 
 @extras_features("cable_terminations", "custom_links", "custom_validators", "graphql", "webhooks")
-class FrontPort(CableTermination, ModularComponentModel):
+class FrontPort(ModularComponentModel, CableTermination):
     """
     A pass-through port on the front of a Device or Module.
     """
@@ -978,15 +973,11 @@ class FrontPort(CableTermination, ModularComponentModel):
             ("rear_port", "rear_port_position"),
         )
 
-    @property
-    def parent(self):
-        return self.device
-
     def clean(self):
         super().clean()
 
         # Validate rear port assignment
-        if self.rear_port.device != self.device:
+        if self.parent and self.rear_port.parent != self.parent:
             raise ValidationError({"rear_port": f"Rear port ({self.rear_port}) must belong to the same device"})
 
         # Validate rear port position assignment
@@ -1000,7 +991,7 @@ class FrontPort(CableTermination, ModularComponentModel):
 
 
 @extras_features("cable_terminations", "custom_links", "custom_validators", "graphql", "webhooks")
-class RearPort(CableTermination, ModularComponentModel):
+class RearPort(ModularComponentModel, CableTermination):
     """
     A pass-through port on the rear of a Device or Module.
     """
@@ -1030,10 +1021,6 @@ class RearPort(CableTermination, ModularComponentModel):
                     f"({front_port_count})"
                 }
             )
-
-    @property
-    def parent(self):
-        return self.device
 
 
 #
@@ -1079,10 +1066,6 @@ class DeviceBay(ComponentModel):
                         "installed_device": f"Cannot install the specified device; device is already installed in {current_bay}"
                     }
                 )
-
-    @property
-    def parent(self):
-        return self.device
 
 
 #

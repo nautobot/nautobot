@@ -136,6 +136,27 @@ class ModularComponentTemplateModel(ComponentTemplateModel):
 
     class Meta:
         abstract = True
+        ordering = ("device_type", "module_type", "_name")
+        constraints = [
+            # Database constraint to make the device_type and module_type fields mutually exclusive
+            models.CheckConstraint(
+                check=models.Q(device_type__isnull=False, module_type__isnull=True)
+                | models.Q(device_type__isnull=True, module_type__isnull=False),
+                name="%(app_label)s_%(class)s_device_type_xor_module_type",
+            ),
+            models.UniqueConstraint(
+                fields=("device_type", "name"),
+                name="%(app_label)s_%(class)s_device_type_name_unique",
+            ),
+            models.UniqueConstraint(
+                fields=("module_type", "name"),
+                name="%(app_label)s_%(class)s_module_type_name_unique",
+            ),
+        ]
+
+    @property
+    def parent(self):
+        return self.device_type if self.device_type else self.module_type
 
     def to_objectchange(self, action, **kwargs):
         """
@@ -144,21 +165,17 @@ class ModularComponentTemplateModel(ComponentTemplateModel):
         if "related_object" in kwargs:
             return super().to_objectchange(action, **kwargs)
 
-        related_object = None
         try:
-            related_object = self.device_type if self.device_type else self.module_type
+            parent = self.parent
         except ObjectDoesNotExist:
-            # The parent DeviceType may have already been deleted
-            pass
+            # The parent may have already been deleted
+            parent = None
 
-        return super().to_objectchange(action, related_object=related_object, **kwargs)
+        return super().to_objectchange(action, related_object=parent, **kwargs)
 
     def get_absolute_url(self, api=False):
         if not api:
-            if self.device_type:
-                return self.device_type.get_absolute_url(api=api)
-            if self.module_type:
-                return self.module_type.get_absolute_url(api=api)
+            return self.parent.get_absolute_url(api=api)
         return super().get_absolute_url(api=api)
 
     def instantiate_model(self, model, device, module=None, **kwargs):
@@ -166,6 +183,16 @@ class ModularComponentTemplateModel(ComponentTemplateModel):
         Helper method to self.instantiate().
         """
         return super().instantiate_model(model, device, module=module, **kwargs)
+
+    def clean(self):
+        super().clean()
+
+        # Validate that a DeviceType or ModuleType is set, but not both
+        if self.device_type and self.module_type:
+            raise ValidationError("Only one of device_type or module_type must be set")
+
+        if not (self.device_type or self.module_type):
+            raise ValidationError("Either device_type or module_type must be set")
 
 
 @extras_features(
@@ -177,10 +204,6 @@ class ConsolePortTemplate(ModularComponentTemplateModel):
     """
 
     type = models.CharField(max_length=50, choices=ConsolePortTypeChoices, blank=True)
-
-    class Meta:
-        ordering = ("device_type", "_name")
-        unique_together = ("device_type", "name")
 
     def instantiate(self, device, module=None):
         return self.instantiate_model(model=ConsolePort, device=device, module=module, type=self.type)
@@ -195,10 +218,6 @@ class ConsoleServerPortTemplate(ModularComponentTemplateModel):
     """
 
     type = models.CharField(max_length=50, choices=ConsolePortTypeChoices, blank=True)
-
-    class Meta:
-        ordering = ("device_type", "_name")
-        unique_together = ("device_type", "name")
 
     def instantiate(self, device, module=None):
         return self.instantiate_model(model=ConsoleServerPort, device=device, module=module, type=self.type)
@@ -225,10 +244,6 @@ class PowerPortTemplate(ModularComponentTemplateModel):
         validators=[MinValueValidator(1)],
         help_text="Allocated power draw (watts)",
     )
-
-    class Meta:
-        ordering = ("device_type", "_name")
-        unique_together = ("device_type", "name")
 
     def instantiate(self, device, module=None):
         return self.instantiate_model(
@@ -273,16 +288,19 @@ class PowerOutletTemplate(ModularComponentTemplateModel):
         help_text="Phase (for three-phase feeds)",
     )
 
-    class Meta:
-        ordering = ("device_type", "_name")
-        unique_together = ("device_type", "name")
-
     def clean(self):
         super().clean()
 
         # Validate power port assignment
-        if self.power_port_template and self.power_port_template.device_type != self.device_type:
-            raise ValidationError(f"Parent power port ({self.power_port_template}) must belong to the same device type")
+        if self.power_port_template:
+            if self.device_type and self.power_port_template.device_type != self.device_type:
+                raise ValidationError(
+                    f"Parent power port ({self.power_port_template}) must belong to the same device type"
+                )
+            if self.module_type and self.power_port_template.module_type != self.module_type:
+                raise ValidationError(
+                    f"Parent power port ({self.power_port_template}) must belong to the same module type"
+                )
 
     def instantiate(self, device, module=None):
         if self.power_port_template:
@@ -316,10 +334,6 @@ class InterfaceTemplate(ModularComponentTemplateModel):
     )
     type = models.CharField(max_length=50, choices=InterfaceTypeChoices)
     mgmt_only = models.BooleanField(default=False, verbose_name="Management only")
-
-    class Meta:
-        ordering = ("device_type", "_name")
-        unique_together = ("device_type", "name")
 
     def instantiate(self, device, module=None):
         try:
@@ -358,19 +372,23 @@ class FrontPortTemplate(ModularComponentTemplateModel):
         ],
     )
 
-    class Meta:
-        ordering = ("device_type", "_name")
-        unique_together = (
-            ("device_type", "name"),
-            ("rear_port_template", "rear_port_position"),
-        )
+    class Meta(ModularComponentTemplateModel.Meta):
+        constraints = [
+            *ModularComponentTemplateModel.Meta.constraints,
+            models.UniqueConstraint(
+                fields=("rear_port_template", "rear_port_position"),
+                name="dcim_frontporttemplate_rear_port_template_rear_port_position_unique",
+            ),
+        ]
 
     def clean(self):
         super().clean()
 
         # Validate rear port assignment
-        if self.rear_port_template.device_type != self.device_type:
+        if self.device_type and self.rear_port_template.device_type != self.device_type:
             raise ValidationError(f"Rear port ({self.rear_port_template}) must belong to the same device type")
+        if self.module_type and self.rear_port_template.module_type != self.module_type:
+            raise ValidationError(f"Rear port ({self.rear_port_template}) must belong to the same module type")
 
         # Validate rear port position assignment
         if self.rear_port_position > self.rear_port_template.positions:
@@ -412,10 +430,6 @@ class RearPortTemplate(ModularComponentTemplateModel):
             MaxValueValidator(REARPORT_POSITIONS_MAX),
         ],
     )
-
-    class Meta:
-        ordering = ("device_type", "_name")
-        unique_together = ("device_type", "name")
 
     def instantiate(self, device, module=None):
         return self.instantiate_model(
@@ -527,7 +541,7 @@ class ModuleBayTemplate(BaseModel, ChangeLoggedModel, CustomFieldModel, Relation
         try:
             parent = self.parent
         except ObjectDoesNotExist:
-            # The parent has already been deleted
+            # The parent may have already been deleted
             parent = None
 
         return super().to_objectchange(action, related_object=parent, **kwargs)
