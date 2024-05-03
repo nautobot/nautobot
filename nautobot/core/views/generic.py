@@ -317,7 +317,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                         view=list_url, pk=current_saved_view_pk
                     )
                 except ObjectDoesNotExist:
-                    pass
+                    messages.error(request, f"Saved view {current_saved_view_pk} not found")
 
             table = self.table(
                 self.queryset,

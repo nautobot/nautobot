@@ -140,7 +140,8 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         unique_object_change_id = None
         if user is not None:
             unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}__{user.pk}"
-
+        else:
+            unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}"
         # If a change already exists for this change_id, user, and object, update it instead of creating a new one.
         # If the object was deleted then recreated with the same pk (don't do this), change the action to update.
         if unique_object_change_id in change_context.deferred_object_changes:

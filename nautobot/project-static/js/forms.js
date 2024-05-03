@@ -653,30 +653,7 @@ function initializeDynamicFilterForm(context){
         e.preventDefault()
         let dynamic_form = $("#dynamic-filter-form");
         dynamic_form.find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
-        const urlParams = new URLSearchParams(window.location.search);
-        const saved_view_pk = urlParams.get('saved_view');
-        var saved_view_pk_query_string = ""
-        if (saved_view_pk != null){
-            saved_view_pk_query_string = "&saved_view=" + saved_view_pk
-        }
-        const sort_order = urlParams.getAll('sort');
-        var sort_order_query_string = ""
-        if (sort_order != null){
-            for (var i = 0; i < sort_order.length; i++){
-                appendage = "&sort=" + sort_order[i]
-                sort_order_query_string += appendage
-            }
-        }
-        const per_page = urlParams.get('per_page');
-        var per_page_query_string = ""
-        if (per_page != null) {
-            per_page_query_string = "&per_page=" + per_page
-        }
-        const table_changes = urlParams.get('table_changes_pending');
-        var table_changes_query_string = ""
-        if (table_changes != null) {
-            table_changes_query_string = "&table_changes_pending=" + table_changes
-        }
+
         // Append q form field to dynamic filter form via hidden input
         let q_field = $('#id_q')
         let q_field_phantom = $('<input type="hidden" name="q" />')
@@ -688,13 +665,20 @@ function initializeDynamicFilterForm(context){
         // 2) combine the two forms into a single set of data without duplicate entries
         let search_query = new URLSearchParams();
         let dynamic_query = new URLSearchParams(new FormData(document.getElementById("dynamic-filter-form")));
+        const urlParams = new URLSearchParams(window.location.search);
+        const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending"]
+        urlParams.forEach((value, key) => {
+            if (non_filter_params.includes(key)){
+                search_query.append(key, value)
+            }
+        })
         dynamic_query.forEach((value, key) => { if (value != "") { search_query.append(key, value); }});
         let default_query = new URLSearchParams(new FormData(document.getElementById("default-filter").firstElementChild));
         default_query.forEach((value, key) => {
             if (value != "" && !search_query.has(key, value)) { search_query.append(key, value); }
         });
         $("#FilterForm_modal").modal("hide");
-        location.assign("?" + search_query + sort_order_query_string + per_page_query_string + saved_view_pk_query_string + table_changes_query_string);
+        location.assign("?" + search_query);
     })
 
     // On submit of filter search form
