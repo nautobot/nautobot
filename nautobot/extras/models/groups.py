@@ -19,6 +19,7 @@ from nautobot.core.forms.fields import DynamicModelChoiceField
 from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices
@@ -26,6 +27,25 @@ from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGro
 from nautobot.extras.utils import extras_features, FeatureQuery
 
 logger = logging.getLogger(__name__)
+
+
+class StaticGroupManager(BaseManager.from_queryset(RestrictedQuerySet)):
+    use_in_migrations = True
+
+    def get_for_model(self, model):
+        """
+        Return all StaticGroups assignable to the given model class.
+        """
+        concrete_model = model._meta.concrete_model
+        cache_key = f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}"
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            content_type = ContentType.objects.get_for_model(concrete_model)
+            queryset = self.get_queryset().filter(content_type=content_type)
+            cache.set(cache_key, queryset)
+        return queryset
+
+    get_for_model.cache_key_prefix = "nautobot.extras.staticgroup.get_for_model"
 
 
 @extras_features(
@@ -54,6 +74,8 @@ class StaticGroup(PrimaryModel):
         blank=True,
         null=True,
     )
+
+    objects = StaticGroupManager()
 
     clone_fields = ["content_type", "tenant"]
     is_static_group_associable_model = False

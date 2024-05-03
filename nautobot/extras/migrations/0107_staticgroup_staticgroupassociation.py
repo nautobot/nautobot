@@ -7,6 +7,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 import nautobot.core.models.fields
+import nautobot.extras.models.groups
 import nautobot.extras.models.mixins
 import nautobot.extras.utils
 
@@ -60,6 +61,9 @@ class Migration(migrations.Migration):
             options={
                 "ordering": ["name"],
             },
+            managers=[
+                ("objects", nautobot.extras.models.groups.StaticGroupManager()),
+            ],
             bases=(
                 models.Model,
                 nautobot.extras.models.mixins.DynamicGroupMixin,
