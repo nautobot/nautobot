@@ -705,7 +705,7 @@ class BaseFilterSet(django_filters.FilterSet):
         fields = super().get_fields()
         if "id" not in fields and (cls._meta.exclude is None or "id" not in cls._meta.exclude):
             # Add "id" as the first key in the `fields` dict
-            fields = dict(id=[django_filters.conf.settings.DEFAULT_LOOKUP_EXPR], **fields)
+            fields = {"id": [django_filters.conf.settings.DEFAULT_LOOKUP_EXPR], **fields}
         return fields
 
     @classmethod
@@ -715,16 +715,16 @@ class BaseFilterSet(django_filters.FilterSet):
         """
         filters = super().get_filters()
 
-        if "static_group" not in filters and getattr(cls._meta.model, "is_static_group_associable_model", False):
-            # Add "static_group" field as the last key
+        if "static_groups" not in filters and getattr(cls._meta.model, "is_static_group_associable_model", False):
+            # Add "static_groups" field as the last key
             from nautobot.extras.models import StaticGroup
 
-            filters["static_group"] = NaturalKeyOrPKMultipleChoiceFilter(
+            filters["static_groups"] = NaturalKeyOrPKMultipleChoiceFilter(
                 queryset=StaticGroup.objects.all(),
                 field_name="associated_static_groups__static_group",
                 to_field_name="name",
                 query_params={"content_type": cls._meta.model._meta.label_lower},
-                label="Static group",
+                label="Static groups (name or ID)",
             )
 
         # django-filters has no concept of "abstract" filtersets, so we have to fake it
