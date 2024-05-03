@@ -42,7 +42,7 @@ from nautobot.core.views.mixins import (
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.models import Controller, Device, Interface, Location, Rack
+from nautobot.dcim.models import Controller, Device, Interface, Rack
 from nautobot.dcim.tables import ControllerTable, DeviceTable, InterfaceTable, RackTable
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
@@ -2067,54 +2067,32 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
             }
 
             if ContentType.objects.get_for_model(Device) in context["content_types"]:
-                devices = instance.devices.select_related(
-                    "status",
-                    "location",
-                    "tenant",
-                    "role",
-                    "rack",
-                    "device_type",
-                ).restrict(request.user, "view")
+                devices = instance.devices.restrict(request.user, "view")
                 device_table = DeviceTable(devices)
                 device_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(device_table)
                 context["device_table"] = device_table
 
             if ContentType.objects.get_for_model(Interface) in context["content_types"]:
-                interfaces = instance.interfaces.select_related(
-                    "device",
-                    "status",
-                    "role",
-                ).restrict(request.user, "view")
+                interfaces = instance.interfaces.restrict(request.user, "view")
                 interface_table = InterfaceTable(interfaces)
                 interface_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(interface_table)
                 context["interface_table"] = interface_table
 
             if ContentType.objects.get_for_model(Controller) in context["content_types"]:
-                controllers = instance.controllers.select_related(
-                    "status",
-                    "location",
-                    "tenant",
-                    "role",
-                ).restrict(request.user, "view")
+                controllers = instance.controllers.restrict(request.user, "view")
                 controller_table = ControllerTable(controllers)
                 controller_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(controller_table)
                 context["controller_table"] = controller_table
 
             if ContentType.objects.get_for_model(IPAddress) in context["content_types"]:
-                ipaddress = (
-                    instance.ip_addresses.select_related("status", "tenant")
-                    .restrict(request.user, "view")
-                    .annotate(
-                        interface_count=count_related(Interface, "ip_addresses"),
-                        interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
-                        vm_interface_count=count_related(VMInterface, "ip_addresses"),
-                        vm_interface_parent_count=count_related(
-                            VirtualMachine, "interfaces__ip_addresses", distinct=True
-                        ),
-                    )
+                ipaddress = instance.ip_addresses.restrict(request.user, "view").annotate(
+                    interface_count=count_related(Interface, "ip_addresses"),
+                    interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
+                    vm_interface_count=count_related(VMInterface, "ip_addresses"),
+                    vm_interface_parent_count=count_related(VirtualMachine, "interfaces__ip_addresses", distinct=True),
                 )
                 ipaddress_table = IPAddressTable(ipaddress)
                 ipaddress_table.columns.hide("role")
@@ -2122,63 +2100,31 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 context["ipaddress_table"] = ipaddress_table
 
             if ContentType.objects.get_for_model(Prefix) in context["content_types"]:
-                prefixes = (
-                    instance.prefixes.select_related(
-                        "status",
-                        "tenant",
-                        "vlan",
-                        "namespace",
-                    )
-                    .restrict(request.user, "view")
-                    .annotate(location_count=count_related(Location, "prefixes"))
-                )
+                prefixes = instance.prefixes.restrict(request.user, "view")
                 prefix_table = PrefixTable(prefixes)
                 prefix_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(prefix_table)
                 context["prefix_table"] = prefix_table
             if ContentType.objects.get_for_model(Rack) in context["content_types"]:
-                racks = instance.racks.select_related(
-                    "location",
-                    "status",
-                    "tenant",
-                    "rack_group",
-                ).restrict(request.user, "view")
+                racks = instance.racks.restrict(request.user, "view")
                 rack_table = RackTable(racks)
                 rack_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(rack_table)
                 context["rack_table"] = rack_table
             if ContentType.objects.get_for_model(VirtualMachine) in context["content_types"]:
-                virtual_machines = instance.virtual_machines.select_related(
-                    "cluster",
-                    "role",
-                    "status",
-                    "tenant",
-                ).restrict(request.user, "view")
+                virtual_machines = instance.virtual_machines.restrict(request.user, "view")
                 virtual_machine_table = VirtualMachineTable(virtual_machines)
                 virtual_machine_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(virtual_machine_table)
                 context["virtual_machine_table"] = virtual_machine_table
             if ContentType.objects.get_for_model(VMInterface) in context["content_types"]:
-                vm_interfaces = instance.vm_interfaces.select_related(
-                    "virtual_machine",
-                    "status",
-                    "role",
-                    "vrf",
-                ).restrict(request.user, "view")
+                vm_interfaces = instance.vm_interfaces.restrict(request.user, "view")
                 vminterface_table = VMInterfaceTable(vm_interfaces)
                 vminterface_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(vminterface_table)
                 context["vminterface_table"] = vminterface_table
             if ContentType.objects.get_for_model(VLAN) in context["content_types"]:
-                vlans = (
-                    instance.vlans.annotate(location_count=count_related(Location, "vlans"))
-                    .select_related(
-                        "vlan_group",
-                        "status",
-                        "tenant",
-                    )
-                    .restrict(request.user, "view")
-                )
+                vlans = instance.vlans.restrict(request.user, "view")
                 vlan_table = VLANTable(vlans)
                 vlan_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(vlan_table)

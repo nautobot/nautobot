@@ -208,6 +208,21 @@ def get_view_for_model(model, view_type=""):
     return result
 
 
+def get_model_for_view_name(view_name):
+    """
+    Return the model class associated with the given view_name e.g. "circuits:circuit_detail", "dcim:device_list" and etc.
+    If the app_label or model_name contained by the given view_name is invalid, this will return `None`.
+    """
+    app_label, model_name = view_name.split(":")  # dcim, device_list
+    model_name = model_name.split("_")[0]  # device
+
+    try:
+        model = apps.get_model(app_label=app_label, model_name=model_name)
+        return model
+    except LookupError:
+        return None
+
+
 def get_created_and_last_updated_usernames_for_model(instance):
     """
     Args:

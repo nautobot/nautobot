@@ -1130,6 +1130,10 @@ class StaticGroupFilterSet(NautobotFilterSet):
         },
     )
     content_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("static_groups").get_choices, conjoined=False)
+    member_id = MultiValueUUIDFilter(
+        field_name="static_group_associations__associated_object_id",
+        label="Group member ID",
+    )
     tenant = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="tenant",
         queryset=Tenant.objects.all(),

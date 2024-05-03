@@ -1094,7 +1094,7 @@ class StatusTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Status
-        fields = ["pk", "name", "color", "content_types", "description"]
+        fields = ["pk", "name", "color", "content_types", "description", "actions"]
 
 
 class StatusTableMixin(BaseTable):

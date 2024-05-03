@@ -1,7 +1,6 @@
 from django_tables2 import RequestConfig
 
 from nautobot.circuits.models import Circuit
-from nautobot.core.models.querysets import count_related
 from nautobot.core.views import generic
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.dcim.models import Device, Location, Rack, RackReservation
@@ -18,7 +17,7 @@ from .models import Tenant, TenantGroup
 
 
 class TenantGroupListView(generic.ObjectListView):
-    queryset = TenantGroup.objects.annotate(tenant_count=count_related(Tenant, "tenant_group"))
+    queryset = TenantGroup.objects.all()
     filterset = filters.TenantGroupFilterSet
     table = tables.TenantGroupTable
 
@@ -61,7 +60,7 @@ class TenantGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, un
 
 
 class TenantGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = TenantGroup.objects.annotate(tenant_count=count_related(Tenant, "tenant_group"))
+    queryset = TenantGroup.objects.all()
     table = tables.TenantGroupTable
     filterset = filters.TenantGroupFilterSet
 
