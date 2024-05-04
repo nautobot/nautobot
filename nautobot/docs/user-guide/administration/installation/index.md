@@ -92,7 +92,7 @@ To begin with installing Nautobot dependencies on a supported platform, see [the
 
 ### Running Nautobot in Docker
 
-Nautobot docker images are available for use in a containerized deployment for an easier installation, see the [Docker overview](./docker.md) for more information.
+Nautobot docker images are available for use in a containerized deployment for an easier installation, see the [Docker overview](../installation_extras/docker.md) for more information.
 
 ## Upgrading
 
