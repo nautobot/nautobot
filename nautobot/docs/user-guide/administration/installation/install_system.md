@@ -311,6 +311,8 @@ Please follow the steps for your selected database backend below.
         CREATE DATABASE nautobot;
         CREATE USER nautobot WITH PASSWORD 'insecure_password';
         GRANT ALL PRIVILEGES ON DATABASE nautobot TO nautobot;
+        \connect nautobot
+        GRANT CREATE ON SCHEMA public TO nautobot;
         \q
         ```
 
