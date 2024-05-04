@@ -196,7 +196,7 @@ Please follow the steps for your selected database backend below.
         mysql --user nautobot --password --host localhost nautobot
         ```
 
-        ??? example "Example Verification of MySQL datbase"
+        ??? example "Example Verification of MySQL database"
 
             ```no-highlight title="Example test output"
             Enter password:
