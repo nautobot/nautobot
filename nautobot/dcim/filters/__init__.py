@@ -965,6 +965,11 @@ class DeviceFilterSet(
         field_name="interfaces",
         label="Has interfaces",
     )
+    interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        label="Interfaces (name or ID)",
+    )
     has_front_ports = RelatedMembershipBooleanFilter(
         field_name="front_ports",
         label="Has front ports",
@@ -1931,7 +1936,13 @@ class ControllerManagedDeviceGroupFilterSet(NautobotFilterSet):
         return queryset.filter(params)
 
 
-class ModuleFilterSet(NautobotFilterSet):
+class ModuleFilterSet(
+    LocatableModelFilterSetMixin,
+    RoleModelFilterSetMixin,
+    StatusModelFilterSetMixin,
+    TenancyModelFilterSetMixin,
+    NautobotFilterSet,
+):
     q = SearchFilter(
         filter_predicates={
             "asset_tag": {
@@ -1946,13 +1957,216 @@ class ModuleFilterSet(NautobotFilterSet):
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
-            "module_type__device_family__name": {
+            "module_type__model": {
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
         }
     )
+    installed = RelatedMembershipBooleanFilter(
+        field_name="parent_module_bay",
+        label="Is installed in a module bay",
+    )
+    mac_address = MultiValueMACAddressFilter(
+        field_name="interfaces__mac_address",
+        label="MAC address",
+    )
+    manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="module_type__manufacturer",
+        queryset=Manufacturer.objects.all(),
+        to_field_name="name",
+        label="Manufacturer (name or ID)",
+    )
+    module_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ModuleType.objects.all(),
+        to_field_name="model",
+        label="Module type (model or ID)",
+    )
+    has_console_ports = RelatedMembershipBooleanFilter(
+        field_name="console_ports",
+        label="Has console ports",
+    )
+    console_ports = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ConsolePort.objects.all(),
+        to_field_name="name",
+        label="Console Ports (name or ID)",
+    )
+    has_console_server_ports = RelatedMembershipBooleanFilter(
+        field_name="console_server_ports",
+        label="Has console server ports",
+    )
+    console_server_ports = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ConsoleServerPort.objects.all(),
+        to_field_name="name",
+        label="Console Server Ports (name or ID)",
+    )
+    has_power_ports = RelatedMembershipBooleanFilter(
+        field_name="power_ports",
+        label="Has power ports",
+    )
+    power_ports = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=PowerPort.objects.all(),
+        to_field_name="name",
+        label="Power Ports (name or ID)",
+    )
+    has_power_outlets = RelatedMembershipBooleanFilter(
+        field_name="power_outlets",
+        label="Has power outlets",
+    )
+    power_outlets = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=PowerOutlet.objects.all(),
+        to_field_name="name",
+        label="Power Outlets (name or ID)",
+    )
+    has_interfaces = RelatedMembershipBooleanFilter(
+        field_name="interfaces",
+        label="Has interfaces",
+    )
+    interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        label="Interfaces (name or ID)",
+    )
+    has_front_ports = RelatedMembershipBooleanFilter(
+        field_name="front_ports",
+        label="Has front ports",
+    )
+    front_ports = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=FrontPort.objects.all(),
+        to_field_name="name",
+        label="Front Ports (name or ID)",
+    )
+    has_rear_ports = RelatedMembershipBooleanFilter(
+        field_name="rear_ports",
+        label="Has rear ports",
+    )
+    rear_ports = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=RearPort.objects.all(),
+        to_field_name="name",
+        label="Rear Ports (name or ID)",
+    )
+    has_module_bays = RelatedMembershipBooleanFilter(
+        field_name="module_bays",
+        label="Has module bays",
+    )
+    module_bays = django_filters.ModelMultipleChoiceFilter(
+        queryset=ModuleBay.objects.all(),
+        label="Module Bays",
+    )
+    parent_module_bay = django_filters.ModelMultipleChoiceFilter(
+        queryset=ModuleBay.objects.all(),
+        label="Parent Module Bay",
+    )
 
     class Meta:
         model = Module
         fields = "__all__"
+
+
+class ModuleTypeFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "manufacturer__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "model": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "part_number": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+        },
+    )
+    manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Manufacturer.objects.all(), to_field_name="name", label="Manufacturer (name or ID)"
+    )
+    has_pass_through_ports = django_filters.BooleanFilter(
+        method="_pass_through_ports",
+        label="Has pass-through ports",
+    )
+    has_modules = RelatedMembershipBooleanFilter(
+        field_name="modules",
+        label="Has module instances",
+    )
+    console_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
+        queryset=ConsolePortTemplate.objects.all(),
+        label="Console port templates (name or ID)",
+    )
+    has_console_port_templates = RelatedMembershipBooleanFilter(
+        field_name="console_port_templates",
+        label="Has console port templates",
+    )
+    console_server_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
+        queryset=ConsoleServerPortTemplate.objects.all(),
+        label="Console server port templates (name or ID)",
+    )
+    has_console_server_port_templates = RelatedMembershipBooleanFilter(
+        field_name="console_server_port_templates",
+        label="Has console server port templates",
+    )
+    power_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
+        queryset=PowerPortTemplate.objects.all(),
+        label="Power port templates (name or ID)",
+    )
+    has_power_port_templates = RelatedMembershipBooleanFilter(
+        field_name="power_port_templates",
+        label="Has power port templates",
+    )
+    power_outlet_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
+        queryset=PowerOutletTemplate.objects.all(),
+        label="Power outlet templates (name or ID)",
+    )
+    has_power_outlet_templates = RelatedMembershipBooleanFilter(
+        field_name="power_outlet_templates",
+        label="Has power outlet templates",
+    )
+    interface_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
+        queryset=InterfaceTemplate.objects.all(),
+        label="Interface templates (name or ID)",
+    )
+    has_interface_templates = RelatedMembershipBooleanFilter(
+        field_name="interface_templates",
+        label="Has interface templates",
+    )
+    front_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
+        queryset=FrontPortTemplate.objects.all(),
+        label="Front port templates (name or ID)",
+    )
+    has_front_port_templates = RelatedMembershipBooleanFilter(
+        field_name="front_port_templates",
+        label="Has front port templates",
+    )
+    rear_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
+        queryset=RearPortTemplate.objects.all(),
+        label="Rear port templates (name or ID)",
+    )
+    has_rear_port_templates = RelatedMembershipBooleanFilter(
+        field_name="rear_port_templates",
+        label="Has rear port templates",
+    )
+    module_bay_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="name",
+        queryset=ModuleBayTemplate.objects.all(),
+        label="Module bay templates (name or ID)",
+    )
+    has_module_bay_templates = RelatedMembershipBooleanFilter(
+        field_name="module_bay_templates",
+        label="Has module bay templates",
+    )
+
+    class Meta:
+        model = ModuleType
+        fields = "__all__"
+
+    def _pass_through_ports(self, queryset, name, value):
+        return queryset.exclude(front_port_templates__isnull=value, rear_port_templates__isnull=value)

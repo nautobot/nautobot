@@ -45,6 +45,7 @@ from nautobot.dcim.filters import (
     LocationFilterSet,
     LocationTypeFilterSet,
     ManufacturerFilterSet,
+    ModuleFilterSet,
     PlatformFilterSet,
     PowerFeedFilterSet,
     PowerOutletFilterSet,
@@ -86,6 +87,10 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
+    Module,
+    ModuleBay,
+    ModuleBayTemplate,
+    ModuleType,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -1424,6 +1429,7 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ("device_type", "device_type__model"),
         ("front_ports", "front_ports__id"),
         ("interfaces", "interfaces__id"),
+        ("interfaces", "interfaces__name"),
         ("mac_address", "interfaces__mac_address"),
         ("manufacturer", "device_type__manufacturer__id"),
         ("manufacturer", "device_type__manufacturer__name"),
@@ -1510,7 +1516,7 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         )
 
         # Assign primary IPs for filtering
-        interfaces = Interface.objects.all()
+        interfaces = Interface.objects.filter(device__isnull=False)
         ipaddr_status = Status.objects.get_for_model(IPAddress).first()
         prefix_status = Status.objects.get_for_model(Prefix).first()
         namespace = Namespace.objects.first()
@@ -3472,3 +3478,261 @@ class ControllerManagedDeviceGroupFilterSetTestCase(FilterTestCases.FilterTestCa
     @classmethod
     def setUpTestData(cls):
         common_test_data(cls)
+
+
+class ModuleTestCase(FilterTestCases.TenancyFilterTestCaseMixin, FilterTestCases.FilterTestCase):
+    queryset = Module.objects.all()
+    filterset = ModuleFilterSet
+    tenancy_related_name = "modules"
+    generic_filter_tests = [
+        ("asset_tag",),
+        ("console_ports", "console_ports__id"),
+        ("console_ports", "console_ports__name"),
+        ("console_server_ports", "console_server_ports__id"),
+        ("console_server_ports", "console_server_ports__name"),
+        ("front_ports", "front_ports__id"),
+        ("front_ports", "front_ports__name"),
+        ("interfaces", "interfaces__id"),
+        ("interfaces", "interfaces__name"),
+        ("mac_address", "interfaces__mac_address"),
+        ("manufacturer", "module_type__manufacturer__id"),
+        ("manufacturer", "module_type__manufacturer__name"),
+        ("module_bays", "module_bays__id"),
+        ("module_type", "module_type__id"),
+        ("module_type", "module_type__model"),
+        ("parent_module_bay", "parent_module_bay__id"),
+        ("power_outlets", "power_outlets__id"),
+        ("power_outlets", "power_outlets__name"),
+        ("power_ports", "power_ports__id"),
+        ("power_ports", "power_ports__name"),
+        ("rear_ports", "rear_ports__id"),
+        ("rear_ports", "rear_ports__name"),
+        ("role", "role__id"),
+        ("role", "role__name"),
+        ("serial",),
+        ("status", "status__id"),
+        ("status", "status__name"),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        common_test_data(cls)
+
+        module_types = ModuleType.objects.all()[:3]
+        ConsolePortTemplate.objects.create(
+            module_type=module_types[0],
+            name="Console Port 1",
+            label="console1",
+            description="Front Console Port 1",
+        )
+        ConsolePortTemplate.objects.create(
+            module_type=module_types[1],
+            name="Console Port 2",
+            label="console2",
+            description="Front Console Port 2",
+        )
+        ConsolePortTemplate.objects.create(
+            module_type=module_types[2],
+            name="Console Port 3",
+            label="console3",
+            description="Front Console Port 3",
+        )
+
+        ConsoleServerPortTemplate.objects.create(
+            module_type=module_types[0],
+            name="Console Server Port 1",
+            label="consoleserverport1",
+            description="Front Console Server Port 1",
+        )
+        ConsoleServerPortTemplate.objects.create(
+            module_type=module_types[1],
+            name="Console Server Port 2",
+            label="consoleserverport2",
+            description="Front Console Server Port 2",
+        )
+        ConsoleServerPortTemplate.objects.create(
+            module_type=module_types[2],
+            name="Console Server Port 3",
+            label="consoleserverport3",
+            description="Front Console Server Port 3",
+        )
+
+        power_port_templates = (
+            PowerPortTemplate.objects.create(
+                module_type=module_types[0],
+                name="Power Port 1",
+                maximum_draw=100,
+                allocated_draw=50,
+                label="powerport1",
+                description="Power Port Description 1",
+            ),
+            PowerPortTemplate.objects.create(
+                module_type=module_types[1],
+                name="Power Port 2",
+                maximum_draw=200,
+                allocated_draw=100,
+                label="powerport2",
+                description="Power Port Description 2",
+            ),
+            PowerPortTemplate.objects.create(
+                module_type=module_types[2],
+                name="Power Port 3",
+                maximum_draw=300,
+                allocated_draw=150,
+                label="powerport3",
+                description="Power Port Description 3",
+            ),
+        )
+
+        PowerOutletTemplate.objects.create(
+            module_type=module_types[0],
+            power_port_template=power_port_templates[0],
+            name="Power Outlet 1",
+            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
+            label="poweroutlet1",
+            description="Power Outlet Description 1",
+        )
+        PowerOutletTemplate.objects.create(
+            module_type=module_types[1],
+            power_port_template=power_port_templates[1],
+            name="Power Outlet 2",
+            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_B,
+            label="poweroutlet2",
+            description="Power Outlet Description 2",
+        )
+        PowerOutletTemplate.objects.create(
+            module_type=module_types[2],
+            power_port_template=power_port_templates[2],
+            name="Power Outlet 3",
+            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_C,
+            label="poweroutlet3",
+            description="Power Outlet Description 3",
+        )
+
+        InterfaceTemplate.objects.create(
+            name="Interface 1",
+            description="Interface Description 1",
+            module_type=module_types[0],
+            label="interface1",
+            mgmt_only=True,
+            type=InterfaceTypeChoices.TYPE_1GE_SFP,
+        )
+        InterfaceTemplate.objects.create(
+            name="Interface 2",
+            description="Interface Description 2",
+            module_type=module_types[1],
+            label="interface2",
+            mgmt_only=False,
+            type=InterfaceTypeChoices.TYPE_1GE_GBIC,
+        )
+        InterfaceTemplate.objects.create(
+            name="Interface 3",
+            description="Interface Description 3",
+            module_type=module_types[2],
+            label="interface3",
+            mgmt_only=False,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+        )
+
+        rear_ports = (
+            RearPortTemplate.objects.create(
+                module_type=module_types[0],
+                name="Rear Port 1",
+                type=PortTypeChoices.TYPE_8P8C,
+                positions=1,
+                label="rearport1",
+                description="Rear Port Description 1",
+            ),
+            RearPortTemplate.objects.create(
+                module_type=module_types[1],
+                name="Rear Port 2",
+                type=PortTypeChoices.TYPE_110_PUNCH,
+                positions=2,
+                label="rearport2",
+                description="Rear Port Description 2",
+            ),
+            RearPortTemplate.objects.create(
+                module_type=module_types[2],
+                name="Rear Port 3",
+                type=PortTypeChoices.TYPE_BNC,
+                positions=3,
+                label="rearport3",
+                description="Rear Port Description 3",
+            ),
+        )
+
+        FrontPortTemplate.objects.create(
+            module_type=module_types[0],
+            name="Front Port 1",
+            rear_port_template=rear_ports[0],
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_position=1,
+            label="frontport1",
+            description="Front Port Description 1",
+        )
+        FrontPortTemplate.objects.create(
+            module_type=module_types[1],
+            name="Front Port 2",
+            rear_port_template=rear_ports[1],
+            type=PortTypeChoices.TYPE_110_PUNCH,
+            rear_port_position=2,
+            label="frontport2",
+            description="Front Port Description 2",
+        )
+        FrontPortTemplate.objects.create(
+            module_type=module_types[2],
+            name="Front Port 3",
+            rear_port_template=rear_ports[2],
+            type=PortTypeChoices.TYPE_BNC,
+            rear_port_position=3,
+            label="frontport3",
+            description="Front Port Description 3",
+        )
+
+        ModuleBayTemplate.objects.create(
+            module_type=module_types[0],
+            position="test module bay 1",
+        )
+        ModuleBayTemplate.objects.create(
+            module_type=module_types[1],
+            position="test module bay 2",
+        )
+        ModuleBayTemplate.objects.create(
+            module_type=module_types[2],
+            position="test module bay 3",
+        )
+        module_bay = ModuleBay.objects.filter(installed_module__isnull=True).first()
+        status = Status.objects.get_for_model(Module).first()
+        tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
+        parent_module = Module.objects.create(
+            parent_module_bay=module_bay,
+            module_type=module_types[0],
+            status=status,
+            tenant=tenants[0],
+        )
+        Module.objects.create(
+            parent_module_bay=parent_module.module_bays.first(),
+            module_type=module_types[1],
+            status=status,
+            tenant=tenants[1],
+        )
+        other_parent_module = Module.objects.create(
+            location=Location.objects.get_for_model(Module).first(),
+            module_type=module_types[2],
+            status=status,
+            tenant=tenants[2],
+        )
+        Module.objects.create(
+            parent_module_bay=other_parent_module.module_bays.first(),
+            module_type=module_types[2],
+            status=status,
+            tenant=tenants[2],
+        )
+
+        # Update existing interface objects with mac addresses for filtering
+        interfaces = Interface.objects.filter(module__isnull=False)[:3]
+        Interface.objects.filter(pk=interfaces[0].pk).update(mac_address="00-00-00-00-00-01")
+        Interface.objects.filter(pk=interfaces[1].pk).update(mac_address="00-00-00-00-00-02")
+
+    def test_has_passthrough_ports(self):
+        pass  # TODO
