@@ -54,8 +54,7 @@ Please follow the steps for your selected database backend below.
 
         ### Create a PostgreSQL Database
 
-        At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This
-        is done with the following commands.
+        At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This is done with the following commands.
 
         !!! danger
             **Do not use the password from the example.** Choose a strong, random password to ensure secure database authentication for your Nautobot installation.
