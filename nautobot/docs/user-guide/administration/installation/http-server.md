@@ -127,7 +127,7 @@ Begin by installing NGINX:
 
     === "Vim"
 
-        ```no-highlight title="Vim nautobot site config"
+        ```no-highlight title="Edit Nautobot site config with Vim"
         vim /etc/nginx/conf.d/nautobot.conf
         ```
 
