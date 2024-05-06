@@ -377,7 +377,7 @@ class FrontPortTemplate(ModularComponentTemplateModel):
             *ModularComponentTemplateModel.Meta.constraints,
             models.UniqueConstraint(
                 fields=("rear_port_template", "rear_port_position"),
-                name="dcim_frontporttemplate_rear_port_template_rear_port_position_unique",
+                name="dcim_frontporttemplate_rear_port_template_position_unique",
             ),
         ]
 
