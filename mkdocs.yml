@@ -179,7 +179,7 @@ plugins:
         "development/templates.md": "development/core/templates.md"
         "development/testing.md": "development/core/testing.md"
         "development/user-preferences.md": "development/core/user-preferences.md"
-        "docker/index.md": "user-guide/administration/installation/docker.md"
+        "docker/index.md": "user-guide/administration/installation-extras/docker.md"
         "installation/centos.md": "user-guide/administration/installation/install_system.md"
         "installation/external-authentication.md": "user-guide/administration/installation/external-authentication.md"
         "installation/http-server.md": "user-guide/administration/installation/http-server.md"
@@ -188,7 +188,7 @@ plugins:
         "installation/migrating-from-postgresql.md": "user-guide/administration/migration/migrating-from-postgresql.md"
         "installation/nautobot.md": "user-guide/administration/installation/nautobot.md"
         "installation/region-and-site-data-migration-guide.md": "user-guide/administration/upgrading/from-v1/region-and-site-data-migration-guide.md"
-        "installation/selinux-troubleshooting.md": "user-guide/administration/installation/selinux-troubleshooting.md"
+        "installation/selinux-troubleshooting.md": "user-guide/administration/installation-extras/selinux-troubleshooting.md"
         "installation/services.md": "user-guide/administration/installation/services.md"
         "installation/ubuntu.md": "user-guide/administration/installation/install_system.md"
         "installation/upgrading-from-nautobot-v1.md": "user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md"
@@ -287,9 +287,9 @@ plugins:
         # Post 2.x redirects
         "development/apps/api/ui-extensions/object-detail-views.md": "development/apps/api/ui-extensions/object-views.md"
         "development/core/extending-models.md": "development/core/model-checklist.md"
-        "administration/installation/docker.md": "administration/installation_extras/docker.md"
-        "administration/installation/health-checks.md": "administration/installation_extras/health-checks.md"
-        "administration/installation/selinux-troubleshooting.md": "administration/installation_extras/selinux-troubleshooting.md"
+        "user-guide/administration/installation/docker.md": "user-guide/administration/installation-extras/docker.md"
+        "user-guide/administration/installation/health-checks.md": "user-guide/administration/installation-extras/health-checks.md"
+        "user-guide/administration/installation/selinux-troubleshooting.md": "user-guide/administration/installation-extras/selinux-troubleshooting.md"
 
 nav:
   - Overview: "index.md"
@@ -305,9 +305,9 @@ nav:
               - Installing and Using Plugins: "user-guide/administration/installation/app-install.md"
               - External Authentication (Optional): "user-guide/administration/installation/external-authentication.md"
           - Installation Extras:
-              - Nautobot Docker Images: "user-guide/administration/installation_extras/docker.md"
-              - Health Checks: "user-guide/administration/installation_extras/health-checks.md"
-              - SELinux Troubleshooting: "user-guide/administration/installation_extras/selinux-troubleshooting.md"
+              - Nautobot Docker Images: "user-guide/administration/installation-extras/docker.md"
+              - Health Checks: "user-guide/administration/installation-extras/health-checks.md"
+              - SELinux Troubleshooting: "user-guide/administration/installation-extras/selinux-troubleshooting.md"
 
           - Upgrading:
               - Database Backup: "user-guide/administration/upgrading/database-backup.md"
