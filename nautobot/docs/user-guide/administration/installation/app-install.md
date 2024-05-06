@@ -36,7 +36,7 @@ If the app requires any configuration, define it in `nautobot_config.py` under t
 ```python title="PLUGINS_CONFIG in nautobot_config.py"
 PLUGINS_CONFIG = {
     'app_name': {
-        'foo': 'bar',
+        'setting_name': 'value',
         'buzz': 'bazz'
     }
 }
