@@ -2476,10 +2476,11 @@ class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin
             except StaticGroupAssociation.DoesNotExist:
                 msg = "Static group association failed due to object-level permissions violation"
                 logger.warning(msg)
-                form.add_error(None, msg)
+                messages.error(self.request, msg)
 
         else:
             logger.debug("Form validation failed")
+            messages.error(self.request, form.errors)
 
         return redirect(self.get_return_url(request))
 

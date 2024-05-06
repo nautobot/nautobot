@@ -7,6 +7,7 @@ from django.core.exceptions import FieldError, ValidationError
 from django.db.models import ForeignKey
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
+from django_tables2 import RequestConfig
 from rest_framework import exceptions, serializers
 
 from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField
@@ -14,7 +15,9 @@ from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.models.utils import is_taggable
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_filter_field_label
-from nautobot.core.utils.lookup import get_form_for_model
+from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model, get_form_for_model
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.extras.tables import AssociatedContactsTable, StaticGroupTable
 
 
 def check_filter_for_display(filters, field_name, values):
@@ -274,3 +277,34 @@ def prepare_cloned_fields(instance):
     param_string = urllib.parse.urlencode(params)
 
     return param_string
+
+
+def common_detail_view_context(request, instance):
+    """Additional template context for object detail views, shared by both ObjectView and NautobotHTMLRenderer."""
+    context = {}
+
+    created_by, last_updated_by = get_created_and_last_updated_usernames_for_model(instance)
+    context["created_by"] = created_by
+    context["last_updated_by"] = last_updated_by
+
+    if instance.is_contact_associable_model:
+        paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        associations = instance.associated_contacts.restrict(request.user, "view").order_by("role__name")
+        associations_table = AssociatedContactsTable(associations, orderable=False)
+        RequestConfig(request, paginate).configure(associations_table)
+        associations_table.columns.show("pk")
+        context["associated_contacts_table"] = associations_table
+    else:
+        context["associated_contacts_table"] = None
+
+    if instance.is_static_group_associable_model:
+        paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        static_groups = instance.static_groups.restrict(request.user, "view")
+        static_groups_table = StaticGroupTable(static_groups, orderable=False)
+        RequestConfig(request, paginate).configure(static_groups_table)
+        # static_groups_table.columns.show("pk")  # we don't have any supported bulk ops here presently
+        context["associated_static_groups_table"] = static_groups_table
+    else:
+        context["associated_static_groups_table"] = None
+
+    return context

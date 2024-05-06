@@ -1594,6 +1594,12 @@ class StaticGroupBulkAssignForm(BootstrapMixin, BulkEditForm):
     class Meta:
         nullable_fields = []
 
+    def clean(self):
+        data = super().clean()
+
+        if data["add_to_groups"].filter(pk__in=data["remove_from_groups"].values_list("pk", flat=True)).exists():
+            raise ValidationError("Same group specified for both addition and removal")
+
 
 class StaticGroupAssociationFilterForm(NautobotFilterForm):
     model = StaticGroupAssociation

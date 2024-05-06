@@ -207,15 +207,14 @@
 
     // TODO: move this to a JS file that is auto-included by static_group_assignment_modal templatetag
     $("#static_group_assignment_modal").on("show.bs.modal", function (event) {
-        console.log("Hello")
         const button = $(event.relatedTarget);
         const selected_or_all = button.data("objects");
         const pks_target = document.getElementById("static_group_assignment_pks");
         pks_target.replaceChildren();
         if (selected_or_all == "all") {
-            $("#static_group_assignment_all").val(true);
+            document.getElementById("static_group_assignment_all").value = true;
         } else {
-            $("#static_group_assignment_all").val();
+            document.getElementById("static_group_assignment_all").value = "";
             const formData = new FormData(document.getElementById("object_list_form"));
             for (let pk of formData.getAll("pk")) {
                 let input = document.createElement("input");

@@ -109,6 +109,32 @@ class StaticGroup(PrimaryModel):
             pk__in=self.static_group_associations.values_list("associated_object_id", flat=True)
         )
 
+    @members.setter
+    def members(self, value):
+        """Set the member objects (QuerySet or list of records) for this group."""
+        if isinstance(value, models.QuerySet):
+            if value.model != self.model:
+                raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
+            to_remove = self.members.exclude(pk__in=value.values_list("pk", flat=True))
+            self.remove_members(to_remove)
+            to_add = value.exclude(pk__in=self.members.values_list("pk", flat=True))
+            self.add_members(to_add)
+        else:
+            for obj in value:
+                if not isinstance(obj, self.model):
+                    raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
+            to_remove = []
+            for member in self.members:
+                if member not in value:
+                    to_remove.append(member)
+            self.remove_members(to_remove)
+            to_add = []
+            members = self.members
+            for candidate in value:
+                if candidate not in members:
+                    to_add.append(candidate)
+            self.add_members(to_add)
+
     @property
     def count(self):
         """Return the number of member objects in this group."""

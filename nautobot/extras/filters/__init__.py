@@ -1119,8 +1119,11 @@ class SecretsGroupAssociationFilterSet(BaseFilterSet):
 # StaticGroups
 #
 
+# Must be imported **after* NautobotFilterSet class is defined to avoid a circular import loop.
+from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin  # noqa: E402
 
-class StaticGroupFilterSet(NautobotFilterSet):
+
+class StaticGroupFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -1133,12 +1136,6 @@ class StaticGroupFilterSet(NautobotFilterSet):
     member_id = MultiValueUUIDFilter(
         field_name="static_group_associations__associated_object_id",
         label="Group member ID",
-    )
-    tenant = NaturalKeyOrPKMultipleChoiceFilter(
-        field_name="tenant",
-        queryset=Tenant.objects.all(),
-        label="Tenant (ID or name)",
-        to_field_name="name",
     )
 
     class Meta:
