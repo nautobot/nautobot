@@ -502,6 +502,9 @@ Django requires the database encoding for PostgreSQL databases to be set to UTF-
         PONG
         ```
 
+        !!! note
+            test
+
 === "RHEL8"
 
     ### Start Redis

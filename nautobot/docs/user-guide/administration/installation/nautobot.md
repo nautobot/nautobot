@@ -75,6 +75,12 @@ Run this command to update `~/.bashrc` for `nautobot` so that anytime you become
 echo "export NAUTOBOT_ROOT=/opt/nautobot" | sudo tee -a ~nautobot/.bashrc
 ```
 
+??? example "Example bashrc update output"
+    
+    ```no-highlight title="Example output of updating bashrc"
+    export NAUTOBOT_ROOT=/opt/nautobot
+    ```
+
 ## Sudo to nautobot
 
 It is critical to install Nautobot as the `nautobot` user so that we don't have to worry about fixing permissions later.
@@ -159,6 +165,24 @@ We also want to deliberately install the `wheel` library which will tell Pip to 
 pip3 install --upgrade pip wheel
 ```
 
+??? example "Example pip update output"
+
+    ```no-highlight
+    Requirement already satisfied: pip in ./lib/python3.10/site-packages (22.0.2)
+    Collecting pip
+    Downloading pip-24.0-py3-none-any.whl (2.1 MB)
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 14.8 MB/s eta 0:00:00
+    Collecting wheel
+    Downloading wheel-0.43.0-py3-none-any.whl (65 kB)
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 65.8/65.8 KB 11.8 MB/s eta 0:00:00
+    Installing collected packages: wheel, pip
+    Attempting uninstall: pip
+        Found existing installation: pip 22.0.2
+        Uninstalling pip-22.0.2:
+        Successfully uninstalled pip-22.0.2
+    Successfully installed pip-24.0 wheel-0.43.0
+    ```
+
 By default, Pip will now install Python packages as wheels. In most cases this is desirable, however in some cases the wheel versions of packages may have been compiled with options differing from what is needed for a specific scenario. One such case presents itself here - the wheel for `pyuwsgi`, a key web server component of Nautobot, is built without SSL (HTTPS) support. This may be fine for a non-production deployment of Nautobot, such as in your lab, but for production deployments, not supporting HTTPS will not do at all. Fortunately, you can tell Pip when you don't want to use wheels for a specific package by passing the `--no-binary=<package>` CLI parameter. We'll use that below.
 
 ## Install Nautobot
@@ -208,7 +232,10 @@ nautobot-server init
     ```no-highlight title="Example nautobot-server init"
     Nautobot would like to send anonymized installation metrics to the project's maintainers.
     These metrics include the installed Nautobot version, the Python version in use, an anonymous "deployment ID", and a list of one-way-hashed names of enabled Nautobot Apps and their versions.
-    Allow Nautobot to send these metrics? [y/n]: y
+    Allow Nautobot to send these metrics? [y/n]:
+    ```
+
+    ```no-highlight title="Example with Metrics sent"
     Installation metrics will be sent when running 'nautobot-server post_upgrade'. Thank you!
     Configuration file created at /opt/nautobot/nautobot_config.py
     ```
@@ -242,13 +269,13 @@ Save your changes to your `nautobot_config.py` and then proceed to the next step
 
 ## Optional Settings
 
+All Python packages required by Nautobot will be installed automatically when running `pip3 install nautobot`.
+
+Nautobot also supports the ability to install optional Python packages. If desired, these packages should be listed in `local_requirements.txt` within the `NAUTOBOT_ROOT` directory, such as `/opt/nautobot/local_requirements.txt`.
+
+If you decide to use any [Nautobot Apps](../../../apps/index.md), they should be listed in the file.
+
 ??? abstract "Optional Settings"
-
-    All Python packages required by Nautobot will be installed automatically when running `pip3 install nautobot`.
-
-    Nautobot also supports the ability to install optional Python packages. If desired, these packages should be listed in `local_requirements.txt` within the `NAUTOBOT_ROOT` directory, such as `/opt/nautobot/local_requirements.txt`.
-
-    If you decide to use any [Nautobot Apps](../../../apps/index.md), they should be listed in this file.
 
     We will cover two examples of common optional settings below.
 
@@ -290,6 +317,16 @@ Nautobot does not come with any predefined user accounts. You'll need to create 
 nautobot-server createsuperuser
 ```
 
+??? example "Example with admin user created"
+
+    ```no title="Example output with admin user created"
+    Username: admin
+    Email address:  
+    Password: 
+    Password (again): 
+    Superuser created successfully.
+    ```
+
 ## Create Static Directories
 
 Nautobot relies upon many static files including:
@@ -306,6 +343,13 @@ The `collectstatic` command will create these directories if they do not exist, 
 ```no-highlight title="Collect static files"
 nautobot-server collectstatic
 ```
+
+??? example "Collect static example output"
+
+    ```no title="Collect static output"
+
+    1103 static files copied to '/opt/nautobot/static'.
+    ```
 
 ## Install Local Requirements
 
@@ -330,6 +374,12 @@ Checks are ran automatically when running a development server using `nautobot-s
 ```no-highlight title="Run a nautobot-server check"
 nautobot-server check
 ```
+
+??? example "nautobot-server check output"
+
+    ```no title="Example nautobot-server check output"
+    System check identified no issues (0 silenced).
+    ```
 
 ## Test the Application
 
