@@ -22,7 +22,7 @@ nautobot-server start --help
 
 Nautobot requires at least one worker to consume background tasks required for advanced background features. A `nautobot-server celery` command is included that directly invokes Celery. This command behaves exactly as the Celery command-line utility does, but launches it through Nautobot's environment to share Redis and database connection settings transparently.
 
-```no-highlight title="Worker Service help"
+```no-highlight title="Show help for the Nautobot worker service"
 nautobot-server celery --help
 ```
 
