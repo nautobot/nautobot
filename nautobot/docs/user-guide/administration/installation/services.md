@@ -320,7 +320,7 @@ index f84073fb5..52baf6096 100644
 
 Because we just added new service files, you'll need to reload the systemd daemon:
 
-```no-highlight title="Daemon reload"
+```no-highlight title="Reload the systemd daemon"
 sudo systemctl daemon-reload
 ```
 
