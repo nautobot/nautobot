@@ -84,6 +84,8 @@ extra:
       link: "https://twitter.com/networktocode"
       name: "Network to Code Twitter"
 markdown_extensions:
+  - "markdown_version_annotations":
+      admonition_tag: "???"
   - "admonition"
   - "toc":
       permalink: true
@@ -114,7 +116,6 @@ plugins:
       on_error_fail: true
       on_undefined: "strict"
       render_by_default: false # Only enable macros and Jinja2 rendering on specific pages
-  - "mkdocs-version-annotations"
   - "section-index"
   - "mkdocstrings":
       default_handler: "python"

@@ -1780,6 +1780,20 @@ rtd = ["jupyter_sphinx", "mdit-py-plugins", "myst-parser", "pyyaml", "sphinx", "
 testing = ["coverage", "pytest", "pytest-cov", "pytest-regressions"]
 
 [[package]]
+name = "markdown-version-annotations"
+version = "1.0.1"
+description = "Markdown plugin to add custom admonitions for documenting version differences"
+optional = false
+python-versions = "<4.0,>=3.7"
+files = [
+    {file = "markdown_version_annotations-1.0.1-py3-none-any.whl", hash = "sha256:6df0b2ac08bab906c8baa425f59fc0fe342fbe8b3917c144fb75914266b33200"},
+    {file = "markdown_version_annotations-1.0.1.tar.gz", hash = "sha256:620aade507ef175ccfb2059db152a34c6a1d2add28c2be16ea4de38d742e6132"},
+]
+
+[package.dependencies]
+markdown = ">=3.3.7,<4.0.0"
+
+[[package]]
 name = "markupsafe"
 version = "2.1.5"
 description = "Safely add untrusted strings to HTML/XML markup."
@@ -2052,17 +2066,6 @@ files = [
 
 [package.dependencies]
 mkdocs = ">=1.2"
-
-[[package]]
-name = "mkdocs-version-annotations"
-version = "1.0.0"
-description = "MkDocs plugin to add custom admonitions for documenting version differences"
-optional = false
-python-versions = ">=3.7,<4.0"
-files = [
-    {file = "mkdocs-version-annotations-1.0.0.tar.gz", hash = "sha256:6786024b37d27b330fda240b76ebec8e7ce48bd5a9d7a66e99804559d088dffa"},
-    {file = "mkdocs_version_annotations-1.0.0-py3-none-any.whl", hash = "sha256:385004eb4a7530dd87a227e08cd907ce7a8fe21fdf297720a4149c511bcf05f5"},
-]
 
 [[package]]
 name = "mkdocstrings"
@@ -4009,4 +4012,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "74bb3b477b8ca440ca0bb11ac551347f100ca3ada52a93da95d3537cd8eb6464"
+content-hash = "02f8508df70da2794068878998b452ca5617f254b8ce505bebe24ad70da8eb16"
