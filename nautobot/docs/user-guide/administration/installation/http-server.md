@@ -68,7 +68,7 @@ Begin by installing NGINX:
 
     === "Vim"
 
-        ```no-highlight title="Vim open NGINX config"
+        ```no-highlight title="Edit NGINX config with Vim"
         vim /etc/nginx/sites-available/nautobot.conf
         ```
 
