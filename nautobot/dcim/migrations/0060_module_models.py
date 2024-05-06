@@ -585,34 +585,6 @@ class Migration(migrations.Migration):
                 to="dcim.devicetype",
             ),
         ),
-        migrations.AlterUniqueTogether(
-            name="consoleporttemplate",
-            unique_together=set(),
-        ),
-        migrations.AlterUniqueTogether(
-            name="consoleserverporttemplate",
-            unique_together=set(),
-        ),
-        migrations.AlterUniqueTogether(
-            name="frontporttemplate",
-            unique_together=set(),
-        ),
-        migrations.AlterUniqueTogether(
-            name="interfacetemplate",
-            unique_together=set(),
-        ),
-        migrations.AlterUniqueTogether(
-            name="poweroutlettemplate",
-            unique_together=set(),
-        ),
-        migrations.AlterUniqueTogether(
-            name="powerporttemplate",
-            unique_together=set(),
-        ),
-        migrations.AlterUniqueTogether(
-            name="rearporttemplate",
-            unique_together=set(),
-        ),
         migrations.AddConstraint(
             model_name="consoleporttemplate",
             constraint=models.CheckConstraint(
@@ -686,7 +658,7 @@ class Migration(migrations.Migration):
             model_name="frontporttemplate",
             constraint=models.UniqueConstraint(
                 fields=("rear_port_template", "rear_port_position"),
-                name="dcim_frontporttemplate_rear_port_template_rear_port_position_unique",
+                name="dcim_frontporttemplate_rear_port_template_position_unique",
             ),
         ),
         migrations.AddConstraint(
@@ -859,5 +831,33 @@ class Migration(migrations.Migration):
             constraint=models.UniqueConstraint(
                 fields=("module_type", "position"), name="dcim_modulebaytemplate_module_type_position_unique"
             ),
+        ),
+        migrations.AlterUniqueTogether(
+            name="consoleporttemplate",
+            unique_together=set(),
+        ),
+        migrations.AlterUniqueTogether(
+            name="consoleserverporttemplate",
+            unique_together=set(),
+        ),
+        migrations.AlterUniqueTogether(
+            name="frontporttemplate",
+            unique_together=set(),
+        ),
+        migrations.AlterUniqueTogether(
+            name="interfacetemplate",
+            unique_together=set(),
+        ),
+        migrations.AlterUniqueTogether(
+            name="poweroutlettemplate",
+            unique_together=set(),
+        ),
+        migrations.AlterUniqueTogether(
+            name="powerporttemplate",
+            unique_together=set(),
+        ),
+        migrations.AlterUniqueTogether(
+            name="rearporttemplate",
+            unique_together=set(),
         ),
     ]
