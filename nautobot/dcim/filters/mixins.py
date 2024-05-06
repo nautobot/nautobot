@@ -10,7 +10,7 @@ from nautobot.core.filters import (
     SearchFilter,
     TreeNodeMultipleChoiceFilter,
 )
-from nautobot.dcim.models import Cable, Device, DeviceType, Location
+from nautobot.dcim.models import Cable, Device, DeviceType, Location, Module, ModuleType
 from nautobot.extras.filters import CustomFieldModelFilterSetMixin
 
 
@@ -37,6 +37,14 @@ class DeviceComponentTemplateModelFilterSetMixin(NameSearchFilterSet, CustomFiel
     name = MultiValueCharFilter(label="Name")
 
 
+class ModularDeviceComponentTemplateModelFilterSetMixin(DeviceComponentTemplateModelFilterSetMixin):
+    module_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ModuleType.objects.all(),
+        to_field_name="model",
+        label="Module type (model or ID)",
+    )
+
+
 class DeviceComponentModelFilterSetMixin(CustomFieldModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
@@ -55,6 +63,14 @@ class DeviceComponentModelFilterSetMixin(CustomFieldModelFilterSetMixin):
         queryset=Device.objects.all(),
         to_field_name="name",
         label="Device (name or ID)",
+    )
+
+
+class ModularDeviceComponentModelFilterSetMixin(DeviceComponentModelFilterSetMixin):
+    module = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Module.objects.all(),
+        to_field_name="module_type__model",
+        label="Module (model or ID)",
     )
 
 

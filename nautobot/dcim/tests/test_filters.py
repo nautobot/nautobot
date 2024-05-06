@@ -20,6 +20,7 @@ from nautobot.dcim.choices import (
     RackWidthChoices,
     SubdeviceRoleChoices,
 )
+from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES, VIRTUAL_IFACE_TYPES
 from nautobot.dcim.filters import (
     CableFilterSet,
     ConsolePortFilterSet,
@@ -701,6 +702,276 @@ def common_test_data(cls):
     parent_controller_managed_device_group.tags.set(Tag.objects.get_for_model(ControllerManagedDeviceGroup))
     cls.controller_managed_device_groups[1].tags.set(Tag.objects.get_for_model(ControllerManagedDeviceGroup)[:3])
 
+    module_types = ModuleType.objects.all()[:3]
+    ConsolePortTemplate.objects.create(
+        module_type=module_types[0],
+        name="Module Console Port 1",
+        label="console1",
+        description="Front Console Port 1",
+    )
+    ConsolePortTemplate.objects.create(
+        module_type=module_types[1],
+        name="Module Console Port 2",
+        label="console2",
+        description="Front Console Port 2",
+    )
+    ConsolePortTemplate.objects.create(
+        module_type=module_types[2],
+        name="Module Console Port 3",
+        label="console3",
+        description="Front Console Port 3",
+    )
+
+    ConsoleServerPortTemplate.objects.create(
+        module_type=module_types[0],
+        name="Module Console Server Port 1",
+        label="consoleserverport1",
+        description="Front Console Server Port 1",
+    )
+    ConsoleServerPortTemplate.objects.create(
+        module_type=module_types[1],
+        name="Module Console Server Port 2",
+        label="consoleserverport2",
+        description="Front Console Server Port 2",
+    )
+    ConsoleServerPortTemplate.objects.create(
+        module_type=module_types[2],
+        name="Module Console Server Port 3",
+        label="consoleserverport3",
+        description="Front Console Server Port 3",
+    )
+
+    power_port_templates = (
+        PowerPortTemplate.objects.create(
+            module_type=module_types[0],
+            name="Module Power Port 1",
+            maximum_draw=100,
+            allocated_draw=50,
+            label="powerport1",
+            description="Power Port Description 1",
+        ),
+        PowerPortTemplate.objects.create(
+            module_type=module_types[1],
+            name="Module Power Port 2",
+            maximum_draw=200,
+            allocated_draw=100,
+            label="powerport2",
+            description="Power Port Description 2",
+        ),
+        PowerPortTemplate.objects.create(
+            module_type=module_types[2],
+            name="Module Power Port 3",
+            maximum_draw=300,
+            allocated_draw=150,
+            label="powerport3",
+            description="Power Port Description 3",
+        ),
+    )
+
+    PowerOutletTemplate.objects.create(
+        module_type=module_types[0],
+        power_port_template=power_port_templates[0],
+        name="Module Power Outlet 1",
+        feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
+        label="poweroutlet1",
+        description="Power Outlet Description 1",
+    )
+    PowerOutletTemplate.objects.create(
+        module_type=module_types[1],
+        power_port_template=power_port_templates[1],
+        name="Module Power Outlet 2",
+        feed_leg=PowerOutletFeedLegChoices.FEED_LEG_B,
+        label="poweroutlet2",
+        description="Power Outlet Description 2",
+    )
+    PowerOutletTemplate.objects.create(
+        module_type=module_types[2],
+        power_port_template=power_port_templates[2],
+        name="Module Power Outlet 3",
+        feed_leg=PowerOutletFeedLegChoices.FEED_LEG_C,
+        label="poweroutlet3",
+        description="Power Outlet Description 3",
+    )
+
+    InterfaceTemplate.objects.create(
+        name="Module Interface 1",
+        description="Interface Description 1",
+        module_type=module_types[0],
+        label="interface1",
+        mgmt_only=True,
+        type=InterfaceTypeChoices.TYPE_1GE_SFP,
+    )
+    InterfaceTemplate.objects.create(
+        name="Module Interface 2",
+        description="Interface Description 2",
+        module_type=module_types[1],
+        label="interface2",
+        mgmt_only=False,
+        type=InterfaceTypeChoices.TYPE_1GE_GBIC,
+    )
+    InterfaceTemplate.objects.create(
+        name="Module Interface 3",
+        description="Interface Description 3",
+        module_type=module_types[2],
+        label="interface3",
+        mgmt_only=False,
+        type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+    )
+
+    rear_ports = (
+        RearPortTemplate.objects.create(
+            module_type=module_types[0],
+            name="Module Rear Port 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            positions=1,
+            label="rearport1",
+            description="Rear Port Description 1",
+        ),
+        RearPortTemplate.objects.create(
+            module_type=module_types[1],
+            name="Module Rear Port 2",
+            type=PortTypeChoices.TYPE_110_PUNCH,
+            positions=2,
+            label="rearport2",
+            description="Rear Port Description 2",
+        ),
+        RearPortTemplate.objects.create(
+            module_type=module_types[2],
+            name="Module Rear Port 3",
+            type=PortTypeChoices.TYPE_BNC,
+            positions=3,
+            label="rearport3",
+            description="Rear Port Description 3",
+        ),
+    )
+
+    FrontPortTemplate.objects.create(
+        module_type=module_types[0],
+        name="Module Front Port 1",
+        rear_port_template=rear_ports[0],
+        type=PortTypeChoices.TYPE_8P8C,
+        rear_port_position=1,
+        label="frontport1",
+        description="Front Port Description 1",
+    )
+    FrontPortTemplate.objects.create(
+        module_type=module_types[1],
+        name="Module Front Port 2",
+        rear_port_template=rear_ports[1],
+        type=PortTypeChoices.TYPE_110_PUNCH,
+        rear_port_position=2,
+        label="frontport2",
+        description="Front Port Description 2",
+    )
+    FrontPortTemplate.objects.create(
+        module_type=module_types[2],
+        name="Module Front Port 3",
+        rear_port_template=rear_ports[2],
+        type=PortTypeChoices.TYPE_BNC,
+        rear_port_position=3,
+        label="frontport3",
+        description="Front Port Description 3",
+    )
+
+    ModuleBayTemplate.objects.create(
+        module_type=module_types[0],
+        position="test module bay 1",
+    )
+    ModuleBayTemplate.objects.create(
+        module_type=module_types[1],
+        position="test module bay 2",
+    )
+    ModuleBayTemplate.objects.create(
+        module_type=module_types[2],
+        position="test module bay 3",
+    )
+    module_bay = ModuleBay.objects.filter(installed_module__isnull=True).first()
+    module_status = Status.objects.get_for_model(Module).first()
+    parent_module = Module.objects.create(
+        parent_module_bay=module_bay,
+        module_type=module_types[0],
+        status=module_status,
+        tenant=tenants[0],
+    )
+    Module.objects.create(
+        parent_module_bay=parent_module.module_bays.first(),
+        module_type=module_types[1],
+        status=module_status,
+        tenant=tenants[1],
+    )
+    other_parent_module = Module.objects.create(
+        location=Location.objects.get_for_model(Module).first(),
+        module_type=module_types[2],
+        status=module_status,
+        tenant=tenants[2],
+    )
+    Module.objects.create(
+        parent_module_bay=other_parent_module.module_bays.first(),
+        module_type=module_types[2],
+        status=module_status,
+        tenant=tenants[2],
+    )
+
+
+class ComponentTemplateMixin:
+    generic_filter_tests = [
+        ("description",),
+        ("device_type", "device_type__id"),
+        ("device_type", "device_type__model"),
+        ("label",),
+        ("name",),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        common_test_data(cls)
+
+
+class ModularComponentTemplateMixin(ComponentTemplateMixin):
+    generic_filter_tests = [
+        *ComponentTemplateMixin.generic_filter_tests,
+        ("module_type", "module_type__id"),
+        ("module_type", "module_type__model"),
+    ]
+
+
+class DeviceComponentMixin:
+    generic_filter_tests = [
+        ("description",),
+        ("device", "device__id"),
+        ("device", "device__name"),
+        ("label",),
+        ("name",),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        common_test_data(cls)
+
+
+class ModularDeviceComponentMixin(DeviceComponentMixin):
+    generic_filter_tests = [
+        *DeviceComponentMixin.generic_filter_tests,
+        ("module", "module__id"),
+        ("module", "module__module_type__model"),
+    ]
+
+
+class PathEndpointModelMixin:
+    def test_connected(self):
+        with self.subTest():
+            params = {"connected": True}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(_path__is_active=True),
+            )
+        with self.subTest():
+            params = {"connected": False}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(Q(_path__isnull=True) | Q(_path__is_active=False)),
+            )
+
 
 class LocationTypeFilterSetTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = LocationType.objects.all()
@@ -1193,36 +1464,21 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class Mixins:
-    class ComponentTemplateMixin(FilterTestCases.FilterTestCase):
-        generic_filter_tests = [
-            ("description",),
-            ("device_type", "device_type__id"),
-            ("device_type", "device_type__model"),
-            ("label",),
-            ("name",),
-        ]
-
-        @classmethod
-        def setUpTestData(cls):
-            common_test_data(cls)
-
-
-class ConsolePortTemplateTestCase(Mixins.ComponentTemplateMixin):
+class ConsolePortTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.FilterTestCase):
     queryset = ConsolePortTemplate.objects.all()
     filterset = ConsolePortTemplateFilterSet
 
 
-class ConsoleServerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
+class ConsoleServerPortTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.FilterTestCase):
     queryset = ConsoleServerPortTemplate.objects.all()
     filterset = ConsoleServerPortTemplateFilterSet
 
 
-class PowerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
+class PowerPortTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.FilterTestCase):
     queryset = PowerPortTemplate.objects.all()
     filterset = PowerPortTemplateFilterSet
     generic_filter_tests = [
-        *Mixins.ComponentTemplateMixin.generic_filter_tests,
+        *ModularComponentTemplateMixin.generic_filter_tests,
         ("allocated_draw",),
         ("maximum_draw",),
         ("power_outlet_templates", "power_outlet_templates__id"),
@@ -1244,11 +1500,12 @@ class PowerPortTemplateTestCase(Mixins.ComponentTemplateMixin):
         )
 
 
-class PowerOutletTemplateTestCase(Mixins.ComponentTemplateMixin):
+class PowerOutletTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.FilterTestCase):
     queryset = PowerOutletTemplate.objects.all()
     filterset = PowerOutletTemplateFilterSet
     generic_filter_tests = [
-        *Mixins.ComponentTemplateMixin.generic_filter_tests,
+        *ModularComponentTemplateMixin.generic_filter_tests,
+        ("feed_leg",),
         ("power_port_template", "power_port_template__id"),
         ("power_port_template", "power_port_template__name"),
     ]
@@ -1266,26 +1523,14 @@ class PowerOutletTemplateTestCase(Mixins.ComponentTemplateMixin):
             description="Power Outlet Description 4",
         )
 
-    def test_feed_leg(self):
-        # TODO: Not a generic_filter_test because this is a single-value filter
-        params = {"feed_leg": [PowerOutletFeedLegChoices.FEED_LEG_A]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A),
-        )
 
-
-class InterfaceTemplateTestCase(Mixins.ComponentTemplateMixin):
+class InterfaceTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.FilterTestCase):
     queryset = InterfaceTemplate.objects.all()
     filterset = InterfaceTemplateFilterSet
-
-    def test_type(self):
-        # TODO: Not a generic_filter_test because this is a single-value filter
-        params = {"type": [InterfaceTypeChoices.TYPE_1GE_FIXED]}
-        self.assertQuerysetEqual(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(type=InterfaceTypeChoices.TYPE_1GE_FIXED),
-        )
+    generic_filter_tests = [
+        *ModularComponentTemplateMixin.generic_filter_tests,
+        ("type",),
+    ]
 
     def test_mgmt_only(self):
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
@@ -1303,11 +1548,11 @@ class InterfaceTemplateTestCase(Mixins.ComponentTemplateMixin):
             )
 
 
-class FrontPortTemplateTestCase(Mixins.ComponentTemplateMixin):
+class FrontPortTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.FilterTestCase):
     queryset = FrontPortTemplate.objects.all()
     filterset = FrontPortTemplateFilterSet
     generic_filter_tests = [
-        *Mixins.ComponentTemplateMixin.generic_filter_tests,
+        *ModularComponentTemplateMixin.generic_filter_tests,
         ("rear_port_position",),
         ("rear_port_template", "rear_port_template__id"),
     ]
@@ -1321,11 +1566,11 @@ class FrontPortTemplateTestCase(Mixins.ComponentTemplateMixin):
         )
 
 
-class RearPortTemplateTestCase(Mixins.ComponentTemplateMixin):
+class RearPortTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.FilterTestCase):
     queryset = RearPortTemplate.objects.all()
     filterset = RearPortTemplateFilterSet
     generic_filter_tests = [
-        *Mixins.ComponentTemplateMixin.generic_filter_tests,
+        *ModularComponentTemplateMixin.generic_filter_tests,
         ("front_port_templates", "front_port_templates__id"),
     ]
 
@@ -1360,7 +1605,7 @@ class RearPortTemplateTestCase(Mixins.ComponentTemplateMixin):
         )
 
 
-class DeviceBayTemplateTestCase(Mixins.ComponentTemplateMixin):
+class DeviceBayTemplateTestCase(ComponentTemplateMixin, FilterTestCases.FilterTestCase):
     queryset = DeviceBayTemplate.objects.all()
     filterset = DeviceBayTemplateFilterSet
 
@@ -1687,21 +1932,17 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             )
 
 
-class ConsolePortTestCase(FilterTestCases.FilterTestCase):
+class ConsolePortTestCase(PathEndpointModelMixin, ModularDeviceComponentMixin, FilterTestCases.FilterTestCase):
     queryset = ConsolePort.objects.all()
     filterset = ConsolePortFilterSet
     generic_filter_tests = [
+        *ModularDeviceComponentMixin.generic_filter_tests,
         ("cable", "cable__id"),
-        ("description",),
-        ("device", "device__id"),
-        ("device", "device__name"),
-        ("label",),
-        ("name",),
     ]
 
     @classmethod
     def setUpTestData(cls):
-        common_test_data(cls)
+        super().setUpTestData()
 
         devices = (
             Device.objects.get(name="Device 1"),
@@ -1736,31 +1977,18 @@ class ConsolePortTestCase(FilterTestCases.FilterTestCase):
         )
         # Third port is not connected
 
-    def test_connected(self):
-        # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
-        with self.subTest():
-            params = {"connected": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        with self.subTest():
-            params = {"connected": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-
-class ConsoleServerPortTestCase(FilterTestCases.FilterTestCase):
+class ConsoleServerPortTestCase(PathEndpointModelMixin, ModularDeviceComponentMixin, FilterTestCases.FilterTestCase):
     queryset = ConsoleServerPort.objects.all()
     filterset = ConsoleServerPortFilterSet
     generic_filter_tests = [
+        *ModularDeviceComponentMixin.generic_filter_tests,
         ("cable", "cable__id"),
-        ("description",),
-        ("device", "device__id"),
-        ("device", "device__name"),
-        ("label",),
-        ("name",),
     ]
 
     @classmethod
     def setUpTestData(cls):
-        common_test_data(cls)
+        super().setUpTestData()
 
         devices = (
             Device.objects.get(name="Device 1"),
@@ -1795,28 +2023,15 @@ class ConsoleServerPortTestCase(FilterTestCases.FilterTestCase):
         )
         # Third port is not connected
 
-    def test_connected(self):
-        # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
-        with self.subTest():
-            params = {"connected": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        with self.subTest():
-            params = {"connected": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-
-class PowerPortTestCase(FilterTestCases.FilterTestCase):
+class PowerPortTestCase(PathEndpointModelMixin, ModularDeviceComponentMixin, FilterTestCases.FilterTestCase):
     queryset = PowerPort.objects.all()
     filterset = PowerPortFilterSet
     generic_filter_tests = [
+        *ModularDeviceComponentMixin.generic_filter_tests,
         ("allocated_draw",),
         ("cable", "cable__id"),
-        ("description",),
-        ("device", "device__id"),
-        ("device", "device__name"),
-        ("label",),
         ("maximum_draw",),
-        ("name",),
         ("power_outlets", "power_outlets__id"),
         ("power_outlets", "power_outlets__name"),
     ]
@@ -1860,32 +2075,20 @@ class PowerPortTestCase(FilterTestCases.FilterTestCase):
         )
         # Third port is not connected
 
-    def test_connected(self):
-        # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
-        with self.subTest():
-            params = {"connected": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        with self.subTest():
-            params = {"connected": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
-
-class PowerOutletTestCase(FilterTestCases.FilterTestCase):
+class PowerOutletTestCase(PathEndpointModelMixin, ModularDeviceComponentMixin, FilterTestCases.FilterTestCase):
     queryset = PowerOutlet.objects.all()
     filterset = PowerOutletFilterSet
     generic_filter_tests = [
+        *ModularDeviceComponentMixin.generic_filter_tests,
         ("cable", "cable__id"),
-        ("description",),
-        ("device", "device__id"),
-        ("device", "device__name"),
-        ("label",),
-        ("name",),
+        ("feed_leg",),
         ("power_port", "power_port__id"),
     ]
 
     @classmethod
     def setUpTestData(cls):
-        common_test_data(cls)
+        super().setUpTestData()
 
         devices = (
             Device.objects.get(name="Device 1"),
@@ -1921,26 +2124,12 @@ class PowerOutletTestCase(FilterTestCases.FilterTestCase):
         )
         # Third port is not connected
 
-    def test_feed_leg(self):
-        # TODO: Not a generic_filter_test because this is a single-value filter
-        # 2.0 TODO: Support filtering for multiple values
-        params = {"feed_leg": [PowerOutletFeedLegChoices.FEED_LEG_A]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-    def test_connected(self):
-        # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
-        with self.subTest():
-            params = {"connected": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        with self.subTest():
-            params = {"connected": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
-
-
-class InterfaceTestCase(FilterTestCases.FilterTestCase):
+class InterfaceTestCase(PathEndpointModelMixin, ModularDeviceComponentMixin, FilterTestCases.FilterTestCase):
     queryset = Interface.objects.all()
     filterset = InterfaceFilterSet
     generic_filter_tests = [
+        # parent class generic_filter_tests intentionally excluded
         ("bridge", "bridge__id"),
         ("bridge", "bridge__name"),
         ("bridged_interfaces", "bridged_interfaces__id"),
@@ -1957,6 +2146,8 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         ("mac_address",),
         ("member_interfaces", "member_interfaces__id"),
         ("member_interfaces", "member_interfaces__name"),
+        ("module", "module__id"),
+        ("module", "module__module_type__model"),
         ("mtu",),
         ("name",),
         ("parent_interface", "parent_interface__id"),
@@ -1974,7 +2165,7 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        common_test_data(cls)
+        super().setUpTestData()
 
         devices = (
             Device.objects.get(name="Device 1"),
@@ -2194,32 +2385,35 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
             status=interface_statuses[3],
         )
 
-    def test_connected(self):
-        # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
-        with self.subTest():
-            params = {"connected": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
-        with self.subTest():
-            params = {"connected": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 17)
-
     def test_enabled(self):
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"enabled": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 19)
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(**params),
+            )
         with self.subTest():
             params = {"enabled": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(**params),
+            )
 
     def test_mgmt_only(self):
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest():
             params = {"mgmt_only": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(**params),
+            )
         with self.subTest():
             params = {"mgmt_only": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 17)
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(**params),
+            )
 
     def test_mode(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
@@ -2289,10 +2483,16 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         # 2.0 TODO: Support filtering for multiple values
         with self.subTest():
             params = {"kind": "physical"}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 12)
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.exclude(type__in=NONCONNECTABLE_IFACE_TYPES),
+            )
         with self.subTest():
             params = {"kind": "virtual"}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 9)
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(type__in=VIRTUAL_IFACE_TYPES),
+            )
 
     def test_vlan(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
@@ -2317,24 +2517,21 @@ class InterfaceTestCase(FilterTestCases.FilterTestCase):
         )
 
 
-class FrontPortTestCase(FilterTestCases.FilterTestCase):
+class FrontPortTestCase(ModularDeviceComponentMixin, FilterTestCases.FilterTestCase):
     queryset = FrontPort.objects.all()
     filterset = FrontPortFilterSet
     generic_filter_tests = [
-        ("description",),
+        *ModularDeviceComponentMixin.generic_filter_tests,
         ("cable", "cable__id"),
-        ("device", "device__id"),
-        ("device", "device__name"),
-        ("label",),
-        ("name",),
         ("rear_port", "rear_port__id"),
         ("rear_port", "rear_port__name"),
         ("rear_port_position",),
+        ("type",),
     ]
 
     @classmethod
     def setUpTestData(cls):
-        common_test_data(cls)
+        super().setUpTestData()
 
         devices = (
             Device.objects.get(name="Device 1"),
@@ -2398,30 +2595,22 @@ class FrontPortTestCase(FilterTestCases.FilterTestCase):
         )
         # Third port is not connected
 
-    def test_type(self):
-        # TODO: Not a generic_filter_test because this is a single-value filter
-        params = {"type": [PortTypeChoices.TYPE_8P8C]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
-
-class RearPortTestCase(FilterTestCases.FilterTestCase):
+class RearPortTestCase(ModularDeviceComponentMixin, FilterTestCases.FilterTestCase):
     queryset = RearPort.objects.all()
     filterset = RearPortFilterSet
     generic_filter_tests = [
+        *ModularDeviceComponentMixin.generic_filter_tests,
         ("cable", "cable__id"),
-        ("description",),
-        ("device", "device__id"),
-        ("device", "device__name"),
         ("front_ports", "front_ports__id"),
         ("front_ports", "front_ports__name"),
-        ("label",),
-        ("name",),
         ("positions",),
+        ("type",),
     ]
 
     @classmethod
     def setUpTestData(cls):
-        common_test_data(cls)
+        super().setUpTestData()
 
         devices = (
             Device.objects.get(name="Device 1"),
@@ -2465,28 +2654,19 @@ class RearPortTestCase(FilterTestCases.FilterTestCase):
         )
         # Third port is not connected
 
-    def test_type(self):
-        # TODO: Not a generic_filter_test because this is a single-value filter
-        params = {"type": [PortTypeChoices.TYPE_8P8C]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
 
-
-class DeviceBayTestCase(FilterTestCases.FilterTestCase):
+class DeviceBayTestCase(DeviceComponentMixin, FilterTestCases.FilterTestCase):
     queryset = DeviceBay.objects.all()
     filterset = DeviceBayFilterSet
     generic_filter_tests = [
-        ("description",),
-        ("device", "device__id"),
-        ("device", "device__name"),
+        *DeviceComponentMixin.generic_filter_tests,
         ("installed_device", "installed_device__id"),
         ("installed_device", "installed_device__name"),
-        ("label",),
-        ("name",),
     ]
 
     @classmethod
     def setUpTestData(cls):
-        common_test_data(cls)
+        super().setUpTestData()
 
         device_role = Role.objects.get_for_model(Device).first()
         parent_device_type = DeviceType.objects.get(model="Model 2")
@@ -2539,19 +2719,14 @@ class DeviceBayTestCase(FilterTestCases.FilterTestCase):
         device_bays[1].save()
 
 
-class InventoryItemTestCase(FilterTestCases.FilterTestCase):
+class InventoryItemTestCase(DeviceComponentMixin, FilterTestCases.FilterTestCase):
     queryset = InventoryItem.objects.all()
     filterset = InventoryItemFilterSet
     generic_filter_tests = [
         ("asset_tag",),
         ("children", "children__id"),
-        ("description",),
-        ("device", "device__id"),
-        ("device", "device__name"),
-        ("label",),
         ("manufacturer", "manufacturer__id"),
         ("manufacturer", "manufacturer__name"),
-        ("name",),
         ("parent", "parent__id"),
         ("parent", "parent__name"),
         ("part_id",),
@@ -2563,7 +2738,7 @@ class InventoryItemTestCase(FilterTestCases.FilterTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        common_test_data(cls)
+        super().setUpTestData()
 
         devices = (
             Device.objects.get(name="Device 1"),
@@ -3019,7 +3194,7 @@ class PowerPanelTestCase(FilterTestCases.FilterTestCase):
         PowerPanel.objects.create(name="Power Panel 4", location=cls.loc1)
 
 
-class PowerFeedTestCase(FilterTestCases.FilterTestCase):
+class PowerFeedTestCase(PathEndpointModelMixin, FilterTestCases.FilterTestCase):
     queryset = PowerFeed.objects.all()
     filterset = PowerFeedFilterSet
     generic_filter_tests = [
@@ -3108,28 +3283,28 @@ class PowerFeedTestCase(FilterTestCases.FilterTestCase):
         )
 
     def test_type(self):
-        # TODO: Not a generic_filter_test because this is a single-value filter
+        # TODO: Not a generic_filter_test because this field only has 2 valid choices
         params = {"type": [PowerFeedTypeChoices.TYPE_PRIMARY]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(type=PowerFeedTypeChoices.TYPE_PRIMARY),
+        )
 
     def test_supply(self):
-        # TODO: Not a generic_filter_test because this is a single-value filter
+        # TODO: Not a generic_filter_test because this field only has 2 valid choices
         params = {"supply": [PowerFeedSupplyChoices.SUPPLY_AC]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(supply=PowerFeedSupplyChoices.SUPPLY_AC),
+        )
 
     def test_phase(self):
-        # TODO: Not a generic_filter_test because this is a single-value filter
+        # TODO: Not a generic_filter_test because this field only has 2 valid choices
         params = {"phase": [PowerFeedPhaseChoices.PHASE_3PHASE]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-
-    def test_connected(self):
-        # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
-        with self.subTest():
-            params = {"connected": True}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
-        with self.subTest():
-            params = {"connected": False}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(phase=PowerFeedPhaseChoices.PHASE_3PHASE),
+        )
 
 
 class DeviceRedundancyGroupTestCase(FilterTestCases.FilterTestCase):
@@ -3518,221 +3693,7 @@ class ModuleTestCase(FilterTestCases.TenancyFilterTestCaseMixin, FilterTestCases
     def setUpTestData(cls):
         common_test_data(cls)
 
-        module_types = ModuleType.objects.all()[:3]
-        ConsolePortTemplate.objects.create(
-            module_type=module_types[0],
-            name="Console Port 1",
-            label="console1",
-            description="Front Console Port 1",
-        )
-        ConsolePortTemplate.objects.create(
-            module_type=module_types[1],
-            name="Console Port 2",
-            label="console2",
-            description="Front Console Port 2",
-        )
-        ConsolePortTemplate.objects.create(
-            module_type=module_types[2],
-            name="Console Port 3",
-            label="console3",
-            description="Front Console Port 3",
-        )
-
-        ConsoleServerPortTemplate.objects.create(
-            module_type=module_types[0],
-            name="Console Server Port 1",
-            label="consoleserverport1",
-            description="Front Console Server Port 1",
-        )
-        ConsoleServerPortTemplate.objects.create(
-            module_type=module_types[1],
-            name="Console Server Port 2",
-            label="consoleserverport2",
-            description="Front Console Server Port 2",
-        )
-        ConsoleServerPortTemplate.objects.create(
-            module_type=module_types[2],
-            name="Console Server Port 3",
-            label="consoleserverport3",
-            description="Front Console Server Port 3",
-        )
-
-        power_port_templates = (
-            PowerPortTemplate.objects.create(
-                module_type=module_types[0],
-                name="Power Port 1",
-                maximum_draw=100,
-                allocated_draw=50,
-                label="powerport1",
-                description="Power Port Description 1",
-            ),
-            PowerPortTemplate.objects.create(
-                module_type=module_types[1],
-                name="Power Port 2",
-                maximum_draw=200,
-                allocated_draw=100,
-                label="powerport2",
-                description="Power Port Description 2",
-            ),
-            PowerPortTemplate.objects.create(
-                module_type=module_types[2],
-                name="Power Port 3",
-                maximum_draw=300,
-                allocated_draw=150,
-                label="powerport3",
-                description="Power Port Description 3",
-            ),
-        )
-
-        PowerOutletTemplate.objects.create(
-            module_type=module_types[0],
-            power_port_template=power_port_templates[0],
-            name="Power Outlet 1",
-            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
-            label="poweroutlet1",
-            description="Power Outlet Description 1",
-        )
-        PowerOutletTemplate.objects.create(
-            module_type=module_types[1],
-            power_port_template=power_port_templates[1],
-            name="Power Outlet 2",
-            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_B,
-            label="poweroutlet2",
-            description="Power Outlet Description 2",
-        )
-        PowerOutletTemplate.objects.create(
-            module_type=module_types[2],
-            power_port_template=power_port_templates[2],
-            name="Power Outlet 3",
-            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_C,
-            label="poweroutlet3",
-            description="Power Outlet Description 3",
-        )
-
-        InterfaceTemplate.objects.create(
-            name="Interface 1",
-            description="Interface Description 1",
-            module_type=module_types[0],
-            label="interface1",
-            mgmt_only=True,
-            type=InterfaceTypeChoices.TYPE_1GE_SFP,
-        )
-        InterfaceTemplate.objects.create(
-            name="Interface 2",
-            description="Interface Description 2",
-            module_type=module_types[1],
-            label="interface2",
-            mgmt_only=False,
-            type=InterfaceTypeChoices.TYPE_1GE_GBIC,
-        )
-        InterfaceTemplate.objects.create(
-            name="Interface 3",
-            description="Interface Description 3",
-            module_type=module_types[2],
-            label="interface3",
-            mgmt_only=False,
-            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-        )
-
-        rear_ports = (
-            RearPortTemplate.objects.create(
-                module_type=module_types[0],
-                name="Rear Port 1",
-                type=PortTypeChoices.TYPE_8P8C,
-                positions=1,
-                label="rearport1",
-                description="Rear Port Description 1",
-            ),
-            RearPortTemplate.objects.create(
-                module_type=module_types[1],
-                name="Rear Port 2",
-                type=PortTypeChoices.TYPE_110_PUNCH,
-                positions=2,
-                label="rearport2",
-                description="Rear Port Description 2",
-            ),
-            RearPortTemplate.objects.create(
-                module_type=module_types[2],
-                name="Rear Port 3",
-                type=PortTypeChoices.TYPE_BNC,
-                positions=3,
-                label="rearport3",
-                description="Rear Port Description 3",
-            ),
-        )
-
-        FrontPortTemplate.objects.create(
-            module_type=module_types[0],
-            name="Front Port 1",
-            rear_port_template=rear_ports[0],
-            type=PortTypeChoices.TYPE_8P8C,
-            rear_port_position=1,
-            label="frontport1",
-            description="Front Port Description 1",
-        )
-        FrontPortTemplate.objects.create(
-            module_type=module_types[1],
-            name="Front Port 2",
-            rear_port_template=rear_ports[1],
-            type=PortTypeChoices.TYPE_110_PUNCH,
-            rear_port_position=2,
-            label="frontport2",
-            description="Front Port Description 2",
-        )
-        FrontPortTemplate.objects.create(
-            module_type=module_types[2],
-            name="Front Port 3",
-            rear_port_template=rear_ports[2],
-            type=PortTypeChoices.TYPE_BNC,
-            rear_port_position=3,
-            label="frontport3",
-            description="Front Port Description 3",
-        )
-
-        ModuleBayTemplate.objects.create(
-            module_type=module_types[0],
-            position="test module bay 1",
-        )
-        ModuleBayTemplate.objects.create(
-            module_type=module_types[1],
-            position="test module bay 2",
-        )
-        ModuleBayTemplate.objects.create(
-            module_type=module_types[2],
-            position="test module bay 3",
-        )
-        module_bay = ModuleBay.objects.filter(installed_module__isnull=True).first()
-        status = Status.objects.get_for_model(Module).first()
-        tenants = Tenant.objects.filter(tenant_group__isnull=False)[:3]
-        parent_module = Module.objects.create(
-            parent_module_bay=module_bay,
-            module_type=module_types[0],
-            status=status,
-            tenant=tenants[0],
-        )
-        Module.objects.create(
-            parent_module_bay=parent_module.module_bays.first(),
-            module_type=module_types[1],
-            status=status,
-            tenant=tenants[1],
-        )
-        other_parent_module = Module.objects.create(
-            location=Location.objects.get_for_model(Module).first(),
-            module_type=module_types[2],
-            status=status,
-            tenant=tenants[2],
-        )
-        Module.objects.create(
-            parent_module_bay=other_parent_module.module_bays.first(),
-            module_type=module_types[2],
-            status=status,
-            tenant=tenants[2],
-        )
-
         # Update existing interface objects with mac addresses for filtering
         interfaces = Interface.objects.filter(module__isnull=False)[:3]
         Interface.objects.filter(pk=interfaces[0].pk).update(mac_address="00-00-00-00-00-01")
         Interface.objects.filter(pk=interfaces[1].pk).update(mac_address="00-00-00-00-00-02")
-
-    def test_has_passthrough_ports(self):
-        pass  # TODO

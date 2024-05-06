@@ -33,6 +33,8 @@ from nautobot.dcim.filters.mixins import (
     DeviceComponentModelFilterSetMixin,
     DeviceComponentTemplateModelFilterSetMixin,
     LocatableModelFilterSetMixin,
+    ModularDeviceComponentModelFilterSetMixin,
+    ModularDeviceComponentTemplateModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
 )
 from nautobot.dcim.models import (
@@ -559,8 +561,8 @@ class DeviceTypeFilterSet(NautobotFilterSet):
         method="_interfaces",
         label="Has interfaces",
     )
-    pass_through_ports = django_filters.BooleanFilter(
-        method="_pass_through_ports",
+    pass_through_ports = RelatedMembershipBooleanFilter(
+        field_name="front_port_templates",
         label="Has pass-through ports",
     )
     device_bays = django_filters.BooleanFilter(
@@ -692,9 +694,6 @@ class DeviceTypeFilterSet(NautobotFilterSet):
     def _interfaces(self, queryset, name, value):
         return queryset.exclude(interface_templates__isnull=value)
 
-    def _pass_through_ports(self, queryset, name, value):
-        return queryset.exclude(front_port_templates__isnull=value, rear_port_templates__isnull=value)
-
     def _device_bays(self, queryset, name, value):
         return queryset.exclude(device_bay_templates__isnull=value)
 
@@ -705,19 +704,19 @@ class DeviceTypeComponentFilterSet(DeviceComponentTemplateModelFilterSetMixin):
     pass
 
 
-class ConsolePortTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilterSetMixin):
+class ConsolePortTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplateModelFilterSetMixin):
     class Meta:
         model = ConsolePortTemplate
         fields = ["type"]
 
 
-class ConsoleServerPortTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilterSetMixin):
+class ConsoleServerPortTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplateModelFilterSetMixin):
     class Meta:
         model = ConsoleServerPortTemplate
         fields = ["type"]
 
 
-class PowerPortTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilterSetMixin):
+class PowerPortTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplateModelFilterSetMixin):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_outlet_templates = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
@@ -738,7 +737,7 @@ class PowerPortTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilt
         ]
 
 
-class PowerOutletTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilterSetMixin):
+class PowerOutletTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplateModelFilterSetMixin):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_port_template = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
@@ -751,13 +750,13 @@ class PowerOutletTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFi
         fields = ["type", "feed_leg"]
 
 
-class InterfaceTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilterSetMixin):
+class InterfaceTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplateModelFilterSetMixin):
     class Meta:
         model = InterfaceTemplate
         fields = ["type", "mgmt_only"]
 
 
-class FrontPortTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilterSetMixin):
+class FrontPortTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplateModelFilterSetMixin):
     rear_port_template = django_filters.ModelMultipleChoiceFilter(
         queryset=RearPortTemplate.objects.all(),
         label="Rear port template",
@@ -768,7 +767,7 @@ class FrontPortTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilt
         fields = ["type", "rear_port_position"]
 
 
-class RearPortTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilterSetMixin):
+class RearPortTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplateModelFilterSetMixin):
     front_port_templates = django_filters.ModelMultipleChoiceFilter(
         queryset=FrontPortTemplate.objects.all(),
         label="Front port templates",
@@ -1063,7 +1062,7 @@ class PathEndpointFilterSet(PathEndpointModelFilterSetMixin):
 
 class ConsolePortFilterSet(
     BaseFilterSet,
-    DeviceComponentModelFilterSetMixin,
+    ModularDeviceComponentModelFilterSetMixin,
     CableTerminationModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
 ):
@@ -1076,7 +1075,7 @@ class ConsolePortFilterSet(
 
 class ConsoleServerPortFilterSet(
     BaseFilterSet,
-    DeviceComponentModelFilterSetMixin,
+    ModularDeviceComponentModelFilterSetMixin,
     CableTerminationModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
 ):
@@ -1089,7 +1088,7 @@ class ConsoleServerPortFilterSet(
 
 class PowerPortFilterSet(
     BaseFilterSet,
-    DeviceComponentModelFilterSetMixin,
+    ModularDeviceComponentModelFilterSetMixin,
     CableTerminationModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
 ):
@@ -1113,7 +1112,7 @@ class PowerPortFilterSet(
 
 class PowerOutletFilterSet(
     BaseFilterSet,
-    DeviceComponentModelFilterSetMixin,
+    ModularDeviceComponentModelFilterSetMixin,
     CableTerminationModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
 ):
@@ -1130,7 +1129,7 @@ class PowerOutletFilterSet(
 
 class InterfaceFilterSet(
     BaseFilterSet,
-    DeviceComponentModelFilterSetMixin,
+    ModularDeviceComponentModelFilterSetMixin,
     CableTerminationModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
     StatusModelFilterSetMixin,
@@ -1294,7 +1293,7 @@ class InterfaceFilterSet(
         }.get(value, queryset.none())
 
 
-class FrontPortFilterSet(BaseFilterSet, DeviceComponentModelFilterSetMixin, CableTerminationModelFilterSetMixin):
+class FrontPortFilterSet(BaseFilterSet, ModularDeviceComponentModelFilterSetMixin, CableTerminationModelFilterSetMixin):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     rear_port = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
@@ -1307,7 +1306,7 @@ class FrontPortFilterSet(BaseFilterSet, DeviceComponentModelFilterSetMixin, Cabl
         fields = ["id", "name", "type", "description", "label", "rear_port_position", "tags"]
 
 
-class RearPortFilterSet(BaseFilterSet, DeviceComponentModelFilterSetMixin, CableTerminationModelFilterSetMixin):
+class RearPortFilterSet(BaseFilterSet, ModularDeviceComponentModelFilterSetMixin, CableTerminationModelFilterSetMixin):
     front_ports = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=FrontPort.objects.all(),
@@ -1963,7 +1962,7 @@ class ModuleFilterSet(
             },
         }
     )
-    installed = RelatedMembershipBooleanFilter(
+    is_installed = RelatedMembershipBooleanFilter(
         field_name="parent_module_bay",
         label="Is installed in a module bay",
     )
@@ -2083,10 +2082,6 @@ class ModuleTypeFilterSet(NautobotFilterSet):
     manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Manufacturer.objects.all(), to_field_name="name", label="Manufacturer (name or ID)"
     )
-    has_pass_through_ports = django_filters.BooleanFilter(
-        method="_pass_through_ports",
-        label="Has pass-through ports",
-    )
     has_modules = RelatedMembershipBooleanFilter(
         field_name="modules",
         label="Has module instances",
@@ -2167,6 +2162,3 @@ class ModuleTypeFilterSet(NautobotFilterSet):
     class Meta:
         model = ModuleType
         fields = "__all__"
-
-    def _pass_through_ports(self, queryset, name, value):
-        return queryset.exclude(front_port_templates__isnull=value, rear_port_templates__isnull=value)
