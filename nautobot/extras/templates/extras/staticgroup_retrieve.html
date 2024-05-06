@@ -11,6 +11,15 @@
 
 {% block extra_tab_content %}
     <div id="members" role="tabpanel" class="tab-pane{% if request.GET.tab == 'members' %} active{% else %} fade{% endif %}">
+        {% if members_list_url %}
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="alert alert-success" role="alert">
+                        You can bulk-add and bulk-remove members of this group from the <a href="{{ members_list_url }}">{{ members_verbose_name_plural|bettertitle }} list view</a>.
+                    </div>
+                </div>
+            </div>
+        {% endif %}
         <div class="row">
             <div class="col-md-12">
                 {% include 'utilities/obj_table.html' with table=members_table table_template='panel_table.html' heading='Static Group members' %}

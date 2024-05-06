@@ -12,6 +12,7 @@ from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.urls import reverse
+from django.urls.exceptions import NoReverseMatch
 from django.utils import timezone
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
@@ -24,7 +25,7 @@ from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.tables import ButtonsColumn
-from nautobot.core.utils.lookup import get_filterset_for_model, get_table_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model, get_table_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic, viewsets
@@ -2352,11 +2353,11 @@ class StaticGroupUIViewSet(NautobotUIViewSet):
             RequestConfig(request, paginate).configure(members_table)
             members_table.columns.show("pk")  # TODO why is this needed?
             context["members_table"] = members_table
-            context["members_table_permissions"] = {
-                "add": request.user.has_perm(get_permission_for_model(StaticGroupAssociation, "add")),
-                "change": request.user.has_perm(get_permission_for_model(StaticGroupAssociation, "change")),
-                "delete": request.user.has_perm(get_permission_for_model(StaticGroupAssociation, "delete")),
-            }
+            try:
+                context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
+            except NoReverseMatch:
+                context["members_list_url"] = None
+            context["members_verbose_name_plural"] = instance.model._meta.verbose_name_plural
 
         return context
 
