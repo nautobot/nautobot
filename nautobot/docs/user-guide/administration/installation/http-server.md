@@ -285,7 +285,7 @@ Then to verify that the user has the permissions to the directory execute at the
 ls -l /opt/
 ```
 
-??? example "Example output"
+??? example "Output of list files in /opt"
 
     Example output shows that the user and group are both `nautobot` below:
 
