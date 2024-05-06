@@ -2,6 +2,8 @@
 {% load helpers %}
 {% load plugins %}
 
+    <link rel="stylesheet" id="template-theme"
+          href="{% url 'template_css' %}">
     <link rel="stylesheet"
           href="{% static 'bootstrap-3.4.1-dist/css/bootstrap.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=bootstrap-3.4.1-dist/css/bootstrap.min.css'">
@@ -9,8 +11,8 @@
           href="{% static 'materialdesignicons-6.5.95/css/materialdesignicons.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=materialdesignicons-6.5.95/css/materialdesignicons.min.css'">
     <link rel="stylesheet"
-          href="{% static 'jquery-ui-1.13.1/jquery-ui.min.css' %}"
-          onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.13.1/jquery-ui.min.css'">
+          href="{% static 'jquery-ui-1.13.2/jquery-ui.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=jquery-ui-1.13.2/jquery-ui.min.css'">
     <link rel="stylesheet"
           href="{% static 'select2-4.0.13/select2.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=select2-4.0.13/select2.min.css'">
@@ -20,6 +22,12 @@
     <link rel="stylesheet"
           href="{% static 'flatpickr-4.6.9/themes/light.min.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=flatpickr-4.6.9/themes/light.min.css'">
+    <link rel="stylesheet"
+          href="{% static 'highlight.js-11.9.0/github.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=highlight.js-11.9.0/github.min.css'"{% if request.COOKIES|get_item:"theme" == 'dark' %} disabled="disabled"{% endif %} >
+    <link rel="stylesheet"
+          href="{% static 'highlight.js-11.9.0/github-dark.min.css' %}"
+          onerror="window.location='{% url 'media_failure' %}?filename=highlight.js-11.9.0/github-dark.min.css'"{% if request.COOKIES|get_item:"theme" != 'dark' %} disabled="disabled"{% endif %} />
     <link rel="stylesheet" id="dark-theme"
           href="{% versioned_static 'css/dark.css' %}"
           onerror="window.location='{% url 'media_failure' %}?filename=css/dark.css'"{% if request.COOKIES|get_item:"theme" != 'dark' %} disabled="disabled"{% endif %} />

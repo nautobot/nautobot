@@ -195,6 +195,9 @@ WantedBy=multi-user.target
 The Celery Beat scheduler enables the periodic execution of and scheduling of background tasks. It is required to take
 advantage of the [job scheduling and approval](../../platform-functionality/jobs/job-scheduling-and-approvals.md) features.
 
+!!! warning
+    It's important that the [`TIME_ZONE`](../configuration/optional-settings.md#time_zone) setting on your Nautobot servers and Celery Beat server match to prevent scheduled jobs from running at the wrong time. See the [time zones](../configuration/time-zones.md) documentation for more information.
+
 To establish the `systemd` unit file for the Celery Beat scheduler, copy and paste the following into `/etc/systemd/system/nautobot-scheduler.service`:
 
 ```ini
@@ -225,12 +228,12 @@ WantedBy=multi-user.target
 
 #### Migrating to Celery from RQ
 
-Prior to migrating, you need to determine whether you have any plugins installed that run custom background tasks that still rely on the RQ worker. There are a few ways to do this. Two of them are:
+Prior to migrating, you need to determine whether you have any Apps installed that run custom background tasks that still rely on the RQ worker. There are a few ways to do this. Two of them are:
 
-* Ask your developer or administrator if there are any plugins running background tasks still using the RQ worker
+* Ask your developer or administrator if there are any Apps running background tasks still using the RQ worker
 * If you are savvy with code, search your code for the `@job` decorator or for `from django_rq import job`
 
-If you're upgrading from Nautobot version 1.0.x and are NOT running plugins that use the RQ worker, all you really need to do are two things.
+If you're upgrading from Nautobot version 1.0.x and are NOT running Apps that use the RQ worker, all you really need to do are two things.
 
 First, you must replace the contents of `/etc/systemd/system/nautobot-worker.service` with the `systemd` unit file provided just above.
 

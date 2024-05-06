@@ -1,13 +1,17 @@
 import datetime
 from io import StringIO
 import json
+import os
 from pathlib import Path
 import re
+import tempfile
 from unittest import mock
 import uuid
-import tempfile
 
+from constance.test import override_config
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -16,10 +20,10 @@ from django.test.client import RequestFactory
 from django.utils import timezone
 
 from nautobot.core.testing import (
-    TestCase,
-    TransactionTestCase,
     create_job_result_and_run_job,
     get_job_class_and_model,
+    TestCase,
+    TransactionTestCase,
 )
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.models import Device, Location, LocationType
@@ -30,8 +34,8 @@ from nautobot.extras.choices import (
     LogLevelChoices,
     ObjectChangeEventContextChoices,
 )
-from nautobot.extras.context_managers import JobHookChangeContext, change_logging, web_request_context
-from nautobot.extras.jobs import get_job
+from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
+from nautobot.extras.jobs import get_job, get_jobs
 
 
 class JobTest(TestCase):
@@ -171,6 +175,111 @@ class JobTest(TestCase):
         self.assertFalse(job_class.supports_dryrun)
         self.assertFalse(job_model.supports_dryrun)
 
+    def test_submodule_in_jobs_root(self):
+        """
+        Test that a subdirectory/submodule in JOBS_ROOT can contain Jobs.
+        """
+        job_class, job_model = get_job_class_and_model("jobs_module.jobs_submodule.jobs", "ChildJob")
+        self.assertIsNotNone(job_class)
+        self.assertIsNotNone(job_model)
+
+    def test_relative_import_among_files_in_jobs_root(self):
+        """
+        Test that a module in JOBS_ROOT can import from other modules in JOBS_ROOT.
+        """
+        job_class, job_model = get_job_class_and_model("relative_import", "TestReallyPass")
+        self.assertIsNotNone(job_class)
+        self.assertIsNotNone(job_model)
+
+    def test_get_jobs_from_jobs_root(self):
+        """
+        Test that get_jobs() correctly loads jobs from JOBS_ROOT as its contents change.
+        """
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                with override_settings(JOBS_ROOT=temp_dir):
+                    # Create a new Job and make sure it's discovered correctly
+                    with open(os.path.join(temp_dir, "my_jobs.py"), "w") as fd:
+                        fd.write("""\
+from nautobot.apps.jobs import Job, register_jobs
+class MyJob(Job):
+    def run(self):
+        pass
+register_jobs(MyJob)
+""")
+                    jobs_data = get_jobs(reload=True)
+                    self.assertIn("my_jobs.MyJob", jobs_data.keys())
+                    self.assertIsNotNone(get_job("my_jobs.MyJob"))
+                    # Also make sure some representative previous JOBS_ROOT jobs aren't still around:
+                    self.assertNotIn("dry_run.TestDryRun", jobs_data.keys())
+                    self.assertNotIn("pass.TestPass", jobs_data.keys())
+
+                    # Create a second Job in the same module
+                    with open(os.path.join(temp_dir, "my_jobs.py"), "a") as fd:
+                        fd.write("""
+class MyOtherJob(MyJob):
+    pass
+register_jobs(MyOtherJob)
+""")
+                    jobs_data = get_jobs(reload=True)
+                    self.assertIn("my_jobs.MyJob", jobs_data.keys())
+                    self.assertIsNotNone(get_job("my_jobs.MyJob"))
+                    self.assertIn("my_jobs.MyOtherJob", jobs_data.keys())
+                    self.assertIsNotNone(get_job("my_jobs.MyOtherJob"))
+
+                    # Create a third Job in another module
+                    with open(os.path.join(temp_dir, "their_jobs.py"), "w") as fd:
+                        fd.write("""
+from nautobot.apps.jobs import Job, register_jobs
+
+class MyJob(Job):
+    def run(self):
+        pass
+register_jobs(MyJob)
+""")
+                    jobs_data = get_jobs(reload=True)
+                    self.assertIn("my_jobs.MyJob", jobs_data.keys())
+                    self.assertIsNotNone(get_job("my_jobs.MyJob"))
+                    self.assertIn("my_jobs.MyOtherJob", jobs_data.keys())
+                    self.assertIsNotNone(get_job("my_jobs.MyOtherJob"))
+                    self.assertIn("their_jobs.MyJob", jobs_data.keys())
+                    self.assertIsNotNone(get_job("their_jobs.MyJob"))
+                    self.assertNotEqual(get_job("my_jobs.MyJob"), get_job("their_jobs.MyJob"))
+
+                    # Delete a module
+                    os.remove(os.path.join(temp_dir, "their_jobs.py"))
+                    jobs_data = get_jobs(reload=True)
+                    self.assertIn("my_jobs.MyJob", jobs_data.keys())
+                    self.assertIsNotNone(get_job("my_jobs.MyJob"))
+                    self.assertIn("my_jobs.MyOtherJob", jobs_data.keys())
+                    self.assertIsNotNone(get_job("my_jobs.MyOtherJob"))
+                    self.assertNotIn("their_jobs", jobs_data.keys())
+                    self.assertIsNone(get_job("their_jobs.MyJob"))
+
+                    # Create a module with an inauspicious name
+                    with open(os.path.join(temp_dir, "traceback.py"), "w") as fd:
+                        fd.write("""
+from nautobot.apps.jobs import Job, register_jobs
+
+class BadJob(Job):
+    def run(self):
+        raise RuntimeError("You ran a bad job!")
+register_jobs(BadJob)
+""")
+                    jobs_data = get_jobs(reload=True)
+                    self.assertIn("my_jobs.MyJob", jobs_data.keys())
+                    self.assertIsNotNone(get_job("my_jobs.MyJob"))
+                    self.assertIn("my_jobs.MyOtherJob", jobs_data.keys())
+                    self.assertIsNotNone(get_job("my_jobs.MyOtherJob"))
+                    # Since `traceback` conflicts with a system module, it should not get loaded
+                    self.assertNotIn("traceback.BadJob", jobs_data.keys())
+                    self.assertIsNone(get_job("traceback.BadJob"))
+
+                    # TODO: testing with subdirectories/submodules under JOBS_ROOT...
+        finally:
+            # Clean up back to normal behavior
+            get_jobs(reload=True)
+
 
 class JobTransactionTest(TransactionTestCase):
     """
@@ -213,6 +322,19 @@ class JobTransactionTest(TransactionTestCase):
         name = "TestPass"
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(job_result.result, True)
+        logs = job_result.job_log_entries
+        self.assertGreater(logs.count(), 0)
+        try:
+            logs.get(message="before_start() was called as expected")
+            logs.get(message="Success")
+            logs.get(message="on_success() was called as expected")
+            logs.get(message="after_return() was called as expected")
+        except models.JobLogEntry.DoesNotExist:
+            for log in logs.all():
+                print(log.message)
+            print(job_result.traceback)
+            raise
 
     def test_job_result_manager_censor_sensitive_variables(self):
         """
@@ -234,6 +356,18 @@ class JobTransactionTest(TransactionTestCase):
         name = "TestFail"
         job_result = create_job_result_and_run_job(module, name)
         self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        logs = job_result.job_log_entries
+        self.assertGreater(logs.count(), 0)
+        try:
+            logs.get(message="before_start() was called as expected")
+            logs.get(message="I'm a test job that fails!")
+            logs.get(message="on_failure() was called as expected")
+            logs.get(message="after_return() was called as expected")
+        except models.JobLogEntry.DoesNotExist:
+            for log in logs.all():
+                print(log.message)
+            print(job_result.traceback)
+            raise
 
     def test_job_fail_with_sanitization(self):
         """
@@ -297,10 +431,9 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 3)
+        self.assertEqual(len(job_logs), 2)
         self.assertIn("Running job", job_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
-        self.assertIn("Job completed", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
 
     def test_atomic_transaction_context_manager_job_fail(self):
@@ -315,10 +448,9 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 3)
+        self.assertEqual(len(job_logs), 2)
         self.assertIn("Running job", job_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
-        self.assertIn("Job completed", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
 
     def test_ip_address_vars(self):
@@ -582,8 +714,79 @@ class JobFileUploadTest(TransactionTestCase):
         self.assertEqual(models.FileProxy.objects.count(), 0)
 
 
+class JobFileOutputTest(TransactionTestCase):
+    """Test a job that outputs files."""
+
+    databases = ("default", "job_logs")
+
+    @override_settings(
+        MEDIA_ROOT=tempfile.gettempdir(),
+    )
+    def test_output_file_to_database(self):
+        module = "file_output"
+        name = "FileOutputJob"
+        data = {"lines": 3}
+        job_result = create_job_result_and_run_job(module, name, **data)
+
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS, job_result.traceback)
+        # JobResult should have one attached file
+        self.assertEqual(1, job_result.files.count())
+        self.assertEqual(job_result.files.first().name, "output.txt")
+        self.assertEqual(job_result.files.first().file.read().decode("utf-8"), "Hello World!\n" * 3)
+        # File shouldn't exist on filesystem
+        self.assertFalse(Path(settings.MEDIA_ROOT, "files", "output.txt").exists())
+        self.assertFalse(Path(settings.MEDIA_ROOT, "files", f"{job_result.files.first().pk}-output.txt").exists())
+        # File should exist in DB
+        # `filename` value is weird, see https://github.com/victor-o-silva/db_file_storage/issues/22
+        models.FileAttachment.objects.get(filename="extras.FileAttachment/bytes/filename/mimetype/output.txt")
+
+        # Make sure cleanup is successful
+        job_result.delete()
+        with self.assertRaises(models.FileProxy.DoesNotExist):
+            models.FileProxy.objects.get(name="output.txt")
+        with self.assertRaises(models.FileAttachment.DoesNotExist):
+            models.FileAttachment.objects.get(filename="extras.FileAttachment/bytes/filename/mimetype/output.txt")
+
+    # It would be great to also test the output-to-filesystem case when using JOB_FILE_IO_STORAGE=FileSystemStorage;
+    # unfortunately with FileField(storage=callable), the callable gets evaluated only at declaration time, not at
+    # usage/runtime, so override_settings(JOB_FILE_IO_STORAGE) doesn't work the way you'd hope it would.
+
+    def test_output_file_too_large(self):
+        module = "file_output"
+        name = "FileOutputJob"
+        data = {"lines": 1}
+
+        # Exactly JOB_CREATE_FILE_MAX_SIZE bytes should be okay:
+        with override_config(JOB_CREATE_FILE_MAX_SIZE=len("Hello world!\n")):
+            job_result = create_job_result_and_run_job(module, name, **data)
+            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS, job_result.traceback)
+            self.assertEqual(1, job_result.files.count())
+            self.assertEqual(job_result.files.first().name, "output.txt")
+            self.assertEqual(job_result.files.first().file.read().decode("utf-8"), "Hello World!\n")
+
+        # Even one byte over is too much:
+        with override_config(JOB_CREATE_FILE_MAX_SIZE=len("Hello world!\n") - 1):
+            job_result = create_job_result_and_run_job(module, name, **data)
+            self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+            self.assertIn("ValueError", job_result.traceback)
+            self.assertEqual(0, job_result.files.count())
+
+        # settings takes precedence over constance config
+        with override_config(JOB_CREATE_FILE_MAX_SIZE=10 << 20):
+            with override_settings(JOB_CREATE_FILE_MAX_SIZE=len("Hello world!\n") - 1):
+                job_result = create_job_result_and_run_job(module, name, **data)
+                self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+                self.assertIn("ValueError", job_result.traceback)
+                self.assertEqual(0, job_result.files.count())
+
+
 class RunJobManagementCommandTest(TransactionTestCase):
     """Test cases for the `nautobot-server runjob` management command."""
+
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
 
     def run_command(self, *args):
         out = StringIO()
@@ -804,6 +1007,7 @@ class JobHookReceiverTransactionTest(TransactionTestCase):
         test_location = Location.objects.get(name="test_jhr")
         oc = get_changes_for_model(test_location).first()
         self.assertEqual(oc.change_context, ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK)
+        self.assertIsNotNone(job_result.user)
         self.assertEqual(oc.user_id, job_result.user.pk)
 
     def test_missing_receive_job_hook_method(self):
@@ -851,10 +1055,18 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
 
     def setUp(self):
         super().setUp()
+        # Because of TransactionTestCase, and its clearing and repopulation of the database between tests,
+        # the `change_logged_models_queryset` cache of ContentTypes becomes invalid.
+        # We need to explicitly clear it here to have tests pass.
+        # This is not a problem during normal operation of Nautobot because content-types don't normally get deleted
+        # and recreated while Nautobot is running.
+        cache.delete("nautobot.extras.utils.change_logged_models_queryset")
 
         module = "job_hook_receiver"
         name = "TestJobHookReceiverLog"
         self.job_class, self.job_model = get_job_class_and_model(module, name)
+        self.assertIsNotNone(self.job_class)
+        self.assertIsNotNone(self.job_model)
         job_hook = models.JobHook(
             name="JobHookTest",
             type_create=True,
@@ -959,6 +1171,6 @@ class ScheduledJobIntervalTestCase(TestCase):
         )
 
         requested_weekday = self.datetime_days[start_time.weekday()]
-        schedule_day_of_week = list(scheduled_job.schedule.day_of_week)[0]
+        schedule_day_of_week = next(iter(scheduled_job.schedule.day_of_week))
         scheduled_job_weekday = self.cron_days[schedule_day_of_week]
         self.assertEqual(scheduled_job_weekday, requested_weekday)

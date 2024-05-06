@@ -1,0 +1,28 @@
+{% extends 'generic/object_create.html' %}
+{% load static %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>External Integration</strong></div>
+        <div class="panel-body">
+            {% render_field form.name %}
+            {% render_field form.remote_url %}
+            {% render_field form.verify_ssl %}
+            {% render_field form.secrets_group %}
+            {% render_field form.timeout %}
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading"><strong>Advanced Configurations</strong></div>
+        <div class="panel-body">
+            {% render_field form.headers %}
+            {% render_field form.http_method %}
+            {% render_field form.ca_file_path %}
+            {% render_field form.extra_config %}
+        </div>
+    </div>
+
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+
+{% endblock form %}

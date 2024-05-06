@@ -156,7 +156,7 @@
                                             {% elif field.type == 'multi-select' and value %}
                                                 {{ value|join:", " }}
                                             {% elif field.type == 'json' and value is not None %}
-                                                <pre><code>{{ value|render_json }}</code></pre>
+                                                <pre>{{ value|render_json }}</pre>
                                             {% elif value or value == 0 %}
                                                 {{ value }}
                                             {% else %}
@@ -177,7 +177,7 @@
                                         {% elif value.has_many and value.queryset.count %}
                                             <td>
                                                 <input type="radio" id="cr_{{relationship.key}}" name="cr_{{relationship.key}}" value="{{ value.queryset | queryset_to_pks }}" required {% if forloop.parentloop.parentloop.first %} checked {% endif %}>
-                                                <label for="cr_{{relationship.key}}"> 
+                                                <label for="cr_{{relationship.key}}">
                                                     <a href="{% url 'extras:relationshipassociation_list' %}?relationship={{relationship.key}}&{{side}}_id={{object.id}}">
                                                         {{ value.queryset.count }}
                                                         {% if value.peer_type.model_class is not None %}
@@ -204,7 +204,7 @@
                         {% endwith %}
                         </tr>
                 {% endfor %}
-                </tbody>    
+                </tbody>
             </table>
     </div>
 </div>

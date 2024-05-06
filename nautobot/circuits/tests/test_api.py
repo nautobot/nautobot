@@ -4,7 +4,7 @@ from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.choices import InterfaceTypeChoices
-from nautobot.dcim.models import Cable, Device, DeviceType, FrontPort, Interface, RearPort, Location
+from nautobot.dcim.models import Cable, Device, DeviceType, FrontPort, Interface, Location, RearPort
 from nautobot.extras.models import Role, Status
 
 

@@ -5,7 +5,6 @@ This document provides guidance on migrating code from version 1.x to version 2.
 ## Table of Contents
 
 - New to Nautobot v2.0.0
-    - [New UI](../../core/react-ui.md)
     - [Enhanced Filter Fields](../../../release-notes/version-2.0.md#enhanced-filter-fields-2804)
 - Changes to Nautobot in v2.0.0
     - [Database (ORM) Changes](../../../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md#database-orm-changes)

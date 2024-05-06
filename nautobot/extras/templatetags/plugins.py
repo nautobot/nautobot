@@ -52,14 +52,18 @@ def _get_registered_content(obj, method, template_context, return_html=True):
     if not return_html:
         return objects
 
-    return mark_safe(html)  # noqa: S308
+    return mark_safe(html)  # noqa: S308  # suspicious-mark-safe-usage -- we have to trust plugins to provide safe HTML
 
 
 @register.simple_tag(takes_context=True)
-def plugin_buttons(context, obj):
+def plugin_buttons(context, obj, view="detail"):
     """
     Render all buttons registered by plugins
     """
+    if view == "list":
+        # The object_list.html template passes content_type.model_class as obj
+        # This is a bit of a hack however, _get_registered_content() only really needs the model in its own logic
+        return _get_registered_content(obj, "list_buttons", context)
     return _get_registered_content(obj, "buttons", context)
 
 

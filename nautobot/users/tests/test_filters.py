@@ -19,7 +19,6 @@ from nautobot.users.filters import (
 )
 from nautobot.users.models import ObjectPermission, Token
 
-
 # Use the proper swappable User model
 User = get_user_model()
 

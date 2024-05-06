@@ -27,9 +27,9 @@ class OptionalLimitOffsetPagination(LimitOffsetPagination):
             return []
 
         if self.limit:
-            return list(queryset[self.offset : self.offset + self.limit])  # noqa: E203
+            return list(queryset[self.offset : self.offset + self.limit])
         else:
-            return list(queryset[self.offset :])  # noqa: E203
+            return list(queryset[self.offset :])
 
     def get_limit(self, request):
         if self.limit_query_param:

@@ -15,11 +15,10 @@ The following minimum versions are required for Nautobot to operate:
 | Dependency | Role         | Minimum Version |
 |------------|--------------|-----------------|
 | Python     | Application  | 3.8             |
-| PostgreSQL | Database     | 9.6             |
+| PostgreSQL | Database     | 12.0            |
 | MySQL      | Database     | 8.0             |
 | Redis      | Cache, Queue | 4.0             |
 | Git        | Additional   | 2.0             |
-| Node.js    | Frontend     | 18.0            |
 
 !!! note
     Either PostgreSQL or MySQL must be selected, but not both.
@@ -36,14 +35,15 @@ The following minimum versions are required for Nautobot to operate:
 +/- 1.6.0
     Python 3.11 support was added and Python 3.7 support was removed.
 
+--- 2.1.0
+    Support for versions of PostgreSQL older than 12.0 was removed.
+
 Nautobot will not work without these dependencies.
 
 #### Python
 
 Nautobot is written in the [Python programming language](https://www.python.org/). The official Python package installer is called [Pip](https://pip.pypa.io/en/stable/), and you will see the `pip` command referenced often to install or
 update Python packages.
-
-All Nautobot plugins and library dependencies will be written using Python.
 
 #### Database
 
@@ -60,10 +60,6 @@ Nautobot uses a relational database to store its data. Both MySQL and PostgreSQL
 #### Redis
 
 [Redis](https://redis.io/) is an open source, in-memory data store which Nautobot employs for caching and queuing.
-
-#### Node.js
-
-[Node.js](https://nodejs.org/) is a JavaScript runtime environment that is used to build the Nautobot frontend.
 
 ### Optional dependencies
 

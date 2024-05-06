@@ -1,0 +1,31 @@
+{% extends 'generic/object_bulk_update.html' %}
+{% load form_helpers %}
+
+{% block form_fields %}
+    {% render_field form.enabled %}
+    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.grouping override_field=form.clear_grouping_override %}
+    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.description override_field=form.clear_description_override %}
+    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.approval_required override_field=form.clear_approval_required_override %}
+    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.dryrun_default override_field=form.clear_dryrun_default_override %}
+    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.hidden override_field=form.clear_hidden_override %}
+    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.soft_time_limit override_field=form.clear_soft_time_limit_override %}
+    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.time_limit override_field=form.clear_time_limit_override %}
+    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.has_sensitive_variables override_field=form.clear_has_sensitive_variables_override %}
+    {% include "extras/inc/bulk_edit_overridable_field.html" with field=form.task_queues override_field=form.clear_task_queues_override %}
+{% endblock %}
+{% block javascript %}
+<script>
+    document.querySelectorAll("[id^=id_clear][id$=override]").forEach(
+        el => el.addEventListener("change", () => {
+            const override_id = el.id;
+            const field_id = "id_" + override_id.slice(9, -9);
+            const field = document.getElementById(field_id);
+            if(el.checked === true){
+                field.disabled = true;
+            } else {
+                field.disabled = false;
+            }
+        }
+    ))
+</script>
+{% endblock %}

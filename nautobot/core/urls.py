@@ -1,23 +1,27 @@
 from django.conf import settings
 from django.conf.urls import include, url
 from django.urls import path
+from django.views.generic import TemplateView
 from django.views.static import serve
 
 from nautobot.core.views import (
     CustomGraphQLView,
-    HomeView,
-    StaticMediaFailureView,
-    SearchView,
-    nautobot_metrics_view,
     get_file_with_authorization,
+    HomeView,
+    NautobotMetricsView,
+    NautobotMetricsViewAuth,
+    SearchView,
+    StaticMediaFailureView,
+    ThemePreviewView,
 )
 from nautobot.extras.plugins.urls import (
+    apps_patterns,
     plugin_admin_patterns,
     plugin_patterns,
 )
 from nautobot.users.views import LoginView, LogoutView
-from .admin import admin_site
 
+from .admin import admin_site
 
 urlpatterns = [
     # Base views
@@ -38,13 +42,14 @@ urlpatterns = [
     path("api/", include("nautobot.core.api.urls")),
     # GraphQL
     path("graphql/", CustomGraphQLView.as_view(graphiql=True), name="graphql"),
-    # Serving static media in Django
+    # Serving static media in Django (TODO: should be DEBUG mode only - "This view is NOT hardened for production use")
     path("media/<path:path>", serve, {"document_root": settings.MEDIA_ROOT}),
     # Admin
     path("admin/", admin_site.urls),
     # Errors
     path("media-failure/", StaticMediaFailureView.as_view(), name="media_failure"),
-    # Plugins
+    # Apps
+    path("apps/", include((apps_patterns, "apps"))),
     path("plugins/", include((plugin_patterns, "plugins"))),
     path("admin/plugins/", include(plugin_admin_patterns)),
     # Social auth/SSO
@@ -58,11 +63,9 @@ urlpatterns = [
         {"add_attachment_headers": True},
         name="db_file_storage.download_file",
     ),
-    url(
-        "files/get/",
-        get_file_with_authorization,
-        {"add_attachment_headers": False},
-        name="db_file_storage.get_file",
+    # Templated css file
+    path(
+        "template.css", TemplateView.as_view(template_name="template.css", content_type="text/css"), name="template_css"
     ),
 ]
 
@@ -73,14 +76,22 @@ if settings.DEBUG:
 
         urlpatterns += [
             path("__debug__/", include(debug_toolbar.urls)),
+            path("theme-preview/", ThemePreviewView.as_view(), name="theme_preview"),
         ]
     except ImportError:
         pass
 
 if settings.METRICS_ENABLED:
-    urlpatterns += [
-        path("metrics/", nautobot_metrics_view, name="metrics"),
-    ]
+    if settings.METRICS_AUTHENTICATED:
+        urlpatterns += [
+            path("metrics/", NautobotMetricsViewAuth.as_view(), name="metrics"),
+        ]
+    else:
+        urlpatterns += [
+            path("metrics/", NautobotMetricsView.as_view(), name="metrics"),
+        ]
 
 handler404 = "nautobot.core.views.resource_not_found"
 handler500 = "nautobot.core.views.server_error"
+
+urlpatterns += [path("silk/", include("silk.urls", namespace="silk"))]

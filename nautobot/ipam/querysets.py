@@ -1,11 +1,12 @@
 import re
 
-import netaddr
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError, Q
+import netaddr
 
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import merge_dicts_without_collision
+from nautobot.ipam.mixins import LocationToLocationsQuerySetMixin
 
 
 class RIRQuerySet(RestrictedQuerySet):
@@ -194,7 +195,7 @@ class BaseNetworkQuerySet(RestrictedQuerySet):
         return ip, last_ip
 
 
-class PrefixQuerySet(BaseNetworkQuerySet):
+class PrefixQuerySet(LocationToLocationsQuerySetMixin, BaseNetworkQuerySet):
     """Queryset for `Prefix` objects."""
 
     def net_equals(self, *prefixes):
@@ -305,7 +306,7 @@ class PrefixQuerySet(BaseNetworkQuerySet):
             return super().delete(*args, **kwargs)
         except ProtectedError as err:
             # This will be either IPAddress or Prefix.
-            protected_instance = tuple(err.protected_objects)[0]
+            protected_instance = next(iter(err.protected_objects))
             protected_model = protected_instance._meta.model
             protected_parent = protected_instance.parent
             new_parent = protected_parent.parent_id
@@ -474,3 +475,7 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
             q |= Q(pk__in=pk_values)
 
         return super().filter(q)
+
+
+class VLANQuerySet(LocationToLocationsQuerySetMixin, RestrictedQuerySet):
+    """Queryset for `VLAN` objects."""

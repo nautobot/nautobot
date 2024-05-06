@@ -1,6 +1,6 @@
 # For Developers
 
-This section covers technical changes to the underlying data models and programmable interfaces and is intended for developers or integrators to help facilitate any necessary changes to functional code in Apps/plugins that extend Nautobot.
+This section covers technical changes to the underlying data models and programmable interfaces and is intended for developers or integrators to help facilitate any necessary changes to functional code in Apps that extend Nautobot.
 
 ## Database (ORM) Changes
 

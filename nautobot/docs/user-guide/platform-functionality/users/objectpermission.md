@@ -18,7 +18,7 @@ There are four core actions that can be permitted for each type of object within
 * **Change** - Modify an existing object
 * **Delete** - Delete an existing object
 
-In addition to these, permissions can also grant custom actions that may be required by a specific model or plugin. For example, the `napalm_read` permission on the device model allows a user to execute NAPALM queries on a device via Nautobot's REST API. These can be specified when granting a permission in the "additional actions" field.
+In addition to these, permissions can also grant custom actions that may be required by a specific model or App. For example, the `napalm_read` permission on the device model allows a user to execute NAPALM queries on a device via Nautobot's REST API. These can be specified when granting a permission in the "additional actions" field.
 
 !!! note
     Internally, all actions granted by a permission (both built-in and custom) are stored as strings in an array field named `actions`.
@@ -54,3 +54,6 @@ To achieve a logical OR with a different set of constraints, define multiple obj
 ```
 
 Additionally, where multiple permissions have been assigned for an object type, their collective constraints will be merged using a logical "OR" operation.
+
++++ 2.1.1
+    The ObjectPermission model now has change-logging capabilities. When object permissions are created, updated, or deleted, change logs will be automatically generated and will be viewable by users with the appropriate permissions.

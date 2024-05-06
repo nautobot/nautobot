@@ -67,7 +67,7 @@ class ComputedFieldsTestCase(SeleniumTestCase):
         and then checks to see if it actually appears there.
         """
         self.browser.visit(f"{self.live_server_url}/dcim/devices/")
-        self.browser.find_by_xpath(".//button[@title='Configure table']").click()
+        self.browser.find_by_xpath(".//button[@data-original-title='Configure table']").click()
         select_option = self.browser.find_by_xpath(
             ".//select[@id='id_columns']/option[contains(text(), 'Device Computed Field')]"
         )
@@ -75,6 +75,6 @@ class ComputedFieldsTestCase(SeleniumTestCase):
         select_option.click()
         self.browser.find_by_xpath(".//input[@value='Save']").click()
         self.assertTrue(self.browser.is_text_present(f"{self.device.name} is awesome!"))
-        self.browser.find_by_xpath(".//button[@title='Configure table']").click()
+        self.browser.find_by_xpath(".//button[@data-original-title='Configure table']").click()
         self.browser.find_by_xpath(".//input[@value='Reset']").click()
         self.assertFalse(self.browser.is_text_present(f"{self.device.name} is awesome!"))

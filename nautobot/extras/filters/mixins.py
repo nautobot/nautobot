@@ -14,7 +14,6 @@ from nautobot.core.filters import (
 )
 from nautobot.dcim.models import Device
 from nautobot.extras.choices import (
-    CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
     RelationshipSideChoices,
 )
@@ -28,6 +27,7 @@ from nautobot.extras.filters.customfields import (
     CustomFieldMultiValueDateFilter,
     CustomFieldMultiValueNumberFilter,
     CustomFieldNumberFilter,
+    CustomFieldSelectFilter,
 )
 from nautobot.extras.models import (
     ConfigContextSchema,
@@ -62,17 +62,19 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
         super().__init__(*args, **kwargs)
 
         custom_field_filter_classes = {
+            # Here, for the "base" filters for each custom field, for backwards compatibility, use single-value filters.
+            # For the "extended" filters, see below, we use multi-value filters.
+            # 3.0 TODO: switch the "base" filters to multi-value filters as well.
             CustomFieldTypeChoices.TYPE_DATE: CustomFieldDateFilter,
             CustomFieldTypeChoices.TYPE_BOOLEAN: CustomFieldBooleanFilter,
             CustomFieldTypeChoices.TYPE_INTEGER: CustomFieldNumberFilter,
             CustomFieldTypeChoices.TYPE_JSON: CustomFieldJSONFilter,
+            # The below are multi-value filters already:
             CustomFieldTypeChoices.TYPE_MULTISELECT: CustomFieldMultiSelectFilter,
-            CustomFieldTypeChoices.TYPE_SELECT: CustomFieldMultiSelectFilter,
+            CustomFieldTypeChoices.TYPE_SELECT: CustomFieldSelectFilter,
         }
 
-        custom_fields = CustomField.objects.filter(
-            content_types=ContentType.objects.get_for_model(self._meta.model)
-        ).exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
+        custom_fields = CustomField.objects.get_for_model(self._meta.model, exclude_filter_disabled=True)
         for cf in custom_fields:
             # Determine filter class for this CustomField type, default to CustomFieldCharFilter
             new_filter_name = cf.add_prefix_to_cf_key()
@@ -213,7 +215,7 @@ class RelationshipFilter(django_filters.ModelMultipleChoiceFilter):
             # unioned queryset is also distinct. We also need to conditionally check if the incoming
             # `qs` is distinct in the case that a caller is manually passing in a queryset that may
             # not be distinct. (Ref: https://github.com/nautobot/nautobot/issues/2963)
-            union_qs = self.get_method(self.qs)(Q(**{"id__in": values}))
+            union_qs = self.get_method(self.qs)(Q(id__in=values))
             if qs.query.distinct:
                 union_qs = union_qs.distinct()
 
@@ -235,16 +237,13 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
         """
         Append form fields for all Relationships assigned to this model.
         """
-        query = Q(source_type=self.obj_type, source_hidden=False) | Q(
-            destination_type=self.obj_type, destination_hidden=False
-        )
-        relationships = Relationship.objects.select_related("source_type", "destination_type").filter(query)
+        src_relationships, dst_relationships = Relationship.objects.get_for_model(model=model, hidden=False)
 
-        for rel in relationships.iterator():
-            if rel.source_type == self.obj_type and not rel.source_hidden:
-                self._append_relationships_side([rel], RelationshipSideChoices.SIDE_SOURCE, model)
-            if rel.destination_type == self.obj_type and not rel.destination_hidden:
-                self._append_relationships_side([rel], RelationshipSideChoices.SIDE_DESTINATION, model)
+        for rel in src_relationships:
+            self._append_relationships_side([rel], RelationshipSideChoices.SIDE_SOURCE, model)
+
+        for rel in dst_relationships:
+            self._append_relationships_side([rel], RelationshipSideChoices.SIDE_DESTINATION, model)
 
     def _append_relationships_side(self, relationships, initial_side, model):
         """
@@ -291,18 +290,12 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
 
 
 class RoleFilter(NaturalKeyOrPKMultipleChoiceFilter):
-    """Limit role choices to the available role choices for self.model"""
+    """Filter field used for filtering Role fields."""
 
     def __init__(self, *args, **kwargs):
-        kwargs.setdefault("field_name", "role")
         kwargs.setdefault("queryset", Role.objects.all())
-        kwargs.setdefault("to_field_name", "name")
         kwargs.setdefault("label", "Role (name or ID)")
-
         super().__init__(*args, **kwargs)
-
-    def get_queryset(self, request):
-        return self.queryset.get_for_model(self.model)
 
 
 class RoleModelFilterSetMixin(django_filters.FilterSet):
@@ -313,34 +306,15 @@ class RoleModelFilterSetMixin(django_filters.FilterSet):
     role = RoleFilter()
 
 
-class StatusFilter(django_filters.ModelMultipleChoiceFilter):
+class StatusFilter(NaturalKeyOrPKMultipleChoiceFilter):
     """
     Filter field used for filtering Status fields.
-
-    Explicitly sets `to_field_name='value'` and dynamically sets queryset to
-    retrieve choices for the corresponding model & field name bound to the
-    filterset.
     """
 
     def __init__(self, *args, **kwargs):
-        kwargs["to_field_name"] = "name"
+        kwargs.setdefault("queryset", Status.objects.all())
+        kwargs.setdefault("label", "Status (name or ID)")
         super().__init__(*args, **kwargs)
-
-    def get_queryset(self, request):
-        self.queryset = Status.objects.all()
-        return super().get_queryset(request)
-
-    def get_filter_predicate(self, value):
-        """Always use the field's name and the `to_field_name` attribute as predicate."""
-        # e.g. `status__name`
-        to_field_name = self.field.to_field_name
-        name = f"{self.field_name}__{to_field_name}"
-        # Sometimes the incoming value is an instance. This block of logic comes from the base
-        # `get_filter_predicate()` and was added here to support this.
-        try:
-            return {name: getattr(value, to_field_name)}
-        except (AttributeError, TypeError):
-            return {name: value}
 
 
 class StatusModelFilterSetMixin(django_filters.FilterSet):

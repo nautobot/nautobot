@@ -2,22 +2,24 @@ import logging
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db.models.signals import m2m_changed, post_save, pre_delete
 from django.db import transaction
+from django.db.models.signals import m2m_changed, post_save, pre_delete
 from django.dispatch import receiver
 
 from nautobot.core.signals import disable_for_loaddata
+
 from .models import (
     Cable,
     CablePath,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceRedundancyGroup,
+    Interface,
     PathEndpoint,
     PowerPanel,
     Rack,
     RackGroup,
     VirtualChassis,
-    Interface,
 )
 from .utils import validate_interface_tagged_vlans
 
@@ -285,3 +287,27 @@ def prevent_adding_tagged_vlans_with_incorrect_mode_or_site(sender, instance, ac
         return
 
     validate_interface_tagged_vlans(instance, kwargs["model"], kwargs["pk_set"])
+
+
+#
+# ControllerManagedDeviceGroup
+#
+
+
+@receiver(post_save, sender=ControllerManagedDeviceGroup)
+def handle_controller_managed_device_group_controller_change(instance, raw=False, **_):
+    """Update descendants when the top level `ControllerManagedDeviceGroup.controller` changes."""
+    if instance.parent or instance._original_controller == instance.controller:
+        return
+
+    logger = logging.getLogger(__name__ + ".ControllerManagedDeviceGroup")
+
+    if raw:
+        logger.debug("Skipping controller update for imported controller device group %s", instance)
+        return
+
+    with transaction.atomic():
+        for group in instance.descendants(include_self=False):
+            group.controller = instance.controller
+            group.save()
+            logger.debug("Updated controller from parent %s for child %s", instance, group)

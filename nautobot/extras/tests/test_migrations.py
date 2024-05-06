@@ -103,7 +103,7 @@ class CustomFieldDataMigrationTest(NautobotDataMigrationTest):
         self.locations[2].save()
 
     def test_label_field_populated_correctly(self):
-        for cf in self.custom_field.objects.exclude(label="Example Plugin Automatically Added Custom Field"):
+        for cf in self.custom_field.objects.exclude(label="Example App Automatically Added Custom Field"):
             self.assertEqual(cf.name, cf.label)
 
     def test_key_field_is_graphql_safe(self):
@@ -120,7 +120,7 @@ class CustomFieldDataMigrationTest(NautobotDataMigrationTest):
             {
                 "a123_main_ave": None,
                 "a_456_main_ave": None,
-                "example_plugin_auto_custom_field": None,
+                "example_app_auto_custom_field": None,
                 "text_custom_field_1": "ABC",
                 "text_custom_field_2": "Bar",
                 "text_custom_field_3": None,
@@ -134,7 +134,7 @@ class CustomFieldDataMigrationTest(NautobotDataMigrationTest):
             {
                 "a123_main_ave": "New Address",
                 "a_456_main_ave": "Old Address",
-                "example_plugin_auto_custom_field": None,
+                "example_app_auto_custom_field": None,
                 "text_custom_field_1": "ABC",
                 "text_custom_field_2": None,
                 "text_custom_field_3": "Bar",
@@ -147,7 +147,7 @@ class CustomFieldDataMigrationTest(NautobotDataMigrationTest):
             {
                 "a123_main_ave": "New Address",
                 "a_456_main_ave": "Old Address",
-                "example_plugin_auto_custom_field": None,
+                "example_app_auto_custom_field": None,
                 "text_custom_field_1": "ABC",
                 "text_custom_field_2": "Bar",
                 "text_custom_field_3": "FOO",

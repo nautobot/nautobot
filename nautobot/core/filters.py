@@ -260,6 +260,9 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
         if not self.conjoined:
             qs = qs.filter(q)
 
+        if self.distinct:
+            qs = qs.distinct()
+
         return qs
 
 
@@ -522,7 +525,10 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
 
         # Fetch the generated Q object and filter the incoming qs with it before passing it along.
         query = self.generate_query(value)
-        return self.get_method(qs)(query)
+        result = self.get_method(qs)(query)
+        if self.distinct:
+            result = result.distinct()
+        return result
 
 
 #
@@ -630,15 +636,23 @@ class BaseFilterSet(django_filters.FilterSet):
         if field is None:
             return magic_filters
 
+        # If the field allows null values, add an `isnull`` check
+        if getattr(field, "null", None):
+            # Use this method vs extend as the `lookup_map` variable is generally one of
+            # the constants which we do not want to update
+            lookup_map = dict(lookup_map, isnull="isnull")
+
         # Create new filters for each lookup expression in the map
         for lookup_name, lookup_expr in lookup_map.items():
             new_filter_name = f"{filter_name}__{lookup_name}"
 
             try:
-                if filter_name in cls.declared_filters:
-                    # The filter field has been explicity defined on the filterset class so we must manually
+                if filter_name in cls.declared_filters and lookup_expr not in {"isnull"}:
+                    # The filter field has been explicitly defined on the filterset class so we must manually
                     # create the new filter with the same type because there is no guarantee the defined type
-                    # is the same as the default type for the field
+                    # is the same as the default type for the field. This does not apply if the filter
+                    # should retain the original lookup_expr type, such as `isnull` using a boolean field on a
+                    # char or date object.
                     resolve_field(field, lookup_expr)  # Will raise FieldLookupError if the lookup is invalid
                     new_filter = type(filter_field)(
                         field_name=field_name,
@@ -649,7 +663,7 @@ class BaseFilterSet(django_filters.FilterSet):
                         **filter_field.extra,
                     )
                 else:
-                    # The filter field is listed in Meta.fields so we can safely rely on default behaviour
+                    # The filter field is listed in Meta.fields so we can safely rely on default behavior
                     # Will raise FieldLookupError if the lookup is invalid
                     new_filter = cls.filter_for_field(field, field_name, lookup_expr)
             except django_filters.exceptions.FieldLookupError:

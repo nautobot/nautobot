@@ -6,6 +6,8 @@ import os
 
 from git import Repo
 
+from nautobot.core.utils.logging import sanitize
+
 logger = logging.getLogger(__name__)
 
 # namedtuple takes a git log diff status and its accompanying text.
@@ -63,6 +65,8 @@ class GitRepo:
             url (str): git repo url
             clone_initially (bool): True if the repo needs to be cloned
         """
+        self.url = url
+        self.sanitized_url = sanitize(url)
         if os.path.isdir(path) and os.path.isdir(os.path.join(path, ".git")):
             self.repo = Repo(path=path)
         elif clone_initially:
@@ -118,7 +122,7 @@ class GitRepo:
                 branch_head.set_tracking_branch(self.repo.remotes.origin.refs[branch])
             except IndexError as git_error:
                 logger.error(
-                    "Branch %s does not exist at %s. %s", branch, list(self.repo.remotes.origin.urls)[0], git_error
+                    "Branch %s does not exist at %s. %s", branch, next(iter(self.repo.remotes.origin.urls)), git_error
                 )
                 raise BranchDoesNotExist(
                     f"Please create branch '{branch}' in upstream and try again."
@@ -143,7 +147,7 @@ class GitRepo:
             self.repo.remotes.origin.refs[branch]
         except IndexError as git_error:
             logger.error(
-                "Branch %s does not exist at %s. %s", branch, list(self.repo.remotes.origin.urls)[0], git_error
+                "Branch %s does not exist at %s. %s", branch, next(iter(self.repo.remotes.origin.urls)), git_error
             )
             raise BranchDoesNotExist(
                 f"Please create branch '{branch}' in upstream and try again."

@@ -1,12 +1,13 @@
 import uuid
 
+from django.conf import settings
+from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.urls import NoReverseMatch, reverse
 from django.utils.encoding import is_protected_type
-from django.conf import settings
-from django.contrib.contenttypes.models import ContentType
-from django.core.cache import cache
 from django.utils.functional import classproperty
 
 from nautobot.core.models.managers import BaseManager
@@ -45,14 +46,19 @@ class BaseModel(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
 
-    objects = BaseManager.from_queryset(RestrictedQuerySet)()
+    # Reverse relation so that deleting a BaseModel automatically deletes any ContactAssociations related to it.
+    associated_contacts = GenericRelation(
+        "extras.ContactAssociation",
+        content_type_field="associated_object_type",
+        object_id_field="associated_object_id",
+        related_query_name="associated_contacts_%(app_label)s_%(class)s",  # e.g. 'associated_contacts_dcim_device'
+    )
 
-    @property
-    def present_in_database(self):
-        """
-        True if the record exists in the database, False if it does not.
-        """
-        return not self._state.adding
+    objects = BaseManager.from_queryset(RestrictedQuerySet)()
+    is_contact_associable_model = True
+
+    class Meta:
+        abstract = True
 
     def get_absolute_url(self, api=False):
         """
@@ -77,6 +83,13 @@ class BaseModel(models.Model):
 
         raise AttributeError(f"Cannot find a URL for {self} ({self._meta.app_label}.{self._meta.model_name})")
 
+    @property
+    def present_in_database(self):
+        """
+        True if the record exists in the database, False if it does not.
+        """
+        return not self._state.adding
+
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def _content_type(cls):  # pylint: disable=no-self-argument
         """
@@ -91,7 +104,7 @@ class BaseModel(models.Model):
 
         Necessary for use with _content_type_cached and management commands.
         """
-        return f"{cls._meta.label_lower}._content_type"
+        return f"nautobot.{cls._meta.label_lower}._content_type"
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def _content_type_cached(cls):  # pylint: disable=no-self-argument
@@ -100,9 +113,6 @@ class BaseModel(models.Model):
         """
 
         return cache.get_or_set(cls._content_type_cache_key, cls._content_type, settings.CONTENT_TYPE_CACHE_TIMEOUT)
-
-    class Meta:
-        abstract = True
 
     def validated_save(self, *args, **kwargs):
         """

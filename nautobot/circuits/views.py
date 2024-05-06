@@ -4,13 +4,11 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django_tables2 import RequestConfig
 
-
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.models.querysets import count_related
 from nautobot.core.views import generic, mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
-
 
 from . import filters, forms, tables
 from .api import serializers
@@ -24,7 +22,7 @@ class CircuitTypeUIViewSet(
     view_mixins.ObjectEditViewMixin,
     view_mixins.ObjectDestroyViewMixin,
     view_mixins.ObjectBulkDestroyViewMixin,
-    view_mixins.ObjectBulkCreateViewMixin,
+    view_mixins.ObjectBulkCreateViewMixin,  # 3.0 TODO: remove this mixin as it's no longer used
     view_mixins.ObjectChangeLogViewMixin,
     view_mixins.ObjectNotesViewMixin,
 ):
@@ -63,7 +61,7 @@ class CircuitTerminationUIViewSet(
     view_mixins.ObjectEditViewMixin,
     view_mixins.ObjectDestroyViewMixin,
     view_mixins.ObjectBulkDestroyViewMixin,
-    view_mixins.ObjectBulkCreateViewMixin,
+    view_mixins.ObjectBulkCreateViewMixin,  # 3.0 TODO: remove this mixin as it's no longer used
     view_mixins.ObjectChangeLogViewMixin,
     view_mixins.ObjectNotesViewMixin,
 ):

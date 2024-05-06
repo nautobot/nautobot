@@ -48,6 +48,8 @@ The following tags are available on both Docker Hub and the GitHub Container Reg
 
 | Tag                                                           | Nautobot Version      | Python Version | Example        |
 | ------------------------------------------------------------- | --------------------- | -------------- | -------------- |
+| `latest`                                                      | Latest stable release | 3.11           | `latest`       |
+| `latest-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `latest-py3.8` |
 | `${NAUTOBOT_VER}`                                             | As specified          | 3.11           | `2.0.0`        |
 | `${NAUTOBOT_VER}-py${PYTHON_VER}`                             | As specified          | As specified   | `2.0.0-py3.8`  |
 | `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}`                 | As specified          | 3.11           | `2.0`          |
@@ -63,8 +65,6 @@ In addition to all tags described in the previous section, the following additio
 
 | Tag                                                  | Nautobot Branch              | Python Version |
 | ---------------------------------------------------- | ---------------------------- | -------------- |
-| `latest`                                             | `develop`, the latest commit | 3.11           |
-| `latest-py${PYTHON_VER}`                             | `develop`, the latest commit | As specified   |
 | `develop`                                            | `develop`, the latest commit | 3.11           |
 | `develop-py${PYTHON_VER}`                            | `develop`, the latest commit | As specified   |
 | `ltm-1.6`                                            | `ltm-1.6`, the latest commit | 3.11           |
@@ -75,6 +75,9 @@ In addition to all tags described in the previous section, the following additio
 ## Getting Started
 
 Nautobot requires a MySQL or PostgreSQL database and Redis instance before it will start. Because of this the quickest and easiest way to get Nautobot running is with [Docker Compose](https://docs.docker.com/compose/), which will install and configure PostgreSQL and Redis containers for you automatically.
+
+!!! tip
+    Whether you're using the Docker CLI, Docker Compose, or [Kubernetes](https://kubernetes.io/), in any case you'll want to set up appropriate [health checks](health-checks.md) for your containers.
 
 ## Configuration
 
@@ -211,9 +214,9 @@ services:
       - /local/path/to/custom/nautobot.key:/opt/nautobot/nautobot.key:ro
 ```
 
-### Nautobot Plugins
+### Nautobot Apps
 
-At this time adding Nautobot plugins to the existing Docker image is not supported, however, you can use the Nautobot image as the base within your `Dockerfile` to install your own plugins, here is an example dockerfile:
+At this time adding Nautobot Apps to the existing Docker image is not supported, however, you can use the Nautobot image as the base within your `Dockerfile` to install your own Apps, here is an example dockerfile:
 
 ```dockerfile
 FROM networktocode/nautobot
@@ -283,4 +286,4 @@ Similarly, you can use `docker-compose.final-dev.yml` if you wish to build and t
 
 ## Docker Compose
 
-An [example library for using Docker Compose](https://github.com/nautobot/nautobot-docker-compose/) to build out all of the components for Nautobot can be found within the Nautobot community. Please see [https://github.com/nautobot/nautobot-docker-compose/](https://github.com/nautobot/nautobot-docker-compose/) for examples on the base application, LDAP integration, and using plugins.
+An [example library for using Docker Compose](https://github.com/nautobot/nautobot-docker-compose/) to build out all of the components for Nautobot can be found within the Nautobot community. Please see [https://github.com/nautobot/nautobot-docker-compose/](https://github.com/nautobot/nautobot-docker-compose/) for examples on the base application, LDAP integration, and using Apps.

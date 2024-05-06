@@ -1,10 +1,10 @@
-import socket
 from collections import OrderedDict
+import socket
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F
-from django.http import HttpResponseForbidden, HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from drf_spectacular.types import OpenApiTypes
@@ -13,12 +13,12 @@ from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.routers import APIRootView
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.api.exceptions import ServiceUnavailable
 from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.views import ModelViewSet
 from nautobot.core.models.querysets import count_related
 from nautobot.dcim import filters
 from nautobot.dcim.models import (
@@ -28,21 +28,25 @@ from nautobot.dcim.models import (
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerManagedDeviceGroup,
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImageFile,
     FrontPort,
     FrontPortTemplate,
     Interface,
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
+    InventoryItem,
     Location,
     LocationType,
     Manufacturer,
-    InventoryItem,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -55,6 +59,8 @@ from nautobot.dcim.models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
+    SoftwareImageFile,
+    SoftwareVersion,
     VirtualChassis,
 )
 from nautobot.extras.api.views import (
@@ -65,18 +71,9 @@ from nautobot.extras.choices import SecretsGroupAccessTypeChoices, SecretsGroupS
 from nautobot.extras.secrets.exceptions import SecretError
 from nautobot.ipam.models import Prefix, VLAN
 from nautobot.virtualization.models import VirtualMachine
+
 from . import serializers
 from .exceptions import MissingFilterException
-
-
-class DCIMRootView(APIRootView):
-    """
-    DCIM API root view
-    """
-
-    def get_view_name(self):
-        return "DCIM"
-
 
 # Mixins
 
@@ -153,8 +150,8 @@ class LocationViewSet(NautobotModelViewSet):
         .annotate(
             device_count=count_related(Device, "location"),
             rack_count=count_related(Rack, "location"),
-            prefix_count=count_related(Prefix, "location"),
-            vlan_count=count_related(VLAN, "location"),
+            prefix_count=count_related(Prefix, "locations"),
+            vlan_count=count_related(VLAN, "locations"),
             circuit_count=count_related(Circuit, "circuit_terminations__location"),
             virtual_machine_count=count_related(VirtualMachine, "cluster__location"),
         )
@@ -270,6 +267,19 @@ class ManufacturerViewSet(NautobotModelViewSet):
 
 
 #
+# Device Family
+#
+
+
+class DeviceFamilyViewSet(NautobotModelViewSet):
+    queryset = DeviceFamily.objects.annotate(
+        device_type_count=count_related(DeviceType, "device_family"),
+    )
+    serializer_class = serializers.DeviceFamilySerializer
+    filterset_class = filters.DeviceFamilyFilterSet
+
+
+#
 # Device types
 #
 
@@ -277,7 +287,7 @@ class ManufacturerViewSet(NautobotModelViewSet):
 class DeviceTypeViewSet(NautobotModelViewSet):
     queryset = (
         DeviceType.objects.select_related("manufacturer")
-        .prefetch_related("tags")
+        .prefetch_related("software_image_files", "tags")
         .annotate(device_count=count_related(Device, "device_type"))
     )
     serializer_class = serializers.DeviceTypeSerializer
@@ -367,11 +377,13 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         "parent_bay",
         "primary_ip4",
         "primary_ip6",
+        "software_version",
         "virtual_chassis__master",
         "device_redundancy_group",
+        "controller_managed_device_group",
         "secrets_group",
         "status",
-    ).prefetch_related("tags", "primary_ip4__nat_outside_list", "primary_ip6__nat_outside_list")
+    ).prefetch_related("tags", "primary_ip4__nat_outside_list", "primary_ip6__nat_outside_list", "software_image_files")
     serializer_class = serializers.DeviceSerializer
     filterset_class = filters.DeviceFilterSet
 
@@ -468,9 +480,9 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
         # Get NAPALM enable-secret from the device if present
         if device.secrets_group:
             # Work around inconsistent enable password arg in NAPALM drivers
-            enable_password_arg = "secret"
+            enable_password_arg = "secret"  # noqa: S105  # hardcoded-password-string -- false positive
             if device.platform.napalm_driver.lower() == "eos":
-                enable_password_arg = "enable_password"
+                enable_password_arg = "enable_password"  # noqa: S105  # hardcoded-password-string -- false positive
             try:
                 optional_args[enable_password_arg] = device.secrets_group.get_secret_value(
                     SecretsGroupAccessTypeChoices.TYPE_GENERIC,
@@ -600,7 +612,9 @@ class DeviceBayViewSet(NautobotModelViewSet):
 
 
 class InventoryItemViewSet(NautobotModelViewSet):
-    queryset = InventoryItem.objects.select_related("device", "manufacturer").prefetch_related("tags")
+    queryset = InventoryItem.objects.select_related("device", "manufacturer", "software_version").prefetch_related(
+        "tags"
+    )
     serializer_class = serializers.InventoryItemSerializer
     filterset_class = filters.InventoryItemFilterSet
 
@@ -761,7 +775,7 @@ class ConnectedDeviceViewSet(ViewSet):
 
         # Determine local interface from peer interface's connection
         peer_interface = get_object_or_404(
-            Interface.objects.all(),
+            Interface.objects.restrict(request.user, "view"),
             device__name=peer_device_name,
             name=peer_interface_name,
         )
@@ -771,3 +785,55 @@ class ConnectedDeviceViewSet(ViewSet):
             return Response()
 
         return Response(serializers.DeviceSerializer(local_interface.device, context={"request": request}).data)
+
+
+#
+# Software image files
+#
+
+
+class SoftwareImageFileViewSet(NautobotModelViewSet):
+    queryset = SoftwareImageFile.objects.select_related("software_version").prefetch_related("device_types")
+    serializer_class = serializers.SoftwareImageFileSerializer
+    filterset_class = filters.SoftwareImageFileFilterSet
+
+
+class SoftwareVersionViewSet(NautobotModelViewSet):
+    queryset = SoftwareVersion.objects.select_related("platform").prefetch_related(
+        "devices", "software_image_files", "inventory_items", "virtual_machines"
+    )
+    serializer_class = serializers.SoftwareVersionSerializer
+    filterset_class = filters.SoftwareVersionFilterSet
+
+
+class DeviceTypeToSoftwareImageFileViewSet(ModelViewSet):
+    queryset = DeviceTypeToSoftwareImageFile.objects.select_related("device_type", "software_image_file")
+    serializer_class = serializers.DeviceTypeToSoftwareImageFileSerializer
+    filterset_class = filters.DeviceTypeToSoftwareImageFileFilterSet
+
+
+#
+# Controllers
+#
+
+
+class ControllerViewSet(NautobotModelViewSet):
+    queryset = Controller.objects.select_related(
+        "location",
+        "platform",
+        "role",
+        "tenant",
+        "status",
+    ).prefetch_related("tags")
+    serializer_class = serializers.ControllerSerializer
+    filterset_class = filters.ControllerFilterSet
+
+
+class ControllerManagedDeviceGroupViewSet(NautobotModelViewSet):
+    queryset = ControllerManagedDeviceGroup.objects.select_related(
+        "controller",
+        "parent",
+    ).prefetch_related("tags")
+
+    serializer_class = serializers.ControllerManagedDeviceGroupSerializer
+    filterset_class = filters.ControllerManagedDeviceGroupFilterSet

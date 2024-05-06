@@ -42,6 +42,19 @@ Location.objects.filter(
 )
 ```
 
+### Tokens
+
+!!! note
+    The below mechanism is only applicable for applying constraints where the model has user relationship (eg Change Log, Job results).
+
+Permissions constraints can be defined by using the special token `$user` to reference the current user at evaluation. This can be beneficial in order to restrict users to only view their own Change log entries for example. Such a constraint can be defined as:
+
+```json
+{
+    "user": "$user"
+}
+```
+
 ### Creating and Modifying Objects
 
 The same sort of logic is in play when a user attempts to create or modify an object in Nautobot, with a twist. Once validation has completed, Nautobot starts an atomic database transaction to facilitate the change, and the object is created or saved normally. Next, still within the transaction, Nautobot issues a second query to retrieve the newly created/updated object, filtering the restricted queryset with the object's primary key. If this query fails to return the object, Nautobot knows that the new revision does not match the constraints imposed by the permission. The transaction is then rolled back, leaving the database in its original state prior to the change, and the user is informed of the violation.

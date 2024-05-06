@@ -1,14 +1,16 @@
 import datetime
+from io import BytesIO
+import urllib.parse
 
 from django.contrib import messages
-from django.core.exceptions import FieldError
+from django.core.exceptions import FieldError, ValidationError
 from django.db.models import ForeignKey
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
-
-from rest_framework import serializers
+from rest_framework import exceptions, serializers
 
 from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField
+from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.models.utils import is_taggable
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_filter_field_label
@@ -97,6 +99,8 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
     """From the given serializer class, build a list of field dicts suitable for rendering in the CSV import form."""
     serializer = serializer_class(context={"request": None, "depth": 0})
     fields = []
+    # Note lots of "noqa: S308" in this function. That's `suspicious-mark-safe-usage`, but in all of the below cases
+    # we control the input string and it's known to be safe, so mark_safe() is being used correctly here.
     for field_name, field in serializer.fields.items():
         if field.read_only:
             continue
@@ -110,6 +114,7 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
                 field_info = {
                     "name": cf.add_prefix_to_cf_key(),
                     "required": cf_form_field.required,
+                    "foreign_key": False,
                     "label": cf_form_field.label,
                     "help_text": cf_form_field.help_text,
                 }
@@ -128,6 +133,7 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
         field_info = {
             "name": field_name,
             "required": field.required,
+            "foreign_key": False,
             "label": field.label,
             "help_text": field.help_text,
         }
@@ -145,12 +151,14 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
             elif isinstance(field.child_relation, ContentTypeField):
                 field_info["format"] = mark_safe('<code>"app_label.model,app_label.model"</code>')  # noqa: S308
             else:
-                field_info["format"] = mark_safe('<code>"UUID,UUID"</code>')  # noqa: S308
+                field_info["foreign_key"] = field.child_relation.queryset.model._meta.label_lower
+                field_info["format"] = mark_safe('<code>"UUID,UUID"</code> or combination of fields')  # noqa: S308
         elif isinstance(field, serializers.RelatedField):
             if isinstance(field, ContentTypeField):
                 field_info["format"] = mark_safe("<code>app_label.model</code>")  # noqa: S308
             else:
-                field_info["format"] = mark_safe("<code>UUID</code>")  # noqa: S308
+                field_info["foreign_key"] = field.queryset.model._meta.label_lower
+                field_info["format"] = mark_safe("<code>UUID</code> or combination of fields")  # noqa: S308
         elif isinstance(field, (serializers.ListField, serializers.MultipleChoiceField)):
             field_info["format"] = mark_safe('<code>"value,value"</code>')  # noqa: S308
         elif isinstance(field, (serializers.DictField, serializers.JSONField)):
@@ -165,6 +173,34 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
     # TODO this ordering should be defined by the serializer instead...
     fields = sorted(fields, key=lambda info: 1 if info["required"] else 2)
     return fields
+
+
+def import_csv_helper(*, request, form, serializer_class):
+    field_name = "csv_file" if request.FILES else "csv_data"
+    csvtext = form.cleaned_data[field_name]
+    try:
+        data = NautobotCSVParser().parse(
+            stream=BytesIO(csvtext.encode("utf-8")),
+            parser_context={"request": request, "serializer_class": serializer_class},
+        )
+        new_objs = []
+        validation_failed = False
+        for row, entry in enumerate(data, start=1):
+            serializer = serializer_class(data=entry, context={"request": request})
+            if serializer.is_valid():
+                new_objs.append(serializer.save())
+            else:
+                validation_failed = True
+                for field, err in serializer.errors.items():
+                    form.add_error(field_name, f"Row {row}: {field}: {err[0]}")
+    except exceptions.ParseError as exc:
+        validation_failed = True
+        form.add_error(None, str(exc))
+
+    if validation_failed:
+        raise ValidationError("")
+
+    return new_objs
 
 
 def handle_protectederror(obj_list, request, e):
@@ -234,7 +270,7 @@ def prepare_cloned_fields(instance):
         for tag in instance.tags.all():
             params.append(("tags", tag.pk))
 
-    # Concatenate parameters into a URL query string
-    param_string = "&".join([f"{k}={v}" for k, v in params])
+    # Encode the parameters into a URL query string
+    param_string = urllib.parse.urlencode(params)
 
     return param_string

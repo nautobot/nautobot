@@ -5,10 +5,8 @@ from nautobot.core.apps import (
     NavMenuAddButton,
     NavMenuGroup,
     NavMenuItem,
-    NavMenuImportButton,
     NavMenuTab,
 )
-
 
 menu_items = (
     NavMenuTab(
@@ -33,12 +31,6 @@ menu_items = (
                                     "virtualization.add_virtualmachine",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="virtualization:virtualmachine_import",
-                                permissions=[
-                                    "virtualization.add_virtualmachine",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -48,14 +40,7 @@ menu_items = (
                         permissions=[
                             "virtualization.view_vminterface",
                         ],
-                        buttons=(
-                            NavMenuImportButton(
-                                link="virtualization:vminterface_import",
-                                permissions=[
-                                    "virtualization.add_vminterface",
-                                ],
-                            ),
-                        ),
+                        buttons=(),
                     ),
                 ),
             ),
@@ -77,12 +62,6 @@ menu_items = (
                                     "virtualization.add_cluster",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="virtualization:cluster_import",
-                                permissions=[
-                                    "virtualization.add_cluster",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -99,12 +78,6 @@ menu_items = (
                                     "virtualization.add_clustertype",
                                 ],
                             ),
-                            NavMenuImportButton(
-                                link="virtualization:clustertype_import",
-                                permissions=[
-                                    "virtualization.add_clustertype",
-                                ],
-                            ),
                         ),
                     ),
                     NavMenuItem(
@@ -117,12 +90,6 @@ menu_items = (
                         buttons=(
                             NavMenuAddButton(
                                 link="virtualization:clustergroup_add",
-                                permissions=[
-                                    "virtualization.add_clustergroup",
-                                ],
-                            ),
-                            NavMenuImportButton(
-                                link="virtualization:clustergroup_import",
                                 permissions=[
                                     "virtualization.add_clustergroup",
                                 ],

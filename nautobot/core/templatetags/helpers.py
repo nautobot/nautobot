@@ -6,21 +6,21 @@ import re
 from django import template
 from django.conf import settings
 from django.contrib.staticfiles.finders import find
-from django.templatetags.static import StaticNode, static
+from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
-from django.utils.html import format_html, strip_tags
-from django.utils.text import slugify as django_slugify
+from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
+from django.utils.text import slugify as django_slugify
 from django_jinja import library
 from markdown import markdown
 import yaml
 
 from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
-from nautobot.core.utils import color, config, data, lookup
-from nautobot.core.utils.navigation import is_route_new_ui_ready
+from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
+# S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
 HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
 HTML_FALSE = mark_safe('<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>')  # noqa: S308
 HTML_NONE = mark_safe('<span class="text-muted">&mdash;</span>')  # noqa: S308
@@ -71,14 +71,25 @@ def hyperlinked_object(value, field="display"):
         >>> hyperlinked_object(location, "name")
         '<a href="/dcim/locations/leaf/">Leaf</a>'
     """
-    if value is None:
+    return _build_hyperlink(value, field)
+
+
+@library.filter()
+@register.filter()
+def hyperlinked_email(value):
+    """Render an email address as a `mailto:` hyperlink."""
+    if not value:
         return placeholder(value)
-    display = getattr(value, field) if hasattr(value, field) else str(value)
-    if hasattr(value, "get_absolute_url"):
-        if hasattr(value, "description") and value.description:
-            return format_html('<a href="{}" title="{}">{}</a>', value.get_absolute_url(), value.description, display)
-        return format_html('<a href="{}">{}</a>', value.get_absolute_url(), display)
-    return format_html("{}", display)
+    return format_html('<a href="mailto:{}">{}</a>', value, value)
+
+
+@library.filter()
+@register.filter()
+def hyperlinked_phone_number(value):
+    """Render a phone number as a `tel:` hyperlink."""
+    if not value:
+        return placeholder(value)
+    return format_html('<a href="tel:{}">{}</a>', value, value)
 
 
 @library.filter()
@@ -124,7 +135,7 @@ def add_html_id(element_str, id_str):
     match = re.match(r"^(.*?<\w+) ?(.*)$", element_str, flags=re.DOTALL)
     if not match:
         return element_str
-    return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))  # noqa: S308
+    return mark_safe(match.group(1) + format_html(' id="{}" ', id_str) + match.group(2))  # noqa: S308  # suspicious-mark-safe-usage
 
 
 @library.filter()
@@ -170,36 +181,43 @@ def render_markdown(value):
     Example:
         {{ text | render_markdown }}
     """
-    # Strip HTML tags
-    value = strip_tags(value)
-
-    # Sanitize Markdown links
-    schemes = "|".join(settings.ALLOWED_URL_SCHEMES)
-    pattern = rf"\[(.+)\]\((?!({schemes})).*:(.+)\)"
-    value = re.sub(pattern, "[\\1](\\3)", value, flags=re.IGNORECASE)
-
     # Render Markdown
     html = markdown(value, extensions=["fenced_code", "tables"])
 
-    return mark_safe(html)  # noqa: S308
+    # Sanitize rendered HTML
+    html = nautobot_logging.clean_html(html)
+
+    return mark_safe(html)  # noqa: S308  # suspicious-mark-safe-usage, OK here since we sanitized the string earlier
 
 
 @library.filter()
 @register.filter()
-def render_json(value):
+def render_json(value, syntax_highlight=True):
     """
     Render a dictionary as formatted JSON.
+
+    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a
+    `<code class="language-json>` HTML tag to flag it for syntax highlighting by highlight.js.
     """
-    return json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
+    rendered_json = json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
+    if syntax_highlight:
+        return format_html('<code class="language-json">{}</code>', rendered_json)
+    return rendered_json
 
 
 @library.filter()
 @register.filter()
-def render_yaml(value):
+def render_yaml(value, syntax_highlight=True):
     """
     Render a dictionary as formatted YAML.
+
+    Unless `syntax_highlight=False` is specified, the returned string will be wrapped in a
+    `<code class="language-yaml>` HTML tag to flag it for syntax highlighting by highlight.js.
     """
-    return yaml.dump(json.loads(json.dumps(value, ensure_ascii=False)), allow_unicode=True)
+    rendered_yaml = yaml.dump(json.loads(json.dumps(value, ensure_ascii=False)), allow_unicode=True)
+    if syntax_highlight:
+        return format_html('<code class="language-yaml">{}</code>', rendered_yaml)
+    return rendered_yaml
 
 
 @library.filter()
@@ -257,6 +275,34 @@ def validated_viewname(model, action):
         # Validate and return the view name. We don't return the actual URL yet because many of the templates
         # are written to pass a name to {% url %}.
         reverse(viewname_str)
+        return viewname_str
+    except NoReverseMatch:
+        return None
+
+
+@library.filter()
+@register.filter()
+def validated_api_viewname(model, action):
+    """
+    Return the API view name for the given model and action if valid, or None if invalid.
+
+    Args:
+        model (models.Model): Class or Instance of a Django Model
+        action (str): name of the action in the viewname
+
+    Returns:
+        (Union[str, None]): return the name of the API view for the model/action provided if valid, or None if invalid.
+    """
+    viewname_str = lookup.get_route_for_model(model, action, api=True)
+
+    try:
+        # Validate and return the view name. We don't return the actual URL yet because many of the templates
+        # are written to pass a name to {% url %}.
+        if action == "detail":
+            # Detail views require an argument, so we'll pass a dummy value just for validation
+            reverse(viewname_str, args=["00000000-0000-0000-0000-000000000000"])
+        else:
+            reverse(viewname_str)
         return viewname_str
     except NoReverseMatch:
         return None
@@ -735,6 +781,24 @@ def versioned_static(file_path):
     return add_nautobot_version_query_param_to_url(url)
 
 
+@register.simple_tag
+def tree_hierarchy_ui_representation(tree_depth, hide_hierarchy_ui):
+    """Generates a visual representation of a tree record hierarchy using dots.
+
+    Args:
+        tree_depth (range): A range representing the depth of the tree nodes.
+        hide_hierarchy_ui (bool): Indicates whether to hide the hierarchy UI.
+
+    Returns:
+        str: A string containing dots (representing hierarchy levels) if `hide_hierarchy_ui` is False,
+             otherwise an empty string.
+    """
+    if hide_hierarchy_ui or tree_depth == 0:
+        return ""
+    ui_representation = " ".join(['<i class="mdi mdi-circle-small"></i>' for _ in tree_depth])
+    return mark_safe(ui_representation)  # noqa: S308 # suspicious-mark-safe-usage, OK here since its just the `i` tag
+
+
 @library.filter()
 @register.filter()
 def hyperlinked_object_with_color(obj):
@@ -753,12 +817,65 @@ def queryset_to_pks(obj):
     return ",".join(result)
 
 
-#
-# Navigation
-#
-
-
+@library.filter()
 @register.filter()
-def is_new_ui_ready(url_path):
-    """Return True if url_path is NewUI Ready else False"""
-    return is_route_new_ui_ready(url_path)
+def hyperlinked_object_target_new_tab(value, field="display"):
+    """Render and link to a Django model instance, if any, or render a placeholder if not.
+
+    Similar to the hyperlinked_object filter, but passes attributes needed to open the link in new tab.
+
+    Uses the specified object field if available, otherwise uses the string representation of the object.
+    If the object defines `get_absolute_url()` this will be used to hyperlink the displayed object;
+    additionally if there is an `object.description` this will be used as the title of the hyperlink.
+
+    Args:
+        value (Union[django.db.models.Model, None]): Instance of a Django model or None.
+        field (Optional[str]): Name of the field to use for the display value. Defaults to "display".
+
+    Returns:
+        (str): String representation of the value (hyperlinked if it defines get_absolute_url()) or a placeholder.
+
+    Examples:
+        >>> hyperlinked_object_target_new_tab(device)
+        '<a href="/dcim/devices/3faafe8c-bdd6-4317-88dc-f791e6988caa/" target="_blank" rel="noreferrer">Device 1</a>'
+        >>> hyperlinked_object_target_new_tab(device_role)
+        '<a href="/dcim/device-roles/router/" title="Devices that are routers, not switches" target="_blank" rel="noreferrer">Router</a>'
+        >>> hyperlinked_object_target_new_tab(None)
+        '<span class="text-muted">&mdash;</span>'
+        >>> hyperlinked_object_target_new_tab("Hello")
+        'Hello'
+        >>> hyperlinked_object_target_new_tab(location)
+        '<a href="/dcim/locations/leaf/" target="_blank" rel="noreferrer">Root → Intermediate → Leaf</a>'
+        >>> hyperlinked_object_target_new_tab(location, "name")
+        '<a href="/dcim/locations/leaf/" target="_blank" rel="noreferrer">Leaf</a>'
+    """
+    return _build_hyperlink(value, field, target="_blank", rel="noreferrer")
+
+
+def _build_hyperlink(value, field="", target="", rel=""):
+    """Internal function used by filters to build hyperlinks.
+
+    Args:
+        value (Union[django.db.models.Model, None]): Instance of a Django model or None.
+        field (Optional[str]): Name of the field to use for the display value. Defaults to "display".
+        target (Optional[str]): Location to open the linked document.  Defaults to "" which is _self.
+        rel (Optional[str]): Relationship between current document and linked document. Defaults to "".
+
+    Returns:
+        (str): String representation of the value (hyperlinked if it defines get_absolute_url()) or a placeholder.
+    """
+    if value is None:
+        return placeholder(value)
+
+    attributes = {}
+    display = getattr(value, field) if hasattr(value, field) else str(value)
+    if hasattr(value, "get_absolute_url"):
+        attributes["href"] = value.get_absolute_url()
+        if hasattr(value, "description") and value.description:
+            attributes["title"] = value.description
+        if target:
+            attributes["target"] = target
+        if rel:
+            attributes["rel"] = rel
+        return format_html("<a {}>{}</a>", format_html_join(" ", '{}="{}"', attributes.items()), display)
+    return format_html("{}", display)

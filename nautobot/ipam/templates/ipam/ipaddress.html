@@ -6,15 +6,6 @@
                     <li>{{ object.parent.namespace|hyperlinked_object }}</li>
 {% endblock extra_breadcrumbs %}
 
-{% block masthead %}
-<h1>
-<span class="hover_copy"><span id="copy_title">{{ object }}</span><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_title">
-    <span class="mdi mdi-content-copy"></span>
-</button>
-</span>
-</h1>
-{% endblock masthead %}
-
 {% block extra_nav_tabs %}
         {% with interface_count=object.interfaces.count %}
             {% if interface_count %}

@@ -1,6 +1,6 @@
 # Best Practices
 
-While there are many different development interfaces in Nautobot that each expose unique functionality, there are a common set of a best practices that have broad applicability to users and developers alike. This includes elements of writing Jobs, Plugins, and scripts for execution through `nautobot-server nbshell`.
+While there are many different development interfaces in Nautobot that each expose unique functionality, there are a common set of a best practices that have broad applicability to users and developers alike. This includes elements of writing Jobs, Apps, and scripts for execution through `nautobot-server nbshell`.
 
 The below best practices apply to test code as well as feature code, and there are additional [test-specific best practices](testing.md) to be aware of as well.
 
@@ -8,16 +8,18 @@ The below best practices apply to test code as well as feature code, and there a
 
 For models that support change-logging, custom fields, and relationships (which includes all subclasses of `OrganizationalModel` and `PrimaryModel`), the "Full-featured models" base classes below should always be used. For less full-featured models, refer to the "Minimal models" column instead.
 
-| Feature                  | Full-featured models       | Minimal models             |
-| ------------------------ | -------------------------- | -------------------------- |
-| FilterSets               | `NautobotFilterSet`        | `BaseFilterSet`            |
-| Object create/edit forms | `NautobotModelForm`        | `BootstrapMixin`           |
-| Object bulk-edit forms   | `NautobotBulkEditForm`     | `BootstrapMixin`           |
-| Table filter forms       | `NautobotFilterForm`       | `BootstrapMixin`           |
-| Read-only serializers    | `BaseModelSerializer`      | `BaseModelSerializer`      |
-| Nested serializers       | `WritableNestedSerializer` | `WritableNestedSerializer` |
-| All other serializers    | `NautobotModelSerializer`  | `ValidatedModelSerializer` |
-| API View Sets            | `NautobotModelViewSet`     | `ModelViewSet`             |
+| Feature                  | Full-featured models       | Minimal models              |
+| ------------------------ | -------------------------- | --------------------------- |
+| Data models              | `PrimaryModel`             | `BaseModel`                 |
+| FilterSets               | `NautobotFilterSet`        | `BaseFilterSet`             |
+| Object create/edit forms | `NautobotModelForm`        | `BootstrapMixin`            |
+| Object bulk-edit forms   | `NautobotBulkEditForm`     | `BootstrapMixin`            |
+| Table filter forms       | `NautobotFilterForm`       | `BootstrapMixin`            |
+| Read-only serializers    | `BaseModelSerializer`      | `BaseModelSerializer`       |
+| All other serializers    | `NautobotModelSerializer`  | `ValidatedModelSerializer`  |
+| List view tables         | `BaseTable`                | `BaseTable`                 |
+| API ViewSets             | `NautobotModelViewSet`     | `ModelViewSet`              |
+| UI ViewSets              | `NautobotUIViewSet`        | individual mixins as needed |
 
 ## Data Model Best Practices
 
@@ -62,7 +64,7 @@ Django offers several places and mechanism in which to exert data and model vali
 
 Django places specific separation between validation and the saving of an instance and this means it is a common Django pattern to make explicit calls first to a model instance's `clean()`/`full_clean()` methods and then the `save()` method. Calling only the `save()` method **does not** automatically enforce validation and may lead to data integrity issues.
 
-Nautobot provides a convenience method that both enforces model validation and saves the instance in a single call to `validated_save()`. Any model which inherits from `nautobot.core.models.BaseModel` has this method available. This includes all core models and it is recommended that all new Nautobot models and plugin-provided models also inherit from `BaseModel` or one of its descendants such as `nautobot.core.models.generics.OrganizationalModel` or `nautobot.core.models.generics.PrimaryModel`.
+Nautobot provides a convenience method that both enforces model validation and saves the instance in a single call to `validated_save()`. Any model which inherits from `nautobot.core.models.BaseModel` has this method available. This includes all core models and it is recommended that all new Nautobot core models and App-provided models also inherit from `BaseModel` or one of its descendants such as `nautobot.core.models.generics.OrganizationalModel` or `nautobot.core.models.generics.PrimaryModel`.
 
 The intended audience for the `validated_save()` convenience method is Job authors and anyone writing scripts for, or interacting with the ORM directly through the `nautobot-server nbshell` command. It is generally not recommended however, to use `validated_save()` as a blanket replacement for the `save()` method in the core of Nautobot.
 
@@ -123,6 +125,10 @@ class ExampleModel(PrimaryModel):
     slug = AutoSlugField(populate_from='name')
 ```
 
+### CharField and SlugField Max Length
+
+When constructing a CharField or SlugField, always utilize the `CHARFIELD_MAX_LENGTH` constant unless your field requires a value greater than `CHARFIELD_MAX_LENGTH`, which is `255`.
+
 ## Getting URL Routes
 
 When developing new models a need often arises to retrieve a reversible route for a model to access it in either the web UI or the REST API. When this time comes, you **must** use `nautobot.core.utils.lookup.get_route_for_model`. You **must not** write your own logic to construct route names.
@@ -134,7 +140,7 @@ When developing new models a need often arises to retrieve a reversible route fo
 from nautobot.core.utils.lookup import get_route_for_model
 ```
 
-This utility function supports both UI and API views for both Nautobot core apps and Nautobot plugins.
+This utility function supports both UI and API views for both Nautobot core apps and Nautobot Apps.
 
 +++ 1.4.3
     Support for generating API routes was added to `get_route_for_model()` by passing the argument `api=True`.
@@ -182,13 +188,13 @@ Core models:
 "dcim-api:device-list"
 ```
 
-Plugin models:
+App models:
 
 ```python
 >>> get_route_for_model(ExampleModel, "list")
-"plugins:example_plugin:examplemodel_list"
+"plugins:example_app:examplemodel_list"
 >>> get_route_for_model(ExampleModel, "list", api=True)
-"plugins-api:example_plugin-api:examplemodel-list"
+"plugins-api:example_app-api:examplemodel-list"
 ```
 
 !!! tip
@@ -232,7 +238,7 @@ The following best practices must be considered when establishing new `FilterSet
 
 ### Mapping Model Fields to Filters
 
-- FilterSets **must** inherit from `nautobot.extras.filters.NautobotFilterSet` (which inherits from `nautobot.core.filters.BaseFilterSet`)
+- FilterSets **must** inherit from `nautobot.core.filters.BaseFilterSet` or `nautobot.extras.filters.NautobotFilterSet` (which inherits from `nautobot.core.filters.BaseFilterSet`)
     - This affords that automatically generated lookup expressions (`ic`, `nic`, `iew`, `niew`, etc.) are always included
     - This also asserts that the correct underlying `Form` class that maps the generated form field types and widgets will be included
 
@@ -463,7 +469,7 @@ filterset.qs.filter(query).count()  # 339
 - For exceptions such as `DeviceFilterSet.has_primary_ip` where it checks for both `Device.primary_ip4` OR `Device.primary_ip6`, method filters may still be necessary, however, they would be **the exception and not the norm.**
 - The good news is that in the core there are not that many of these filter methods defined, but we also don’t want to see them continue to proliferate.
 
-## Using NautobotUIViewSet for Plugin Development
+## Using NautobotUIViewSet for App Development
 
 +++ 1.4.0
-    Using `NautobotUIViewSet` for [plugin development](../apps/api/views/nautobotuiviewset.md) is strongly recommended.
+    Using `NautobotUIViewSet` for [App development](../apps/api/views/nautobotuiviewset.md) is strongly recommended.

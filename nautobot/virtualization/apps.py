@@ -10,4 +10,4 @@ class VirtualizationConfig(NautobotConfig):
 
     def ready(self):
         super().ready()
-        import nautobot.virtualization.signals  # noqa: F401
+        import nautobot.virtualization.signals  # noqa: F401  # unused-import -- but this import installs the signals

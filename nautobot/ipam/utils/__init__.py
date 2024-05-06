@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 import netaddr
 
 from nautobot.dcim.models import Interface
@@ -271,5 +272,5 @@ def retrieve_interface_or_vminterface_from_request(request):
     try:
         obj = interface_model.objects.restrict(request.user, "change").get(id=interface_id)
         return obj, None
-    except interface_model.DoesNotExist:
+    except (interface_model.DoesNotExist, ValidationError):
         return None, f'{interface_model.__name__} with id "{interface_id}" not found.'

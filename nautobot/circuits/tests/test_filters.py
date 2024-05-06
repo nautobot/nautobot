@@ -15,7 +15,7 @@ from nautobot.dcim.models import Cable, Device, DeviceType, Interface, Location
 from nautobot.extras.models import Role, Status, Tag
 
 
-class ProviderTestCase(FilterTestCases.NameOnlyFilterTestCase):
+class ProviderTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTestCases.FilterTestCase):
     queryset = Provider.objects.all()
     filterset = ProviderFilterSet
 
@@ -57,7 +57,7 @@ class ProviderTestCase(FilterTestCases.NameOnlyFilterTestCase):
     def test_location(self):
         expected = self.queryset.filter(
             circuits__circuit_terminations__location__in=[self.locations[0].pk, self.locations[1].pk]
-        )
+        ).distinct()
         params = {"location": [self.locations[0].pk, self.locations[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
         params = {"location": [self.locations[0].name, self.locations[1].name]}
@@ -91,6 +91,7 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
         ["provider_network", "circuit_terminations__provider_network__name"],
         ["circuit_type", "circuit_type__id"],
         ["circuit_type", "circuit_type__name"],
+        ["status", "status__id"],
         ["status", "status__name"],
         ["circuit_termination_a"],
         ["circuit_termination_z"],

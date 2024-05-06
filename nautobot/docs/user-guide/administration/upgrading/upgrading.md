@@ -15,7 +15,7 @@ The below sub-sections describe some key changes that deployers should be aware 
 
 Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*, as Celery has been introduced to eventually replace RQ for executing background tasks within Nautobot. All Nautobot **core** usage of RQ has been migrated to use Celery.
 
-RQ support for custom tasks was not removed in order to give plugin authors time to migrate, however, to continue to utilize advanced Nautobot features such as Git repository synchronization, webhooks, jobs, etc. you must migrate your `nautobot-worker` deployment from RQ to Celery.
+RQ support for custom tasks was not removed in order to give App authors time to migrate, however, to continue to utilize advanced Nautobot features such as Git repository synchronization, webhooks, jobs, etc. you must migrate your `nautobot-worker` deployment from RQ to Celery.
 
 Please see the section on [migrating to Celery from RQ](../installation/services.md#migrating-to-celery-from-rq) for more information on how to easily migrate your deployment.
 
@@ -53,16 +53,19 @@ Please see the [official MySQL documentation on migrating collation encoding set
 
 ## Update Prerequisites to Required Versions
 
-Nautobot v2.0.0 and later requires the following:
+Nautobot v2.1.0 and later requires the following:
 
 | Dependency | Minimum Version |
 | ---------- | --------------- |
 | Python     | 3.8             |
-| PostgreSQL | 9.6             |
+| PostgreSQL | 12.0            |
 | Redis      | 4.0             |
 
 --- 1.6.0
     Support for Python 3.7 was removed.
+
+--- 2.1.0
+    Support for versions of PostgreSQL older than 12.0 was removed.
 
 Nautobot v1.1.0 and later can optionally support the following:
 

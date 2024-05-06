@@ -10,7 +10,7 @@ TLDR:
 
 ```shell
 echo "nautobot[remote_storage]" >> $NAUTOBOT_ROOT/local_requirements.txt
-pip3 install "nautobot[remote_storage]"
+pip3 install "nautobot[remote_storage]" boto3
 ```
 
 ## Configuration
@@ -20,7 +20,7 @@ The [`django-storages`](https://django-storages.readthedocs.io/en/stable/) libra
 In `nautobot_config.py` define the following configuration:
 
 ```python
-STORAGE_BACKEND = "storages.backends.s3boto3.S3Boto3Storage"
+STORAGE_BACKEND = "storages.backends.s3.S3Storage"
 
 STORAGE_CONFIG = {
     "AWS_ACCESS_KEY_ID": "...",
@@ -31,6 +31,7 @@ STORAGE_CONFIG = {
     "AWS_QUERYSTRING_AUTH": False,
     "AWS_LOCATION": "subfolder/name/"
 }
+JOB_FILE_IO_STORAGE = STORAGE_BACKEND
 STATICFILES_STORAGE = STORAGE_BACKEND
 ```
 

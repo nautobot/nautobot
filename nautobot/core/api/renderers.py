@@ -9,7 +9,6 @@ from rest_framework.renderers import BaseRenderer, BrowsableAPIRenderer, JSONRen
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
 
-
 logger = logging.getLogger(__name__)
 
 

@@ -15,7 +15,6 @@ from nautobot.core.api import (
     WritableNestedSerializer,
 )
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -114,7 +113,7 @@ class NautobotAutoSchema(AutoSchema):
             }
 
         # Inject a custom description for the "id" parameter since ours has custom lookup behavior.
-        if "parameters" in operation:
+        if operation is not None and "parameters" in operation:
             for param in operation["parameters"]:
                 if param["name"] == "id" and "description" not in param:
                     param["description"] = "Unique object identifier, either a UUID primary key or a composite key."
@@ -153,7 +152,7 @@ class NautobotAutoSchema(AutoSchema):
             if re.search(r"<drf_format_suffix\w*:\w+>", self.path_regex):
                 tokenized_path.append("formatted")
 
-            return "_".join(tokenized_path + [action])
+            return "_".join([*tokenized_path, action])
 
         # For all other view actions, operation-id is the same as in the base class
         return super().get_operation_id()

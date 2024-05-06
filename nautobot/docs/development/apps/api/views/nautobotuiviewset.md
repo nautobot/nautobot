@@ -2,7 +2,7 @@
 
 +++ 1.4.0
 
-New in Nautobot 1.4 is the debut of `NautobotUIViewSet`: A powerful app development tool that can save app developer hundreds of lines of code compared to using legacy `generic.views`. Using it to gain access to default functionalities previous provided by `generic.views` such as `create()`, `bulk_create()`, `update()`, `partial_update()`, `bulk_update()`, `destroy()`, `bulk_destroy()`, `retrieve()` and `list()` actions.
+New in Nautobot 1.4 is the debut of `NautobotUIViewSet`: A powerful app development tool that can save app developer hundreds of lines of code compared to using legacy `generic.views`. Using it to gain access to default functionalities previous provided by `generic.views` such as `create()`, `update()`, `partial_update()`, `bulk_update()`, `destroy()`, `bulk_destroy()`, `retrieve()` and `list()` actions.
 
 Note that this ViewSet is catered specifically to the UI, not the API.
 
@@ -137,11 +137,63 @@ Template naming is very intuitive in NautobotUIViewSet. In `templates/yourapp` f
 | ObjectEditViewMixin        | create/update|
 | ObjectDestroyViewMixin     | destroy      |
 | ObjectBulkDestroyViewMixin | bulk_destroy |
-| ObjectBulkCreateViewMixin  | bulk_create  |
 | ObjectBulkUpdateViewMixin  | bulk_update  |
 
-For example, for a DetailView template for `YourAppModel`, the template name will be `yourapp/yourappmodel_retrieve.html`, for a BulkCreateView template for `yourappmodel`, the template name will be `yourapp/yourappmodel_bulk_create.html` and etc.
+--- 2.2.0
+    ObjectBulkCreateViewMixin is deprecated as its functionality has been replaced by a system Job. It will be removed from the code base entirely in Nautobot 3.0.
+
+For example, for a DetailView template for `YourAppModel`, the template name will be `yourapp/yourappmodel_retrieve.html`, for a BulkUpdateView template for `yourappmodel`, the template name will be `yourapp/yourappmodel_bulk_update.html` and etc.
 
 If you do not provide your own templates in the `yourapp/templates/yourapp` folder, `NautobotUIViewSet` will fall back to `generic/object_{self.action}.html`.
 
 Since in many cases the `create` and `update` templates for a model will be identical, you are not required to create both. If you provide a `{app_label}/{model_opts.model_name}_create.html` file but not a `{app_label}/{model_opts.model_name}_update.html` file, then when you update an object, it will fall back to `{app_label}/{model_opts.model_name}_create.html` and vice versa.
+
+### Adding Custom Views To NautobotUIViewSet & NautobotUIViewSetRouter
+
++/- 1.6.0
+    Via [PR #4045](https://github.com/nautobot/nautobot/pull/4045), notes and changelog views provided by mixins have now been moved to this pattern.
+
+Django REST Framework provides the ability to decorate a method on a ViewSet with `@action(detail=True)` to add the method as a view to the ViewSetRouter. This method must return a fully rendered HTML view.
+
+Below is an example of adding a custom action view to an App's ViewSet. A few considerations to keep in mind:
+
+* The method name is the `action` in Django REST Framework terms.
+* The `action` will be used for [template lookup](#template-naming-for-nautobotuiviewset)
+* The `action` will be used for URL naming and construction (`plugins:<app>:<model>_<action>`, `/plugins/<app>/<model>/<uuid>/<action>/`).
+* The `action` will be used as a custom permission that users must have (`<app>.<action>_<model>`)
+
+In the below example:
+
+* The expected template must be named `yourapp/yourappmodel_customview.html`
+* The reversible URL name will be `plugins:yourapp:yourappmodel_customview`
+* The URL pattern will be `/plugins/yourapp/yourappmodel/<uuid>/customview/`
+* Users will need `yourapp.customview_yourappmodel` permission to access this view.
+
+```python
+from nautobot.apps.views import NautobotUIViewSet
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+from yourapp import filters, forms, models, tables
+from yourapp.api import serializers
+
+class YourAppModelUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.YourAppModelBulkEditForm
+    filterset_class = filters.YourAppModelFilterSet
+    filterset_form_class = forms.YourAppModelFilterForm
+    form_class = forms.YourAppModelForm
+    queryset = models.YourAppModel.objects.all()
+    serializer_class = serializers.YourAppModelSerializer
+    table_class = tables.YourAppModelTable
+
+    @action(detail=True)
+    def customview(self, request, *args, **kwargs):
+        """Context passed to template for rendering.
+        
+        Expected URL pattern will be `/plugins/yourapp/yourappmodel/<uuid>/customview/`
+        """
+        context = {
+            "some_key": "some value",
+        }
+        return Response(context)
+```

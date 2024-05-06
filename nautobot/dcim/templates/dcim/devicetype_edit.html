@@ -1,4 +1,4 @@
-{% extends 'generic/object_edit.html' %}
+{% extends 'generic/object_create.html' %}
 {% load form_helpers %}
 
 {% block form %}
@@ -6,11 +6,13 @@
         <div class="panel-heading"><strong>Device Type</strong></div>
         <div class="panel-body">
             {% render_field form.manufacturer %}
+            {% render_field form.device_family %}
             {% render_field form.model %}
             {% render_field form.part_number %}
             {% render_field form.u_height %}
             {% render_field form.is_full_depth %}
             {% render_field form.subdevice_role %}
+            {% render_field form.software_image_files %}
         </div>
     </div>
     <div class="panel panel-default">

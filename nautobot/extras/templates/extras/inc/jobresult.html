@@ -32,7 +32,7 @@
         </tr>
         <tr>
             <td>Duration</td>
-            <td id="pending-result-loader">
+            <td>
             {% if result.date_done %}
                 {{ result.duration }}
             {% else %}
@@ -42,26 +42,53 @@
         </tr>
         <tr>
             <td>Return Value</td>
-            <td id="pending-result-loader">
+            <td>
             {% if result.date_done %}
-                {{ result.result | placeholder }}
+                {% if result.result %}
+                    <pre>{{ result.result | render_json }}</pre>
+                {% else %}
+                    {{ result.result | placeholder }}
+                {% endif %}
             {% else %}
                 <img src="{% static 'img/ajax-loader.gif' %}">
             {% endif %}
             </td>
         </tr>
+        {% if result.files.exists %}
+            <tr>
+                <td>File Output(s)</td>
+                <td>
+                    <ul>
+                        {% for file_proxy in result.files.all %}
+                            {% if file_proxy.file %}
+                                <li>
+                                    <a
+                                    {% if settings.JOB_FILE_IO_STORAGE == "db_file_storage.storage.DatabaseFileStorage" %}
+                                        href="{% url "db_file_storage.download_file" %}?name={{ file_proxy.file }}"
+                                    {% else %}
+                                        href="{{ file_proxy.file.url }}"
+                                    {% endif %}
+                                        download="{{ file_proxy.name }}">
+                                        {{ file_proxy.name }}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
+                </td>
+            </tr>
+        {% endif %}
     </table>
 </div>
 
-<form method="post">
-    {% csrf_token %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <strong>Logs</strong>
-            <div class="pull-right col-md-2 noprint">
-                <input class="form-control log-filter" type="text" placeholder="Filter log level or message" title="Filter log level or message (regular expressions supported)" style="height: 23px" />
-            </div>
+
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>Logs</strong>
+        <div class="pull-right noprint">
+            <input class="form-control" id="log-filter" type="text" placeholder="Filter log level or message" title="Filter log level or message" style="height: 23px" />
         </div>
-        {% ajax_table "log_table" "extras:jobresult_log-table" pk=result.pk %}
     </div>
-</form>
+    {% ajax_table "log_table" "extras:jobresult_log-table" pk=result.pk %}
+</div>
+

@@ -35,7 +35,7 @@ Once completed, you will be sent to the Platforms page, where all the Platform v
 
 !!! tip
     Different use cases for Platforms may require different information. For example, to use a specific Platform with
-    the **Device Onboarding Plugin**, you may be required to override the default Name value with that of the
+    the **Device Onboarding App**, you may be required to override the default Name value with that of the
     Netmiko [device_type](https://github.com/ktbyers/netmiko/blob/2dc032b64c3049d3048966441ee30a0139bebc81/netmiko/ssh_autodetect.py#L50)
 
 ![Platforms page](../images/getting-started-nautobot-ui/11-platforms-page.png)
@@ -56,7 +56,7 @@ in the Search Bar.
 !!! tip
     See the [Search Bar](search-bar.md) section of this guide for more information on using the Search Bar
 
-1. Type the device name in the Search Bar in the upper-right of the page
+1. Type the device name in the Search Bar in the upper-left of the page
 2. Click on the device name on the results page
 3. Click on the `Edit` button on the main page for the Device
 
@@ -70,7 +70,7 @@ For a new Device, follow the steps to [create a new Device](creating-devices.md)
 
 1. While on the **Add a new device**/**Editing device** page, scroll down to the 'Management' section
 2. In the `Platform` field drop-down selector, select the appropriate Platform
-3. Click the 'Update' (edit Device) or `Create` (add Device) button
+3. Click the `Update` (edit Device) or `Create` (add Device) button
 
 !!! tip
     The only choices that will appear in the `Platform` drop-down selector will be those Platforms that have the same Manufacturer specified in the Device's `Hardware` section.

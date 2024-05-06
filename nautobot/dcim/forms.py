@@ -1,27 +1,29 @@
+import logging
 import re
 
 from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-
 from django.db.models import Q
-
 from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import Circuit, CircuitTermination, Provider
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
+    add_blank_choice,
     APISelect,
     APISelectMultiple,
-    add_blank_choice,
     BootstrapMixin,
     BulkEditNullBooleanSelect,
     ColorSelect,
     CommentField,
+    DatePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
     form_from_model,
     MultipleContentTypeField,
+    NullableDateField,
     NumericArrayField,
     SelectWithPK,
     SmallTextarea,
@@ -38,25 +40,26 @@ from nautobot.dcim.form_mixins import (
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
-    NautobotBulkEditForm,
-    NautobotModelForm,
-    NautobotFilterForm,
-    NoteModelFormMixin,
     LocalContextFilterForm,
-    LocalContextModelForm,
     LocalContextModelBulkEditForm,
+    LocalContextModelForm,
+    NautobotBulkEditForm,
+    NautobotFilterForm,
+    NautobotModelForm,
+    NoteModelFormMixin,
     RoleModelBulkEditFormMixin,
     RoleModelFilterFormMixin,
     StatusModelBulkEditFormMixin,
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
-from nautobot.extras.models import SecretsGroup, Status
+from nautobot.extras.models import Contact, ContactAssociation, ExternalIntegration, Role, SecretsGroup, Status, Team
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
-from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VLANLocationAssignment, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant, TenantGroup
-from nautobot.virtualization.models import Cluster, ClusterGroup
+from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
+
 from .choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
@@ -66,6 +69,7 @@ from .choices import (
     InterfaceModeChoices,
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceTypeChoices,
+    LocationDataToContactActionChoices,
     PortTypeChoices,
     PowerFeedPhaseChoices,
     PowerFeedSupplyChoices,
@@ -76,6 +80,7 @@ from .choices import (
     RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
+    SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
 from .constants import (
@@ -84,17 +89,19 @@ from .constants import (
     REARPORT_POSITIONS_MAX,
     REARPORT_POSITIONS_MIN,
 )
-
 from .models import (
     Cable,
-    DeviceBay,
-    DeviceBayTemplate,
-    DeviceRedundancyGroup,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
     ConsoleServerPortTemplate,
+    Controller,
+    ControllerManagedDeviceGroup,
     Device,
+    DeviceBay,
+    DeviceBayTemplate,
+    DeviceFamily,
+    DeviceRedundancyGroup,
     DeviceType,
     FrontPort,
     FrontPortTemplate,
@@ -102,10 +109,10 @@ from .models import (
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
     InterfaceTemplate,
+    InventoryItem,
     Location,
     LocationType,
     Manufacturer,
-    InventoryItem,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -118,8 +125,12 @@ from .models import (
     RackReservation,
     RearPort,
     RearPortTemplate,
+    SoftwareImageFile,
+    SoftwareVersion,
     VirtualChassis,
 )
+
+logger = logging.getLogger(__name__)
 
 DEVICE_BY_PK_RE = r"{\d+\}"
 
@@ -184,8 +195,13 @@ class InterfaceCommonForm(forms.Form):
         # TODO: after Location model replaced Site, which was not a hierarchical model, should we allow users to add a VLAN
         # belongs to the parent Location or the child location of the parent device to the `tagged_vlan` field of the interface?
         elif mode == InterfaceModeChoices.MODE_TAGGED:
-            valid_locations = [None, self.cleaned_data[parent_field].location]
-            invalid_vlans = [str(v) for v in tagged_vlans if v.location not in valid_locations]
+            valid_location = self.cleaned_data[parent_field].location
+            invalid_vlans = [
+                str(v)
+                for v in tagged_vlans
+                if v.locations.without_tree_fields().exists()
+                and not VLANLocationAssignment.objects.filter(location=valid_location, vlan=v).exists()
+            ]
 
             if invalid_vlans:
                 raise forms.ValidationError(
@@ -324,7 +340,7 @@ class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, 
     # location_type is not editable on existing instances
     parent = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     asn = forms.IntegerField(min_value=BGP_ASN_MIN, max_value=BGP_ASN_MAX, required=False, label="ASN")
     time_zone = TimeZoneFormField(
         choices=add_blank_choice(TimeZoneFormField().choices),
@@ -354,6 +370,55 @@ class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Tenancy
     parent = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     subtree = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     tags = TagFilterField(model)
+
+
+class LocationMigrateDataToContactForm(NautobotModelForm):
+    # Assign tab form fields
+    action = forms.ChoiceField(
+        choices=LocationDataToContactActionChoices,
+        required=True,
+        widget=StaticSelect2(),
+    )
+    location = DynamicModelChoiceField(queryset=Location.objects.all(), required=False, label="Source Location")
+    contact = DynamicModelChoiceField(
+        queryset=Contact.objects.all(),
+        required=False,
+        label="Available Contacts",
+        query_params={"similar_to_location_data": "$location"},
+    )
+    team = DynamicModelChoiceField(
+        queryset=Team.objects.all(),
+        required=False,
+        label="Available Teams",
+        query_params={"similar_to_location_data": "$location"},
+    )
+    role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        required=True,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        required=True,
+        query_params={"content_types": ContactAssociation._meta.label_lower},
+    )
+    name = forms.CharField(required=False, label="Name")
+    phone = forms.CharField(required=False, label="Phone")
+    email = forms.CharField(required=False, label="Email")
+
+    class Meta:
+        model = ContactAssociation
+        fields = [
+            "action",
+            "location",
+            "contact",
+            "team",
+            "role",
+            "status",
+            "name",
+            "phone",
+            "email",
+        ]
 
 
 #
@@ -475,8 +540,8 @@ class RackBulkEditForm(
         query_params={"location": "$location"},
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    serial = forms.CharField(max_length=255, required=False, label="Serial Number")
-    asset_tag = forms.CharField(max_length=50, required=False)
+    serial = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, label="Serial Number")
+    asset_tag = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(RackTypeChoices),
         required=False,
@@ -615,7 +680,7 @@ class RackReservationBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         widget=StaticSelect2(),
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         nullable_fields = []
@@ -664,23 +729,59 @@ class ManufacturerForm(NautobotModelForm):
 
 
 #
+# Device Family
+#
+
+
+class DeviceFamilyForm(NautobotModelForm):
+    class Meta:
+        model = DeviceFamily
+        fields = [
+            "name",
+            "description",
+        ]
+
+
+class DeviceFamilyFilterForm(NautobotFilterForm):
+    model = DeviceFamily
+    q = forms.CharField(required=False, label="Search")
+    tags = TagFilterField(model)
+
+
+class DeviceFamilyBulkEditForm(NautobotBulkEditForm, TagsBulkEditFormMixin):
+    pk = forms.ModelMultipleChoiceField(queryset=DeviceFamily.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(required=False)
+
+    class Meta:
+        nullable_fields = []
+
+
+#
 # Device types
 #
 
 
 class DeviceTypeForm(NautobotModelForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all())
+    device_family = DynamicModelChoiceField(queryset=DeviceFamily.objects.all(), required=False)
     comments = CommentField()
+    software_image_files = DynamicModelMultipleChoiceField(
+        queryset=SoftwareImageFile.objects.all(),
+        required=False,
+        label="Software image files",
+    )
 
     class Meta:
         model = DeviceType
         fields = [
             "manufacturer",
+            "device_family",
             "model",
             "part_number",
             "u_height",
             "is_full_depth",
             "subdevice_role",
+            "software_image_files",
             "front_image",
             "rear_image",
             "comments",
@@ -708,11 +809,13 @@ class DeviceTypeImportForm(BootstrapMixin, forms.ModelForm):
     """
 
     manufacturer = forms.ModelChoiceField(queryset=Manufacturer.objects.all(), to_field_name="name")
+    device_family = forms.ModelChoiceField(queryset=DeviceFamily.objects.all(), to_field_name="name", required=False)
 
     class Meta:
         model = DeviceType
         fields = [
             "manufacturer",
+            "device_family",
             "model",
             "part_number",
             "u_height",
@@ -725,11 +828,13 @@ class DeviceTypeImportForm(BootstrapMixin, forms.ModelForm):
 class DeviceTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceType.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+    device_family = DynamicModelChoiceField(queryset=DeviceFamily.objects.all(), required=False)
+    software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
     u_height = forms.IntegerField(required=False)
     is_full_depth = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect(), label="Is full depth")
 
     class Meta:
-        nullable_fields = []
+        nullable_fields = ["device_family", "software_image_files"]
 
 
 class DeviceTypeFilterForm(NautobotFilterForm):
@@ -737,6 +842,9 @@ class DeviceTypeFilterForm(NautobotFilterForm):
     q = forms.CharField(required=False, label="Search")
     manufacturer = DynamicModelMultipleChoiceField(
         queryset=Manufacturer.objects.all(), to_field_name="name", required=False
+    )
+    device_family = DynamicModelMultipleChoiceField(
+        queryset=DeviceFamily.objects.all(), to_field_name="name", required=False
     )
     subdevice_role = forms.MultipleChoiceField(
         choices=add_blank_choice(SubdeviceRoleChoices),
@@ -773,6 +881,7 @@ class DeviceTypeFilterForm(NautobotFilterForm):
         label="Has pass-through ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
+    software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
     tags = TagFilterField(model)
 
 
@@ -827,7 +936,7 @@ class ConsolePortTemplateCreateForm(ComponentTemplateCreateForm):
 
 class ConsolePortTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ConsolePortTemplate.objects.all(), widget=forms.MultipleHiddenInput())
-    label = forms.CharField(max_length=64, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(ConsolePortTypeChoices),
         required=False,
@@ -870,7 +979,7 @@ class ConsoleServerPortTemplateBulkEditForm(NautobotBulkEditForm):
         queryset=ConsoleServerPortTemplate.objects.all(),
         widget=forms.MultipleHiddenInput(),
     )
-    label = forms.CharField(max_length=64, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(ConsolePortTypeChoices),
         required=False,
@@ -917,7 +1026,7 @@ class PowerPortTemplateCreateForm(ComponentTemplateCreateForm):
 
 class PowerPortTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=PowerPortTemplate.objects.all(), widget=forms.MultipleHiddenInput())
-    label = forms.CharField(max_length=64, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerPortTypeChoices),
         required=False,
@@ -995,7 +1104,7 @@ class PowerOutletTemplateBulkEditForm(NautobotBulkEditForm):
         disabled=True,
         widget=forms.HiddenInput(),
     )
-    label = forms.CharField(max_length=64, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerOutletTypeChoices),
         required=False,
@@ -1057,7 +1166,7 @@ class InterfaceTemplateCreateForm(ComponentTemplateCreateForm):
 
 class InterfaceTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=InterfaceTemplate.objects.all(), widget=forms.MultipleHiddenInput())
-    label = forms.CharField(max_length=64, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(InterfaceTypeChoices),
         required=False,
@@ -1167,7 +1276,7 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
 
 class FrontPortTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=FrontPortTemplate.objects.all(), widget=forms.MultipleHiddenInput())
-    label = forms.CharField(max_length=64, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(PortTypeChoices),
         required=False,
@@ -1220,7 +1329,7 @@ class RearPortTemplateCreateForm(ComponentTemplateCreateForm):
 
 class RearPortTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=RearPortTemplate.objects.all(), widget=forms.MultipleHiddenInput())
-    label = forms.CharField(max_length=64, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(PortTypeChoices),
         required=False,
@@ -1258,7 +1367,7 @@ class DeviceBayTemplateCreateForm(ComponentTemplateCreateForm):
 
 class DeviceBayTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceBayTemplate.objects.all(), widget=forms.MultipleHiddenInput())
-    label = forms.CharField(max_length=64, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     description = forms.CharField(required=False)
 
     class Meta:
@@ -1289,6 +1398,11 @@ class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
 
         super().__init__(data, *args, **kwargs)
 
+        if "type" in self.fields:
+            # Since model.type has defined choices, the form field defaults to a ChoiceField which will reject unknowns.
+            # We want to instead be able to remap unknown values to "other" in clean_type() below, so we replace it:
+            self.fields["type"] = forms.CharField()
+
     def clean_device_type(self):
         data = self.cleaned_data["device_type"]
 
@@ -1296,6 +1410,29 @@ class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
         for field_name, field in self.fields.items():
             if isinstance(field, forms.ModelChoiceField) and field_name != "device_type":
                 field.queryset = field.queryset.filter(device_type=data)
+
+        return data
+
+    def clean_type(self):
+        data = self.cleaned_data["type"]
+        choices = self.Meta.model._meta.get_field("type").choices
+
+        try:
+            if data not in choices.values():
+                logger.debug(
+                    'For %s "%s", the "type" value "%s" is unrecognized and will be replaced by "%s"',
+                    self.Meta.model.__name__,
+                    self.cleaned_data["name"],
+                    data,
+                    choices.TYPE_OTHER,
+                )
+                data = choices.TYPE_OTHER
+        except AttributeError:
+            logger.warning(
+                "Either %s.type.choices is not a ChoiceSet, or %s.type.choices.TYPE_OTHER is not defined",
+                self.Meta.model.__name__,
+                self.Meta.model.__name__,
+            )
 
         return data
 
@@ -1364,8 +1501,6 @@ class PowerOutletTemplateImportForm(ComponentTemplateImportForm):
 
 
 class InterfaceTemplateImportForm(ComponentTemplateImportForm):
-    type = forms.ChoiceField(choices=InterfaceTypeChoices.CHOICES)
-
     class Meta:
         model = InterfaceTemplate
         fields = [
@@ -1378,7 +1513,6 @@ class InterfaceTemplateImportForm(ComponentTemplateImportForm):
 
 
 class FrontPortTemplateImportForm(ComponentTemplateImportForm):
-    type = forms.ChoiceField(choices=PortTypeChoices.CHOICES)
     rear_port_template = forms.ModelChoiceField(
         queryset=RearPortTemplate.objects.all(), to_field_name="name", required=False
     )
@@ -1406,8 +1540,6 @@ class FrontPortTemplateImportForm(ComponentTemplateImportForm):
 
 
 class RearPortTemplateImportForm(ComponentTemplateImportForm):
-    type = forms.ChoiceField(choices=PortTypeChoices.CHOICES)
-
     class Meta:
         model = RearPortTemplate
         fields = [
@@ -1471,6 +1603,9 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         },
     )
     device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
+    controller_managed_device_group = DynamicModelChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(), required=False
+    )
     position = forms.IntegerField(
         required=False,
         help_text="The lowest-numbered unit occupied by the device",
@@ -1506,12 +1641,23 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
     cluster = DynamicModelChoiceField(
         queryset=Cluster.objects.all(),
         required=False,
-        query_params={"group_id": "$cluster_group"},
+        query_params={"cluster_group": "$cluster_group"},
     )
     vrfs = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),
         required=False,
         label="VRFs",
+    )
+    software_image_files = DynamicModelMultipleChoiceField(
+        queryset=SoftwareImageFile.objects.all(),
+        required=False,
+        label="Software image files",
+        help_text="Override the software image files associated with the software version for this device",
+        query_params={"device_types": "$device_type"},
+    )
+    software_version = DynamicModelChoiceField(
+        queryset=SoftwareVersion.objects.all(),
+        required=False,
     )
     comments = CommentField()
 
@@ -1523,10 +1669,13 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "device_type",
             "serial",
             "asset_tag",
+            "software_image_files",
+            "software_version",
             "location",
             "rack",
             "device_redundancy_group",
             "device_redundancy_group_priority",
+            "controller_managed_device_group",
             "position",
             "face",
             "status",
@@ -1547,8 +1696,9 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         help_texts = {
             "role": "The function this device serves",
             "serial": "Chassis serial number",
-            "local_config_context_data": "Local config context data overwrites all source contexts in the final rendered "
-            "config context",
+            "local_config_context_data": (
+                "Local config context data overwrites all source contexts in the final rendered config context"
+            ),
         }
         widgets = {
             "face": StaticSelect2(),
@@ -1647,20 +1797,31 @@ class DeviceBulkEditForm(
         required=False,
         query_params={"manufacturer": "$manufacturer"},
     )
-    rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False)
+    rack = DynamicModelChoiceField(
+        queryset=Rack.objects.all(),
+        required=False,
+        query_params={"location": "$location", "rack_group": "$rack_group"},
+    )
     position = forms.IntegerField(required=False)
     face = forms.ChoiceField(
         required=False,
         choices=add_blank_choice(DeviceFaceChoices),
         widget=StaticSelect2(),
     )
-    rack_group = DynamicModelChoiceField(queryset=RackGroup.objects.all(), required=False)
+    rack_group = DynamicModelChoiceField(
+        queryset=RackGroup.objects.all(), required=False, query_params={"location": "$location"}
+    )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
-    serial = forms.CharField(max_length=255, required=False, label="Serial Number")
+    serial = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, label="Serial Number")
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
     device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
     device_redundancy_group_priority = forms.IntegerField(required=False, min_value=1)
+    controller_managed_device_group = DynamicModelChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(), required=False
+    )
+    software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
+    software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
 
     class Meta:
         model = Device
@@ -1676,6 +1837,9 @@ class DeviceBulkEditForm(
             "secrets_group",
             "device_redundancy_group",
             "device_redundancy_group_priority",
+            "controller_managed_device_group",
+            "software_image_files",
+            "software_version",
         ]
 
     def __init__(self, *args, **kwrags):
@@ -1706,6 +1870,8 @@ class DeviceFilterForm(
         "manufacturer",
         "device_type",
         "mac_address",
+        "has_software_version",
+        "software_version",
         "has_primary_ip",
     ]
     q = forms.CharField(required=False, label="Search")
@@ -1751,14 +1917,30 @@ class DeviceFilterForm(
         null_option="None",
     )
     device_redundancy_group_priority = NumericArrayField(base_field=forms.IntegerField(min_value=1), required=False)
+    controller_managed_device_group = DynamicModelMultipleChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(),
+        to_field_name="name",
+        required=False,
+        null_option="None",
+    )
+    software_version = DynamicModelMultipleChoiceField(
+        queryset=SoftwareVersion.objects.all(),
+        required=False,
+        label="Software version",
+    )
+    virtual_chassis_member = forms.NullBooleanField(
+        required=False,
+        label="Virtual chassis member",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
     has_primary_ip = forms.NullBooleanField(
         required=False,
         label="Has a primary IP",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    virtual_chassis_member = forms.NullBooleanField(
+    has_software_version = forms.NullBooleanField(
         required=False,
-        label="Virtual chassis member",
+        label="Has software version",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     has_console_ports = forms.NullBooleanField(
@@ -1810,7 +1992,7 @@ class ComponentCreateForm(ComponentForm):
     """
 
     device = DynamicModelChoiceField(queryset=Device.objects.all())
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
 
 class ComponentEditForm(NautobotModelForm):
@@ -1832,7 +2014,7 @@ class ComponentEditForm(NautobotModelForm):
 
 class DeviceBulkAddComponentForm(ComponentForm, CustomFieldModelBulkEditFormMixin):
     pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())
-    description = forms.CharField(max_length=100, required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         nullable_fields = []
@@ -2361,12 +2543,6 @@ class InterfaceBulkEditForm(
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Interface.objects.all(), widget=forms.MultipleHiddenInput())
-    device = forms.ModelChoiceField(
-        queryset=Device.objects.all(),
-        required=False,
-        disabled=True,
-        widget=forms.HiddenInput(),
-    )
     enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
     parent_interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
@@ -2401,6 +2577,11 @@ class InterfaceBulkEditForm(
             "location": "null",
         },
     )
+    vrf = DynamicModelChoiceField(
+        queryset=VRF.objects.all(),
+        label="VRF",
+        required=False,
+    )
 
     class Meta:
         nullable_fields = [
@@ -2414,42 +2595,38 @@ class InterfaceBulkEditForm(
             "mode",
             "untagged_vlan",
             "tagged_vlans",
+            "vrf",
         ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Limit LAG choices to interfaces which belong to the parent device (or VC master)
-        if "device" in self.initial:
-            device = Device.objects.filter(pk=self.initial["device"]).first()
+        if "pk" not in self.initial:
+            return
 
-            # Restrict parent/bridge/LAG interface assignment by device
+        devices = Device.objects.filter(interfaces__in=self.initial["pk"]).only("pk").distinct()
+        locations = Location.objects.without_tree_fields().order_by().filter(devices__in=devices).only("pk").distinct()
+        device_count = devices.count()
+
+        if device_count > 0:
+            device = devices.first()
+
+            # Limit VRF choices to only VRFs available on the first parent device
+            # TODO: The choices for this field should be only VRFs that are associated to every parent device
+            self.fields["vrf"].widget.add_query_param("device", device.pk)
+
+            # Limit VLAN choices by Location
+            if locations.count() == 1:
+                location = locations.first()
+                self.fields["untagged_vlan"].widget.add_query_param("location", location.pk)
+                self.fields["tagged_vlans"].widget.add_query_param("location", location.pk)
+
+        # Restrict parent/bridge/LAG interface assignment by device (or VC master)
+        if device_count == 1:
             self.fields["parent_interface"].widget.add_query_param("device_with_common_vc", device.pk)
             self.fields["bridge"].widget.add_query_param("device_with_common_vc", device.pk)
             self.fields["lag"].widget.add_query_param("device_with_common_vc", device.pk)
-
-            # Add current location to VLANs query params
-            self.fields["untagged_vlan"].widget.add_query_param("location", device.location.pk)
-            self.fields["tagged_vlans"].widget.add_query_param("location", device.location.pk)
         else:
-            # See netbox-community/netbox#4523
-            if "pk" in self.initial:
-                location = None
-                interfaces = Interface.objects.filter(pk__in=self.initial["pk"]).select_related("device__location")
-
-                # Check interface locations.  First interface should set location, further interfaces will either continue the
-                # loop or reset back to no location and break the loop.
-                for interface in interfaces:
-                    if location is None:
-                        location = interface.device.location
-                    elif interface.device.location is not location:
-                        location = None
-                        break
-
-                if location is not None:
-                    self.fields["untagged_vlan"].widget.add_query_param("location", location.pk)
-                    self.fields["tagged_vlans"].widget.add_query_param("location", location.pk)
-
             self.fields["parent_interface"].choices = ()
             self.fields["parent_interface"].widget.attrs["disabled"] = True
             self.fields["bridge"].choices = ()
@@ -2739,6 +2916,17 @@ class InventoryItemForm(NautobotModelForm):
         query_params={"device": "$device"},
     )
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+    software_version = DynamicModelChoiceField(
+        queryset=SoftwareVersion.objects.all(),
+        required=False,
+        label="Software version",
+    )
+    software_image_files = DynamicModelMultipleChoiceField(
+        queryset=SoftwareImageFile.objects.all(),
+        required=False,
+        label="Software image files",
+        help_text="Override the software image files associated with the software version for this inventory item",
+    )
 
     class Meta:
         model = InventoryItem
@@ -2748,6 +2936,8 @@ class InventoryItemForm(NautobotModelForm):
             "name",
             "label",
             "manufacturer",
+            "software_image_files",
+            "software_version",
             "part_id",
             "serial",
             "asset_tag",
@@ -2763,14 +2953,25 @@ class InventoryItemCreateForm(ComponentCreateForm):
         required=False,
         query_params={"device": "$device"},
     )
-    part_id = forms.CharField(max_length=50, required=False, label="Part ID")
+    part_id = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, label="Part ID")
     serial = forms.CharField(
-        max_length=255,
+        max_length=CHARFIELD_MAX_LENGTH,
         required=False,
     )
     asset_tag = forms.CharField(
-        max_length=50,
+        max_length=CHARFIELD_MAX_LENGTH,
         required=False,
+    )
+    software_version = DynamicModelChoiceField(
+        queryset=SoftwareVersion.objects.all(),
+        required=False,
+        label="Software version",
+    )
+    software_image_files = DynamicModelMultipleChoiceField(
+        queryset=SoftwareImageFile.objects.all(),
+        required=False,
+        label="Software image files",
+        help_text="Override the software image files associated with the software version for this inventory item",
     )
     field_order = (
         "device",
@@ -2778,6 +2979,8 @@ class InventoryItemCreateForm(ComponentCreateForm):
         "name_pattern",
         "label_pattern",
         "manufacturer",
+        "software_version",
+        "software_image_files",
         "part_id",
         "serial",
         "asset_tag",
@@ -2787,7 +2990,9 @@ class InventoryItemCreateForm(ComponentCreateForm):
 
 
 class InventoryItemBulkCreateForm(
-    form_from_model(InventoryItem, ["manufacturer", "part_id", "serial", "asset_tag", "discovered", "tags"]),
+    form_from_model(
+        InventoryItem, ["manufacturer", "part_id", "serial", "asset_tag", "discovered", "software_version", "tags"]
+    ),
     DeviceBulkAddComponentForm,
 ):
     field_order = (
@@ -2798,6 +3003,7 @@ class InventoryItemBulkCreateForm(
         "serial",
         "asset_tag",
         "discovered",
+        "software_version",
         "description",
         "tags",
     )
@@ -2810,9 +3016,18 @@ class InventoryItemBulkEditForm(
 ):
     pk = forms.ModelMultipleChoiceField(queryset=InventoryItem.objects.all(), widget=forms.MultipleHiddenInput())
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+    software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
+    software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
 
     class Meta:
-        nullable_fields = ["label", "manufacturer", "part_id", "description"]
+        nullable_fields = [
+            "description",
+            "label",
+            "manufacturer",
+            "part_id",
+            "software_image_files",
+            "software_version",
+        ]
 
 
 class InventoryItemFilterForm(DeviceComponentFilterForm):
@@ -2823,6 +3038,16 @@ class InventoryItemFilterForm(DeviceComponentFilterForm):
     serial = forms.CharField(required=False)
     asset_tag = forms.CharField(required=False)
     discovered = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    software_version = DynamicModelMultipleChoiceField(
+        queryset=SoftwareVersion.objects.all(),
+        required=False,
+        label="Software version",
+    )
+    has_software_version = forms.NullBooleanField(
+        required=False,
+        label="Has software version",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
     tags = TagFilterField(model)
 
 
@@ -3070,7 +3295,7 @@ class CableBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, Nau
         initial="",
         widget=StaticSelect2(),
     )
-    label = forms.CharField(max_length=100, required=False)
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())  # RGB color code
     length = forms.IntegerField(min_value=1, required=False)
     length_unit = forms.ChoiceField(
@@ -3325,7 +3550,7 @@ class VCMemberSelectForm(BootstrapMixin, forms.Form):
 
 class VirtualChassisBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualChassis.objects.all(), widget=forms.MultipleHiddenInput())
-    domain = forms.CharField(max_length=30, required=False)
+    domain = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         nullable_fields = ["domain"]
@@ -3607,20 +3832,19 @@ class InterfaceRedundancyGroupAssociationForm(BootstrapMixin, NoteModelFormMixin
     location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         required=False,
-        query_params={"region_id": "$region"},
     )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
         required=False,
         null_option="None",
-        query_params={"location_id": "$location"},
+        query_params={"location": "$location"},
     )
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
         query_params={
-            "location_id": "$location",
-            "rack_id": "$rack",
+            "location": "$location",
+            "rack": "$rack",
         },
     )
     interface = DynamicModelChoiceField(
@@ -3719,3 +3943,466 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
             "secrets_group",
             "protocol",
         ]
+
+
+#
+# Software image files
+#
+
+
+class SoftwareImageFileBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
+    """SoftwareImageFile bulk edit form."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), widget=forms.MultipleHiddenInput)
+    software_version = DynamicModelChoiceField(queryset=SoftwareVersion.objects.all(), required=False)
+    image_file_name = forms.CharField(required=False)
+    image_file_checksum = forms.CharField(required=False)
+    hashing_algorithm = forms.ChoiceField(
+        choices=add_blank_choice(SoftwareImageFileHashingAlgorithmChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    image_file_size = forms.IntegerField(required=False)
+    default_image = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Is default image")
+    download_url = forms.URLField(required=False)
+
+    class Meta:
+        model = SoftwareImageFile
+        nullable_fields = [
+            "image_file_checksum",
+            "hashing_algorithm",
+            "image_file_size",
+            "download_url",
+        ]
+
+
+class SoftwareImageFileFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
+    """SoftwareImageFile basic filter form."""
+
+    model = SoftwareImageFile
+
+    q = forms.CharField(required=False, label="Search")
+    software_version = DynamicModelMultipleChoiceField(
+        queryset=SoftwareVersion.objects.all(),
+        required=False,
+        label="Software version",
+    )
+    image_file_name = forms.CharField(required=False, label="Image file name")
+    image_file_checksum = forms.CharField(required=False, label="Image file checksum")
+    hashing_algorithm = forms.ChoiceField(
+        choices=add_blank_choice(SoftwareImageFileHashingAlgorithmChoices),
+        required=False,
+        widget=StaticSelect2(),
+        label="Hashing algorithm",
+    )
+    image_file_size = forms.IntegerField(required=False, label="Image file size")
+    download_url = forms.URLField(required=False, label="Download URL")
+    device_types = DynamicModelMultipleChoiceField(
+        queryset=DeviceType.objects.all(),
+        required=False,
+        label="Device types",
+    )
+    has_device_types = forms.NullBooleanField(
+        required=False,
+        label="Has device types",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+
+    tags = TagFilterField(model)
+
+    field_order = [
+        "q",
+        "software_version",
+        "image_file_name",
+        "image_file_checksum",
+        "hashing_algorithm",
+        "image_file_size",
+        "download_url",
+        "device_types",
+        "has_device_types",
+        "status",
+        "tags",
+    ]
+
+
+class SoftwareImageFileForm(NautobotModelForm):
+    """SoftwareImageFile credit/edit form."""
+
+    device_types = DynamicModelMultipleChoiceField(
+        queryset=DeviceType.objects.all(),
+        required=False,
+        label="Device Types",
+    )
+
+    field_order = [
+        "software_version",
+        "image_file_name",
+        "status",
+    ]
+
+    class Meta:
+        model = SoftwareImageFile
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["device_types"].initial = self.instance.device_types.all()
+
+    def _save_m2m(self):
+        """Save many-to-many fields."""
+        super()._save_m2m()
+        self.instance.device_types.set(self.cleaned_data["device_types"])
+
+
+class SoftwareVersionBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
+    """SoftwareVersion bulk edit form."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=SoftwareVersion.objects.all(), widget=forms.MultipleHiddenInput)
+    platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
+    alias = forms.CharField(required=False)
+    release_date = NullableDateField(required=False, widget=DatePicker())
+    end_of_support_date = NullableDateField(required=False, widget=DatePicker())
+    documentation_url = forms.URLField(required=False)
+    long_term_support = forms.NullBooleanField(
+        required=False, widget=BulkEditNullBooleanSelect, label="Long Term Support"
+    )
+    pre_release = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Pre-Release")
+
+    class Meta:
+        model = SoftwareVersion
+        nullable_fields = [
+            "alias",
+            "release_date",
+            "end_of_support_date",
+            "documentation_url",
+        ]
+
+
+class SoftwareVersionFilterForm(NautobotFilterForm, StatusModelFilterFormMixin):
+    """SoftwareVersion basic filter form."""
+
+    model = SoftwareVersion
+
+    q = forms.CharField(required=False, label="Search")
+    platform = DynamicModelMultipleChoiceField(
+        queryset=Platform.objects.all(),
+        required=False,
+        label="Platform",
+    )
+    version = forms.CharField(required=False, label="Version")
+    alias = forms.CharField(required=False, label="Alias")
+    release_date = NullableDateField(required=False, widget=DatePicker(), label="Release date")
+    end_of_support_date = NullableDateField(required=False, widget=DatePicker(), label="End of support date")
+    documentation_url = forms.URLField(required=False, label="Documentation URL")
+    long_term_support = forms.NullBooleanField(
+        required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES), label="Long Term Support"
+    )
+    pre_release = forms.NullBooleanField(
+        required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES), label="Pre-Release"
+    )
+    software_image_files = DynamicModelMultipleChoiceField(
+        queryset=SoftwareImageFile.objects.all(),
+        required=False,
+        label="Software image files",
+    )
+    has_software_image_files = forms.NullBooleanField(
+        required=False,
+        label="Has software image files",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    devices = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        label="Devices",
+    )
+    has_devices = forms.NullBooleanField(
+        required=False,
+        label="Has devices",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    inventory_items = DynamicModelMultipleChoiceField(
+        queryset=InventoryItem.objects.all(),
+        required=False,
+        label="Inventory items",
+    )
+    has_inventory_items = forms.NullBooleanField(
+        required=False,
+        label="Has inventory items",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    virtual_machines = DynamicModelMultipleChoiceField(
+        queryset=VirtualMachine.objects.all(),
+        required=False,
+        label="Virtual machines",
+    )
+    has_virtual_machines = forms.NullBooleanField(
+        required=False,
+        label="Has virtual machines",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    tags = TagFilterField(model)
+
+    field_order = [
+        "q",
+        "platform",
+        "version",
+        "alias",
+        "release_date",
+        "end_of_support_date",
+        "documentation_url",
+        "long_term_support",
+        "pre_release",
+        "software_image_files",
+        "has_software_image_files",
+        "devices",
+        "has_devices",
+        "inventory_items",
+        "has_inventory_items",
+        "virtual_machines",
+        "has_virtual_machines",
+        "status",
+        "tags",
+    ]
+
+
+class SoftwareVersionForm(NautobotModelForm):
+    """SoftwareVersion credit/edit form."""
+
+    release_date = NullableDateField(required=False, widget=DatePicker())
+    end_of_support_date = NullableDateField(required=False, widget=DatePicker())
+    field_order = [
+        "platform",
+        "version",
+        "status",
+    ]
+
+    class Meta:
+        model = SoftwareVersion
+        fields = "__all__"
+
+
+class ControllerForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
+    """Controller create/edit form."""
+
+    platform = DynamicModelChoiceField(
+        queryset=Platform.objects.all(),
+        required=False,
+    )
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+    )
+    external_integration = DynamicModelChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
+    )
+    controller_device = DynamicModelChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+    )
+    controller_device_redundancy_group = DynamicModelChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(),
+        required=False,
+    )
+
+    class Meta:
+        model = Controller
+        fields = (
+            "name",
+            "status",
+            "role",
+            "description",
+            "platform",
+            "tenant",
+            "location",
+            "external_integration",
+            "controller_device",
+            "controller_device_redundancy_group",
+            "tags",
+        )
+
+
+class ControllerFilterForm(
+    NautobotFilterForm,
+    LocatableModelFilterFormMixin,
+    TenancyFilterForm,
+    StatusModelFilterFormMixin,
+    RoleModelFilterFormMixin,
+):
+    """Controller basic filter form."""
+
+    model = Controller
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False, label="Name")
+    description = forms.CharField(required=False, label="Description")
+    platform = DynamicModelMultipleChoiceField(
+        queryset=Platform.objects.all(),
+        required=False,
+        label="Platform",
+    )
+    external_integration = DynamicModelMultipleChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
+        label="External integration",
+    )
+    controller_device = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        label="Controller device",
+    )
+    controller_device_redundancy_group = DynamicModelMultipleChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(),
+        required=False,
+        label="Controller device redundancy group",
+    )
+    tags = TagFilterField(model)
+    field_order = (
+        "q",
+        "name",
+        "status",
+        "role",
+        "description",
+        "location",
+        "platform",
+        "tenant",
+        "external_integration",
+        "controller_device",
+        "controller_device_redundancy_group",
+        "tags",
+    )
+
+
+class ControllerBulkEditForm(
+    TagsBulkEditFormMixin,
+    LocatableModelBulkEditFormMixin,
+    StatusModelBulkEditFormMixin,
+    RoleModelBulkEditFormMixin,
+    NautobotBulkEditForm,
+):
+    """Controller bulk edit form."""
+
+    pk = forms.ModelMultipleChoiceField(
+        queryset=Controller.objects.all(),
+        widget=forms.MultipleHiddenInput,
+    )
+    platform = DynamicModelChoiceField(
+        queryset=Platform.objects.all(),
+        required=False,
+    )
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+    )
+    external_integration = DynamicModelChoiceField(
+        queryset=ExternalIntegration.objects.all(),
+        required=False,
+    )
+    controller_device = DynamicModelChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+    )
+    controller_device_redundancy_group = DynamicModelChoiceField(
+        queryset=DeviceRedundancyGroup.objects.all(),
+        required=False,
+    )
+
+    class Meta:
+        model = Controller
+        fields = (
+            "status",
+            "role",
+            "description",
+            "location",
+            "platform",
+            "tenant",
+            "external_integration",
+            "controller_device",
+            "controller_device_redundancy_group",
+            "tags",
+        )
+
+
+class ControllerManagedDeviceGroupForm(NautobotModelForm):
+    """ControllerManagedDeviceGroup create/edit form."""
+
+    controller = DynamicModelChoiceField(queryset=Controller.objects.all(), required=True)
+    devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
+    parent = DynamicModelChoiceField(queryset=ControllerManagedDeviceGroup.objects.all(), required=False)
+
+    class Meta:
+        model = ControllerManagedDeviceGroup
+        fields = (
+            "controller",
+            "name",
+            "devices",
+            "parent",
+            "weight",
+            "tags",
+        )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance.present_in_database:
+            self.initial["devices"] = self.instance.devices.values_list("pk", flat=True)
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        instance.devices.set(self.cleaned_data["devices"])
+        return instance
+
+
+class ControllerManagedDeviceGroupFilterForm(NautobotFilterForm):
+    """ControllerManagedDeviceGroup basic filter form."""
+
+    model = ControllerManagedDeviceGroup
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False, label="Name")
+    controller = DynamicModelChoiceField(
+        queryset=Controller.objects.all(),
+        required=False,
+        label="Controller",
+    )
+    parent = DynamicModelChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(),
+        required=False,
+        label="Parent",
+    )
+    weight = forms.IntegerField(required=False, label="Weight")
+    subtree = DynamicModelMultipleChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(),
+        to_field_name="name",
+        required=False,
+    )
+    tags = TagFilterField(model)
+    field_order = (
+        "q",
+        "name",
+        "controller",
+        "parent",
+        "weight",
+        "subtree",
+        "tags",
+    )
+
+
+class ControllerManagedDeviceGroupBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    """ControllerManagedDeviceGroup bulk edit form."""
+
+    pk = forms.ModelMultipleChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(),
+        widget=forms.MultipleHiddenInput,
+    )
+    controller = DynamicModelChoiceField(queryset=Controller.objects.all(), required=False)
+    parent = DynamicModelChoiceField(queryset=ControllerManagedDeviceGroup.objects.all(), required=False)
+    weight = forms.IntegerField(required=False)
+
+    class Meta:
+        model = ControllerManagedDeviceGroup
+        fields = (
+            "controller",
+            "parent",
+            "weight",
+            "tags",
+        )

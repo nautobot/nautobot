@@ -36,7 +36,7 @@
             </tr>
             <tr>
                 <td>Source Filter</td>
-                <td>{% if object.source_filter %}{{ object.source_filter | render_json  }}{% else %} {{ None | placeholder }}{% endif %}</td>
+                <td>{% if object.source_filter %}<pre>{{ object.source_filter | render_json }}</pre>{% else %}{{ None | placeholder }}{% endif %}</td>
             </tr>
             <tr>
                 <td>Hide on Source Object</td>
@@ -52,7 +52,7 @@
             </tr>
             <tr>
                 <td>Destination Filter</td>
-                <td>{% if object.destination_filter %}{{ object.destination_filter | render_json  }}{% else %} {{ None | placeholder }}{% endif %}</td>
+                <td>{% if object.destination_filter %}<pre>{{ object.destination_filter | render_json }}</pre>{% else %}{{ None | placeholder }}{% endif %}</td>
             </tr>
             <tr>
                 <td>Hide on Destination Object</td>

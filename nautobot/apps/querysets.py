@@ -2,5 +2,4 @@
 
 from nautobot.extras.querysets import ConfigContextModelQuerySet
 
-
 __all__ = ("ConfigContextModelQuerySet",)

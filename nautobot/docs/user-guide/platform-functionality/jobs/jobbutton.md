@@ -29,7 +29,10 @@ For any Job that is loaded into Nautobot, the Job must be enabled to run. See [E
 ## Required Permissions
 
 !!! note
-    In order to run any job via a Job Button, a user must be assigned the `extras.run_job` **as well as** the `extras.run_jobbutton` permissions. This is achieved by assigning the user (or group) a permission on the `extras > job` and `extras > jobbutton` objects and specifying the `run` action in the **Additional actions** section. Any user lacking these permissions may still see the button on the respective page(s) - if not using [conditional rendering](#conditional-rendering) - but they will be disabled.
+    In order to run any job via a Job Button, a user must be assigned the `extras.run_job` permission. This is achieved by assigning the user (or group) a permission on the `extras > job` objects and specifying the `run` action in the **Additional actions** section. Any user lacking this permissions may still see the button on the respective page(s) - if not using [conditional rendering](#conditional-rendering) - but it will be disabled.
+
++/- 2.1.0
+    In prior versions, users also had to have `extras.run_jobbutton` permission as well. This requirement has been removed.
 
 ## Context Data
 

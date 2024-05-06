@@ -1,20 +1,15 @@
-from unittest import skipIf
-
 from constance.test import override_config
 from django.conf import settings
 from django.templatetags.static import static
-from django.test import TestCase, override_settings
-from example_plugin.models import AnotherExampleModel, ExampleModel
+from django.test import override_settings, TestCase
 
 from nautobot.core.templatetags import helpers
 from nautobot.dcim import models
 from nautobot.ipam.models import VLAN
 
+from example_app.models import AnotherExampleModel, ExampleModel
 
-@skipIf(
-    "example_plugin" not in settings.PLUGINS,
-    "example_plugin not in settings.PLUGINS",
-)
+
 class NautobotTemplatetagsHelperTest(TestCase):
     def test_hyperlinked_object(self):
         # None gives a placeholder
@@ -47,6 +42,16 @@ class NautobotTemplatetagsHelperTest(TestCase):
             f'<a href="/dcim/locations/{location.pk}/" title="An important location">{location!s}</a>',
         )
 
+    def test_hyperlinked_email(self):
+        self.assertEqual(
+            helpers.hyperlinked_email("admin@example.com"), '<a href="mailto:admin@example.com">admin@example.com</a>'
+        )
+        self.assertEqual(helpers.hyperlinked_email(None), '<span class="text-muted">&mdash;</span>')
+
+    def test_hyperlinked_phone_number(self):
+        self.assertEqual(helpers.hyperlinked_phone_number("555-1234"), '<a href="tel:555-1234">555-1234</a>')
+        self.assertEqual(helpers.hyperlinked_phone_number(None), '<span class="text-muted">&mdash;</span>')
+
     def test_placeholder(self):
         self.assertEqual(helpers.placeholder(None), '<span class="text-muted">&mdash;</span>')
         self.assertEqual(helpers.placeholder([]), '<span class="text-muted">&mdash;</span>')
@@ -78,19 +83,42 @@ class NautobotTemplatetagsHelperTest(TestCase):
             helpers.render_markdown("**bold and _italics_**"), "<p><strong>bold and <em>italics</em></strong></p>"
         )
         self.assertEqual(helpers.render_markdown("* list"), "<ul>\n<li>list</li>\n</ul>")
-        self.assertEqual(
+        self.assertHTMLEqual(
             helpers.render_markdown("[I am a link](https://www.example.com)"),
-            '<p><a href="https://www.example.com">I am a link</a></p>',
+            '<p><a href="https://www.example.com" rel="noopener noreferrer">I am a link</a></p>',
+        )
+
+    def test_render_markdown_security(self):
+        self.assertEqual(helpers.render_markdown('<script>alert("XSS")</script>'), "")
+        self.assertHTMLEqual(
+            helpers.render_markdown('[link](javascript:alert("XSS"))'),
+            '<p><a title="XSS" rel="noopener noreferrer">link</a>)</p>',  # the trailing ) seems weird to me, but...
+        )
+        self.assertHTMLEqual(
+            helpers.render_markdown(
+                "[link\nJS]"
+                "(&#x6A&#x61&#x76&#x61&#x73&#x63&#x72&#x69&#x70&#x74&#x3A"  # '(javascript:'
+                "&#x61&#x6C&#x65&#x72&#x74&#x28&#x27&#x58&#x53&#x53&#x27&#x29)"  # 'alert("XSS"))'
+            ),
+            '<p><a rel="noopener noreferrer">link JS</a></p>',
         )
 
     def test_render_json(self):
         self.assertEqual(
-            helpers.render_json({"first": [1, 2, 3]}), '{\n    "first": [\n        1,\n        2,\n        3\n    ]\n}'
+            helpers.render_json({"syntax": "highlight"}),
+            '<code class="language-json">{\n    &quot;syntax&quot;: &quot;highlight&quot;\n}</code>',
         )
-        self.assertEqual('"I am UTF-8! 😀"', helpers.render_json("I am UTF-8! 😀"))
+        self.assertEqual(
+            helpers.render_json({"first": [1, 2, 3]}, False),
+            '{\n    "first": [\n        1,\n        2,\n        3\n    ]\n}',
+        )
+        self.assertEqual('"I am UTF-8! 😀"', helpers.render_json("I am UTF-8! 😀", False))
 
     def test_render_yaml(self):
-        self.assertEqual("utf8:\n- 😀😀\n- 😀\n", helpers.render_yaml({"utf8": ["😀😀", "😀"]}))
+        self.assertEqual(
+            helpers.render_yaml({"syntax": "highlight"}), '<code class="language-yaml">syntax: highlight\n</code>'
+        )
+        self.assertEqual("utf8:\n- 😀😀\n- 😀\n", helpers.render_yaml({"utf8": ["😀😀", "😀"]}, False))
 
     def test_meta(self):
         location = models.Location.objects.first()
@@ -99,7 +127,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.meta(models.Location, "app_label"), "dcim")
         self.assertEqual(helpers.meta(location, "not_present"), "")
 
-        self.assertEqual(helpers.meta(ExampleModel, "app_label"), "example_plugin")
+        self.assertEqual(helpers.meta(ExampleModel, "app_label"), "example_app")
 
     def test_viewname(self):
         location = models.Location.objects.first()
@@ -107,7 +135,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.viewname(location, "edit"), "dcim:location_edit")
         self.assertEqual(helpers.viewname(models.Location, "test"), "dcim:location_test")
 
-        self.assertEqual(helpers.viewname(ExampleModel, "edit"), "plugins:example_plugin:examplemodel_edit")
+        self.assertEqual(helpers.viewname(ExampleModel, "edit"), "plugins:example_app:examplemodel_edit")
 
     def test_validated_viewname(self):
         location = models.Location.objects.first()
@@ -115,8 +143,22 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.validated_viewname(location, "list"), "dcim:location_list")
         self.assertIsNone(helpers.validated_viewname(models.Location, "notvalid"))
 
-        self.assertEqual(helpers.validated_viewname(ExampleModel, "list"), "plugins:example_plugin:examplemodel_list")
+        self.assertEqual(helpers.validated_viewname(ExampleModel, "list"), "plugins:example_app:examplemodel_list")
         self.assertIsNone(helpers.validated_viewname(ExampleModel, "notvalid"))
+
+    def test_validated_api_viewname(self):
+        location = models.Location.objects.first()
+
+        self.assertEqual(helpers.validated_api_viewname(location, "list"), "dcim-api:location-list")
+        self.assertIsNone(helpers.validated_api_viewname(models.Location, "notvalid"))
+
+        self.assertEqual(
+            helpers.validated_api_viewname(ExampleModel, "list"), "plugins-api:example_app-api:examplemodel-list"
+        )
+        self.assertIsNone(helpers.validated_api_viewname(ExampleModel, "notvalid"))
+
+        # Assert detail views get validated as well
+        self.assertEqual(helpers.validated_api_viewname(location, "detail"), "dcim-api:location-detail")
 
     def test_bettertitle(self):
         self.assertEqual(helpers.bettertitle("myTITle"), "MyTITle")
@@ -152,7 +194,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         location = models.Location.objects.first()
         self.assertEqual(helpers.get_docs_url(location), static("docs/user-guide/core-data-model/dcim/location.html"))
         example_model = ExampleModel.objects.create(name="test", number=1)
-        self.assertEqual(helpers.get_docs_url(example_model), static("example_plugin/docs/models/examplemodel.html"))
+        self.assertEqual(helpers.get_docs_url(example_model), static("example_app/docs/models/examplemodel.html"))
         # AnotherExampleModel does not have documentation.
         another_model = AnotherExampleModel.objects.create(name="test", number=1)
         self.assertIsNone(helpers.get_docs_url(another_model))
@@ -212,10 +254,10 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.hyperlinked_object_with_color(obj=None), "—")
 
     @override_settings(BANNER_TOP="¡Hola, mundo!")
-    @override_config(example_plugin__SAMPLE_VARIABLE="Testing")
+    @override_config(example_app__SAMPLE_VARIABLE="Testing")
     def test_settings_or_config(self):
         self.assertEqual(helpers.settings_or_config("BANNER_TOP"), "¡Hola, mundo!")
-        self.assertEqual(helpers.settings_or_config("SAMPLE_VARIABLE", "example_plugin"), "Testing")
+        self.assertEqual(helpers.settings_or_config("SAMPLE_VARIABLE", "example_app"), "Testing")
 
     def test_support_message(self):
         """Test the `support_message` tag with config and settings."""
@@ -225,8 +267,8 @@ class NautobotTemplatetagsHelperTest(TestCase):
                 self.assertHTMLEqual(
                     helpers.support_message(),
                     "<p>If further assistance is required, please join the <code>#nautobot</code> channel "
-                    'on <a href="https://slack.networktocode.com/">Network to Code\'s Slack community</a> '
-                    "and post your question.</p>",
+                    'on <a href="https://slack.networktocode.com/" rel="noopener noreferrer">Network to Code\'s '
+                    "Slack community</a> and post your question.</p>",
                 )
 
             with override_config(SUPPORT_MESSAGE="Reach out to your support team for assistance."):
@@ -241,3 +283,35 @@ class NautobotTemplatetagsHelperTest(TestCase):
                     helpers.support_message(),
                     "<p>Settings <strong>support</strong> message:</p><ul><li>Item 1</li><li>Item 2</li></ul>",
                 )
+
+    def test_hyperlinked_object_target_new_tab(self):
+        # None gives a placeholder
+        self.assertEqual(helpers.hyperlinked_object_target_new_tab(None), helpers.placeholder(None))
+        # An object without get_absolute_url gives a string
+        self.assertEqual(helpers.hyperlinked_object_target_new_tab("hello"), "hello")
+        # An object with get_absolute_url gives a hyperlink
+        location = models.Location.objects.first()
+        # Initially remove description if any
+        location.description = ""
+        location.save()
+        self.assertEqual(
+            helpers.hyperlinked_object_target_new_tab(location),
+            f'<a href="/dcim/locations/{location.pk}/" target="_blank" rel="noreferrer">{location.name}</a>',
+        )
+        # An object with get_absolute_url and a description gives a titled hyperlink
+        location.description = "An important location"
+        location.save()
+        self.assertEqual(
+            helpers.hyperlinked_object_target_new_tab(location),
+            f'<a href="/dcim/locations/{location.pk}/" title="An important location" target="_blank" rel="noreferrer">{location.name}</a>',
+        )
+        # Optionally you can request a field other than the object's display string
+        self.assertEqual(
+            helpers.hyperlinked_object_target_new_tab(location, "name"),
+            f'<a href="/dcim/locations/{location.pk}/" title="An important location" target="_blank" rel="noreferrer">{location.name}</a>',
+        )
+        # If you request a nonexistent field, it defaults to the string representation
+        self.assertEqual(
+            helpers.hyperlinked_object_target_new_tab(location, "foo"),
+            f'<a href="/dcim/locations/{location.pk}/" title="An important location" target="_blank" rel="noreferrer">{location!s}</a>',
+        )

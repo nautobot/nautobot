@@ -1,27 +1,27 @@
 import collections
-import inspect
 from functools import partial
 from importlib import import_module
+import inspect
 from logging import getLogger
 
-from packaging import version
-
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.template.loader import get_template
 from django.urls import get_resolver, URLPattern
+from packaging import version
 
 from nautobot.core.apps import (
     NautobotConfig,
     NavMenuTab,
-    register_menu_items,
     register_homepage_panels,
+    register_menu_items,
 )
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.core.signals import nautobot_database_ready
+from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.extras.choices import BannerClassChoices
-from nautobot.extras.registry import registry, register_datasource_contents
 from nautobot.extras.plugins.exceptions import PluginImproperlyConfigured
 from nautobot.extras.plugins.utils import import_object
+from nautobot.extras.registry import register_datasource_contents, registry
 from nautobot.extras.secrets import register_secrets_provider
 
 logger = getLogger(__name__)
@@ -31,7 +31,6 @@ logger = getLogger(__name__)
 registry["plugin_banners"] = []
 registry["plugin_custom_validators"] = collections.defaultdict(list)
 registry["plugin_graphql_types"] = []
-registry["plugin_jobs"] = []
 registry["plugin_template_extensions"] = collections.defaultdict(list)
 registry["app_metrics"] = []
 
@@ -141,14 +140,14 @@ class NautobotAppConfig(NautobotConfig):
             register_graphql_types(graphql_types)
 
         # Import jobs (if present)
+        # Note that we do *not* auto-call `register_jobs()` - the App is responsible for doing so when imported.
         jobs = import_object(f"{self.__module__}.{self.jobs}")
         if jobs is not None:
-            register_jobs(jobs)
             self.features["jobs"] = jobs
 
         # Import metrics (if present)
         metrics = import_object(f"{self.__module__}.{self.metrics}")
-        if metrics is not None:
+        if metrics is not None and self.name not in settings.METRICS_DISABLED_APPS:
             register_metrics(metrics)
             self.features["metrics"] = []  # Initialize as empty, to be filled by the signal handler
             # Inject the metrics to discover into the signal handler.
@@ -332,6 +331,14 @@ class TemplateExtension:
         """
         raise NotImplementedError
 
+    def list_buttons(self):
+        """
+        Buttons that will be rendered and added to the existing list of buttons on the list page view. Content
+        should be returned as an HTML string. Note that content does not need to be marked as safe because this is
+        automatically handled.
+        """
+        raise NotImplementedError
+
     def detail_tabs(self):
         """
         Tabs that will be rendered and added to the existing list of tabs on the detail page view.
@@ -415,24 +422,6 @@ def register_graphql_types(class_list):
         registry["plugin_graphql_types"].append(item)
 
 
-def register_jobs(class_list):
-    """
-    Register a list of Job classes
-    """
-    from nautobot.extras.jobs import Job
-
-    for job in class_list:
-        if not inspect.isclass(job):
-            raise TypeError(f"Job class {job} was passed as an instance!")
-        if not issubclass(job, Job):
-            raise TypeError(f"{job} is not a subclass of extras.jobs.Job!")
-
-        registry["plugin_jobs"].append(job)
-
-    # Note that we do not (and cannot) update the Job records in the Nautobot database at this time.
-    # That is done in response to the `nautobot_database_ready` signal, see nautobot.extras.signals.refresh_job_models
-
-
 def register_metrics(function_list):
     """
     Register a list of metric functions
@@ -462,8 +451,8 @@ def register_filter_extensions(filter_extensions, plugin_name):
     """
     Register a list of FilterExtension classes
     """
-    from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
     from nautobot.core.forms.utils import add_field_to_filter_form_class
+    from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 
     for filter_extension in filter_extensions:
         if not issubclass(filter_extension, FilterExtension):

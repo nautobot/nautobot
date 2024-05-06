@@ -1,4 +1,4 @@
-{% extends 'generic/object_edit.html' %}
+{% extends 'generic/object_create.html' %}
 {% load form_helpers %}
 
 {% block form %}
@@ -15,7 +15,7 @@
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Assignment</strong></div>
         <div class="panel-body">
-            {% render_field form.location %}
+            {% render_field form.locations %}
             {% render_field form.vlan_group %}
         </div>
     </div>

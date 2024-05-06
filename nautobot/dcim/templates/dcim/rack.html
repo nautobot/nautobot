@@ -295,7 +295,7 @@
                     {% for device in nonracked_devices %}
                         <tr{% if device.device_type.u_height %} class="warning"{% endif %}>
                             <td>{{ device|hyperlinked_object }}</td>
-                            <td>{{ device.device_role }}</td>
+                            <td>{{ device.role }}</td>
                             <td>{{ device.device_type.display }}</td>
                             {% if device.parent_bay %}
                                 <td>{{ device.parent_bay.device|hyperlinked_object }}</td>

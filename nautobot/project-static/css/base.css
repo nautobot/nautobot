@@ -1,4 +1,9 @@
 /* Layout */
+
+:root {
+    --navbar-transition-duration: 350ms;
+}
+
 * {
     margin: 0;
 }
@@ -9,7 +14,8 @@ html, body {
     height: 100%;
 }
 body {
-    padding-top: 70px;
+    padding-left: 240px;  /* same as width of .navbar-fixed-left */
+    padding-top: 20px;
 }
 .wrapper {
     min-height: 100%;
@@ -17,15 +23,28 @@ body {
     margin: 0 auto -48px; /* the bottom margin is the negative value of the footer's height */
     padding-bottom: 30px;
 }
-.navbar-brand {
-    padding: 12px 15px 8px;
+#main-content {
+    transition-duration: var(--navbar-transition-duration);
+    transition-timing-function: ease-in-out;
+    transition-property: margin-left, width;
+    min-height: calc(100vh - 20px);
+}
+#main-content > .form {
+    margin-top: 20px;
 }
 .footer, .push {
     height: 48px; /* .push must be the same height as .footer */
 }
 .footer {
     background-color: #f5f5f5;
-    border-top: 1px solid #d0d0d0;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    white-space: nowrap;
+    transition-duration: var(--navbar-transition-duration);
+    transition-timing-function: ease-in-out;
+    transition-property: margin-left, width;
+    overflow: visible;
+    margin: 0;
 }
 .footer .row {
     background-color: #f5f5f5;
@@ -33,27 +52,10 @@ body {
 footer p {
     margin: 12px 0;
 }
-#navbar_search {
-    padding: 0 8px;
-}
 .right-side-panel {
     max-width: 400px;
     min-width: 300px;
     padding-right: 0;
-}
-
-/* Hide the username in the navigation menu on displays less than 1470px wide */
-@media (max-width: 1469px) {
-    #navbar_user {
-        display: none;
-    }
-}
-
-/* Hide the search bar in the navigation menu on displays less than 1384px wide */
-@media (max-width: 1383px) {
-    #navbar_search {
-        display: none;
-    }
 }
 
 /* Printer friendly CSS class and various fixes for printing. */
@@ -67,90 +69,6 @@ footer p {
     .noprint {
         display: none !important;
     }
-}
-
-/* Scroll the drop-down menus at or above 768px wide to match bootstrap's behavior for hiding dropdown menus */
-@media (min-width: 768px) {
-    .navbar-nav > li > ul {
-        max-height: calc(80vh - 50px);
-        overflow-y: auto;
-    }
-}
-
-/* Collapse the nav menu on displays less than 1180px wide */
-@media (max-width: 1179px) {
-    #navbar {
-        max-height: calc(80vh - 50px);
-        overflow-y: auto !important;
-    }
-    .navbar-header {
-        float: none;
-    }
-    .navbar-left, .navbar-right {
-        float: none !important;
-    }
-    .navbar-toggle {
-        display: block;
-    }
-    .navbar-collapse {
-        border-top: 1px solid transparent;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    }
-    .navbar-fixed-top {
-        top: 0;
-        border-width: 0 0 1px;
-    }
-    .navbar-collapse.collapse {
-        display: none !important;
-        max-height: none;
-    }
-    .navbar-nav {
-        float: none !important;
-        margin-top: 7.5px;
-    }
-    .navbar-nav .open .dropdown-menu {
-        position: static;
-        float: none;
-        width: auto;
-        margin-top: 0;
-        background-color: transparent;
-        border: 0;
-        -webkit-box-shadow: none;
-        box-shadow: none;
-    }
-    .navbar-nav > li {
-        float: none;
-    }
-    .navbar-nav > li > a {
-        padding-top: 10px;
-        padding-bottom: 10px;
-    }
-    .collapse.in {
-        display: block !important;
-    }
-    #navbar_user {
-        display: inline;
-    }
-}
-
-/* Navigation menu */
-ul.dropdown-menu {
-    min-width: 250px;
-}
-ul.dropdown-menu.edge {
-    right: 0;
-    left: auto;
-}
-ul.dropdown-menu div.buttons {
-    padding-right: 10px;
-    padding-top: 2px;
-}
-ul.dropdown-menu > li > a {
-    clear: left;
-    margin-right: 80px
-}
-.nav > li > a.dropdown-toggle {
-    padding: 15px 12px;
 }
 
 /* Forms */
@@ -391,6 +309,15 @@ table.report th a {
 .panel .list-group {
     max-height: 400px;
     overflow: auto;
+    border-bottom-left-radius: 9px;
+    border-bottom-right-radius: 9px;
+}
+.panel-heading {
+    font-weight: 700;
+}
+.panel-body {
+    border-bottom-left-radius: 9px;
+    border-bottom-right-radius: 9px;
 }
 ul.nav-tabs, ul.nav-pills {
     margin-bottom: 20px;
@@ -399,8 +326,23 @@ ul.nav-tabs li a {
     padding: 8px 10px;
     border: none;
 }
+ul.nav-tabs li a:hover,
+ul.nav-tabs li a:focus,
+ul.nav-pills li a:hover,
+ul.nav-pills li.active a:hover,
+ul.nav-pills li a:focus {
+    background-color: #d2d2d2;
+}
+ul.nav-pills li.active a {
+    background-color: #eaf2f9;
+}
+ul.nav-tabs li a:hover,
 .label a {
     color: inherit;
+}
+ul.software-image-hierarchy {
+    list-style-type: "↳ ";
+    padding-left: 18px;
 }
 
 /* Filters */
@@ -562,10 +504,13 @@ h1 .btn-inline {
     position: relative;
     top: 2px;
 }
-.navbar .navbar-toggle .mdi::before {
-    position: relative;
-    top: 4px;
-    color: #FFF;
+.breadcrumb {
+    transition-duration: var(--navbar-transition-duration);
+    transition-timing-function: ease-in-out;
+    transition-property: margin-left, width;
+}
+.breadcrumb.collapsed {
+    margin-left: 240px;
 }
 .breadcrumb .mdi::before {
     position: relative;
@@ -588,11 +533,6 @@ h1 .btn-inline {
 }
 .input-group-btn .mdi::before {
     font-size: 20px;
-}
-.navbar-brand .mdi::before {
-    position: relative;
-    top: 2px;
-    margin-right: 2px;
 }
 .list-group-item .mdi::before {
     position: relative;
@@ -666,4 +606,357 @@ td span.hover_copy:hover .hover_copy_button {
 .modal-body {
     max-height: calc(100vh - 212px);
     overflow-y: scroll;
+}
+
+/* Navbar */
+.navbar-fixed-left {
+    border: none;
+    border-radius: 0;
+    bottom: 0;
+    left: 0;
+    margin-bottom: 0;
+    margin-right: 20px;
+    overflow: auto;
+    overflow-y: auto;
+    position: fixed;
+    top: 0;
+    width: 240px;  /* same as body padding-left */
+    z-index: 1030; /* `1030` is taken from Bootstrap's `navbar-fixed-top` */
+    -ms-overflow-style: none;  /* Hide scrollbar IE and Edge */
+    scrollbar-width: none;  /* Hide scrollbar Firefox */
+    transition-duration: var(--navbar-transition-duration);
+    transition-timing-function: ease-in-out;
+    transition-property: margin-left, width;
+}
+
+.navbar-fixed-left.collapsed {
+    width: 0px;
+}
+
+.navbar-fixed-left.collapsed:hover {
+    cursor: pointer;
+}
+
+.navbar-fixed-left > .container-fluid {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.navbar-fixed-left .navbar-header {
+    float: none;
+    margin: 0;
+}
+
+.navbar-fixed-left .navbar-header > .navbar-brand {
+    height: auto;
+    margin: 0;
+    padding: 25px 60px 10px 20px;
+    background-color: transparent;
+}
+
+.navbar-fixed-left .navbar-header > .navbar-brand img {
+    transition: opacity 0.5s ease;
+}
+
+.navbar-fixed-left .navbar-form {
+    border: none;
+    box-shadow: none;
+    margin: 0;
+    padding: 10px 20px 20px 20px;
+}
+
+.navbar-fixed-left .navbar-form input,
+.navbar-fixed-left .navbar-form button {
+    padding: 7px 10px;
+}
+
+.navbar-fixed-left .navbar-nav {
+    margin: 0;
+    width: 100%;
+    display: none; /* Hide menu items by default */
+}
+
+/* When navbar is expanded, show menu items */
+.navbar-fixed-left:not(.collapsed) .navbar-nav {
+    display: block;
+}
+
+.navbar-fixed-left .navbar-nav > .dropdown > a {
+    display: flex;
+    align-items: center;
+}
+
+/* Change color of dropdown anchor element when dropdown is opened */
+.navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="true"] {
+    color: #ff8000; /* Color when expanded */
+}
+
+/* Reset focus color when dropdown is closed */
+.navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="false"]:focus {
+    color: #999999;
+}
+
+/* Re-add hover color after dropdown is closed */
+.navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="false"]:hover {
+    color: #ff8000;
+}
+
+.navbar-fixed-left .navbar-nav > .dropdown > a > .mdi-chevron-down {
+    margin-left: auto;
+}
+
+/* Change arrow direction, color when the dropdown is opened */
+.navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="true"] > .mdi-chevron-down::before {
+    transition: transform 300ms ease;
+    transform: rotate(-180deg);
+    color: #ff8000; /* Color when expanded */
+}
+
+/* Change arrow direction, color when the dropdown is closed */
+.navbar-fixed-left .navbar-nav > .dropdown > a[aria-expanded="false"] > .mdi-chevron-down::before {
+    transition: transform 300ms ease;
+}
+
+.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-toggle > #dropdown_title {
+    display: inline-block;
+    max-width: calc(100% - 51px); /* 51px = 30px of chevron + 14px of caret + 7px of whitespaces between inline elements */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.navbar-fixed-left .navbar-nav > .dropdown > .dropdown-toggle > img {
+    margin-right: 10px;
+}
+
+.navbar-fixed-left .navbar-nav:last-of-type > .dropdown > .dropdown-toggle {
+    text-transform: uppercase;
+}
+
+/* Navbar Dropdown Behavior */
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu {
+    color: #999999 !important;
+    background-color: #151e2a;
+    position: relative;
+    padding: 5px 0;
+    padding-left: 0;
+    margin: 2px 0 0;
+    margin-top: 0;
+    width: 100%;
+    min-width: auto;
+    font-size: 14px;
+    border: none;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-radius: 6px;
+}
+
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu .divider {
+    height: 1px;
+    margin: 11px 0;
+    overflow: hidden;
+    background-color: #646464;
+}
+
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > .dropdown-header {
+    line-height: 2;
+    padding: 3px 20px;
+    text-transform: uppercase;
+}
+
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li {
+    display: flex;
+    align-items: center;
+}
+
+/* Default style for the dropdown links */
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a {
+    color: #ffffff;
+    display: block;
+    clear: left;
+    line-height: 1.285714286;
+    margin-right: 0;
+    padding: 8px 20px;
+    white-space: normal;
+    text-decoration: none;
+    transition: color 200ms ease;
+    flex-grow: 1;
+}
+
+/* Change dropdown link on hover */
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > a:hover {
+    transition: background-color 200ms ease;
+    background-color: #cdf3ff1a;
+    text-decoration: none;
+    border-radius: 8px;
+}
+
+/* Change dropdown link color when item is active (after clicking) */
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li.active > a {
+    color: #ff8000 !important;
+    text-decoration: none;
+}
+
+.navbar-fixed-left .navbar-nav > .dropdown > .nav-dropdown-menu > li > .buttons {
+    display: flex;
+    margin-left: 5px;
+    margin-right: 5px;
+    gap: 5px;
+    text-wrap: nowrap;
+}
+
+.navbar-fixed-left .navbar-nav > li {
+    width: 100%;
+}
+
+.navbar-fixed-left .navbar-nav > li > a {
+    padding: 12px 20px;
+}
+
+.navbar-fixed-left .navbar-nav > li > a > i.mdi {
+    margin-right: 7px;
+}
+
+.navbar-fixed-left .navbar-nav .nav-divider {
+    margin: 11px 17px;
+    width: 206px;
+    background-color: #999999;
+}
+
+/* Hide scrollbar for Chrome, Safari, and Opera */
+.navbar-fixed-left::-webkit-scrollbar {
+    display: none;
+}
+
+.navbar-inverse .navbar-collapse, .navbar-inverse .navbar-form {
+    border-color: transparent;
+}
+
+.navbar-inverse .navbar-nav > li > a {
+    color: #999999;
+    transition: background-color 200ms ease, color 200ms ease;
+}
+
+.navbar-inverse .navbar-nav > .dropdown > .nav-dropdown-menu {
+    background-color: #151e2a;
+}
+
+.nav-dropdown-menu .mdi {
+    margin-left: 2px;
+}
+
+.navbar-toggler {
+    position: fixed;
+    left: 225px;
+    top: 25px;
+    z-index: 1035;
+    justify-content: flex-start;
+    transition-duration: var(--navbar-transition-duration);
+    transition-timing-function: ease-in-out;
+}
+
+/* Collapse icon on homepage panels */
+.collapse-icon {
+    float: right;
+    cursor: pointer !important;
+}
+
+/* Draggable homepage panels fade in effect on page load */
+#draggable-homepage-panels {
+    opacity: 0;
+}
+
+/* Change cursor when hovering over panel headings on homepage */
+#draggable-homepage-panels .panel-heading {
+    cursor: move;
+}
+
+/* Make panel being dragged opaque */
+.dragging {
+    opacity: 0.5;
+}
+
+/* Special diff block `<pre><code>...</code></pre>` backgrounds */
+pre.diff-added {
+    background-color: #e6ffec;
+}
+pre.diff-removed {
+    background-color: #ffebe9;
+}
+pre.diff-added code,
+pre.diff-removed code {
+    background-color: inherit;
+}
+
+/* Fix highlight.js and Bootstrap 3 style incompatibilities */
+pre:has(code.hljs) {
+    padding: 0; /* Reset Bootstrap 3 `pre` padding in case it contains a `code` element already formatted by highlight.js */
+}
+pre code.hljs {
+    padding: 11.5px; /* Same as Bootstrap 3 `pre` padding */
+}
+code.hljs {
+    padding: 2px 4px; /* Same as Bootstrap 3 `code` padding */
+}
+
+/* Table or tile dropdown context menu option spacings and icon colors */
+.context-menu li i {
+    margin-right: 10px;
+}
+.context-menu a:focus i,
+.context-menu a:focus span,
+.context-menu a:hover i,
+.context-menu a:hover span {
+    color: inherit;
+}
+
+/* Tile component styles */
+.tiles {
+    display: grid;
+    grid-gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(445px, 1fr));
+}
+@media (max-width: 1007px) {
+    .tiles {
+        /* More than one tile won't fit into a row when the viewport is narrower than 1007px */
+        /* On the other hand this makes tiles shrink if container width becomes less than 445px */
+        grid-template-columns: 1fr;
+    }
+}
+.tile {
+    background: #ffffff;
+    border: 1px solid #d8d8d8;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+.tile.disabled {
+    background: #f4f4f4;
+    color: #7d7f7c;
+}
+.tile h2 {
+    margin: 10px 0;
+}
+.tile-header {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+}
+.tile-header h3 {
+    color: #999999;
+    display: flex;
+    flex: 1;
+    font-size: 12px;
+    font-weight: 400;
+    margin: 0;
+}
+.tile-description {
+    flex: 1;
+}
+.tile-footer {
+    border-top: 1px solid #d8d8d8;
+    display: flex;
+    padding-top: 10px;
 }

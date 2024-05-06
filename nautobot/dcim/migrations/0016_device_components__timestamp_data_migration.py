@@ -2,7 +2,6 @@
 
 from django.db import migrations
 
-
 # Models that need to share their parent's timestamps.
 COMPONENT_MODELS = [
     "dcim.consoleport",

@@ -7,13 +7,16 @@ from nautobot.core.exceptions import (
     FilterSetFieldNotFound,
     ViewConfigException,
 )
-from nautobot.core.runner.importer import ConfigurationError
 from nautobot.extras.secrets.exceptions import (
     SecretError,
     SecretParametersError,
     SecretProviderError,
     SecretValueNotFoundError,
 )
+
+
+class ConfigurationError(Exception):
+    """Deprecated - no longer used in Nautobot core."""
 
 
 __all__ = (

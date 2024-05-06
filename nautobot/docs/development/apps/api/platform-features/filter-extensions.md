@@ -26,9 +26,9 @@ However, that does not cover every possible use case, to list a few examples:
 There are several conditions that must be met in order to extend a filter:
 
 * The original FilterSet must follow the pattern: `f"{model.__name__}FilterSet"` e.g. `TenantFilterSet`
-* The `FilterExtension.filterset_fields` attribute must be a valid dict, with each key being the filter name (which must start with the plugin's `name` + `_`, e.g. `"example_plugin_description"`, not merely `"description"`) and each value being a valid [django-filter](https://django-filter.readthedocs.io/en/main/) filter
+* The `FilterExtension.filterset_fields` attribute must be a valid dict, with each key being the filter name (which must start with the App's `name` + `_`, e.g. `"example_app_description"`, not merely `"description"`) and each value being a valid [django-filter](https://django-filter.readthedocs.io/en/main/) filter
 
-Nautobot will dynamically generate the additional relevant lookup expressions of an app's defined custom FilterSet field, so no need to additionally register `example_plugin_description__ic`, etc.
+Nautobot will dynamically generate the additional relevant lookup expressions of an app's defined custom FilterSet field, so no need to additionally register `example_app_description__ic`, etc.
 
 Similar to `FilterSet` fields, Nautobot provides a default filter form for each model, however that does not cover every possible use case. To list a few examples of why one may want to extend a filter form:
 
@@ -43,7 +43,7 @@ There are several conditions that must be met in order to extend a filter:
 !!! note
     An app is not required to define both `filterset_fields` and `filterform_fields`.
 
-You can view an example of `filter_extensions.py` by viewing [the one provided](https://github.com/nautobot/nautobot/blob/main/examples/example_plugin/example_plugin/filter_extensions.py) with the Example Plugin.
+You can view an example of `filter_extensions.py` by viewing [the one provided](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/filter_extensions.py) with the Example App.
 
 !!! tip
     The `method` parameter, if used, must be a callable (method/function). Note that because filters with a `method` do their filtering in Python code rather than at the database level, performance of `method` filters is generally much poorer than pure-database filters. The `method` parameter is not supported when using [Dynamic Groups](../../../../user-guide/platform-functionality/dynamicgroup.md).

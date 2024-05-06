@@ -2,6 +2,8 @@ import contextlib
 from copy import deepcopy
 import logging
 import uuid
+
+from django.contrib.contenttypes.fields import GenericRel
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
@@ -10,7 +12,6 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError as DjangoValidationError,
 )
-from django.contrib.contenttypes.fields import GenericRel
 from django.db import models
 from django.db.models.fields.related_descriptors import ManyToManyDescriptor
 from django.db.models.functions import Cast
@@ -18,27 +19,26 @@ from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field, PolymorphicProxySerializer as _PolymorphicProxySerializer
 from rest_framework import relations as drf_relations, serializers
-from rest_framework.fields import CreateOnlyDefault
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.fields import CreateOnlyDefault
 from rest_framework.reverse import reverse
 from rest_framework.serializers import SerializerMethodField
-from rest_framework.utils.model_meta import RelationInfo, _get_to_field
+from rest_framework.utils.model_meta import _get_to_field, RelationInfo
 
-
+from nautobot.core import constants
 from nautobot.core.api.fields import NautobotHyperlinkedRelatedField, ObjectTypeField
 from nautobot.core.api.utils import (
     dict_to_filter_params,
     nested_serializer_factory,
 )
-from nautobot.core import constants
 from nautobot.core.exceptions import ViewConfigException
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.requests import normalize_querydict
+from nautobot.extras.api.customfields import CustomFieldDefaultValues, CustomFieldsDataField
 from nautobot.extras.api.relationships import RelationshipsDataField
-from nautobot.extras.api.customfields import CustomFieldsDataField, CustomFieldDefaultValues
 from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import RelationshipAssociation, Tag
 from nautobot.ipam.fields import VarbinaryIPField
@@ -134,7 +134,15 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
     natural_keys_values = None
     natural_slug = serializers.SerializerMethodField()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, force_csv=False, **kwargs):
+        """
+        Instantiate a BaseModelSerializer.
+
+        The force_csv kwarg allows you to force _is_csv_request() to evaluate True without passing a Request object,
+        which is necessary to be able to export appropriately structured CSV from a Job that doesn't have a Request.
+        """
+        self._force_csv = force_csv
+
         super().__init__(*args, **kwargs)
         # If it is not a Nested Serializer, we should set the depth argument to whatever is in the request's context
         if not self.is_nested:
@@ -254,7 +262,9 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         fields = [
             field
             for field in model._meta.get_fields()
-            if field.is_relation and not field.many_to_many and not field.one_to_many
+            if field.is_relation
+            and not field.many_to_many
+            and not field.one_to_many
             # Ignore GenericRel since its `fk` and `content_type` would be used.
             and not isinstance(field, GenericRel)
         ]
@@ -270,6 +280,8 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
     def _is_csv_request(self):
         """Return True if this a CSV export request"""
+        if self._force_csv:
+            return True
         request = self.context.get("request")
         return hasattr(request, "accepted_media_type") and "text/csv" in request.accepted_media_type
 
@@ -361,10 +373,10 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         self.extend_field_names(fields, "id", at_start=True)
 
         # Move these fields to the end
-        if hasattr(self.Meta.model, "created"):
-            self.extend_field_names(fields, "created")
-        if hasattr(self.Meta.model, "last_updated"):
-            self.extend_field_names(fields, "last_updated")
+        fields_to_include = ["created", "last_updated"]
+        for field in fields_to_include:
+            if hasattr(self.Meta.model, field):
+                self.extend_field_names(fields, field)
 
         def filter_field(field):
             # Eliminate all field names that start with "_" as those fields are not user-facing
@@ -654,6 +666,8 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
                     data[key] = str(value)
                 elif value == constants.VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT:
                     data[key] = constants.CSV_NO_OBJECT
+                elif value == "":
+                    data[key] = value
                 elif not value:
                     data[key] = constants.CSV_NULL_TYPE
                 else:

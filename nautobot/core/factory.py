@@ -1,11 +1,11 @@
 from ipaddress import IPv6Address, IPV6LENGTH, IPv6Network
+import itertools
 
 from django.db.models import Model
 import factory
 from factory.django import DjangoModelFactory
-from faker.providers import BaseProvider
 import factory.random
-import itertools
+from faker.providers import BaseProvider
 
 from nautobot.core import constants
 from nautobot.extras.models import Tag

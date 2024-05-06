@@ -1,32 +1,37 @@
-from copy import deepcopy
 import csv
 from io import BytesIO, StringIO
 import json
+import os
 from unittest import skip
-
-from django.contrib.contenttypes.models import ContentType
-from django.conf import settings
-from django.test import RequestFactory, override_settings, TestCase
-from django.urls import reverse
 
 from constance import config
 from constance.test import override_config
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
+from django.test import override_settings, RequestFactory, TestCase
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.exceptions import ParseError
 from rest_framework.settings import api_settings
+import yaml
 
 from nautobot.circuits.models import Provider
 from nautobot.core import testing
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
+from nautobot.core.api.utils import get_serializer_for_model, get_view_name
 from nautobot.core.api.versioning import NautobotAPIVersioning
 from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
-from nautobot.extras import choices
-from nautobot.extras import models as extras_models
+from nautobot.extras import choices, models as extras_models
 from nautobot.ipam import models as ipam_models
-from nautobot.ipam.api import serializers as ipam_serializers
+from nautobot.ipam.api import serializers as ipam_serializers, views as ipam_api_views
+from nautobot.tenancy import models as tenancy_models
+
+User = get_user_model()
 
 
 class AppTest(testing.APITestCase):
@@ -73,6 +78,9 @@ class APIDocsTestCase(TestCase):
         self.cf_text.save()
 
     def test_api_docs(self):
+        user = User.objects.create_user(username="nautobotuser")
+        self.client.force_login(user)
+
         url = reverse("api_docs")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -183,17 +191,6 @@ class APIVersioningTestCase(testing.APITestCase):
     Testing our custom API versioning, NautobotAPIVersioning.
     """
 
-    OVERRIDE_REST_FRAMEWORK = deepcopy(settings.REST_FRAMEWORK)
-    # For Nautobot 2.0, the default/only supported API version is 2.0, which limits our ability to test with multiple
-    # or min/max versions. For test purposes we force there to be some extra versions available.
-    EXTRA_ALLOWED_VERSIONS = [
-        f"{settings.VERSION_MAJOR - 1}.99",
-        *settings.REST_FRAMEWORK["ALLOWED_VERSIONS"],
-        f"{settings.VERSION_MAJOR}.{settings.VERSION_MINOR + 1}",
-    ]
-    OVERRIDE_REST_FRAMEWORK["ALLOWED_VERSIONS"] = EXTRA_ALLOWED_VERSIONS
-    OVERRIDE_REST_FRAMEWORK["DEFAULT_VERSION"] = EXTRA_ALLOWED_VERSIONS[-1]
-
     def test_default_version(self):
         """Test that a request with no specific API version gets the default version, which is the current version."""
         url = reverse("api-root")
@@ -202,13 +199,6 @@ class APIVersioningTestCase(testing.APITestCase):
         self.assertIn("API-Version", response)
         self.assertEqual(response["API-Version"], api_settings.DEFAULT_VERSION)
         self.assertEqual(response["API-Version"], f"{settings.VERSION_MAJOR}.{settings.VERSION_MINOR}")
-
-        with override_settings(REST_FRAMEWORK=self.OVERRIDE_REST_FRAMEWORK):
-            response = self.client.get(url, **self.header)
-            self.assertHttpStatus(response, 200)
-            self.assertIn("API-Version", response)
-            self.assertEqual(response["API-Version"], self.OVERRIDE_REST_FRAMEWORK["DEFAULT_VERSION"])
-            self.assertEqual(response["API-Version"], f"{settings.VERSION_MAJOR}.{settings.VERSION_MINOR + 1}")
 
     def test_allowed_versions(self):
         """Test that all expected versions are supported."""
@@ -237,7 +227,7 @@ class APIVersioningTestCase(testing.APITestCase):
         self.assertEqual(response["API-Version"], default_version)
 
         max_version = api_settings.ALLOWED_VERSIONS[-1]
-        self.set_api_version(min_version)
+        self.set_api_version(max_version)
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, 200)
         self.assertIn("API-Version", response)
@@ -249,29 +239,6 @@ class APIVersioningTestCase(testing.APITestCase):
         self.assertHttpStatus(response, 406)  # Not Acceptable
         for version in api_settings.ALLOWED_VERSIONS:
             self.assertIn(version, response.data["detail"])
-
-        # Also test with explicitly added additional allowed versions
-        with override_settings(REST_FRAMEWORK=self.OVERRIDE_REST_FRAMEWORK):
-            min_version = self.EXTRA_ALLOWED_VERSIONS[0]
-            self.set_api_version(min_version)
-            response = self.client.get(url, **self.header)
-            self.assertHttpStatus(response, 200)
-            self.assertIn("API-Version", response)
-            self.assertEqual(response["API-Version"], min_version)
-
-            max_version = self.EXTRA_ALLOWED_VERSIONS[-1]
-            self.set_api_version(max_version)
-            response = self.client.get(url, **self.header)
-            self.assertHttpStatus(response, 200)
-            self.assertIn("API-Version", response)
-            self.assertEqual(response["API-Version"], max_version)
-
-            invalid_version = "0.0"
-            self.set_api_version(invalid_version)
-            response = self.client.get(url, **self.header)
-            self.assertHttpStatus(response, 406)  # Not Acceptable
-            for version in self.EXTRA_ALLOWED_VERSIONS:
-                self.assertIn(version, response.data["detail"])
 
     def test_query_version(self):
         """Test that the API version can be specified via a query parameter."""
@@ -301,33 +268,12 @@ class APIVersioningTestCase(testing.APITestCase):
         for version in api_settings.ALLOWED_VERSIONS:
             self.assertIn(version, response.data["detail"])
 
-        # Also test with explicitly added additional allowed versions
-        with override_settings(REST_FRAMEWORK=self.OVERRIDE_REST_FRAMEWORK):
-            min_version = self.EXTRA_ALLOWED_VERSIONS[0]
-            response = self.client.get(f"{url}?api_version={min_version}", **self.header)
-            self.assertHttpStatus(response, 200)
-            self.assertIn("API-Version", response)
-            self.assertEqual(response["API-Version"], min_version)
-
-            max_version = self.EXTRA_ALLOWED_VERSIONS[-1]
-            response = self.client.get(f"{url}?api_version={max_version}", **self.header)
-            self.assertHttpStatus(response, 200)
-            self.assertIn("API-Version", response)
-            self.assertEqual(response["API-Version"], max_version)
-
-            invalid_version = "0.0"
-            response = self.client.get(f"{url}?api_version={invalid_version}", **self.header)
-            self.assertHttpStatus(response, 404)
-            for version in self.EXTRA_ALLOWED_VERSIONS:
-                self.assertIn(version, response.data["detail"])
-
-    @override_settings(REST_FRAMEWORK=OVERRIDE_REST_FRAMEWORK)
     def test_header_and_query_version(self):
         """Test the behavior when the API version is specified in both the Accept header *and* a query parameter."""
         url = reverse("api-root")
 
-        min_version = self.EXTRA_ALLOWED_VERSIONS[0]
-        max_version = self.EXTRA_ALLOWED_VERSIONS[-1]
+        min_version = api_settings.ALLOWED_VERSIONS[0]
+        max_version = api_settings.ALLOWED_VERSIONS[-1]
         # Specify same version both as Accept header and as query parameter (valid)
         self.set_api_version(max_version)
         response = self.client.get(f"{url}?api_version={max_version}", **self.header)
@@ -551,7 +497,7 @@ class NautobotCSVRendererTest(TestCase):
 
         # Make sure a) it's well-constructed parsable CSV and b) it contains what we expect it to, within reason
         reader = csv.DictReader(StringIO(csv_text))
-        read_data = list(reader)[0]
+        read_data = next(iter(reader))
         self.assertIn("id", read_data)
         self.assertEqual(read_data["id"], str(location_type.id))
         self.assertIn("display", read_data)
@@ -677,7 +623,6 @@ class WritableNestedSerializerTest(testing.APITestCase):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "location": self.location1.pk,
             "status": self.statuses.first().pk,
             "vlan_group": self.vlan_group1.pk,
         }
@@ -686,17 +631,17 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(str(response.data["location"]["url"]), self.absolute_api_url(self.location1))
+        self.assertEqual(str(response.data["vlan_group"]["url"]), self.absolute_api_url(self.vlan_group1))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.status, self.statuses.first())
-        self.assertEqual(vlan.location, self.location1)
+        self.assertEqual(vlan.vlan_group, self.vlan_group1)
 
     def test_related_by_pk_no_match(self):
         data = {
             "vid": 160,
             "name": "Test VLAN 160",
-            "location": "00000000-0000-0000-0000-0000000009eb",
             "status": self.statuses.first().pk,
+            "vlan_group": "00000000-0000-0000-0000-0000000009eb",
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
@@ -705,32 +650,30 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["location"][0].startswith("Related object not found"))
+        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
 
     def test_related_by_attributes(self):
         data = {
             "vid": 110,
             "name": "Test VLAN 110",
             "status": self.statuses.first().pk,
-            "location": {"name": "Location 1"},
-            "vlan_group": self.vlan_group1.pk,
+            "vlan_group": {"name": self.vlan_group1.name},
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(str(response.data["location"]["url"]), self.absolute_api_url(self.location1))
+        self.assertEqual(str(response.data["vlan_group"]["url"]), self.absolute_api_url(self.vlan_group1))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
-        self.assertEqual(vlan.location, self.location1)
+        self.assertEqual(vlan.vlan_group, self.vlan_group1)
 
     def test_related_by_attributes_no_match(self):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
             "status": self.statuses.first().pk,
-            "location": {"name": "Location X"},
-            "vlan_group": self.vlan_group1.pk,
+            "vlan_group": {"name": "VLAN GROUP XX"},
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
@@ -739,19 +682,18 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["location"][0].startswith("Related object not found"))
+        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
 
     def test_related_by_attributes_multiple_matches(self):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
             "status": self.statuses.first().pk,
-            "location": {
-                "parent": {
-                    "name": self.location1.name,
-                },
+            "vlan_group": {
+                "location": {
+                    "status": {"name": self.vlan_group1.location.status.name},
+                }
             },
-            "vlan_group": self.vlan_group1.pk,
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
@@ -760,7 +702,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["location"][0].startswith("Multiple objects match"))
+        self.assertTrue(response.data["vlan_group"][0].startswith("Multiple objects match"))
 
     @skip("Composite keys aren't being supported at this time")
     def test_related_by_composite_key(self):
@@ -768,7 +710,6 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "vid": 100,
             "name": "Test VLAN 100",
             "status": self.statuses.first().composite_key,
-            "location": self.location1.composite_key,
             "vlan_group": self.vlan_group1.composite_key,
         }
         url = reverse("ipam-api:vlan-list")
@@ -776,9 +717,9 @@ class WritableNestedSerializerTest(testing.APITestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(str(response.data["location"]["url"]), self.absolute_api_url(self.location1))
+        self.assertEqual(str(response.data["vlan_group"]["url"]), self.absolute_api_url(self.location1))
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
-        self.assertEqual(vlan.location, self.location1)
+        self.assertEqual(vlan.vlan_group, self.vlan_group1)
 
     @skip("Composite keys aren't being supported at this time")
     def test_related_by_composite_key_no_match(self):
@@ -786,7 +727,6 @@ class WritableNestedSerializerTest(testing.APITestCase):
             "vid": 100,
             "name": "Test VLAN 100",
             "status": self.statuses.first().composite_key + COMPOSITE_KEY_SEPARATOR + "xyz",
-            "location": self.location1.composite_key + COMPOSITE_KEY_SEPARATOR + "hello" + COMPOSITE_KEY_SEPARATOR,
             "vlan_group": self.vlan_group1.composite_key[1:-1],
         }
         url = reverse("ipam-api:vlan-list")
@@ -797,16 +737,14 @@ class WritableNestedSerializerTest(testing.APITestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
         self.assertTrue(response.data["status"][0].startswith("Related object not found"))
-        self.assertTrue(response.data["location"][0].startswith("Related object not found"))
         self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
 
     def test_related_by_invalid(self):
         data = {
             "vid": 100,
             "name": "Test VLAN 100",
-            "location": "XXX",
             "status": self.statuses.first().pk,
-            "vlan_group": self.vlan_group2.pk,
+            "vlan_group": "XXX",
         }
         url = reverse("ipam-api:vlan-list")
         self.add_permissions("ipam.add_vlan")
@@ -832,23 +770,36 @@ class APIOrderingTestCase(testing.APITestCase):
             "TextField": "admin_contact",
             "DateTimeField": "created",
         }
+        cls.maxDiff = None
+
+    def _validate_sorted_response(self, response, queryset, field_name, is_fk_field=False):
+        self.assertHttpStatus(response, 200)
+
+        # If the field is a foreign key field, we cannot guarantee the relative order of objects with the same value across multiple objects.
+        # Therefore, we directly compare the names of the foreign key objects.
+        if is_fk_field:
+            api_data = list(map(lambda p: p[field_name]["name"] if p[field_name] else None, response.data["results"]))
+            queryset_data = list(queryset.values_list(f"{field_name}__name", flat=True)[:10])
+        else:
+            api_data = list(map(lambda p: p["id"], response.data["results"]))
+            queryset_data = list(
+                map(
+                    lambda p: str(p),  # pylint: disable=unnecessary-lambda
+                    queryset.values_list("id", flat=True)[:10],
+                )
+            )
+        self.assertEqual(api_data, queryset_data)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_ascending_sort(self):
         """Tests that results are returned in the expected ascending order."""
 
         for field_type, field_name in self.field_type_map.items():
-            with self.subTest(f"Testing {field_type}"):
-                response = self.client.get(f"{self.url}?sort={field_name}&limit=10", **self.header)
-                self.assertHttpStatus(response, 200)
-                self.assertEqual(
-                    list(map(lambda p: p["id"], response.data["results"])),
-                    list(
-                        map(
-                            lambda p: str(p),  # pylint: disable=unnecessary-lambda
-                            Provider.objects.order_by(field_name).values_list("id", flat=True)[:10],
-                        )
-                    ),
+            with self.subTest(f"Testing {field_type} {field_name}"):
+                # Use `name` as a secondary sort as fields like `asn` and `admin_contact` may be null
+                response = self.client.get(f"{self.url}?sort={field_name},name&limit=10", **self.header)
+                self._validate_sorted_response(
+                    response, Provider.objects.all().order_by(field_name, "name"), field_name
                 )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -856,23 +807,91 @@ class APIOrderingTestCase(testing.APITestCase):
         """Tests that results are returned in the expected descending order."""
 
         for field_type, field_name in self.field_type_map.items():
-            with self.subTest(f"Testing {field_type}"):
-                response = self.client.get(f"{self.url}?sort=-{field_name}&limit=10", **self.header)
-                self.assertHttpStatus(response, 200)
-                self.assertEqual(
-                    list(map(lambda p: p["id"], response.data["results"])),
-                    list(
-                        map(
-                            lambda p: str(p),  # pylint: disable=unnecessary-lambda
-                            Provider.objects.order_by(f"-{field_name}").values_list("id", flat=True)[:10],
-                        )
-                    ),
+            with self.subTest(f"Testing {field_type} {field_name}"):
+                # Use `name` as a secondary sort as fields like `asn` and `admin_contact` may be null
+                response = self.client.get(f"{self.url}?sort=-{field_name},name&limit=10", **self.header)
+                self._validate_sorted_response(
+                    response, Provider.objects.all().order_by(f"-{field_name}", "name"), field_name
                 )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_sorting_tree_node_models(self):
+        location_type = dcim_models.LocationType.objects.get(name="Campus")
+        locations = dcim_models.Location.objects.filter(location_type=location_type)
+        devices = dcim_models.Device.objects.all()
+
+        dcim_models.RackGroup.objects.create(name="Rack Group 0", location=locations[0])
+        dcim_models.InventoryItem.objects.create(
+            device=devices[0], name="Inventory Item 0", manufacturer=devices[0].device_type.manufacturer
+        )
+
+        for i in range(1, 3):
+            dcim_models.InventoryItem.objects.create(
+                name=f"Inventory Item {i}",
+                device=devices[i],
+                manufacturer=devices[i].device_type.manufacturer,
+                parent=dcim_models.InventoryItem.objects.all()[i - 1],
+            )
+            dcim_models.RackGroup.objects.create(
+                name=f"Rack Group {i}",
+                location=locations[i],
+                parent=dcim_models.RackGroup.objects.all()[i - 1],
+            )
+
+        tree_node_models = [
+            dcim_models.Location,
+            dcim_models.LocationType,
+            dcim_models.RackGroup,
+            dcim_models.InventoryItem,
+            tenancy_models.TenantGroup,
+        ]
+        # Each of the table has at-least two sortable field_names in the field_names
+        fk_fields = ["location", "parent", "location_type", "manufacturer"]
+        model_field_names = ["name", *fk_fields]
+        for model_class in tree_node_models:
+            url = reverse(get_route_for_model(model_class, "list", api=True))
+            serializer = get_serializer_for_model(model_class)
+            serializer_avail_fields = set(model_field_names) & set(serializer().fields.keys())
+            for field_name in serializer_avail_fields:
+                with self.subTest(f'Assert sorting "{model_class.__name__}" using "{field_name}" field name.'):
+                    response = self.client.get(f"{url}?sort={field_name}&limit=10&depth=1", **self.header)
+                    self._validate_sorted_response(
+                        response=response,
+                        queryset=model_class.objects.extra(order_by=[field_name]),
+                        field_name=field_name,
+                        is_fk_field=field_name in fk_fields,
+                    )
+
+                with self.subTest(f'Assert inverse sorting "{model_class.__name__}" using "{field_name}" field name.'):
+                    response = self.client.get(f"{url}?sort=-{field_name}&limit=10&depth=1", **self.header)
+                    self._validate_sorted_response(
+                        response=response,
+                        queryset=model_class.objects.extra(order_by=[f"-{field_name}"]),
+                        field_name=field_name,
+                        is_fk_field=field_name in fk_fields,
+                    )
+
+
+class SettingsJSONSchemaViewTestCase(testing.APITestCase):
+    """Tests for the /api/settings-schema/ REST API endpoint."""
+
+    def test_correct_response(self):
+        file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/settings.yaml"
+        with open(file_path, "r") as schemafile:
+            expected_schema_data = yaml.safe_load(schemafile)
+
+        url = reverse("setting_schema_json")
+        response = self.client.get(url, **self.header)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, expected_schema_data)
 
 
 class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
     def test_get_menu(self):
         """Asset response from new ui nav menu api returns a well formatted registry["new_ui_nav_menu"] expected by nautobot-ui."""
+        self.user.is_superuser = True
+        self.user.save()
+
         url = reverse("ui-api:get-menu")
         response = self.client.get(url, **self.header)
         expected_response = {
@@ -961,7 +980,7 @@ class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
             },
             "Platform": {
                 "Platform": {
-                    "Installed Apps": "/plugins/installed-plugins/",
+                    "Installed Apps": "/apps/installed-apps/",
                     "Git Repositories": "/extras/git-repositories/",
                 },
                 "Governance": {"Change Log": "/extras/object-changes/"},
@@ -975,47 +994,27 @@ class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
                 },
             },
         }
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, expected_response)
 
 
-class GetSettingsAPIViewTestCase(testing.APITestCase):
-    def test_get_settings(self):
-        """Assert get settings value"""
-        url = reverse("ui-api:settings")
+class NautobotGetViewNameTest(TestCase):
+    """
+    Some unit tests for the get_view_name() functionality.
+    """
 
-        with self.subTest("Test get allowed settings"):
-            url_with_filters = f"{url}?name=FEEDBACK_BUTTON_ENABLED"
-            response = self.client.get(url_with_filters, **self.header)
-            self.assertEqual(response.status_code, 200)
-            expected_response = {"FEEDBACK_BUTTON_ENABLED": True}
-            self.assertEqual(response.data, expected_response)
-        with self.subTest("Test get not-allowed settings"):
-            url_with_filters = f"{url}?name=NAPALM_PASSWORD"
-            response = self.client.get(url_with_filters, **self.header)
-            self.assertEqual(response.status_code, 400)
-            expected_response = {"error": "Invalid settings names specified: NAPALM_PASSWORD."}
-            self.assertEqual(response.data, expected_response)
-
-
-class NewUIReadyRoutesAPIViewTestCase(testing.APITestCase):
-    def test_new_ui_ready_routes(self):
-        """Assert get settings value"""
-        url = reverse("ui-api:new-ui-ready-routes")
-        response = self.client.get(url, **self.header)
-        self.assertEqual(response.status_code, 200)
-        expected_response = [
-            "^$",
-            "^login\\/$",
-            "^dcim\\/device\\-types\\/$",
-            "^dcim\\/device\\-types\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
-            "^dcim\\/devices\\/$",
-            "^dcim\\/devices\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
-            "^dcim\\/locations\\/$",
-            "^dcim\\/locations\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
-            "^ipam\\/ip\\-addresses\\/$",
-            "^ipam\\/ip\\-addresses\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
-            "^ipam\\/prefixes\\/$",
-            "^ipam\\/prefixes\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\/$",
-        ]
-        self.assertEqual(sorted(response.data), sorted(expected_response))
+    @override_settings(ALLOWED_HOSTS=["*"])
+    def test_get(self):
+        """Assert that the proper view name is displayed for the correct view."""
+        viewset = ipam_api_views.PrefixViewSet
+        # We need to get a specific view, so we need to set the class kwargs
+        view_kwargs = {
+            "Prefixes": {"suffix": "List", "basename": "prefix", "detail": False},
+            "Prefix": {"suffix": "Instance", "basename": "prefix", "detail": True},
+            "Available IPs": {"name": "Available IPs"},
+            "Available Prefixes": {"name": "Available Prefixes"},
+            "Notes": {"name": "Notes"},
+        }
+        for view_name, view_kwarg in view_kwargs.items():
+            self.assertEqual(view_name, get_view_name(viewset(**view_kwarg)))

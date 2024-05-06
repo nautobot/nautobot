@@ -2,9 +2,9 @@
 <p>
     <small class="text-muted">
     {% if object.created %}
-    Created {{ object.created }} &middot;
+    <span title="{{ object.created }}"><i class="mdi mdi-bookmark-plus"></i> {{ object.created }}</span> |
     {% endif %}
-    Updated <span title="{{ object.last_updated }}">{{ object.last_updated|timesince }}</span> ago
+    <span title="{{ object.last_updated }}"><i class="mdi mdi-clock"></i> {{ object.last_updated|timesince }}</span> ago
     </small>
 </p>
 {% endif %}

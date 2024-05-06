@@ -8,6 +8,7 @@ import sys
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.validators import ValidationError
 from django.db import transaction
 from django.db.models import Q
@@ -15,16 +16,17 @@ from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
 
 from nautobot.core.choices import ColorChoices
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
+from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.constants import (
+    CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL,
     EXTRAS_FEATURES,
-    JOB_MAX_GROUPING_LENGTH,
     JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
 from nautobot.extras.registry import registry
-
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +104,18 @@ class ChangeLoggedModelsQuery(FeaturedQueryMixin):
         Return a list of classes that implement the to_objectchange method
         """
         return [_class for _class in apps.get_models() if hasattr(_class, "to_objectchange")]
+
+
+def change_logged_models_queryset():
+    """
+    Cacheable function for cases where we need this queryset many times, such as when saving multiple objects.
+    """
+    cache_key = "nautobot.extras.utils.change_logged_models_queryset"
+    queryset = cache.get(cache_key)
+    if queryset is None:
+        queryset = ChangeLoggedModelsQuery().as_queryset()
+        cache.set(cache_key, queryset)
+    return queryset
 
 
 @deconstructible
@@ -338,9 +352,9 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
     and in that case we need to not import models ourselves.
     """
     from nautobot.extras.jobs import (
-        JobHookReceiver,
         JobButtonReceiver,
-    )  # imported here to prevent circular import problem
+        JobHookReceiver,
+    )
 
     # Unrecoverable errors
     if len(job_class.__module__) > JOB_MAX_NAME_LENGTH:
@@ -365,12 +379,12 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
         return (None, False)
 
     # Recoverable errors
-    if len(job_class.grouping) > JOB_MAX_GROUPING_LENGTH:
+    if len(job_class.grouping) > CHARFIELD_MAX_LENGTH:
         logger.warning(
             'Job class "%s" grouping "%s" exceeds %d characters in length, it will be truncated in the database.',
             job_class.__name__,
             job_class.grouping,
-            JOB_MAX_GROUPING_LENGTH,
+            CHARFIELD_MAX_LENGTH,
         )
     if len(job_class.name) > JOB_MAX_NAME_LENGTH:
         logger.warning(
@@ -411,7 +425,7 @@ def refresh_job_model_from_job_class(job_model_class, job_class):
                 module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
                 job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
                 defaults={
-                    "grouping": job_class.grouping[:JOB_MAX_GROUPING_LENGTH],
+                    "grouping": job_class.grouping[:CHARFIELD_MAX_LENGTH],
                     "name": job_name,
                     "is_job_hook_receiver": issubclass(job_class, JobHookReceiver),
                     "is_job_button_receiver": issubclass(job_class, JobButtonReceiver),
@@ -526,10 +540,17 @@ def migrate_role_data(
         to_role_choiceset (ChoiceSet): If `to_role_field` is a choices field, the corresponding ChoiceSet for it
         is_m2m_field (bool): True if the role fields are both ManyToManyFields, else False
     """
+    if from_role_model is not None and from_role_choiceset is not None:
+        raise RuntimeError("from_role_model and from_role_choiceset are mutually exclusive")
+    if from_role_model is None and from_role_choiceset is None:
+        raise RuntimeError("One of from_role_model or from_role_choiceset must be specified and not None")
+    if to_role_model is not None and to_role_choiceset is not None:
+        raise RuntimeError("to_role_model and to_role_choiceset are mutually exclusive")
+    if to_role_model is None and to_role_choiceset is None:
+        raise RuntimeError("One of to_role_model or to_role_choiceset must be specified and not None")
+
     if from_role_model is not None:
-        assert from_role_choiceset is None
         if to_role_model is not None:
-            assert to_role_choiceset is None
             # Mapping "from" model instances to corresponding "to" model instances
             roles_translation_mapping = {
                 # Use .filter().first(), not .get() because "to" role might not exist, especially on reverse migrations
@@ -537,7 +558,6 @@ def migrate_role_data(
                 for from_role in from_role_model.objects.all()
             }
         else:
-            assert to_role_choiceset is not None
             # Mapping "from" model instances to corresponding "to" choices
             # We need to use `label` to look up the from_role instance, but `value` is what we set for the to_role_field
             inverted_to_role_choiceset = {label: value for value, label in to_role_choiceset.CHOICES}
@@ -546,9 +566,7 @@ def migrate_role_data(
                 for from_role in from_role_model.objects.all()
             }
     else:
-        assert from_role_choiceset is not None
         if to_role_model is not None:
-            assert to_role_choiceset is None
             # Mapping "from" choices to corresponding "to" model instances
             roles_translation_mapping = {
                 # Use .filter().first(), not .get() because "to" role might not exist, especially on reverse migrations
@@ -556,7 +574,6 @@ def migrate_role_data(
                 for from_role_value, from_role_label in from_role_choiceset.CHOICES
             }
         else:
-            assert to_role_choiceset is not None
             # Mapping "from" choices to corresponding "to" choices; we don't currently use this case, but it should work
             # We need to use `label` to look up the from_role instance, but `value` is what we set for the to_role_field
             inverted_to_role_choiceset = {label: value for value, label in to_role_choiceset.CHOICES}
@@ -595,3 +612,38 @@ def migrate_role_data(
             model_to_migrate._meta.label,
             to_role_field_name,
         )
+
+
+def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
+    """
+    Deletes objects in the provided queryset and creates ObjectChange instances in bulk to improve performance.
+    For use with bulk delete views. This operation is wrapped in an atomic transaction.
+    """
+    from nautobot.extras.models import ObjectChange
+    from nautobot.extras.signals import change_context_state
+
+    change_context = change_context_state.get()
+    if change_context is None:
+        raise ValueError("Change logging must be enabled before using bulk_delete_with_bulk_change_logging")
+
+    with transaction.atomic():
+        try:
+            queued_object_changes = []
+            change_context.defer_object_changes = True
+            for obj in qs.iterator():
+                if not hasattr(obj, "to_objectchange"):
+                    break
+                if len(queued_object_changes) >= batch_size:
+                    ObjectChange.objects.bulk_create(queued_object_changes)
+                    queued_object_changes = []
+                oc = obj.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
+                oc.user = change_context.user
+                oc.request_id = change_context.change_id
+                oc.change_context = change_context.context
+                oc.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+                queued_object_changes.append(oc)
+            ObjectChange.objects.bulk_create(queued_object_changes)
+            return qs.delete()
+        finally:
+            change_context.defer_object_changes = False
+            change_context.reset_deferred_object_changes()

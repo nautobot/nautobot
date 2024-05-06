@@ -10,8 +10,8 @@ import nautobot
 # differs.
 # os.environ.setdefault("DJANGO_SETTINGS_MODULE", "nautobot.core.settings")
 
-# Instead of importing `DJANGO_SETTINGS_MODULE` we're using the custom loader
-# pattern from `nautobot.core.runner` to read environment or config path for us.
+# Instead of just pointing to `DJANGO_SETTINGS_MODULE` and letting Django run with it,
+# we're using the custom Nautobot loader code to read environment or config path for us.
 nautobot.setup()
 
 # Use try/except because we might not be running uWSGI. If `settings.WEBSERVER_WARMUP` is `True`,

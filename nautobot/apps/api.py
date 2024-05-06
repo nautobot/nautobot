@@ -19,7 +19,7 @@ from nautobot.core.api.fields import (
 )
 from nautobot.core.api.mixins import WritableSerializerMixin
 from nautobot.core.api.parsers import NautobotCSVParser
-from nautobot.core.api.routers import OrderedDefaultRouter
+from nautobot.core.api.routers import AuthenticatedAPIRootView as APIRootView, OrderedDefaultRouter
 from nautobot.core.api.schema import NautobotAutoSchema
 from nautobot.core.api.serializers import (
     OptInFieldsMixin,
@@ -36,7 +36,6 @@ from nautobot.core.api.utils import (
     versioned_serializer_selector,
 )
 from nautobot.core.api.views import (
-    APIRootView,
     BulkDestroyModelMixin,
     BulkUpdateModelMixin,
     GetObjectCountsView,
@@ -47,7 +46,6 @@ from nautobot.core.api.views import (
 from nautobot.extras.api.fields import MultipleChoiceJSONField
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.extras.api.views import CustomFieldModelViewSet, NautobotModelViewSet, NotesViewSetMixin
-
 
 __all__ = (
     "APIRootView",

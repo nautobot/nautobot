@@ -3,10 +3,13 @@ from django_tables2.utils import Accessor
 
 from nautobot.core.tables import BaseTable, BooleanColumn
 from nautobot.dcim.models import ConsolePort, Interface, PowerPort
+
 from .cables import CableTable
 from .devices import (
     ConsolePortTable,
     ConsoleServerPortTable,
+    ControllerManagedDeviceGroupTable,
+    ControllerTable,
     DeviceBayTable,
     DeviceConsolePortTable,
     DeviceConsoleServerPortTable,
@@ -15,26 +18,29 @@ from .devices import (
     DeviceImportTable,
     DeviceInterfaceTable,
     DeviceInventoryItemTable,
-    DevicePowerPortTable,
     DevicePowerOutletTable,
+    DevicePowerPortTable,
     DeviceRearPortTable,
     DeviceRedundancyGroupTable,
     DeviceTable,
     FrontPortTable,
-    InterfaceTable,
-    InterfaceRedundancyGroupTable,
     InterfaceRedundancyGroupAssociationTable,
+    InterfaceRedundancyGroupTable,
+    InterfaceTable,
     InventoryItemTable,
     PlatformTable,
     PowerOutletTable,
     PowerPortTable,
     RearPortTable,
+    SoftwareImageFileTable,
+    SoftwareVersionTable,
     VirtualChassisTable,
 )
 from .devicetypes import (
     ConsolePortTemplateTable,
     ConsoleServerPortTemplateTable,
     DeviceBayTemplateTable,
+    DeviceFamilyTable,
     DeviceTypeTable,
     FrontPortTemplateTable,
     InterfaceTemplateTable,
@@ -46,10 +52,10 @@ from .devicetypes import (
 from .locations import LocationTable, LocationTypeTable
 from .power import PowerFeedTable, PowerPanelTable
 from .racks import (
-    RackTable,
     RackDetailTable,
     RackGroupTable,
     RackReservationTable,
+    RackTable,
 )
 
 __all__ = (
@@ -59,11 +65,14 @@ __all__ = (
     "ConsolePortTemplateTable",
     "ConsoleServerPortTable",
     "ConsoleServerPortTemplateTable",
+    "ControllerTable",
+    "ControllerManagedDeviceGroupTable",
     "DeviceBayTable",
     "DeviceBayTemplateTable",
     "DeviceConsolePortTable",
     "DeviceConsoleServerPortTable",
     "DeviceDeviceBayTable",
+    "DeviceFamilyTable",
     "DeviceFrontPortTable",
     "DeviceImportTable",
     "DeviceInterfaceTable",
@@ -99,6 +108,8 @@ __all__ = (
     "RackTable",
     "RearPortTable",
     "RearPortTemplateTable",
+    "SoftwareImageFileTable",
+    "SoftwareVersionTable",
     "VirtualChassisTable",
 )
 

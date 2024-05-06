@@ -143,4 +143,20 @@
     {% include 'inc/paginator.html' with paginator=vlan_table.paginator page=vlan_table.page %}
     {% endif %}
      <div class="row"></div>
+    {% if controller_table %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Controllers</strong>
+            </div>
+            {% include 'inc/table.html' with table=controller_table %}
+            {% if perms.dcim.add_controller %}
+                <div class="panel-footer text-right noprint">
+                    <a href="{% url 'dcim:controller_add' %}?role={{ object.pk }}" class="btn btn-xs btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Controller
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    {% include 'inc/paginator.html' with paginator=controller_table.paginator page=controller_table.page %}
+    {% endif %}
  {% endblock content_full_width_page %}

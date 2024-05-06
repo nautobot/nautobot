@@ -156,6 +156,8 @@ We also want to deliberately install the `wheel` library which will tell Pip to 
 pip3 install --upgrade pip wheel
 ```
 
+By default, Pip will now install Python packages as wheels. In most cases this is desirable, however in some cases the wheel versions of packages may have been compiled with options differing from what is needed for a specific scenario. One such case presents itself here - the wheel for `pyuwsgi`, a key web server component of Nautobot, is built without SSL (HTTPS) support. This may be fine for a non-production deployment of Nautobot, such as in your lab, but for production deployments, not supporting HTTPS will not do at all. Fortunately, you can tell Pip when you don't want to use wheels for a specific package by passing the `--no-binary=<package>` CLI parameter. We'll use that below.
+
 ## Install Nautobot
 
 === "PostgreSQL (Ubuntu and RHEL Flavors)"
@@ -163,7 +165,7 @@ pip3 install --upgrade pip wheel
     Use Pip to install Nautobot:
 
     ```no-highlight
-    pip3 install nautobot
+    pip3 install --no-binary=pyuwsgi nautobot
     ```
 
 === "MySQL (Ubuntu and RHEL Flavors)"
@@ -171,7 +173,7 @@ pip3 install --upgrade pip wheel
     Use Pip to install Nautobot with the MySQL client:
 
     ```no-highlight
-    pip3 install "nautobot[mysql]"
+    pip3 install --no-binary=pyuwsgi "nautobot[mysql]"
     ```
 
 Great! We have `NAUTOBOT_ROOT` ready for use by the `nautobot` user, so let's proceed to verifying the installation.
@@ -239,7 +241,7 @@ All Python packages required by Nautobot will be installed automatically when ru
 
 Nautobot also supports the ability to install optional Python packages. If desired, these packages should be listed in `local_requirements.txt` within the `NAUTOBOT_ROOT` directory, such as `/opt/nautobot/local_requirements.txt`.
 
-If you decide to use any [Nautobot plugins](../../../apps/index.md), they should be listed in this file.
+If you decide to use any [Nautobot Apps](../../../apps/index.md), they should be listed in this file.
 
 We will cover two examples of common optional settings below.
 
@@ -280,20 +282,6 @@ Nautobot does not come with any predefined user accounts. You'll need to create 
 ```no-highlight
 nautobot-server createsuperuser
 ```
-
-## Build Nautobot 2.0 UI
-
-Nautobot 2.0 introduces a new user interface. This interface is built using [React](https://react.dev/) and requires Node.js version 18 or higher to build the UI.
-
-### Build the UI
-
-Nautobot provides a management command to install the required Node.js packages and build the UI:
-
-```no-highlight
-nautobot-server build_ui --npm-install
-```
-
-This only needs to be performed manually the first time Nautobot v2 is installed. The [`post_upgrade`](../tools/nautobot-server.md#post_upgrade) command that must be ran after any Nautobot upgrade will automatically re-run this command.
 
 ## Create Static Directories
 
@@ -356,9 +344,9 @@ Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on
 !!! important
     Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background Celery worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server celery worker` separately. For production use, Nautobot and the worker processes should be managed by `systemd` rather than started manually, as described in the next section of this documentation.
 
-Note that the initial user interface will be locked down for non-authenticated users.
+Unauthenticated users will be presented with a login page:
 
-![Nautobot UI as seen by a non-authenticated user](../../../media/installation/nautobot_ui_guest.png)
+![Nautobot UI as seen by a non-authenticated user](../../../media/installation/nautobot_ui_login.png)
 
 Try logging in using the superuser account we just created. Once authenticated, you'll be able to access all areas of the UI:
 

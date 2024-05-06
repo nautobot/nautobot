@@ -41,6 +41,10 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 ![Gif of GraphQL](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_graphql.gif?raw=true "GraphQL API")
 
+---
+
+![Gif of Modes](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_modes.gif?raw=true "Modes")
+
 ## Installation
 
 Please see [the documentation](https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/installation/) for instructions on installing Nautobot.
@@ -66,6 +70,10 @@ There are many plugins available within the Nautobot Apps ecosystem. The below s
 #### ChatOps Plugin
 
 ![Gif of chatops](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_chatops.gif?raw=true "ChatOps")
+
+#### Device Lifecycle Management Plugin
+
+![Gif of DLM](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_device_lifecycle_management.gif?raw=true "Device Lifecycle Management")
 
 ## Providing Feedback
 

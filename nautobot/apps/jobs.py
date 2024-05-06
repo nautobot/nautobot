@@ -12,6 +12,7 @@ from nautobot.extras.jobs import (
     enqueue_job_hooks,
     FileVar,
     get_job,
+    get_jobs,
     IntegerVar,
     IPAddressVar,
     IPAddressWithMaskVar,
@@ -21,6 +22,7 @@ from nautobot.extras.jobs import (
     Job,
     JobButtonReceiver,
     JobHookReceiver,
+    JSONVar,
     MultiChoiceVar,
     MultiObjectVar,
     ObjectVar,
@@ -29,7 +31,6 @@ from nautobot.extras.jobs import (
     StringVar,
     TextVar,
 )
-
 
 __all__ = (
     "BaseJob",
@@ -40,6 +41,7 @@ __all__ = (
     "enqueue_job_hooks",
     "FileVar",
     "get_job",
+    "get_jobs",
     "GitRepositoryDryRun",
     "GitRepositorySync",
     "IntegerVar",
@@ -51,6 +53,7 @@ __all__ = (
     "Job",
     "JobButtonReceiver",
     "JobHookReceiver",
+    "JSONVar",
     "MultiChoiceVar",
     "MultiObjectVar",
     "NautobotKombuJSONEncoder",

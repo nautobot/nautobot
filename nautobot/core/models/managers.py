@@ -3,7 +3,6 @@ import logging
 from django.db.models import Manager
 from taggit.managers import _TaggableManager
 
-
 logger = logging.getLogger(__name__)
 
 

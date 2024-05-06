@@ -1,6 +1,6 @@
 import os
 import tempfile
-from unittest import mock, expectedFailure
+from unittest import expectedFailure, mock
 import uuid
 import warnings
 
@@ -13,11 +13,11 @@ from django.db.utils import IntegrityError
 from django.test import override_settings
 from django.test.utils import isolate_apps
 from django.utils.timezone import now
+from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
 
 from nautobot.circuits.models import CircuitType
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import TestCase
-from nautobot.core.testing.mixins import NautobotTestCaseMixin
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import (
     Device,
@@ -28,8 +28,8 @@ from nautobot.dcim.models import (
     Platform,
 )
 from nautobot.extras.choices import (
-    LogLevelChoices,
     JobResultStatusChoices,
+    LogLevelChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
     SecretsGroupAccessTypeChoices,
@@ -48,6 +48,7 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     DynamicGroup,
     ExportTemplate,
+    ExternalIntegration,
     FileAttachment,
     FileProxy,
     GitRepository,
@@ -64,6 +65,7 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.models.statuses import StatusModel
+from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant
@@ -73,6 +75,8 @@ from nautobot.virtualization.models import (
     ClusterType,
     VirtualMachine,
 )
+
+from example_app.jobs import ExampleJob
 
 
 class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
@@ -869,6 +873,95 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
             nonduplicate_template.validated_save()
 
 
+class ExternalIntegrationTest(ModelTestCases.BaseModelTestCase):
+    """
+    Tests for the ExternalIntegration model class.
+    """
+
+    model = ExternalIntegration
+
+    def test_remote_url_validation(self):
+        with self.assertRaises(ValidationError):
+            ei = ExternalIntegration(
+                name="Test Integration",
+                remote_url="foo://localhost",
+            )
+            ei.validated_save()
+
+        ei.remote_url = "http://localhost"
+        ei.validated_save()
+
+    def test_timeout_validation(self):
+        with self.assertRaises(ValidationError):
+            ei = ExternalIntegration(
+                name="Test Integration",
+                remote_url="http://localhost",
+                timeout=-1,
+            )
+            ei.validated_save()
+
+        ei.timeout = 0
+        ei.validated_save()
+        ei.timeout = 65536
+        ei.validated_save()
+
+    def test_render_extra_config(self):
+        ei_with_extra_config = ExternalIntegration.objects.filter(extra_config__isnull=False)
+        ei_without_extra_config = ExternalIntegration.objects.filter(extra_config__isnull=True)
+        ei = ei_with_extra_config.first()
+        self.assertEqual(
+            ei.render_extra_config({}),
+            ei.extra_config,
+        )
+        self.assertEqual(
+            ei_without_extra_config.first().render_extra_config({}),
+            {},
+        )
+        # Data gets substituted correctly
+        ei.extra_config = {"config": "{{ data }}"}
+        ei.save()
+        context = {"data": "extra_config_data"}
+        self.assertEqual(ei.render_extra_config(context), {"config": "extra_config_data"})
+        # Invalid template tag
+        ei.extra_config = {"context": "{% foo %}"}
+        ei.save()
+        with self.assertRaises(TemplateSyntaxError):
+            ei.render_extra_config({})
+        # Invalid template helper
+        ei.extra_config = "{{ data | notvalid }}"
+        ei.save()
+        with self.assertRaises(TemplateAssertionError):
+            ei.render_extra_config({})
+
+    def test_render_headers(self):
+        ei_with_headers = ExternalIntegration.objects.filter(headers__isnull=False)
+        ei_without_headers = ExternalIntegration.objects.filter(headers__isnull=True)
+        ei = ei_with_headers.first()
+        self.assertEqual(
+            ei.render_headers({}),
+            ei.headers,
+        )
+        self.assertEqual(
+            ei_without_headers.first().render_headers({}),
+            {},
+        )
+        # Data gets substituted correctly
+        ei.headers = {"headers": "{{ data }}"}
+        ei.save()
+        context = {"data": "headers_data"}
+        self.assertEqual(ei.render_headers(context), {"headers": "headers_data"})
+        # Invalid template tag
+        ei.headers = {"context": "{% foo %}"}
+        ei.save()
+        with self.assertRaises(TemplateSyntaxError):
+            ei.render_headers({})
+        # Invalid template helper
+        ei.headers = "{{ data | notvalid }}"
+        ei.save()
+        with self.assertRaises(TemplateAssertionError):
+            ei.render_headers({})
+
+
 class FileProxyTest(ModelTestCases.BaseModelTestCase):
     model = FileProxy
 
@@ -965,49 +1058,53 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         # JobModel instances are automatically instantiated at startup, so we just need to look them up.
         cls.local_job = JobModel.objects.get(job_class_name="TestPass")
         cls.job_containing_sensitive_variables = JobModel.objects.get(job_class_name="ExampleLoggingJob")
-        cls.plugin_job = JobModel.objects.get(job_class_name="ExampleJob")
+        cls.app_job = JobModel.objects.get(job_class_name="ExampleJob")
 
     def test_job_class(self):
         self.assertEqual(self.local_job.job_class.description, "Validate job import")
 
-        from example_plugin.jobs import ExampleJob
-
-        self.assertEqual(self.plugin_job.job_class, ExampleJob)
+        self.assertEqual(self.app_job.job_class, ExampleJob)
 
     def test_class_path(self):
         self.assertEqual(self.local_job.class_path, "pass.TestPass")
         self.assertEqual(self.local_job.class_path, self.local_job.job_class.class_path)
 
-        self.assertEqual(self.plugin_job.class_path, "example_plugin.jobs.ExampleJob")
-        self.assertEqual(self.plugin_job.class_path, self.plugin_job.job_class.class_path)
+        self.assertEqual(self.app_job.class_path, "example_app.jobs.ExampleJob")
+        self.assertEqual(self.app_job.class_path, self.app_job.job_class.class_path)
 
     def test_latest_result(self):
         self.assertEqual(self.local_job.latest_result, None)
-        self.assertEqual(self.plugin_job.latest_result, None)
+        self.assertEqual(self.app_job.latest_result, None)
         # TODO(Glenn): create some JobResults and test that this works correctly for them as well.
 
     def test_defaults(self):
         """Verify that defaults for discovered JobModel instances are as expected."""
         for job_model in JobModel.objects.all():
-            self.assertTrue(job_model.installed)
-            # System jobs should be enabled by default, all others are disabled by default
-            if job_model.module_name.startswith("nautobot."):
-                self.assertTrue(job_model.enabled)
-            else:
-                self.assertFalse(job_model.enabled)
-            for field_name in JOB_OVERRIDABLE_FIELDS:
-                if field_name == "name" and "duplicate_name" in job_model.job_class.__module__:
-                    pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
-                else:
-                    self.assertFalse(
-                        getattr(job_model, f"{field_name}_override"),
-                        (field_name, getattr(job_model, field_name), getattr(job_model.job_class, field_name)),
-                    )
-                    self.assertEqual(
-                        getattr(job_model, field_name),
-                        getattr(job_model.job_class, field_name),
-                        field_name,
-                    )
+            with self.subTest(class_path=job_model.class_path):
+                try:
+                    self.assertTrue(job_model.installed)
+                    # System jobs should be enabled by default, all others are disabled by default
+                    if job_model.module_name.startswith("nautobot."):
+                        self.assertTrue(job_model.enabled)
+                    else:
+                        self.assertFalse(job_model.enabled)
+                    for field_name in JOB_OVERRIDABLE_FIELDS:
+                        if field_name == "name" and "duplicate_name" in job_model.job_class.__module__:
+                            pass  # name field for test_duplicate_name jobs tested in test_duplicate_job_name below
+                        else:
+                            self.assertFalse(
+                                getattr(job_model, f"{field_name}_override"),
+                                (field_name, getattr(job_model, field_name), getattr(job_model.job_class, field_name)),
+                            )
+                            self.assertEqual(
+                                getattr(job_model, field_name),
+                                getattr(job_model.job_class, field_name),
+                                field_name,
+                            )
+                except AssertionError:
+                    print(list(JobModel.objects.all()))
+                    print(registry["jobs"])
+                    raise
 
     def test_duplicate_job_name(self):
         self.assertTrue(JobModel.objects.filter(name="TestDuplicateNameNoMeta").exists())
@@ -1180,7 +1277,7 @@ class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual("", log.absolute_url)
 
 
-class RoleTest(NautobotTestCaseMixin, ModelTestCases.BaseModelTestCase):
+class RoleTest(ModelTestCases.BaseModelTestCase):
     """Tests for `Role` model class."""
 
     model = Role
@@ -1719,6 +1816,15 @@ class JobResultTestCase(TestCase):
             with self.assertRaises(TypeError) as err:
                 JobResult.objects.create(name="ExampleJob2", user=None, result=lambda: 1)
             self.assertEqual(str(err.exception), "Object of type function is not JSON serializable")
+
+    def test_get_task(self):
+        """Assert bug fix for `Cannot resolve keyword 'task_id' into field` #5440"""
+        data = {
+            "output": "valid data",
+        }
+        job_result = JobResult.objects.create(name="ExampleJob1", user=None, result=data)
+
+        self.assertEqual(JobResult.objects.get_task(job_result.pk), job_result)
 
 
 class WebhookTest(ModelTestCases.BaseModelTestCase):

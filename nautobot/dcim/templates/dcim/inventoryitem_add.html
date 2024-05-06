@@ -1,0 +1,48 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+{% load static %}
+
+{% block title %}Create {{ component_type }}{% endblock %}
+
+{% block form %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <strong>{{ component_type|title }}</strong>
+                </div>
+                <div class="panel-body">
+                    {% for field in form.hidden_fields %}{{ field }}{% endfor %}
+                    {% render_field form.device %}
+                    {% render_field form.parent %}
+                    {% render_field form.name_pattern %}
+                    {% render_field form.label_pattern %}
+                    {% render_field form.manufacturer %}
+                    {% render_field form.software_version %}
+                    <div class="form-group" id="software_version_image_container" style="display:none">
+                        <div class="col-md-3"></div>
+                        <div class="col-md-9">
+                            <span class="help-block">
+                                <span id="software_version_image_description"><img src="{% static 'img/ajax-loader.gif' %}"></span>
+                                <ul id="software_version_image_list">
+                                    <li> Software images for the selected software version will appear here </li>
+                                </ul>
+                            </span>
+                        </div>
+                    </div>
+                    {% render_field form.software_image_files %}
+                    {% render_field form.part_id %}
+                    {% render_field form.serial %}
+                    {% render_field form.asset_tag %}
+                    {% render_field form.description %}
+                </div>
+            </div>
+            {% include 'inc/extras_features_edit_form_fields.html' with form=model_form %}
+{% endblock %}
+{% block buttons %}
+                    <button type="submit" name="_create" class="btn btn-primary">Create</button>
+                    <button type="submit" name="_addanother" class="btn btn-primary">Create and Add More</button>
+                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+{% endblock %}
+
+{% block javascript %}
+    {% include 'dcim/inc/edit_form_softwareversion_js.html' %}
+{% endblock %}

@@ -1,15 +1,15 @@
 import json
 import re
 
-from django.contrib.contenttypes.models import ContentType
 from django.core import exceptions
-from django.core.validators import RegexValidator, MaxLengthValidator
+from django.core.validators import MaxLengthValidator, RegexValidator
 from django.db import models
 from django.utils.text import slugify
 from django_extensions.db.fields import AutoSlugField as _AutoSlugField
 from netaddr import AddrFormatError, EUI, mac_unix_expanded
 from taggit.managers import TaggableManager
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import fields, widgets
 from nautobot.core.models import ordering
 from nautobot.core.models.managers import TagsManager
@@ -134,7 +134,7 @@ class AutoSlugField(_AutoSlugField):
     """
 
     def __init__(self, *args, **kwargs):
-        kwargs.setdefault("max_length", 100)
+        kwargs.setdefault("max_length", CHARFIELD_MAX_LENGTH)
         kwargs.setdefault("editable", True)
         kwargs.setdefault("overwrite_on_add", False)
         kwargs.setdefault("unique", True)
@@ -187,7 +187,18 @@ class ForeignKeyLimitedByContentTypes(ForeignKeyWithAutoRelatedName):
     """
 
     def get_limit_choices_to(self):
-        return {"content_types": ContentType.objects.get_for_model(self.model)}
+        """
+        Limit this field to only objects which are assigned to this model's content-type.
+
+        Note that this is implemented via specifying `content_types__app_label=` and `content_types__model=`
+        rather than via the more obvious `content_types=ContentType.objects.get_for_model(self.model)`
+        because the latter approach would involve a database query, and in some cases
+        (most notably FilterSet definition) this function is called **before** database migrations can be run.
+        """
+        return {
+            "content_types__app_label": self.model._meta.app_label,
+            "content_types__model": self.model._meta.model_name,
+        }
 
     def formfield(self, **kwargs):
         """Return a prepped formfield for use in model forms."""

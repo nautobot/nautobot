@@ -3,7 +3,6 @@
 import logging
 import pickle
 
-import django_filters
 from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -11,7 +10,9 @@ from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.utils.functional import cached_property
+import django_filters
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import DynamicModelChoiceField
 from nautobot.core.forms.widgets import StaticSelect2
@@ -20,9 +21,8 @@ from nautobot.core.models.generics import OrganizationalModel
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices
-from nautobot.extras.querysets import DynamicGroupQuerySet, DynamicGroupMembershipQuerySet
+from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGroupQuerySet
 from nautobot.extras.utils import extras_features
-
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +37,8 @@ logger = logging.getLogger(__name__)
 class DynamicGroup(OrganizationalModel):
     """Dynamic Group Model."""
 
-    name = models.CharField(max_length=100, unique=True, help_text="Dynamic Group name")
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True, help_text="Dynamic Group name")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
@@ -326,7 +326,7 @@ class DynamicGroup(OrganizationalModel):
     @property
     def members_cache_key(self):
         """Return the cache key for this group's members."""
-        return f"{self.__class__.__name__}.{self.id}.members_cached"
+        return f"nautobot.extras.dynamicgroup.{self.id}.members_cached"
 
     @property
     def members_cached(self):
@@ -336,7 +336,7 @@ class DynamicGroup(OrganizationalModel):
         try:
             cached_query = cache.get(self.members_cache_key)
             if cached_query is not None:
-                unpickled_query = pickle.loads(cached_query)
+                unpickled_query = pickle.loads(cached_query)  # noqa: S301  # suspicious-pickle-usage -- we know, but we control what's in the DB
         except pickle.UnpicklingError:
             logger.warning("Failed to unpickle cached members for %s", self)
         finally:

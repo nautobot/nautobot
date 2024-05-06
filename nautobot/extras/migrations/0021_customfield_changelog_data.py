@@ -1,8 +1,9 @@
+import json
+import uuid
+
 from django.db import migrations
 from django.utils.text import get_text_list
 from django.utils.translation import gettext
-import json
-import uuid
 
 from nautobot.core.models.utils import serialize_object
 from nautobot.extras.choices import ObjectChangeActionChoices
@@ -94,6 +95,8 @@ def migrate_history(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
+        ("admin", "0001_initial"),
+        ("contenttypes", "0001_initial"),
         ("extras", "0020_customfield_changelog"),
     ]
 

@@ -1,7 +1,7 @@
 # Utilizing Nautobot Generic Views
 
 +++ 1.1.0
-    Via [PR #14](https://github.com/nautobot/nautobot/issues/14), some `generic` views have been exposed to help aid in plugin development. These views have some requirements that must be in place in order to work. These can be used by importing them from `from nautobot.core.views import generic`.
+    Via [PR #14](https://github.com/nautobot/nautobot/issues/14), some `generic` views have been exposed to help aid in App development. These views have some requirements that must be in place in order to work. These can be used by importing them from `from nautobot.core.views import generic`.
 
 More documentation and examples can be found in [Generic Views](../../../core/generic-views.md) guide.
 

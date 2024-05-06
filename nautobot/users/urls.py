@@ -15,4 +15,5 @@ urlpatterns = [
         views.TokenDeleteView.as_view(),
         name="token_delete",
     ),
+    path("advanced-settings/", views.AdvancedProfileSettingsEditView.as_view(), name="advanced_settings_edit"),
 ]

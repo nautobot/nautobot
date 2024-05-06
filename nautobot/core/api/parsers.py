@@ -4,13 +4,11 @@ import json
 import logging
 
 from django.conf import settings
-
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 from rest_framework.parsers import BaseParser
 
-from nautobot.core.constants import CSV_NULL_TYPE, CSV_NO_OBJECT
-
+from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 
 logger = logging.getLogger(__name__)
 

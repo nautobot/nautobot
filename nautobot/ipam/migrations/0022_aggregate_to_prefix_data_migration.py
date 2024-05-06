@@ -8,8 +8,7 @@ from django.utils.timezone import make_aware
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import serialize_object
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
-from nautobot.extras import choices as extras_choices
-from nautobot.extras import models as extras_models
+from nautobot.extras import choices as extras_choices, models as extras_models
 from nautobot.extras.constants import CHANGELOG_MAX_OBJECT_REPR
 from nautobot.ipam.choices import PrefixTypeChoices
 
@@ -159,7 +158,11 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
             prefix_length=instance.prefix_length,
             vrf__isnull=True,
         ).exists():
-            prefix = Prefix.objects.get(network=instance.network, prefix_length=instance.prefix_length)
+            prefix = Prefix.objects.filter(
+                network=instance.network,
+                prefix_length=instance.prefix_length,
+                vrf__isnull=True,
+            ).first()
             mismatches.update(_migrate_aggregate_to_existing_prefix(instance, prefix))
 
         else:
@@ -234,8 +237,10 @@ def migrate_aggregate_to_prefix(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("ipam", "0021_prefix_add_rir_and_date_allocated"),
+        ("contenttypes", "0002_remove_content_type_name"),
         ("extras", "0039_objectchange__add_change_context"),
+        ("ipam", "0021_prefix_add_rir_and_date_allocated"),
+        ("users", "0001_initial"),
     ]
 
     operations = [

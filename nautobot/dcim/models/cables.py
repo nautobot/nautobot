@@ -1,5 +1,5 @@
-import logging
 from collections import defaultdict
+import logging
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -8,6 +8,7 @@ from django.db import models
 from django.db.models import Sum
 from django.utils.functional import classproperty
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import ColorField
 from nautobot.core.utils.data import to_meters
 from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices
@@ -25,10 +26,10 @@ from nautobot.extras.utils import extras_features
 # from dcim.models.cables to core.models.generics to extras.models.datasources to core.models.generics.
 # Deferring the update to here works for now; fixing so that core.models.generics doesn't depend on extras.models
 # would be the much more invasive but much more "correct" fix.
-from nautobot.core.models.generics import BaseModel, PrimaryModel
+from nautobot.core.models.generics import BaseModel, PrimaryModel  # isort: skip
 
-from .devices import Device
 from .device_components import FrontPort, RearPort
+from .devices import Device
 
 __all__ = (
     "Cable",
@@ -74,7 +75,7 @@ class Cable(PrimaryModel):
     termination_b = GenericForeignKey(ct_field="termination_b_type", fk_field="termination_b_id")
     type = models.CharField(max_length=50, choices=CableTypeChoices, blank=True)
     status = StatusField(blank=False, null=False)
-    label = models.CharField(max_length=100, blank=True)
+    label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     color = ColorField(blank=True)
     length = models.PositiveSmallIntegerField(blank=True, null=True)
     length_unit = models.CharField(

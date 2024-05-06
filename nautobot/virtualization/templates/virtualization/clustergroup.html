@@ -14,7 +14,7 @@
                 <tr>
                     <td>Clusters</td>
                     <td>
-                        <a href="{% url 'virtualization:cluster_list' %}?group={{ object.name }}">{{ cluster_table.rows|length }}</a>
+                        <a href="{% url 'virtualization:cluster_list' %}?cluster_group={{ object.name }}">{{ cluster_table.rows|length }}</a>
                     </td>
                 </tr>
             </table>
@@ -29,7 +29,7 @@
             {% include 'inc/table.html' with table=cluster_table %}
             {% if perms.virtualization.add_cluster %}
                 <div class="panel-footer text-right noprint">
-                    <a href="{% url 'virtualization:cluster_add' %}?group={{ object.pk }}" class="btn btn-xs btn-primary">
+                    <a href="{% url 'virtualization:cluster_add' %}?cluster_group={{ object.pk }}" class="btn btn-xs btn-primary">
                         <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add cluster
                     </a>
                 </div>

@@ -15,12 +15,20 @@ from nautobot.core.tables import RelationshipColumn
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.utils.lookup import get_route_for_model
-from nautobot.dcim.models import Device, Platform, Rack, Location, LocationType
+from nautobot.dcim.models import (
+    Controller,
+    Device,
+    DeviceTypeToSoftwareImageFile,
+    Location,
+    LocationType,
+    Platform,
+    Rack,
+)
 from nautobot.dcim.tables import LocationTable
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import Relationship, RelationshipAssociation, Status
+from nautobot.ipam.models import VLAN, VLANGroup
 
 
 class RelationshipBaseTest:
@@ -126,8 +134,8 @@ class RelationshipBaseTest:
         cls.m2ms_1.validated_save()
 
         # Relationships involving a content type that doesn't actually have a backing model.
-        # This can occur in practice if, for example, a relationship is defined for a plugin-defined model,
-        # then the plugin is subsequently uninstalled or deactivated.
+        # This can occur in practice if, for example, a relationship is defined for an App-defined model,
+        # then the App is subsequently uninstalled or deactivated.
         cls.invalid_ct = ContentType.objects.create(app_label="nonexistent", model="nosuchmodel")
 
         # Don't use validated_save() on these as it will fail due to the invalid content-type
@@ -427,6 +435,56 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
             "This key is not Python/GraphQL safe. Please do not start the key with a digit and do not use hyphens or whitespace",
             str(error.exception),
         )
+
+    def test_get_for_model_caching_and_cache_invalidation(self):
+        """Test that the cache is used and is properly invalidated when Relationships are created or deleted."""
+
+        manager = Relationship.objects
+        manager_methods = [
+            (manager.get_for_model, 2),
+            (manager.get_for_model_source, 1),
+            (manager.get_for_model_destination, 1),
+        ]
+
+        for manager_method, expected_queries in manager_methods:
+            with self.subTest(manager_method=manager_method.__name__):
+                manager_method(Location)
+
+                # Assert that the cache is used when calling method a second time
+                with self.assertNumQueries(0):
+                    manager_method(Location)
+
+                # Assert that different models are cached separately
+                with self.assertNumQueries(expected_queries):
+                    manager_method(Rack)
+                with self.assertNumQueries(0):
+                    manager_method(Rack)
+                with self.assertNumQueries(0):
+                    manager_method(Location)
+
+                # Assert that the cache is invalidated on object save
+                relationship = Relationship(
+                    label="Test Relationship 1",
+                    key="test_relationship_1",
+                    source_type=self.location_ct,
+                    destination_type=self.location_ct,
+                    source_label="Location",
+                    destination_filter={"name": ["location-b"]},
+                    type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+                )
+                relationship.save()
+                try:
+                    with self.assertNumQueries(expected_queries):
+                        manager_method(Location)
+                    with self.assertNumQueries(0):
+                        manager_method(Location)
+                finally:
+                    # Assert that the cache is invalidated on object delete
+                    relationship.delete()
+                with self.assertNumQueries(expected_queries):
+                    manager_method(Location)
+                with self.assertNumQueries(0):
+                    manager_method(Location)
 
 
 class RelationshipAssociationTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
@@ -1112,6 +1170,11 @@ class RequiredRelationshipTestMixin:
            =================================================================
 
         """
+        # Protected FK to SoftwareImageFile prevents deletion
+        DeviceTypeToSoftwareImageFile.objects.all().delete()
+        # Protected FK to SoftwareVersion prevents deletion
+        Controller.objects.all().delete()
+        Device.objects.all().update(software_version=None)
 
         # Create required relationships:
         device_ct = ContentType.objects.get_for_model(Device)
@@ -1368,7 +1431,7 @@ class RequiredRelationshipTestMixin:
                     # Object is updated with the required relationship data (succeeds)
                     response = self.send_data(
                         from_model,
-                        {**{"name": f'{params["create_data"]["name"]} edited'}, **related_objects_data},
+                        {"name": f'{params["create_data"]["name"]} edited', **related_objects_data},
                         interact_with,
                         action="edit",
                         url_kwargs={"pk": newly_created_object.pk},

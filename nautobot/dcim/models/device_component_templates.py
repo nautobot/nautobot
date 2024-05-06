@@ -1,24 +1,25 @@
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.contrib.contenttypes.models import ContentType
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseModel
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, NaturalOrderingField
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.dcim.choices import (
-    SubdeviceRoleChoices,
     ConsolePortTypeChoices,
-    PowerPortTypeChoices,
-    PowerOutletTypeChoices,
-    PowerOutletFeedLegChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
+    PowerOutletFeedLegChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
+    SubdeviceRoleChoices,
 )
-
 from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
 from nautobot.extras.models import ChangeLoggedModel, CustomField, CustomFieldModel, RelationshipModel, Status
 from nautobot.extras.utils import extras_features
+
 from .device_components import (
     ConsolePort,
     ConsoleServerPort,
@@ -44,10 +45,10 @@ __all__ = (
 
 class ComponentTemplateModel(BaseModel, ChangeLoggedModel, CustomFieldModel, RelationshipModel):
     device_type = ForeignKeyWithAutoRelatedName(to="dcim.DeviceType", on_delete=models.CASCADE)
-    name = models.CharField(max_length=64)
-    _name = NaturalOrderingField(target_field="name", max_length=100, blank=True)
-    label = models.CharField(max_length=64, blank=True, help_text="Physical label")
-    description = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
     class Meta:
         abstract = True
@@ -242,7 +243,7 @@ class InterfaceTemplate(ComponentTemplateModel):
     _name = NaturalOrderingField(
         target_field="name",
         naturalize_function=naturalize_interface,
-        max_length=100,
+        max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
     )
     type = models.CharField(max_length=50, choices=InterfaceTypeChoices)

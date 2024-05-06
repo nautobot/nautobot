@@ -1,0 +1,49 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>External Integration</strong>
+            </div>
+
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Name</td>
+                    <td>{{ object.name }}</td>
+                </tr>
+                <tr>
+                    <td>Remote URL</td>
+                    <td>{{ object.remote_url }}</td>
+                </tr>
+                <tr>
+                    <td>HTTP Method</td>
+                    <td>{{ object.http_method }}</td>
+                </tr>
+                <tr>
+                    <td>Headers</td>
+                    <td><pre>{{ object.headers | render_json }}</pre></td>
+                </tr>
+                <tr>
+                    <td>Verify SSL</td>
+                    <td>{{ object.verify_ssl | render_boolean }}</td>
+                </tr>
+                <tr>
+                    <td>CA File Path</td>
+                    <td>{{ object.ca_file_path }}</td>
+                </tr>
+                <tr>
+                    <td>Secrets Group</td>
+                    <td>{{ object.secrets_group | hyperlinked_object }}</td>
+                </tr>
+                <tr>
+                    <td>Timeout</td>
+                    <td>{{ object.timeout }}</td>
+                </tr>
+                <tr>
+                    <td>Extra Config</td>
+                    <td><pre>{{ object.extra_config | render_json }}</pre></td>
+                </tr>
+            </table>
+        </div>
+{% endblock content_left_page %}

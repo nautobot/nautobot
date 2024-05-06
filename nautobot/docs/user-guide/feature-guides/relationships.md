@@ -59,11 +59,11 @@ You can see now the relationship name is `VIDs` instead of `VLANs`.
 
 Business requirements are one concept to take into account when making `labels`, but making the relationship data more meaningful is an option worth exploring.
 
-In the snippet below the source label was updated to `Configured VLANs`. The result on the device detail view is evident and provides additional context that is otherwise missing. `VLANs: 3 VLANs` doesn't give the same context as `Configured VLANs: 3 VLANs`.
+In the snippet below the source label was updated to `Configured VLANs`. The result on the device detail view is evident and provides additional context that is otherwise missing. `VLANs: 2 VLANs` doesn't give the same context as `Configured VLANs: 2 VLANs`.
 
 ![updated-source-label-expanded](./images/relationships/10-relationships.png)
 
-In a similar fashion the destination label can make it move evident that these VLANs are in use on the devices. A destination label `In use on devices: 3 devices` is far superior to the default of `Devices: 3 devices`. Providing these labels makes it easier for users of the system to understand the relationships, especially if they weren't the initial implementor of the relationship.
+In a similar fashion the destination label can make it move evident that these VLANs are in use on the devices. A destination label `In use on devices: 2 devices` is far superior to the default of `Devices: 2 devices`. Providing these labels makes it easier for users of the system to understand the relationships, especially if they weren't the initial implementor of the relationship.
 
 ![updated-destination-label-expanded](./images/relationships/11-relationships.png)
 

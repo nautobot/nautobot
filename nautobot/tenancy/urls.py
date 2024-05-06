@@ -1,6 +1,7 @@
 from django.urls import path
 
 from nautobot.extras.views import ObjectChangeLogView, ObjectNotesView
+
 from . import views
 from .models import Tenant, TenantGroup
 
@@ -15,7 +16,7 @@ urlpatterns = [
     ),
     path(
         "tenant-groups/import/",
-        views.TenantGroupBulkImportView.as_view(),
+        views.TenantGroupBulkImportView.as_view(),  # 3.0 TODO: remove, unused
         name="tenantgroup_import",
     ),
     path(
@@ -53,7 +54,7 @@ urlpatterns = [
     # Tenants
     path("tenants/", views.TenantListView.as_view(), name="tenant_list"),
     path("tenants/add/", views.TenantEditView.as_view(), name="tenant_add"),
-    path("tenants/import/", views.TenantBulkImportView.as_view(), name="tenant_import"),
+    path("tenants/import/", views.TenantBulkImportView.as_view(), name="tenant_import"),  # 3.0 TODO: remove, unused
     path("tenants/edit/", views.TenantBulkEditView.as_view(), name="tenant_bulk_edit"),
     path(
         "tenants/delete/",

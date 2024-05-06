@@ -1,12 +1,14 @@
 """Utilities for looking up related classes and information."""
 
 import inspect
+import re
 
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Model
+from django.urls import get_resolver, URLPattern, URLResolver
 from django.utils.module_loading import import_string
 
 
@@ -47,7 +49,7 @@ def get_model_from_name(model_name):
 def get_route_for_model(model, action, api=False):
     """
     Return the URL route name for the given model and action. Does not perform any validation.
-    Supports both core and plugin routes.
+    Supports both core and App routes.
 
     Args:
         model (models.Model, str): Class, Instance, or dotted string of a Django Model
@@ -67,9 +69,9 @@ def get_route_for_model(model, action, api=False):
         >>> get_route_for_model("dcim.location", "list", api=True)
         "dcim-api:location-list"
         >>> get_route_for_model(ExampleModel, "list")
-        "plugins:example_plugin:examplemodel_list"
+        "plugins:example_app:examplemodel_list"
         >>> get_route_for_model(ExampleModel, "list", api=True)
-        "plugins-api:example_plugin-api:examplemodel-list"
+        "plugins-api:example_app-api:examplemodel-list"
     """
 
     if isinstance(model, str):
@@ -190,3 +192,169 @@ def get_table_for_model(model):
         (Union[Table, None]): Either the `Table` class or `None`
     """
     return get_related_class_for_model(model, module_name="tables", object_suffix="Table")
+
+
+def get_view_for_model(model, view_type=""):
+    """Return the `UIViewSet` or `<view_type>View` class associated with a given `model`.
+
+    The view class is expected to be in the `views` module within the app associated with the model,
+    and its name is expected to be either `{ModelName}UIViewSet` or `{ModelName}{view_type}View`.
+
+    If neither view class is found, this will return `None`.
+    """
+    result = get_related_class_for_model(model, module_name="views", object_suffix="UIViewSet")
+    if result is None:
+        result = get_related_class_for_model(model, module_name="views", object_suffix=f"{view_type}View")
+    return result
+
+
+def get_created_and_last_updated_usernames_for_model(instance):
+    """
+    Args:
+        instance: A model class instance
+
+    Returns:
+        created_by: Username of the user that created the instance
+        last_updated_by: Username of the user that last modified the instance
+    """
+    from nautobot.extras.choices import ObjectChangeActionChoices
+    from nautobot.extras.models import ObjectChange
+
+    object_change_records = get_changes_for_model(instance)
+    created_by = None
+    last_updated_by = None
+    try:
+        created_by_record = object_change_records.get(action=ObjectChangeActionChoices.ACTION_CREATE)
+        created_by = created_by_record.user_name
+    except ObjectChange.DoesNotExist:
+        pass
+
+    last_updated_by_record = object_change_records.first()
+    if last_updated_by_record:
+        last_updated_by = last_updated_by_record.user_name
+
+    return created_by, last_updated_by
+
+
+def get_url_patterns(urlconf=None, patterns_list=None, base_path="/"):
+    """
+    Recursively yield a list of registered URL patterns.
+
+    Args:
+        urlconf (URLConf): Python module such as `nautobot.core.urls`.
+            Default if unspecified is the value of `settings.ROOT_URLCONF`, i.e. the `nautobot.core.urls` module.
+        patterns_list (list): Used in recursion. Generally can be omitted on initial call.
+            Default if unspecified is the `url_patterns` attribute of the given `urlconf` module.
+        base_path (str): String to prepend to all URL patterns yielded.
+            Default if unspecified is the string `"/"`.
+
+    Yields:
+        (str): Each URL pattern defined in the given urlconf and its descendants
+
+    Examples:
+        >>> generator = get_url_patterns()
+        >>> next(generator)
+        '/'
+        >>> next(generator)
+        '/search/'
+        >>> next(generator)
+        '/login/'
+        >>> next(generator)
+        '/logout/'
+        >>> next(generator)
+        '/circuits/circuits/<uuid:pk>/terminations/swap/'
+
+        >>> import example_plugin.urls as example_urls
+        >>> for url_pattern in get_url_patterns(example_urls, base_path="/plugins/example-app/"):
+        ...     print(url_pattern)
+        ...
+        /plugins/example-app/
+        /plugins/example-app/config/
+        /plugins/example-app/models/<uuid:pk>/dynamic-groups/
+        /plugins/example-app/other-models/<uuid:pk>/dynamic-groups/
+        /plugins/example-app/docs/
+        /plugins/example-app/circuits/<uuid:pk>/example-app-tab/
+        /plugins/example-app/devices/<uuid:pk>/example-app-tab-1/
+        /plugins/example-app/devices/<uuid:pk>/example-app-tab-2/
+        /plugins/example-app/override-target/
+        /plugins/example-app/^models/$
+        /plugins/example-app/^models/add/$
+        /plugins/example-app/^models/import/$
+        /plugins/example-app/^models/edit/$
+        /plugins/example-app/^models/delete/$
+        /plugins/example-app/^models/all-names/$
+        /plugins/example-app/^models/(?P<pk>[^/.]+)/$
+        /plugins/example-app/^models/(?P<pk>[^/.]+)/delete/$
+        /plugins/example-app/^models/(?P<pk>[^/.]+)/edit/$
+        /plugins/example-app/^models/(?P<pk>[^/.]+)/changelog/$
+        /plugins/example-app/^models/(?P<pk>[^/.]+)/notes/$
+        /plugins/example-app/^other-models/$
+        /plugins/example-app/^other-models/add/$
+        /plugins/example-app/^other-models/edit/$
+        /plugins/example-app/^other-models/delete/$
+        /plugins/example-app/^other-models/(?P<pk>[^/.]+)/$
+        /plugins/example-app/^other-models/(?P<pk>[^/.]+)/delete/$
+        /plugins/example-app/^other-models/(?P<pk>[^/.]+)/edit/$
+        /plugins/example-app/^other-models/(?P<pk>[^/.]+)/changelog/$
+        /plugins/example-app/^other-models/(?P<pk>[^/.]+)/notes/$
+    """
+    if urlconf is None:
+        urlconf = settings.ROOT_URLCONF
+    if patterns_list is None:
+        patterns_list = get_resolver(urlconf).url_patterns
+
+    for item in patterns_list:
+        if isinstance(item, URLPattern):
+            yield base_path + str(item.pattern)
+        elif isinstance(item, URLResolver):
+            # Recurse!
+            yield from get_url_patterns(urlconf, item.url_patterns, base_path + str(item.pattern))
+
+
+def get_url_for_url_pattern(url_pattern):
+    """
+    Given a URL pattern, construct a URL string that would match that pattern.
+
+    Examples:
+        >>> get_url_for_url_pattern("/plugins/example-app/^models/(?P<pk>[^/.]+)/$")
+        '/plugins/example-app/models/00000000-0000-0000-0000-000000000000/'
+        >>> get_url_for_url_pattern("/circuits/circuit-terminations/<uuid:termination_a_id>/connect/<str:termination_b_type>/")
+        '/circuits/circuit-terminations/00000000-0000-0000-0000-000000000000/connect/string/'
+    """
+    url = url_pattern
+    # Fixup tokens in path-style "classic" view URLs:
+    # "/admin/users/user/<id>/password/"
+    url = re.sub(r"<id>", "00000000-0000-0000-0000-000000000000", url)
+    # "/silk/request/<uuid:request_id>/profile/<int:profile_id>/"
+    url = re.sub(r"<int:\w+>", "1", url)
+    # "/admin/admin/logentry/<path:object_id>/"
+    url = re.sub(r"<path:\w+>", "1", url)
+    # "/dcim/sites/<slug:slug>/"
+    url = re.sub(r"<slug:\w+>", "slug", url)
+    # "/apps/installed-apps/<str:app>/"
+    url = re.sub(r"<str:\w+>", "string", url)
+    # "/dcim/locations/<uuid:pk>/"
+    url = re.sub(r"<uuid:\w+>", "00000000-0000-0000-0000-000000000000", url)
+    # "/api/circuits/<drf_format_suffix:format>"
+    url = re.sub(r"<drf_format_suffix:\w+>", ".json", url)
+    # tokens in regexp-style router urls, including REST and NautobotUIViewSet:
+    # "/extras/^external-integrations/(?P<pk>[^/.]+)/$"
+    # "/api/virtualization/^interfaces/(?P<pk>[^/.]+)/$"
+    # "/api/virtualization/^interfaces/(?P<pk>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$"
+    url = re.sub(r"[$^]", "", url)
+    url = re.sub(r"/\?", "/", url)
+    url = re.sub(r"\(\?P<app_label>[^)]+\)", "users", url)
+    url = re.sub(r"\(\?P<class_path>[^)]+\)", "foo/bar/baz", url)
+    url = re.sub(r"\(\?P<format>[^)]+\)", "json", url)
+    url = re.sub(r"\(\?P<name>[^)]+\)", "string", url)
+    url = re.sub(r"\(\?P<pk>[^)]+\)", "00000000-0000-0000-0000-000000000000", url)
+    url = re.sub(r"\(\?P<slug>[^)]+\)", "string", url)
+    url = re.sub(r"\(\?P<url>[^)]+\)", "any", url)
+    # Fallthru for generic URL parameters
+    url = re.sub(r"\(\?P<\w+>[^)]+\)\??", "unknown", url)
+    url = re.sub(r"\\", "", url)
+
+    if any(char in url for char in "<>[]()?+^$"):
+        raise RuntimeError(f"Unhandled token in URL {url} derived from {url_pattern}")
+
+    return url

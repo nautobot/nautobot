@@ -5,15 +5,6 @@
                 <li><a href="{% url 'circuits:circuit_list' %}?provider={{ object.provider.pk }}">{{ object.provider }}</a></li>
 {% endblock extra_breadcrumbs %}
 
-{% block masthead %}
-<h1>
-<span class="hover_copy"><span id="copy_title">{{ object }}</span><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_title">
-    <span class="mdi mdi-content-copy"></span>
-</button>
-</span>
-</h1>
-{% endblock masthead %}
-
 {% block content_left_page %}
         <div class="panel panel-default">
             <div class="panel-heading">

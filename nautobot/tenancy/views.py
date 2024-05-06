@@ -6,10 +6,10 @@ from nautobot.core.views import generic
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.dcim.models import Device, Location, Rack, RackReservation
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VRF
-from nautobot.virtualization.models import VirtualMachine, Cluster
+from nautobot.virtualization.models import Cluster, VirtualMachine
+
 from . import filters, forms, tables
 from .models import Tenant, TenantGroup
-
 
 #
 # Tenant groups
@@ -52,7 +52,7 @@ class TenantGroupDeleteView(generic.ObjectDeleteView):
     queryset = TenantGroup.objects.all()
 
 
-class TenantGroupBulkImportView(generic.BulkImportView):
+class TenantGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = TenantGroup.objects.all()
     table = tables.TenantGroupTable
 
@@ -69,7 +69,7 @@ class TenantGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class TenantListView(generic.ObjectListView):
-    queryset = Tenant.objects.select_related("tenant_group")
+    queryset = Tenant.objects.all()
     filterset = filters.TenantFilterSet
     filterset_form = forms.TenantFilterForm
     table = tables.TenantTable
@@ -111,7 +111,7 @@ class TenantDeleteView(generic.ObjectDeleteView):
     queryset = Tenant.objects.all()
 
 
-class TenantBulkImportView(generic.BulkImportView):
+class TenantBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
     queryset = Tenant.objects.all()
     table = tables.TenantTable
 

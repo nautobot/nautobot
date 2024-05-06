@@ -143,6 +143,10 @@ Some fields were only renamed without making any changes to the data so the cons
 - Nautobot no longer uses or supports the use of `django-mptt`.
 - Nautobot no longer uses or supports the use of `django-rq`.
 
+## App Developer Interface
+
+All imports for app developers should now be sourced from `nautobot.apps.*` or provided models, as this is the supported public interface. This will help ensure proper SemVer is kept intact and provide a place to add new features without breaking existing integrations.
+
 ## Database (ORM) Changes
 
 !!! warning
@@ -401,7 +405,6 @@ The below is mostly relevant only to authors of Jobs and Nautobot Apps. End user
 ## Removed Python Code
 
 - Because of the replacement of the `?brief` REST API query parameter with `?depth` and the removal of all `Nested*Serializers`, some of the classes and mixins are removed because they are no longer needed.
-- In the redesigned UI of Nautobot 2.0, menu items may no longer contain buttons, and so the `NavMenuButton` class and its subclasses have been removed as they are no longer needed/supported.
 - With the reimplementation of CSV import and export, `CSVForm` classes are generally no longer needed, and so a number of related mixin classes have been removed.
 
 ??? info "Full table of code removals"
@@ -476,14 +479,15 @@ Therefore all code that is calling `JobResult.set_status()` (which has been remo
 
 ### Fundamental Changes
 
-The `BaseJob` class is now a subclass of Celery's `Task` class. Some fundamental changes to the job's methods and signatures were required to support this change:
++/- 2.2.3
+    In Nautobot 2.0.0 through 2.2.2, Nautobot's `BaseJob` class was made to be a subclass of Celery's `Task` class. The implications of this change are outside the scope of this document, but this change has been reverted in Nautobot 2.2.3 and later.
 
-- The `test_*` and `post_run` methods for backwards compatibility to NetBox scripts and reports were removed. Celery implements `before_start`, `on_success`, `on_retry`, `on_failure`, and `after_return` methods that can be used by job authors to perform similar functions.
+- The `test_*` and `post_run` methods for backwards compatibility to NetBox scripts and reports were removed. In their place, Nautobot Jobs now have `before_start`, `on_success`, `on_failure`, and `after_return` methods that can be used by job authors to perform similar functions.
 
 !!! important
     Be sure to call the `super()` method when overloading any of the job's `before_start`, `on_success`, `on_retry`, `on_failure`, or `after_return` methods
 
-- The run method signature is now customizable by the job author. This means that the `data` and `commit` arguments are no longer passed to the job by default and the job's run method signature should match the the job's input variables.
+- The `run` method signature now includes each of the input variables defined on the Job. This means that the `data` and `commit` arguments are no longer passed to the job by default and the job's run method signature should match the the job's input variables.
 
 !!! example
     ```py
@@ -493,7 +497,7 @@ The `BaseJob` class is now a subclass of Celery's `Task` class. Some fundamental
         var3 = BooleanVar()
         var4 = ObjectVar(model=Role)
 
-        def run(self, var1, var2, var3, var4):
+        def run(self, *, var1, var2, var3, var4):
             ...
     ```
 

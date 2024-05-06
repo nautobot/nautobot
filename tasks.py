@@ -34,9 +34,6 @@ except ModuleNotFoundError:
 # Base directory path from this file.
 BASE_DIR = os.path.join(os.path.dirname(__file__))
 
-# Base directory path for Nautobot UI.
-NAUTOBOT_UI_DIR = os.path.join(BASE_DIR, "nautobot/ui")
-
 
 def is_truthy(arg):
     """
@@ -185,7 +182,7 @@ def run_command(context, command, service="nautobot", **kwargs):
         env = kwargs.pop("env", {})
         if "hide" not in kwargs:
             print_command(command, env=env)
-        context.run(command, pty=True, env=env, **kwargs)
+        return context.run(command, pty=True, env=env, **kwargs)
     else:
         # Check if Nautobot is running; no need to start another Nautobot container to run a command
         docker_compose_status = "ps --services --filter status=running"
@@ -197,7 +194,7 @@ def run_command(context, command, service="nautobot", **kwargs):
         else:
             compose_command = f"run {'--user=root ' if root else ''}--rm --entrypoint '{command}' {service}"
 
-        docker_compose(context, compose_command, pty=True)
+        return docker_compose(context, compose_command, pty=True, **kwargs)
 
 
 # ------------------------------------------------------------------------------
@@ -411,7 +408,7 @@ def stop(context, service=None):
     """Stop Nautobot and its dependencies."""
     print("Stopping Nautobot...")
     if not service:
-        docker_compose(context, "down")
+        docker_compose(context, "--profile '*' down")
     else:
         docker_compose(context, "stop", service=service)
 
@@ -439,7 +436,7 @@ def nbshell(context):
     """Launch an interactive Nautobot shell."""
     command = "nautobot-server nbshell"
 
-    run_command(context, command, pty=True)
+    run_command(context, command)
 
 
 @task(
@@ -453,7 +450,7 @@ def cli(context, service="nautobot", root=False):
     context.nautobot.local = False
     command = "bash"
 
-    run_command(context, command, service=service, pty=True, root=root)
+    run_command(context, command, service=service, root=root)
 
 
 @task(
@@ -538,7 +535,7 @@ def loaddata(context, filepath="db_output.json"):
 def build_and_check_docs(context):
     """Build docs for use within Nautobot."""
     build_nautobot_docs(context)
-    build_example_plugin_docs(context)
+    build_example_app_docs(context)
 
 
 def build_nautobot_docs(context):
@@ -547,43 +544,21 @@ def build_nautobot_docs(context):
     run_command(context, command)
 
 
-def build_example_plugin_docs(context):
-    """Build Example Plugin docs."""
+def build_example_app_docs(context):
+    """Build Example App docs."""
     command = "mkdocs build --no-directory-urls --strict"
     if is_truthy(context.nautobot.local):
-        local_command = f"cd examples/example_plugin && {command}"
+        local_command = f"cd examples/example_app && {command}"
         print_command(local_command)
         context.run(local_command, pty=True)
     else:
-        docker_command = f"run --workdir='/source/examples/example_plugin' --entrypoint '{command}' nautobot"
+        docker_command = f"run --rm --workdir='/source/examples/example_app' --entrypoint '{command}' nautobot"
         docker_compose(context, docker_command, pty=True)
 
 
 # ------------------------------------------------------------------------------
 # TESTS
 # ------------------------------------------------------------------------------
-@task(
-    help={
-        "autoformat": "Apply formatting recommendations automatically, rather than failing if formatting is incorrect.",
-    }
-)
-def black(context, autoformat=False):
-    """Check Python code style with Black."""
-    if autoformat:
-        black_command = "black"
-    else:
-        black_command = "black --check --diff"
-
-    command = f"{black_command} development/ examples/ nautobot/ tasks.py"
-
-    run_command(context, command)
-
-
-@task
-def flake8(context):
-    """Check for PEP8 compliance and other style issues."""
-    command = "flake8 development/ examples/ nautobot/ tasks.py"
-    run_command(context, command)
 
 
 @task(
@@ -595,34 +570,57 @@ def flake8(context):
 )
 def pylint(context, target=None, recursive=False):
     """Perform static analysis of Nautobot code."""
+    base_command = 'pylint --verbose --init-hook "import nautobot; nautobot.setup()" '
     if not target:
         # Lint everything
-        # Lint the installed nautobot package and the file tasks.py in the current directory
-        command = "nautobot-server pylint nautobot tasks.py"
-        run_command(context, command)
-        # Lint Python files discovered recursively in the development/ and examples/ directories
-        command = "nautobot-server pylint --recursive development/ examples/"
+        command = base_command + "--recursive=y nautobot tasks.py development/ examples/"
         run_command(context, command)
     else:
-        command = "nautobot-server pylint "
+        command = base_command
         if recursive:
-            command += "--recursive "
+            command += "--recursive=y "
         command += " ".join(target)
         run_command(context, command)
 
 
-@task
-def ruff(context, output_format="text"):
-    """Run ruff to perform static analysis and linting."""
-    command = f"ruff --output-format {output_format} development/ examples/ nautobot/ tasks.py"
-    run_command(context, command)
+@task(
+    help={
+        "fix": "Automatically apply formatting and linting recommendations. May not be able to fix all linting issues.",
+        "target": "File or directory to inspect, repeatable (default: all files in the project will be inspected)",
+        "output_format": "For CI purposes, can be ignored otherwise.",
+    },
+    iterable=["target"],
+)
+def ruff(context, fix=False, target=None, output_format="concise"):
+    """Run ruff to perform code formatting and linting."""
+    if not target:
+        target = ["development", "examples", "nautobot", "tasks.py"]
+
+    command = "ruff format "
+    if not fix:
+        command += "--check "
+    command += " ".join(target)
+    format_result = run_command(context, command, warn=True)
+
+    command = "ruff check "
+    if fix:
+        command += "--fix "
+    command += f"--output-format {output_format} "
+    command += " ".join(target)
+    lint_result = run_command(context, command, warn=True)
+
+    if not (format_result and lint_result):
+        if not fix:
+            raise Exit("'ruff format' and/or 'ruff check' failed; you may want to run 'invoke ruff --fix'", code=1)
+        raise Exit("'ruff format` and/or 'ruff check' failed; please see above for specifics", code=1)
+    print("ruff successful!")
 
 
 @task
 def yamllint(context):
     """Run yamllint to validate formatting applies to YAML standards."""
     # TODO: enable for directories other than nautobot/docs and fix all warnings
-    command = "yamllint nautobot/docs --format standard"
+    command = "yamllint nautobot/docs nautobot/core/settings.yaml --format standard"
     run_command(context, command)
 
 
@@ -645,23 +643,16 @@ def hadolint(context):
 @task
 def markdownlint(context):
     """Lint Markdown files."""
-    if is_truthy(context.nautobot.local):
-        command = (
-            "cd nautobot/ui && npx -- markdownlint-cli "
-            "--ignore ../../nautobot/project-static --ignore ../../nautobot/ui/node_modules "
-            "--config ../../.markdownlint.yml --rules ../../scripts/use-relative-md-links.js "
-            "../../nautobot ../../examples ../../*.md"
-        )
-        run_command(context, command)
+    if is_truthy(context.nautobot.local) and not context.run("command -v markdownlint", warn=True):
+        command = "npm exec -- markdownlint "
     else:
-        command = (
-            "npx -- markdownlint-cli "
-            "--ignore /source/nautobot/project-static --ignore /source/nautobot/ui/node_modules "
-            "--config /source/.markdownlint.yml --rules /source/scripts/use-relative-md-links.js "
-            "/source/nautobot /source/examples /source/*.md"
-        )
-        docker_command = f"run --workdir='/opt/nautobot/ui' --entrypoint '{command}' nautobot"
-        docker_compose(context, docker_command, pty=True)
+        command = "markdownlint "
+    command += (
+        "--ignore nautobot/project-static "
+        "--config .markdownlint.yml --rules scripts/use-relative-md-links.js "
+        "nautobot examples *.md"
+    )
+    run_command(context, command)
 
 
 @task
@@ -685,7 +676,8 @@ def check_schema(context, api_version=None):
         nautobot_version = get_nautobot_version()
         # logic equivalent to nautobot.core.settings REST_FRAMEWORK_ALLOWED_VERSIONS - keep them in sync!
         current_major, current_minor = [int(v) for v in nautobot_version.split(".")[:2]]
-        assert current_major == 2, f"check_schemas version calc must be updated to handle version {current_major}"
+        if current_major != 2:
+            raise RuntimeError(f"check_schemas version calc must be updated to handle version {current_major}")
         api_versions = [f"{current_major}.{minor}" for minor in range(0, current_minor + 1)]
 
     for api_vers in api_versions:
@@ -698,29 +690,35 @@ def check_schema(context, api_version=None):
         "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
+        "pattern": "Only run tests which match the given substring. Can be used multiple times.",
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
         "buffer": "Discard output from passing tests.",
         "tag": "Run only tests with the specified tag. Can be used multiple times.",
         "exclude_tag": "Do not run tests with the specified tag. Can be used multiple times.",
         "verbose": "Enable verbose test output.",
         "append": "Append coverage data to .coverage, otherwise it starts clean each time.",
+        "parallel": "Run tests in parallel; auto-detects the number of workers if not specified with `--parallel-workers`. (default: False)",
+        "parallel-workers": "Specify the number of workers to use when running tests in parallel. Implies `--parallel`. (default: None)",
         "skip_docs_build": "Skip (re)build of documentation before running the test.",
         "performance_report": "Generate Performance Testing report in the terminal. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
         "performance_snapshot": "Generate a new performance testing report to report.yml. Has to set GENERATE_PERFORMANCE_REPORT=True in settings.py",
     },
-    iterable=["tag", "exclude_tag"],
+    iterable=["tag", "exclude_tag", "pattern"],
 )
 def unittest(
     context,
     cache_test_fixtures=False,
     keepdb=False,
     label="nautobot",
+    pattern=None,
     failfast=False,
     buffer=True,
     exclude_tag=None,
     tag=None,
     verbose=False,
     append=False,
+    parallel=False,
+    parallel_workers=None,
     skip_docs_build=False,
     performance_report=False,
     performance_snapshot=False,
@@ -730,8 +728,16 @@ def unittest(
         # First build the docs so they are available.
         build_and_check_docs(context)
 
-    append_arg = " --append" if append else ""
-    command = f"coverage run{append_arg} --module nautobot.core.cli test {label}"
+    if not append:
+        run_command(context, "coverage erase")
+
+    if parallel_workers:
+        parallel_workers = int(parallel_workers)
+        if parallel_workers > 1:
+            parallel = True
+    append_arg = " --append" if append and not parallel else ""
+    parallel_arg = " --parallel-mode" if parallel else ""
+    command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
     command += " --config=nautobot/core/tests/nautobot_config.py"
     # booleans
     if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
@@ -740,10 +746,14 @@ def unittest(
         command += " --keepdb"
     if failfast:
         command += " --failfast"
-    if buffer:
+    if buffer and not parallel:  # Django 3.x doesn't support '--parallel --buffer'; can remove this after Django 4.x
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
+    if parallel:
+        command += " --parallel"
+        if parallel_workers:
+            command += f"={parallel_workers}"
     if performance_report or (tag and "performance" in tag):
         command += " --slowreport"
     if performance_snapshot:
@@ -758,14 +768,20 @@ def unittest(
     if exclude_tag:
         for individual_exclude_tag in exclude_tag:
             command += f" --tag {individual_exclude_tag}"
+    for item in pattern or []:
+        command += f" -k='{item}'"
 
     run_command(context, command)
+
+    unittest_coverage(context)
 
 
 @task
 def unittest_coverage(context):
     """Report on code test coverage as measured by 'invoke unittest'."""
-    command = "coverage report --skip-covered --include 'nautobot/*' --omit *migrations*"
+    run_command(context, "coverage combine")
+
+    command = "coverage report --skip-covered --include 'nautobot/*'"
 
     run_command(context, command)
 
@@ -922,86 +938,12 @@ def performance_test(
 
 @task(
     help={
-        "label": "Specify a directory to test instead of running all Nautobot UI tests.",
-    },
-)
-def unittest_ui(
-    context,
-    label=None,
-):
-    """Run Nautobot UI unit tests."""
-    command = "npm run test -- --watchAll=false"
-    if label:
-        command += f" {label}"
-    run_command(context, command, service="nodejs")
-
-
-@task(
-    help={
-        "autoformat": "Apply formatting recommendations automatically, rather than failing if formatting is incorrect.",
-    }
-)
-def prettier(context, autoformat=False):
-    """Check Node.JS code style with Prettier."""
-    prettier_command = "npx prettier"
-
-    if autoformat:
-        arg = "--write"
-    else:
-        arg = "--check"
-
-    if is_truthy(context.nautobot.local):
-        run_command(context, f"cd nautobot/ui && {prettier_command} {arg} .")
-    else:
-        docker_compose(
-            context,
-            f"run --workdir='/opt/nautobot/ui' --entrypoint '{prettier_command} {arg} /source/nautobot/ui' nautobot",
-        )
-
-
-@task(
-    help={
-        "autoformat": "Apply some recommendations automatically, rather than failing if formatting is incorrect. Not all issues can be fixed automatically.",
-    }
-)
-def eslint(context, autoformat=False):
-    """Check for ESLint rule compliance and other style issues."""
-    eslint_command = "npx eslint --max-warnings 0"
-
-    if autoformat:
-        eslint_command += " --fix"
-
-    if is_truthy(context.nautobot.local):
-        # babel-preset-react-app / eslint requires setting environment variable for either
-        # `NODE_ENV` or `BABEL_ENV` to 'test'|'development'|'production'
-        run_command(context, f"cd nautobot/ui && NODE_ENV=test {eslint_command} .")
-    else:
-        # TODO: we should really run against /source/nautobot/ui, not /opt/nautobot/ui, but eslint aborts if we do:
-        #   ESLint couldn't find the config "@react-app" to extend from.
-        #   Please check that the name of the config is correct.
-        # Probably this is because we don't install node_modules under /source/nautobot/ui normally...?
-        #
-        # babel-preset-react-app / eslint requires setting environment variable for either
-        # `NODE_ENV` or `BABEL_ENV` to 'test'|'development'|'production'
-        docker_compose(
-            context,
-            "run --workdir='/opt/nautobot/ui' -e NODE_ENV=test "
-            f"--entrypoint '{eslint_command} /opt/nautobot/ui' nodejs",
-        )
-
-
-@task(
-    help={
         "lint-only": "Only run linters; unit tests will be excluded.",
         "keepdb": "Save and re-use test database between test runs for faster re-testing.",
     }
 )
 def tests(context, lint_only=False, keepdb=False):
     """Run all linters and unit tests."""
-    black(context)
-    flake8(context)
-    prettier(context)
-    eslint(context)
     hadolint(context)
     markdownlint(context)
     yamllint(context)
@@ -1017,8 +959,7 @@ def tests(context, lint_only=False, keepdb=False):
 @task(help={"version": "The version number or the rule to update the version."})
 def version(context, version=None):  # pylint: disable=redefined-outer-name
     """
-    Show the version of Nautobot Python and NPM packages or bump them when a valid bump rule is
-    provided.
+    Show the version of Nautobot Python package or bump it when a valid bump rule is provided.
 
     The version number or rules are those supported by `poetry version`.
     """
@@ -1026,4 +967,3 @@ def version(context, version=None):  # pylint: disable=redefined-outer-name
         version = ""
 
     run_command(context, f"poetry version --short {version}")
-    run_command(context, f"npm --prefix nautobot/ui version {version}")

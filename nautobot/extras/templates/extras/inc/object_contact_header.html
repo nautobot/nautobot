@@ -1,0 +1,15 @@
+{% load helpers %}
+
+{% block form %}
+    <ul class="nav nav-tabs" style="margin-bottom: 20px">
+        <li role="presentation"{% if active_tab == 'assign' %} class="active"{% endif %}>
+            <a href="{% url 'extras:object_contact_team_assign' %}{% querystring request %}">Assign Contact/Team</a>
+        </li>
+        <li role="presentation"{% if active_tab == 'contact' %} class="active"{% endif %}>
+            <a href="{% url 'extras:object_contact_add' %}{% querystring request %}">New Contact</a>
+        </li>
+        <li role="presentation"{% if active_tab == 'team' %} class="active"{% endif %}>
+            <a href="{% url 'extras:object_team_add' %}{% querystring request %}">New Team</a>
+        </li>
+    </ul>
+{% endblock %}

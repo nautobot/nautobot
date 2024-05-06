@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
-import uuid
 import tempfile
 from unittest import mock, skip
+import uuid
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -13,16 +13,17 @@ from django.utils.timezone import make_aware, now
 from rest_framework import status
 
 from nautobot.core.choices import ColorChoices
+from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.core.testing.utils import disable_warnings
 from nautobot.core.utils.lookup import get_route_for_model
-from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.dcim.models import (
+    Controller,
     Device,
     DeviceType,
-    Manufacturer,
     Location,
     LocationType,
+    Manufacturer,
     Rack,
     RackGroup,
 )
@@ -37,17 +38,22 @@ from nautobot.extras.choices import (
     RelationshipTypeChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
+    WebhookHttpMethodChoices,
 )
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
+    Contact,
+    ContactAssociation,
     CustomField,
     CustomLink,
     DynamicGroup,
     DynamicGroupMembership,
     ExportTemplate,
+    ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -65,16 +71,15 @@ from nautobot.extras.models import (
     SecretsGroupAssociation,
     Status,
     Tag,
+    Team,
     Webhook,
 )
-from nautobot.extras.models.jobs import JobHook, JobButton
+from nautobot.extras.models.jobs import JobButton, JobHook
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
-
-from nautobot.ipam.models import IPAddress, Prefix, VLANGroup, VLAN
+from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
-
 
 User = get_user_model()
 
@@ -373,6 +378,122 @@ class ContentTypeTest(APITestCase):
 
         url = reverse("extras-api:contenttype-detail", kwargs={"pk": contenttype.pk})
         self.assertHttpStatus(self.client.get(url, **self.header), status.HTTP_200_OK)
+
+
+#
+#  Contacts
+#
+
+
+class ContactTest(APIViewTestCases.APIViewTestCase):
+    model = Contact
+    bulk_update_data = {
+        "address": "Carnegie Hall, New York, NY",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_data = [
+            {
+                "name": "Contact 1",
+                "phone": "555-0121",
+                "email": "contact1@example.com",
+                "teams": [Team.objects.first().pk, Team.objects.last().pk],
+            },
+            {
+                "name": "Contact 2",
+                "phone": "555-0122",
+                "email": "contact2@example.com",
+                "address": "Bowser's Castle, Staten Island, NY",
+            },
+            {
+                "name": "Contact 3",
+                "phone": "555-0123",
+            },
+            {
+                "name": "Contact 4",
+                "email": "contact4@example.com",
+            },
+        ]
+
+
+class ContactAssociationTestCase(APIViewTestCases.APIViewTestCase):
+    model = ContactAssociation
+    create_data = []
+    choices_fields = ["associated_object_type"]
+
+    @classmethod
+    def setUpTestData(cls):
+        roles = Role.objects.get_for_model(ContactAssociation)
+        statuses = Status.objects.get_for_model(ContactAssociation)
+        ip_addresses = IPAddress.objects.all()
+        devices = Device.objects.all()
+        ContactAssociation.objects.create(
+            contact=Contact.objects.first(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=ip_addresses[0].pk,
+            role=roles[0],
+            status=statuses[0],
+        )
+        ContactAssociation.objects.create(
+            contact=Contact.objects.last(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=ip_addresses[1].pk,
+            role=roles[1],
+            status=statuses[1],
+        )
+        ContactAssociation.objects.create(
+            team=Team.objects.first(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=ip_addresses[2].pk,
+            role=roles[1],
+            status=statuses[0],
+        )
+        ContactAssociation.objects.create(
+            team=Team.objects.last(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=ip_addresses[3].pk,
+            role=roles[2],
+            status=statuses[1],
+        )
+        cls.create_data = [
+            {
+                "contact": Contact.objects.first().pk,
+                "team": None,
+                "associated_object_type": "ipam.ipaddress",
+                "associated_object_id": ip_addresses[4].pk,
+                "role": roles[3].pk,
+                "status": statuses[0].pk,
+            },
+            {
+                "contact": Contact.objects.last().pk,
+                "team": None,
+                "associated_object_type": "dcim.device",
+                "associated_object_id": devices[0].pk,
+                "role": roles[3].pk,
+                "status": statuses[0].pk,
+            },
+            {
+                "contact": None,
+                "team": Team.objects.first().pk,
+                "associated_object_type": "ipam.ipaddress",
+                "associated_object_id": ip_addresses[5].pk,
+                "role": roles[3].pk,
+                "status": statuses[2].pk,
+            },
+            {
+                "contact": None,
+                "team": Team.objects.last().pk,
+                "associated_object_type": "dcim.device",
+                "associated_object_id": devices[1].pk,
+                "role": roles[3].pk,
+                "status": statuses[0].pk,
+            },
+        ]
+        cls.bulk_update_data = {
+            "role": roles[4].pk,
+            "status": statuses[1].pk,
+        }
 
 
 class CreatedUpdatedFilterTest(APITestCase):
@@ -813,6 +934,103 @@ class ExportTemplateTest(APIViewTestCases.APIViewTestCase):
         )
 
 
+class ExternalIntegrationTest(APIViewTestCases.APIViewTestCase):
+    model = ExternalIntegration
+    create_data = [
+        {
+            "name": "Test External Integration 1",
+            "remote_url": "ssh://example.com/test1/",
+            "verify_ssl": False,
+            "timeout": 5,
+            "extra_config": "{'foo': 'bar'}",
+            "http_method": WebhookHttpMethodChoices.METHOD_DELETE,
+            "headers": "{'header': 'fake header'}",
+            "ca_file_path": "/this/is/a/file/path",
+        },
+        {
+            "name": "Test External Integration 2",
+            "remote_url": "http://example.com/test2/",
+            "http_method": WebhookHttpMethodChoices.METHOD_POST,
+        },
+        {
+            "name": "Test External Integration 3",
+            "remote_url": "https://example.com/test3/",
+            "verify_ssl": True,
+            "timeout": 30,
+            "extra_config": "{'foo': ['bat', 'baz']}",
+            "headers": "{'new_header': 'fake header'}",
+            "ca_file_path": "/this/is/a/new/file/path",
+        },
+    ]
+    bulk_update_data = {"timeout": 10, "verify_ssl": True, "extra_config": r"{}"}
+    choices_fields = ["http_method"]
+
+
+class FileProxyTest(
+    APIViewTestCases.GetObjectViewTestCase,
+    APIViewTestCases.ListObjectsViewTestCase,
+):
+    model = FileProxy
+
+    @classmethod
+    def setUpTestData(cls):
+        job = Job.objects.first()
+        job_results = (
+            JobResult.objects.create(
+                job_model=job,
+                name=job.class_path,
+                date_done=now(),
+                status=JobResultStatusChoices.STATUS_SUCCESS,
+            ),
+            JobResult.objects.create(
+                job_model=job,
+                name=job.class_path,
+                date_done=now(),
+                status=JobResultStatusChoices.STATUS_SUCCESS,
+            ),
+            JobResult.objects.create(
+                job_model=job,
+                name=job.class_path,
+                date_done=now(),
+                status=JobResultStatusChoices.STATUS_SUCCESS,
+            ),
+        )
+        cls.file_proxies = []
+        for i, job_result in enumerate(job_results):
+            file = SimpleUploadedFile(name=f"Output {i}.txt", content=f"Content {i}\n".encode("utf-8"))
+            file_proxy = FileProxy.objects.create(name=file.name, file=file, job_result=job_result)
+            cls.file_proxies.append(file_proxy)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_download_file_without_permission(self):
+        """Test `download` action without permission."""
+        url = reverse("extras-api:fileproxy-download", kwargs={"pk": self.file_proxies[0].pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_download_file_with_permission(self):
+        """Test `download` action with permission."""
+        obj_perm = ObjectPermission(
+            name="Test permission", constraints={"pk": self.file_proxies[0].pk}, actions=["view"]
+        )
+        obj_perm.validated_save()
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+        obj_perm.users.add(self.user)
+
+        # FileProxy permitted by permission
+        url = reverse("extras-api:fileproxy-download", kwargs={"pk": self.file_proxies[0].pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = b"".join(data for data in response)
+        self.assertEqual(content.decode("utf-8"), "Content 0\n")
+
+        # FileProxy not permitted by permission
+        url = reverse("extras-api:fileproxy-download", kwargs={"pk": self.file_proxies[1].pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+
+
 class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     model = GitRepository
     bulk_update_data = {
@@ -886,7 +1104,6 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     def test_run_git_sync_no_celery_worker(self, mock_get_worker_count):
         """Git sync cannot be triggered if Celery is not running."""
         mock_get_worker_count.return_value = 0
-        self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
@@ -900,7 +1117,6 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     def test_run_git_sync_nonexistent_repo(self, mock_get_worker_count):
         """Git sync request handles case of a nonexistent repository."""
         mock_get_worker_count.return_value = 1
-        self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": "11111111-1111-1111-1111-111111111111"})
         response = self.client.post(url, format="json", **self.header)
@@ -919,22 +1135,21 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
     @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
     def test_run_git_sync_with_permissions(self, _):
         """Git sync request can be submitted successfully."""
-        self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
         response = self.client.post(url, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
-    def test_create_with_plugin_provided_contents(self):
-        """Test that `provided_contents` published by a plugin works."""
+    def test_create_with_app_provided_contents(self):
+        """Test that `provided_contents` published by an App works."""
         self.add_permissions("extras.add_gitrepository")
         self.add_permissions("extras.change_gitrepository")
         url = self._get_list_url()
         data = {
-            "name": "plugin_test",
-            "slug": "plugin_test",
-            "remote_url": "https://localhost/plugin-test",
-            "provided_contents": ["example_plugin.textfile"],
+            "name": "app_test",
+            "slug": "app_test",
+            "remote_url": "https://localhost/app-test",
+            "provided_contents": ["example_app.textfile"],
         }
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
@@ -2088,6 +2303,7 @@ class JobApprovalTest(APITestCase):
             name="test dryrun",
             task="dry_run.TestDryRun",
             job_model=cls.dryrun_job_model,
+            kwargs={"value": 1},
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=cls.additional_user,
             approval_required=True,
@@ -2227,6 +2443,8 @@ class JobApprovalTest(APITestCase):
         url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": self.dryrun_scheduled_job.pk})
         response = self.client.post(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
+        # The below fails because JobResult.task_kwargs doesn't get set until *after* the task begins executing.
+        # self.assertEqual(response.data["task_kwargs"], {"dryrun": True, "value": 1}, response.data)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_dry_run_not_supported(self):
@@ -2635,6 +2853,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
         vlan_groups = VLANGroup.objects.all()[:2]
 
         # Try deleting all devices and then creating 2 VLANs (fails):
+        Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
         response = send_bulk_data(
             "post",
@@ -3106,7 +3325,7 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
             test_secret = Secret.objects.create(
                 name="secret-check-test-not-accessible",
                 provider="text-file",
-                parameters={"path": "/tmp/does-not-matter"},
+                parameters={"path": "/tmp/does-not-matter"},  # noqa: S108  # hardcoded-temp-file -- false positive
             )
             response = self.client.get(reverse("extras-api:secret-check", kwargs={"pk": test_secret.pk}), **self.header)
             self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
@@ -3131,7 +3350,7 @@ class SecretTest(APIViewTestCases.APIViewTestCase):
             test_secret = Secret.objects.create(
                 name="secret-check-test-failed",
                 provider="text-file",
-                parameters={"path": "/tmp/does-not-exist"},
+                parameters={"path": "/tmp/does-not-exist"},  # noqa: S108  # hardcoded-temp-file -- false positive
             )
             response = self.client.get(reverse("extras-api:secret-check", kwargs={"pk": test_secret.pk}), **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -3364,6 +3583,44 @@ class TagTest(APIViewTestCases.APIViewTestCase):
         tag.refresh_from_db()
         self.assertEqual(tag.color, ColorChoices.COLOR_LIME)
         self.assertEqual(list(tag.content_types.all()), tag_content_types)
+
+
+#
+# Team
+#
+
+
+class TeamTest(APIViewTestCases.APIViewTestCase):
+    model = Team
+    bulk_update_data = {
+        "address": "Carnegie Hall, New York, NY",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_data = [
+            {
+                "name": "Team 1",
+                "phone": "555-0121",
+                "email": "team1@example.com",
+                "contacts": [Contact.objects.first().pk, Contact.objects.last().pk],
+            },
+            {
+                "name": "Team 2",
+                "phone": "555-0122",
+                "email": "team2@example.com",
+                "address": "Bowser's Castle, Staten Island, NY",
+            },
+            {
+                "name": "Team 3",
+                "phone": "555-0123",
+            },
+            {
+                "name": "Team 4",
+                "email": "team4@example.com",
+                "address": "Rainbow Bridge, Central NJ",
+            },
+        ]
 
 
 class WebhookTest(APIViewTestCases.APIViewTestCase):

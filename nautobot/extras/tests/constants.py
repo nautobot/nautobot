@@ -73,7 +73,7 @@ query ($device: [String!]) {
         color
       }
       tagged_vlans {
-        location {
+        locations {
           name
         }
         id

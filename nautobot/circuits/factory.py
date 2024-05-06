@@ -7,8 +7,8 @@ from nautobot.core.factory import (
     NautobotBoolIterator,
     OrganizationalModelFactory,
     PrimaryModelFactory,
-    UniqueFaker,
     random_instance,
+    UniqueFaker,
 )
 from nautobot.dcim import models as dcim_models
 from nautobot.extras.models import Status

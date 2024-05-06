@@ -5,7 +5,6 @@ from django.contrib.contenttypes.models import ContentType
 
 from nautobot.extras.choices import LogLevelChoices
 
-
 logger = logging.getLogger(__name__)
 
 

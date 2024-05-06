@@ -3,8 +3,9 @@
 from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
-import nautobot.extras.utils
 import taggit.managers
+
+import nautobot.extras.utils
 
 
 class Migration(migrations.Migration):

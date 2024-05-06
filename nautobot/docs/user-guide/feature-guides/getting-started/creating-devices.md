@@ -28,7 +28,7 @@ To create a new Device, you will need an existing Device Role or need to create 
 
 To create a new Device Role:
 
-1. Click on **Devices** in the top navigation menu
+1. Click on **Devices** in the left sidebar menu
 2. Find **Device Roles** on the drop-down menu
 3. Select `+`
 4. In the `Add a new device role` form, populate the `Name`
@@ -46,7 +46,7 @@ To create a new Device Type, you will need an existing Manufacturer or need to c
 
 To create a new Manufacturer:
 
-1. Click on **Devices** in the top navigation menu
+1. Click on **Devices** in the left sidebar menu
 2. Find **Manufacturers** on the drop-down
 3. Select **+**
 4. In the `Add a new manufacturer` form, populate the `Name`
@@ -65,7 +65,7 @@ To create a new Device, you will need an existing Device Type or need to create 
 
 To create a new Device Type:
 
-1. Click on **Devices** in the top navigation menu
+1. Click on **Devices** in the left sidebar menu
 2. Find **Device Types**
 3. Select **+** to go to the `Add a new device type` form
 4. Select the `Manufacturer` from the drop-down selector
@@ -82,7 +82,7 @@ More information on Location Type is found in the [Locations](../../core-data-mo
 
 To create a new Location Type:
 
-1. Click on **Organization** in the top navigation menu
+1. Click on **Organization** in the left sidebar menu
 2. Find **LocationTypes**
 3. Select **+** to go to the `Add a new location type` form
 4. Select a `Parent` LocationType if needed
@@ -102,7 +102,7 @@ To create a new Device, you will need an existing Location or need to create a n
 
 To create a new Location:
 
-1. Click on **Organization** in the top navigation menu
+1. Click on **Organization** in the left sidebar menu
 2. Find **Locations**
 3. Select **+** to go to the `Add a new location` form
 4. Select a `LocationType`
@@ -117,7 +117,7 @@ To create a new Location:
 
 To create a new Device:
 
-1. Click on **Devices** in the top navigation menu
+1. Click on **Devices** in the left sidebar menu
 2. Find **Devices**
 3. Select **+** to go to the `Add a new device` form
 4. Populate the `Name`

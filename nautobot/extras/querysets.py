@@ -1,12 +1,11 @@
-from django.core.cache import cache
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Model, OuterRef, Subquery, Q, F
+from django.core.cache import cache
+from django.db.models import F, Model, OuterRef, Q, Subquery
 from django.db.models.functions import JSONObject
-from django_celery_beat.managers import ExtendedQuerySet
 
-from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.query_functions import EmptyGroupByJSONBAgg
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.models.tags import TaggedItem
 
@@ -148,7 +147,7 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
             location_query_string = "cluster__location"
 
         location_query = Q(locations=None) | Q(locations=OuterRef(location_query_string))
-        for _ in range(Location.objects.max_tree_depth() + 1):
+        for _ in range(Location.objects.max_depth + 1):
             location_query_string += "__parent"
             location_query |= Q(locations=OuterRef(location_query_string))
 
@@ -156,7 +155,7 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
 
         tenant_group_query_string = "tenant__tenant_group"
         tenant_group_query = Q(tenant_groups=None) | Q(tenant_groups=OuterRef(tenant_group_query_string))
-        for _ in range(TenantGroup.objects.max_tree_depth() + 1):
+        for _ in range(TenantGroup.objects.max_depth + 1):
             tenant_group_query_string += "__parent"
             tenant_group_query |= Q(tenant_groups=OuterRef(tenant_group_query_string))
         base_query.add((tenant_group_query), Q.AND)
@@ -210,7 +209,7 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
         Return the cache key for the queryset of `DynamicGroup` objects that are eligible to potentially contain the
         given object.
         """
-        return f"{obj._meta.label_lower}._get_eligible_dynamic_groups"
+        return f"nautobot.{obj._meta.label_lower}._get_eligible_dynamic_groups"
 
     def _get_eligible_dynamic_groups(self, obj, use_cache=False):
         """
@@ -272,7 +271,7 @@ class JobQuerySet(RestrictedQuerySet):
         )
 
 
-class ScheduledJobExtendedQuerySet(RestrictedQuerySet, ExtendedQuerySet):
+class ScheduledJobExtendedQuerySet(RestrictedQuerySet):
     """
     Base queryset used for the ScheduledJob class
     """
