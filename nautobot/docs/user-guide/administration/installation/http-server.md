@@ -275,7 +275,7 @@ ls -l /opt/
 
 At the prompt `[nautobot@localhost ~]$` execute:
 
-```no-highlight title="Change permissions on NAUTOBOT files"
+```no-highlight title="Update all permissions to 755 in Nautobot Root"
 chmod 755 $NAUTOBOT
 ```
 
