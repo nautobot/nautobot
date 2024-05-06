@@ -23,7 +23,7 @@ If you are developing a app and want to install it only temporarily, run `python
 
 In your `nautobot_config.py`, add the app's name to the `PLUGINS` list:
 
-```python title="Plugins list in nautobot_config.py"
+```python title="Update PLUGINS list in nautobot_config.py"
 PLUGINS = [
     'app_name',
 ]
