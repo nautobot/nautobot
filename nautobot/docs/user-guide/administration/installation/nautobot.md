@@ -272,7 +272,7 @@ Save your changes to your `nautobot_config.py` and then proceed to the next step
     echo "nautobot[remote_storage]" >> $NAUTOBOT_ROOT/local_requirements.txt
     ```
 
-    An example of using django-storages with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md) user-guide.
+    For an example of using django-storages with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md) user-guide.
 
 ## Prepare the Database
 
