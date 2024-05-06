@@ -498,7 +498,7 @@ Django requires the database encoding for PostgreSQL databases to be set to UTF-
 
     ??? example "Example Redis check output"
 
-        ```no-highlight title="
+        ```no-highlight title="redis-cli ping output"
         PONG
         ```
 
