@@ -42,7 +42,7 @@ As the `nautobot` user, copy and paste the following into the file:
 
 === "Vim"
 
-    ```no-highlight title="Vim open uwsgi file"
+    ```no-highlight title="Edit uwsgi file with Vim"
     vim $NAUTOBOT_ROOT/uwsgi.ini
     ```
 
