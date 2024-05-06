@@ -3,9 +3,17 @@ from datetime import timezone
 from django.contrib.auth import get_user_model
 import factory
 
-from nautobot.core.factory import BaseModelFactory, NautobotBoolIterator
+from nautobot.core.factory import BaseModelFactory, NautobotBoolIterator, random_instance
+from nautobot.users.models import SavedView
 
 User = get_user_model()
+
+VIEW_NAMES = [
+    "circuits:circuit_list",
+    "dcim:device_list",
+    "dcim:location_list",
+    "ipam:ipaddress_list",
+]
 
 
 class UserFactory(BaseModelFactory):
@@ -31,3 +39,13 @@ class UserFactory(BaseModelFactory):
     last_login = factory.Faker("date_time", tzinfo=timezone.utc)
 
     # TODO config_data
+
+
+class SavedViewFactory(BaseModelFactory):
+    class Meta:
+        model = SavedView
+
+    name = factory.LazyAttributeSequence(lambda o, n: f" Sample {o.view} Saved View - {n + 1}")
+    owner = random_instance(User, allow_null=False)
+    view = factory.Faker("random_element", elements=VIEW_NAMES)
+    # TODO config attribute
