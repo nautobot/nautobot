@@ -33,7 +33,7 @@ PLUGINS = [
 
 If the app requires any configuration, define it in `nautobot_config.py` under the `PLUGINS_CONFIG` parameter. The available configuration parameters should be detailed in the app's README file.
 
-```python title="PLUGINS_CONFIG in nautobot_config.py"
+```python title="Update PLUGINS_CONFIG in nautobot_config.py"
 PLUGINS_CONFIG = {
     'app_name': {
         'setting_name': 'value',
