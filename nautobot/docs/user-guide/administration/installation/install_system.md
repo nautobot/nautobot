@@ -508,7 +508,7 @@ Django requires the database encoding for PostgreSQL databases to be set to UTF-
 
     Start the service and enable it to run at system startup:
 
-    ```no-highlight title="Enable Redis to start on boot and starts Redis"
+    ```no-highlight title="Enable Redis to start on boot and start Redis now"
     sudo systemctl enable --now redis
     ```
 
