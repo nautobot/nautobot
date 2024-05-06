@@ -112,7 +112,7 @@
         {% if object.is_static_group_associable_model and perms.extras.view_staticgroup %}
             <li role="presentation"{% if request.GET.tab == 'static_groups' %} class="active"{% endif %}>
                 <a href="{{ object.get_absolute_url }}#static_groups" onclick="switch_tab(this.href)" aria-controls="static_groups" role="tab" data-toggle="tab">
-                    Static Groups
+                    Static Groups {% badge object.static_groups.count %}
                 </a>
             </li>
         {% endif %}
