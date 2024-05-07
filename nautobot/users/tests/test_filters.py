@@ -117,7 +117,6 @@ class UserTestCase(FilterTestCases.FilterTestCase):
 
     def test_is_active(self):
         params = {"is_active": True}
-        # 4 created active users in setUpTestData, plus one created active user in TestCase.setUp
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), self.queryset.filter(is_active=True).count())
 
     def test_search(self):
