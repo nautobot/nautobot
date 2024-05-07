@@ -137,7 +137,7 @@ Begin by installing NGINX:
         nano /etc/nginx/conf.d/nautobot.conf
         ```
 
-    ```nginxconf title="/etc/nginx/sites-available/nautobot.conf"
+    ```nginxconf title="/etc/nginx/conf.d/nautobot.conf"
     server {
         listen 443 ssl http2 default_server;
         listen [::]:443 ssl http2 default_server;
