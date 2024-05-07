@@ -9,7 +9,7 @@ There are three primary methods of deploying Nautobot with regular updates:
 
 [Instructions](install_system.md) here are written for a fresh installation on a [RHEL (Red Hat Enterprise Linux)](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux) or [Ubuntu](https://ubuntu.com/) virtual machine.
 
-For more information about the Docker tags, Docker configurations, or using container images for your own development environment checkout these docs on [Nautobot in Docker](../installation_extras/docker.md).
+For more information about the Docker tags, Docker configurations, or using container images for your own development environment checkout these docs on [Nautobot in Docker](../installation-extras/docker.md).
 
 ??? info "Supported Platforms"
 
