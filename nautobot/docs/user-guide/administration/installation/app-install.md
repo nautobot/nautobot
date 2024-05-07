@@ -50,7 +50,7 @@ After installing or upgrading a app, you should always run [`nautobot-server pos
 * Collecting any static files provided by the app
 * Etc.
 
-```no-highlight title="Run the `post_upgrade` command"
+```no-highlight title="Run the `post_upgrade` command" <!-- markdownlint-disable MD031 MD040 -->
 nautobot-server post_upgrade
 ```
 

@@ -76,7 +76,7 @@ echo "export NAUTOBOT_ROOT=/opt/nautobot" | sudo tee -a ~nautobot/.bashrc
 ```
 
 ??? example "Example bashrc update output"
-    
+
     ```no-highlight title="Example output of updating bashrc"
     export NAUTOBOT_ROOT=/opt/nautobot
     ```
@@ -96,7 +96,7 @@ sudo -iu nautobot
     echo $NAUTOBOT_ROOT
     ```
 
-    ??? example "Example NAUTOBOT_ROOT output"
+    ???+ example "Example NAUTOBOT_ROOT output"
 
         ```no-highlight
         /opt/nautobot
@@ -209,7 +209,6 @@ Great! We have `NAUTOBOT_ROOT` ready for use by the `nautobot` user, so let's pr
 
         If you are using MySQL as your database backend, and you want to enable support for Unicode emojis, please make sure to add `"OPTIONS": {"charset": "utf8mb4"}` to your `DATABASES` setting (upcoming). Please see the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#mysql-unicode-settings) for more information.
 
-
 ## Verify your Nautobot Installation
 
 You should now have a fancy `nautobot-server` command in your environment. This will be your gateway to all things Nautobot! Run it to confirm the installed version of `nautobot`:
@@ -265,7 +264,6 @@ Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on 
     If you are using MySQL as your database backend, you **must also update** the database `ENGINE` setting to `django.db.backends.mysql`.
 
 Save your changes to your `nautobot_config.py` and then proceed to the next step.
-
 
 ## Optional Settings
 

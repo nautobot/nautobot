@@ -5,14 +5,14 @@ There are three primary methods of deploying Nautobot with regular updates:
 * Docker containers are available via [Docker Hub](https://hub.docker.com/r/networktocode/nautobot) & [GitHub Container Registry](https://github.com/nautobot/nautobot/pkgs/container/nautobot) for use within a containerized environment
 * Docker Compose instructions
 * [Helm Charts](https://docs.nautobot.com/projects/helm-charts/en/stable/) for Kubernetes
-* Install onto Ubuntu/Debian and Enterprise Linux 
- 
+* Install onto Ubuntu/Debian and Enterprise Linux
+
 [Instructions](install_system.md) here are written for a fresh installation on a [RHEL (Red Hat Enterprise Linux)](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux) or [Ubuntu](https://ubuntu.com/) virtual machine.
 
 For more information about the Docker tags, Docker configurations, or using container images for your own development environment checkout these docs on [Nautobot in Docker](../installation_extras/docker.md).
 
 ??? info "Supported Platforms"
-    
+
     Nautobot was designed to be a cross-platform application that can run on nearly any system that is able to run the required dependencies. *Only the operating system platforms listed below are officially supported at this time*.
 
     - Red Hat flavors of Linux including CentOS 8.2+ and Red Hat Enterprise Linux (RHEL) 8.2+ are supported.
