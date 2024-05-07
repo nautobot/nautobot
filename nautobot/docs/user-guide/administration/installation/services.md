@@ -48,7 +48,7 @@ As the `nautobot` user, copy and paste the following into the file:
 
 === "Nano"
 
-    ```no-highlight title="Nano open uwsgi file"
+    ```no-highlight title="Edit uwsgi file with Nano"
     nano $NAUTOBOT_ROOT/uwsgi.ini
     ```
 
