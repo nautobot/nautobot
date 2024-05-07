@@ -72,6 +72,15 @@ The default Python version for Nautobot Docker images has been changed from 3.7 
 As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support installation or operation under Python 3.7.
 
 <!-- towncrier release notes start -->
+## v1.6.21 (2024-05-07)
+
+### Security
+
+- [#5521](https://github.com/nautobot/nautobot/issues/5521) - Updated `Pillow` dependency to `~10.3.0` to address `CVE-2024-28219`.
+- [#5561](https://github.com/nautobot/nautobot/issues/5561) - Updated `idna` to `3.7` due to `CVE-2024-3651`. This is not a direct dependency so will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#5624](https://github.com/nautobot/nautobot/issues/5624) - Updated `social-auth-app-django` dependency to `~5.4.1` to address `CVE-2024-32879`.
+- [#5675](https://github.com/nautobot/nautobot/issues/5675) - Updated `Jinja2` dependency to `3.1.4` to address `CVE-2024-34064`.
+
 ## v1.6.20 (2024-04-30)
 
 ### Security
