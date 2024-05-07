@@ -246,7 +246,7 @@ To establish the `systemd` unit file for the Celery Beat scheduler, copy and pas
 
 === "Nano"
 
-    ```no-highlight title="Nano open scheduler service file"
+    ```no-highlight title="Edit scheduler service file with Nano"
     sudo nano /etc/systemd/system/nautobot-scheduler.service
     ```
 
