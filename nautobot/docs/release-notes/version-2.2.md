@@ -78,7 +78,6 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5637](https://github.com/nautobot/nautobot/issues/5637) - Removed "version" from development `docker-compose.yml` files as newer versions of Docker complain about it being obsolete.
 - [#5637](https://github.com/nautobot/nautobot/issues/5637) - Fixed behavior of `invoke stop` so that it also stops the optional `mkdocs` container if present.
 
-
 ## v2.2.3 (2024-04-30)
 
 ### Security
