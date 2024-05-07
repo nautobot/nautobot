@@ -2,12 +2,16 @@ from unittest import mock
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import override_settings, RequestFactory
 from django.urls import reverse
+from django.utils.html import conditional_escape, escape
 from social_django.utils import load_backend, load_strategy
 
-from nautobot.core.testing import TestCase
+from nautobot.core.testing import ModelTestCase, TestCase
+from nautobot.core.testing.utils import disable_warnings, extract_page_body
+from nautobot.users.models import ObjectPermission, SavedView
 
 User = get_user_model()
 
@@ -135,3 +139,96 @@ class AdvancedProfileSettingsViewTest(TestCase):
 
         # Check if the session has the correct value
         self.assertFalse(self.client.session.get("silk_record_requests"))
+
+
+class SavedViewTest(ModelTestCase):
+    """
+    Tests for Saved Views
+    """
+
+    model = SavedView
+
+    def get_detail_view_url_for_saved_view(self, saved_view):
+        """
+        Since saved view detail url redirects, we need to manually construct its detail url
+        to test the content of its response.
+        """
+        view = saved_view.view
+        pk = saved_view.pk
+        url = reverse(view) + saved_view.view_config + f"&saved_view={pk}"
+
+        return url
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_get_object_anonymous(self):
+        # Make the request as an unauthenticated user
+        self.client.logout()
+        instance = self._get_queryset().first()
+        url = self.get_detail_view_url_for_saved_view(instance)
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+
+        response_body = response.content.decode(response.charset)
+        # No good way to represent the url encode in the response
+        # "/login/?next=/ipam/ip-addresses/%3Fper_page%3D65000%26saved_view%3Df9f4fb33-6f28-49a3-b431-cec8312d5d95"
+        # so instead of doing "/login/?next=" + url, I am only doing "/login/?next="
+        self.assertIn("/login/?next=", response_body, msg=response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_without_permission(self):
+        instance = self._get_queryset().first()
+        url = self.get_detail_view_url_for_saved_view(instance)
+
+        # Try GET without permission
+        with disable_warnings("django.request"):
+            response = self.client.get(url)
+            self.assertHttpStatus(response, [403, 404])
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn("/login/", response_body, msg=response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_get_object_with_permission(self):
+        instance = self._get_queryset().first()
+        view = instance.view
+        app_label = view.split(":")[0]
+        model_name = view.split(":")[1].split("_")[0]
+        # Add model-level permission
+        self.add_permissions("users.view_savedview")
+        self.add_permissions(f"{app_label}.view_{model_name}")
+
+        # Try GET with model-level permission
+        # SavedView detail view should redirect to the View from which it is derived
+        response = self.client.get(instance.get_absolute_url())
+        self.assertHttpStatus(response, 302)
+
+        # To go to the actual saved view, we have to construct the url from scratch
+        view_url = self.get_detail_view_url_for_saved_view(instance)
+        response = self.client.get(view_url)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(escape(instance.name), response_body, msg=response_body)
+
+        # TODO Test view_changes_not_saved() helper function
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_with_constrained_permission(self):
+        instance1, instance2 = self._get_queryset().all()[:2]
+
+        # Add object-level permission
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance1.pk},
+            actions=["view", "add", "change", "delete"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+        app_label = instance1.view.split(":")[0]
+        model_name = instance1.view.split(":")[1].split("_")[0]
+        self.add_permissions(f"{app_label}.view_{model_name}")
+
+        # Try GET to permitted object
+        self.assertHttpStatus(self.client.get(instance1.get_absolute_url()), 302)
+
+        # Try GET to non-permitted object
+        self.assertHttpStatus(self.client.get(instance2.get_absolute_url()), 404)

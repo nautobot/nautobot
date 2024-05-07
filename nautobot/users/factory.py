@@ -45,7 +45,7 @@ class SavedViewFactory(BaseModelFactory):
     class Meta:
         model = SavedView
 
-    name = factory.LazyAttributeSequence(lambda o, n: f" Sample {o.view} Saved View - {n + 1}")
+    name = factory.LazyAttributeSequence(lambda o, n: f"Sample {o.view} Saved View - {n + 1}")
     owner = random_instance(User, allow_null=False)
     view = factory.Faker("random_element", elements=VIEW_NAMES)
     # TODO config attribute
