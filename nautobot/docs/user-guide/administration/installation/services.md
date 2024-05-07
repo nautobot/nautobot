@@ -128,7 +128,7 @@ First, we'll establish the `systemd` unit file for the Nautobot web service. Cop
 
 === "Vim"
 
-    ```no-highlight title="Vim open nautobot service file"
+    ```no-highlight title="Edit Nautobot service file with Vim"
     sudo vim /etc/systemd/system/nautobot.service
     ```
 
