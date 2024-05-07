@@ -2798,6 +2798,41 @@ class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
         super().test_edit_object_with_constrained_permission()
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_assign_successful(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+        group_1 = StaticGroup.objects.create(content_type=location_ct, name="Group 1")
+        group_2 = StaticGroup.objects.create(content_type=location_ct, name="Group 2")
+        group_2.add_members(Location.objects.filter(name__startswith="Root"))
+
+        self.add_permissions(
+            "extras.add_staticgroupassociation", "extras.delete_staticgroupassociation", "extras.add_staticgroup"
+        )
+
+        url = reverse("extras:staticgroup_bulk_assign")
+        request = {
+            "path": url,
+            "data": post_data(
+                {
+                    "content_type": location_ct.pk,
+                    "pk": list(Location.objects.filter(parent__isnull=True).values_list("pk", flat=True)),
+                    "create_and_assign_to_new_group_name": "Root Locations",
+                    "add_to_groups": [group_1.pk],
+                    "remove_from_groups": [group_2.pk],
+                }
+            ),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        new_group = StaticGroup.objects.get(name="Root Locations")
+        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), new_group.members)
+        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), group_1.members)
+        self.assertQuerysetEqualAndNotEmpty(
+            Location.objects.filter(name__startswith="Root").exclude(parent__isnull=True), group_2.members
+        )
+
+    # TODO: negative tests - global permission violation, object-level permission violation, invalid data, etc.
+
 
 class StaticGroupAssociationTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,

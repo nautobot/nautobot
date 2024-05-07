@@ -2396,9 +2396,10 @@ class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin
         Unlike BulkEditView, this takes a single POST rather than two to perform its operation as
         there's no separate confirmation step involved.
         """
-        # TODO error handling
+        # TODO more error handling - content-type doesn't exist, model_class not found, filterset missing, etc.
         content_type = ContentType.objects.get(pk=request.POST.get("content_type"))
         model = content_type.model_class()
+        self.default_return_url = get_route_for_model(model, "list")
         filterset_class = get_filterset_for_model(model)
 
         if request.POST.get("_all"):
@@ -2415,66 +2416,73 @@ class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin
         if form.is_valid():
             logger.debug("Form validation was successful")
             try:
-                add_to_groups = list(form.cleaned_data["add_to_groups"])
-                new_group_name = form.cleaned_data["create_and_assign_to_new_group_name"]
-                if new_group_name:
-                    if not request.user.has_perm("extras.add_staticgroup"):
-                        pass  # TODO
-                    else:
-                        new_group = StaticGroup(name=new_group_name, content_type=content_type)
-                        new_group.validated_save()
-                        add_to_groups.append(new_group)
-                        msg = f"Created static group {new_group.name}"
+                with transaction.atomic():
+                    add_to_groups = list(form.cleaned_data["add_to_groups"])
+                    new_group_name = form.cleaned_data["create_and_assign_to_new_group_name"]
+                    if new_group_name:
+                        if not request.user.has_perm("extras.add_staticgroup"):
+                            raise StaticGroup.DoesNotExist
+                        else:
+                            new_group = StaticGroup(name=new_group_name, content_type=content_type)
+                            new_group.validated_save()
+                            # Check permissions
+                            StaticGroup.objects.restrict(request.user, "add").get(pk=new_group.pk)
+
+                            add_to_groups.append(new_group)
+                            msg = "Created static group"
+                            logger.info(f"{msg} {new_group} (PK: {new_group.pk})")
+                            msg = format_html('{} <a href="{}">{}</a>', msg, new_group.get_absolute_url(), new_group)
+                            messages.success(self.request, msg)
+
+                    with deferred_change_logging_for_bulk_operation():
+                        associations = []
+                        for pk in pk_list:
+                            for static_group in add_to_groups:
+                                association, created = StaticGroupAssociation.objects.get_or_create(
+                                    static_group=static_group,
+                                    associated_object_type=content_type,
+                                    associated_object_id=pk,
+                                )
+                                association.validated_save()
+                                associations.append(association)
+                                if created:
+                                    logger.debug("Created %s", association)
+
+                        # Enforce object-level permissions
+                        if self.queryset.filter(pk__in=[assoc.pk for assoc in associations]).count() != len(
+                            associations
+                        ):
+                            raise StaticGroupAssociation.DoesNotExist
+
+                    if associations:
+                        msg = (
+                            f"Added {len(pk_list)} {model._meta.verbose_name_plural} "
+                            f"to {len(add_to_groups)} static group(s)."
+                        )
                         logger.info(msg)
                         messages.success(self.request, msg)
 
-                with deferred_change_logging_for_bulk_operation():
-                    associations = []
-                    for pk in pk_list:
-                        for static_group in add_to_groups:
-                            association, created = StaticGroupAssociation.objects.get_or_create(
-                                static_group=static_group,
-                                associated_object_type=content_type,
-                                associated_object_id=pk,
+                    if form.cleaned_data["remove_from_groups"]:
+                        for static_group in form.cleaned_data["remove_from_groups"]:
+                            (
+                                StaticGroupAssociation.objects.restrict(request.user, "delete")
+                                .filter(
+                                    static_group=static_group,
+                                    associated_object_type=content_type,
+                                    associated_object_id__in=pk_list,
+                                )
+                                .delete()
                             )
-                            association.validated_save()
-                            associations.append(association)
-                            if created:
-                                logger.debug("Created %s", association)
 
-                    # Enforce object-level permissions
-                    if self.queryset.filter(pk__in=[assoc.pk for assoc in associations]).count() != len(associations):
-                        raise StaticGroupAssociation.DoesNotExist
-
-                if associations:
-                    msg = (
-                        f"Added {len(pk_list)} {model._meta.verbose_name_plural} "
-                        f"to {len(add_to_groups)} static group(s)."
-                    )
-                    logger.info(msg)
-                    messages.success(self.request, msg)
-
-                if form.cleaned_data["remove_from_groups"]:
-                    for static_group in form.cleaned_data["remove_from_groups"]:
-                        (
-                            StaticGroupAssociation.objects.restrict(request.user, "delete")
-                            .filter(
-                                static_group=static_group,
-                                associated_object_type=content_type,
-                                associated_object_id__in=pk_list,
-                            )
-                            .delete()
+                        msg = (
+                            f"Removed {len(pk_list)} {model._meta.verbose_name_plural} from "
+                            f"{len(form.cleaned_data['remove_from_groups'])} static group(s)."
                         )
-
-                    msg = (
-                        f"Removed {len(pk_list)} {model._meta.verbose_name_plural} from "
-                        f"{len(form.cleaned_data['remove_from_groups'])} static group(s)."
-                    )
-                    logger.info(msg)
-                    messages.success(self.request, msg)
+                        logger.info(msg)
+                        messages.success(self.request, msg)
             except ValidationError as e:
                 messages.error(self.request, e)
-            except StaticGroupAssociation.DoesNotExist:
+            except ObjectDoesNotExist:
                 msg = "Static group association failed due to object-level permissions violation"
                 logger.warning(msg)
                 messages.error(self.request, msg)
