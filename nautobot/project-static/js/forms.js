@@ -632,18 +632,19 @@ function initializeDynamicFilterForm(context){
 
     // Remove applied filters
     this_context.find(".remove-filter-param").on("click", function(){
-        let query_params = location.search;
+        let query_params = new URLSearchParams(location.search);
         let type = $(this).attr("data-field-type");
         let field_value = $(this).attr("data-field-value");
-        let query_string = location.search.substr(1).split("&");
 
         if (type === "parent") {
-            query_string = query_string.filter(item => item.search(field_value) < 0);
+            // Remove all instances of this query param
+            query_params.delete(field_value);
         } else {
+            // Remove this specific instance of this query param
             let parent = $(this).attr("data-field-parent");
-            query_string = query_string.filter(item => item.search(parent + "=" + field_value) < 0)
+            query_params.delete(parent, field_value);
         }
-        location.replace("?" + query_string.join("&"))
+        location.assign("?" + query_params);
     })
 
     // On submit of filter form
@@ -657,12 +658,18 @@ function initializeDynamicFilterForm(context){
         q_field_phantom.val(q_field.val())
         dynamic_form.append(q_field_phantom);
 
-        // Get the serialize data from the forms and filter out query_params which values are empty e.g ?sam=&dan=2 becomes dan=2
-        let dynamic_filter_form_query = $("#dynamic-filter-form").serialize().split("&").filter(params => params.split("=")[1]?.length || 0 )
-        let default_filter_form_query = $("#default-filter form").serialize().split("&").filter(params => params.split("=")[1]?.length || 0 )
-        // Union Operation
-        let search_query = [...new Set([...default_filter_form_query, ...dynamic_filter_form_query])].join("&")
-        location.replace("?" + search_query)
+        // Get the serialized data from the forms and:
+        // 1) filter out query_params which values are empty e.g ?sam=&dan=2 becomes dan=2
+        // 2) combine the two forms into a single set of data without duplicate entries
+        let search_query = new URLSearchParams();
+        let dynamic_query = new URLSearchParams(new FormData(document.getElementById("dynamic-filter-form")));
+        dynamic_query.forEach((value, key) => { if (value != "") { search_query.append(key, value); }});
+        let default_query = new URLSearchParams(new FormData(document.getElementById("default-filter").firstElementChild));
+        default_query.forEach((value, key) => {
+            if (value != "" && !search_query.has(key, value)) { search_query.append(key, value); }
+        });
+        $("#FilterForm_modal").modal("hide");
+        location.assign("?" + search_query);
     })
 
     // On submit of filter search form

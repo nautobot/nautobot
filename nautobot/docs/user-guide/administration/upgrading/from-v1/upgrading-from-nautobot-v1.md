@@ -479,14 +479,15 @@ Therefore all code that is calling `JobResult.set_status()` (which has been remo
 
 ### Fundamental Changes
 
-The `BaseJob` class is now a subclass of Celery's `Task` class. Some fundamental changes to the job's methods and signatures were required to support this change:
++/- 2.2.3
+    In Nautobot 2.0.0 through 2.2.2, Nautobot's `BaseJob` class was made to be a subclass of Celery's `Task` class. The implications of this change are outside the scope of this document, but this change has been reverted in Nautobot 2.2.3 and later.
 
-- The `test_*` and `post_run` methods for backwards compatibility to NetBox scripts and reports were removed. Celery implements `before_start`, `on_success`, `on_retry`, `on_failure`, and `after_return` methods that can be used by job authors to perform similar functions.
+- The `test_*` and `post_run` methods for backwards compatibility to NetBox scripts and reports were removed. In their place, Nautobot Jobs now have `before_start`, `on_success`, `on_failure`, and `after_return` methods that can be used by job authors to perform similar functions.
 
 !!! important
     Be sure to call the `super()` method when overloading any of the job's `before_start`, `on_success`, `on_retry`, `on_failure`, or `after_return` methods
 
-- The run method signature is now customizable by the job author. This means that the `data` and `commit` arguments are no longer passed to the job by default and the job's run method signature should match the the job's input variables.
+- The `run` method signature now includes each of the input variables defined on the Job. This means that the `data` and `commit` arguments are no longer passed to the job by default and the job's run method signature should match the the job's input variables.
 
 !!! example
     ```py
@@ -496,7 +497,7 @@ The `BaseJob` class is now a subclass of Celery's `Task` class. Some fundamental
         var3 = BooleanVar()
         var4 = ObjectVar(model=Role)
 
-        def run(self, var1, var2, var3, var4):
+        def run(self, *, var1, var2, var3, var4):
             ...
     ```
 
