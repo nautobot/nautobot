@@ -133,7 +133,7 @@ Begin by installing NGINX:
 
     === "Nano"
 
-        ```no-highlight title="Nano nautobot site config"
+        ```no-highlight title="Edit Nautobot site config with Nano"
         nano /etc/nginx/conf.d/nautobot.conf
         ```
 
