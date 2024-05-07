@@ -114,7 +114,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             # Apply the request context
             paginate = {
                 "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
+                "per_page": get_paginate_count(request, self.saved_view),
             }
             max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
             if max_page_size and paginate["per_page"] > max_page_size:

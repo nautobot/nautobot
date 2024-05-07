@@ -12,7 +12,6 @@ from rest_framework import exceptions, serializers
 from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.models.utils import is_taggable
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_filter_field_label
 from nautobot.core.utils.lookup import get_form_for_model
@@ -284,16 +283,16 @@ def view_changes_not_saved(request, view, current_saved_view):
     If every configuration is the same, return False
     """
     if current_saved_view is None:
-        return False
+        return True
     query_dict = request.GET.dict()
 
     if query_dict.get("table_changes_pending", None):
         return True
-    if int(query_dict.get("per_page", get_settings_or_config("PAGINATE_COUNT"))) != current_saved_view.config.get(
-        "pagination_count", get_settings_or_config("PAGINATE_COUNT")
-    ):
+    per_page = int(query_dict.get("per_page", 0))
+    if per_page and per_page != current_saved_view.config.get("pagination_count"):
         return True
-    if (request.GET.getlist("sort", [])) != current_saved_view.config.get("sort_order", []):
+    sort = request.GET.getlist("sort", [])
+    if sort and sort != current_saved_view.config.get("sort_order", []):
         return True
     query_dict_keys = sorted(list(query_dict.keys()))
     for param in view.non_filter_params:
@@ -301,9 +300,10 @@ def view_changes_not_saved(request, view, current_saved_view):
             query_dict_keys.remove(param)
     filter_params = current_saved_view.config.get("filter_params", {})
 
-    if set(query_dict_keys) != set(filter_params.keys()):
-        return True
-    for key, value in filter_params.items():
-        if set(value) != set(request.GET.getlist(key)):
+    if query_dict_keys:
+        if set(query_dict_keys) != set(filter_params.keys()):
             return True
+        for key, value in filter_params.items():
+            if set(value) != set(request.GET.getlist(key)):
+                return True
     return False
