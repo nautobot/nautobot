@@ -124,6 +124,8 @@ __all__ = (
     "LocationFilterSet",
     "LocationTypeFilterSet",
     "ManufacturerFilterSet",
+    "ModuleBayFilterSet",
+    "ModuleBayTemplateFilterSet",
     "ModuleFilterSet",
     "ModuleTypeFilterSet",
     "PathEndpointFilterSet",
@@ -2163,4 +2165,101 @@ class ModuleTypeFilterSet(NautobotFilterSet):
 
     class Meta:
         model = ModuleType
+        fields = "__all__"
+
+
+class ModuleBayTemplateFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "device_type__manufacturer__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "device_type__model": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "module_type__manufacturer__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "module_type__model": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "position": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+        }
+    )
+    device_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DeviceType.objects.all(),
+        to_field_name="model",
+        label="Device type (model or ID)",
+    )
+    has_device_type = RelatedMembershipBooleanFilter(
+        field_name="device_type",
+        label="Has device type",
+    )
+    module_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=ModuleType.objects.all(),
+        to_field_name="model",
+        label="Module type (model or ID)",
+    )
+    has_module_type = RelatedMembershipBooleanFilter(
+        field_name="module_type",
+        label="Has module type",
+    )
+
+    class Meta:
+        model = ModuleBayTemplate
+        fields = "__all__"
+
+
+class ModuleBayFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "device__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "parent_module__module_type__manufacturer__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "parent_module__module_type__model": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "position": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+        }
+    )
+    parent_device = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Parent device (name or ID)",
+    )
+    has_parent_device = RelatedMembershipBooleanFilter(
+        field_name="parent_device",
+        label="Has parent device",
+    )
+    parent_module = django_filters.ModelMultipleChoiceFilter(
+        queryset=Module.objects.all(),
+        label="Parent module (ID)",
+    )
+    has_parent_module = RelatedMembershipBooleanFilter(
+        field_name="parent_module",
+        label="Has parent module",
+    )
+    has_installed_module = RelatedMembershipBooleanFilter(
+        field_name="installed_module",
+        label="Has installed module",
+    )
+
+    class Meta:
+        model = ModuleBay
         fields = "__all__"

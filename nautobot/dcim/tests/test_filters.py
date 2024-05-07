@@ -46,6 +46,8 @@ from nautobot.dcim.filters import (
     LocationFilterSet,
     LocationTypeFilterSet,
     ManufacturerFilterSet,
+    ModuleBayFilterSet,
+    ModuleBayTemplateFilterSet,
     ModuleFilterSet,
     ModuleTypeFilterSet,
     PlatformFilterSet,
@@ -561,7 +563,24 @@ def common_test_data(cls):
         label="devicebay3",
         description="Device Bay Description 3",
     )
-
+    ModuleBayTemplate.objects.create(
+        device_type=device_types[0],
+        position="device test module bay 1",
+        label="devicemodulebay1",
+        description="device test module bay 1 description",
+    )
+    ModuleBayTemplate.objects.create(
+        device_type=device_types[1],
+        position="device test module bay 2",
+        label="devicemodulebay2",
+        description="device test module bay 2 description",
+    )
+    ModuleBayTemplate.objects.create(
+        device_type=device_types[2],
+        position="device test module bay 3",
+        label="devicemodulebay3",
+        description="device test module bay 3 description",
+    )
     secrets_groups = (
         SecretsGroup.objects.create(name="Secrets group 1"),
         SecretsGroup.objects.create(name="Secrets group 2"),
@@ -877,14 +896,20 @@ def common_test_data(cls):
     ModuleBayTemplate.objects.create(
         module_type=module_types[0],
         position="test module bay 1",
+        label="modulebay1",
+        description="test module bay 1 description",
     )
     ModuleBayTemplate.objects.create(
         module_type=module_types[1],
         position="test module bay 2",
+        label="modulebay2",
+        description="test module bay 2 description",
     )
     ModuleBayTemplate.objects.create(
         module_type=module_types[2],
         position="test module bay 3",
+        label="modulebay3",
+        description="test module bay 3 description",
     )
     module_bay = ModuleBay.objects.filter(installed_module__isnull=True).first()
     module_status = Status.objects.get_for_model(Module).first()
@@ -3723,6 +3748,41 @@ class ModuleTypeTestCase(FilterTestCases.FilterTestCase):
         ("rear_port_templates", "rear_port_templates__id"),
         ("rear_port_templates", "rear_port_templates__name"),
         ("module_bay_templates", "module_bay_templates__id"),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        common_test_data(cls)
+
+
+class ModuleBayTemplateTestCase(FilterTestCases.FilterTestCase):
+    queryset = ModuleBayTemplate.objects.all()
+    filterset = ModuleBayTemplateFilterSet
+    generic_filter_tests = [
+        ("description",),
+        ("device_type", "device_type__id"),
+        ("device_type", "device_type__model"),
+        ("label",),
+        ("module_type", "module_type__id"),
+        ("module_type", "module_type__model"),
+        ("position",),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        common_test_data(cls)
+
+
+class ModuleBayTestCase(FilterTestCases.FilterTestCase):
+    queryset = ModuleBay.objects.all()
+    filterset = ModuleBayFilterSet
+    generic_filter_tests = [
+        ("description",),
+        ("label",),
+        ("parent_device", "parent_device__id"),
+        ("parent_device", "parent_device__name"),
+        ("parent_module", "parent_module__id"),
+        ("position",),
     ]
 
     @classmethod
