@@ -2351,7 +2351,9 @@ class StaticGroupUIViewSet(NautobotUIViewSet):
                 "per_page": get_paginate_count(request),
             }
             RequestConfig(request, paginate).configure(members_table)
-            members_table.columns.show("pk")  # TODO why is this needed?
+            members_table.columns.hide("pk")
+            if "actions" in members_table.columns:
+                members_table.columns.hide("actions")
             context["members_table"] = members_table
             try:
                 context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))

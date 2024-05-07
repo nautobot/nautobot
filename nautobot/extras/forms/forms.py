@@ -1566,7 +1566,7 @@ class StaticGroupBulkAssignForm(BootstrapMixin, BulkEditForm):
     )
     create_and_assign_to_new_group_name = forms.CharField(
         required=False,
-        label="Add to new group",
+        label="Create a new group",
         help_text="Create a new group with this name and assign the selected objects to it.",
     )
 

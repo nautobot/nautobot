@@ -19,8 +19,8 @@
                     {% for field in form.hidden_fields %}
                         {{ field }}
                     {% endfor %}
-                    {% render_field form.create_and_assign_to_new_group_name %}
                     {% render_field form.add_to_groups %}
+                    {% render_field form.create_and_assign_to_new_group_name %}
                     {% render_field form.remove_from_groups %}
                 </div>
                 <div class="modal-footer">
