@@ -124,6 +124,8 @@ __all__ = (
     "LocationFilterSet",
     "LocationTypeFilterSet",
     "ManufacturerFilterSet",
+    "ModuleFilterSet",
+    "ModuleTypeFilterSet",
     "PathEndpointFilterSet",
     "PathEndpointModelFilterSetMixin",
     "PlatformFilterSet",
@@ -2080,7 +2082,9 @@ class ModuleTypeFilterSet(NautobotFilterSet):
         },
     )
     manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Manufacturer.objects.all(), to_field_name="name", label="Manufacturer (name or ID)"
+        queryset=Manufacturer.objects.all(),
+        to_field_name="name",
+        label="Manufacturer (name or ID)",
     )
     has_modules = RelatedMembershipBooleanFilter(
         field_name="modules",
@@ -2149,10 +2153,8 @@ class ModuleTypeFilterSet(NautobotFilterSet):
         field_name="rear_port_templates",
         label="Has rear port templates",
     )
-    module_bay_templates = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="name",
+    module_bay_templates = django_filters.ModelMultipleChoiceFilter(
         queryset=ModuleBayTemplate.objects.all(),
-        label="Module bay templates (name or ID)",
     )
     has_module_bay_templates = RelatedMembershipBooleanFilter(
         field_name="module_bay_templates",

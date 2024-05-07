@@ -47,6 +47,7 @@ from nautobot.dcim.filters import (
     LocationTypeFilterSet,
     ManufacturerFilterSet,
     ModuleFilterSet,
+    ModuleTypeFilterSet,
     PlatformFilterSet,
     PowerFeedFilterSet,
     PowerOutletFilterSet,
@@ -3697,3 +3698,33 @@ class ModuleTestCase(FilterTestCases.TenancyFilterTestCaseMixin, FilterTestCases
         interfaces = Interface.objects.filter(module__isnull=False)[:3]
         Interface.objects.filter(pk=interfaces[0].pk).update(mac_address="00-00-00-00-00-01")
         Interface.objects.filter(pk=interfaces[1].pk).update(mac_address="00-00-00-00-00-02")
+
+
+class ModuleTypeTestCase(FilterTestCases.FilterTestCase):
+    queryset = ModuleType.objects.all()
+    filterset = ModuleTypeFilterSet
+    generic_filter_tests = [
+        ("manufacturer", "manufacturer__id"),
+        ("manufacturer", "manufacturer__name"),
+        ("model",),
+        ("part_number",),
+        ("console_port_templates", "console_port_templates__id"),
+        ("console_port_templates", "console_port_templates__name"),
+        ("console_server_port_templates", "console_server_port_templates__id"),
+        ("console_server_port_templates", "console_server_port_templates__name"),
+        ("power_port_templates", "power_port_templates__id"),
+        ("power_port_templates", "power_port_templates__name"),
+        ("power_outlet_templates", "power_outlet_templates__id"),
+        ("power_outlet_templates", "power_outlet_templates__name"),
+        ("interface_templates", "interface_templates__id"),
+        ("interface_templates", "interface_templates__name"),
+        ("front_port_templates", "front_port_templates__id"),
+        ("front_port_templates", "front_port_templates__name"),
+        ("rear_port_templates", "rear_port_templates__id"),
+        ("rear_port_templates", "rear_port_templates__name"),
+        ("module_bay_templates", "module_bay_templates__id"),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        common_test_data(cls)
