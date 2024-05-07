@@ -194,7 +194,7 @@ To establish the `systemd` unit file for the Celery worker, copy and paste the f
 
 === "Nano"
 
-    ```no-highlight title="Nano open worker service"
+    ```no-highlight title="Edit worker service with Nano"
     sudo nano /etc/systemd/system/nautobot-worker.service
     ```
 
