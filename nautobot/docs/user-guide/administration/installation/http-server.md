@@ -74,7 +74,7 @@ Begin by installing NGINX:
 
     === "Nano"
 
-        ```no-highlight title="Nano open NGINX config"
+        ```no-highlight title="Edit NGINX config with Nano"
         nano /etc/nginx/sites-available/nautobot.conf
         ```
 
