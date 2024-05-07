@@ -120,13 +120,22 @@ class ModularComponentModel(ComponentModel):
 
     class Meta:
         abstract = True
+        ordering = ("device", "module", "_name")
         constraints = [
             # Database constraint to make the device and module fields mutually exclusive
             models.CheckConstraint(
                 check=models.Q(device__isnull=False, module__isnull=True)
                 | models.Q(device__isnull=True, module__isnull=False),
                 name="%(app_label)s_%(class)s_device_xor_module",
-            )
+            ),
+            models.UniqueConstraint(
+                fields=("device", "name"),
+                name="%(app_label)s_%(class)s_device_name_unique",
+            ),
+            models.UniqueConstraint(
+                fields=("module", "name"),
+                name="%(app_label)s_%(class)s_module_name_unique",
+            ),
         ]
 
     @property
@@ -292,10 +301,6 @@ class ConsolePort(ModularComponentModel, CableTermination, PathEndpoint):
         help_text="Physical port type",
     )
 
-    class Meta:
-        ordering = ("device", "_name")
-        unique_together = ("device", "name")
-
 
 #
 # Console server ports
@@ -314,10 +319,6 @@ class ConsoleServerPort(ModularComponentModel, CableTermination, PathEndpoint):
         blank=True,
         help_text="Physical port type",
     )
-
-    class Meta:
-        ordering = ("device", "_name")
-        unique_together = ("device", "name")
 
 
 #
@@ -356,10 +357,6 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
         validators=[MinValueValidator(1)],
         help_text="Allocated power draw (watts)",
     )
-
-    class Meta:
-        ordering = ("device", "_name")
-        unique_together = ("device", "name")
 
     def clean(self):
         super().clean()
@@ -465,10 +462,6 @@ class PowerOutlet(ModularComponentModel, CableTermination, PathEndpoint):
         blank=True,
         help_text="Phase (for three-phase feeds)",
     )
-
-    class Meta:
-        ordering = ("device", "_name")
-        unique_together = ("device", "name")
 
     def clean(self):
         super().clean()
@@ -612,9 +605,8 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         verbose_name="IP Addresses",
     )
 
-    class Meta:
+    class Meta(ModularComponentModel.Meta):
         ordering = ("device", CollateAsChar("_name"))
-        unique_together = ("device", "name")
 
     def clean(self):
         super().clean()
@@ -966,12 +958,14 @@ class FrontPort(ModularComponentModel, CableTermination):
         ],
     )
 
-    class Meta:
-        ordering = ("device", "_name")
-        unique_together = (
-            ("device", "name"),
-            ("rear_port", "rear_port_position"),
-        )
+    class Meta(ModularComponentModel.Meta):
+        constraints = [
+            *ModularComponentModel.Meta.constraints,
+            models.UniqueConstraint(
+                fields=("rear_port", "rear_port_position"),
+                name="dcim_frontport_rear_port_position_unique",
+            ),
+        ]
 
     def clean(self):
         super().clean()
@@ -1004,10 +998,6 @@ class RearPort(ModularComponentModel, CableTermination):
             MaxValueValidator(REARPORT_POSITIONS_MAX),
         ],
     )
-
-    class Meta:
-        ordering = ("device", "_name")
-        unique_together = ("device", "name")
 
     def clean(self):
         super().clean()

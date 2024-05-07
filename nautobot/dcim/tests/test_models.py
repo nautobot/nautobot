@@ -68,6 +68,147 @@ from nautobot.users.models import User
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
+class ModularDeviceComponentTestCaseMixin:
+    model = None
+
+    @classmethod
+    def setUpTestData(cls):
+        device_related_name = cls.model.device.field.remote_field.related_name
+        module_related_name = cls.model.module.field.remote_field.related_name
+        cls.device = Device.objects.filter(**{f"{device_related_name}__isnull": True}).first()
+        cls.module = Module.objects.filter(**{f"{module_related_name}__isnull": True}).first()
+
+    def test_parent_validation_device_and_module(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        instance = self.model(
+            device=self.device,
+            module=self.module,
+            name=f"test {self.model._meta.model_name} 1",
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
+
+    def test_parent_validation_no_device_or_module(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 1",
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
+
+    def test_parent_validation_succeeds(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        with self.subTest(f"{self.model._meta.model_name} with a parent device"):
+            instance = self.model(
+                device=self.device,
+                name=f"test {self.model._meta.model_name} 1",
+            )
+
+            instance.full_clean()
+            instance.save()
+
+        with self.subTest(f"{self.model._meta.model_name} with a parent module"):
+            instance = self.model(
+                module=self.module,
+                name=f"test {self.model._meta.model_name} 1",
+            )
+
+            instance.full_clean()
+            instance.save()
+
+    def test_uniqueness_device(self):
+        """Assert that the combination of device and name is unique."""
+        instance = self.model(
+            device=self.device,
+            name=f"test {self.model._meta.model_name} 1",
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        # same device, different name works
+        instance = self.model(
+            device=self.device,
+            name=f"test {self.model._meta.model_name} 2",
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        instance = self.model(
+            device=self.device,
+            name=f"test {self.model._meta.model_name} 1",
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
+
+    def test_uniqueness_module(self):
+        """Assert that the combination of module and name is unique."""
+        instance = self.model(
+            module=self.module,
+            name=f"test {self.model._meta.model_name} 1",
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        # same module, different name works
+        instance = self.model(
+            module=self.module,
+            name=f"test {self.model._meta.model_name} 2",
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        instance = self.model(
+            module=self.module,
+            name=f"test {self.model._meta.model_name} 1",
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
+
+
+class ConsolePortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = ConsolePort
+
+
+class ConsoleServerPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = ConsoleServerPort
+
+
+class PowerPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = PowerPort
+
+
+class PowerOutletTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = PowerOutlet
+
+
+class FrontPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = FrontPort
+
+
+class RearPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = RearPort
+
+
 class CableLengthTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -1569,7 +1710,9 @@ class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we
         )
 
 
-class InterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase once we have an InterfaceFactory
+class InterfaceTestCase(
+    ModularDeviceComponentTestCaseMixin, TestCase
+):  # TODO: change to BaseModelTestCase once we have an InterfaceFactory
     @classmethod
     def setUpTestData(cls):
         manufacturer = Manufacturer.objects.first()

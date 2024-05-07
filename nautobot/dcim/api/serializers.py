@@ -440,6 +440,7 @@ class ConsolePortTemplateSerializer(NautobotModelSerializer):
     class Meta:
         model = ConsolePortTemplate
         fields = "__all__"
+        validators = []
 
 
 class ConsoleServerPortTemplateSerializer(NautobotModelSerializer):
@@ -448,6 +449,7 @@ class ConsoleServerPortTemplateSerializer(NautobotModelSerializer):
     class Meta:
         model = ConsoleServerPortTemplate
         fields = "__all__"
+        validators = []
 
 
 #
@@ -486,6 +488,7 @@ class PowerPortTemplateSerializer(NautobotModelSerializer):
     class Meta:
         model = PowerPortTemplate
         fields = "__all__"
+        validators = []
 
 
 class PowerOutletTemplateSerializer(NautobotModelSerializer):
@@ -495,6 +498,7 @@ class PowerOutletTemplateSerializer(NautobotModelSerializer):
     class Meta:
         model = PowerOutletTemplate
         fields = "__all__"
+        validators = []
 
 
 class InterfaceTemplateSerializer(NautobotModelSerializer):
@@ -503,6 +507,7 @@ class InterfaceTemplateSerializer(NautobotModelSerializer):
     class Meta:
         model = InterfaceTemplate
         fields = "__all__"
+        validators = []
 
 
 class RearPortTemplateSerializer(NautobotModelSerializer):
@@ -511,6 +516,7 @@ class RearPortTemplateSerializer(NautobotModelSerializer):
     class Meta:
         model = RearPortTemplate
         fields = "__all__"
+        validators = []
 
 
 class FrontPortTemplateSerializer(NautobotModelSerializer):
@@ -519,6 +525,7 @@ class FrontPortTemplateSerializer(NautobotModelSerializer):
     class Meta:
         model = FrontPortTemplate
         fields = "__all__"
+        validators = []
 
 
 class DeviceBayTemplateSerializer(NautobotModelSerializer):
@@ -666,6 +673,7 @@ class ConsoleServerPortSerializer(
         model = ConsoleServerPort
         fields = "__all__"
         extra_kwargs = {"cable": {"read_only": True}}
+        validators = []
 
 
 class ConsolePortSerializer(
@@ -680,6 +688,7 @@ class ConsolePortSerializer(
         model = ConsolePort
         fields = "__all__"
         extra_kwargs = {"cable": {"read_only": True}}
+        validators = []
 
 
 class PowerOutletSerializer(
@@ -695,6 +704,7 @@ class PowerOutletSerializer(
         model = PowerOutlet
         fields = "__all__"
         extra_kwargs = {"cable": {"read_only": True}}
+        validators = []
 
 
 class PowerPortSerializer(
@@ -709,6 +719,7 @@ class PowerPortSerializer(
         model = PowerPort
         fields = "__all__"
         extra_kwargs = {"cable": {"read_only": True}}
+        validators = []
 
 
 class InterfaceCommonSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
@@ -745,6 +756,7 @@ class InterfaceSerializer(
         fields = "__all__"
         list_display_fields = ["device", "name", "status", "label", "enabled", "type", "description"]
         extra_kwargs = {"cable": {"read_only": True}}
+        validators = []
 
     def validate(self, data):
         # Validate many-to-many VLAN assignments
@@ -770,6 +782,7 @@ class RearPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Ca
         model = RearPort
         fields = "__all__"
         extra_kwargs = {"cable": {"read_only": True}}
+        validators = []
 
 
 class FrontPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, CableTerminationModelSerializerMixin):
@@ -779,6 +792,12 @@ class FrontPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, C
         model = FrontPort
         fields = "__all__"
         extra_kwargs = {"cable": {"read_only": True}}
+        validators = [
+            UniqueTogetherValidator(
+                queryset=FrontPort.objects.all(),
+                fields=("rear_port_template", "rear_port_position"),
+            ),
+        ]
 
 
 class DeviceRedundancyGroupSerializer(
@@ -1068,12 +1087,14 @@ class ModuleBaySerializer(NautobotModelSerializer):
     class Meta:
         model = ModuleBay
         fields = "__all__"
+        validators = []
 
 
 class ModuleBayTemplateSerializer(NautobotModelSerializer):
     class Meta:
         model = ModuleBayTemplate
         fields = "__all__"
+        validators = []
 
 
 class ModuleSerializer(NautobotModelSerializer):

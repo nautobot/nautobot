@@ -134,6 +134,8 @@ class ModularComponentTemplateModel(ComponentTemplateModel):
         null=True,
     )
 
+    natural_key_field_names = ["device_type", "module_type", "name"]
+
     class Meta:
         abstract = True
         ordering = ("device_type", "module_type", "_name")

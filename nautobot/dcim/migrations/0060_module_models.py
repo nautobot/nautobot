@@ -431,6 +431,30 @@ class Migration(migrations.Migration):
             name="rearporttemplate",
             options={"ordering": ("device_type", "module_type", "_name")},
         ),
+        migrations.AlterModelOptions(
+            name="consoleport",
+            options={"ordering": ("device", "module", "_name")},
+        ),
+        migrations.AlterModelOptions(
+            name="consoleserverport",
+            options={"ordering": ("device", "module", "_name")},
+        ),
+        migrations.AlterModelOptions(
+            name="frontport",
+            options={"ordering": ("device", "module", "_name")},
+        ),
+        migrations.AlterModelOptions(
+            name="poweroutlet",
+            options={"ordering": ("device", "module", "_name")},
+        ),
+        migrations.AlterModelOptions(
+            name="powerport",
+            options={"ordering": ("device", "module", "_name")},
+        ),
+        migrations.AlterModelOptions(
+            name="rearport",
+            options={"ordering": ("device", "module", "_name")},
+        ),
         migrations.AlterField(
             model_name="consoleport",
             name="device",
@@ -753,6 +777,149 @@ class Migration(migrations.Migration):
                 fields=("module_type", "name"), name="dcim_rearporttemplate_module_type_name_unique"
             ),
         ),
+        migrations.AddConstraint(
+            model_name="consoleport",
+            constraint=models.CheckConstraint(
+                check=models.Q(
+                    models.Q(("device__isnull", False), ("module__isnull", True)),
+                    models.Q(("device__isnull", True), ("module__isnull", False)),
+                    _connector="OR",
+                ),
+                name="dcim_consoleport_device_xor_module",
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="consoleport",
+            constraint=models.UniqueConstraint(fields=("device", "name"), name="dcim_consoleport_device_name_unique"),
+        ),
+        migrations.AddConstraint(
+            model_name="consoleport",
+            constraint=models.UniqueConstraint(fields=("module", "name"), name="dcim_consoleport_module_name_unique"),
+        ),
+        migrations.AddConstraint(
+            model_name="consoleserverport",
+            constraint=models.CheckConstraint(
+                check=models.Q(
+                    models.Q(("device__isnull", False), ("module__isnull", True)),
+                    models.Q(("device__isnull", True), ("module__isnull", False)),
+                    _connector="OR",
+                ),
+                name="dcim_consoleserverport_device_xor_module",
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="consoleserverport",
+            constraint=models.UniqueConstraint(
+                fields=("device", "name"), name="dcim_consoleserverport_device_name_unique"
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="consoleserverport",
+            constraint=models.UniqueConstraint(
+                fields=("module", "name"), name="dcim_consoleserverport_module_name_unique"
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="frontport",
+            constraint=models.CheckConstraint(
+                check=models.Q(
+                    models.Q(("device__isnull", False), ("module__isnull", True)),
+                    models.Q(("device__isnull", True), ("module__isnull", False)),
+                    _connector="OR",
+                ),
+                name="dcim_frontport_device_xor_module",
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="frontport",
+            constraint=models.UniqueConstraint(fields=("device", "name"), name="dcim_frontport_device_name_unique"),
+        ),
+        migrations.AddConstraint(
+            model_name="frontport",
+            constraint=models.UniqueConstraint(fields=("module", "name"), name="dcim_frontport_module_name_unique"),
+        ),
+        migrations.AddConstraint(
+            model_name="frontport",
+            constraint=models.UniqueConstraint(
+                fields=("rear_port", "rear_port_position"), name="dcim_frontport_rear_port_position_unique"
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="interface",
+            constraint=models.CheckConstraint(
+                check=models.Q(
+                    models.Q(("device__isnull", False), ("module__isnull", True)),
+                    models.Q(("device__isnull", True), ("module__isnull", False)),
+                    _connector="OR",
+                ),
+                name="dcim_interface_device_xor_module",
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="interface",
+            constraint=models.UniqueConstraint(fields=("device", "name"), name="dcim_interface_device_name_unique"),
+        ),
+        migrations.AddConstraint(
+            model_name="interface",
+            constraint=models.UniqueConstraint(fields=("module", "name"), name="dcim_interface_module_name_unique"),
+        ),
+        migrations.AddConstraint(
+            model_name="poweroutlet",
+            constraint=models.CheckConstraint(
+                check=models.Q(
+                    models.Q(("device__isnull", False), ("module__isnull", True)),
+                    models.Q(("device__isnull", True), ("module__isnull", False)),
+                    _connector="OR",
+                ),
+                name="dcim_poweroutlet_device_xor_module",
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="poweroutlet",
+            constraint=models.UniqueConstraint(fields=("device", "name"), name="dcim_poweroutlet_device_name_unique"),
+        ),
+        migrations.AddConstraint(
+            model_name="poweroutlet",
+            constraint=models.UniqueConstraint(fields=("module", "name"), name="dcim_poweroutlet_module_name_unique"),
+        ),
+        migrations.AddConstraint(
+            model_name="powerport",
+            constraint=models.CheckConstraint(
+                check=models.Q(
+                    models.Q(("device__isnull", False), ("module__isnull", True)),
+                    models.Q(("device__isnull", True), ("module__isnull", False)),
+                    _connector="OR",
+                ),
+                name="dcim_powerport_device_xor_module",
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="powerport",
+            constraint=models.UniqueConstraint(fields=("device", "name"), name="dcim_powerport_device_name_unique"),
+        ),
+        migrations.AddConstraint(
+            model_name="powerport",
+            constraint=models.UniqueConstraint(fields=("module", "name"), name="dcim_powerport_module_name_unique"),
+        ),
+        migrations.AddConstraint(
+            model_name="rearport",
+            constraint=models.CheckConstraint(
+                check=models.Q(
+                    models.Q(("device__isnull", False), ("module__isnull", True)),
+                    models.Q(("device__isnull", True), ("module__isnull", False)),
+                    _connector="OR",
+                ),
+                name="dcim_rearport_device_xor_module",
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="rearport",
+            constraint=models.UniqueConstraint(fields=("device", "name"), name="dcim_rearport_device_name_unique"),
+        ),
+        migrations.AddConstraint(
+            model_name="rearport",
+            constraint=models.UniqueConstraint(fields=("module", "name"), name="dcim_rearport_module_name_unique"),
+        ),
         migrations.AlterUniqueTogether(
             name="moduletype",
             unique_together={("manufacturer", "model")},
@@ -858,6 +1025,34 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterUniqueTogether(
             name="rearporttemplate",
+            unique_together=set(),
+        ),
+        migrations.AlterUniqueTogether(
+            name="consoleport",
+            unique_together=set(),
+        ),
+        migrations.AlterUniqueTogether(
+            name="consoleserverport",
+            unique_together=set(),
+        ),
+        migrations.AlterUniqueTogether(
+            name="frontport",
+            unique_together=set(),
+        ),
+        migrations.AlterUniqueTogether(
+            name="interface",
+            unique_together=set(),
+        ),
+        migrations.AlterUniqueTogether(
+            name="poweroutlet",
+            unique_together=set(),
+        ),
+        migrations.AlterUniqueTogether(
+            name="powerport",
+            unique_together=set(),
+        ),
+        migrations.AlterUniqueTogether(
+            name="rearport",
             unique_together=set(),
         ),
     ]

@@ -9,6 +9,7 @@ import pytz
 
 from nautobot.circuits.models import CircuitTermination
 from nautobot.core.factory import (
+    BaseModelFactory,
     get_random_instances,
     NautobotBoolIterator,
     OrganizationalModelFactory,
@@ -17,7 +18,12 @@ from nautobot.core.factory import (
     UniqueFaker,
 )
 from nautobot.dcim.choices import (
+    ConsolePortTypeChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
     RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
@@ -25,12 +31,16 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.models import (
+    ConsolePortTemplate,
+    ConsoleServerPortTemplate,
     Controller,
     ControllerManagedDeviceGroup,
     Device,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
+    FrontPortTemplate,
+    InterfaceTemplate,
     Location,
     LocationType,
     Manufacturer,
@@ -38,10 +48,13 @@ from nautobot.dcim.models import (
     ModuleBay,
     ModuleType,
     Platform,
+    PowerOutletTemplate,
     PowerPanel,
+    PowerPortTemplate,
     Rack,
     RackGroup,
     RackReservation,
+    RearPortTemplate,
     SoftwareImageFile,
     SoftwareVersion,
 )
@@ -804,3 +817,104 @@ class ModuleFactory(PrimaryModelFactory):
     serial = factory.Maybe("has_serial", factory.Faker("ean", length=8), "")
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant, allow_null=False), None)
+
+
+class DeviceComponentTemplateFactory(BaseModelFactory):
+    class Params:
+        has_label = NautobotBoolIterator()
+        has_description = NautobotBoolIterator()
+
+    device_type = random_instance(DeviceType.objects.all(), allow_null=False)
+    label = factory.Maybe(
+        "has_label",
+        factory.Faker("word"),
+        "",
+    )
+    description = factory.Maybe(
+        "has_description",
+        factory.Faker("sentence"),
+        "",
+    )
+
+
+class ModularDeviceComponentTemplateFactory(DeviceComponentTemplateFactory):
+    class Params:
+        has_device_type = NautobotBoolIterator()
+
+    device_type = factory.Maybe("has_device_type", random_instance(DeviceType, allow_null=False), None)
+    module_type = factory.Maybe("has_device_type", None, random_instance(ModuleType, allow_null=False))
+
+
+class ConsolePortTemplateFactory(ModularDeviceComponentTemplateFactory):
+    class Meta:
+        model = ConsolePortTemplate
+
+    type = factory.Faker("random_element", elements=ConsolePortTypeChoices.values())
+    name = factory.Sequence(lambda n: f"ConsolePort {n}")
+
+
+class ConsoleServerPortTemplateFactory(ModularDeviceComponentTemplateFactory):
+    class Meta:
+        model = ConsoleServerPortTemplate
+
+    type = factory.Faker("random_element", elements=ConsolePortTypeChoices.values())
+    name = factory.Sequence(lambda n: f"ConsoleServerPort {n}")
+
+
+class PowerPortTemplateFactory(ModularDeviceComponentTemplateFactory):
+    class Meta:
+        model = PowerPortTemplate
+
+    type = factory.Faker("random_element", elements=PowerPortTypeChoices.values())
+    name = factory.Sequence(lambda n: f"PowerPort {n}")
+
+
+class PowerOutletTemplateFactory(ModularDeviceComponentTemplateFactory):
+    class Meta:
+        model = PowerOutletTemplate
+
+    type = factory.Faker("random_element", elements=PowerOutletTypeChoices.values())
+    name = factory.Sequence(lambda n: f"PowerOutlet {n}")
+
+
+class InterfaceTemplateFactory(ModularDeviceComponentTemplateFactory):
+    class Meta:
+        model = InterfaceTemplate
+
+    type = factory.Faker("random_element", elements=InterfaceTypeChoices.values())
+    name = factory.Sequence(lambda n: f"Interface {n}")
+
+
+class FrontPortTemplateFactory(ModularDeviceComponentTemplateFactory):
+    class Meta:
+        model = FrontPortTemplate
+
+    device_type = factory.Maybe(
+        "has_device_type",
+        random_instance(DeviceType.objects.filter(rear_port_templates__isnull=False), allow_null=False),
+        None,
+    )
+    module_type = factory.Maybe(
+        "has_device_type",
+        None,
+        random_instance(ModuleType.objects.filter(rear_port_templates__isnull=False), allow_null=False),
+    )
+    type = factory.Faker("random_element", elements=PortTypeChoices.values())
+    name = factory.Sequence(lambda n: f"FrontPort {n}")
+    rear_port_position = factory.Sequence(lambda n: n + 1)
+
+    @factory.lazy_attribute
+    def rear_port_template(self):
+        if self.module_type:
+            return factory.random.randgen.choice(self.module_type.rear_port_templates.all())
+        elif self.device_type:
+            return factory.random.randgen.choice(self.device_type.rear_port_templates.all())
+
+
+class RearPortTemplateFactory(ModularDeviceComponentTemplateFactory):
+    class Meta:
+        model = RearPortTemplate
+
+    type = factory.Faker("random_element", elements=PortTypeChoices.values())
+    name = factory.Sequence(lambda n: f"RearPort {n}")
+    positions = factory.Sequence(lambda n: n + 100)

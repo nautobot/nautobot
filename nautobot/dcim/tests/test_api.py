@@ -133,7 +133,8 @@ class Mixins:
         @classmethod
         def setUpTestData(cls):
             super().setUpTestData()
-            cls.device_type = DeviceType.objects.exclude(manufacturer__isnull=True).first()
+            cls.device_type = DeviceType.objects.first()
+            cls.module_type = ModuleType.objects.first()
             cls.manufacturer = cls.device_type.manufacturer
             cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
             cls.device_role = Role.objects.get_for_model(Device).first()
@@ -1108,7 +1109,7 @@ class RearPortTemplateTest(Mixins.BasePortTemplateTestMixin):
                 "type": PortTypeChoices.TYPE_8P8C,
             },
             {
-                "device_type": cls.device_type.pk,
+                "module_type": cls.module_type.pk,
                 "name": "Rear Port Template 6",
                 "type": PortTypeChoices.TYPE_8P8C,
             },
@@ -2914,37 +2915,38 @@ class ModuleTestCase(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        mt = ModuleType.objects.create(
-            manufacturer=Manufacturer.objects.first(),
-            model="Test Module Type",
-        )
-        module_bay = ModuleBay.objects.create(
-            parent_device=Device.objects.first(),
-            position="0",
-        )
-        status = Status.objects.get_for_model(Module).first()
+        module_type = ModuleType.objects.first()
+        module_bay = ModuleBay.objects.filter(installed_module__isnull=True).first()
+        module_status = Status.objects.get_for_model(Module).first()
         location = Location.objects.get_for_model(Module).first()
         cls.create_data = [
             {
-                "module_type": mt.pk,
+                "module_type": module_type.pk,
                 "parent_module_bay": module_bay.pk,
                 "serial": None,
                 "asset_tag": None,
-                "status": status.pk,
+                "status": module_status.pk,
             },
             {
-                "module_type": mt.pk,
+                "module_type": module_type.pk,
                 "location": location.pk,
-                "serial": "xyz",
-                "asset_tag": None,
-                "status": status.pk,
+                "serial": "test module serial xyz",
+                "asset_tag": "test module 2",
+                "status": module_status.pk,
             },
             {
-                "module_type": mt.pk,
+                "module_type": module_type.pk,
                 "location": location.pk,
                 "serial": None,
-                "asset_tag": "Test Module 1",
-                "status": status.pk,
+                "asset_tag": "Test Module 3",
+                "status": module_status.pk,
+            },
+            {
+                "module_type": module_type.pk,
+                "location": location.pk,
+                "serial": "test module serial abc",
+                "asset_tag": None,
+                "status": module_status.pk,
             },
         ]
         cls.bulk_update_data = {

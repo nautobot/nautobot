@@ -939,7 +939,7 @@ def common_test_data(cls):
     )
 
 
-class ComponentTemplateMixin:
+class ComponentTemplateTestMixin:
     generic_filter_tests = [
         ("description",),
         ("device_type", "device_type__id"),
@@ -953,15 +953,15 @@ class ComponentTemplateMixin:
         common_test_data(cls)
 
 
-class ModularComponentTemplateMixin(ComponentTemplateMixin):
+class ModularComponentTemplateTestMixin(ComponentTemplateTestMixin):
     generic_filter_tests = [
-        *ComponentTemplateMixin.generic_filter_tests,
+        *ComponentTemplateTestMixin.generic_filter_tests,
         ("module_type", "module_type__id"),
         ("module_type", "module_type__model"),
     ]
 
 
-class DeviceComponentMixin:
+class DeviceComponentTestMixin:
     generic_filter_tests = [
         ("description",),
         ("device", "device__id"),
@@ -975,15 +975,15 @@ class DeviceComponentMixin:
         common_test_data(cls)
 
 
-class ModularDeviceComponentMixin(DeviceComponentMixin):
+class ModularDeviceComponentTestMixin(DeviceComponentTestMixin):
     generic_filter_tests = [
-        *DeviceComponentMixin.generic_filter_tests,
+        *DeviceComponentTestMixin.generic_filter_tests,
         ("module", "module__id"),
         ("module", "module__module_type__model"),
     ]
 
 
-class PathEndpointModelMixin:
+class PathEndpointModelTestMixin:
     def test_connected(self):
         with self.subTest():
             params = {"connected": True}
@@ -1490,21 +1490,21 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class ConsolePortTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.FilterTestCase):
+class ConsolePortTemplateTestCase(ModularComponentTemplateTestMixin, FilterTestCases.FilterTestCase):
     queryset = ConsolePortTemplate.objects.all()
     filterset = ConsolePortTemplateFilterSet
 
 
-class ConsoleServerPortTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.FilterTestCase):
+class ConsoleServerPortTemplateTestCase(ModularComponentTemplateTestMixin, FilterTestCases.FilterTestCase):
     queryset = ConsoleServerPortTemplate.objects.all()
     filterset = ConsoleServerPortTemplateFilterSet
 
 
-class PowerPortTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.FilterTestCase):
+class PowerPortTemplateTestCase(ModularComponentTemplateTestMixin, FilterTestCases.FilterTestCase):
     queryset = PowerPortTemplate.objects.all()
     filterset = PowerPortTemplateFilterSet
     generic_filter_tests = [
-        *ModularComponentTemplateMixin.generic_filter_tests,
+        *ModularComponentTemplateTestMixin.generic_filter_tests,
         ("allocated_draw",),
         ("maximum_draw",),
         ("power_outlet_templates", "power_outlet_templates__id"),
@@ -1526,11 +1526,11 @@ class PowerPortTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.F
         )
 
 
-class PowerOutletTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.FilterTestCase):
+class PowerOutletTemplateTestCase(ModularComponentTemplateTestMixin, FilterTestCases.FilterTestCase):
     queryset = PowerOutletTemplate.objects.all()
     filterset = PowerOutletTemplateFilterSet
     generic_filter_tests = [
-        *ModularComponentTemplateMixin.generic_filter_tests,
+        *ModularComponentTemplateTestMixin.generic_filter_tests,
         ("feed_leg",),
         ("power_port_template", "power_port_template__id"),
         ("power_port_template", "power_port_template__name"),
@@ -1550,11 +1550,11 @@ class PowerOutletTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases
         )
 
 
-class InterfaceTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.FilterTestCase):
+class InterfaceTemplateTestCase(ModularComponentTemplateTestMixin, FilterTestCases.FilterTestCase):
     queryset = InterfaceTemplate.objects.all()
     filterset = InterfaceTemplateFilterSet
     generic_filter_tests = [
-        *ModularComponentTemplateMixin.generic_filter_tests,
+        *ModularComponentTemplateTestMixin.generic_filter_tests,
         ("type",),
     ]
 
@@ -1574,11 +1574,11 @@ class InterfaceTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.F
             )
 
 
-class FrontPortTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.FilterTestCase):
+class FrontPortTemplateTestCase(ModularComponentTemplateTestMixin, FilterTestCases.FilterTestCase):
     queryset = FrontPortTemplate.objects.all()
     filterset = FrontPortTemplateFilterSet
     generic_filter_tests = [
-        *ModularComponentTemplateMixin.generic_filter_tests,
+        *ModularComponentTemplateTestMixin.generic_filter_tests,
         ("rear_port_position",),
         ("rear_port_template", "rear_port_template__id"),
     ]
@@ -1592,11 +1592,11 @@ class FrontPortTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.F
         )
 
 
-class RearPortTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.FilterTestCase):
+class RearPortTemplateTestCase(ModularComponentTemplateTestMixin, FilterTestCases.FilterTestCase):
     queryset = RearPortTemplate.objects.all()
     filterset = RearPortTemplateFilterSet
     generic_filter_tests = [
-        *ModularComponentTemplateMixin.generic_filter_tests,
+        *ModularComponentTemplateTestMixin.generic_filter_tests,
         ("front_port_templates", "front_port_templates__id"),
     ]
 
@@ -1631,7 +1631,7 @@ class RearPortTemplateTestCase(ModularComponentTemplateMixin, FilterTestCases.Fi
         )
 
 
-class DeviceBayTemplateTestCase(ComponentTemplateMixin, FilterTestCases.FilterTestCase):
+class DeviceBayTemplateTestCase(ComponentTemplateTestMixin, FilterTestCases.FilterTestCase):
     queryset = DeviceBayTemplate.objects.all()
     filterset = DeviceBayTemplateFilterSet
 
@@ -1958,11 +1958,11 @@ class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             )
 
 
-class ConsolePortTestCase(PathEndpointModelMixin, ModularDeviceComponentMixin, FilterTestCases.FilterTestCase):
+class ConsolePortTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMixin, FilterTestCases.FilterTestCase):
     queryset = ConsolePort.objects.all()
     filterset = ConsolePortFilterSet
     generic_filter_tests = [
-        *ModularDeviceComponentMixin.generic_filter_tests,
+        *ModularDeviceComponentTestMixin.generic_filter_tests,
         ("cable", "cable__id"),
     ]
 
@@ -2004,11 +2004,13 @@ class ConsolePortTestCase(PathEndpointModelMixin, ModularDeviceComponentMixin, F
         # Third port is not connected
 
 
-class ConsoleServerPortTestCase(PathEndpointModelMixin, ModularDeviceComponentMixin, FilterTestCases.FilterTestCase):
+class ConsoleServerPortTestCase(
+    PathEndpointModelTestMixin, ModularDeviceComponentTestMixin, FilterTestCases.FilterTestCase
+):
     queryset = ConsoleServerPort.objects.all()
     filterset = ConsoleServerPortFilterSet
     generic_filter_tests = [
-        *ModularDeviceComponentMixin.generic_filter_tests,
+        *ModularDeviceComponentTestMixin.generic_filter_tests,
         ("cable", "cable__id"),
     ]
 
@@ -2050,11 +2052,11 @@ class ConsoleServerPortTestCase(PathEndpointModelMixin, ModularDeviceComponentMi
         # Third port is not connected
 
 
-class PowerPortTestCase(PathEndpointModelMixin, ModularDeviceComponentMixin, FilterTestCases.FilterTestCase):
+class PowerPortTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMixin, FilterTestCases.FilterTestCase):
     queryset = PowerPort.objects.all()
     filterset = PowerPortFilterSet
     generic_filter_tests = [
-        *ModularDeviceComponentMixin.generic_filter_tests,
+        *ModularDeviceComponentTestMixin.generic_filter_tests,
         ("allocated_draw",),
         ("cable", "cable__id"),
         ("maximum_draw",),
@@ -2102,11 +2104,11 @@ class PowerPortTestCase(PathEndpointModelMixin, ModularDeviceComponentMixin, Fil
         # Third port is not connected
 
 
-class PowerOutletTestCase(PathEndpointModelMixin, ModularDeviceComponentMixin, FilterTestCases.FilterTestCase):
+class PowerOutletTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMixin, FilterTestCases.FilterTestCase):
     queryset = PowerOutlet.objects.all()
     filterset = PowerOutletFilterSet
     generic_filter_tests = [
-        *ModularDeviceComponentMixin.generic_filter_tests,
+        *ModularDeviceComponentTestMixin.generic_filter_tests,
         ("cable", "cable__id"),
         ("feed_leg",),
         ("power_port", "power_port__id"),
@@ -2151,7 +2153,7 @@ class PowerOutletTestCase(PathEndpointModelMixin, ModularDeviceComponentMixin, F
         # Third port is not connected
 
 
-class InterfaceTestCase(PathEndpointModelMixin, ModularDeviceComponentMixin, FilterTestCases.FilterTestCase):
+class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMixin, FilterTestCases.FilterTestCase):
     queryset = Interface.objects.all()
     filterset = InterfaceFilterSet
     generic_filter_tests = [
@@ -2543,11 +2545,11 @@ class InterfaceTestCase(PathEndpointModelMixin, ModularDeviceComponentMixin, Fil
         )
 
 
-class FrontPortTestCase(ModularDeviceComponentMixin, FilterTestCases.FilterTestCase):
+class FrontPortTestCase(ModularDeviceComponentTestMixin, FilterTestCases.FilterTestCase):
     queryset = FrontPort.objects.all()
     filterset = FrontPortFilterSet
     generic_filter_tests = [
-        *ModularDeviceComponentMixin.generic_filter_tests,
+        *ModularDeviceComponentTestMixin.generic_filter_tests,
         ("cable", "cable__id"),
         ("rear_port", "rear_port__id"),
         ("rear_port", "rear_port__name"),
@@ -2622,11 +2624,11 @@ class FrontPortTestCase(ModularDeviceComponentMixin, FilterTestCases.FilterTestC
         # Third port is not connected
 
 
-class RearPortTestCase(ModularDeviceComponentMixin, FilterTestCases.FilterTestCase):
+class RearPortTestCase(ModularDeviceComponentTestMixin, FilterTestCases.FilterTestCase):
     queryset = RearPort.objects.all()
     filterset = RearPortFilterSet
     generic_filter_tests = [
-        *ModularDeviceComponentMixin.generic_filter_tests,
+        *ModularDeviceComponentTestMixin.generic_filter_tests,
         ("cable", "cable__id"),
         ("front_ports", "front_ports__id"),
         ("front_ports", "front_ports__name"),
@@ -2681,11 +2683,11 @@ class RearPortTestCase(ModularDeviceComponentMixin, FilterTestCases.FilterTestCa
         # Third port is not connected
 
 
-class DeviceBayTestCase(DeviceComponentMixin, FilterTestCases.FilterTestCase):
+class DeviceBayTestCase(DeviceComponentTestMixin, FilterTestCases.FilterTestCase):
     queryset = DeviceBay.objects.all()
     filterset = DeviceBayFilterSet
     generic_filter_tests = [
-        *DeviceComponentMixin.generic_filter_tests,
+        *DeviceComponentTestMixin.generic_filter_tests,
         ("installed_device", "installed_device__id"),
         ("installed_device", "installed_device__name"),
     ]
@@ -2745,7 +2747,7 @@ class DeviceBayTestCase(DeviceComponentMixin, FilterTestCases.FilterTestCase):
         device_bays[1].save()
 
 
-class InventoryItemTestCase(DeviceComponentMixin, FilterTestCases.FilterTestCase):
+class InventoryItemTestCase(DeviceComponentTestMixin, FilterTestCases.FilterTestCase):
     queryset = InventoryItem.objects.all()
     filterset = InventoryItemFilterSet
     generic_filter_tests = [
@@ -3220,7 +3222,7 @@ class PowerPanelTestCase(FilterTestCases.FilterTestCase):
         PowerPanel.objects.create(name="Power Panel 4", location=cls.loc1)
 
 
-class PowerFeedTestCase(PathEndpointModelMixin, FilterTestCases.FilterTestCase):
+class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCase):
     queryset = PowerFeed.objects.all()
     filterset = PowerFeedFilterSet
     generic_filter_tests = [
