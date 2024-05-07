@@ -273,7 +273,7 @@ class SavedViewUIViewSet(
 
     def update(self, request, *args, **kwargs):
         """
-        This method will extract filter_params, pagination and sort_order from request.GET and apply it to the SavedView specified
+        Extract filter_params, pagination and sort_order from request.GET and apply it to the SavedView specified
         """
         sv = get_object_or_404(SavedView, pk=request.GET.get("saved_view", None))
         table_changes_pending = request.GET.get("table_changes_pending", False)
@@ -281,14 +281,20 @@ class SavedViewUIViewSet(
         if pagination_count is not None:
             sv.config["pagination_count"] = int(pagination_count)
         sort_order = request.GET.getlist("sort", [])
-        sv.config["sort_order"] = sort_order
+        if sort_order:
+            sv.config["sort_order"] = sort_order
 
         filter_params = {}
         for key in request.GET:
             if key in self.non_filter_params:
                 continue
-            filter_params[key] = request.GET.getlist(key)
-        sv.config["filter_params"] = filter_params
+            # TODO: this is fragile, other single-value filters will also be unhappy if given a list
+            if key == "q":
+                filter_params[key] = request.GET.get(key)
+            else:
+                filter_params[key] = request.GET.getlist(key)
+        if filter_params:
+            sv.config["filter_params"] = filter_params
 
         if table_changes_pending:
             table_class = self.get_table_class_string_from_view_name(sv.view)
@@ -322,16 +328,31 @@ class SavedViewUIViewSet(
                 return redirect(self.get_return_url(request, obj=derived_instance))
             else:
                 return redirect(reverse(view_name))
-        pagination_count = request.GET.get("per_page", get_settings_or_config("PAGINATE_COUNT"))
+        pagination_count = request.GET.get("per_page", None)
+        if not pagination_count:
+            if derived_instance:
+                pagination_count = derived_instance.config["pagination_count"]
+            else:
+                pagination_count = get_settings_or_config("PAGINATE_COUNT")
         sv.config["pagination_count"] = int(pagination_count)
         sort_order = request.GET.getlist("sort", [])
+        if not sort_order:
+            if derived_instance:
+                sort_order = derived_instance.config["sort_order"]
         sv.config["sort_order"] = sort_order
 
         sv.config["filter_params"] = {}
         for key in request.GET:
             if key in [*self.non_filter_params, "view"]:
                 continue
-            sv.config["filter_params"][key] = request.GET.getlist(key)
+            # TODO: this is fragile, any other single-value filters will not be happy if given a list
+            if key == "q":
+                sv.config["filter_params"][key] = request.GET.get(key)
+            else:
+                sv.config["filter_params"][key] = request.GET.getlist(key)
+        if not sv.config["filter_params"]:
+            if derived_instance:
+                sv.config["filter_params"] = derived_instance.config["filter_params"]
 
         table_class = self.get_table_class_string_from_view_name(view_name)
         sv.config["table_config"] = {}

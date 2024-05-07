@@ -232,6 +232,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         model = self.queryset.model
         content_type = ContentType.objects.get_for_model(model)
 
+        filter_params = request.GET
         display_filter_params = []
         dynamic_filter_form = None
         filter_form = None
@@ -261,7 +262,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
             if request.GET:
                 factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
-                    request.GET, filterset
+                    filter_params, filterset
                 )
                 dynamic_filter_form = DynamicFilterFormSet(filterset=filterset, data=factory_formset_params)
             else:
@@ -311,9 +312,6 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         )
         if self.table:
             # Construct the objects table
-            if self.request.GET.getlist("sort"):
-                hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
-            table_changes_pending = self.request.GET.get("table_changes_pending", False)
             if current_saved_view_pk:
                 try:
                     current_saved_view = SavedView.objects.restrict(request.user, "view").get(
@@ -321,6 +319,11 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
                     )
                 except ObjectDoesNotExist:
                     messages.error(request, f"Saved view {current_saved_view_pk} not found")
+            if self.request.GET.getlist("sort") or (
+                current_saved_view is not None and current_saved_view.config.get("sort_order")
+            ):
+                hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
+            table_changes_pending = self.request.GET.get("table_changes_pending", False)
 
             table = self.table(
                 self.queryset,
@@ -348,7 +351,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         # For the search form field, use a custom placeholder.
         q_placeholder = "Search " + bettertitle(model._meta.verbose_name_plural)
-        search_form = SearchForm(data=request.GET, q_placeholder=q_placeholder)
+        search_form = SearchForm(data=filter_params, q_placeholder=q_placeholder)
 
         valid_actions = self.validate_action_buttons(request)
 
