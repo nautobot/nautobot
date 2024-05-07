@@ -134,7 +134,7 @@ First, we'll establish the `systemd` unit file for the Nautobot web service. Cop
 
 === "Nano"
 
-    ```no-highlight title="Nano open nautobot service file"
+    ```no-highlight title="Edit Nautobot service file with Nano"
     sudo nano /etc/systemd/system/nautobot.service
     ```
 
