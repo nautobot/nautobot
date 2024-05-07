@@ -225,5 +225,17 @@
             }
         }
     });
+
+    document.getElementById("static_group_assignment_cancel").addEventListener("click", (e) => {
+        // Clear form data on cancel, but not on "close" "x" button
+        $("#static_group_assignment_modal").modal("hide");
+        document.getElementById("static_group_assignment_all").value = "";
+        document.getElementById("static_group_assignment_pks").replaceChildren();
+        document.getElementById("id_create_and_assign_to_new_group_name").value = "";
+        $("#id_add_to_groups").val(null).trigger("change");
+        $("#id_remove_from_groups").val(null).trigger("change");
+    });
+
+
 </script>
 {% endblock %}
