@@ -64,7 +64,7 @@ Begin by installing NGINX:
     If the file location of SSL certificates had to be changed in the [Obtain an SSL Certificate](#obtain-an-ssl-certificate) step above, then the location will need to be changed in the NGINX configuration below.
 
 === "Ubuntu/Debian"
-    Once NGINX is installed, copy and paste the following NGINX configuration into 
+    Once NGINX is installed, copy and paste the following NGINX configuration into `/etc/nginx/sites-available/nautobot.conf`:
 
     === "Vim"
 
