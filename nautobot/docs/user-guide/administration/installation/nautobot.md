@@ -185,6 +185,8 @@ pip3 install --upgrade pip wheel
 
 By default, Pip will now install Python packages as wheels. In most cases this is desirable, however in some cases the wheel versions of packages may have been compiled with options differing from what is needed for a specific scenario. One such case presents itself here - the wheel for `pyuwsgi`, a key web server component of Nautobot, is built without SSL (HTTPS) support. This may be fine for a non-production deployment of Nautobot, such as in your lab, but for production deployments, not supporting HTTPS will not do at all. Fortunately, you can tell Pip when you don't want to use wheels for a specific package by passing the `--no-binary=<package>` CLI parameter. We'll use that below.
 
+Great! We have `NAUTOBOT_ROOT` ready for use by the `nautobot` user, so let's proceed to verifying the installation.
+
 ## Install Nautobot
 
 === "PostgreSQL"
@@ -203,7 +205,10 @@ By default, Pip will now install Python packages as wheels. In most cases this i
     pip3 install --no-binary=pyuwsgi "nautobot[mysql]"
     ```
 
-Great! We have `NAUTOBOT_ROOT` ready for use by the `nautobot` user, so let's proceed to verifying the installation.
+    !!! note "MySQL Unicode Settings"
+
+        If you are using MySQL as your database backend, and you want to enable support for Unicode emojis, please make sure to add `"OPTIONS": {"charset": "utf8mb4"}` to your `DATABASES` setting (upcoming). Please see the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#mysql-unicode-settings) for more information.
+
 
 ## Verify your Nautobot Installation
 
@@ -261,11 +266,6 @@ Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on 
 
 Save your changes to your `nautobot_config.py` and then proceed to the next step.
 
-#### MySQL Unicode Settings
-
-??? note "MySQL Unicode Settings"
-
-    If you are using MySQL as your database backend, and you want to enable support for Unicode emojis, please make sure to add `"OPTIONS": {"charset": "utf8mb4"}` to your `DATABASES` setting. Please see the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#mysql-unicode-settings) for more information.
 
 ## Optional Settings
 

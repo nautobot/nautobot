@@ -195,6 +195,13 @@ Please follow the steps for your selected database backend below.
         mysql --user nautobot --password --host localhost nautobot
         ```
 
+        Then after the password prompt you can use `status` and `\q` commands
+
+        ``` no title="Check the status and quit"
+        status
+        \q
+        ```
+
         ??? example "Example Verification of MySQL database"
 
             ```no-highlight title="Example test output"

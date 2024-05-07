@@ -80,15 +80,15 @@ When given a choice between a relatively simple [80% solution](https://en.wikipe
 
 Nautobot is built on the [Django](https://djangoproject.com/) Python Web framework and requires either a [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database backend. It runs as a WSGI service behind your choice of HTTP server.
 
-| Function           | Component                       |
-|--------------------|---------------------------------|
-| HTTP service       | NGINX                           |
-| WSGI service       | uWSGI or Gunicorn               |
-| Application        | Django/Python                   |
-| Database           | PostgreSQL 12.0+ or MySQL 8.0+  |
-| Cache              | Django/Redis                    |
-| Task queuing       | Redis/Celery                    |
-| Live device access | NAPALM                          |
+| Function           | Component                      |
+| ------------------ | ------------------------------ |
+| HTTP service       | NGINX                          |
+| WSGI service       | uWSGI or Gunicorn              |
+| Application        | Django/Python                  |
+| Database           | PostgreSQL 12.0+ or MySQL 8.0+ |
+| Cache              | Django/Redis                   |
+| Task queuing       | Redis/Celery                   |
+| Live device access | NAPALM                         |
 
 +++ 1.1.0
     MySQL support was added.
