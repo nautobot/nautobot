@@ -52,7 +52,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         if filterset_class:
             filterset = filterset_class()
             factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
-                view.filter_params, filterset
+                view.filter_params if view.filter_params is not None else request.GET, filterset
             )
         return DynamicFilterFormSet(filterset=filterset, data=factory_formset_params)
 
