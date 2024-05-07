@@ -6,7 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import override_settings, RequestFactory
 from django.urls import reverse
-from django.utils.html import conditional_escape, escape
+from django.utils.html import escape
 from social_django.utils import load_backend, load_strategy
 
 from nautobot.core.testing import ModelTestCase, TestCase

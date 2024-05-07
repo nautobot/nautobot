@@ -121,7 +121,7 @@ class Command(BaseCommand):
         self.stdout.write("Creating Users...")
         UserFactory.create_batch(3, using=db_name)
         self.stdout.write("Creating SavedViews...")
-        SavedViewFactory.create_batch(4, using=db_name)
+        SavedViewFactory.create_batch(10, using=db_name)
         self.stdout.write("Creating Contacts...")
         ContactFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Teams...")

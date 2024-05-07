@@ -14,10 +14,11 @@ from nautobot.extras.models import ObjectChange
 from nautobot.users.filters import (
     GroupFilterSet,
     ObjectPermissionFilterSet,
+    SavedViewFilterSet,
     TokenFilterSet,
     UserFilterSet,
 )
-from nautobot.users.models import ObjectPermission, Token
+from nautobot.users.models import ObjectPermission, SavedView, Token
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -204,6 +205,18 @@ class ObjectPermissionTestCase(FilterTestCases.FilterTestCase):
         object_types = ContentType.objects.filter(model__in=["location", "rack"])
         params = {"object_types": [object_types[0].pk, object_types[1].pk]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+
+class SavedViewTestCase(FilterTestCases.FilterTestCase):
+    queryset = SavedView.objects.all()
+    filterset = SavedViewFilterSet
+
+    generic_filter_tests = (
+        ["owner", "owner__id"],
+        ["owner", "owner__username"],
+        ["name"],
+        ["view"],
+    )
 
 
 class TokenTestCase(FilterTestCases.FilterTestCase):
