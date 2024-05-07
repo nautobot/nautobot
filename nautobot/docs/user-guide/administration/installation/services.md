@@ -240,7 +240,7 @@ To establish the `systemd` unit file for the Celery Beat scheduler, copy and pas
 
 === "Vim"
 
-    ```no-highlight title="Vim open scheduler service file"
+    ```no-highlight title="Edit scheduler service file with Vim"
     sudo vim /etc/systemd/system/nautobot-scheduler.service
     ```
 
