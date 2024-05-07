@@ -17,6 +17,7 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 | [Custom fields](../../../../user-guide/platform-functionality/customfield.md) | ❌ | ❌ | ✅ | ✅ |
 | [Notes](../../../../user-guide/platform-functionality/note.md) | ❌ | ❌ | ✅ | ✅ |
 | [Relationships](../../../../user-guide/platform-functionality/relationship.md) | ❌ | ❌ | ✅ | ✅ |
+| [Saved Views](../../../../user-guide/platform-functionality/savedview.md) | ❌ | ❌ | ✅ | ✅ |
 | [Static Groups](../../../../user-guide/platform-functionality/staticgroup.md) | ❌ | ❌ | ✅ | ✅ |
 | [Tags](../../../../user-guide/platform-functionality/tag.md) | ❌ | ❌ | ❌ | ✅ |
 
@@ -28,6 +29,9 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 
 +++ 2.3.0
     Support for Static Groups was added to `OrganizationalModel` and `PrimaryModel`. The mixin class `StaticGroupMixin` (included in both of those base classes) has been added to be used by `BaseModel` subclasses that want to be assignable to Static Groups.
+
++++ 2.3.0
+    Support for Saved Views was added to `OrganizationalModel` and `PrimaryModel`. The mixin class `SavedViewMixin` (included in both of those base classes) has been added to be used by `BaseModel` subclasses that want to be assignable to Saved Views.
 
 Below is an example `models.py` file containing a basic model with two character fields:
 
