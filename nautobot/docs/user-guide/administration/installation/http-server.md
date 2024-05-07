@@ -127,7 +127,7 @@ Begin by installing NGINX:
 
     === "Vim"
 
-        ```no-highlight title="Vim nautobot site config"
+        ```no-highlight title="Edit Nautobot site config with Vim"
         vim /etc/nginx/conf.d/nautobot.conf
         ```
 
@@ -302,4 +302,4 @@ If you are able to connect but receive a 502 (bad gateway) error, check the foll
 - NGINX is configured to connect to the port on which uWSGI is listening (default is `8001`).
 - SELinux may be preventing the reverse proxy connection. You may need to allow HTTP network connections with the
   command `setsebool -P httpd_can_network_connect 1`. For further information, view the [SELinux
-  troubleshooting](selinux-troubleshooting.md) guide.
+  troubleshooting](../installation-extras/selinux-troubleshooting.md) guide.
