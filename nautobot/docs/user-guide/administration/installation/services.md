@@ -188,7 +188,7 @@ To establish the `systemd` unit file for the Celery worker, copy and paste the f
 
 === "Vim"
 
-    ```no-highlight title="Vim open worker service"
+    ```no-highlight title="Edit worker service with Vim"
     sudo vim /etc/systemd/system/nautobot-worker.service
     ```
 
