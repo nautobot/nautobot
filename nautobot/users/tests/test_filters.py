@@ -113,12 +113,12 @@ class UserTestCase(FilterTestCases.FilterTestCase):
 
     def test_is_staff(self):
         params = {"is_staff": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), self.queryset.filter(is_staff=True).count())
 
     def test_is_active(self):
         params = {"is_active": True}
         # 4 created active users in setUpTestData, plus one created active user in TestCase.setUp
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), self.queryset.filter(is_active=True).count())
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
