@@ -23,6 +23,7 @@ urlpatterns = [
         name="token_delete",
     ),
     path("advanced-settings/", views.AdvancedProfileSettingsEditView.as_view(), name="advanced_settings_edit"),
+    path("saved-views/<uuid:pk>/clear/", views.SavedViewClearView.as_view(), name="savedview_clear"),
 ]
 
 urlpatterns += router.urls

@@ -90,9 +90,9 @@
                         </a>
                     </li>
                 {% endif %}
-                {% if current_saved_view %}
+                {% if current_saved_view and perms.users.change_savedview %}
                     <li>
-                        <a href="{% url 'user:savedview' pk=request.GET.saved_view %}">
+                        <a href="{% url 'user:savedview_clear' pk=request.GET.saved_view %}">
                             <i class="mdi mdi-arrow-u-right-bottom text-danger" aria-hidden="true"></i>
                             <span class="text-danger">Clear View</span>
                         </a>

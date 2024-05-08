@@ -157,11 +157,11 @@ class SavedViewTest(ModelTestCase):
         pk = saved_view.pk
 
         if action == "detail":
-            url = reverse(view) + saved_view.view_config + f"&saved_view={pk}"
+            url = reverse(view) + f"?saved_view={pk}"
         elif action == "edit":
-            url = saved_view.get_absolute_url() + "edit/" + saved_view.view_config + f"&saved_view={pk}"
+            url = saved_view.get_absolute_url() + "edit/" + f"?saved_view={pk}"
         else:
-            url = reverse("users:savedview_add") + saved_view.view_config + f"&saved_view={pk}" + f"&view_name={view}"
+            url = reverse("users:savedview_add") + f"?saved_view={pk}" + f"&view_name={view}"
 
         return url
 
@@ -266,6 +266,24 @@ class SavedViewTest(ModelTestCase):
         self.assertEqual(instance.config["filter_params"]["status"], ["active"])
         self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
         self.assertEqual(instance.config["sort_order"], ["name"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_clear_saved_view(self):
+        instance = self._get_queryset().first()
+        instance.config = {
+            "filter_params": {
+                "location_type": ["Campus", "Building", "Floor", "Elevator"],
+                "tenant": ["Krause, Welch and Fuentes"],
+            },
+            "table_config": {"LocationTable": {"columns": ["name", "status", "location_type", "tags"]}},
+        }
+        instance.validated_save()
+        self.add_permissions("users.change_savedview")
+        update_url = reverse("users:savedview_clear", kwargs={"pk": instance.pk})
+        response = self.client.get(update_url)
+        self.assertHttpStatus(response, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.config, {})
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_saved_view(self):

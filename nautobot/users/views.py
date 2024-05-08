@@ -1,4 +1,5 @@
 import logging
+import uuid
 
 from django.contrib import messages
 from django.contrib.auth import (
@@ -7,7 +8,7 @@ from django.contrib.auth import (
     logout as auth_logout,
     update_session_auth_hash,
 )
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
@@ -299,7 +300,7 @@ class SavedViewUIViewSet(
         if table_changes_pending:
             table_class = self.get_table_class_string_from_view_name(sv.view)
             if table_class:
-                if sv.config.get("table_config", None):
+                if sv.config.get("table_config", None) is None:
                     sv.config["table_config"] = {}
                 sv.config["table_config"][f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
 
@@ -369,6 +370,19 @@ class SavedViewUIViewSet(
         except ValidationError as e:
             messages.error(request, e)
             return redirect(self.get_return_url(request))
+
+
+class SavedViewClearView(GenericView):
+    def get(self, request, pk):
+        try:
+            sv = SavedView.objects.restrict(request.user, "view").get(pk=pk)
+            sv.config = {}
+            sv.validated_save()
+            list_view_url = reverse(sv.view) + f"?saved_view={pk}"
+            return redirect(list_view_url)
+        except ObjectDoesNotExist:
+            messages.error(request, f"Saved view {pk} not found")
+            return redirect(reverse("users:savedview_list"))
 
 
 #
