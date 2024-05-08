@@ -278,6 +278,7 @@ class SavedViewUIViewSet(
         """
         sv = get_object_or_404(SavedView, pk=request.GET.get("saved_view", None))
         table_changes_pending = request.GET.get("table_changes_pending", False)
+        all_filters_removed = request.GET.get("all_filters_removed", False)
         pagination_count = request.GET.get("per_page", None)
         if pagination_count is not None:
             sv.config["pagination_count"] = int(pagination_count)
@@ -294,8 +295,11 @@ class SavedViewUIViewSet(
                 filter_params[key] = request.GET.get(key)
             else:
                 filter_params[key] = request.GET.getlist(key)
+
         if filter_params:
             sv.config["filter_params"] = filter_params
+        elif all_filters_removed:
+            sv.config["filter_params"] = {}
 
         if table_changes_pending:
             table_class = self.get_table_class_string_from_view_name(sv.view)
@@ -321,6 +325,7 @@ class SavedViewUIViewSet(
         if derived_view_pk:
             derived_instance = self.get_queryset().get(pk=derived_view_pk)
         table_changes_pending = request.GET.get("table_changes_pending", False)
+        all_filters_removed = request.GET.get("all_filters_removed", False)
         try:
             sv = SavedView.objects.create(name=name, owner=request.user, view=view_name)
         except IntegrityError:
@@ -331,7 +336,7 @@ class SavedViewUIViewSet(
                 return redirect(reverse(view_name))
         pagination_count = request.GET.get("per_page", None)
         if not pagination_count:
-            if derived_instance:
+            if derived_instance and derived_instance.config.get("pagination_count", None):
                 pagination_count = derived_instance.config["pagination_count"]
             else:
                 pagination_count = get_settings_or_config("PAGINATE_COUNT")
@@ -339,7 +344,7 @@ class SavedViewUIViewSet(
         sort_order = request.GET.getlist("sort", [])
         if not sort_order:
             if derived_instance:
-                sort_order = derived_instance.config["sort_order"]
+                sort_order = derived_instance.config.get("sort_order", [])
         sv.config["sort_order"] = sort_order
 
         sv.config["filter_params"] = {}
@@ -352,7 +357,9 @@ class SavedViewUIViewSet(
             else:
                 sv.config["filter_params"][key] = request.GET.getlist(key)
         if not sv.config["filter_params"]:
-            if derived_instance:
+            if derived_instance and all_filters_removed:
+                sv.config["filter_params"] = {}
+            elif derived_instance:
                 sv.config["filter_params"] = derived_instance.config["filter_params"]
 
         table_class = self.get_table_class_string_from_view_name(view_name)
@@ -360,7 +367,9 @@ class SavedViewUIViewSet(
         if table_class:
             if table_changes_pending or derived_instance is None:
                 sv.config["table_config"][f"{table_class}"] = request.user.get_config(f"tables.{table_class}")
-            else:
+            elif derived_instance.config.get("table_config") and derived_instance.config["table_config"].get(
+                f"{table_class}"
+            ):
                 sv.config["table_config"][f"{table_class}"] = derived_instance.config["table_config"][f"{table_class}"]
         try:
             sv.validated_save()
@@ -379,6 +388,7 @@ class SavedViewClearView(GenericView):
             sv.config = {}
             sv.validated_save()
             list_view_url = reverse(sv.view) + f"?saved_view={pk}"
+            messages.success(request, f"Successfully cleared saved view {pk}")
             return redirect(list_view_url)
         except ObjectDoesNotExist:
             messages.error(request, f"Saved view {pk} not found")
