@@ -213,7 +213,7 @@ class ModularDeviceComponentSerializerMixin:
 #
 
 
-class LocationTypeSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
+class LocationTypeSerializer(TreeModelSerializerMixin, NautobotModelSerializer):
     content_types = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("locations").get_query()),
         required=False,
@@ -227,9 +227,9 @@ class LocationTypeSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
 
 
 class LocationSerializer(
-    NautobotModelSerializer,
     TaggedModelSerializerMixin,
     TreeModelSerializerMixin,
+    NautobotModelSerializer,
 ):
     time_zone = TimeZoneSerializerField(required=False, allow_null=True)
     circuit_count = serializers.IntegerField(read_only=True)
@@ -290,7 +290,7 @@ class LocationSerializer(
 #
 
 
-class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
+class RackGroupSerializer(TreeModelSerializerMixin, NautobotModelSerializer):
     rack_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -299,10 +299,7 @@ class RackGroupSerializer(NautobotModelSerializer, TreeModelSerializerMixin):
         list_display_fields = ["name", "location", "rack_count", "description"]
 
 
-class RackSerializer(
-    NautobotModelSerializer,
-    TaggedModelSerializerMixin,
-):
+class RackSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     type = ChoiceField(choices=RackTypeChoices, allow_blank=True, required=False)
     width = ChoiceField(choices=RackWidthChoices, required=False, help_text="Rail-to-rail width (in inches)")
     outer_unit = ChoiceField(choices=RackDimensionUnitChoices, allow_blank=True, required=False)
@@ -358,7 +355,7 @@ class RackUnitSerializer(serializers.Serializer):
     occupied = serializers.BooleanField(read_only=True)
 
 
-class RackReservationSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+class RackReservationSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = RackReservation
         fields = "__all__"
@@ -424,7 +421,7 @@ class DeviceFamilySerializer(NautobotModelSerializer):
         list_display_fields = ["name", "device_type_count", "description"]
 
 
-class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+class DeviceTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     subdevice_role = ChoiceField(choices=SubdeviceRoleChoices, allow_blank=True, required=False)
     front_image = serializers.ImageField(allow_null=True, required=False)
     rear_image = serializers.ImageField(allow_null=True, required=False)
@@ -495,7 +492,7 @@ class InterfaceRedundancyGroupAssociationSerializer(ValidatedModelSerializer):
         fields = "__all__"
 
 
-class InterfaceRedundancyGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+class InterfaceRedundancyGroupSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     """InterfaceRedundancyGroup Serializer."""
 
     protocol = ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices)
@@ -594,13 +591,13 @@ class PlatformSerializer(NautobotModelSerializer):
         ]
 
 
-class DeviceBaySerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+class DeviceBaySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = DeviceBay
         fields = "__all__"
 
 
-class DeviceSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     face = ChoiceField(choices=DeviceFaceChoices, allow_blank=True, required=False)
     config_context = serializers.SerializerMethodField()
 
@@ -696,10 +693,10 @@ class DeviceNAPALMSerializer(serializers.Serializer):
 
 class ConsoleServerPortSerializer(
     ModularDeviceComponentSerializerMixin,
-    NautobotModelSerializer,
     TaggedModelSerializerMixin,
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
+    NautobotModelSerializer,
 ):
     type = ChoiceField(choices=ConsolePortTypeChoices, allow_blank=True, required=False)
 
@@ -712,10 +709,10 @@ class ConsoleServerPortSerializer(
 
 class ConsolePortSerializer(
     ModularDeviceComponentSerializerMixin,
-    NautobotModelSerializer,
     TaggedModelSerializerMixin,
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
+    NautobotModelSerializer,
 ):
     type = ChoiceField(choices=ConsolePortTypeChoices, allow_blank=True, required=False)
 
@@ -728,10 +725,10 @@ class ConsolePortSerializer(
 
 class PowerOutletSerializer(
     ModularDeviceComponentSerializerMixin,
-    NautobotModelSerializer,
     TaggedModelSerializerMixin,
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
+    NautobotModelSerializer,
 ):
     type = ChoiceField(choices=PowerOutletTypeChoices, allow_blank=True, required=False)
     feed_leg = ChoiceField(choices=PowerOutletFeedLegChoices, allow_blank=True, required=False)
@@ -745,10 +742,10 @@ class PowerOutletSerializer(
 
 class PowerPortSerializer(
     ModularDeviceComponentSerializerMixin,
-    NautobotModelSerializer,
     TaggedModelSerializerMixin,
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
+    NautobotModelSerializer,
 ):
     type = ChoiceField(choices=PowerPortTypeChoices, allow_blank=True, required=False)
 
@@ -759,7 +756,7 @@ class PowerPortSerializer(
         validators = []
 
 
-class InterfaceCommonSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+class InterfaceCommonSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     def validate(self, data):
         # Validate many-to-many VLAN assignments
         mode = data.get("mode", getattr(self.instance, "mode", None))
@@ -780,9 +777,9 @@ class InterfaceCommonSerializer(NautobotModelSerializer, TaggedModelSerializerMi
 
 class InterfaceSerializer(
     ModularDeviceComponentSerializerMixin,
-    InterfaceCommonSerializer,
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
+    InterfaceCommonSerializer,
 ):
     type = ChoiceField(choices=InterfaceTypeChoices)
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
@@ -815,9 +812,9 @@ class InterfaceSerializer(
 
 class RearPortSerializer(
     ModularDeviceComponentSerializerMixin,
-    NautobotModelSerializer,
     TaggedModelSerializerMixin,
     CableTerminationModelSerializerMixin,
+    NautobotModelSerializer,
 ):
     type = ChoiceField(choices=PortTypeChoices)
 
@@ -830,9 +827,9 @@ class RearPortSerializer(
 
 class FrontPortSerializer(
     ModularDeviceComponentSerializerMixin,
-    NautobotModelSerializer,
     TaggedModelSerializerMixin,
     CableTerminationModelSerializerMixin,
+    NautobotModelSerializer,
 ):
     type = ChoiceField(choices=PortTypeChoices)
 
@@ -848,10 +845,7 @@ class FrontPortSerializer(
         ]
 
 
-class DeviceRedundancyGroupSerializer(
-    NautobotModelSerializer,
-    TaggedModelSerializerMixin,
-):
+class DeviceRedundancyGroupSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     failover_strategy = ChoiceField(
         choices=DeviceRedundancyGroupFailoverStrategyChoices,
         allow_blank=True,
@@ -869,7 +863,7 @@ class DeviceRedundancyGroupSerializer(
 #
 
 
-class InventoryItemSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, TreeModelSerializerMixin):
+class InventoryItemSerializer(TaggedModelSerializerMixin, TreeModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = InventoryItem
         fields = "__all__"
@@ -895,10 +889,7 @@ class InventoryItemSerializer(NautobotModelSerializer, TaggedModelSerializerMixi
 #
 
 
-class CableSerializer(
-    NautobotModelSerializer,
-    TaggedModelSerializerMixin,
-):
+class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     # TODO: termination_a_type/termination_b_type are a bit redundant with the full termination_a/termination_b dicts
     termination_a_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
     termination_b_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
@@ -1054,7 +1045,7 @@ class InterfaceConnectionSerializer(ValidatedModelSerializer):
 #
 
 
-class VirtualChassisSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+class VirtualChassisSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     member_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -1068,7 +1059,7 @@ class VirtualChassisSerializer(NautobotModelSerializer, TaggedModelSerializerMix
 #
 
 
-class PowerPanelSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+class PowerPanelSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     power_feed_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -1077,10 +1068,10 @@ class PowerPanelSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 
 
 class PowerFeedSerializer(
-    NautobotModelSerializer,
     TaggedModelSerializerMixin,
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
+    NautobotModelSerializer,
 ):
     type = ChoiceField(choices=PowerFeedTypeChoices, default=PowerFeedTypeChoices.TYPE_PRIMARY)
     supply = ChoiceField(choices=PowerFeedSupplyChoices, default=PowerFeedSupplyChoices.SUPPLY_AC)
@@ -1096,13 +1087,13 @@ class PowerFeedSerializer(
 #
 
 
-class SoftwareImageFileSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+class SoftwareImageFileSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = SoftwareImageFile
         fields = "__all__"
 
 
-class SoftwareVersionSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+class SoftwareVersionSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = SoftwareVersion
         fields = "__all__"
@@ -1114,13 +1105,13 @@ class DeviceTypeToSoftwareImageFileSerializer(ValidatedModelSerializer):
         fields = "__all__"
 
 
-class ControllerSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+class ControllerSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = Controller
         fields = "__all__"
 
 
-class ControllerManagedDeviceGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+class ControllerManagedDeviceGroupSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = ControllerManagedDeviceGroup
         fields = "__all__"

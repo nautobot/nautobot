@@ -32,6 +32,8 @@ from nautobot.dcim.filters.mixins import (
     CableTerminationModelFilterSetMixin,
     DeviceComponentModelFilterSetMixin,
     DeviceComponentTemplateModelFilterSetMixin,
+    DeviceModuleCommonFiltersMixin,
+    DeviceTypeModuleTypeCommonFiltersMixin,
     LocatableModelFilterSetMixin,
     ModularDeviceComponentModelFilterSetMixin,
     ModularDeviceComponentTemplateModelFilterSetMixin,
@@ -164,7 +166,7 @@ class LocationTypeFilterSet(NautobotFilterSet, NameSearchFilterSet):
         fields = ["id", "name", "description", "nestable"]
 
 
-class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFilterSetMixin):
+class LocationFilterSet(StatusModelFilterSetMixin, TenancyModelFilterSetMixin, NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -340,7 +342,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         return queryset.filter(params)
 
 
-class RackGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSearchFilterSet):
+class RackGroupFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet, NameSearchFilterSet):
     parent = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
         to_field_name="name",
@@ -377,11 +379,11 @@ class RackGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSe
 
 
 class RackFilterSet(
-    NautobotFilterSet,
     LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
+    NautobotFilterSet,
 ):
     q = SearchFilter(
         filter_predicates={
@@ -446,7 +448,7 @@ class RackFilterSet(
         ]
 
 
-class RackReservationFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
+class RackReservationFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "rack__name": "icontains",
@@ -529,7 +531,7 @@ class DeviceFamilyFilterSet(NautobotFilterSet, NameSearchFilterSet):
         fields = ["id", "name", "description", "tags"]
 
 
-class DeviceTypeFilterSet(NautobotFilterSet):
+class DeviceTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "manufacturer__name": "icontains",
@@ -538,9 +540,6 @@ class DeviceTypeFilterSet(NautobotFilterSet):
             "part_number": "icontains",
             "comments": "icontains",
         },
-    )
-    manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Manufacturer.objects.all(), to_field_name="name", label="Manufacturer (name or ID)"
     )
     device_family = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceFamily.objects.all(), to_field_name="name", label="Device family (name or ID)"
@@ -576,76 +575,6 @@ class DeviceTypeFilterSet(NautobotFilterSet):
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
         label="Has device instances",
-    )
-    # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
-    console_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="name",
-        queryset=ConsolePortTemplate.objects.all(),
-        label="Console port templates (name or ID)",
-    )
-    has_console_port_templates = RelatedMembershipBooleanFilter(
-        field_name="console_port_templates",
-        label="Has console port templates",
-    )
-    # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
-    console_server_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="name",
-        queryset=ConsoleServerPortTemplate.objects.all(),
-        label="Console server port templates (name or ID)",
-    )
-    has_console_server_port_templates = RelatedMembershipBooleanFilter(
-        field_name="console_server_port_templates",
-        label="Has console server port templates",
-    )
-    # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
-    power_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="name",
-        queryset=PowerPortTemplate.objects.all(),
-        label="Power port templates (name or ID)",
-    )
-    has_power_port_templates = RelatedMembershipBooleanFilter(
-        field_name="power_port_templates",
-        label="Has power port templates",
-    )
-    # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
-    power_outlet_templates = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="name",
-        queryset=PowerOutletTemplate.objects.all(),
-        label="Power outlet templates (name or ID)",
-    )
-    has_power_outlet_templates = RelatedMembershipBooleanFilter(
-        field_name="power_outlet_templates",
-        label="Has power outlet templates",
-    )
-    # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
-    interface_templates = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="name",
-        queryset=InterfaceTemplate.objects.all(),
-        label="Interface templates (name or ID)",
-    )
-    has_interface_templates = RelatedMembershipBooleanFilter(
-        field_name="interface_templates",
-        label="Has interface templates",
-    )
-    # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
-    front_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="name",
-        queryset=FrontPortTemplate.objects.all(),
-        label="Front port templates (name or ID)",
-    )
-    has_front_port_templates = RelatedMembershipBooleanFilter(
-        field_name="front_port_templates",
-        label="Has front port templates",
-    )
-    # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
-    rear_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="name",
-        queryset=RearPortTemplate.objects.all(),
-        label="Rear port templates (name or ID)",
-    )
-    has_rear_port_templates = RelatedMembershipBooleanFilter(
-        field_name="rear_port_templates",
-        label="Has rear port templates",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     device_bay_templates = NaturalKeyOrPKMultipleChoiceFilter(
@@ -708,19 +637,19 @@ class DeviceTypeComponentFilterSet(DeviceComponentTemplateModelFilterSetMixin):
     pass
 
 
-class ConsolePortTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplateModelFilterSetMixin):
+class ConsolePortTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMixin, BaseFilterSet):
     class Meta:
         model = ConsolePortTemplate
         fields = ["type"]
 
 
-class ConsoleServerPortTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplateModelFilterSetMixin):
+class ConsoleServerPortTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMixin, BaseFilterSet):
     class Meta:
         model = ConsoleServerPortTemplate
         fields = ["type"]
 
 
-class PowerPortTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplateModelFilterSetMixin):
+class PowerPortTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMixin, BaseFilterSet):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_outlet_templates = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
@@ -741,7 +670,7 @@ class PowerPortTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplateMo
         ]
 
 
-class PowerOutletTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplateModelFilterSetMixin):
+class PowerOutletTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMixin, BaseFilterSet):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_port_template = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
@@ -754,13 +683,13 @@ class PowerOutletTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplate
         fields = ["type", "feed_leg"]
 
 
-class InterfaceTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplateModelFilterSetMixin):
+class InterfaceTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMixin, BaseFilterSet):
     class Meta:
         model = InterfaceTemplate
         fields = ["type", "mgmt_only"]
 
 
-class FrontPortTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplateModelFilterSetMixin):
+class FrontPortTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMixin, BaseFilterSet):
     rear_port_template = django_filters.ModelMultipleChoiceFilter(
         queryset=RearPortTemplate.objects.all(),
         label="Rear port template",
@@ -771,7 +700,7 @@ class FrontPortTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplateMo
         fields = ["type", "rear_port_position"]
 
 
-class RearPortTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplateModelFilterSetMixin):
+class RearPortTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMixin, BaseFilterSet):
     front_port_templates = django_filters.ModelMultipleChoiceFilter(
         queryset=FrontPortTemplate.objects.all(),
         label="Front port templates",
@@ -786,7 +715,7 @@ class RearPortTemplateFilterSet(BaseFilterSet, ModularDeviceComponentTemplateMod
         fields = ["type", "positions"]
 
 
-class DeviceBayTemplateFilterSet(BaseFilterSet, DeviceComponentTemplateModelFilterSetMixin):
+class DeviceBayTemplateFilterSet(DeviceComponentTemplateModelFilterSetMixin, BaseFilterSet):
     class Meta:
         model = DeviceBayTemplate
         fields = []
@@ -820,12 +749,13 @@ class PlatformFilterSet(NautobotFilterSet, NameSearchFilterSet):
 
 
 class DeviceFilterSet(
-    NautobotFilterSet,
+    DeviceModuleCommonFiltersMixin,
     LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     LocalContextModelFilterSetMixin,
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
+    NautobotFilterSet,
 ):
     q = SearchFilter(
         filter_predicates={
@@ -895,10 +825,6 @@ class DeviceFilterSet(
         field_name="device_type__is_full_depth",
         label="Is full depth",
     )
-    mac_address = MultiValueMACAddressFilter(
-        field_name="interfaces__mac_address",
-        label="MAC address",
-    )
     serial = MultiValueCharFilter(lookup_expr="iexact")
     has_primary_ip = django_filters.BooleanFilter(
         method="_has_primary_ip",
@@ -932,63 +858,6 @@ class DeviceFilterSet(
         label="Controller Managed Device Groups (name or ID)",
     )
     virtual_chassis_member = is_virtual_chassis_member
-    has_console_ports = RelatedMembershipBooleanFilter(
-        field_name="console_ports",
-        label="Has console ports",
-    )
-    console_ports = django_filters.ModelMultipleChoiceFilter(
-        queryset=ConsolePort.objects.all(),
-        label="Console Ports",
-    )
-    has_console_server_ports = RelatedMembershipBooleanFilter(
-        field_name="console_server_ports",
-        label="Has console server ports",
-    )
-    console_server_ports = django_filters.ModelMultipleChoiceFilter(
-        queryset=ConsoleServerPort.objects.all(),
-        label="Console Server Ports",
-    )
-    has_power_ports = RelatedMembershipBooleanFilter(
-        field_name="power_ports",
-        label="Has power ports",
-    )
-    power_ports = django_filters.ModelMultipleChoiceFilter(
-        queryset=PowerPort.objects.all(),
-        label="Power Ports",
-    )
-    has_power_outlets = RelatedMembershipBooleanFilter(
-        field_name="power_outlets",
-        label="Has power outlets",
-    )
-    power_outlets = django_filters.ModelMultipleChoiceFilter(
-        queryset=PowerOutlet.objects.all(),
-        label="Power Outlets",
-    )
-    has_interfaces = RelatedMembershipBooleanFilter(
-        field_name="interfaces",
-        label="Has interfaces",
-    )
-    interfaces = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Interface.objects.all(),
-        to_field_name="name",
-        label="Interfaces (name or ID)",
-    )
-    has_front_ports = RelatedMembershipBooleanFilter(
-        field_name="front_ports",
-        label="Has front ports",
-    )
-    front_ports = django_filters.ModelMultipleChoiceFilter(
-        queryset=FrontPort.objects.all(),
-        label="Front Port",
-    )
-    has_rear_ports = RelatedMembershipBooleanFilter(
-        field_name="rear_ports",
-        label="Has rear ports",
-    )
-    rear_ports = django_filters.ModelMultipleChoiceFilter(
-        queryset=RearPort.objects.all(),
-        label="Rear Port",
-    )
     has_device_bays = RelatedMembershipBooleanFilter(
         field_name="device_bays",
         label="Has device bays",
@@ -1065,10 +934,10 @@ class PathEndpointFilterSet(PathEndpointModelFilterSetMixin):
 
 
 class ConsolePortFilterSet(
-    BaseFilterSet,
     ModularDeviceComponentModelFilterSetMixin,
     CableTerminationModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
+    BaseFilterSet,
 ):
     type = django_filters.MultipleChoiceFilter(choices=ConsolePortTypeChoices, null_value=None)
 
@@ -1078,10 +947,10 @@ class ConsolePortFilterSet(
 
 
 class ConsoleServerPortFilterSet(
-    BaseFilterSet,
     ModularDeviceComponentModelFilterSetMixin,
     CableTerminationModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
+    BaseFilterSet,
 ):
     type = django_filters.MultipleChoiceFilter(choices=ConsolePortTypeChoices, null_value=None)
 
@@ -1091,10 +960,10 @@ class ConsoleServerPortFilterSet(
 
 
 class PowerPortFilterSet(
-    BaseFilterSet,
     ModularDeviceComponentModelFilterSetMixin,
     CableTerminationModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
+    BaseFilterSet,
 ):
     type = django_filters.MultipleChoiceFilter(choices=PowerPortTypeChoices, null_value=None)
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
@@ -1115,10 +984,10 @@ class PowerPortFilterSet(
 
 
 class PowerOutletFilterSet(
-    BaseFilterSet,
     ModularDeviceComponentModelFilterSetMixin,
     CableTerminationModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
+    BaseFilterSet,
 ):
     type = django_filters.MultipleChoiceFilter(choices=PowerOutletTypeChoices, null_value=None)
     power_port = django_filters.ModelMultipleChoiceFilter(
@@ -1132,12 +1001,12 @@ class PowerOutletFilterSet(
 
 
 class InterfaceFilterSet(
-    BaseFilterSet,
     ModularDeviceComponentModelFilterSetMixin,
     CableTerminationModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
+    BaseFilterSet,
 ):
     # Override device and device_id filters from DeviceComponentModelFilterSetMixin to
     # match against any peer virtual chassis members
@@ -1297,7 +1166,7 @@ class InterfaceFilterSet(
         }.get(value, queryset.none())
 
 
-class FrontPortFilterSet(BaseFilterSet, ModularDeviceComponentModelFilterSetMixin, CableTerminationModelFilterSetMixin):
+class FrontPortFilterSet(ModularDeviceComponentModelFilterSetMixin, CableTerminationModelFilterSetMixin, BaseFilterSet):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     rear_port = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
@@ -1310,7 +1179,7 @@ class FrontPortFilterSet(BaseFilterSet, ModularDeviceComponentModelFilterSetMixi
         fields = ["id", "name", "type", "description", "label", "rear_port_position", "tags"]
 
 
-class RearPortFilterSet(BaseFilterSet, ModularDeviceComponentModelFilterSetMixin, CableTerminationModelFilterSetMixin):
+class RearPortFilterSet(ModularDeviceComponentModelFilterSetMixin, CableTerminationModelFilterSetMixin, BaseFilterSet):
     front_ports = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=FrontPort.objects.all(),
@@ -1326,7 +1195,7 @@ class RearPortFilterSet(BaseFilterSet, ModularDeviceComponentModelFilterSetMixin
         fields = ["id", "name", "type", "positions", "description", "label", "tags"]
 
 
-class DeviceBayFilterSet(BaseFilterSet, DeviceComponentModelFilterSetMixin):
+class DeviceBayFilterSet(DeviceComponentModelFilterSetMixin, BaseFilterSet):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     installed_device = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="installed_device",
@@ -1340,7 +1209,7 @@ class DeviceBayFilterSet(BaseFilterSet, DeviceComponentModelFilterSetMixin):
         fields = ["id", "name", "description", "label", "tags"]
 
 
-class InventoryItemFilterSet(BaseFilterSet, DeviceComponentModelFilterSetMixin):
+class InventoryItemFilterSet(DeviceComponentModelFilterSetMixin, BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -1469,7 +1338,7 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         fields = ["id", "domain", "name", "tags"]
 
 
-class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
+class CableFilterSet(StatusModelFilterSetMixin, NautobotFilterSet):
     q = SearchFilter(filter_predicates={"label": "icontains"})
     type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
     color = MultiValueCharFilter()
@@ -1589,7 +1458,7 @@ class InterfaceConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
         fields = []
 
 
-class PowerPanelFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin):
+class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
     q = SearchFilter(filter_predicates={"name": "icontains"})
     rack_group = TreeNodeMultipleChoiceFilter(
         queryset=RackGroup.objects.all(),
@@ -1613,7 +1482,10 @@ class PowerPanelFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin):
 
 
 class PowerFeedFilterSet(
-    NautobotFilterSet, CableTerminationModelFilterSetMixin, PathEndpointModelFilterSetMixin, StatusModelFilterSetMixin
+    CableTerminationModelFilterSetMixin,
+    PathEndpointModelFilterSetMixin,
+    StatusModelFilterSetMixin,
+    NautobotFilterSet,
 ):
     q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
     location = NaturalKeyOrPKMultipleChoiceFilter(
@@ -1653,7 +1525,7 @@ class PowerFeedFilterSet(
         ]
 
 
-class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, NameSearchFilterSet):
+class DeviceRedundancyGroupFilterSet(StatusModelFilterSetMixin, NautobotFilterSet, NameSearchFilterSet):
     q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
@@ -1666,7 +1538,7 @@ class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixi
         fields = ["id", "name", "failover_strategy", "tags"]
 
 
-class InterfaceRedundancyGroupFilterSet(BaseFilterSet, NameSearchFilterSet):
+class InterfaceRedundancyGroupFilterSet(NameSearchFilterSet, BaseFilterSet):
     """Filter for InterfaceRedundancyGroup."""
 
     q = SearchFilter(filter_predicates={"name": "icontains"})
@@ -1723,7 +1595,7 @@ class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet):
         fields = ["id", "interface_redundancy_group", "interface", "priority"]
 
 
-class SoftwareImageFileFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
+class SoftwareImageFileFilterSet(StatusModelFilterSetMixin, NautobotFilterSet):
     """Filters for SoftwareImageFile model."""
 
     q = SearchFilter(
@@ -1765,7 +1637,7 @@ class SoftwareImageFileFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         fields = "__all__"
 
 
-class SoftwareVersionFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
+class SoftwareVersionFilterSet(StatusModelFilterSetMixin, NautobotFilterSet):
     """Filters for SoftwareVersion model."""
 
     q = SearchFilter(
@@ -1852,11 +1724,11 @@ class DeviceTypeToSoftwareImageFileFilterSet(BaseFilterSet):
 
 
 class ControllerFilterSet(
-    NautobotFilterSet,
     LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
+    NautobotFilterSet,
 ):
     """Filters for Controller model."""
 
@@ -1940,6 +1812,7 @@ class ControllerManagedDeviceGroupFilterSet(NautobotFilterSet):
 
 
 class ModuleFilterSet(
+    DeviceModuleCommonFiltersMixin,
     LocatableModelFilterSetMixin,
     RoleModelFilterSetMixin,
     StatusModelFilterSetMixin,
@@ -1970,10 +1843,6 @@ class ModuleFilterSet(
         field_name="parent_module_bay",
         label="Is installed in a module bay",
     )
-    mac_address = MultiValueMACAddressFilter(
-        field_name="interfaces__mac_address",
-        label="MAC address",
-    )
     manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="module_type__manufacturer",
         queryset=Manufacturer.objects.all(),
@@ -1985,77 +1854,6 @@ class ModuleFilterSet(
         to_field_name="model",
         label="Module type (model or ID)",
     )
-    has_console_ports = RelatedMembershipBooleanFilter(
-        field_name="console_ports",
-        label="Has console ports",
-    )
-    console_ports = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=ConsolePort.objects.all(),
-        to_field_name="name",
-        label="Console Ports (name or ID)",
-    )
-    has_console_server_ports = RelatedMembershipBooleanFilter(
-        field_name="console_server_ports",
-        label="Has console server ports",
-    )
-    console_server_ports = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=ConsoleServerPort.objects.all(),
-        to_field_name="name",
-        label="Console Server Ports (name or ID)",
-    )
-    has_power_ports = RelatedMembershipBooleanFilter(
-        field_name="power_ports",
-        label="Has power ports",
-    )
-    power_ports = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=PowerPort.objects.all(),
-        to_field_name="name",
-        label="Power Ports (name or ID)",
-    )
-    has_power_outlets = RelatedMembershipBooleanFilter(
-        field_name="power_outlets",
-        label="Has power outlets",
-    )
-    power_outlets = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=PowerOutlet.objects.all(),
-        to_field_name="name",
-        label="Power Outlets (name or ID)",
-    )
-    has_interfaces = RelatedMembershipBooleanFilter(
-        field_name="interfaces",
-        label="Has interfaces",
-    )
-    interfaces = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Interface.objects.all(),
-        to_field_name="name",
-        label="Interfaces (name or ID)",
-    )
-    has_front_ports = RelatedMembershipBooleanFilter(
-        field_name="front_ports",
-        label="Has front ports",
-    )
-    front_ports = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=FrontPort.objects.all(),
-        to_field_name="name",
-        label="Front Ports (name or ID)",
-    )
-    has_rear_ports = RelatedMembershipBooleanFilter(
-        field_name="rear_ports",
-        label="Has rear ports",
-    )
-    rear_ports = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=RearPort.objects.all(),
-        to_field_name="name",
-        label="Rear Ports (name or ID)",
-    )
-    has_module_bays = RelatedMembershipBooleanFilter(
-        field_name="module_bays",
-        label="Has module bays",
-    )
-    module_bays = django_filters.ModelMultipleChoiceFilter(
-        queryset=ModuleBay.objects.all(),
-        label="Module Bays",
-    )
     parent_module_bay = django_filters.ModelMultipleChoiceFilter(
         queryset=ModuleBay.objects.all(),
         label="Parent Module Bay",
@@ -2066,7 +1864,7 @@ class ModuleFilterSet(
         fields = "__all__"
 
 
-class ModuleTypeFilterSet(NautobotFilterSet):
+class ModuleTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
             "manufacturer__name": {
@@ -2083,84 +1881,9 @@ class ModuleTypeFilterSet(NautobotFilterSet):
             },
         },
     )
-    manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Manufacturer.objects.all(),
-        to_field_name="name",
-        label="Manufacturer (name or ID)",
-    )
     has_modules = RelatedMembershipBooleanFilter(
         field_name="modules",
         label="Has module instances",
-    )
-    console_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="name",
-        queryset=ConsolePortTemplate.objects.all(),
-        label="Console port templates (name or ID)",
-    )
-    has_console_port_templates = RelatedMembershipBooleanFilter(
-        field_name="console_port_templates",
-        label="Has console port templates",
-    )
-    console_server_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="name",
-        queryset=ConsoleServerPortTemplate.objects.all(),
-        label="Console server port templates (name or ID)",
-    )
-    has_console_server_port_templates = RelatedMembershipBooleanFilter(
-        field_name="console_server_port_templates",
-        label="Has console server port templates",
-    )
-    power_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="name",
-        queryset=PowerPortTemplate.objects.all(),
-        label="Power port templates (name or ID)",
-    )
-    has_power_port_templates = RelatedMembershipBooleanFilter(
-        field_name="power_port_templates",
-        label="Has power port templates",
-    )
-    power_outlet_templates = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="name",
-        queryset=PowerOutletTemplate.objects.all(),
-        label="Power outlet templates (name or ID)",
-    )
-    has_power_outlet_templates = RelatedMembershipBooleanFilter(
-        field_name="power_outlet_templates",
-        label="Has power outlet templates",
-    )
-    interface_templates = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="name",
-        queryset=InterfaceTemplate.objects.all(),
-        label="Interface templates (name or ID)",
-    )
-    has_interface_templates = RelatedMembershipBooleanFilter(
-        field_name="interface_templates",
-        label="Has interface templates",
-    )
-    front_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="name",
-        queryset=FrontPortTemplate.objects.all(),
-        label="Front port templates (name or ID)",
-    )
-    has_front_port_templates = RelatedMembershipBooleanFilter(
-        field_name="front_port_templates",
-        label="Has front port templates",
-    )
-    rear_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
-        to_field_name="name",
-        queryset=RearPortTemplate.objects.all(),
-        label="Rear port templates (name or ID)",
-    )
-    has_rear_port_templates = RelatedMembershipBooleanFilter(
-        field_name="rear_port_templates",
-        label="Has rear port templates",
-    )
-    module_bay_templates = django_filters.ModelMultipleChoiceFilter(
-        queryset=ModuleBayTemplate.objects.all(),
-    )
-    has_module_bay_templates = RelatedMembershipBooleanFilter(
-        field_name="module_bay_templates",
-        label="Has module bay templates",
     )
 
     class Meta:

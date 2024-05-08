@@ -71,7 +71,7 @@ class ComponentModel(PrimaryModel):
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
-    natural_key_field_names = ["name", "device"]
+    natural_key_field_names = ["device", "name"]
 
     class Meta:
         abstract = True
@@ -116,7 +116,7 @@ class ModularComponentModel(ComponentModel):
         null=True,
     )
 
-    natural_key_field_names = ["name", "device", "module"]
+    natural_key_field_names = ["device", "module", "name"]
 
     class Meta:
         abstract = True
@@ -958,7 +958,7 @@ class FrontPort(ModularComponentModel, CableTermination):
         ],
     )
 
-    natural_key_field_names = ["name", "device", "module", "rear_port", "rear_port_position"]
+    natural_key_field_names = ["device", "module", "name", "rear_port", "rear_port_position"]
 
     class Meta(ModularComponentModel.Meta):
         constraints = [
