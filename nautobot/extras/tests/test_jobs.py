@@ -43,6 +43,15 @@ class JobTest(TestCase):
     Test job features that don't require a transaction test case.
     """
 
+    def test_name_inconsistency(self):
+        """
+        Test that `Job.name` != `Job().name`, an inconsistency we introduced in 2.0 but which Apps are relying on.
+        """
+        job_class = get_job("nautobot.core.jobs.ExportObjectList")
+        self.assertEqual(job_class.name, "Export Object List")
+        job_instance = job_class()
+        self.assertEqual(job_instance.name, "nautobot.core.jobs.ExportObjectList")
+
     def test_field_default(self):
         """
         Job test with field that is a default value that is falsey.

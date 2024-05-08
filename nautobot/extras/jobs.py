@@ -109,6 +109,8 @@ class BaseJob:
 
     def __init__(self):
         self.logger = get_task_logger(self.__module__)
+        # Override the `name` classproperty on the instance; see the classproperty docstring for details and history.
+        self.name = self.class_path
 
     def __call__(self, *args, **kwargs):
         # Attempt to resolve serialized data back into original form by creating querysets or model instances
@@ -327,9 +329,14 @@ class BaseJob:
             raise TypeError(f"Meta.{attr_name} should be {expected_type}, not {type(result)}")
         return result
 
-    @final
     @classproperty
     def name(cls) -> str:  # pylint: disable=no-self-argument
+        """
+        `Job.name` is the `Meta.name` if any, else the class name; however, `Job().name` is the `class_path` value.
+
+        This discrepancy was introduced in the 2.0 Jobs refactoring, and by the time we noticed it,
+        there were already Apps relying on this behavior. :-(
+        """
         return cls._get_meta_attr_and_assert_type("name", cls.__name__, expected_type=str)
 
     @final

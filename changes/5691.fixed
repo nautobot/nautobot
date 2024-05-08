@@ -1,0 +1,1 @@
+Restored pre-2.2.3 behavior of `Job().name` attribute (as distinct from `Job.name` classproperty) to fix unintended breakage of the `nautobot-golden-config` App.
