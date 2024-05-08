@@ -3,8 +3,8 @@
 There are three primary methods of deploying Nautobot with regular updates:
 
 * Docker containers are available via [Docker Hub](https://hub.docker.com/r/networktocode/nautobot) & [GitHub Container Registry](https://github.com/nautobot/nautobot/pkgs/container/nautobot) for use within a containerized environment
-* Docker Compose instructions
-* [Helm Charts](https://docs.nautobot.com/projects/helm-charts/en/stable/) for Kubernetes
+  * Docker Compose instructions
+  * [Helm Charts](https://docs.nautobot.com/projects/helm-charts/en/stable/) for Kubernetes
 * Install onto Ubuntu/Debian and Enterprise Linux
 
 [Instructions](install_system.md) here are written for a fresh installation on a [RHEL (Red Hat Enterprise Linux)](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux) or [Ubuntu](https://ubuntu.com/) virtual machine.
@@ -45,14 +45,14 @@ Nautobot will not work without these dependencies.
 
 Nautobot is written in the [Python programming language](https://www.python.org/). The official Python package installer is called [Pip](https://pip.pypa.io/en/stable/), and you will see the `pip` command referenced often to install or update Python packages.
 
-+/- 1.6.0
-    Python 3.11 support was added and Python 3.7 support was removed.
-
 +++ 1.3.0
     Python 3.10 support was added.
 
 --- 1.3.0
     Python 3.6 support was removed.
+
++/- 1.6.0
+    Python 3.11 support was added and Python 3.7 support was removed.
 
 #### Database
 
