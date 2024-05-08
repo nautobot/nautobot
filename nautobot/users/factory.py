@@ -1,6 +1,7 @@
 from datetime import timezone
 
 from django.contrib.auth import get_user_model
+from django.urls import NoReverseMatch, reverse
 import factory
 
 from nautobot.core.factory import BaseModelFactory, NautobotBoolIterator, random_instance, UniqueFaker
@@ -14,7 +15,12 @@ for choice in FeatureQuery("saved_views").get_choices():
     app_label, model = choice[0].split(".")
     # Relevant list view name only
     if app_label in ["circuits", "dcim", "ipam", "extras", "tenancy", "virtualization"]:
-        VIEW_NAMES.append(f"{app_label}:{model}_list")
+        list_view_name = f"{app_label}:{model}_list"
+        try:
+            reverse(list_view_name)
+            VIEW_NAMES.append(f"{app_label}:{model}_list")
+        except NoReverseMatch:
+            pass
 
 
 class UserFactory(BaseModelFactory):

@@ -1,0 +1,92 @@
+Running docker compose command "ps --services --filter status=running"
+Running docker compose command "exec nautobot coverage erase"
+PYTHON_VER=3.10 \
+docker compose \
+    --project-name "nautobot" \
+    --project-directory "development" \
+    -f "development/docker-compose.yml" \
+    -f "development/docker-compose.postgres.yml" \
+    -f "development/docker-compose.dev.yml" exec nautobot coverage erase
+Running docker compose command "ps --services --filter status=running"
+Running docker compose command "exec nautobot coverage run --module nautobot.core.cli test nautobot.users.tests.test_views.SavedViewTest.test_create_saved_view 
+--config=nautobot/core/tests/nautobot_config.py --cache-test-fixtures --keepdb"
+PYTHON_VER=3.10 \
+docker compose \
+    --project-name "nautobot" \
+    --project-directory "development" \
+    -f "development/docker-compose.yml" \
+    -f "development/docker-compose.postgres.yml" \
+    -f "development/docker-compose.dev.yml" exec nautobot coverage run \
+    --module nautobot.core.cli test nautobot.users.tests.test_views.SavedViewTest.test_create_saved_view \
+    --config=nautobot/core/tests/nautobot_config.py \
+    --cache-test-fixtures \
+    --keepdb
+Using NautobotPerformanceTestRunner to run tests ...
+Using existing test database for alias 'default'...
+[33;1mFlushing all existing data from the database "default"...[0m
+[33;1mLoading factory data from file development/factory_dump.json[0m
+Installed 5778 object(s) from 1 fixture(s)
+[32;1mDatabase default populated successfully![0m
+System check identified some issues:
+
+WARNINGS:
+[33;1m<Settings "nautobot_config">: (nautobot.core.W005) STORAGE_CONFIG has been set but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be ignored.[0m
+
+System check identified 1 issue (0 silenced).
+E
+======================================================================
+ERROR: test_create_saved_view (nautobot.users.tests.test_views.SavedViewTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/django/test/utils.py", line 387, in inner
+    return func(*args, **kwargs)
+  File "/source/nautobot/users/tests/test_views.py", line 288, in test_create_saved_view
+    self.assertHttpStatus(self.client.post(**request), 302)
+  File "/usr/local/lib/python3.10/site-packages/rest_framework/test.py", line 296, in post
+    response = super().post(
+  File "/usr/local/lib/python3.10/site-packages/rest_framework/test.py", line 210, in post
+    return self.generic('POST', path, data, content_type, **extra)
+  File "/usr/local/lib/python3.10/site-packages/rest_framework/test.py", line 234, in generic
+    return super().generic(
+  File "/usr/local/lib/python3.10/site-packages/django/test/client.py", line 473, in generic
+    return self.request(**r)
+  File "/usr/local/lib/python3.10/site-packages/rest_framework/test.py", line 286, in request
+    return super().request(**kwargs)
+  File "/usr/local/lib/python3.10/site-packages/rest_framework/test.py", line 238, in request
+    request = super().request(**kwargs)
+  File "/usr/local/lib/python3.10/site-packages/django/test/client.py", line 719, in request
+    self.check_exception(response)
+  File "/usr/local/lib/python3.10/site-packages/django/test/client.py", line 580, in check_exception
+    raise exc_value
+  File "/usr/local/lib/python3.10/site-packages/django/core/handlers/exception.py", line 47, in inner
+    response = get_response(request)
+  File "/source/nautobot/core/middleware.py", line 102, in __call__
+    with web_request_context(
+  File "/usr/local/lib/python3.10/contextlib.py", line 142, in __exit__
+    next(self.gen)
+  File "/source/nautobot/extras/context_managers.py", line 198, in web_request_context
+    for object_change in ObjectChange.objects.filter(request_id=change_context.change_id).iterator():
+  File "/usr/local/lib/python3.10/site-packages/django/db/models/query.py", line 353, in _iterator
+    yield from self._iterable_class(self, chunked_fetch=use_chunked_fetch, chunk_size=chunk_size)
+  File "/usr/local/lib/python3.10/site-packages/django/db/models/query.py", line 51, in __iter__
+    results = compiler.execute_sql(chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size)
+  File "/usr/local/lib/python3.10/site-packages/django/db/models/sql/compiler.py", line 1175, in execute_sql
+    cursor.execute(sql, params)
+  File "/usr/local/lib/python3.10/site-packages/django/db/backends/utils.py", line 66, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+  File "/usr/local/lib/python3.10/site-packages/django/db/backends/utils.py", line 75, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/usr/local/lib/python3.10/site-packages/django/db/backends/utils.py", line 78, in _execute
+    self.db.validate_no_broken_transaction()
+  File "/usr/local/lib/python3.10/site-packages/django/db/backends/base/base.py", line 447, in validate_no_broken_transaction
+    raise TransactionManagementError(
+django.db.transaction.TransactionManagementError: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+
+----------------------------------------------------------------------
+Ran 1 test in 0.506s
+
+FAILED (errors=1)
+Emptying test database "default"...
+Database default emptied!
+Preserving test database for alias 'default'...
+[0m

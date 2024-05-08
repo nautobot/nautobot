@@ -267,23 +267,28 @@ class SavedViewTest(ModelTestCase):
         self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
         self.assertEqual(instance.config["sort_order"], ["name"])
 
-    # @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    # def test_create_saved_view(self):
-    #     instance = self._get_queryset().first()
-    #     view = instance.view
-    #     app_label = view.split(":")[0]
-    #     model_name = view.split(":")[1].split("_")[0]
-    #     # Add model-level permission
-    #     self.add_permissions("users.view_savedview")
-    #     self.add_permissions("users.add_savedview")
-    #     self.add_permissions(f"{app_label}.view_{model_name}")
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_saved_view(self):
+        instance = self._get_queryset().first()
+        view = instance.view
+        app_label = view.split(":")[0]
+        model_name = view.split(":")[1].split("_")[0]
+        # Add model-level permission
+        self.add_permissions("users.view_savedview")
+        self.add_permissions("users.add_savedview")
+        self.add_permissions(f"{app_label}.view_{model_name}")
 
-    #     create_query_strings = ["&per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
-    #     create_url = self.get_view_url_for_saved_view(instance, "create") + "".join(create_query_strings)
-    #     response = self.client.get(create_url)
-    #     self.assertHttpStatus(response, 302)
-    #     instance.refresh_from_db()
-    #     self.assertEqual(instance.config["pagination_count"], 12)
-    #     self.assertEqual(instance.config["filter_params"]["status"], ["active"])
-    #     self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
-    #     self.assertEqual(instance.config["sort_order"], ["name"])
+        create_query_strings = ["&per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
+        create_url = self.get_view_url_for_saved_view(instance, "create") + "".join(create_query_strings)
+        # response = self.client.get(create_url)
+        request = {
+            "path": create_url,
+            "data": {"name": "New View"},
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        # self.assertHttpStatus(response, 302)
+        # instance.refresh_from_db()
+        # self.assertEqual(instance.config["pagination_count"], 12)
+        # self.assertEqual(instance.config["filter_params"]["status"], ["active"])
+        # self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
+        # self.assertEqual(instance.config["sort_order"], ["name"])
