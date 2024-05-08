@@ -19,7 +19,7 @@ router.register("device-families", views.DeviceFamilyViewSet)
 router.register("device-types", views.DeviceTypeViewSet)
 router.register("module-types", views.ModuleTypeViewSet)
 
-# Device type components
+# Device type and Module type components
 router.register("console-port-templates", views.ConsolePortTemplateViewSet)
 router.register("console-server-port-templates", views.ConsoleServerPortTemplateViewSet)
 router.register("power-port-templates", views.PowerPortTemplateViewSet)

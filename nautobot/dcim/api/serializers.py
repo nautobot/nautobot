@@ -180,6 +180,34 @@ class ConnectedEndpointSerializer(PathEndpointModelSerializerMixin):
     pass
 
 
+class ModularDeviceComponentTemplateSerializerMixin:
+    def validate(self, data):
+        """Validate device_type and module_type field constraints for modular device component templates."""
+        if data.get("device_type") and data.get("module_type"):
+            raise serializers.ValidationError("Only one of device_type or module_type may be set.")
+        if data.get("device_type"):
+            validator = UniqueTogetherValidator(queryset=self.Meta.model.objects.all(), fields=("device_type", "name"))
+            validator(data, self)
+        if data.get("module_type"):
+            validator = UniqueTogetherValidator(queryset=self.Meta.model.objects.all(), fields=("module_type", "name"))
+            validator(data, self)
+        return super().validate(data)
+
+
+class ModularDeviceComponentSerializerMixin:
+    def validate(self, data):
+        """Validate device and module field constraints for modular device components."""
+        if data.get("device") and data.get("module"):
+            raise serializers.ValidationError("Only one of device or module may be set.")
+        if data.get("device"):
+            validator = UniqueTogetherValidator(queryset=self.Meta.model.objects.all(), fields=("device", "name"))
+            validator(data, self)
+        if data.get("module"):
+            validator = UniqueTogetherValidator(queryset=self.Meta.model.objects.all(), fields=("module", "name"))
+            validator(data, self)
+        return super().validate(data)
+
+
 #
 # Locations
 #
@@ -434,7 +462,7 @@ class DeviceTypeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         }
 
 
-class ConsolePortTemplateSerializer(NautobotModelSerializer):
+class ConsolePortTemplateSerializer(ModularDeviceComponentTemplateSerializerMixin, NautobotModelSerializer):
     type = ChoiceField(choices=ConsolePortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -443,7 +471,7 @@ class ConsolePortTemplateSerializer(NautobotModelSerializer):
         validators = []
 
 
-class ConsoleServerPortTemplateSerializer(NautobotModelSerializer):
+class ConsoleServerPortTemplateSerializer(ModularDeviceComponentTemplateSerializerMixin, NautobotModelSerializer):
     type = ChoiceField(choices=ConsolePortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -482,7 +510,7 @@ class InterfaceRedundancyGroupSerializer(NautobotModelSerializer, TaggedModelSer
         }
 
 
-class PowerPortTemplateSerializer(NautobotModelSerializer):
+class PowerPortTemplateSerializer(ModularDeviceComponentTemplateSerializerMixin, NautobotModelSerializer):
     type = ChoiceField(choices=PowerPortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
@@ -491,7 +519,7 @@ class PowerPortTemplateSerializer(NautobotModelSerializer):
         validators = []
 
 
-class PowerOutletTemplateSerializer(NautobotModelSerializer):
+class PowerOutletTemplateSerializer(ModularDeviceComponentTemplateSerializerMixin, NautobotModelSerializer):
     type = ChoiceField(choices=PowerOutletTypeChoices, allow_blank=True, required=False)
     feed_leg = ChoiceField(choices=PowerOutletFeedLegChoices, allow_blank=True, required=False)
 
@@ -501,7 +529,7 @@ class PowerOutletTemplateSerializer(NautobotModelSerializer):
         validators = []
 
 
-class InterfaceTemplateSerializer(NautobotModelSerializer):
+class InterfaceTemplateSerializer(ModularDeviceComponentTemplateSerializerMixin, NautobotModelSerializer):
     type = ChoiceField(choices=InterfaceTypeChoices)
 
     class Meta:
@@ -510,7 +538,7 @@ class InterfaceTemplateSerializer(NautobotModelSerializer):
         validators = []
 
 
-class RearPortTemplateSerializer(NautobotModelSerializer):
+class RearPortTemplateSerializer(ModularDeviceComponentTemplateSerializerMixin, NautobotModelSerializer):
     type = ChoiceField(choices=PortTypeChoices)
 
     class Meta:
@@ -519,13 +547,18 @@ class RearPortTemplateSerializer(NautobotModelSerializer):
         validators = []
 
 
-class FrontPortTemplateSerializer(NautobotModelSerializer):
+class FrontPortTemplateSerializer(ModularDeviceComponentTemplateSerializerMixin, NautobotModelSerializer):
     type = ChoiceField(choices=PortTypeChoices)
 
     class Meta:
         model = FrontPortTemplate
         fields = "__all__"
-        validators = []
+        validators = [
+            UniqueTogetherValidator(
+                queryset=FrontPortTemplate.objects.all(),
+                fields=("rear_port_template", "rear_port_position"),
+            ),
+        ]
 
 
 class DeviceBayTemplateSerializer(NautobotModelSerializer):
@@ -662,6 +695,7 @@ class DeviceNAPALMSerializer(serializers.Serializer):
 
 
 class ConsoleServerPortSerializer(
+    ModularDeviceComponentSerializerMixin,
     NautobotModelSerializer,
     TaggedModelSerializerMixin,
     CableTerminationModelSerializerMixin,
@@ -677,6 +711,7 @@ class ConsoleServerPortSerializer(
 
 
 class ConsolePortSerializer(
+    ModularDeviceComponentSerializerMixin,
     NautobotModelSerializer,
     TaggedModelSerializerMixin,
     CableTerminationModelSerializerMixin,
@@ -692,6 +727,7 @@ class ConsolePortSerializer(
 
 
 class PowerOutletSerializer(
+    ModularDeviceComponentSerializerMixin,
     NautobotModelSerializer,
     TaggedModelSerializerMixin,
     CableTerminationModelSerializerMixin,
@@ -708,6 +744,7 @@ class PowerOutletSerializer(
 
 
 class PowerPortSerializer(
+    ModularDeviceComponentSerializerMixin,
     NautobotModelSerializer,
     TaggedModelSerializerMixin,
     CableTerminationModelSerializerMixin,
@@ -742,6 +779,7 @@ class InterfaceCommonSerializer(NautobotModelSerializer, TaggedModelSerializerMi
 
 
 class InterfaceSerializer(
+    ModularDeviceComponentSerializerMixin,
     InterfaceCommonSerializer,
     CableTerminationModelSerializerMixin,
     PathEndpointModelSerializerMixin,
@@ -775,7 +813,12 @@ class InterfaceSerializer(
         return super().validate(data)
 
 
-class RearPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, CableTerminationModelSerializerMixin):
+class RearPortSerializer(
+    ModularDeviceComponentSerializerMixin,
+    NautobotModelSerializer,
+    TaggedModelSerializerMixin,
+    CableTerminationModelSerializerMixin,
+):
     type = ChoiceField(choices=PortTypeChoices)
 
     class Meta:
@@ -785,7 +828,12 @@ class RearPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, Ca
         validators = []
 
 
-class FrontPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, CableTerminationModelSerializerMixin):
+class FrontPortSerializer(
+    ModularDeviceComponentSerializerMixin,
+    NautobotModelSerializer,
+    TaggedModelSerializerMixin,
+    CableTerminationModelSerializerMixin,
+):
     type = ChoiceField(choices=PortTypeChoices)
 
     class Meta:
@@ -795,7 +843,7 @@ class FrontPortSerializer(NautobotModelSerializer, TaggedModelSerializerMixin, C
         validators = [
             UniqueTogetherValidator(
                 queryset=FrontPort.objects.all(),
-                fields=("rear_port_template", "rear_port_position"),
+                fields=("rear_port", "rear_port_position"),
             ),
         ]
 
@@ -1083,11 +1131,27 @@ class ControllerManagedDeviceGroupSerializer(NautobotModelSerializer, TaggedMode
 #
 
 
-class ModuleBaySerializer(NautobotModelSerializer):
+class ModuleBaySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = ModuleBay
         fields = "__all__"
         validators = []
+
+    def validate(self, data):
+        """Validate device and module field constraints for module bay."""
+        if data.get("parent_device") and data.get("parent_module"):
+            raise serializers.ValidationError("Only one of parent_device or parent_module may be set.")
+        if data.get("parent_device"):
+            validator = UniqueTogetherValidator(
+                queryset=self.Meta.model.objects.all(), fields=("parent_device", "position")
+            )
+            validator(data, self)
+        if data.get("parent_module"):
+            validator = UniqueTogetherValidator(
+                queryset=self.Meta.model.objects.all(), fields=("parent_module", "position")
+            )
+            validator(data, self)
+        return super().validate(data)
 
 
 class ModuleBayTemplateSerializer(NautobotModelSerializer):
@@ -1096,14 +1160,32 @@ class ModuleBayTemplateSerializer(NautobotModelSerializer):
         fields = "__all__"
         validators = []
 
+    def validate(self, data):
+        """Validate device_type and module_type field constraints for module bay template."""
+        if data.get("device_type") and data.get("module_type"):
+            raise serializers.ValidationError("Only one of device_type or module_type may be set.")
+        if data.get("device_type"):
+            validator = UniqueTogetherValidator(
+                queryset=self.Meta.model.objects.all(), fields=("device_type", "position")
+            )
+            validator(data, self)
+        if data.get("module_type"):
+            validator = UniqueTogetherValidator(
+                queryset=self.Meta.model.objects.all(), fields=("module_type", "position")
+            )
+            validator(data, self)
+        return super().validate(data)
 
-class ModuleSerializer(NautobotModelSerializer):
+
+class ModuleSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = Module
         fields = "__all__"
 
+    # TODO: add custom validation
 
-class ModuleTypeSerializer(NautobotModelSerializer):
+
+class ModuleTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
         model = ModuleType
         fields = "__all__"

@@ -958,6 +958,8 @@ class FrontPort(ModularComponentModel, CableTermination):
         ],
     )
 
+    natural_key_field_names = ["name", "device", "module", "rear_port", "rear_port_position"]
+
     class Meta(ModularComponentModel.Meta):
         constraints = [
             *ModularComponentModel.Meta.constraints,

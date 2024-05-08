@@ -374,6 +374,8 @@ class FrontPortTemplate(ModularComponentTemplateModel):
         ],
     )
 
+    natural_key_field_names = ["name", "device_type", "module_type", "rear_port_template", "rear_port_position"]
+
     class Meta(ModularComponentTemplateModel.Meta):
         constraints = [
             *ModularComponentTemplateModel.Meta.constraints,

@@ -45,6 +45,7 @@ from nautobot.dcim.models import (
     Manufacturer,
     Module,
     ModuleBay,
+    ModuleBayTemplate,
     ModuleType,
     Platform,
     PowerFeed,
@@ -134,7 +135,6 @@ class Mixins:
         def setUpTestData(cls):
             super().setUpTestData()
             cls.device_type = DeviceType.objects.first()
-            cls.module_type = ModuleType.objects.first()
             cls.manufacturer = cls.device_type.manufacturer
             cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
             cls.device_role = Role.objects.get_for_model(Device).first()
@@ -146,6 +146,8 @@ class Mixins:
                 location=cls.location,
                 status=cls.device_status,
             )
+            cls.module = Module.objects.first()
+            cls.module_type = cls.module.module_type
 
     class BasePortTestMixin(ComponentTraceMixin, BaseComponentTestMixin):
         """Mixin class for all `FooPort` tests."""
@@ -851,6 +853,37 @@ class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases
         ]
 
 
+class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
+    model = ModuleType
+    bulk_update_data = {
+        "part_number": "ABC123",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        manufacturer_id = Manufacturer.objects.first().pk
+
+        cls.create_data = [
+            {
+                "manufacturer": manufacturer_id,
+                "model": "Module Type 1",
+                "part_number": "123456",
+            },
+            {
+                "manufacturer": manufacturer_id,
+                "model": "Module Type 2",
+            },
+            {
+                "manufacturer": manufacturer_id,
+                "model": "Module Type 3",
+            },
+            {
+                "manufacturer": manufacturer_id,
+                "model": "Module Type 4",
+            },
+        ]
+
+
 class ConsolePortTemplateTest(Mixins.BasePortTemplateTestMixin):
     model = ConsolePortTemplate
 
@@ -858,17 +891,13 @@ class ConsolePortTemplateTest(Mixins.BasePortTemplateTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        ConsolePortTemplate.objects.create(device_type=cls.device_type, name="Console Port Template 1")
-        ConsolePortTemplate.objects.create(device_type=cls.device_type, name="Console Port Template 2")
-        ConsolePortTemplate.objects.create(device_type=cls.device_type, name="Console Port Template 3")
-
         cls.create_data = [
             {
                 "device_type": cls.device_type.pk,
                 "name": "Console Port Template 4",
             },
             {
-                "device_type": cls.device_type.pk,
+                "module_type": cls.module_type.pk,
                 "name": "Console Port Template 5",
             },
             {
@@ -885,17 +914,13 @@ class ConsoleServerPortTemplateTest(Mixins.BasePortTemplateTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        ConsoleServerPortTemplate.objects.create(device_type=cls.device_type, name="Console Server Port Template 1")
-        ConsoleServerPortTemplate.objects.create(device_type=cls.device_type, name="Console Server Port Template 2")
-        ConsoleServerPortTemplate.objects.create(device_type=cls.device_type, name="Console Server Port Template 3")
-
         cls.create_data = [
             {
                 "device_type": cls.device_type.pk,
                 "name": "Console Server Port Template 4",
             },
             {
-                "device_type": cls.device_type.pk,
+                "module_type": cls.module_type.pk,
                 "name": "Console Server Port Template 5",
             },
             {
@@ -912,17 +937,13 @@ class PowerPortTemplateTest(Mixins.BasePortTemplateTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        PowerPortTemplate.objects.create(device_type=cls.device_type, name="Power Port Template 1")
-        PowerPortTemplate.objects.create(device_type=cls.device_type, name="Power Port Template 2")
-        PowerPortTemplate.objects.create(device_type=cls.device_type, name="Power Port Template 3")
-
         cls.create_data = [
             {
                 "device_type": cls.device_type.pk,
                 "name": "Power Port Template 4",
             },
             {
-                "device_type": cls.device_type.pk,
+                "module_type": cls.module_type.pk,
                 "name": "Power Port Template 5",
             },
             {
@@ -940,17 +961,13 @@ class PowerOutletTemplateTest(Mixins.BasePortTemplateTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        PowerOutletTemplate.objects.create(device_type=cls.device_type, name="Power Outlet Template 1")
-        PowerOutletTemplate.objects.create(device_type=cls.device_type, name="Power Outlet Template 2")
-        PowerOutletTemplate.objects.create(device_type=cls.device_type, name="Power Outlet Template 3")
-
         cls.create_data = [
             {
                 "device_type": cls.device_type.pk,
                 "name": "Power Outlet Template 4",
             },
             {
-                "device_type": cls.device_type.pk,
+                "module_type": cls.module_type.pk,
                 "name": "Power Outlet Template 5",
             },
             {
@@ -967,10 +984,6 @@ class InterfaceTemplateTest(Mixins.BasePortTemplateTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        InterfaceTemplate.objects.create(device_type=cls.device_type, name="Interface Template 1", type="1000base-t")
-        InterfaceTemplate.objects.create(device_type=cls.device_type, name="Interface Template 2", type="1000base-t")
-        InterfaceTemplate.objects.create(device_type=cls.device_type, name="Interface Template 3", type="1000base-t")
-
         cls.create_data = [
             {
                 "device_type": cls.device_type.pk,
@@ -978,7 +991,7 @@ class InterfaceTemplateTest(Mixins.BasePortTemplateTestMixin):
                 "type": "1000base-t",
             },
             {
-                "device_type": cls.device_type.pk,
+                "module_type": cls.module_type.pk,
                 "name": "Interface Template 5",
                 "type": "1000base-t",
             },
@@ -998,77 +1011,32 @@ class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
         super().setUpTestData()
 
         rear_port_templates = (
-            RearPortTemplate.objects.create(
-                device_type=cls.device_type,
-                name="Rear Port Template 1",
-                type=PortTypeChoices.TYPE_8P8C,
-            ),
-            RearPortTemplate.objects.create(
-                device_type=cls.device_type,
-                name="Rear Port Template 2",
-                type=PortTypeChoices.TYPE_8P8C,
-            ),
-            RearPortTemplate.objects.create(
-                device_type=cls.device_type,
-                name="Rear Port Template 3",
-                type=PortTypeChoices.TYPE_8P8C,
-            ),
-            RearPortTemplate.objects.create(
-                device_type=cls.device_type,
-                name="Rear Port Template 4",
-                type=PortTypeChoices.TYPE_8P8C,
-            ),
-            RearPortTemplate.objects.create(
-                device_type=cls.device_type,
-                name="Rear Port Template 5",
-                type=PortTypeChoices.TYPE_8P8C,
-            ),
-            RearPortTemplate.objects.create(
-                device_type=cls.device_type,
-                name="Rear Port Template 6",
-                type=PortTypeChoices.TYPE_8P8C,
-            ),
+            *RearPortTemplate.objects.filter(device_type__isnull=False)[:2],
+            RearPortTemplate.objects.filter(module_type__isnull=False)[0],
         )
-
-        FrontPortTemplate.objects.create(
-            device_type=cls.device_type,
-            name="Front Port Template 1",
-            type=PortTypeChoices.TYPE_8P8C,
-            rear_port_template=rear_port_templates[0],
-        )
-        FrontPortTemplate.objects.create(
-            device_type=cls.device_type,
-            name="Front Port Template 2",
-            type=PortTypeChoices.TYPE_8P8C,
-            rear_port_template=rear_port_templates[1],
-        )
-        FrontPortTemplate.objects.create(
-            device_type=cls.device_type,
-            name="Front Port Template 3",
-            type=PortTypeChoices.TYPE_8P8C,
-            rear_port_template=rear_port_templates[2],
-        )
+        for rpt in rear_port_templates:
+            rpt.front_port_templates.all().delete()
 
         cls.create_data = [
             {
-                "device_type": cls.device_type.pk,
+                "device_type": rear_port_templates[0].device_type.pk,
                 "name": "Front Port Template 4",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port_template": rear_port_templates[3].pk,
+                "rear_port_template": rear_port_templates[0].pk,
                 "rear_port_position": 1,
             },
             {
-                "device_type": cls.device_type.pk,
+                "device_type": rear_port_templates[1].device_type.pk,
                 "name": "Front Port Template 5",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port_template": rear_port_templates[4].pk,
+                "rear_port_template": rear_port_templates[1].pk,
                 "rear_port_position": 1,
             },
             {
-                "device_type": cls.device_type.pk,
+                "module_type": rear_port_templates[2].module_type.pk,
                 "name": "Front Port Template 6",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port_template": rear_port_templates[5].pk,
+                "rear_port_template": rear_port_templates[2].pk,
                 "rear_port_position": 1,
             },
         ]
@@ -1081,22 +1049,6 @@ class RearPortTemplateTest(Mixins.BasePortTemplateTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        RearPortTemplate.objects.create(
-            device_type=cls.device_type,
-            name="Rear Port Template 1",
-            type=PortTypeChoices.TYPE_8P8C,
-        )
-        RearPortTemplate.objects.create(
-            device_type=cls.device_type,
-            name="Rear Port Template 2",
-            type=PortTypeChoices.TYPE_8P8C,
-        )
-        RearPortTemplate.objects.create(
-            device_type=cls.device_type,
-            name="Rear Port Template 3",
-            type=PortTypeChoices.TYPE_8P8C,
-        )
-
         cls.create_data = [
             {
                 "device_type": cls.device_type.pk,
@@ -1104,7 +1056,7 @@ class RearPortTemplateTest(Mixins.BasePortTemplateTestMixin):
                 "type": PortTypeChoices.TYPE_8P8C,
             },
             {
-                "device_type": cls.device_type.pk,
+                "module_type": cls.module_type.pk,
                 "name": "Rear Port Template 5",
                 "type": PortTypeChoices.TYPE_8P8C,
             },
@@ -1143,6 +1095,32 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
                 "name": "Device Bay Template 6",
             },
         ]
+
+
+class ModuleBayTemplateTest(Mixins.BaseComponentTestMixin):
+    model = ModuleBayTemplate
+    choices_fields = []
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        cls.create_data = [
+            {
+                "device_type": cls.device_type.pk,
+                "position": "Test1",
+            },
+            {
+                "module_type": cls.module_type.pk,
+                "position": "Test2",
+            },
+            {
+                "device_type": cls.device_type.pk,
+                "position": "Test3",
+            },
+        ]
+
+    # TODO: add validation tests for all modular component templates
 
 
 class PlatformTest(APIViewTestCases.APIViewTestCase):
@@ -1466,6 +1444,52 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
 
+class ModuleTestCase(APIViewTestCases.APIViewTestCase):
+    model = Module
+
+    @classmethod
+    def setUpTestData(cls):
+        module_type = ModuleType.objects.first()
+        module_bay = ModuleBay.objects.filter(installed_module__isnull=True).first()
+        module_status = Status.objects.get_for_model(Module).first()
+        location = Location.objects.get_for_model(Module).first()
+        cls.create_data = [
+            {
+                "module_type": module_type.pk,
+                "parent_module_bay": module_bay.pk,
+                "serial": None,
+                "asset_tag": None,
+                "status": module_status.pk,
+            },
+            {
+                "module_type": module_type.pk,
+                "location": location.pk,
+                "serial": "test module serial xyz",
+                "asset_tag": "test module 2",
+                "status": module_status.pk,
+            },
+            {
+                "module_type": module_type.pk,
+                "location": location.pk,
+                "serial": None,
+                "asset_tag": "Test Module 3",
+                "status": module_status.pk,
+            },
+            {
+                "module_type": module_type.pk,
+                "location": location.pk,
+                "serial": "test module serial abc",
+                "asset_tag": None,
+                "status": module_status.pk,
+            },
+        ]
+        cls.bulk_update_data = {
+            "tenant": Tenant.objects.first().pk,
+        }
+
+    # TODO: add validation test
+
+
 class ConsolePortTest(Mixins.BasePortTestMixin):
     model = ConsolePort
     peer_termination_type = ConsoleServerPort
@@ -1474,22 +1498,18 @@ class ConsolePortTest(Mixins.BasePortTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        ConsolePort.objects.create(device=cls.device, name="Console Port 1")
-        ConsolePort.objects.create(device=cls.device, name="Console Port 2")
-        ConsolePort.objects.create(device=cls.device, name="Console Port 3")
-
         cls.create_data = [
             {
                 "device": cls.device.pk,
-                "name": "Console Port 4",
+                "name": "Console Port 1",
+            },
+            {
+                "module": cls.module.pk,
+                "name": "Console Port 2",
             },
             {
                 "device": cls.device.pk,
-                "name": "Console Port 5",
-            },
-            {
-                "device": cls.device.pk,
-                "name": "Console Port 6",
+                "name": "Console Port 3",
             },
         ]
 
@@ -1502,22 +1522,18 @@ class ConsoleServerPortTest(Mixins.BasePortTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        ConsoleServerPort.objects.create(device=cls.device, name="Console Server Port 1")
-        ConsoleServerPort.objects.create(device=cls.device, name="Console Server Port 2")
-        ConsoleServerPort.objects.create(device=cls.device, name="Console Server Port 3")
-
         cls.create_data = [
             {
                 "device": cls.device.pk,
-                "name": "Console Server Port 4",
+                "name": "Console Server Port 1",
+            },
+            {
+                "module": cls.module.pk,
+                "name": "Console Server Port 2",
             },
             {
                 "device": cls.device.pk,
-                "name": "Console Server Port 5",
-            },
-            {
-                "device": cls.device.pk,
-                "name": "Console Server Port 6",
+                "name": "Console Server Port 3",
             },
         ]
 
@@ -1530,22 +1546,18 @@ class PowerPortTest(Mixins.BasePortTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        PowerPort.objects.create(device=cls.device, name="Power Port 1")
-        PowerPort.objects.create(device=cls.device, name="Power Port 2")
-        PowerPort.objects.create(device=cls.device, name="Power Port 3")
-
         cls.create_data = [
             {
                 "device": cls.device.pk,
-                "name": "Power Port 4",
+                "name": "Power Port 1",
+            },
+            {
+                "module": cls.module.pk,
+                "name": "Power Port 2",
             },
             {
                 "device": cls.device.pk,
-                "name": "Power Port 5",
-            },
-            {
-                "device": cls.device.pk,
-                "name": "Power Port 6",
+                "name": "Power Port 3",
             },
         ]
 
@@ -1559,22 +1571,18 @@ class PowerOutletTest(Mixins.BasePortTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        PowerOutlet.objects.create(device=cls.device, name="Power Outlet 1")
-        PowerOutlet.objects.create(device=cls.device, name="Power Outlet 2")
-        PowerOutlet.objects.create(device=cls.device, name="Power Outlet 3")
-
         cls.create_data = [
             {
                 "device": cls.device.pk,
-                "name": "Power Outlet 4",
+                "name": "Power Outlet 1",
+            },
+            {
+                "module": cls.module.pk,
+                "name": "Power Outlet 2",
             },
             {
                 "device": cls.device.pk,
-                "name": "Power Outlet 5",
-            },
-            {
-                "device": cls.device.pk,
-                "name": "Power Outlet 6",
+                "name": "Power Outlet 3",
             },
         ]
 
@@ -1895,53 +1903,32 @@ class FrontPortTest(Mixins.BasePortTestMixin):
         super().setUpTestData()
 
         rear_ports = (
-            RearPort.objects.create(device=cls.device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=cls.device, name="Rear Port 2", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=cls.device, name="Rear Port 3", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=cls.device, name="Rear Port 4", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=cls.device, name="Rear Port 5", type=PortTypeChoices.TYPE_8P8C),
-            RearPort.objects.create(device=cls.device, name="Rear Port 6", type=PortTypeChoices.TYPE_8P8C),
+            *RearPort.objects.filter(device__isnull=False)[:2],
+            RearPort.objects.filter(module__isnull=False)[0],
         )
-
-        FrontPort.objects.create(
-            device=cls.device,
-            name="Front Port 1",
-            type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rear_ports[0],
-        )
-        FrontPort.objects.create(
-            device=cls.device,
-            name="Front Port 2",
-            type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rear_ports[1],
-        )
-        FrontPort.objects.create(
-            device=cls.device,
-            name="Front Port 3",
-            type=PortTypeChoices.TYPE_8P8C,
-            rear_port=rear_ports[2],
-        )
+        for rp in rear_ports:
+            rp.front_ports.all().delete()
 
         cls.create_data = [
             {
-                "device": cls.device.pk,
-                "name": "Front Port 4",
+                "device": rear_ports[0].device.pk,
+                "name": "Front Port 1",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_ports[3].pk,
+                "rear_port": rear_ports[0].pk,
                 "rear_port_position": 1,
             },
             {
-                "device": cls.device.pk,
-                "name": "Front Port 5",
+                "device": rear_ports[1].device.pk,
+                "name": "Front Port 2",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_ports[4].pk,
+                "rear_port": rear_ports[1].pk,
                 "rear_port_position": 1,
             },
             {
-                "device": cls.device.pk,
-                "name": "Front Port 6",
+                "module": rear_ports[2].module.pk,
+                "name": "Front Port 3",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_ports[5].pk,
+                "rear_port": rear_ports[2].pk,
                 "rear_port_position": 1,
             },
         ]
@@ -1958,24 +1945,20 @@ class RearPortTest(Mixins.BasePortTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        RearPort.objects.create(device=cls.device, name="Rear Port 1", type=PortTypeChoices.TYPE_8P8C)
-        RearPort.objects.create(device=cls.device, name="Rear Port 2", type=PortTypeChoices.TYPE_8P8C)
-        RearPort.objects.create(device=cls.device, name="Rear Port 3", type=PortTypeChoices.TYPE_8P8C)
-
         cls.create_data = [
             {
                 "device": cls.device.pk,
-                "name": "Rear Port 4",
+                "name": "Rear Port 1",
+                "type": PortTypeChoices.TYPE_8P8C,
+            },
+            {
+                "module": cls.module.pk,
+                "name": "Rear Port 2",
                 "type": PortTypeChoices.TYPE_8P8C,
             },
             {
                 "device": cls.device.pk,
-                "name": "Rear Port 5",
-                "type": PortTypeChoices.TYPE_8P8C,
-            },
-            {
-                "device": cls.device.pk,
-                "name": "Rear Port 6",
+                "name": "Rear Port 3",
                 "type": PortTypeChoices.TYPE_8P8C,
             },
         ]
@@ -2091,6 +2074,32 @@ class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeMode
     @skip("DRF's built-in InventoryItem nautral_key is infinitely recursive")
     def test_list_objects_descending_ordered(self):
         pass
+
+
+class ModuleBayTest(Mixins.BaseComponentTestMixin):
+    model = ModuleBay
+    choices_fields = []
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        cls.create_data = [
+            {
+                "parent_device": cls.device.pk,
+                "position": "Test1",
+            },
+            {
+                "parent_module": cls.module.pk,
+                "position": "Test2",
+            },
+            {
+                "parent_device": cls.device.pk,
+                "position": "Test3",
+            },
+        ]
+
+    # TODO: Add validation tests for all modular device components
 
 
 class CableTest(Mixins.BaseComponentTestMixin):
@@ -2907,48 +2916,4 @@ class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
         ]
         cls.bulk_update_data = {
             "weight": 300,
-        }
-
-
-class ModuleTestCase(APIViewTestCases.APIViewTestCase):
-    model = Module
-
-    @classmethod
-    def setUpTestData(cls):
-        module_type = ModuleType.objects.first()
-        module_bay = ModuleBay.objects.filter(installed_module__isnull=True).first()
-        module_status = Status.objects.get_for_model(Module).first()
-        location = Location.objects.get_for_model(Module).first()
-        cls.create_data = [
-            {
-                "module_type": module_type.pk,
-                "parent_module_bay": module_bay.pk,
-                "serial": None,
-                "asset_tag": None,
-                "status": module_status.pk,
-            },
-            {
-                "module_type": module_type.pk,
-                "location": location.pk,
-                "serial": "test module serial xyz",
-                "asset_tag": "test module 2",
-                "status": module_status.pk,
-            },
-            {
-                "module_type": module_type.pk,
-                "location": location.pk,
-                "serial": None,
-                "asset_tag": "Test Module 3",
-                "status": module_status.pk,
-            },
-            {
-                "module_type": module_type.pk,
-                "location": location.pk,
-                "serial": "test module serial abc",
-                "asset_tag": None,
-                "status": module_status.pk,
-            },
-        ]
-        cls.bulk_update_data = {
-            "tenant": Tenant.objects.first().pk,
         }
