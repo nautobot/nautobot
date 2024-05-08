@@ -148,14 +148,20 @@ class SavedViewTest(ModelTestCase):
 
     model = SavedView
 
-    def get_detail_view_url_for_saved_view(self, saved_view):
+    def get_view_url_for_saved_view(self, saved_view, action="detail"):
         """
         Since saved view detail url redirects, we need to manually construct its detail url
         to test the content of its response.
         """
         view = saved_view.view
         pk = saved_view.pk
-        url = reverse(view) + saved_view.view_config + f"&saved_view={pk}"
+
+        if action == "detail":
+            url = reverse(view) + saved_view.view_config + f"&saved_view={pk}"
+        elif action == "edit":
+            url = saved_view.get_absolute_url() + "edit/" + saved_view.view_config + f"&saved_view={pk}"
+        else:
+            url = reverse("users:savedview_add") + saved_view.view_config + f"&saved_view={pk}" + f"&view_name={view}"
 
         return url
 
@@ -164,7 +170,7 @@ class SavedViewTest(ModelTestCase):
         # Make the request as an unauthenticated user
         self.client.logout()
         instance = self._get_queryset().first()
-        url = self.get_detail_view_url_for_saved_view(instance)
+        url = self.get_view_url_for_saved_view(instance)
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
 
@@ -177,7 +183,7 @@ class SavedViewTest(ModelTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_object_without_permission(self):
         instance = self._get_queryset().first()
-        url = self.get_detail_view_url_for_saved_view(instance)
+        url = self.get_view_url_for_saved_view(instance)
 
         # Try GET without permission
         with disable_warnings("django.request"):
@@ -202,13 +208,20 @@ class SavedViewTest(ModelTestCase):
         self.assertHttpStatus(response, 302)
 
         # To go to the actual saved view, we have to construct the url from scratch
-        view_url = self.get_detail_view_url_for_saved_view(instance)
+        view_url = self.get_view_url_for_saved_view(instance)
         response = self.client.get(view_url)
         self.assertHttpStatus(response, 200)
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn(escape(instance.name), response_body, msg=response_body)
 
-        # TODO Test view_changes_not_saved() helper function
+        query_strings = ["&table_changes_pending=true", "&per_page=1234", "&status=active", "&sort=name"]
+        for string in query_strings:
+            view_url = self.get_view_url_for_saved_view(instance) + string
+            response = self.client.get(view_url)
+            self.assertHttpStatus(response, 200)
+            response_body = extract_page_body(response.content.decode(response.charset))
+            # Assert that the star sign is rendered on the page since there are unsaved changes
+            self.assertIn("<sup>*</sup>", response_body, msg=response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_object_with_constrained_permission(self):
@@ -232,3 +245,45 @@ class SavedViewTest(ModelTestCase):
 
         # Try GET to non-permitted object
         self.assertHttpStatus(self.client.get(instance2.get_absolute_url()), 404)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_update_saved_view(self):
+        instance = self._get_queryset().first()
+        view = instance.view
+        app_label = view.split(":")[0]
+        model_name = view.split(":")[1].split("_")[0]
+        # Add model-level permission
+        self.add_permissions("users.view_savedview")
+        self.add_permissions("users.change_savedview")
+        self.add_permissions(f"{app_label}.view_{model_name}")
+
+        update_query_strings = ["&per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
+        update_url = self.get_view_url_for_saved_view(instance, "edit") + "".join(update_query_strings)
+        response = self.client.get(update_url)
+        self.assertHttpStatus(response, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.config["pagination_count"], 12)
+        self.assertEqual(instance.config["filter_params"]["status"], ["active"])
+        self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
+        self.assertEqual(instance.config["sort_order"], ["name"])
+
+    # @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    # def test_create_saved_view(self):
+    #     instance = self._get_queryset().first()
+    #     view = instance.view
+    #     app_label = view.split(":")[0]
+    #     model_name = view.split(":")[1].split("_")[0]
+    #     # Add model-level permission
+    #     self.add_permissions("users.view_savedview")
+    #     self.add_permissions("users.add_savedview")
+    #     self.add_permissions(f"{app_label}.view_{model_name}")
+
+    #     create_query_strings = ["&per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
+    #     create_url = self.get_view_url_for_saved_view(instance, "create") + "".join(create_query_strings)
+    #     response = self.client.get(create_url)
+    #     self.assertHttpStatus(response, 302)
+    #     instance.refresh_from_db()
+    #     self.assertEqual(instance.config["pagination_count"], 12)
+    #     self.assertEqual(instance.config["filter_params"]["status"], ["active"])
+    #     self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
+    #     self.assertEqual(instance.config["sort_order"], ["name"])
