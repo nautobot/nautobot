@@ -1,4 +1,3 @@
-
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.extras.filters import (
     ContactAssociationFilterSet,
