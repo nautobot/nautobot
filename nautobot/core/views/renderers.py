@@ -51,7 +51,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         filterset = None
         if filterset_class:
             filterset = filterset_class()
-            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(request.GET, filterset)
+            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
+                view.filter_params if view.filter_params is not None else request.GET, filterset
+            )
         return DynamicFilterFormSet(filterset=filterset, data=factory_formset_params)
 
     def construct_user_permissions(self, request, model):
@@ -78,14 +80,16 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         if view.action in ["list", "notes", "changelog"]:
             if view.action == "list":
                 permissions = kwargs.get("permissions", {})
-                if view.request.GET.getlist("sort"):
-                    view.hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
                 self.saved_view = None
                 if saved_view_pk is not None:
                     try:
                         self.saved_view = SavedView.objects.restrict(request.user, "view").get(pk=saved_view_pk)
                     except ObjectDoesNotExist:
                         pass
+                if view.request.GET.getlist("sort") or (
+                    self.saved_view is not None and self.saved_view.config.get("sort_order")
+                ):
+                    view.hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
                 table = table_class(
                     queryset,
                     table_changes_pending=table_changes_pending,
@@ -114,7 +118,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             # Apply the request context
             paginate = {
                 "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
+                "per_page": get_paginate_count(request, self.saved_view),
             }
             max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
             if max_page_size and paginate["per_page"] > max_page_size:
@@ -200,9 +204,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                         for field_name, values in view.filter_params.items()
                     ]
                     if view.filterset_form_class is not None:
-                        filter_form = view.filterset_form_class(request.GET, label_suffix="")
+                        filter_form = view.filterset_form_class(view.filter_params, label_suffix="")
                 table = self.construct_table(view, request=request, permissions=permissions)
-                search_form = SearchForm(data=request.GET)
+                search_form = SearchForm(data=view.filter_params)
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
