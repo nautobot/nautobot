@@ -120,7 +120,7 @@
         {% if current_saved_view %}
             — {{ current_saved_view.name }}
             {% if new_changes_not_applied %}
-                <sup>*</sup>
+                <sup title="Pending changes not saved">*</sup>
             {% endif %}
         {% endif %}
     {% endblock %}
