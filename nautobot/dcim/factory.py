@@ -876,7 +876,7 @@ class FrontPortTemplateFactory(ModularDeviceComponentTemplateFactory):
     def rear_port_template(self):
         if self.module_type:
             return factory.random.randgen.choice(self.module_type.rear_port_templates.all())
-        elif self.device_type:
+        else:
             return factory.random.randgen.choice(self.device_type.rear_port_templates.all())
 
 
