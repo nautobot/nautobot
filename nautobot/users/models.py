@@ -1,7 +1,5 @@
 import binascii
 import os
-import urllib
-import urllib.parse
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, Group, UserManager as UserManager_
@@ -15,7 +13,6 @@ from django.utils import timezone
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin
 from nautobot.core.models.fields import JSONArrayField
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import flatten_dict
 from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.utils import extras_features
@@ -329,20 +326,3 @@ class SavedView(BaseModel, ChangeLoggedModel):
 
     def __str__(self):
         return f"{self.owner.username} - {self.view} - {self.name}"
-
-    @property
-    def view_config(self):
-        """Return a combined query strings of the config e.g. table_config, pagination_count, filter_params, sort_order stored on this SavedView"""
-        query_string = "?"
-        params = []
-        for key, value in self.config.get("filter_params", {}).items():
-            for item in value:
-                params.append((key, item))
-
-        params.append(("per_page", self.config.get("pagination_count", get_settings_or_config("PAGINATE_COUNT"))))
-
-        for value in self.config.get("sort", []):
-            params.append(("sort", value))
-
-        query_string += urllib.parse.urlencode(params)
-        return query_string

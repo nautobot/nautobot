@@ -633,6 +633,16 @@ function initializeDynamicFilterForm(context){
     // Remove applied filters
     this_context.find(".remove-filter-param").on("click", function(){
         let query_params = new URLSearchParams(location.search);
+        if (query_params.has("saved_view")) {
+            // Need to reverse-engineer the "real" query params from the rendered page
+            for (let element of document.getElementsByClassName("filter-selection-choice-remove")) {
+                let key = element.getAttribute("data-field-parent");
+                let value = element.getAttribute("data-field-value");
+                if (!query_params.has(key, value)) {
+                    query_params.append(key, value);
+                }
+            }
+        }
         let type = $(this).attr("data-field-type");
         let field_value = $(this).attr("data-field-value");
 

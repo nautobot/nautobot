@@ -35,7 +35,14 @@ class BaseTable(django_tables2.Table):
         }
 
     def __init__(
-        self, *args, table_changes_pending=False, saved_view=None, user=None, hide_hierarchy_ui=False, **kwargs
+        self,
+        *args,
+        table_changes_pending=False,
+        saved_view=None,
+        user=None,
+        hide_hierarchy_ui=False,
+        order_by=None,
+        **kwargs,
     ):
         # Add custom field columns
         model = self._meta.model
@@ -64,8 +71,11 @@ class BaseTable(django_tables2.Table):
                 )
             # symmetric relationships are already handled above in the source_type case
 
+        if order_by is None and saved_view is not None:
+            order_by = saved_view.config.get("sort_order", None)
+
         # Init table
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, order_by=order_by, **kwargs)
         self.hide_hierarchy_ui = hide_hierarchy_ui
 
         # Set default empty_text if none was provided
