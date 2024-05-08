@@ -6,12 +6,12 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.http import QueryDict
-from django.test import TestCase
 
 from nautobot.circuits import models as circuits_models
 from nautobot.core import exceptions, forms, settings_funcs
 from nautobot.core.api import utils as api_utils
 from nautobot.core.models import fields as core_fields, utils as models_utils
+from nautobot.core.testing import TestCase
 from nautobot.core.utils import data as data_utils, filtering, lookup, requests
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
 from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models, tables
@@ -438,61 +438,61 @@ class LookupRelatedFunctionTest(TestCase):
             location_fields = ["comments", "name", "contact_email", "physical_address", "shipping_address"]
             for field_name in location_fields:
                 form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, field_name)
-                self.assertIs(type(form_field), forms.MultiValueCharField)
+                self.assertIsInstance(form_field, forms.MultiValueCharField)
 
             device_fields = ["serial", "name"]
             for field_name in device_fields:
                 form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, field_name)
-                self.assertIs(type(form_field), forms.MultiValueCharField)
+                self.assertIsInstance(form_field, forms.MultiValueCharField)
 
         with self.subTest("Test IntegerField"):
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, "asn")
-            self.assertIs(type(form_field), django_forms.IntegerField)
+            self.assertIsInstance(form_field, django_forms.IntegerField)
 
             device_fields = ["vc_position", "vc_priority"]
             for field_name in device_fields:
                 form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, field_name)
-                self.assertIs(type(form_field), django_forms.IntegerField)
+                self.assertIsInstance(form_field, django_forms.IntegerField)
 
         with self.subTest("Test DynamicModelMultipleChoiceField"):
             location_fields = ["tenant", "status"]
             for field_name in location_fields:
                 form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, field_name)
-                self.assertIs(type(form_field), forms.DynamicModelMultipleChoiceField)
+                self.assertIsInstance(form_field, forms.DynamicModelMultipleChoiceField)
 
             device_fields = ["cluster", "device_type", "location"]
             for field_name in device_fields:
                 form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, field_name)
-                self.assertIs(type(form_field), forms.DynamicModelMultipleChoiceField)
+                self.assertIsInstance(form_field, forms.DynamicModelMultipleChoiceField)
 
             location_fields = ["has_circuit_terminations", "has_devices"]
             for field_name in location_fields:
                 with self.subTest("Test ChoiceField", model=dcim_models.Location, field_name=field_name):
                     form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, field_name)
-                    self.assertIs(type(form_field), django_forms.ChoiceField)
-                    self.assertIs(type(form_field.widget), forms.StaticSelect2)
+                    self.assertIsInstance(form_field, django_forms.ChoiceField)
+                    self.assertIsInstance(form_field.widget, forms.StaticSelect2)
 
             device_fields = ["has_console_ports", "has_interfaces", "local_config_context_data"]
             for field_name in device_fields:
                 with self.subTest("Test ChoiceField", model=dcim_models.Device, field_name=field_name):
                     form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, field_name)
-                    self.assertIs(type(form_field), django_forms.ChoiceField)
-                    self.assertIs(type(form_field.widget), forms.StaticSelect2)
+                    self.assertIsInstance(form_field, django_forms.ChoiceField)
+                    self.assertIsInstance(form_field.widget, forms.StaticSelect2)
 
         with self.subTest("Test MultipleChoiceField"):
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, "face")
-            self.assertIs(type(form_field), django_forms.MultipleChoiceField)
+            self.assertIsInstance(form_field, django_forms.MultipleChoiceField)
 
         with self.subTest("Test DateTimePicker"):
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Location, "last_updated")
-            self.assertIs(type(form_field.widget), forms.DateTimePicker)
+            self.assertIsInstance(form_field.widget, forms.DateTimePicker)
 
             form_field = filtering.get_filterset_parameter_form_field(dcim_models.Device, "last_updated")
-            self.assertIs(type(form_field.widget), forms.DateTimePicker)
+            self.assertIsInstance(form_field.widget, forms.DateTimePicker)
 
         with self.subTest("Test DatePicker"):
             form_field = filtering.get_filterset_parameter_form_field(circuits_models.Circuit, "install_date")
-            self.assertIs(type(form_field.widget), forms.DatePicker)
+            self.assertIsInstance(form_field.widget, forms.DatePicker)
 
         with self.subTest("Test Invalid parameter"):
             with self.assertRaises(exceptions.FilterSetFieldNotFound) as err:
@@ -501,16 +501,18 @@ class LookupRelatedFunctionTest(TestCase):
 
         with self.subTest("Test Content types"):
             form_field = filtering.get_filterset_parameter_form_field(extras_models.Status, "content_types")
-            self.assertIs(type(form_field), forms.MultipleContentTypeField)
+            self.assertIsInstance(form_field, forms.MultipleContentTypeField)
 
             # Assert total ContentTypes generated by form_field is == total `content_types` generated by TaggableClassesQuery
             form_field = filtering.get_filterset_parameter_form_field(extras_models.Tag, "content_types")
-            self.assertIs(type(form_field), forms.MultipleContentTypeField)
-            self.assertEqual(form_field.queryset.count(), extras_utils.TaggableClassesQuery().as_queryset().count())
+            self.assertIsInstance(form_field, forms.MultipleContentTypeField)
+            self.assertQuerysetEqualAndNotEmpty(form_field.queryset, extras_utils.TaggableClassesQuery().as_queryset())
 
             form_field = filtering.get_filterset_parameter_form_field(extras_models.JobHook, "content_types")
-            self.assertIs(type(form_field), forms.MultipleContentTypeField)
-            self.assertEqual(form_field.queryset.count(), extras_utils.ChangeLoggedModelsQuery().as_queryset().count())
+            self.assertIsInstance(form_field, forms.MultipleContentTypeField)
+            self.assertQuerysetEqualAndNotEmpty(
+                form_field.queryset, extras_utils.ChangeLoggedModelsQuery().as_queryset()
+            )
 
     def test_convert_querydict_to_factory_formset_dict(self):
         location_filter_set = dcim_filters.LocationFilterSet()

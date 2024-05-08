@@ -65,6 +65,8 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroup,
+    StaticGroupAssociation,
     Status,
     Tag,
     Team,
@@ -75,6 +77,7 @@ from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
 # Use the proper swappable User model
@@ -2766,7 +2769,83 @@ class RelationshipAssociationTestCase(
         self.assertNotIn(instance2.destination.name, content, msg=content)
 
 
+class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = StaticGroup
+
+    @classmethod
+    def setUpTestData(cls):
+        content_type = ContentType.objects.get_for_model(Device)
+
+        cls.form_data = {
+            "name": "The Best Devices",
+            "description": "No really!",
+            "content_type": content_type.pk,
+            "tenant": Tenant.objects.first().pk,
+        }
+
+        cls.bulk_edit_data = {
+            "description": "Is anyone there?",
+            "tenant": Tenant.objects.last().pk,
+        }
+
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
+        super().test_edit_object_with_permission()
+
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
+        super().test_edit_object_with_constrained_permission()
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_assign_successful(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+        group_1 = StaticGroup.objects.create(content_type=location_ct, name="Group 1")
+        group_2 = StaticGroup.objects.create(content_type=location_ct, name="Group 2")
+        group_2.add_members(Location.objects.filter(name__startswith="Root"))
+
+        self.add_permissions(
+            "extras.add_staticgroupassociation", "extras.delete_staticgroupassociation", "extras.add_staticgroup"
+        )
+
+        url = reverse("extras:staticgroup_bulk_assign")
+        request = {
+            "path": url,
+            "data": post_data(
+                {
+                    "content_type": location_ct.pk,
+                    "pk": list(Location.objects.filter(parent__isnull=True).values_list("pk", flat=True)),
+                    "create_and_assign_to_new_group_name": "Root Locations",
+                    "add_to_groups": [group_1.pk],
+                    "remove_from_groups": [group_2.pk],
+                }
+            ),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        new_group = StaticGroup.objects.get(name="Root Locations")
+        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), new_group.members)
+        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), group_1.members)
+        self.assertQuerysetEqualAndNotEmpty(
+            Location.objects.filter(name__startswith="Root").exclude(parent__isnull=True), group_2.members
+        )
+
+    # TODO: negative tests - global permission violation, object-level permission violation, invalid data, etc.
+
+
+class StaticGroupAssociationTestCase(
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = StaticGroupAssociation
+
+
 class StatusTestCase(
+    # TODO? ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,

@@ -31,6 +31,8 @@ router.register("contact-associations", views.ContactAssociationUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("roles", views.RoleUIViewSet)
+router.register("static-groups", views.StaticGroupUIViewSet)
+router.register("static-group-associations", views.StaticGroupAssociationUIViewSet)
 router.register("teams", views.TeamUIViewSet)
 
 urlpatterns = [
@@ -602,6 +604,8 @@ urlpatterns = [
         name="secretsgroup_notes",
         kwargs={"model": SecretsGroup},
     ),
+    # Static group custom views - the base StaticGroupUIViewSet is registered above
+    path("static-groups/assign-members/", views.StaticGroupBulkAssignView.as_view(), name="staticgroup_bulk_assign"),
     # Custom statuses
     path("statuses/", views.StatusListView.as_view(), name="status_list"),
     path("statuses/add/", views.StatusEditView.as_view(), name="status_add"),

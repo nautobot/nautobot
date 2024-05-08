@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load buttons %}
 {% load helpers %}
+{% load perms %}
 {% load plugins %}
 {% load static %}
 
@@ -103,7 +104,7 @@
     <div class="col-md-12">
         {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
         {% if permissions.change or permissions.delete %}
-            <form method="post" class="form form-horizontal">
+            <form id="object_list_form" method="post" class="form form-horizontal">
                 {% csrf_token %}
                 <input type="hidden" name="return_url" value="{% if return_url %}{{ return_url }}{% else %}{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}{% endif %}" />
                 {% if table.paginator.num_pages > 1 %}
@@ -117,6 +118,18 @@
                                 </label>
                             </div>
                             <div class="pull-right">
+                                {% if content_type.model_class.is_static_group_associable_model and perms.extras.add_staticgroupassociation %}
+                                    <button type="button"
+                                            id="update_static_groups_for_all"
+                                            data-toggle="modal"
+                                            data-target="#static_group_assignment_modal"
+                                            data-objects="all"
+                                            class="btn btn-primary btn-sm"
+                                            disabled="disabled">
+                                        <span class="mdi mdi-group" aria-hidden="true"></span>
+                                        Update Static Groups for All
+                                    </button>
+                                {% endif %}
                                 {% if bulk_edit_url and permissions.change %}
                                     <button type="submit" name="_edit" formaction="{% url bulk_edit_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-warning btn-sm" disabled="disabled">
                                         <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit All
@@ -135,6 +148,16 @@
                 {% include table_template|default:'panel_table.html' %}
                 <div class="pull-left noprint">
                     {% block bulk_buttons %}{% endblock %}
+                    {% if content_type.model_class.is_static_group_associable_model and perms.extras.add_staticgroupassociation %}
+                        <button type="button"
+                                id="update_static_groups_for_selected"
+                                data-toggle="modal"
+                                data-target="#static_group_assignment_modal"
+                                data-objects="selected"
+                                class="btn btn-primary btn-sm">
+                            <span class="mdi mdi-group" aria-hidden="true"></span> Update Static Groups
+                        </button>
+                    {% endif %}
                     {% if bulk_edit_url and permissions.change %}
                         <button type="submit" name="_edit" formaction="{% url bulk_edit_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-warning btn-sm">
                             <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit Selected
@@ -158,6 +181,7 @@
 </div>
 {% if table %}{% table_config_form table table_name="ObjectTable" %}{% endif %}
 {% filter_form_modal filter_form dynamic_filter_form model_plural_name=title %}
+{% static_group_assignment_modal request=request content_type=content_type %}
 {% endblock %}
 
 {% block javascript %}
@@ -180,5 +204,38 @@
         added: jsify_form,
         removed: (row) => { row.remove(); }
     });
+
+    // TODO: move this to a JS file that is auto-included by static_group_assignment_modal templatetag
+    $("#static_group_assignment_modal").on("show.bs.modal", function (event) {
+        const button = $(event.relatedTarget);
+        const selected_or_all = button.data("objects");
+        const pks_target = document.getElementById("static_group_assignment_pks");
+        pks_target.replaceChildren();
+        if (selected_or_all == "all") {
+            document.getElementById("static_group_assignment_all").value = true;
+        } else {
+            document.getElementById("static_group_assignment_all").value = "";
+            const formData = new FormData(document.getElementById("object_list_form"));
+            for (let pk of formData.getAll("pk")) {
+                let input = document.createElement("input");
+                input.setAttribute("type", "hidden");
+                input.setAttribute("name", "pk");
+                input.setAttribute("value", pk);
+                pks_target.append(input);
+            }
+        }
+    });
+
+    document.getElementById("static_group_assignment_cancel").addEventListener("click", (e) => {
+        // Clear form data on cancel, but not on "close" "x" button
+        $("#static_group_assignment_modal").modal("hide");
+        document.getElementById("static_group_assignment_all").value = "";
+        document.getElementById("static_group_assignment_pks").replaceChildren();
+        document.getElementById("id_create_and_assign_to_new_group_name").value = "";
+        $("#id_add_to_groups").val(null).trigger("change");
+        $("#id_remove_from_groups").val(null).trigger("change");
+    });
+
+
 </script>
 {% endblock %}

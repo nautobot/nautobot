@@ -1,1 +1,6 @@
 Added `StaticGroup` and `StaticGroupAssociation` data models, used for statically defining groups of Nautobot objects.
+Added `feature` filter to `/api/extras/content-types/`.
+Added `static_groups` filter to all applicable models via the `BaseFilterSet` class.
+Added `static_groups` field to applicable model create/edit forms via the `StaticGroupModelFormMixin` class (included in `NautobotModelForm` class automatically).
+Added `Static Groups` column to applicable model tables.
+Enhanced `BaseTable` class to automatically apply appropriate `count_related` annotations for any `LinkedCountColumn`.

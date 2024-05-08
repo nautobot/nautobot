@@ -228,6 +228,10 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
 
         if "queryset" not in kwargs:
             if feature is not None:
+                from nautobot.extras.registry import registry
+
+                if feature not in registry["model_features"]:
+                    raise KeyError
                 kwargs["queryset"] = ContentType.objects.filter(
                     extras_utils.FeatureQuery(feature).get_query()
                 ).order_by("app_label", "model")

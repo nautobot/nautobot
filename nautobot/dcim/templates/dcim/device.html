@@ -403,6 +403,28 @@
             </div>
         </div>
     </div>
-</div>
 {% endif %}
+{% if object.is_static_group_associable_model and perms.extras.view_staticgroup %}
+    <div id="static_groups" role="tabpanel" class="tab-pane {% if request.GET.tab == 'static_groups' %}active{% else %}fade{% endif %}">
+        <div class="row">
+            <div class="col-md-12">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <strong>Static Groups</strong>
+                            <div class="pull-right noprint">
+                                <!-- Insert table config button here -->
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            {% render_table associated_static_groups_table 'inc/table.html' %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+</div>
 {% endblock content %}
