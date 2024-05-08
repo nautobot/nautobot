@@ -1487,6 +1487,19 @@ class ModuleTestCase(APIViewTestCases.APIViewTestCase):
             "tenant": Tenant.objects.first().pk,
         }
 
+        cls.update_data = {
+            "serial": "new serial 789",
+            "asset_tag": "new asset tag 789",
+            "status": Status.objects.get_for_model(Module).last().pk,
+        }
+
+    def get_deletable_object_pks(self):
+        """Modules and ModuleBays are nestable, find Modules that don't have any child Modules."""
+        instances = self._get_queryset().filter(module_bays__isnull=True).values_list("pk", flat=True)[:3]
+        if len(instances) < 3:
+            self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
+        return instances
+
     # TODO: add validation test
 
 
@@ -2098,6 +2111,13 @@ class ModuleBayTest(Mixins.BaseComponentTestMixin):
                 "position": "Test3",
             },
         ]
+
+    def get_deletable_object_pks(self):
+        """Modules and ModuleBays are nestable, find ModuleBays that don't have any child ModuleBays."""
+        instances = self._get_queryset().filter(installed_module__isnull=True).values_list("pk", flat=True)[:3]
+        if len(instances) < 3:
+            self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
+        return instances
 
     # TODO: Add validation tests for all modular device components
 
