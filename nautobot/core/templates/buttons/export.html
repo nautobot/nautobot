@@ -12,6 +12,7 @@
                     <span class="mdi mdi-database-export" aria-hidden="true"></span>
                     Export
                 </button>
+            </form>
                 <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     <span class="caret"></span>
                     <span class="sr-only">Toggle Dropdown</span>
@@ -54,7 +55,6 @@
                     {% endif %}
                 </ul>
             </div>
-        </form>
     {% else %}
         <form style="display: inline-block" action="{{ export_url }}" method="post">
             {% csrf_token %}
