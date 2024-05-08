@@ -12,11 +12,14 @@ from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.choices import (
     CableStatusChoices,
     CableTypeChoices,
+    ConsolePortTypeChoices,
     DeviceFaceChoices,
     InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerOutletFeedLegChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
 )
 from nautobot.dcim.models import (
     Cable,
@@ -69,21 +72,25 @@ from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
 class ModularDeviceComponentTestCaseMixin:
+    """Generic test for modular device components. Also used for testing modular component templates."""
+
+    # fields required to create instances of the model, with the exception of name, device_field and module_field
+    modular_component_create_data = {}
     model = None
+    device_field = "device"  # field name for the parent device
+    module_field = "module"  # field name for the parent module
 
     @classmethod
     def setUpTestData(cls):
-        device_related_name = cls.model.device.field.remote_field.related_name
-        module_related_name = cls.model.module.field.remote_field.related_name
-        cls.device = Device.objects.filter(**{f"{device_related_name}__isnull": True}).first()
-        cls.module = Module.objects.filter(**{f"{module_related_name}__isnull": True}).first()
+        cls.device = Device.objects.first()
+        cls.module = Module.objects.first()
 
     def test_parent_validation_device_and_module(self):
         """Assert that a modular component must have a parent device or parent module but not both."""
         instance = self.model(
-            device=self.device,
-            module=self.module,
             name=f"test {self.model._meta.model_name} 1",
+            **{self.device_field: self.device, self.module_field: self.module},
+            **self.modular_component_create_data,
         )
 
         with self.assertRaises(ValidationError):
@@ -96,6 +103,172 @@ class ModularDeviceComponentTestCaseMixin:
         """Assert that a modular component must have a parent device or parent module but not both."""
         instance = self.model(
             name=f"test {self.model._meta.model_name} 1",
+            **self.modular_component_create_data,
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
+
+    def test_parent_validation_succeeds(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        with self.subTest(f"{self.model._meta.model_name} with a parent device"):
+            instance = self.model(
+                name=f"test {self.model._meta.model_name} 1",
+                **{self.device_field: self.device},
+                **self.modular_component_create_data,
+            )
+
+            instance.full_clean()
+            instance.save()
+
+        with self.subTest(f"{self.model._meta.model_name} with a parent module"):
+            instance = self.model(
+                name=f"test {self.model._meta.model_name} 1",
+                **{self.module_field: self.module},
+                **self.modular_component_create_data,
+            )
+
+            instance.full_clean()
+            instance.save()
+
+    def test_uniqueness_device(self):
+        """Assert that the combination of device and name is unique."""
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 1",
+            **{self.device_field: self.device},
+            **self.modular_component_create_data,
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        # same device, different name works
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 2",
+            **{self.device_field: self.device},
+            **self.modular_component_create_data,
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 1",
+            **{self.device_field: self.device},
+            **self.modular_component_create_data,
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
+
+    def test_uniqueness_module(self):
+        """Assert that the combination of module and name is unique."""
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 1",
+            **{self.module_field: self.module},
+            **self.modular_component_create_data,
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        # same module, different name works
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 2",
+            **{self.module_field: self.module},
+            **self.modular_component_create_data,
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 1",
+            **{self.module_field: self.module},
+            **self.modular_component_create_data,
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
+
+
+class ConsolePortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = ConsolePort
+    modular_component_create_data = {"type": ConsolePortTypeChoices.TYPE_RJ45}
+
+
+class ConsoleServerPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = ConsoleServerPort
+    modular_component_create_data = {"type": ConsolePortTypeChoices.TYPE_RJ45}
+
+
+class PowerPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = PowerPort
+    modular_component_create_data = {"type": PowerPortTypeChoices.TYPE_NEMA_1030P}
+
+
+class PowerOutletTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = PowerOutlet
+    modular_component_create_data = {"type": PowerOutletTypeChoices.TYPE_IEC_C13}
+
+
+class RearPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = RearPort
+    modular_component_create_data = {"type": PortTypeChoices.TYPE_8P8C}
+
+
+class FrontPortTestCase(ModelTestCases.BaseModelTestCase):
+    model = FrontPort
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.module = Module.objects.filter(rear_ports__isnull=False).first()
+        cls.module_rear_port = cls.module.rear_ports.first()
+        module_used_positions = set(cls.module_rear_port.front_ports.values_list("rear_port_position", flat=True))
+        cls.module_available_positions = set(range(1, cls.module_rear_port.positions + 1)).difference(
+            module_used_positions
+        )
+
+        cls.device = Device.objects.filter(rear_ports__isnull=False).first()
+        cls.device_rear_port = cls.device.rear_ports.first()
+        device_used_positions = set(cls.device_rear_port.front_ports.values_list("rear_port_position", flat=True))
+        cls.device_available_positions = set(range(1, cls.device_rear_port.positions + 1)).difference(
+            device_used_positions
+        )
+
+    def test_parent_validation_device_and_module(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        instance = self.model(
+            device=self.device,
+            module=self.module,
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=self.module_rear_port,
+            rear_port_position=self.module_available_positions.copy().pop(),
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
+
+    def test_parent_validation_no_device_or_module(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=self.module_rear_port,
+            rear_port_position=self.module_available_positions.copy().pop(),
         )
 
         with self.assertRaises(ValidationError):
@@ -110,6 +283,9 @@ class ModularDeviceComponentTestCaseMixin:
             instance = self.model(
                 device=self.device,
                 name=f"test {self.model._meta.model_name} 1",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=self.device_rear_port,
+                rear_port_position=self.device_available_positions.copy().pop(),
             )
 
             instance.full_clean()
@@ -119,6 +295,9 @@ class ModularDeviceComponentTestCaseMixin:
             instance = self.model(
                 module=self.module,
                 name=f"test {self.model._meta.model_name} 1",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=self.module_rear_port,
+                rear_port_position=self.module_available_positions.copy().pop(),
             )
 
             instance.full_clean()
@@ -126,9 +305,13 @@ class ModularDeviceComponentTestCaseMixin:
 
     def test_uniqueness_device(self):
         """Assert that the combination of device and name is unique."""
+        device_available_positions = self.device_available_positions.copy()
         instance = self.model(
             device=self.device,
             name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=self.device_rear_port,
+            rear_port_position=device_available_positions.pop(),
         )
 
         instance.full_clean()
@@ -138,6 +321,9 @@ class ModularDeviceComponentTestCaseMixin:
         instance = self.model(
             device=self.device,
             name=f"test {self.model._meta.model_name} 2",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=self.device_rear_port,
+            rear_port_position=device_available_positions.pop(),
         )
 
         instance.full_clean()
@@ -146,6 +332,9 @@ class ModularDeviceComponentTestCaseMixin:
         instance = self.model(
             device=self.device,
             name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=self.device_rear_port,
+            rear_port_position=device_available_positions.pop(),
         )
 
         with self.assertRaises(ValidationError):
@@ -156,9 +345,13 @@ class ModularDeviceComponentTestCaseMixin:
 
     def test_uniqueness_module(self):
         """Assert that the combination of module and name is unique."""
+        module_available_positions = self.module_available_positions.copy()
         instance = self.model(
             module=self.module,
             name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=self.module_rear_port,
+            rear_port_position=module_available_positions.pop(),
         )
 
         instance.full_clean()
@@ -168,6 +361,9 @@ class ModularDeviceComponentTestCaseMixin:
         instance = self.model(
             module=self.module,
             name=f"test {self.model._meta.model_name} 2",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=self.module_rear_port,
+            rear_port_position=module_available_positions.pop(),
         )
 
         instance.full_clean()
@@ -176,6 +372,9 @@ class ModularDeviceComponentTestCaseMixin:
         instance = self.model(
             module=self.module,
             name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port=self.module_rear_port,
+            rear_port_position=module_available_positions.pop(),
         )
 
         with self.assertRaises(ValidationError):
@@ -185,28 +384,203 @@ class ModularDeviceComponentTestCaseMixin:
             instance.save()
 
 
-class ConsolePortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
-    model = ConsolePort
+class ModularDeviceComponentTemplateTestCaseMixin(ModularDeviceComponentTestCaseMixin):
+    """Generic test for modular device component templates."""
+
+    device_field = "device_type"  # field name for the parent device_type
+    module_field = "module_type"  # field name for the parent module_type
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device = DeviceType.objects.first()
+        cls.module = ModuleType.objects.first()
 
 
-class ConsoleServerPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
-    model = ConsoleServerPort
+class ConsolePortTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = ConsolePortTemplate
+    modular_component_create_data = {"type": ConsolePortTypeChoices.TYPE_RJ45}
 
 
-class PowerPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
-    model = PowerPort
+class ConsoleServerPortTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = ConsoleServerPortTemplate
+    modular_component_create_data = {"type": ConsolePortTypeChoices.TYPE_RJ45}
 
 
-class PowerOutletTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
-    model = PowerOutlet
+class PowerPortTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = PowerPortTemplate
+    modular_component_create_data = {"type": PowerPortTypeChoices.TYPE_NEMA_1030P}
 
 
-class FrontPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
-    model = FrontPort
+class PowerOutletTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = PowerOutletTemplate
+    modular_component_create_data = {"type": PowerOutletTypeChoices.TYPE_IEC_C13}
 
 
-class RearPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
-    model = RearPort
+class RearPortTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = RearPortTemplate
+    modular_component_create_data = {"type": PortTypeChoices.TYPE_8P8C}
+
+
+class FrontPortTemplateTestCase(ModelTestCases.BaseModelTestCase):
+    model = FrontPortTemplate
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.module_type = ModuleType.objects.filter(rear_port_templates__isnull=False).first()
+        cls.module_rear_port = cls.module_type.rear_port_templates.first()
+        module_used_positions = set(
+            cls.module_rear_port.front_port_templates.values_list("rear_port_position", flat=True)
+        )
+        cls.module_available_positions = set(range(1, cls.module_rear_port.positions + 1)).difference(
+            module_used_positions
+        )
+
+        cls.device_type = DeviceType.objects.filter(rear_port_templates__isnull=False).first()
+        cls.device_rear_port = cls.device_type.rear_port_templates.first()
+        device_used_positions = set(
+            cls.device_rear_port.front_port_templates.values_list("rear_port_position", flat=True)
+        )
+        cls.device_available_positions = set(range(1, cls.device_rear_port.positions + 1)).difference(
+            device_used_positions
+        )
+
+    def test_parent_validation_device_and_module(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        instance = self.model(
+            device_type=self.device_type,
+            module_type=self.module_type,
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=self.module_rear_port,
+            rear_port_position=self.module_available_positions.copy().pop(),
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
+
+    def test_parent_validation_no_device_or_module(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=self.module_rear_port,
+            rear_port_position=self.module_available_positions.copy().pop(),
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
+
+    def test_parent_validation_succeeds(self):
+        """Assert that a modular component must have a parent device or parent module but not both."""
+        with self.subTest(f"{self.model._meta.model_name} with a parent device"):
+            instance = self.model(
+                device_type=self.device_type,
+                name=f"test {self.model._meta.model_name} 1",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port_template=self.device_rear_port,
+                rear_port_position=self.device_available_positions.copy().pop(),
+            )
+
+            instance.full_clean()
+            instance.save()
+
+        with self.subTest(f"{self.model._meta.model_name} with a parent module"):
+            instance = self.model(
+                module_type=self.module_type,
+                name=f"test {self.model._meta.model_name} 1",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port_template=self.module_rear_port,
+                rear_port_position=self.module_available_positions.copy().pop(),
+            )
+
+            instance.full_clean()
+            instance.save()
+
+    def test_uniqueness_device(self):
+        """Assert that the combination of device and name is unique."""
+        device_available_positions = self.device_available_positions.copy()
+        instance = self.model(
+            device_type=self.device_type,
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=self.device_rear_port,
+            rear_port_position=device_available_positions.pop(),
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        # same device, different name works
+        instance = self.model(
+            device_type=self.device_type,
+            name=f"test {self.model._meta.model_name} 2",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=self.device_rear_port,
+            rear_port_position=device_available_positions.pop(),
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        instance = self.model(
+            device_type=self.device_type,
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=self.device_rear_port,
+            rear_port_position=device_available_positions.pop(),
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
+
+    def test_uniqueness_module(self):
+        """Assert that the combination of module and name is unique."""
+        module_available_positions = self.module_available_positions.copy()
+        instance = self.model(
+            module_type=self.module_type,
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=self.module_rear_port,
+            rear_port_position=module_available_positions.pop(),
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        # same module, different name works
+        instance = self.model(
+            module_type=self.module_type,
+            name=f"test {self.model._meta.model_name} 2",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=self.module_rear_port,
+            rear_port_position=module_available_positions.pop(),
+        )
+
+        instance.full_clean()
+        instance.save()
+
+        instance = self.model(
+            module_type=self.module_type,
+            name=f"test {self.model._meta.model_name} 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=self.module_rear_port,
+            rear_port_position=module_available_positions.pop(),
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
+
+        with self.assertRaises(IntegrityError):
+            instance.save()
 
 
 class CableLengthTestCase(TestCase):
@@ -1710,11 +2084,16 @@ class PowerPanelTestCase(TestCase):  # TODO: change to BaseModelTestCase once we
         )
 
 
-class InterfaceTestCase(
-    ModularDeviceComponentTestCaseMixin, TestCase
-):  # TODO: change to BaseModelTestCase once we have an InterfaceFactory
+class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
+    model = Interface
+
     @classmethod
     def setUpTestData(cls):
+        super().setUpTestData()
+        cls.modular_component_create_data = {
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "status": Status.objects.get_for_model(Interface).first(),
+        }
         manufacturer = Manufacturer.objects.first()
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
         devicerole = Role.objects.get_for_model(Device).first()
@@ -2647,14 +3026,14 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
             status=self.status,
         )
         module.validated_save()
-        self.assertEqual(module.console_ports.count(), 1)
-        self.assertEqual(module.console_server_ports.count(), 1)
-        self.assertEqual(module.power_ports.count(), 1)
-        self.assertEqual(module.power_outlets.count(), 1)
-        self.assertEqual(module.interfaces.count(), 1)
-        self.assertEqual(module.front_ports.count(), 1)
-        self.assertEqual(module.rear_ports.count(), 1)
-        self.assertEqual(module.module_bays.count(), 1)
+        self.assertEqual(module.console_ports.count(), self.module_type.console_port_templates.count())
+        self.assertEqual(module.console_server_ports.count(), self.module_type.console_server_port_templates.count())
+        self.assertEqual(module.power_ports.count(), self.module_type.power_port_templates.count())
+        self.assertEqual(module.power_outlets.count(), self.module_type.power_outlet_templates.count())
+        self.assertEqual(module.interfaces.count(), self.module_type.interface_templates.count())
+        self.assertEqual(module.front_ports.count(), self.module_type.front_port_templates.count())
+        self.assertEqual(module.rear_ports.count(), self.module_type.rear_port_templates.count())
+        self.assertEqual(module.module_bays.count(), self.module_type.module_bay_templates.count())
 
         ConsolePort.objects.get(module=module, name="Console Port 1")
 
