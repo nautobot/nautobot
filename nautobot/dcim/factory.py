@@ -46,6 +46,7 @@ from nautobot.dcim.models import (
     Manufacturer,
     Module,
     ModuleBay,
+    ModuleBayTemplate,
     ModuleType,
     Platform,
     PowerOutletTemplate,
@@ -743,38 +744,6 @@ class ModuleTypeFactory(PrimaryModelFactory):
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
 
 
-class ModuleBayFactory(PrimaryModelFactory):
-    class Meta:
-        model = ModuleBay
-        exclude = (
-            "has_description",
-            "has_label",
-            "has_parent_module",
-        )
-
-    has_parent_module = False
-    parent_device = factory.Maybe("has_parent_module", None, random_instance(Device, allow_null=False))
-    parent_module = factory.Maybe("has_parent_module", random_instance(Module, allow_null=False), None)
-
-    position = factory.Maybe(
-        "has_parent_module",
-        factory.LazyAttribute(lambda o: o.parent_module.module_bays.count() + 1),
-        factory.LazyAttribute(lambda o: o.parent_device.module_bays.count() + 1),
-    )
-    has_label = NautobotBoolIterator()
-    label = factory.Maybe(
-        "has_label",
-        factory.Maybe(
-            "has_parent_module",
-            factory.LazyAttribute(lambda o: f"{o.parent_module!s} Bay {o.position}"),
-            factory.LazyAttribute(lambda o: f"{o.parent_device!s} Bay {o.position}"),
-        ),
-        "",
-    )
-    has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("sentence", nb_words=5), "")
-
-
 class ModuleFactory(PrimaryModelFactory):
     class Meta:
         model = Module
@@ -918,3 +887,14 @@ class RearPortTemplateFactory(ModularDeviceComponentTemplateFactory):
     type = factory.Faker("random_element", elements=PortTypeChoices.values())
     name = factory.Sequence(lambda n: f"RearPort {n}")
     positions = factory.Sequence(lambda n: n + 100)
+
+
+class ModuleBayTemplateFactory(ModularDeviceComponentTemplateFactory):
+    class Meta:
+        model = ModuleBayTemplate
+
+    position = factory.Maybe(
+        "has_device_type",
+        factory.LazyAttribute(lambda o: o.device_type.module_bay_templates.count() + 1),
+        factory.LazyAttribute(lambda o: o.module_type.module_bay_templates.count() + 1),
+    )

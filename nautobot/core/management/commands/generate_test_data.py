@@ -71,7 +71,7 @@ class Command(BaseCommand):
                 LocationFactory,
                 LocationTypeFactory,
                 ManufacturerFactory,
-                ModuleBayFactory,
+                ModuleBayTemplateFactory,
                 ModuleFactory,
                 ModuleTypeFactory,
                 PlatformFactory,
@@ -192,18 +192,15 @@ class Command(BaseCommand):
         InterfaceTemplateFactory.create_batch(30, using=db_name)
         PowerPortTemplateFactory.create_batch(30, using=db_name)
         PowerOutletTemplateFactory.create_batch(30, using=db_name)
+        ModuleBayTemplateFactory.create_batch(30, using=db_name)
         self.stdout.write("Creating Manufacturers without DeviceTypes, ModuleTypes or Platforms...")
         ManufacturerFactory.create_batch(2, using=db_name)  # Last 2 hard-coded Manufacturers
         self.stdout.write("Creating DeviceRedundancyGroups...")
         DeviceRedundancyGroupFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Devices...")
         DeviceFactory.create_batch(20, using=db_name)
-        self.stdout.write("Creating ModuleBays...")
-        ModuleBayFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Modules...")
         ModuleFactory.create_batch(20, using=db_name)
-        self.stdout.write("Creating ModuleBays with parent Modules...")
-        ModuleBayFactory.create_batch(5, has_parent_module=True, using=db_name)
         self.stdout.write("Creating SoftwareVersions with Devices, InventoryItems or VirtualMachines...")
         SoftwareVersionFactory.create_batch(5)
         self.stdout.write("Creating SoftwareImageFiles without DeviceTypes...")
@@ -283,7 +280,7 @@ class Command(BaseCommand):
                 LocationFactory,
                 LocationTypeFactory,
                 ManufacturerFactory,
-                ModuleBayFactory,
+                ModuleBayTemplateFactory,
                 ModuleFactory,
                 ModuleTypeFactory,
                 NamespaceFactory,
