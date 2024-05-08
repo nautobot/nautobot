@@ -4,16 +4,17 @@ from django.contrib.auth import get_user_model
 import factory
 
 from nautobot.core.factory import BaseModelFactory, NautobotBoolIterator, random_instance, UniqueFaker
+from nautobot.extras.utils import FeatureQuery
 from nautobot.users.models import SavedView
 
 User = get_user_model()
 
-VIEW_NAMES = [
-    "circuits:circuit_list",
-    "dcim:device_list",
-    "dcim:location_list",
-    "ipam:ipaddress_list",
-]
+VIEW_NAMES = []
+for choice in FeatureQuery("saved_views").get_choices():
+    app_label, model = choice[0].split(".")
+    # Relevant list view name only
+    if app_label in ["circuits", "dcim", "ipam", "extras", "tenancy", "virtualization"]:
+        VIEW_NAMES.append(f"{app_label}:{model}_list")
 
 
 class UserFactory(BaseModelFactory):
@@ -47,5 +48,8 @@ class SavedViewFactory(BaseModelFactory):
 
     name = factory.LazyAttributeSequence(lambda o, n: f"Sample {o.view} Saved View - {n + 1}")
     owner = random_instance(User, allow_null=False)
-    view = factory.Faker("random_element", elements=VIEW_NAMES)
+    view = factory.Faker(
+        "random_element",
+        elements=VIEW_NAMES,
+    )
     # TODO config attribute

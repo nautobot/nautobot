@@ -14,7 +14,7 @@ Added an optional `role` field to Interface and VMInterface models to track comm
 
 #### Saved Views
 
-Added the new model `SavedView`, which gives users the ability to save multiple different list view configurations (table configuration, filter parameters, pagination and sorting) into Saved View instances for ease of access.
+Added the new model `SavedView` and users now have the ability to save multiple configurations of list views (table columns, filtering, pagination and sorting) for ease of later use and reuse.
 
 #### Static Groups
 
