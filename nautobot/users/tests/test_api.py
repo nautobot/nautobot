@@ -476,21 +476,46 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.user = User.objects.first()
+        # same user from setUpNautobot()
+        cls.user = User.objects.get(name="nautobotuser")
         cls.create_data = [
             {
                 "owner": cls.user.pk,
                 "name": "Saved View 1",
                 "view": "circuits:circuit_list",
+                "config": {
+                    "filter_params": {"circuit_type": ["#047c4c", "#06cc23"], "status": ["Active", "Decommissioned"]}
+                },
             },
             {
                 "owner": cls.user.pk,
                 "name": "Saved View 2",
                 "view": "dcim:device_list",
+                "config": {
+                    "filter_params": {
+                        "location": ["Campus-01", "Building-02", "Aisle-06"],
+                        "role": ["PossibleDangerous", "NervousDangerous"],
+                        "status": ["Active", "ExtremeOriginal"],
+                    }
+                },
             },
             {
                 "owner": cls.user.pk,
                 "name": "Saved View 3",
                 "view": "dcim:location_list",
+                "config": {
+                    "filter_params": {
+                        "location_type": ["Campus", "Building", "Elevator"],
+                        "parent": ["Campus-01", "Building-02"],
+                        "q": "building-02",
+                    },
+                    "pagination_count": 50,
+                    "sort_order": [],
+                    "table_config": {
+                        "LocationTable": {
+                            "columns": ["name", "status", "location_type", "description", "parent", "tenant"]
+                        }
+                    },
+                },
             },
         ]

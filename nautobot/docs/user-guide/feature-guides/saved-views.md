@@ -32,7 +32,7 @@ We will name this new saved view "Campus Staging Location List View".
 
 ![Saved View Modal](./images/saved-views/save-view-modal.png)
 
-Click the "Save" button on the modal and the browser should take you to the new saved view. Note the success banner on top of the page stating "Successfully created new Saved View Campus Staging Location List View".
+Click the "Save" button on the modal and the browser should take you to the new saved view. Note the success banner on top of the page stating "Successfully created new Saved View Campus Staging Location List View". Note that the current saved view name also appeared in the page heading. This is an indicator that you are currently viewing a saved view.
 
 ![Successfully Created New Saved View](./images/saved-views/create-saved-view-success.png)
 
@@ -44,7 +44,7 @@ Click the "Saved Views" dropdown button again and you should see your new saved 
 
 Stay on the same page where we just created the new Saved View and make some modifications to the view.
 
-Note that an asterik appeared next to the title of the view. The asterik is an indicator that this saved view currently has unsaved changes.
+Note that an asterisk appeared next to the title of the view. The asterisk is an indicator that this saved view currently has unsaved changes.
 
 ![Unsaved saved view](./images/saved-views/unsaved-saved-view.png)
 
@@ -58,11 +58,11 @@ Congratulations, you have successfully updated your saved view!
 
 ### How to navigate Saved Views
 
-There are several ways you can navigate saved views. All the saved views created can be accessed from the navigation menu on the left hand side under "Extensibility -> Saved Views"
+There are several ways you can navigate saved views. All saved views created by any user for any list view can be accessed from the navigation menu on the left hand side under "Extensibility -> Saved Views":
 
 ![Navigation Menu](./images/saved-views/navigation-menu.png)
 
-Another way is from the "Saved View" dropdown button on the default model list view or saved views. All saved views derived from the default model list view are populated in the dropdown menu and the saved view the user is currently viewing will be boldened.
+Another way is from the "Saved View" dropdown button on any given model list view. All saved views defined for this specific model list view are populated in the dropdown menu and the saved view the user is currently viewing will be highlighted in bold.
 
 ![Location List View with Saved Views](./images/saved-views/location-list-view-with-saved-views.png)
 

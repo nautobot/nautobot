@@ -58,4 +58,4 @@ class SavedViewFactory(BaseModelFactory):
         "random_element",
         elements=VIEW_NAMES,
     )
-    # TODO config attribute
+    config = factory.Faker("pydict")
