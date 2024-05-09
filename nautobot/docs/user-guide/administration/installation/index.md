@@ -16,8 +16,7 @@ For more information about the Docker tags, Docker configurations, or using cont
     - Red Hat flavors of Linux including CentOS 8.2+ and Red Hat Enterprise Linux (RHEL) 8.2+ are supported.
     - Debian/Ubuntu flavors of Linux including Ubuntu 20.04+ and Debian 11+ are supported.
 
-    !!! info
-        Nautobot *should* work on any POSIX-compliant system including practically any flavor of Linux, BSD, or even macOS, but those are not *officially* supported at this time.
+    Nautobot *should* work on any POSIX-compliant system including practically any flavor of Linux, BSD, or even macOS, but those are not *officially* supported at this time.
 
 To begin with installing Nautobot dependencies on a supported platform, see [the next page of the documentation](install_system.md).
 
