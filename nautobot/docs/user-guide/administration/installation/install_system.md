@@ -106,7 +106,7 @@ Please follow the steps for your selected database backend below.
         psql --username nautobot --password --host localhost nautobot
         ```
 
-        ??? example "Example Postgres connection output"
+        ??? example "Example Postgres Connection Output"
 
             ```no-highlight title="Example output"
             Password for user nautobot:
