@@ -3,8 +3,8 @@
 There are three primary methods of deploying Nautobot with regular updates:
 
 * Docker containers are available via [Docker Hub](https://hub.docker.com/r/networktocode/nautobot) & [GitHub Container Registry](https://github.com/nautobot/nautobot/pkgs/container/nautobot) for use within a containerized environment
-  * Docker Compose instructions
-  * [Helm Charts](https://docs.nautobot.com/projects/helm-charts/en/stable/) for Kubernetes
+    * Install Nautobot via Docker Compose
+    * [Install Nautobot via Helm Charts](https://docs.nautobot.com/projects/helm-charts/en/stable/) for Kubernetes
 * Install onto Ubuntu/Debian and Enterprise Linux
 
 [Instructions](install_system.md) here are written for a fresh installation on a [RHEL (Red Hat Enterprise Linux)](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux) or [Ubuntu](https://ubuntu.com/) virtual machine.
