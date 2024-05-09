@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils.html import escape
 from social_django.utils import load_backend, load_strategy
 
-from nautobot.core.testing import ModelTestCase, post_data, TestCase
+from nautobot.core.testing import ModelViewTestCase, post_data, TestCase
 from nautobot.core.testing.utils import disable_warnings, extract_page_body
 from nautobot.users.models import ObjectPermission, SavedView
 
@@ -141,7 +141,7 @@ class AdvancedProfileSettingsViewTest(TestCase):
         self.assertFalse(self.client.session.get("silk_record_requests"))
 
 
-class SavedViewTest(ModelTestCase):
+class SavedViewTest(ModelViewTestCase):
     """
     Tests for Saved Views
     """
@@ -169,16 +169,12 @@ class SavedViewTest(ModelTestCase):
     def test_get_object_anonymous(self):
         # Make the request as an unauthenticated user
         self.client.logout()
-        instance = self._get_queryset().first()
-        url = self.get_view_url_for_saved_view(instance)
-        response = self.client.get(url)
+        response = self.client.get(self._get_queryset().first().get_absolute_url(), follow=True)
         self.assertHttpStatus(response, 200)
-
         response_body = response.content.decode(response.charset)
-        # No good way to represent the url encode in the response
-        # "/login/?next=/ipam/ip-addresses/%3Fper_page%3D65000%26saved_view%3Df9f4fb33-6f28-49a3-b431-cec8312d5d95"
-        # so instead of doing "/login/?next=" + url, I am only doing "/login/?next="
-        self.assertIn("/login/?next=", response_body, msg=response_body)
+        self.assertIn(
+            "/login/?next=" + self._get_queryset().first().get_absolute_url(), response_body, msg=response_body
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_object_without_permission(self):
@@ -205,7 +201,7 @@ class SavedViewTest(ModelTestCase):
         # Try GET with model-level permission
         # SavedView detail view should redirect to the View from which it is derived
         response = self.client.get(instance.get_absolute_url(), follow=True)
-        self.assertHttpStatus(response, 302)
+        self.assertHttpStatus(response, 200)
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn(escape(instance.name), response_body, msg=response_body)
 
@@ -216,7 +212,7 @@ class SavedViewTest(ModelTestCase):
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             # Assert that the star sign is rendered on the page since there are unsaved changes
-            self.assertIn("<sup>*</sup>", response_body, msg=response_body)
+            self.assertIn('<sup title="Pending changes not saved">*</sup>', response_body, msg=response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_object_with_constrained_permission(self):
@@ -302,14 +298,12 @@ class SavedViewTest(ModelTestCase):
         request = {
             "path": create_url,
             "data": post_data(
-                {"name": "New View", "view_name": f"{instance.view}", "params": "".join(create_query_strings)}
+                {"name": "New Test View", "view": f"{instance.view}", "params": "".join(create_query_strings)}
             ),
         }
-        self.client.post(**request)
-        # self.assertHttpStatus(self.client.post(**request), 302)
-        # self.assertHttpStatus(response, 302)
-        # instance.refresh_from_db()
-        # self.assertEqual(instance.config["pagination_count"], 12)
-        # self.assertEqual(instance.config["filter_params"]["status"], ["active"])
-        # self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
-        # self.assertEqual(instance.config["sort_order"], ["name"])
+        self.assertHttpStatus(self.client.post(**request), 302)
+        instance = SavedView.objects.get(name="New Test View")
+        self.assertEqual(instance.config["pagination_count"], 12)
+        self.assertEqual(instance.config["filter_params"]["status"], ["active"])
+        self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
+        self.assertEqual(instance.config["sort_order"], ["name"])
