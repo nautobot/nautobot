@@ -101,7 +101,7 @@
 <div class="container-fluid wrapper" {% if is_popup %}style="padding-bottom: 0px;"{% endif %}>
     {% if "BANNER_TOP"|settings_or_config %}
         <div class="alert alert-info text-center" role="alert">
-            {{ "BANNER_TOP"|settings_or_config|safe }}
+            {{ "BANNER_TOP"|settings_or_config|render_markdown }}
         </div>
     {% endif %}
     {% if settings.MAINTENANCE_MODE %}
@@ -153,7 +153,7 @@
     <div class="push"></div>
     {% if "BANNER_BOTTOM"|settings_or_config %}
         <div class="alert alert-info text-center banner-bottom" role="alert">
-                {{ "BANNER_BOTTOM"|settings_or_config|safe }}
+                {{ "BANNER_BOTTOM"|settings_or_config|render_markdown }}
         </div>
     {% endif %}
 </div>

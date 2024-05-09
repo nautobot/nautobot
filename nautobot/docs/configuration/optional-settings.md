@@ -66,7 +66,14 @@ A list of permitted URL schemes referenced when rendering links within Nautobot.
 
 Default: `""` (Empty string)
 
-Setting these variables will display custom content in a banner at the top and/or bottom of the page, respectively. HTML is allowed. To replicate the content of the top banner in the bottom banner, set:
+Environment Variable: `NAUTOBOT_BANNER_TOP`
+Environment Variable: `NAUTOBOT_BANNER_BOTTOM`
+
+Setting these variables will display custom content in a banner at the top and/or bottom of the page, respectively.
+
+Markdown formatting is supported within these messages, as well as [a limited subset of HTML](../additional-features/template-filters.md#render_markdown).
+
+To replicate the content of the top banner in the bottom banner, set:
 
 ```python
 BANNER_TOP = 'Your banner text'
@@ -82,7 +89,11 @@ BANNER_BOTTOM = BANNER_TOP
 
 Default: `""` (Empty string)
 
-This defines custom content to be displayed on the login page above the login form. HTML is allowed.
+Environment Variable: `NAUTOBOT_BANNER_LOGIN`
+
+This defines custom content to be displayed on the login page above the login form.
+
+Markdown formatting is supported within this message, as well as [a limited subset of HTML](../additional-features/template-filters.md#render_markdown).
 
 +++ 1.2.0
     If you do not set a value for this setting in your `nautobot_config.py`, it can be configured dynamically by an admin user via the Nautobot Admin UI. If you do have a value for this setting in `nautobot_config.py`, it will override any dynamically configured value.
@@ -102,10 +113,12 @@ Default:
     "icon_180": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_180", None),  # 180x180px icon - used for the apple-touch-icon header
     "icon_192": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_192", None),  # 192x192px icon
     "icon_mask": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None),  # mono-chrome icon used for the mask-icon header
+    "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # custom global CSS file
+    "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # custom global Javascript file
 }
 ```
 
-A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate image assets used for custom branding. Each of these assets takes the place of the corresponding stock Nautobot asset. This allows for instance, providing your own navbar logo and favicon.
+A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate assets used for custom branding of your Nautobot instance. With the exception of `css` and `javascript`, which provide the option to add an _additional_ file to Nautobot page content, each of the other assets takes the place of the corresponding stock Nautobot asset. This allows for instance, providing your own navbar logo and favicon.
 
 These environment variables may be used to specify the values:
 
@@ -116,8 +129,13 @@ These environment variables may be used to specify the values:
 * `NAUTOBOT_BRANDING_FILEPATHS_ICON_180`
 * `NAUTOBOT_BRANDING_FILEPATHS_ICON_192`
 * `NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK`
+* `NAUTOBOT_BRANDING_FILEPATHS_CSS`
+* `NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT`
 
-If a custom image asset is not provided for any of the above options, the stock Nautobot asset is used.
+If a custom asset is not provided for any of the above options, the stock Nautobot asset is used.
+
++++ 1.6.22
+    The `css` and `javascript` assets were added as options.
 
 ---
 

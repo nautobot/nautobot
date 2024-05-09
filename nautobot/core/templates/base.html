@@ -15,7 +15,7 @@
         {% if request.user.is_authenticated or not "HIDE_RESTRICTED_UI"|settings_or_config %}
             {% if "BANNER_TOP"|settings_or_config %}
                 <div class="alert alert-info text-center" role="alert">
-                    {{ "BANNER_TOP"|settings_or_config|safe }}
+                    {{ "BANNER_TOP"|settings_or_config|render_markdown }}
                 </div>
             {% endif %}
         {% endif %}
@@ -40,7 +40,7 @@
         {% if request.user.is_authenticated or not "HIDE_RESTRICTED_UI"|settings_or_config %}
             {% if "BANNER_BOTTOM"|settings_or_config %}
                 <div class="alert alert-info text-center banner-bottom" role="alert">
-                    {{ "BANNER_BOTTOM"|settings_or_config|safe }}
+                    {{ "BANNER_BOTTOM"|settings_or_config|render_markdown }}
                 </div>
             {% endif %}
         {% endif %}

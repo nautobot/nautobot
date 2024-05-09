@@ -52,3 +52,6 @@
             dropdown.removeClass('edge');
     })
 </script>
+{% if settings.BRANDING_FILEPATHS.javascript %}
+<script src="{% custom_branding_or_static 'javascript' None %}"></script>
+{% endif %}
