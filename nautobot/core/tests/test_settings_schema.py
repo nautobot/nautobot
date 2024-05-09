@@ -127,6 +127,8 @@ class SettingsJSONSchemaTestCase(TestCase):
             "CSRF_FAILURE_VIEW",
             "DATA_UPLOAD_MAX_NUMBER_FIELDS",
             "DEFAULT_AUTO_FIELD",
+            "DJANGO_STRUCTLOG_CELERY_ENABLED",
+            "DJANGO_STRUCTLOG_COMMAND_LOGGING_ENABLED",
             "DRF_REACT_TEMPLATE_TYPE_MAP",
             "EXEMPT_EXCLUDE_MODELS",
             "FILTERS_NULL_CHOICE_LABEL",
