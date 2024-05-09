@@ -1,6 +1,6 @@
 # Installation
 
-There are three primary methods of deploying Nautobot with regular updates:
+Nautobot can be deployed via Docker (Compose or Kubernetes) or directly onto a supported Linux system:
 
 * Docker containers are available via [Docker Hub](https://hub.docker.com/r/networktocode/nautobot) & [GitHub Container Registry](https://github.com/nautobot/nautobot/pkgs/container/nautobot) for use within a containerized environment
     * Install Nautobot via Docker Compose
