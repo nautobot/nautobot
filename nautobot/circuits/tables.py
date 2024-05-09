@@ -4,6 +4,7 @@ from django_tables2.utils import Accessor
 from nautobot.core.tables import (
     BaseTable,
     ButtonsColumn,
+    LinkedCountColumn,
     TagColumn,
     ToggleColumn,
 )
@@ -48,7 +49,11 @@ class ProviderNetworkTable(BaseTable):
 class ProviderTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    circuit_count = tables.Column(accessor=Accessor("count_circuits"), verbose_name="Circuits")
+    circuit_count = LinkedCountColumn(
+        viewname="circuits:circuit_list",
+        url_params={"provider": "pk"},
+        verbose_name="Circuits",
+    )
     tags = TagColumn(url_name="circuits:provider_list")
 
     class Meta(BaseTable.Meta):
@@ -75,7 +80,11 @@ class ProviderTable(BaseTable):
 class CircuitTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    circuit_count = tables.Column(verbose_name="Circuits")
+    circuit_count = LinkedCountColumn(
+        viewname="circuits:circuit_list",
+        url_params={"circuit_type": "pk"},
+        verbose_name="Circuits",
+    )
     actions = ButtonsColumn(CircuitType)
 
     class Meta(BaseTable.Meta):

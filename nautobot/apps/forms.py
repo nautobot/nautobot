@@ -77,6 +77,7 @@ from nautobot.extras.forms import (
     NoteModelFormMixin,
     RelationshipModelBulkEditFormMixin,
     RelationshipModelFormMixin,
+    StaticGroupModelFormMixin,
     StatusModelBulkEditFormMixin,
     TagsBulkEditFormMixin,
 )
@@ -171,6 +172,7 @@ __all__ = (
     "SlugField",
     "SlugWidget",
     "SmallTextarea",
+    "StaticGroupModelFormMixin",
     "StaticSelect2",
     "StaticSelect2Multiple",
     "StatusModelBulkEditFormMixin",

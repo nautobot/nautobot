@@ -1,6 +1,6 @@
 from nautobot.core.apps import HomePageItem, HomePagePanel
 from nautobot.extras.choices import JobResultStatusChoices
-from nautobot.extras.models import GitRepository, JobResult, ObjectChange
+from nautobot.extras.models import GitRepository, JobResult, ObjectChange, StaticGroup
 
 
 def get_job_results(request):
@@ -18,6 +18,19 @@ def get_changelog(request):
 
 
 layout = (
+    HomePagePanel(
+        name="Organization",
+        items=(
+            HomePageItem(
+                name="Static Groups",
+                link="extras:staticgroup_list",
+                model=StaticGroup,
+                description="Statically defined groups of objects",
+                permissions=["extras.view_staticgroup"],
+                weight=300,
+            ),
+        ),
+    ),
     HomePagePanel(
         name="Data Sources",
         weight=700,

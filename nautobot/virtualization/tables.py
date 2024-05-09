@@ -43,7 +43,9 @@ VMINTERFACE_BUTTONS = """
 class ClusterTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    cluster_count = tables.Column(verbose_name="Clusters")
+    cluster_count = LinkedCountColumn(
+        viewname="virtualization:cluster_list", url_params={"cluster_type": "pk"}, verbose_name="Clusters"
+    )
     actions = ButtonsColumn(ClusterType)
 
     class Meta(BaseTable.Meta):
@@ -60,7 +62,9 @@ class ClusterTypeTable(BaseTable):
 class ClusterGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    cluster_count = tables.Column(verbose_name="Clusters")
+    cluster_count = LinkedCountColumn(
+        viewname="virtualization:cluster_list", url_params={"cluster_group": "pk"}, verbose_name="Clusters"
+    )
     actions = ButtonsColumn(ClusterGroup)
 
     class Meta(BaseTable.Meta):
