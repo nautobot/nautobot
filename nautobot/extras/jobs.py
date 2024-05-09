@@ -330,7 +330,7 @@ class BaseJob:
         return result
 
     @classproperty
-    def name(cls) -> str:  # pylint: disable=no-self-argument
+    def name(cls) -> str:  # pylint: disable=no-self-argument, method-hidden
         """
         `Job.name` is the `Meta.name` if any, else the class name; however, `Job().name` is the `class_path` value.
 
