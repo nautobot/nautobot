@@ -514,13 +514,15 @@ MIDDLEWARE = [
 
 
 LOGGING = {"loggers": {"nautobot": {}}}
+LOG_DEBUG_DB = is_truthy(os.getenv("NAUTOBOT_LOG_DEBUG_DB", "False"))
+LOG_PLAIN = is_truthy(os.getenv("NAUTOBOT_LOG_PLAIN", "False"))
 setup_structlog_logging(
     LOGGING,
     INSTALLED_APPS,
     MIDDLEWARE,
     log_level="DEBUG" if DEBUG else "INFO",
-    debug_db=is_truthy(os.getenv("NAUTOBOT_LOG_DEBUG_DB", "False")),
-    plain_format=is_truthy(os.getenv("NAUTOBOT_LOG_PLAIN", "False")),
+    debug_db=LOG_DEBUG_DB,
+    plain_format=LOG_PLAIN,
 )
 DJANGO_STRUCTLOG_CELERY_ENABLED = True
 DJANGO_STRUCTLOG_COMMAND_LOGGING_ENABLED = True
