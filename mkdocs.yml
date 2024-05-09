@@ -302,7 +302,7 @@ nav:
               - Installing Nautobot: "user-guide/administration/installation/nautobot.md"
               - Deploying Nautobot Services: "user-guide/administration/installation/services.md"
               - Configuring an HTTP Server: "user-guide/administration/installation/http-server.md"
-              - Installing and Using Plugins: "user-guide/administration/installation/app-install.md"
+              - Installing and Using Apps: "user-guide/administration/installation/app-install.md"
               - External Authentication (Optional): "user-guide/administration/installation/external-authentication.md"
           - Installation Extras:
               - Nautobot Docker Images: "user-guide/administration/installation-extras/docker.md"
