@@ -15,9 +15,6 @@ Download and install the app package per its installation instructions. Apps pub
 pip3 install <package>
 ```
 
-Alternatively, if you're or installing a app from from a local source copy, you may wish to install the app manually by running `python setup.py install`.
-
-If you are developing a app and want to install it only temporarily, run `python setup.py develop` instead.
 
 ## Enable the App
 
