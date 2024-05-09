@@ -154,7 +154,7 @@ Please follow the steps for your selected database backend below.
         \q
         ```
 
-        ??? example "MySQL Example output"
+        ??? example "Example MySQL output"
 
             ```no-highlight title="Example MySQL DB creation output."
             Welcome to the MySQL monitor.  Commands end with ; or \g.
