@@ -2,7 +2,7 @@
 
 Nautobot can be deployed via Docker (Compose or Kubernetes) or directly onto a supported Linux system:
 
-* Docker containers are available via [Docker Hub](https://hub.docker.com/r/networktocode/nautobot) & [GitHub Container Registry](https://github.com/nautobot/nautobot/pkgs/container/nautobot) for use within a containerized environment
+* [Nautobot Docker images](../installation-extras/docker.md) are available via [Docker Hub](https://hub.docker.com/r/networktocode/nautobot) & [GitHub Container Registry](https://github.com/nautobot/nautobot/pkgs/container/nautobot) for use within a containerized environment
     * Install Nautobot via Docker Compose
     * [Install Nautobot via Helm Charts](https://docs.nautobot.com/projects/helm-charts/en/stable/) for Kubernetes
 * Install onto Ubuntu/Debian and Enterprise Linux
