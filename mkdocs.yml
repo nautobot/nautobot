@@ -297,7 +297,7 @@ nav:
       - "user-guide/index.md"
       - Administration:
           - Installation:
-              - Prerequisites: "user-guide/administration/installation/index.md"
+              - Getting Started: "user-guide/administration/installation/index.md"
               - Installing System Dependencies: "user-guide/administration/installation/install_system.md"
               - Installing Nautobot: "user-guide/administration/installation/nautobot.md"
               - Deploying Nautobot Services: "user-guide/administration/installation/services.md"
