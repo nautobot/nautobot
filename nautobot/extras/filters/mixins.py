@@ -303,17 +303,7 @@ class RoleModelFilterSetMixin(django_filters.FilterSet):
     Mixin to add a `role` filter field to a FilterSet.
     """
 
-    @classmethod
-    def get_filters(cls):
-        filters = super().get_filters()
-
-        if cls._meta.model is not None:
-            filters["role"] = RoleFilter(
-                field_name="role",
-                query_params={"content_types": [cls._meta.model._meta.label_lower]},
-            )
-
-        return filters
+    role = RoleFilter(field_name="role")
 
 
 class StatusFilter(NaturalKeyOrPKMultipleChoiceFilter):
@@ -332,14 +322,4 @@ class StatusModelFilterSetMixin(django_filters.FilterSet):
     Mixin to add a `status` filter field to a FilterSet.
     """
 
-    @classmethod
-    def get_filters(cls):
-        filters = super().get_filters()
-
-        if cls._meta.model is not None:
-            filters["status"] = StatusFilter(
-                field_name="status",
-                query_params={"content_types": [cls._meta.model._meta.label_lower]},
-            )
-
-        return filters
+    status = StatusFilter(field_name="status")

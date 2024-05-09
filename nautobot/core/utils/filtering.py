@@ -119,6 +119,8 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
             "to_field_name": field.extra.get("to_field_name", "id"),
             "query_params": field.extra.get("query_params", {}),
         }
+        form_attr["query_params"].setdefault("content_types", [model._meta.label_lower])
+
         # ConfigContext requires content_type set to Device and VirtualMachine
         if model == ConfigContext:
             form_attr["query_params"] = {"content_types": [Device._meta.label_lower, VirtualMachine._meta.label_lower]}
