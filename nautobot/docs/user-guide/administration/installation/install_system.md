@@ -130,9 +130,6 @@ Please follow the steps for your selected database backend below.
         sudo apt install -y libmysqlclient-dev mysql-server
         ```
 
-        !!! note
-            In the Nautobot Docker image `libmariadb-dev` is installed due to licensing challenges with `libmysqlclient-dev`. 
-
         **Create a MySQL Database**
 
         At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This is done with the following commands.
