@@ -11,7 +11,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils.decorators import method_decorator
 from django.utils.encoding import iri_to_uri
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -275,6 +275,8 @@ class SavedViewUIViewSet(
         """
         Extract filter_params, pagination and sort_order from request.GET and apply it to the SavedView specified
         """
+        print(args)
+        print(kwargs)
         sv = get_object_or_404(SavedView, pk=request.GET.get("saved_view", None))
         table_changes_pending = request.GET.get("table_changes_pending", False)
         all_filters_removed = request.GET.get("all_filters_removed", False)
@@ -317,9 +319,7 @@ class SavedViewUIViewSet(
         This method will extract filter_params, pagination and sort_order from request.GET
         and the name of the new SavedView from request.POST to create a new SavedView.
         """
-        print(request.POST)
         name = request.POST.get("name")
-        view_name = request.POST.get("view")
         params = request.POST.get("params", "")
 
         params_list = params.split("&")
@@ -342,6 +342,15 @@ class SavedViewUIViewSet(
         derived_instance = None
         if derived_view_pk:
             derived_instance = self.get_queryset().get(pk=derived_view_pk)
+        view_name = request.POST.get("view")
+        try:
+            reverse(view_name)
+        except NoReverseMatch:
+            messages.error(f"Invalid view name {view_name} specified.")
+            if derived_view_pk:
+                return redirect(self.get_return_url(request, obj=derived_instance))
+            else:
+                return redirect(reverse(view_name))
         table_changes_pending = param_dict.get("table_changes_pending", False)
         all_filters_removed = param_dict.get("all_filters_removed", False)
         try:
@@ -386,7 +395,7 @@ class SavedViewUIViewSet(
             ):
                 sv.config["table_config"][f"{table_class}"] = derived_instance.config["table_config"][f"{table_class}"]
         try:
-            # sv.validated_save()
+            sv.validated_save()
             list_view_url = sv.get_absolute_url()
             messages.success(request, f"Successfully created new Saved View {sv.name}")
             return redirect(list_view_url)

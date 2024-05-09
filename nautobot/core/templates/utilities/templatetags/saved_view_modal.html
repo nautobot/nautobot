@@ -12,8 +12,8 @@
                     {% csrf_token %}
                     <div class="form-group">
                         {% render_field form.name %}
-                        <input type="hidden" id="view" name="view" value={{view}}>
-                        <input type="hidden" id="params" name="params" value={{params}}>
+                        <input type="hidden" id="view" name="view" value="{{view}}">
+                        <input type="hidden" id="params" name="params" value="{{params}}">
                     </div>
                 </div>
                 <div class="modal-footer">
