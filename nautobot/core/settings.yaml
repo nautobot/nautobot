@@ -954,6 +954,22 @@ properties:
     is_constance_config: true
     type: "boolean"
     version_added: "2.0.0"
+  LOG_DEBUG_DB:
+    default: false
+    description: >-
+      Set the environment variable `NAUTOBOT_LOG_DEBUG_DB` to change this setting.
+      This can be set to `True` to enable detailed logging of database queries.
+    details: |-
+      !!! warning
+          This setting can generate a large amount of log data and should be used with caution.
+          It is recommended to enable this setting only for short periods of time when troubleshooting
+          performance issues or other database-related problems.
+
+      When enabled, all database queries will be logged to the console with detailed information about the
+      query, including the SQL statement, the time taken to execute the query, and the number of rows returned.
+    environment_variable: "NAUTOBOT_LOG_DEBUG_DB"
+    type: "boolean"
+    version_added: "2.3.0"
   LOG_DEPRECATION_WARNINGS:
     default: false
     description: >-
@@ -976,6 +992,18 @@ properties:
     environment_variable: "NAUTOBOT_LOG_DEPRECATION_WARNINGS"
     type: "boolean"
     version_added: "1.5.2"
+  LOG_PLAIN:
+    default: false
+    description: >-
+      Set the environment variable `NAUTOBOT_LOG_PLAIN` to change this setting.
+      When enabled, log messages will be output in a more human-readable format, with each log message on a single line.
+    details: |-
+      This setting can be useful when debugging or troubleshooting issues with Nautobot, as it can make logging
+      output easier to read and understand. However, the default JSON output is more easily machine-readable and
+      can be more easily consumed by log aggregation systems.
+    environment_variable: "NAUTOBOT_LOG_PLAIN"
+    type: "boolean"
+    version_added: "2.3.0"
   LOGGING:
     additionalProperties: true
     default:

@@ -2,18 +2,20 @@
 
 import os
 
-from nautobot.core.settings import *  # noqa: F403  # undefined-local-with-import-star
+#
+# Debugging defaults to True rather than False for the development environment
+#
+os.environ["NAUTOBOT_DEBUG"] = os.getenv("NAUTOBOT_DEBUG", "True")
+
+from nautobot.core.settings import *  # noqa: F403,E402  # undefined-local-with-import-star,import
 
 # The above results in various F405 undefined-local-with-import-star-usage,
 # "may be undefined, or defined from star imports",
 # which we suppress on a case-by-case basis below
-from nautobot.core.settings_funcs import is_truthy
+from nautobot.core.settings_funcs import is_truthy  # noqa: E402  # import
 
 SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "012345678901234567890123456789012345678901234567890123456789")
 
-#
-# Debugging defaults to True rather than False for the development environment
-#
 DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "True"))
 
 
@@ -33,10 +35,6 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #
 # Logging for the development environment, taking into account the redefinition of DEBUG above
 #
-
-LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
-LOGGING["loggers"]["nautobot"]["handlers"] = ["verbose_console" if DEBUG else "normal_console"]  # noqa: F405
-LOGGING["loggers"]["nautobot"]["level"] = LOG_LEVEL  # noqa: F405
 
 #
 # Plugins

@@ -2,8 +2,10 @@
 
 from collections import namedtuple
 import os
+import sys
 
 from django.conf import settings
+import structlog
 
 ConstanceConfigItem = namedtuple("ConstanceConfigItem", ["default", "help_text", "field_type"], defaults=[str])
 
@@ -82,3 +84,86 @@ def parse_redis_connection(redis_database):
         return f"{redis_scheme}://{redis_creds}{redis_host}?db={redis_database}"
     else:
         return f"{redis_scheme}://{redis_creds}{redis_host}:{redis_port}/{redis_database}"
+
+
+def setup_structlog_logging(
+    django_logging: dict,
+    django_apps: list,
+    django_middleware: list,
+    log_level="INFO",
+    root_level="INFO",
+    debug=False,
+    debug_db=False,
+    plain_format=False,
+) -> None:
+    """Set up structlog logging for Django."""
+    django_logging["version"] = 1
+    django_logging["disable_existing_loggers"] = True
+    if "test" in sys.argv:
+        django_logging["handlers"] = {
+            "null_handler": {
+                "level": "INFO",
+                "class": "logging.NullHandler",
+            },
+        }
+        for logger in django_logging["loggers"].values():
+            logger["handlers"] = ["null_handler"]
+            logger["level"] = "INFO"
+
+        return
+
+    django_apps.append("django_structlog")
+    django_middleware.append("django_structlog.middlewares.RequestMiddleware")
+
+    processors = (
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.contextvars.merge_contextvars,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.UnicodeDecoder(),
+        *([] if debug else [structlog.processors.format_exc_info]),
+    )
+
+    django_logging["formatters"] = {
+        "default_formatter": {
+            "()": structlog.stdlib.ProcessorFormatter,
+            "foreign_pre_chain": processors,
+            "processor": structlog.dev.ConsoleRenderer() if plain_format else structlog.processors.JSONRenderer(),
+        },
+    }
+
+    django_logging["handlers"] = {
+        "default_handler": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "default_formatter",
+        },
+    }
+
+    django_logging["root"] = {
+        "handlers": ["default_handler"],
+        "level": root_level,
+    }
+
+    if debug_db:
+        django_logging["loggers"]["django.db.backends"] = {"level": "DEBUG"}
+
+    for logger in django_logging["loggers"].values():
+        if "level" not in logger:
+            logger["level"] = log_level
+        logger["propagate"] = False
+        logger["handlers"] = ["default_handler"]
+
+    structlog.configure(
+        processors=[
+            structlog.stdlib.filter_by_level,
+            *processors,
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+        ],
+        context_class=dict,
+        wrapper_class=structlog.stdlib.BoundLogger,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
+    )

@@ -1,0 +1,1 @@
+Changed logging to use `structlog` JSON format as a default.

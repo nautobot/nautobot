@@ -11,7 +11,7 @@ from django.utils.safestring import mark_safe
 
 from nautobot import __version__
 from nautobot.core.constants import CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR
-from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
+from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection, setup_structlog_logging
 
 #
 # Environment setup
@@ -435,51 +435,6 @@ FORCE_SCRIPT_NAME = None
 
 TESTING = "test" in sys.argv
 
-LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
-
-if TESTING:
-    # Log to null handler instead of stderr during testing
-    LOGGING = {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "handlers": {"console": {"level": "INFO", "class": "logging.NullHandler"}},
-        "loggers": {"nautobot": {"handlers": ["console"], "level": "INFO"}},
-    }
-else:
-    LOGGING = {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {
-            "normal": {
-                "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
-                "datefmt": "%H:%M:%S",
-            },
-            "verbose": {
-                "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s",
-                "datefmt": "%H:%M:%S",
-            },
-        },
-        "handlers": {
-            "normal_console": {
-                "level": "INFO",
-                "class": "logging.StreamHandler",
-                "formatter": "normal",
-            },
-            "verbose_console": {
-                "level": "DEBUG",
-                "class": "logging.StreamHandler",
-                "formatter": "verbose",
-            },
-        },
-        "loggers": {
-            "django": {"handlers": ["normal_console"], "level": "INFO"},
-            "nautobot": {
-                "handlers": ["verbose_console" if DEBUG else "normal_console"],
-                "level": LOG_LEVEL,
-            },
-        },
-    }
-
 MEDIA_ROOT = os.path.join(NAUTOBOT_ROOT, "media").rstrip("/")
 SESSION_EXPIRE_AT_BROWSER_CLOSE = is_truthy(os.getenv("NAUTOBOT_SESSION_EXPIRE_AT_BROWSER_CLOSE", "False"))
 SESSION_COOKIE_AGE = int(os.getenv("NAUTOBOT_SESSION_COOKIE_AGE", "1209600"))  # 2 weeks, in seconds
@@ -556,6 +511,20 @@ MIDDLEWARE = [
     "nautobot.core.middleware.ObjectChangeMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
+
+
+LOGGING = {"loggers": {"nautobot": {}}}
+setup_structlog_logging(
+    LOGGING,
+    INSTALLED_APPS,
+    MIDDLEWARE,
+    log_level="DEBUG" if DEBUG else "INFO",
+    debug=DEBUG,
+    debug_db=is_truthy(os.getenv("NAUTOBOT_LOG_DEBUG_DB", "False")),
+    plain_format=is_truthy(os.getenv("NAUTOBOT_LOG_PLAIN", "False")),
+)
+DJANGO_STRUCTLOG_CELERY_ENABLED = True
+DJANGO_STRUCTLOG_COMMAND_LOGGING_ENABLED = True
 
 ROOT_URLCONF = "nautobot.core.urls"
 
