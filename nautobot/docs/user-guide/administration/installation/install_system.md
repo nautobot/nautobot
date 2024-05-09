@@ -63,7 +63,7 @@ Please follow the steps for your selected database backend below.
         sudo -u postgres psql
         ```
 
-        ??? example "Entering Postgres DB"
+        ??? example "Example of Entering Postgres"
 
             ```no-highlight title="Entering Postgres DB"
             psql (12.5 (Ubuntu 12.5-0ubuntu0.20.04.1))
