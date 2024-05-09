@@ -266,7 +266,7 @@ Example of modifying the permissions:
 ls -l /opt/
 ```
 
-??? example "Output of list files in /opt`
+??? example "Output of list files in `/opt`"
 
     ```no-highlight title="Example output of list"
     total 4
