@@ -109,7 +109,7 @@ class HomeViewTestCase(TestCase):
         self.assertInHTML("<h1>Hello world</h1>", response.content.decode(response.charset))
         self.assertInHTML(
             '<a href="https://nautobot.com" rel="noopener noreferrer">info</a>',
-            response.content.decode(response.charset)
+            response.content.decode(response.charset),
         )
 
         with override_settings(BANNER_LOGIN="_Welcome to Nautobot!_"):
