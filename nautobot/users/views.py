@@ -1,5 +1,4 @@
 import logging
-import uuid
 
 from django.contrib import messages
 from django.contrib.auth import (
@@ -318,14 +317,33 @@ class SavedViewUIViewSet(
         This method will extract filter_params, pagination and sort_order from request.GET
         and the name of the new SavedView from request.POST to create a new SavedView.
         """
+        print(request.POST)
         name = request.POST.get("name")
-        view_name = request.GET.get("view")
-        derived_view_pk = request.GET.get("saved_view", None)
+        view_name = request.POST.get("view")
+        params = request.POST.get("params", "")
+
+        params_list = params.split("&")
+        param_dict = {}
+
+        single_value_params = ["saved_view", "table_changes_pending", "all_filters_removed", "q", "per_page"]
+        for param in params_list:
+            key, value = param.split("=")
+            # Expected single value params
+            if key in single_value_params:
+                param_dict[key] = value
+            else:
+                # Expected multi-value params
+                if key in param_dict:
+                    param_dict[key].append(value)
+                else:
+                    param_dict[key] = [value]
+
+        derived_view_pk = param_dict.get("saved_view", None)
         derived_instance = None
         if derived_view_pk:
             derived_instance = self.get_queryset().get(pk=derived_view_pk)
-        table_changes_pending = request.GET.get("table_changes_pending", False)
-        all_filters_removed = request.GET.get("all_filters_removed", False)
+        table_changes_pending = param_dict.get("table_changes_pending", False)
+        all_filters_removed = param_dict.get("all_filters_removed", False)
         try:
             sv = SavedView.objects.create(name=name, owner=request.user, view=view_name)
         except IntegrityError:
@@ -334,28 +352,24 @@ class SavedViewUIViewSet(
                 return redirect(self.get_return_url(request, obj=derived_instance))
             else:
                 return redirect(reverse(view_name))
-        pagination_count = request.GET.get("per_page", None)
+        pagination_count = param_dict.get("per_page", None)
         if not pagination_count:
             if derived_instance and derived_instance.config.get("pagination_count", None):
                 pagination_count = derived_instance.config["pagination_count"]
             else:
                 pagination_count = get_settings_or_config("PAGINATE_COUNT")
         sv.config["pagination_count"] = int(pagination_count)
-        sort_order = request.GET.getlist("sort", [])
+        sort_order = param_dict.get("sort", [])
         if not sort_order:
             if derived_instance:
                 sort_order = derived_instance.config.get("sort_order", [])
         sv.config["sort_order"] = sort_order
 
         sv.config["filter_params"] = {}
-        for key in request.GET:
+        for key in param_dict:
             if key in [*self.non_filter_params, "view"]:
                 continue
-            # TODO: this is fragile, any other single-value filters will not be happy if given a list
-            if key == "q":
-                sv.config["filter_params"][key] = request.GET.get(key)
-            else:
-                sv.config["filter_params"][key] = request.GET.getlist(key)
+            sv.config["filter_params"][key] = param_dict.get(key)
         if not sv.config["filter_params"]:
             if derived_instance and all_filters_removed:
                 sv.config["filter_params"] = {}
@@ -372,7 +386,7 @@ class SavedViewUIViewSet(
             ):
                 sv.config["table_config"][f"{table_class}"] = derived_instance.config["table_config"][f"{table_class}"]
         try:
-            sv.validated_save()
+            # sv.validated_save()
             list_view_url = sv.get_absolute_url()
             messages.success(request, f"Successfully created new Saved View {sv.name}")
             return redirect(list_view_url)
