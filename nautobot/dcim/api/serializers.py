@@ -3,7 +3,7 @@ import contextlib
 from django.contrib.contenttypes.models import ContentType
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
-from rest_framework.validators import UniqueTogetherValidator
+from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 
 from nautobot.core.api import (
     ChoiceField,
@@ -184,7 +184,7 @@ class ModularDeviceComponentTemplateSerializerMixin:
     def validate(self, data):
         """Validate device_type and module_type field constraints for modular device component templates."""
         if data.get("device_type") and data.get("module_type"):
-            raise serializers.ValidationError("Only one of device_type or module_type may be set.")
+            raise serializers.ValidationError("Only one of device_type or module_type must be set")
         if data.get("device_type"):
             validator = UniqueTogetherValidator(queryset=self.Meta.model.objects.all(), fields=("device_type", "name"))
             validator(data, self)
@@ -198,7 +198,7 @@ class ModularDeviceComponentSerializerMixin:
     def validate(self, data):
         """Validate device and module field constraints for modular device components."""
         if data.get("device") and data.get("module"):
-            raise serializers.ValidationError("Only one of device or module may be set.")
+            raise serializers.ValidationError("Only one of device or module must be set")
         if data.get("device"):
             validator = UniqueTogetherValidator(queryset=self.Meta.model.objects.all(), fields=("device", "name"))
             validator(data, self)
@@ -1131,7 +1131,7 @@ class ModuleBaySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     def validate(self, data):
         """Validate device and module field constraints for module bay."""
         if data.get("parent_device") and data.get("parent_module"):
-            raise serializers.ValidationError("Only one of parent_device or parent_module may be set.")
+            raise serializers.ValidationError("Only one of parent_device or parent_module must be set")
         if data.get("parent_device"):
             validator = UniqueTogetherValidator(
                 queryset=self.Meta.model.objects.all(), fields=("parent_device", "position")
@@ -1154,7 +1154,7 @@ class ModuleBayTemplateSerializer(NautobotModelSerializer):
     def validate(self, data):
         """Validate device_type and module_type field constraints for module bay template."""
         if data.get("device_type") and data.get("module_type"):
-            raise serializers.ValidationError("Only one of device_type or module_type may be set.")
+            raise serializers.ValidationError("Only one of device_type or module_type must be set")
         if data.get("device_type"):
             validator = UniqueTogetherValidator(
                 queryset=self.Meta.model.objects.all(), fields=("device_type", "position")
@@ -1173,7 +1173,19 @@ class ModuleSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         model = Module
         fields = "__all__"
 
-    # TODO: add custom validation
+        validators = []
+
+    def validate(self, data):
+        """Validate asset_Tag, serial, parent_module_bay and location field constraints for module."""
+        if data.get("parent_module_bay") and data.get("location"):
+            raise serializers.ValidationError("Only one of parent_module_bay or location must be set")
+        if data.get("serial"):
+            validator = UniqueTogetherValidator(queryset=Module.objects.all(), fields=("module_type", "serial"))
+            validator(data, self)
+        if data.get("asset_tag"):
+            validator = UniqueValidator(queryset=Module.objects.all())
+            validator(data["asset_tag"], self.fields["asset_tag"])
+        return super().validate(data)
 
 
 class ModuleTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):

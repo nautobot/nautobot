@@ -12,10 +12,13 @@ from rest_framework import status
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
 from nautobot.dcim.choices import (
+    ConsolePortTypeChoices,
     InterfaceModeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerFeedTypeChoices,
+    PowerOutletTypeChoices,
+    PowerPortTypeChoices,
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
@@ -172,6 +175,162 @@ class Mixins:
                 if o not in SoftwareImageFileHashingAlgorithmChoices.as_dict().keys()
             ]
         )
+
+    class ModularDeviceComponentMixin:
+        modular_component_create_data = {}
+
+        def test_module_device_validation(self):
+            """Assert that a modular component can have a module or a device but not both."""
+
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+            data = {
+                "module": self.module.pk,
+                "device": self.device.pk,
+                "name": "test parent module validation",
+                **self.modular_component_create_data,
+            }
+            url = self._get_list_url()
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.json(),
+                {"non_field_errors": ["Only one of device or module must be set"]},
+            )
+
+            data.pop("module")
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+            data.pop("device")
+            data["module"] = self.module.pk
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+            data.pop("module")
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.json(),
+                {"__all__": ["Either device or module must be set"]},
+            )
+
+        def test_module_device_name_unique_validation(self):
+            """Assert uniqueness constraint is enforced for (device,name) and (module,name) fields."""
+
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+            modules = Module.objects.all()[:2]
+            data = {
+                "module": modules[0].pk,
+                "name": "test modular device component parent validation",
+                **self.modular_component_create_data,
+            }
+            url = self._get_list_url()
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.json(),
+                {"non_field_errors": ["The fields module, name must make a unique set."]},
+            )
+
+            # same name, different module works
+            data["module"] = modules[1].pk
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+            devices = Device.objects.all()[:2]
+            data = {
+                "device": devices[0].pk,
+                "name": "test modular device component parent validation",
+                **self.modular_component_create_data,
+            }
+            url = self._get_list_url()
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.json(),
+                {"non_field_errors": ["The fields device, name must make a unique set."]},
+            )
+
+            # same name, different device works
+            data["device"] = devices[1].pk
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+    class ModularDeviceComponentTemplateMixin:
+        modular_component_create_data = {}
+
+        def test_module_type_device_type_validation(self):
+            """Assert that a modular component template can have a module_type or a device_type but not both."""
+
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+            data = {
+                "module_type": self.module_type.pk,
+                "device_type": self.device_type.pk,
+                "name": "test parent module_type validation",
+                **self.modular_component_create_data,
+            }
+            url = self._get_list_url()
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.json(),
+                {"non_field_errors": ["Only one of device_type or module_type must be set"]},
+            )
+
+            data.pop("module_type")
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+            data.pop("device_type")
+            data["module_type"] = self.module_type.pk
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+            data.pop("module_type")
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.json(),
+                {"__all__": ["Either device_type or module_type must be set"]},
+            )
+
+        def test_module_type_device_type_name_unique_validation(self):
+            """Assert uniqueness constraint is enforced for (device_type,name) and (module_type,name) fields."""
+
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+            module_types = ModuleType.objects.all()[:2]
+            data = {
+                "module_type": module_types[0].pk,
+                "name": "test modular device component template parent validation",
+                **self.modular_component_create_data,
+            }
+            url = self._get_list_url()
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.json(),
+                {"non_field_errors": ["The fields module_type, name must make a unique set."]},
+            )
+
+            # same name, different module_type works
+            data["module_type"] = module_types[1].pk
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+            device_types = DeviceType.objects.all()[:2]
+            data = {
+                "device_type": device_types[0].pk,
+                "name": "test modular device component template parent validation",
+                **self.modular_component_create_data,
+            }
+            url = self._get_list_url()
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                response.json(),
+                {"non_field_errors": ["The fields device_type, name must make a unique set."]},
+            )
+
+            # same name, different device_type works
+            data["device_type"] = device_types[1].pk
+            self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
 
 
 class LocationTypeTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
@@ -884,8 +1043,9 @@ class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
-class ConsolePortTemplateTest(Mixins.BasePortTemplateTestMixin):
+class ConsolePortTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BasePortTemplateTestMixin):
     model = ConsolePortTemplate
+    modular_component_create_data = {"type": ConsolePortTypeChoices.TYPE_RJ45}
 
     @classmethod
     def setUpTestData(cls):
@@ -907,8 +1067,9 @@ class ConsolePortTemplateTest(Mixins.BasePortTemplateTestMixin):
         ]
 
 
-class ConsoleServerPortTemplateTest(Mixins.BasePortTemplateTestMixin):
+class ConsoleServerPortTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BasePortTemplateTestMixin):
     model = ConsoleServerPortTemplate
+    modular_component_create_data = {"type": ConsolePortTypeChoices.TYPE_RJ45}
 
     @classmethod
     def setUpTestData(cls):
@@ -930,8 +1091,9 @@ class ConsoleServerPortTemplateTest(Mixins.BasePortTemplateTestMixin):
         ]
 
 
-class PowerPortTemplateTest(Mixins.BasePortTemplateTestMixin):
+class PowerPortTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BasePortTemplateTestMixin):
     model = PowerPortTemplate
+    modular_component_create_data = {"type": PowerPortTypeChoices.TYPE_NEMA_1030P}
 
     @classmethod
     def setUpTestData(cls):
@@ -953,9 +1115,10 @@ class PowerPortTemplateTest(Mixins.BasePortTemplateTestMixin):
         ]
 
 
-class PowerOutletTemplateTest(Mixins.BasePortTemplateTestMixin):
+class PowerOutletTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BasePortTemplateTestMixin):
     model = PowerOutletTemplate
     choices_fields = ["feed_leg", "type"]
+    modular_component_create_data = {"type": PowerOutletTypeChoices.TYPE_IEC_C13}
 
     @classmethod
     def setUpTestData(cls):
@@ -977,13 +1140,13 @@ class PowerOutletTemplateTest(Mixins.BasePortTemplateTestMixin):
         ]
 
 
-class InterfaceTemplateTest(Mixins.BasePortTemplateTestMixin):
+class InterfaceTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BasePortTemplateTestMixin):
     model = InterfaceTemplate
+    modular_component_create_data = {"type": InterfaceTypeChoices.TYPE_1GE_FIXED}
 
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-
         cls.create_data = [
             {
                 "device_type": cls.device_type.pk,
@@ -1010,40 +1173,125 @@ class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        rear_port_templates = (
-            *RearPortTemplate.objects.filter(device_type__isnull=False)[:2],
-            RearPortTemplate.objects.filter(module_type__isnull=False)[0],
+        cls.module_type = ModuleType.objects.first()
+        cls.module_rear_port_templates = (
+            RearPortTemplate.objects.create(module_type=cls.module_type, name="Test FrontPort RP1", positions=100),
+            RearPortTemplate.objects.create(module_type=cls.module_type, name="Test FrontPort RP2", positions=100),
         )
-        for rpt in rear_port_templates:
-            rpt.front_port_templates.all().delete()
+        cls.device_type = DeviceType.objects.first()
+        cls.device_rear_port_templates = (
+            RearPortTemplate.objects.create(device_type=cls.device_type, name="Test FrontPort RP3", positions=100),
+            RearPortTemplate.objects.create(device_type=cls.device_type, name="Test FrontPort RP4", positions=100),
+        )
 
         cls.create_data = [
             {
-                "device_type": rear_port_templates[0].device_type.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Front Port Template 4",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port_template": rear_port_templates[0].pk,
+                "rear_port_template": cls.device_rear_port_templates[0].pk,
                 "rear_port_position": 1,
             },
             {
-                "device_type": rear_port_templates[1].device_type.pk,
+                "device_type": cls.device_type.pk,
                 "name": "Front Port Template 5",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port_template": rear_port_templates[1].pk,
+                "rear_port_template": cls.device_rear_port_templates[1].pk,
                 "rear_port_position": 1,
             },
             {
-                "module_type": rear_port_templates[2].module_type.pk,
+                "module_type": cls.module_type.pk,
                 "name": "Front Port Template 6",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port_template": rear_port_templates[2].pk,
+                "rear_port_template": cls.module_rear_port_templates[0].pk,
                 "rear_port_position": 1,
             },
         ]
 
+    def test_module_type_device_type_validation(self):
+        """Assert that a modular component template can have a module_type or a device_type but not both."""
 
-class RearPortTemplateTest(Mixins.BasePortTemplateTestMixin):
+        self.add_permissions("dcim.add_frontporttemplate")
+        data = {
+            "module_type": self.module_type.pk,
+            "device_type": self.device_type.pk,
+            "name": "test parent module_type validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port_template": self.device_rear_port_templates[0].pk,
+            "rear_port_position": 2,
+        }
+        url = self._get_list_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["Only one of device_type or module_type must be set"]},
+        )
+
+        data.pop("module_type")
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data.pop("device_type")
+        data["module_type"] = self.module_type.pk
+        data["rear_port_template"] = self.module_rear_port_templates[0].pk
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+    def test_module_type_device_type_name_unique_validation(self):
+        """Assert uniqueness constraint is enforced for (device_type,name) and (module_type,name) fields."""
+
+        self.add_permissions("dcim.add_frontporttemplate")
+        data = {
+            "module_type": self.module_type.pk,
+            "name": "test modular device_type component parent validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port_template": self.module_rear_port_templates[0].pk,
+            "rear_port_position": 2,
+        }
+        url = self._get_list_url()
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data = {
+            "module_type": self.module_type.pk,
+            "name": "test modular device_type component parent validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port_template": self.module_rear_port_templates[1].pk,
+            "rear_port_position": 2,
+        }
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["The fields module_type, name must make a unique set."]},
+        )
+
+        data = {
+            "device_type": self.device_type.pk,
+            "name": "test modular device_type component parent validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port_template": self.device_rear_port_templates[0].pk,
+            "rear_port_position": 2,
+        }
+        url = self._get_list_url()
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data = {
+            "device_type": self.device_type.pk,
+            "name": "test modular device_type component parent validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port_template": self.device_rear_port_templates[1].pk,
+            "rear_port_position": 2,
+        }
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["The fields device_type, name must make a unique set."]},
+        )
+
+
+class RearPortTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BasePortTemplateTestMixin):
     model = RearPortTemplate
+    modular_component_create_data = {"type": PortTypeChoices.TYPE_8P8C}
 
     @classmethod
     def setUpTestData(cls):
@@ -1120,7 +1368,77 @@ class ModuleBayTemplateTest(Mixins.BaseComponentTestMixin):
             },
         ]
 
-    # TODO: add validation tests for all modular component templates
+    def test_module_type_device_type_validation(self):
+        """Assert that a modulebay template can have a module_type or a device_type but not both."""
+
+        self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+        data = {
+            "module_type": self.module_type.pk,
+            "device_type": self.device_type.pk,
+            "position": "test parent module_type validation",
+        }
+        url = self._get_list_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["Only one of device_type or module_type must be set"]},
+        )
+
+        data.pop("module_type")
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data.pop("device_type")
+        data["module_type"] = self.module_type.pk
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data.pop("module_type")
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"__all__": ["Either device_type or module_type must be set"]},
+        )
+
+    def test_module_type_device_type_position_unique_validation(self):
+        """Assert uniqueness constraint is enforced for (device_type,position) and (module_type,position) fields."""
+
+        self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+        module_types = ModuleType.objects.all()[:2]
+        data = {
+            "module_type": module_types[0].pk,
+            "position": "test modular device component template parent validation",
+        }
+        url = self._get_list_url()
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["The fields module_type, position must make a unique set."]},
+        )
+
+        # same position, different module_type works
+        data["module_type"] = module_types[1].pk
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        device_types = DeviceType.objects.all()[:2]
+        data = {
+            "device_type": device_types[0].pk,
+            "position": "test modular device component template parent validation",
+        }
+        url = self._get_list_url()
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["The fields device_type, position must make a unique set."]},
+        )
+
+        # same position, different device_type works
+        data["device_type"] = device_types[1].pk
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
 
 
 class PlatformTest(APIViewTestCases.APIViewTestCase):
@@ -1449,38 +1767,39 @@ class ModuleTestCase(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        module_type = ModuleType.objects.first()
-        module_bay = ModuleBay.objects.filter(installed_module__isnull=True).first()
-        module_status = Status.objects.get_for_model(Module).first()
-        location = Location.objects.get_for_model(Module).first()
+        cls.module_type = ModuleType.objects.first()
+        cls.module_bay = ModuleBay.objects.filter(installed_module__isnull=True).first()
+        cls.module_status = Status.objects.get_for_model(Module).first()
+        cls.location = Location.objects.get_for_model(Module).first()
         cls.create_data = [
             {
-                "module_type": module_type.pk,
-                "parent_module_bay": module_bay.pk,
-                "serial": None,
-                "asset_tag": None,
-                "status": module_status.pk,
+                "module_type": cls.module_type.pk,
+                "parent_module_bay": cls.module_bay.pk,
+                "status": cls.module_status.pk,
             },
             {
-                "module_type": module_type.pk,
-                "location": location.pk,
+                "module_type": cls.module_type.pk,
+                "location": cls.location.pk,
+                "status": cls.module_status.pk,
+            },
+            {
+                "module_type": cls.module_type.pk,
+                "location": cls.location.pk,
                 "serial": "test module serial xyz",
                 "asset_tag": "test module 2",
-                "status": module_status.pk,
+                "status": cls.module_status.pk,
             },
             {
-                "module_type": module_type.pk,
-                "location": location.pk,
-                "serial": None,
+                "module_type": cls.module_type.pk,
+                "location": cls.location.pk,
                 "asset_tag": "Test Module 3",
-                "status": module_status.pk,
+                "status": cls.module_status.pk,
             },
             {
-                "module_type": module_type.pk,
-                "location": location.pk,
+                "module_type": cls.module_type.pk,
+                "location": cls.location.pk,
                 "serial": "test module serial abc",
-                "asset_tag": None,
-                "status": module_status.pk,
+                "status": cls.module_status.pk,
             },
         ]
         cls.bulk_update_data = {
@@ -1500,12 +1819,86 @@ class ModuleTestCase(APIViewTestCases.APIViewTestCase):
             self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
         return instances
 
-    # TODO: add validation test
+    def test_parent_module_bay_location_validation(self):
+        """Assert that a module can have a parent_module_bay or a location but not both."""
+
+        self.add_permissions("dcim.add_module")
+        data = {
+            "module_type": self.module_type.pk,
+            "location": self.location.pk,
+            "parent_module_bay": self.module_bay.pk,
+            "status": self.module_status.pk,
+        }
+        url = self._get_list_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["Only one of parent_module_bay or location must be set"]},
+        )
+
+        data.pop("parent_module_bay")
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data.pop("location")
+        data["parent_module_bay"] = self.module_bay.pk
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data.pop("parent_module_bay")
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"__all__": ["One of location or parent_module_bay must be set"]},
+        )
+
+    def test_serial_module_type_unique_validation(self):
+        self.add_permissions("dcim.add_module")
+        data = {
+            "module_type": self.module_type.pk,
+            "location": self.location.pk,
+            "status": self.module_status.pk,
+        }
+        url = self._get_list_url()
+        # create multiple instances with null serial
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        data["serial"] = ""
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        data["serial"] = None
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data["serial"] = "xyz"
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["The fields module_type, serial must make a unique set."]},
+        )
+
+    def test_asset_tag_unique_validation(self):
+        self.add_permissions("dcim.add_module")
+        data = {
+            "module_type": self.module_type.pk,
+            "location": self.location.pk,
+            "status": self.module_status.pk,
+            "asset_tag": "xyz123",
+        }
+        url = self._get_list_url()
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"asset_tag": ["module with this Asset tag already exists."]},
+        )
 
 
-class ConsolePortTest(Mixins.BasePortTestMixin):
+class ConsolePortTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = ConsolePort
     peer_termination_type = ConsoleServerPort
+    modular_component_create_data = {"type": ConsolePortTypeChoices.TYPE_RJ45}
 
     @classmethod
     def setUpTestData(cls):
@@ -1527,9 +1920,10 @@ class ConsolePortTest(Mixins.BasePortTestMixin):
         ]
 
 
-class ConsoleServerPortTest(Mixins.BasePortTestMixin):
+class ConsoleServerPortTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = ConsoleServerPort
     peer_termination_type = ConsolePort
+    modular_component_create_data = {"type": ConsolePortTypeChoices.TYPE_RJ45}
 
     @classmethod
     def setUpTestData(cls):
@@ -1551,9 +1945,10 @@ class ConsoleServerPortTest(Mixins.BasePortTestMixin):
         ]
 
 
-class PowerPortTest(Mixins.BasePortTestMixin):
+class PowerPortTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = PowerPort
     peer_termination_type = PowerOutlet
+    modular_component_create_data = {"type": PowerPortTypeChoices.TYPE_NEMA_1030P}
 
     @classmethod
     def setUpTestData(cls):
@@ -1575,10 +1970,11 @@ class PowerPortTest(Mixins.BasePortTestMixin):
         ]
 
 
-class PowerOutletTest(Mixins.BasePortTestMixin):
+class PowerOutletTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = PowerOutlet
     peer_termination_type = PowerPort
     choices_fields = ["feed_leg", "type"]
+    modular_component_create_data = {"type": PowerOutletTypeChoices.TYPE_IEC_C13}
 
     @classmethod
     def setUpTestData(cls):
@@ -1600,7 +1996,7 @@ class PowerOutletTest(Mixins.BasePortTestMixin):
         ]
 
 
-class InterfaceTest(Mixins.BasePortTestMixin):
+class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = Interface
     peer_termination_type = Interface
     choices_fields = ["mode", "type"]
@@ -1609,7 +2005,10 @@ class InterfaceTest(Mixins.BasePortTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
         interface_status = Status.objects.get_for_model(Interface).first()
-
+        cls.modular_component_create_data = {
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "status": interface_status.pk,
+        }
         cls.devices = (
             cls.device,
             Device.objects.create(
@@ -1915,41 +2314,135 @@ class FrontPortTest(Mixins.BasePortTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        rear_ports = (
-            *RearPort.objects.filter(device__isnull=False)[:2],
-            RearPort.objects.filter(module__isnull=False)[0],
+        cls.module = Module.objects.first()
+        cls.module_rear_ports = (
+            RearPort.objects.create(module=cls.module, name="Test FrontPort RP1", positions=100),
+            RearPort.objects.create(module=cls.module, name="Test FrontPort RP2", positions=100),
         )
-        for rp in rear_ports:
-            rp.front_ports.all().delete()
+        cls.device = Device.objects.first()
+        cls.device_rear_ports = (
+            RearPort.objects.create(device=cls.device, name="Test FrontPort RP3", positions=100),
+            RearPort.objects.create(device=cls.device, name="Test FrontPort RP4", positions=100),
+        )
 
         cls.create_data = [
             {
-                "device": rear_ports[0].device.pk,
+                "device": cls.device.pk,
                 "name": "Front Port 1",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_ports[0].pk,
+                "rear_port": cls.device_rear_ports[0].pk,
                 "rear_port_position": 1,
             },
             {
-                "device": rear_ports[1].device.pk,
+                "device": cls.device.pk,
                 "name": "Front Port 2",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_ports[1].pk,
+                "rear_port": cls.device_rear_ports[1].pk,
                 "rear_port_position": 1,
             },
             {
-                "module": rear_ports[2].module.pk,
+                "module": cls.module.pk,
                 "name": "Front Port 3",
                 "type": PortTypeChoices.TYPE_8P8C,
-                "rear_port": rear_ports[2].pk,
+                "rear_port": cls.module_rear_ports[0].pk,
                 "rear_port_position": 1,
             },
         ]
 
+    def test_module_device_validation(self):
+        """Assert that a modular component can have a module or a device but not both."""
 
-class RearPortTest(Mixins.BasePortTestMixin):
+        self.add_permissions("dcim.add_frontport")
+        data = {
+            "module": self.module.pk,
+            "device": self.device.pk,
+            "name": "test parent module validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port": self.device_rear_ports[0].pk,
+            "rear_port_position": 2,
+        }
+        url = self._get_list_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["Only one of device or module must be set"]},
+        )
+
+        data.pop("module")
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data.pop("device")
+        data["module"] = self.module.pk
+        data["rear_port"] = self.module_rear_ports[0].pk
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data.pop("module")
+        data["rear_port_position"] = 3
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"__all__": ["Either device or module must be set"]},
+        )
+
+    def test_module_device_name_unique_validation(self):
+        """Assert uniqueness constraint is enforced for (device,name) and (module,name) fields."""
+
+        self.add_permissions("dcim.add_frontport")
+        data = {
+            "module": self.module.pk,
+            "name": "test modular device component parent validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port": self.module_rear_ports[0].pk,
+            "rear_port_position": 2,
+        }
+        url = self._get_list_url()
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data = {
+            "module": self.module.pk,
+            "name": "test modular device component parent validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port": self.module_rear_ports[1].pk,
+            "rear_port_position": 2,
+        }
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["The fields module, name must make a unique set."]},
+        )
+
+        data = {
+            "device": self.device.pk,
+            "name": "test modular device component parent validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port": self.device_rear_ports[0].pk,
+            "rear_port_position": 2,
+        }
+        url = self._get_list_url()
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data = {
+            "device": self.device.pk,
+            "name": "test modular device component parent validation",
+            "type": PortTypeChoices.TYPE_8P8C,
+            "rear_port": self.device_rear_ports[1].pk,
+            "rear_port_position": 2,
+        }
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["The fields device, name must make a unique set."]},
+        )
+
+
+class RearPortTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = RearPort
     peer_termination_type = Interface
+    modular_component_create_data = {"type": PortTypeChoices.TYPE_8P8C}
 
     def test_trace(self):
         """RearPorts don't support trace."""
@@ -2119,7 +2612,77 @@ class ModuleBayTest(Mixins.BaseComponentTestMixin):
             self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
         return instances
 
-    # TODO: Add validation tests for all modular device components
+    def test_parent_module_parent_device_validation(self):
+        """Assert that a module bay can have a parent_module or a parent_device but not both."""
+
+        self.add_permissions("dcim.add_modulebay")
+        data = {
+            "parent_module": self.module.pk,
+            "parent_device": self.device.pk,
+            "position": "test parent module validation",
+        }
+        url = self._get_list_url()
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["Only one of parent_device or parent_module must be set"]},
+        )
+
+        data.pop("parent_module")
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data.pop("parent_device")
+        data["parent_module"] = self.module.pk
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        data.pop("parent_module")
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"__all__": ["Either parent_device or parent_module must be set"]},
+        )
+
+    def test_parent_module_parent_device_position_unique_validation(self):
+        """Assert uniqueness constraint is enforced for (parent_device,position) and (parent_module,position) fields."""
+
+        self.add_permissions("dcim.add_modulebay")
+        modules = Module.objects.all()[:2]
+        data = {
+            "parent_module": modules[0].pk,
+            "position": "test modulebay parent validation",
+        }
+        url = self._get_list_url()
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["The fields parent_module, position must make a unique set."]},
+        )
+
+        # same position, different parent_module works
+        data["parent_module"] = modules[1].pk
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+
+        devices = Device.objects.all()[:2]
+        data = {
+            "parent_device": devices[0].pk,
+            "position": "test modulebay parent validation",
+        }
+        url = self._get_list_url()
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {"non_field_errors": ["The fields parent_device, position must make a unique set."]},
+        )
+
+        # same position, different parent_device works
+        data["parent_device"] = devices[1].pk
+        self.assertHttpStatus(self.client.post(url, data, format="json", **self.header), status.HTTP_201_CREATED)
 
 
 class CableTest(Mixins.BaseComponentTestMixin):
