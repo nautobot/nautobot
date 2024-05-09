@@ -519,7 +519,6 @@ setup_structlog_logging(
     INSTALLED_APPS,
     MIDDLEWARE,
     log_level="DEBUG" if DEBUG else "INFO",
-    debug=DEBUG,
     debug_db=is_truthy(os.getenv("NAUTOBOT_LOG_DEBUG_DB", "False")),
     plain_format=is_truthy(os.getenv("NAUTOBOT_LOG_PLAIN", "False")),
 )

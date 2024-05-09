@@ -92,7 +92,6 @@ def setup_structlog_logging(
     django_middleware: list,
     log_level="INFO",
     root_level="INFO",
-    debug=False,
     debug_db=False,
     plain_format=False,
 ) -> None:
@@ -116,14 +115,22 @@ def setup_structlog_logging(
     django_middleware.append("django_structlog.middlewares.RequestMiddleware")
 
     processors = (
+        # Add the log level to the event dict under the level key.
         structlog.stdlib.add_log_level,
+        # Add the logger name to the event dict.
         structlog.stdlib.add_logger_name,
+        # Apply stdlib-like string formatting to the event key.
         structlog.stdlib.PositionalArgumentsFormatter(),
+        # A processor that merges in a global (context-local) context.
         structlog.contextvars.merge_contextvars,
+        # Add a timestamp to event_dict in ISO 8601 format.
         structlog.processors.TimeStamper(fmt="iso"),
+        # Replace an exc_info field with an exception string field using Python's built-in traceback formatting.
+        structlog.processors.format_exc_info,
+        # Add stack information with key stack if stack_info is True.
         structlog.processors.StackInfoRenderer(),
+        # Decode byte string values in event_dict.
         structlog.processors.UnicodeDecoder(),
-        *([] if debug else [structlog.processors.format_exc_info]),
     )
 
     django_logging["formatters"] = {
@@ -158,12 +165,12 @@ def setup_structlog_logging(
 
     structlog.configure(
         processors=[
+            # Filter out log records below the configured log level.
             structlog.stdlib.filter_by_level,
             *processors,
+            # Must be the final processor in structlog's processor chain.
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
-        context_class=dict,
-        wrapper_class=structlog.stdlib.BoundLogger,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
