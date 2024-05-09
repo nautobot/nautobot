@@ -47,13 +47,13 @@ After installing or upgrading a app, you should always run [`nautobot-server pos
 * Collecting any static files provided by the app
 * Etc.
 
-```no-highlight title="Run the `post_upgrade` command" <!-- markdownlint-disable MD031 MD040 -->
+```no-highlight title="Run the post_upgrade command"
 nautobot-server post_upgrade
 ```
 
 ??? example "Example post_upgrade output"
 
-    ```no-highlight
+    ```no-highlight title="Example Output of post_upgrade Command"
     # nautobot-server post_upgrade
     Performing database migrations...
     Operations to perform:
