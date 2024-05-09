@@ -71,7 +71,7 @@ We need to set the `NAUTOBOT_ROOT` environment variable for the `nautobot` user 
 
 Run this command to update `~/.bashrc` for `nautobot` so that anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be set automatically.
 
-```no-highlight title="Add NAUTOBOT_ROOT to nautobot user bashrc file"
+```no-highlight title="Add `NAUTOBOT_ROOT` to the `nautobot` user `.bashrc` file"
 echo "export NAUTOBOT_ROOT=/opt/nautobot" | sudo tee -a ~nautobot/.bashrc
 ```
 
@@ -145,7 +145,7 @@ sudo -iu nautobot
     which pip3
     ```
 
-    ??? example "Example which pip output"
+    ??? example "Example `which pip3` output"
 
         ```no-highlight title="Example output"
         /opt/nautobot/bin/pip3
@@ -231,9 +231,9 @@ However, because we've set the `NAUTOBOT_ROOT`, this command will automatically 
 nautobot-server init
 ```
 
-??? example "Example nautobot-server init output"
+??? example "Example `nautobot-server init` output"
 
-    ```no-highlight title="Example nautobot-server init"
+    ```no-highlight title="Example `nautobot-server init`"
     Nautobot would like to send anonymized installation metrics to the project's maintainers.
     These metrics include the installed Nautobot version, the Python version in use, an anonymous "deployment ID", and a list of one-way-hashed names of enabled Nautobot Apps and their versions.
     Allow Nautobot to send these metrics? [y/n]:
@@ -273,7 +273,7 @@ Nautobot also supports the ability to install optional Python packages. If desir
 
 If you decide to use any [Nautobot Apps](../../../apps/index.md), they should be listed in the file.
 
-??? abstract "Optional Settings"
+??? abstract "Examples of `local_requirements.txt`"
 
     We will cover two examples of common optional settings below.
 
@@ -409,4 +409,4 @@ Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on
 
     ![Nautobot UI as seen by an administrator](../../../media/installation/nautobot_ui_admin.png)
 
-    Type `Ctrl-C` to stop the development server. Now you're ready to proceed to [starting Nautobot as a system service](services.md).
+Type `Ctrl-C` to stop the development server. Now you're ready to proceed to [starting Nautobot as a system service](services.md).

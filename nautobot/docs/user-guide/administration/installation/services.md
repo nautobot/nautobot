@@ -198,7 +198,7 @@ To establish the `systemd` unit file for the Celery worker, copy and paste the f
     sudo nano /etc/systemd/system/nautobot-worker.service
     ```
 
-```ini /etc/systemd/system/nautobot-worker.service
+```ini title="/etc/systemd/system/nautobot-worker.service"
 [Unit]
 Description=Nautobot Celery Worker
 Documentation=https://docs.nautobot.com/projects/core/en/stable/

@@ -401,7 +401,7 @@ Please follow the steps for your selected database backend below.
         \q
         ```
 
-        ??? example "Creation of MySQL DB"
+        ??? example "Example Creation of MySQL DB"
 
             ```no-highlight title="Example output creation of DB"
             Welcome to the MySQL monitor.  Commands end with ; or \g.
@@ -442,7 +442,7 @@ Please follow the steps for your selected database backend below.
         mysql --user nautobot --password --host localhost nautobot
         ```
 
-        ??? example "Example MySQL Verification."
+        ??? example "Example MySQL Verification"
 
             ```no-highlight
             Enter password:
