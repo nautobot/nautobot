@@ -348,7 +348,7 @@ Please follow the steps for your selected database backend below.
         psql --username nautobot --password --host localhost nautobot
         ```
 
-        ??? example "Verification example output"
+        ??? example "Example Verification Output"
 
             ```no-highlight
             Password for user nautobot:
