@@ -18,7 +18,7 @@ For more information about the Docker tags, Docker configurations, or using cont
 
     Nautobot *should* work on any POSIX-compliant system including practically any flavor of Linux, BSD, or even macOS, but those are not *officially* supported at this time.
 
-To begin with installing Nautobot dependencies on a supported platform, see [the next page of the documentation](install_system.md).
+To begin installing Nautobot, click the link to your preferred deployment approach from the list above.
 
 ## About Dependencies
 
