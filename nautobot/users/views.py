@@ -388,7 +388,7 @@ class SavedViewClearView(GenericView):
             sv.config = {}
             sv.validated_save()
             list_view_url = reverse(sv.view) + f"?saved_view={pk}"
-            messages.success(request, f"Successfully cleared saved view {pk}")
+            messages.success(request, f"Successfully cleared saved view {sv.name}")
             return redirect(list_view_url)
         except ObjectDoesNotExist:
             messages.error(request, f"Saved view {pk} not found")

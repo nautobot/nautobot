@@ -56,6 +56,22 @@ Congratulations, you have successfully updated your saved view!
 
 ![Updated saved view](./images/saved-views/updated-saved-view.png)
 
-### How to navigate among Saved Views
+### How to navigate Saved Views
+
+There are several ways you can navigate saved views. All the saved views created can be accessed from the navigation menu on the left hand side under "Extensibility -> Saved Views"
+
+![Navigation Menu](./images/saved-views/navigation-menu.png)
+
+Another way is from the "Saved View" dropdown button on the default model list view or saved views. All saved views derived from the default model list view are populated in the dropdown menu and the saved view the user is currently viewing will be boldened.
+
+![Location List View with Saved Views](./images/saved-views/location-list-view-with-saved-views.png)
+
+![Current Saved View](./images/saved-views/current-saved-view-drop-down-menu.png)
 
 ### How to clear configurations on a Saved View
+
+If the user is currently viewing a saved view, a "Clear View" button will be at the bottom of the dropdown menu. This button will clear the configurations of the saved view and the saved view will have the same configuration as the default model list view.
+
+![Clear View Button](./images/saved-views/clear-view-button.png)
+
+![Cleared Saved View](./images/saved-views/cleared-view.png)
