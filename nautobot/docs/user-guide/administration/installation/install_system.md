@@ -5,7 +5,7 @@ The documentation assumes that you are running one of the following:
 - Ubuntu 20.04+
 - Debian 11+
 - RHEL/CentOS 8.2+
-    - Also includes other derivatives of RHEL such as RockyLinux or AlmaLinux, and will be delimited by `RHEL8` tabs in the docs.
+    - Delimited by `RHEL8` tabs in the docs, but also includes other derivatives of RHEL such as RockyLinux or AlmaLinux
 
 ## Install System Packages
 
