@@ -48,7 +48,6 @@ from .template_code import (
     INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES,
     INTERFACE_REDUNDANCY_INTERFACE_PRIORITY,
     INTERFACE_TAGGED_VLANS,
-    LINKED_RECORD_COUNT,
     PATHENDPOINT,
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
@@ -940,8 +939,9 @@ class VirtualChassisTable(BaseTable):
 class DeviceRedundancyGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    device_count = tables.TemplateColumn(
-        template_code=LINKED_RECORD_COUNT,
+    device_count = LinkedCountColumn(
+        viewname="dcim:device_list",
+        url_params={"device_redundancy_group": "pk"},
         verbose_name="Devices",
     )
     secrets_group = tables.Column(linkify=True)
@@ -1188,7 +1188,11 @@ class ControllerManagedDeviceGroupTable(BaseTable):
     controller = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:controllermanageddevicegroup_list")
     actions = ButtonsColumn(ControllerManagedDeviceGroup)
-    device_count = tables.TemplateColumn(template_code=LINKED_RECORD_COUNT, verbose_name="Devices")
+    device_count = LinkedCountColumn(
+        viewname="dcim:device_list",
+        url_params={"controller_managed_device_group": "pk"},
+        verbose_name="Devices",
+    )
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""

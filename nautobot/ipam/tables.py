@@ -443,6 +443,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     )
     tenant = TenantColumn()
     parent__namespace = tables.Column(linkify=True)
+    # Interface, Device, and VirtualMachine tables aren't currently filterable by IP address (?) so no LinkedCountColumn
     interface_count = tables.Column(verbose_name="Interfaces")
     interface_parent_count = tables.Column(verbose_name="Devices")
     vm_interface_count = LinkedCountColumn(

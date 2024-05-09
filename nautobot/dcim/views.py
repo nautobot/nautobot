@@ -468,7 +468,7 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
 
 
 class RackGroupListView(generic.ObjectListView):
-    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group"))
+    queryset = RackGroup.objects.all()
     filterset = filters.RackGroupFilterSet
     filterset_form = forms.RackGroupFilterForm
     table = tables.RackGroupTable
@@ -514,7 +514,7 @@ class RackGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unus
 
 
 class RackGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = RackGroup.objects.annotate(rack_count=count_related(Rack, "rack_group")).select_related("location")
+    queryset = RackGroup.objects.all()
     filterset = filters.RackGroupFilterSet
     table = tables.RackGroupTable
 
@@ -525,7 +525,7 @@ class RackGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class RackListView(generic.ObjectListView):
-    queryset = Rack.objects.annotate(device_count=count_related(Device, "rack"))
+    queryset = Rack.objects.all()
     filterset = filters.RackFilterSet
     filterset_form = forms.RackFilterForm
     table = tables.RackDetailTable
@@ -634,14 +634,14 @@ class RackBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
 
 
 class RackBulkEditView(generic.BulkEditView):
-    queryset = Rack.objects.select_related("location", "rack_group", "tenant", "role")
+    queryset = Rack.objects.all()
     filterset = filters.RackFilterSet
     table = tables.RackTable
     form = forms.RackBulkEditForm
 
 
 class RackBulkDeleteView(generic.BulkDeleteView):
-    queryset = Rack.objects.select_related("location", "rack_group", "tenant", "role")
+    queryset = Rack.objects.all()
     filterset = filters.RackFilterSet
     table = tables.RackTable
 
@@ -703,11 +703,7 @@ class RackReservationBulkDeleteView(generic.BulkDeleteView):
 
 
 class ManufacturerListView(generic.ObjectListView):
-    queryset = Manufacturer.objects.annotate(
-        device_type_count=count_related(DeviceType, "manufacturer"),
-        inventory_item_count=count_related(InventoryItem, "manufacturer"),
-        platform_count=count_related(Platform, "manufacturer"),
-    )
+    queryset = Manufacturer.objects.all()
     filterset = filters.ManufacturerFilterSet
     table = tables.ManufacturerTable
 
@@ -751,7 +747,7 @@ class ManufacturerBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, u
 
 
 class ManufacturerBulkDeleteView(generic.BulkDeleteView):
-    queryset = Manufacturer.objects.annotate(device_type_count=count_related(DeviceType, "manufacturer"))
+    queryset = Manufacturer.objects.all()
     table = tables.ManufacturerTable
     filterset = filters.ManufacturerFilterSet
 
@@ -762,7 +758,7 @@ class ManufacturerBulkDeleteView(generic.BulkDeleteView):
 
 
 class DeviceTypeListView(generic.ObjectListView):
-    queryset = DeviceType.objects.annotate(device_count=count_related(Device, "device_type"))
+    queryset = DeviceType.objects.all()
     filterset = filters.DeviceTypeFilterSet
     filterset_form = forms.DeviceTypeFilterForm
     table = tables.DeviceTypeTable
@@ -881,22 +877,14 @@ class DeviceTypeImportView(generic.ObjectImportView):
 
 
 class DeviceTypeBulkEditView(generic.BulkEditView):
-    queryset = (
-        DeviceType.objects.select_related("manufacturer")
-        .prefetch_related("software_image_files")
-        .annotate(device_count=count_related(Device, "device_type"))
-    )
+    queryset = DeviceType.objects.all()
     filterset = filters.DeviceTypeFilterSet
     table = tables.DeviceTypeTable
     form = forms.DeviceTypeBulkEditForm
 
 
 class DeviceTypeBulkDeleteView(generic.BulkDeleteView):
-    queryset = (
-        DeviceType.objects.select_related("manufacturer")
-        .prefetch_related("software_image_files")
-        .annotate(device_count=count_related(Device, "device_type"))
-    )
+    queryset = DeviceType.objects.all()
     filterset = filters.DeviceTypeFilterSet
     table = tables.DeviceTypeTable
 
@@ -1207,10 +1195,7 @@ class DeviceBayTemplateBulkDeleteView(generic.BulkDeleteView):
 
 
 class PlatformListView(generic.ObjectListView):
-    queryset = Platform.objects.annotate(
-        device_count=count_related(Device, "platform"),
-        virtual_machine_count=count_related(VirtualMachine, "platform"),
-    )
+    queryset = Platform.objects.all()
     filterset = filters.PlatformFilterSet
     table = tables.PlatformTable
 
@@ -2686,7 +2671,7 @@ class InterfaceConnectionsListView(ConnectionsListView):
 
 
 class VirtualChassisListView(generic.ObjectListView):
-    queryset = VirtualChassis.objects.annotate(member_count=count_related(Device, "virtual_chassis"))
+    queryset = VirtualChassis.objects.all()
     table = tables.VirtualChassisTable
     filterset = filters.VirtualChassisFilterSet
     filterset_form = forms.VirtualChassisFilterForm
@@ -2924,7 +2909,7 @@ class VirtualChassisBulkDeleteView(generic.BulkDeleteView):
 
 
 class PowerPanelListView(generic.ObjectListView):
-    queryset = PowerPanel.objects.annotate(power_feed_count=count_related(PowerFeed, "power_panel"))
+    queryset = PowerPanel.objects.all()
     filterset = filters.PowerPanelFilterSet
     filterset_form = forms.PowerPanelFilterForm
     table = tables.PowerPanelTable
@@ -2966,9 +2951,7 @@ class PowerPanelBulkEditView(generic.BulkEditView):
 
 
 class PowerPanelBulkDeleteView(generic.BulkDeleteView):
-    queryset = PowerPanel.objects.select_related("location", "rack_group").annotate(
-        power_feed_count=count_related(PowerFeed, "power_panel")
-    )
+    queryset = PowerPanel.objects.all()
     filterset = filters.PowerPanelFilterSet
     table = tables.PowerPanelTable
 
@@ -3022,11 +3005,7 @@ class DeviceRedundancyGroupUIViewSet(NautobotUIViewSet):
     filterset_class = filters.DeviceRedundancyGroupFilterSet
     filterset_form_class = forms.DeviceRedundancyGroupFilterForm
     form_class = forms.DeviceRedundancyGroupForm
-    queryset = (
-        DeviceRedundancyGroup.objects.select_related("status")
-        .prefetch_related("devices")
-        .annotate(device_count=count_related(Device, "device_redundancy_group"))
-    )
+    queryset = DeviceRedundancyGroup.objects.all()
     serializer_class = serializers.DeviceRedundancyGroupSerializer
     table_class = tables.DeviceRedundancyGroupTable
 
@@ -3048,11 +3027,7 @@ class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
     filterset_class = filters.InterfaceRedundancyGroupFilterSet
     filterset_form_class = forms.InterfaceRedundancyGroupFilterForm
     form_class = forms.InterfaceRedundancyGroupForm
-    queryset = InterfaceRedundancyGroup.objects.select_related("status")
-    queryset = queryset.prefetch_related("interfaces")
-    queryset = queryset.annotate(
-        interface_count=count_related(Interface, "interface_redundancy_groups"),
-    )
+    queryset = InterfaceRedundancyGroup.objects.all()
     serializer_class = serializers.InterfaceRedundancyGroupSerializer
     table_class = tables.InterfaceRedundancyGroupTable
     lookup_field = "pk"
@@ -3102,7 +3077,7 @@ class DeviceFamilyUIViewSet(NautobotUIViewSet):
     filterset_class = filters.DeviceFamilyFilterSet
     form_class = forms.DeviceFamilyForm
     bulk_update_form_class = forms.DeviceFamilyBulkEditForm
-    queryset = DeviceFamily.objects.annotate(device_type_count=count_related(DeviceType, "device_family"))
+    queryset = DeviceFamily.objects.all()
     serializer_class = serializers.DeviceFamilySerializer
     table_class = tables.DeviceFamilyTable
     lookup_field = "pk"
@@ -3145,7 +3120,7 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.SoftwareImageFileFilterForm
     form_class = forms.SoftwareImageFileForm
     bulk_update_form_class = forms.SoftwareImageFileBulkEditForm
-    queryset = SoftwareImageFile.objects.annotate(device_type_count=count_related(DeviceType, "software_image_files"))
+    queryset = SoftwareImageFile.objects.all()
 
     serializer_class = serializers.SoftwareImageFileSerializer
     table_class = tables.SoftwareImageFileTable
@@ -3156,11 +3131,7 @@ class SoftwareVersionUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.SoftwareVersionFilterForm
     form_class = forms.SoftwareVersionForm
     bulk_update_form_class = forms.SoftwareVersionBulkEditForm
-    queryset = SoftwareVersion.objects.annotate(
-        software_image_file_count=count_related(SoftwareImageFile, "software_version"),
-        device_count=count_related(Device, "software_version"),
-        inventory_item_count=count_related(InventoryItem, "software_version"),
-    )
+    queryset = SoftwareVersion.objects.all()
     serializer_class = serializers.SoftwareVersionSerializer
     table_class = tables.SoftwareVersionTable
 
@@ -3203,11 +3174,7 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.ControllerManagedDeviceGroupFilterForm
     form_class = forms.ControllerManagedDeviceGroupForm
     bulk_update_form_class = forms.ControllerManagedDeviceGroupBulkEditForm
-    queryset = (
-        ControllerManagedDeviceGroup.objects.all()
-        .prefetch_related("devices")
-        .annotate(device_count=count_related(Device, "controller_managed_device_group"))
-    )
+    queryset = ControllerManagedDeviceGroup.objects.all()
     serializer_class = serializers.ControllerManagedDeviceGroupSerializer
     table_class = tables.ControllerManagedDeviceGroupTable
     template_name = "dcim/controllermanageddevicegroup_create.html"

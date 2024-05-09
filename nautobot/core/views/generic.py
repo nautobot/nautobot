@@ -14,7 +14,7 @@ from django.core.exceptions import (
 from django.db import IntegrityError, transaction
 from django.db.models import ManyToManyField, ProtectedError
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
@@ -38,7 +38,6 @@ from nautobot.core.forms import (
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.lookup import get_created_and_last_updated_usernames_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
@@ -49,14 +48,14 @@ from nautobot.core.views.mixins import GetReturnURLMixin, ObjectPermissionRequir
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
     check_filter_for_display,
+    common_detail_view_context,
     get_csv_form_fields_from_serializer_class,
     handle_protectederror,
     import_csv_helper,
     prepare_cloned_fields,
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
-from nautobot.extras.models import ContactAssociation, ExportTemplate
-from nautobot.extras.tables import AssociatedContactsTable
+from nautobot.extras.models import ExportTemplate
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
 
 
@@ -111,53 +110,17 @@ class ObjectView(ObjectPermissionRequiredMixin, View):
         Generic GET handler for accessing an object.
         """
         instance = get_object_or_404(self.queryset, **kwargs)
-        # Get the ObjectChange records to populate the advanced tab information
-        created_by, last_updated_by = get_created_and_last_updated_usernames_for_model(instance)
+        content_type = ContentType.objects.get_for_model(self.queryset.model)
+        context = {
+            "object": instance,
+            "content_type": content_type,
+            "verbose_name": self.queryset.model._meta.verbose_name,
+            "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
+            **common_detail_view_context(request, instance),
+            **self.get_extra_context(request, instance),
+        }
 
-        # TODO: this feels inelegant - should the tabs lookup be a dedicated endpoint rather than piggybacking
-        # on the object-retrieve endpoint?
-        # TODO: similar functionality probably needed in NautobotUIViewSet as well, not currently present
-        if request.GET.get("viewconfig", None) == "true":
-            # TODO: we shouldn't be importing a private-named function from another module. Should it be renamed?
-            from nautobot.extras.templatetags.plugins import _get_registered_content
-
-            temp_fake_context = {
-                "object": instance,
-                "request": request,
-                "settings": {},
-                "csrf_token": "",
-                "perms": {},
-            }
-
-            plugin_tabs = _get_registered_content(instance, "detail_tabs", temp_fake_context, return_html=False)
-            resp = {"tabs": plugin_tabs}
-            return JsonResponse(resp)
-        else:
-            content_type = ContentType.objects.get_for_model(self.queryset.model)
-            context = {
-                "object": instance,
-                "content_type": content_type,
-                "verbose_name": self.queryset.model._meta.verbose_name,
-                "verbose_name_plural": self.queryset.model._meta.verbose_name_plural,
-                "created_by": created_by,
-                "last_updated_by": last_updated_by,
-                **self.get_extra_context(request, instance),
-            }
-            if instance.is_contact_associable_model:
-                paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-                associations = (
-                    ContactAssociation.objects.filter(
-                        associated_object_id=instance.id,
-                        associated_object_type=content_type,
-                    )
-                    .restrict(request.user, "view")
-                    .order_by("role__name")
-                )
-                associations_table = AssociatedContactsTable(associations, orderable=False)
-                RequestConfig(request, paginate).configure(associations_table)
-                associations_table.columns.show("pk")
-                context["associated_contacts_table"] = associations_table
-            return render(request, self.get_template_name(), context)
+        return render(request, self.get_template_name(), context)
 
 
 class ObjectListView(ObjectPermissionRequiredMixin, View):

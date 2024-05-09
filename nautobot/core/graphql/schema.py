@@ -41,7 +41,7 @@ from nautobot.dcim.graphql.types import (
     RearPortType,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
-from nautobot.extras.graphql.types import DynamicGroupType, TagType
+from nautobot.extras.graphql.types import ContactAssociationType, DynamicGroupType, StaticGroupType, TagType
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import check_if_key_is_graphql_safe
@@ -67,8 +67,10 @@ registry["graphql_types"]["dcim.powerport"] = PowerPortType
 registry["graphql_types"]["dcim.rack"] = RackType
 registry["graphql_types"]["dcim.rearport"] = RearPortType
 registry["graphql_types"]["dcim.location"] = LocationType
-registry["graphql_types"]["extras.tag"] = TagType
+registry["graphql_types"]["extras.contactassociation"] = ContactAssociationType
 registry["graphql_types"]["extras.dynamicgroup"] = DynamicGroupType
+registry["graphql_types"]["extras.staticgroup"] = StaticGroupType
+registry["graphql_types"]["extras.tag"] = TagType
 registry["graphql_types"]["ipam.ipaddress"] = IPAddressType
 registry["graphql_types"]["ipam.prefix"] = PrefixType
 registry["graphql_types"]["ipam.vlan"] = VLANType
@@ -125,6 +127,11 @@ def extend_schema_type(schema_type):
     # Config Context
     #
     schema_type = extend_schema_type_config_context(schema_type, model)
+
+    #
+    # Global features (contacts, teams, static groups)
+    #
+    schema_type = extend_schema_type_global_features(schema_type, model)
 
     #
     # Relationships
@@ -359,6 +366,29 @@ def extend_schema_type_config_context(schema_type, model):
 
     schema_type._meta.fields["config_context"] = graphene.Field.mounted(generic.GenericScalar())
     setattr(schema_type, "resolve_config_context", resolve_config_context)
+
+    return schema_type
+
+
+def extend_schema_type_global_features(schema_type, model):
+    """
+    Extend schema_type object to have attributes and resolvers for global features (contacts, static groups, etc.).
+    """
+    if getattr(model, "is_contact_associable_model", False):
+
+        def resolve_associated_contacts(self, args):
+            return self.associated_contacts.all()
+
+        setattr(schema_type, "resolve_associated_contacts", resolve_associated_contacts)
+        schema_type._meta.fields["associated_contacts"] = graphene.Field.mounted(graphene.List(ContactAssociationType))
+
+    if getattr(model, "is_static_group_associable_model", False):
+
+        def resolve_static_groups(self, args):
+            return self.static_groups
+
+        setattr(schema_type, "resolve_static_groups", resolve_static_groups)
+        schema_type._meta.fields["static_groups"] = graphene.Field.mounted(graphene.List(StaticGroupType))
 
     return schema_type
 

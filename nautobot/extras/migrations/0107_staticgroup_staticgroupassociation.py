@@ -7,6 +7,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 import nautobot.core.models.fields
+import nautobot.extras.models.groups
 import nautobot.extras.models.mixins
 import nautobot.extras.utils
 
@@ -15,6 +16,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
         ("extras", "0106_populate_default_statuses_and_roles_for_contact_associations"),
+        ("tenancy", "0001_initial"),
     ]
 
     operations = [
@@ -40,8 +42,18 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         limit_choices_to=nautobot.extras.utils.FeatureQuery("static_groups"),
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="static_groups",
+                        related_name="static_groups_set",
                         to="contenttypes.contenttype",
+                    ),
+                ),
+                (
+                    "tenant",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="managed_static_groups",
+                        to="tenancy.tenant",
                     ),
                 ),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
@@ -49,6 +61,9 @@ class Migration(migrations.Migration):
             options={
                 "ordering": ["name"],
             },
+            managers=[
+                ("objects", nautobot.extras.models.groups.StaticGroupManager()),
+            ],
             bases=(
                 models.Model,
                 nautobot.extras.models.mixins.DynamicGroupMixin,

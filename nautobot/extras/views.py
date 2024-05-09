@@ -12,6 +12,7 @@ from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.urls import reverse
+from django.urls.exceptions import NoReverseMatch
 from django.utils import timezone
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
@@ -24,22 +25,28 @@ from nautobot.core.forms import restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.tables import ButtonsColumn
-from nautobot.core.utils.lookup import get_table_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model, get_table_for_model
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.mixins import (
+    GetReturnURLMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
+    ObjectChangeLogViewMixin,
     ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
     ObjectEditViewMixin,
+    ObjectListViewMixin,
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.models import Controller, Device, Interface, Location, Rack
+from nautobot.dcim.models import Controller, Device, Interface, Rack
 from nautobot.dcim.tables import ControllerTable, DeviceTable, InterfaceTable, RackTable
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
+from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.signals import change_context_state
 from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import get_base_template, get_worker_count
@@ -87,6 +94,8 @@ from .models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroup,
+    StaticGroupAssociation,
     Status,
     Tag,
     TaggedItem,
@@ -2059,54 +2068,32 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
             }
 
             if ContentType.objects.get_for_model(Device) in context["content_types"]:
-                devices = instance.devices.select_related(
-                    "status",
-                    "location",
-                    "tenant",
-                    "role",
-                    "rack",
-                    "device_type",
-                ).restrict(request.user, "view")
+                devices = instance.devices.restrict(request.user, "view")
                 device_table = DeviceTable(devices)
                 device_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(device_table)
                 context["device_table"] = device_table
 
             if ContentType.objects.get_for_model(Interface) in context["content_types"]:
-                interfaces = instance.interfaces.select_related(
-                    "device",
-                    "status",
-                    "role",
-                ).restrict(request.user, "view")
+                interfaces = instance.interfaces.restrict(request.user, "view")
                 interface_table = InterfaceTable(interfaces)
                 interface_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(interface_table)
                 context["interface_table"] = interface_table
 
             if ContentType.objects.get_for_model(Controller) in context["content_types"]:
-                controllers = instance.controllers.select_related(
-                    "status",
-                    "location",
-                    "tenant",
-                    "role",
-                ).restrict(request.user, "view")
+                controllers = instance.controllers.restrict(request.user, "view")
                 controller_table = ControllerTable(controllers)
                 controller_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(controller_table)
                 context["controller_table"] = controller_table
 
             if ContentType.objects.get_for_model(IPAddress) in context["content_types"]:
-                ipaddress = (
-                    instance.ip_addresses.select_related("status", "tenant")
-                    .restrict(request.user, "view")
-                    .annotate(
-                        interface_count=count_related(Interface, "ip_addresses"),
-                        interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
-                        vm_interface_count=count_related(VMInterface, "ip_addresses"),
-                        vm_interface_parent_count=count_related(
-                            VirtualMachine, "interfaces__ip_addresses", distinct=True
-                        ),
-                    )
+                ipaddress = instance.ip_addresses.restrict(request.user, "view").annotate(
+                    interface_count=count_related(Interface, "ip_addresses"),
+                    interface_parent_count=count_related(Device, "interfaces__ip_addresses", distinct=True),
+                    vm_interface_count=count_related(VMInterface, "ip_addresses"),
+                    vm_interface_parent_count=count_related(VirtualMachine, "interfaces__ip_addresses", distinct=True),
                 )
                 ipaddress_table = IPAddressTable(ipaddress)
                 ipaddress_table.columns.hide("role")
@@ -2114,63 +2101,31 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 context["ipaddress_table"] = ipaddress_table
 
             if ContentType.objects.get_for_model(Prefix) in context["content_types"]:
-                prefixes = (
-                    instance.prefixes.select_related(
-                        "status",
-                        "tenant",
-                        "vlan",
-                        "namespace",
-                    )
-                    .restrict(request.user, "view")
-                    .annotate(location_count=count_related(Location, "prefixes"))
-                )
+                prefixes = instance.prefixes.restrict(request.user, "view")
                 prefix_table = PrefixTable(prefixes)
                 prefix_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(prefix_table)
                 context["prefix_table"] = prefix_table
             if ContentType.objects.get_for_model(Rack) in context["content_types"]:
-                racks = instance.racks.select_related(
-                    "location",
-                    "status",
-                    "tenant",
-                    "rack_group",
-                ).restrict(request.user, "view")
+                racks = instance.racks.restrict(request.user, "view")
                 rack_table = RackTable(racks)
                 rack_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(rack_table)
                 context["rack_table"] = rack_table
             if ContentType.objects.get_for_model(VirtualMachine) in context["content_types"]:
-                virtual_machines = instance.virtual_machines.select_related(
-                    "cluster",
-                    "role",
-                    "status",
-                    "tenant",
-                ).restrict(request.user, "view")
+                virtual_machines = instance.virtual_machines.restrict(request.user, "view")
                 virtual_machine_table = VirtualMachineTable(virtual_machines)
                 virtual_machine_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(virtual_machine_table)
                 context["virtual_machine_table"] = virtual_machine_table
             if ContentType.objects.get_for_model(VMInterface) in context["content_types"]:
-                vm_interfaces = instance.vm_interfaces.select_related(
-                    "virtual_machine",
-                    "status",
-                    "role",
-                    "vrf",
-                ).restrict(request.user, "view")
+                vm_interfaces = instance.vm_interfaces.restrict(request.user, "view")
                 vminterface_table = VMInterfaceTable(vm_interfaces)
                 vminterface_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(vminterface_table)
                 context["vminterface_table"] = vminterface_table
             if ContentType.objects.get_for_model(VLAN) in context["content_types"]:
-                vlans = (
-                    instance.vlans.annotate(location_count=count_related(Location, "vlans"))
-                    .select_related(
-                        "vlan_group",
-                        "status",
-                        "tenant",
-                    )
-                    .restrict(request.user, "view")
-                )
+                vlans = instance.vlans.restrict(request.user, "view")
                 vlan_table = VLANTable(vlans)
                 vlan_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(vlan_table)
@@ -2370,6 +2325,175 @@ class SecretsGroupBulkDeleteView(generic.BulkDeleteView):
     queryset = SecretsGroup.objects.all()
     filterset = filters.SecretsGroupFilterSet
     table = tables.SecretsGroupTable
+
+
+#
+# Static Groups
+#
+
+
+class StaticGroupUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.StaticGroupBulkEditForm
+    filterset_class = filters.StaticGroupFilterSet
+    filterset_form_class = forms.StaticGroupFilterForm
+    form_class = forms.StaticGroupForm
+    queryset = StaticGroup.objects.all()
+    serializer_class = serializers.StaticGroupSerializer
+    table_class = tables.StaticGroupTable
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            members_table_class = get_table_for_model(instance.model)
+            members_table = members_table_class(instance.members, orderable=False)
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(members_table)
+            members_table.columns.hide("pk")
+            if "actions" in members_table.columns:
+                members_table.columns.hide("actions")
+            context["members_table"] = members_table
+            try:
+                context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
+            except NoReverseMatch:
+                context["members_list_url"] = None
+            context["members_verbose_name_plural"] = instance.model._meta.verbose_name_plural
+
+        return context
+
+
+class StaticGroupAssociationUIViewSet(
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    # TODO anything else?
+):
+    filterset_class = filters.StaticGroupAssociationFilterSet
+    filterset_form_class = forms.StaticGroupAssociationFilterForm
+    queryset = StaticGroupAssociation.objects.all()
+    serializer_class = serializers.StaticGroupAssociationSerializer
+    table_class = tables.StaticGroupAssociationTable
+    action_buttons = ("export",)
+
+
+class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
+    queryset = StaticGroupAssociation.objects.all()
+    form_class = forms.StaticGroupBulkAssignForm
+    template_name = "extras/staticgroup_bulk_assign.html"
+
+    def get_required_permission(self):
+        return get_permission_for_model(self.queryset.model, "add")
+
+    def get(self, request):
+        return redirect(self.get_return_url(request))
+
+    def post(self, request, **kwargs):
+        """
+        Update the static group assignments of the provided `pk_list` (or `_all`) of the given `content_type`.
+
+        Unlike BulkEditView, this takes a single POST rather than two to perform its operation as
+        there's no separate confirmation step involved.
+        """
+        # TODO more error handling - content-type doesn't exist, model_class not found, filterset missing, etc.
+        content_type = ContentType.objects.get(pk=request.POST.get("content_type"))
+        model = content_type.model_class()
+        self.default_return_url = get_route_for_model(model, "list")
+        filterset_class = get_filterset_for_model(model)
+
+        if request.POST.get("_all"):
+            if filterset_class is not None:
+                pk_list = list(filterset_class(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True))
+            else:
+                pk_list = list(model.objects.all().values_list("pk", flat=True))
+        else:
+            pk_list = request.POST.getlist("pk")
+
+        form = self.form_class(model, request.POST)
+        restrict_form_fields(form, request.user)
+
+        if form.is_valid():
+            logger.debug("Form validation was successful")
+            try:
+                with transaction.atomic():
+                    add_to_groups = list(form.cleaned_data["add_to_groups"])
+                    new_group_name = form.cleaned_data["create_and_assign_to_new_group_name"]
+                    if new_group_name:
+                        if not request.user.has_perm("extras.add_staticgroup"):
+                            raise StaticGroup.DoesNotExist
+                        else:
+                            new_group = StaticGroup(name=new_group_name, content_type=content_type)
+                            new_group.validated_save()
+                            # Check permissions
+                            StaticGroup.objects.restrict(request.user, "add").get(pk=new_group.pk)
+
+                            add_to_groups.append(new_group)
+                            msg = "Created static group"
+                            logger.info(f"{msg} {new_group} (PK: {new_group.pk})")
+                            msg = format_html('{} <a href="{}">{}</a>', msg, new_group.get_absolute_url(), new_group)
+                            messages.success(self.request, msg)
+
+                    with deferred_change_logging_for_bulk_operation():
+                        associations = []
+                        for pk in pk_list:
+                            for static_group in add_to_groups:
+                                association, created = StaticGroupAssociation.objects.get_or_create(
+                                    static_group=static_group,
+                                    associated_object_type=content_type,
+                                    associated_object_id=pk,
+                                )
+                                association.validated_save()
+                                associations.append(association)
+                                if created:
+                                    logger.debug("Created %s", association)
+
+                        # Enforce object-level permissions
+                        if self.queryset.filter(pk__in=[assoc.pk for assoc in associations]).count() != len(
+                            associations
+                        ):
+                            raise StaticGroupAssociation.DoesNotExist
+
+                    if associations:
+                        msg = (
+                            f"Added {len(pk_list)} {model._meta.verbose_name_plural} "
+                            f"to {len(add_to_groups)} static group(s)."
+                        )
+                        logger.info(msg)
+                        messages.success(self.request, msg)
+
+                    if form.cleaned_data["remove_from_groups"]:
+                        for static_group in form.cleaned_data["remove_from_groups"]:
+                            (
+                                StaticGroupAssociation.objects.restrict(request.user, "delete")
+                                .filter(
+                                    static_group=static_group,
+                                    associated_object_type=content_type,
+                                    associated_object_id__in=pk_list,
+                                )
+                                .delete()
+                            )
+
+                        msg = (
+                            f"Removed {len(pk_list)} {model._meta.verbose_name_plural} from "
+                            f"{len(form.cleaned_data['remove_from_groups'])} static group(s)."
+                        )
+                        logger.info(msg)
+                        messages.success(self.request, msg)
+            except ValidationError as e:
+                messages.error(self.request, e)
+            except ObjectDoesNotExist:
+                msg = "Static group association failed due to object-level permissions violation"
+                logger.warning(msg)
+                messages.error(self.request, msg)
+
+        else:
+            logger.debug("Form validation failed")
+            messages.error(self.request, form.errors)
+
+        return redirect(self.get_return_url(request))
 
 
 #
