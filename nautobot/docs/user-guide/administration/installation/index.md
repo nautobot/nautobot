@@ -61,7 +61,7 @@ Nautobot uses a relational database to store its data. Both MySQL and PostgreSQL
 --- 2.1.0
     Support for versions of PostgreSQL older than 12.0 was removed.
 
-??? note "Only one database"
+!!! note "Only one database"
     Either PostgreSQL or MySQL must be selected, but not both.
 
 === "MySQL"
