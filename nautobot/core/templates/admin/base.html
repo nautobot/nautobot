@@ -32,6 +32,9 @@
     <link rel="stylesheet" id="base-theme"
           href="{% static 'css/base.css' %}?v{{ settings.VERSION }}"
           onerror="window.location='{% url 'media_failure' %}?filename=css/base.css'">
+    {% if settings.BRANDING_FILEPATHS.css %}
+    <link rel="stylesheet" id="custom-css" href="{% custom_branding_or_static 'css' None %}">
+    {% endif %}
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/nautobot_icon_180x180.png' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/nautobot_icon_32x32.png' %}">
     <link rel="icon" type="image/png" sizes="16x16" href="{% static 'img/nautobot_icon_16x16.png' %}">
@@ -101,7 +104,7 @@
 <div class="container-fluid wrapper" {% if is_popup %}style="padding-bottom: 0px;"{% endif %}>
     {% if "BANNER_TOP"|settings_or_config %}
         <div class="alert alert-info text-center" role="alert">
-            {{ "BANNER_TOP"|settings_or_config|safe }}
+            {{ "BANNER_TOP"|settings_or_config|render_markdown }}
         </div>
     {% endif %}
     {% if settings.MAINTENANCE_MODE %}
@@ -153,7 +156,7 @@
     <div class="push"></div>
     {% if "BANNER_BOTTOM"|settings_or_config %}
         <div class="alert alert-info text-center banner-bottom" role="alert">
-                {{ "BANNER_BOTTOM"|settings_or_config|safe }}
+                {{ "BANNER_BOTTOM"|settings_or_config|render_markdown }}
         </div>
     {% endif %}
 </div>
@@ -189,6 +192,9 @@
 {% endif %}
 {% include 'modals/modal_theme.html' with name='theme'%}
 <script src="{% static 'js/theme.js' %}"></script>
+{% if settings.BRANDING_FILEPATHS.javascript %}
+<script src="{% custom_branding_or_static 'javascript' None %}"></script>
+{% endif %}
 {% block javascript %}{% endblock %}
 </body>
 </html>

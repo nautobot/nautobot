@@ -59,6 +59,14 @@ ALLOWED_URL_SCHEMES = (
     "xmpp",
 )
 
+# Banners to display to users. Markdown and limited HTML are allowed.
+if "NAUTOBOT_BANNER_BOTTOM" in os.environ and os.environ["NAUTOBOT_BANNER_BOTTOM"] != "":
+    BANNER_BOTTOM = os.environ["NAUTOBOT_BANNER_BOTTOM"]
+if "NAUTOBOT_BANNER_LOGIN" in os.environ and os.environ["NAUTOBOT_BANNER_LOGIN"] != "":
+    BANNER_LOGIN = os.environ["NAUTOBOT_BANNER_LOGIN"]
+if "NAUTOBOT_BANNER_TOP" in os.environ and os.environ["NAUTOBOT_BANNER_TOP"] != "":
+    BANNER_TOP = os.environ["NAUTOBOT_BANNER_TOP"]
+
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
@@ -586,15 +594,15 @@ CONSTANCE_CONFIG = {
     ],
     "BANNER_BOTTOM": [
         "",
-        "Custom HTML to display in a banner at the bottom of all pages.",
+        "Custom Markdown or limited HTML to display in a banner at the bottom of all pages.",
     ],
     "BANNER_LOGIN": [
         "",
-        "Custom HTML to display in a banner at the top of the login page.",
+        "Custom Markdown or limited HTML to display in a banner at the top of the login page.",
     ],
     "BANNER_TOP": [
         "",
-        "Custom HTML to display in a banner at the top of all pages.",
+        "Custom Markdown or limited HTML to display in a banner at the top of all pages.",
     ],
     "CHANGELOG_RETENTION": [
         90,
@@ -869,6 +877,8 @@ BRANDING_FILEPATHS = {
     "icon_mask": os.getenv(
         "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None
     ),  # mono-chrome icon used for the mask-icon header
+    "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
+    "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
 }
 
 # Title to use in place of "Nautobot"
