@@ -716,6 +716,11 @@ class BaseFilterSet(django_filters.FilterSet):
         """
         filters = super().get_filters()
 
+        # Remove any filters that may have been auto-generated from private model attributes
+        for filter_name in list(filters.keys()):
+            if filter_name.startswith("_"):
+                del filters[filter_name]
+
         # django-filters has no concept of "abstract" filtersets, so we have to fake it
         if cls._meta.model is not None:
             new_filters = {}
