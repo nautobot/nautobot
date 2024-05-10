@@ -169,7 +169,7 @@ class SavedViewTest(ModelViewTestCase):
     def test_get_object_anonymous(self):
         # Make the request as an unauthenticated user
         self.client.logout()
-        response = self.client.get(self._get_queryset().first().get_absolute_url(), follow=True)
+        response = self.client.get(self._get_queryset().first().get_absolute_url())
         self.assertHttpStatus(response, 200)
         response_body = response.content.decode(response.charset)
         self.assertIn(

@@ -7,6 +7,7 @@ from django.contrib.auth import (
     logout as auth_logout,
     update_session_auth_hash,
 )
+from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError
 from django.http import HttpResponseForbidden, HttpResponseRedirect
@@ -31,6 +32,7 @@ from nautobot.core.views.mixins import (
     ObjectListViewMixin,
 )
 
+from .api.serializers import SavedViewSerializer
 from .filters import SavedViewFilterSet
 from .forms import AdvancedProfileSettingsForm, LoginForm, PasswordChangeForm, TokenForm
 from .models import SavedView, Token
@@ -242,6 +244,7 @@ class SavedViewUIViewSet(
 ):
     queryset = SavedView.objects.all()
     filterset_class = SavedViewFilterSet
+    serializer_class = SavedViewSerializer
     table_class = SavedViewTable
     action_buttons = ("export",)
 
@@ -267,6 +270,8 @@ class SavedViewUIViewSet(
         """
         The detail view for a saved view should the related ObjectListView with saved configurations applied
         """
+        if isinstance(request.user, AnonymousUser):
+            return super().retrieve(request, *args, **kwargs)
         instance = self.get_object()
         list_view_url = reverse(instance.view) + f"?saved_view={instance.pk}"
         return redirect(list_view_url)
@@ -344,7 +349,7 @@ class SavedViewUIViewSet(
         try:
             reverse(view_name)
         except NoReverseMatch:
-            messages.error(f"Invalid view name {view_name} specified.")
+            messages.error(request, f"Invalid view name {view_name} specified.")
             if derived_view_pk:
                 return redirect(self.get_return_url(request, obj=derived_instance))
             else:
