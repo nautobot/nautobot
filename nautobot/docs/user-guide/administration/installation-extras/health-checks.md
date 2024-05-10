@@ -62,7 +62,7 @@ Redis provides the [`redis-cli ping` CLI command](https://redis.io/commands/ping
 
 ## Deployments with systemd
 
-For systemd deployments, the underlying services of PostgreSQL/MySQL and Redis integrate natively with systemd's `sd_notify` API to provide additional status information to the system, and `uwsgi` does as well. We recommend following the standard deployment patterns provided by your OS for PostgreSQL/MySQL and Redis. For the Nautobot service and Celery/Beat services, follow the Nautobot installation documentation at [Setup systemd](services.md#setup-systemd).
+For systemd deployments, the underlying services of PostgreSQL/MySQL and Redis integrate natively with systemd's `sd_notify` API to provide additional status information to the system, and `uwsgi` does as well. We recommend following the standard deployment patterns provided by your OS for PostgreSQL/MySQL and Redis. For the Nautobot service and Celery/Beat services, follow the Nautobot installation documentation at [Setup systemd](../installation/services.md#setup-systemd).
 
 ## Kubernetes Deployments
 

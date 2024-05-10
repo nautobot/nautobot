@@ -1,12 +1,12 @@
 Jinja2==3.1.4
 Markdown==3.5.2
 markdown-data-tables==1.0.0
+markdown-version-annotations==1.0.1
 mkdocs==1.5.3
 mkdocs-gen-files==0.5.0
 mkdocs-macros-plugin==1.0.5
 mkdocs-material==9.5.16
 mkdocs-redirects==1.2.1
 mkdocs-section-index==0.3.8
-mkdocs-version-annotations==1.0.0
 mkdocstrings==0.24.1
 mkdocstrings-python==1.9.0
