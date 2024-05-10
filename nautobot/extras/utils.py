@@ -637,7 +637,8 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
                     ObjectChange.objects.bulk_create(queued_object_changes)
                     queued_object_changes = []
                 oc = obj.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-                oc.user = change_context.user
+                oc.user = change_context.get_user()
+                oc.user_name = oc.user.username
                 oc.request_id = change_context.change_id
                 oc.change_context = change_context.context
                 oc.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
