@@ -166,7 +166,7 @@ class LocationTypeFilterSet(NautobotFilterSet, NameSearchFilterSet):
         fields = ["id", "name", "description", "nestable"]
 
 
-class LocationFilterSet(StatusModelFilterSetMixin, TenancyModelFilterSetMixin, NautobotFilterSet):
+class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -379,11 +379,11 @@ class RackGroupFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet, NameSe
 
 
 class RackFilterSet(
+    NautobotFilterSet,
     LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
-    NautobotFilterSet,
 ):
     q = SearchFilter(
         filter_predicates={
@@ -749,13 +749,13 @@ class PlatformFilterSet(NautobotFilterSet, NameSearchFilterSet):
 
 
 class DeviceFilterSet(
+    NautobotFilterSet,
     DeviceModuleCommonFiltersMixin,
     LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     LocalContextModelFilterSetMixin,
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
-    NautobotFilterSet,
 ):
     q = SearchFilter(
         filter_predicates={
@@ -1001,12 +1001,12 @@ class PowerOutletFilterSet(
 
 
 class InterfaceFilterSet(
+    BaseFilterSet,
     ModularDeviceComponentModelFilterSetMixin,
     CableTerminationModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
-    BaseFilterSet,
 ):
     # Override device and device_id filters from DeviceComponentModelFilterSetMixin to
     # match against any peer virtual chassis members
@@ -1338,7 +1338,7 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         fields = ["id", "domain", "name", "tags"]
 
 
-class CableFilterSet(StatusModelFilterSetMixin, NautobotFilterSet):
+class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     q = SearchFilter(filter_predicates={"label": "icontains"})
     type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
     color = MultiValueCharFilter()
@@ -1482,10 +1482,10 @@ class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
 
 
 class PowerFeedFilterSet(
+    NautobotFilterSet,
     CableTerminationModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
     StatusModelFilterSetMixin,
-    NautobotFilterSet,
 ):
     q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
     location = NaturalKeyOrPKMultipleChoiceFilter(
@@ -1525,7 +1525,7 @@ class PowerFeedFilterSet(
         ]
 
 
-class DeviceRedundancyGroupFilterSet(StatusModelFilterSetMixin, NautobotFilterSet, NameSearchFilterSet):
+class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, NameSearchFilterSet):
     q = SearchFilter(filter_predicates={"name": "icontains", "comments": "icontains"})
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
@@ -1595,7 +1595,7 @@ class InterfaceRedundancyGroupAssociationFilterSet(BaseFilterSet):
         fields = ["id", "interface_redundancy_group", "interface", "priority"]
 
 
-class SoftwareImageFileFilterSet(StatusModelFilterSetMixin, NautobotFilterSet):
+class SoftwareImageFileFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     """Filters for SoftwareImageFile model."""
 
     q = SearchFilter(
@@ -1637,7 +1637,7 @@ class SoftwareImageFileFilterSet(StatusModelFilterSetMixin, NautobotFilterSet):
         fields = "__all__"
 
 
-class SoftwareVersionFilterSet(StatusModelFilterSetMixin, NautobotFilterSet):
+class SoftwareVersionFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     """Filters for SoftwareVersion model."""
 
     q = SearchFilter(
@@ -1724,11 +1724,11 @@ class DeviceTypeToSoftwareImageFileFilterSet(BaseFilterSet):
 
 
 class ControllerFilterSet(
+    NautobotFilterSet,
     LocatableModelFilterSetMixin,
     TenancyModelFilterSetMixin,
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
-    NautobotFilterSet,
 ):
     """Filters for Controller model."""
 
@@ -1812,12 +1812,12 @@ class ControllerManagedDeviceGroupFilterSet(NautobotFilterSet):
 
 
 class ModuleFilterSet(
+    NautobotFilterSet,
     DeviceModuleCommonFiltersMixin,
     LocatableModelFilterSetMixin,
     RoleModelFilterSetMixin,
     StatusModelFilterSetMixin,
     TenancyModelFilterSetMixin,
-    NautobotFilterSet,
 ):
     q = SearchFilter(
         filter_predicates={
@@ -1977,6 +1977,10 @@ class ModuleBayFilterSet(NautobotFilterSet):
     has_parent_module = RelatedMembershipBooleanFilter(
         field_name="parent_module",
         label="Has parent module",
+    )
+    installed_module = django_filters.ModelMultipleChoiceFilter(
+        queryset=Module.objects.all(),
+        label="Installed module (ID)",
     )
     has_installed_module = RelatedMembershipBooleanFilter(
         field_name="installed_module",

@@ -3571,6 +3571,7 @@ class ModuleBayTestCase(FilterTestCases.FilterTestCase):
         ("parent_device", "parent_device__id"),
         ("parent_device", "parent_device__name"),
         ("parent_module", "parent_module__id"),
+        ("installed_module", "installed_module__id"),
         ("position",),
     ]
 
