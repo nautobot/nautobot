@@ -71,7 +71,7 @@ We need to set the `NAUTOBOT_ROOT` environment variable for the `nautobot` user 
 
 Run this command to update `~/.bashrc` for `nautobot` so that anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be set automatically.
 
-```no-highlight title="Add `NAUTOBOT_ROOT` to the `nautobot` user `.bashrc` file"
+```no-highlight title="Add NAUTOBOT_ROOT to the nautobot user .bashrc file"
 echo "export NAUTOBOT_ROOT=/opt/nautobot" | sudo tee -a ~nautobot/.bashrc
 ```
 
@@ -102,10 +102,10 @@ sudo -iu nautobot
         /opt/nautobot
         ```
 
-## Understanding the Virtual Environment
-
 !!! warning
     Unless explicitly stated, all remaining steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
+
+## Prepare the Virtual Environment
 
 ??? abstract "Understanding the Virtual Environment"
 
@@ -152,8 +152,6 @@ sudo -iu nautobot
         ```
 
     This makes sure that the version of Python you're using, as well any dependencies that you install, remain isolated in this environment.
-
-## Prepare the Virtual Environment
 
 Before we install anything into the virtualenv, we want to make sure that Pip is running the latest version.
 
@@ -205,10 +203,6 @@ Great! We have `NAUTOBOT_ROOT` ready for use by the `nautobot` user, so let's pr
     pip3 install --no-binary=pyuwsgi "nautobot[mysql]"
     ```
 
-    !!! note "MySQL Unicode Settings"
-
-        If you are using MySQL as your database backend, and you want to enable support for Unicode emojis, please make sure to add `"OPTIONS": {"charset": "utf8mb4"}` to your `DATABASES` setting (upcoming). Please see the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#mysql-unicode-settings) for more information.
-
 ## Verify your Nautobot Installation
 
 You should now have a fancy `nautobot-server` command in your environment. This will be your gateway to all things Nautobot! Run it to confirm the installed version of `nautobot`:
@@ -254,18 +248,25 @@ Your `nautobot_config.py` provides sane defaults for all of the configuration se
 Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../configuration/required-settings.md) to tweak your required settings. At a minimum, you'll need to update the following settings:
 
 * [`ALLOWED_HOSTS`](../configuration/required-settings.md#allowed_hosts): You must set this value. This can be set to `["*"]` for a quick start, but this value is not suitable for production deployment.
-* [`DATABASES`](../configuration/required-settings.md#databases): Database connection parameters. If you installed your database server on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here. If you are using MySQL, you'll also need to update the `ENGINE` field, changing the default database driver suffix from `django.db.backends.postgresql` to `django.db.backends.mysql`.
-* **Redis settings**: Redis configuration requires multiple settings, if different from the defaults. If you installed Redis on the same system as Nautobot, you do not need to change these settings.
+* [`DATABASES`](../configuration/required-settings.md#databases): Database connection parameters, see below.
+* [Redis settings](../configuration/required-settings.md#redis-settings): Redis configuration requires multiple settings, if different from the defaults. If you installed Redis on the same system as Nautobot, you most likely do not need to change these settings.
 
-!!! important
-    You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
+=== "PostgreSQL"
+
+    - At a minimum, you'll need to update the `"USER"` and `"PASSWORD"` fields under `DATABASES`.
+
+=== "MySQL"
+
+    - At a minimum, you'll need to update the `"USER"` and `"PASSWORD"` fields under `DATABASES`.
+    - Additionally, since Nautobot's configuration defaults to assuming PostgreSQL, you must change the `"ENGINE"` setting from `django.db.backends.postgresql` to `django.db.backends.mysql`.
+    - If you want to enable support for Unicode text, including emojis, please make sure to add `"OPTIONS": {"charset": "utf8mb4"}`. Refer to the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#mysql-unicode-settings) for more information.
 
 !!! warning
-    If you are using MySQL as your database backend, you **must also update** the database `ENGINE` setting to `django.db.backends.mysql`.
+    You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
 
 Save your changes to your `nautobot_config.py` and then proceed to the next step.
 
-## Optional Settings
+### Optional Settings
 
 All Python packages required by Nautobot will be installed automatically when running `pip3 install nautobot`.
 
@@ -277,7 +278,7 @@ If you decide to use any [Nautobot Apps](../../../apps/index.md), they should be
 
     We will cover two examples of common optional settings below.
 
-    ### Configuring NAPALM
+    <h4>NAPALM</h4>
 
     Nautobot provides built-in support for the [NAPALM automation](https://github.com/napalm-automation/napalm/) library, which allows Nautobot to fetch live data from devices and return it to a requester via its REST API. The [`NAPALM_USERNAME`](../configuration/optional-settings.md#napalm_username) and [`NAPALM_PASSWORD`](../configuration/optional-settings.md#napalm_password) configuration parameters define the credentials to be used when connecting to a device.
 
@@ -287,7 +288,7 @@ If you decide to use any [Nautobot Apps](../../../apps/index.md), they should be
     echo "nautobot[napalm]" >> $NAUTOBOT_ROOT/local_requirements.txt
     ```
 
-    ### Remote File Storage
+    <h4>Remote File Storage</h4>
 
     By default, Nautobot will use the local filesystem to store uploaded files. To use a remote filesystem, install the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) library and configure your [desired storage backend](../configuration/optional-settings.md#storage_backend) in `nautobot_config.py`.
 
@@ -319,9 +320,9 @@ nautobot-server createsuperuser
 
     ```no title="Example output with admin user created"
     Username: admin
-    Email address:  
-    Password: 
-    Password (again): 
+    Email address:
+    Password:
+    Password (again):
     Superuser created successfully.
     ```
 

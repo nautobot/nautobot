@@ -230,8 +230,8 @@ WantedBy=multi-user.target
 
 The Celery Beat scheduler enables the periodic execution of and scheduling of background tasks. It is required to take advantage of the [job scheduling and approval](../../platform-functionality/jobs/job-scheduling-and-approvals.md) features.
 
-!!! info
-    You should have a single instance of scheduler running. Having more than one scheduler will cause multiple task executions.
+!!! warning
+    You should only have a single instance of the scheduler running. Having more than one scheduler will cause multiple task executions.
 
 !!! warning
     It's important that the [`TIME_ZONE`](../configuration/optional-settings.md#time_zone) setting on your Nautobot servers and Celery Beat server match to prevent scheduled jobs from running at the wrong time. See the [time zones](../configuration/time-zones.md) documentation for more information.

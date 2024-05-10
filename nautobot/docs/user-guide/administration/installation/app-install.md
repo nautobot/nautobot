@@ -15,7 +15,6 @@ Download and install the app package per its installation instructions. Apps pub
 pip3 install <package>
 ```
 
-
 ## Enable the App
 
 In your `nautobot_config.py`, add the app's name to the `PLUGINS` list:

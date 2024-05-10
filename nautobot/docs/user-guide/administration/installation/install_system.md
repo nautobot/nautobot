@@ -40,11 +40,17 @@ You must select either MySQL (MariaDB is **not** supported) or PostgreSQL. Postg
 
 Please follow the steps for your selected database backend below.
 
+<!--
+We intentionally use explicit <h3> tags inside the tabbed block below rather than ### markdown.
+This is done so that these subheads don't get included in the page table of contents, where it would be confusing
+to have multiple "Install PostgreSQL", "Create a PostgreSQL Database", etc. entries.
+-->
+
 === "Ubuntu/Debian"
 
     === "PostgreSQL"
 
-        **Install PostgreSQL**
+        <h3>Install PostgreSQL</h3>
 
         This will install the PostgreSQL database server and client.
 
@@ -52,7 +58,7 @@ Please follow the steps for your selected database backend below.
         sudo apt install -y postgresql
         ```
 
-        **Create a PostgreSQL Database**
+        <h3>Create a PostgreSQL Database</h3>
 
         At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This is done with the following commands.
 
@@ -96,7 +102,7 @@ Please follow the steps for your selected database backend below.
             nautobot=# \q
             ```
 
-        **Verify PostgreSQL Service Status**
+        <h3>Verify PostgreSQL Service Status</h3>
 
         You can verify that authentication works issuing the following command and providing the configured password. (Replace `localhost` with your database server if using a remote database.)
 
@@ -122,7 +128,7 @@ Please follow the steps for your selected database backend below.
 
     === "MySQL"
 
-        **Install MySQL**
+        <h3>Install MySQL</h3>
 
         This will install the MySQL database server and client. Additionally, MySQL requires that the MySQL development libraries are installed so that we may compile the Python `mysqlclient` library during the Nautobot installation steps.
 
@@ -130,7 +136,7 @@ Please follow the steps for your selected database backend below.
         sudo apt install -y libmysqlclient-dev mysql-server
         ```
 
-        **Create a MySQL Database**
+        <h3>Create a MySQL Database</h3>
 
         At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This is done with the following commands.
 
@@ -179,7 +185,7 @@ Please follow the steps for your selected database backend below.
             Bye
             ```
 
-        **Verify MySQL Service Status**
+        <h3>Verify MySQL Service Status</h3>
 
         You can verify that authentication works issuing the following command and providing the configured password.
 
@@ -248,7 +254,7 @@ Please follow the steps for your selected database backend below.
 
     === "PostgreSQL"
 
-        **Install PostgreSQL**
+        <h3>Install PostgreSQL</h3>
 
         This will install the PostgreSQL database server and client.
 
@@ -256,7 +262,7 @@ Please follow the steps for your selected database backend below.
         sudo dnf install -y postgresql-server
         ```
 
-        **Initialize PostgreSQL**
+        <h3>Initialize PostgreSQL</h3>
 
         CentOS/RHEL requires a manual step to generate the initial configurations required by PostgreSQL.
 
@@ -264,7 +270,7 @@ Please follow the steps for your selected database backend below.
         sudo postgresql-setup --initdb
         ```
 
-        **Configure Authentication**
+        <h3>Configure Authentication</h3>
 
         CentOS/RHEL configures PostgreSQL to use [`ident`](https://www.postgresql.org/docs/current/auth-ident.html) host-based authentication by default. Because Nautobot will need to authenticate using a username and password, we must update `pg_hba.conf` to support [`md5` password](https://www.postgresql.org/docs/current/auth-password.html) authentication.
 
@@ -288,7 +294,7 @@ Please follow the steps for your selected database backend below.
         host    all             all             ::1/128                 md5
         ```
 
-        **Start PostgreSQL**
+        <h3>Start PostgreSQL</h3>
 
         Start the service and enable it to run at system startup:
 
@@ -296,7 +302,7 @@ Please follow the steps for your selected database backend below.
         sudo systemctl enable --now postgresql
         ```
 
-        **Create a PostgreSQL Database**
+        <h3>Create a PostgreSQL Database</h3>
 
         At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This
         is done with the following commands.
@@ -320,7 +326,7 @@ Please follow the steps for your selected database backend below.
         ```
 
         ??? example "Example Database creation output."
-        
+
             ```no-highlight title="Example DB creation output"
             postgres=# CREATE DATABASE nautobot;
             CREATE DATABASE
@@ -335,7 +341,7 @@ Please follow the steps for your selected database backend below.
             nautobot=# \q
             ```
 
-        **Verify PostgreSQL Service Status**
+        <h3>Verify PostgreSQL Service Status</h3>
 
         You can verify that authentication works issuing the following command and providing the configured password. (Replace `localhost` with your database server if using a remote database.)
 
@@ -359,7 +365,7 @@ Please follow the steps for your selected database backend below.
 
     === "MySQL"
 
-        **Install MySQL**
+        <h3>Install MySQL</h3>
 
         This will install the MySQL database server and client. Additionally, MySQL requires that `gcc` and the MySQL development libraries are installed so that we may compile the Python `mysqlclient` library during the Nautobot installation steps.
 
@@ -367,7 +373,7 @@ Please follow the steps for your selected database backend below.
         sudo dnf install -y gcc mysql-server mysql-devel
         ```
 
-        **Start MySQL**
+        <h3>Start MySQL</h3>
 
         Start the service and enable it to run at system startup:
 
@@ -375,7 +381,7 @@ Please follow the steps for your selected database backend below.
         sudo systemctl enable --now mysql
         ```
 
-        **Create a MySQL Database**
+        <h3>Create a MySQL Database</h3>
 
         At a minimum, we need to create a database for Nautobot and assign it a username and password for authentication. This is done with the following commands.
 
@@ -388,8 +394,6 @@ Please follow the steps for your selected database backend below.
         ```no-highlight title="Connect to MySQL"
         sudo -u root mysql
         ```
-
-        **Create the MySQL Database**
 
         ```no-highlight title="Create Nautobot DB"
         CREATE DATABASE nautobot;
@@ -426,7 +430,7 @@ Please follow the steps for your selected database backend below.
             Bye
             ```
 
-        **Verify MySQL Service Status**
+        <h3>Verify MySQL Service Status</h3>
 
         You can verify that authentication works issuing the following command and providing the configured password.
 
@@ -486,7 +490,8 @@ Please follow the steps for your selected database backend below.
 
 ### Troubleshooting
 
-**django.db.utils.NotSupportedError: conversion between UTF8 and SQL_ASCII is not supported**
+<!-- markdownlint-disable-next-line no-inline-html -->
+<h4>django.db.utils.NotSupportedError: conversion between UTF8 and SQL_ASCII is not supported</h4>
 
 Django requires the database encoding for PostgreSQL databases to be set to UTF-8. If you receive the error `django.db.utils.NotSupportedError: conversion between UTF8 and SQL_ASCII is not supported`, you will need to drop and re-create the `nautobot` database with the correct encoding.
 
@@ -508,7 +513,7 @@ Django requires the database encoding for PostgreSQL databases to be set to UTF-
 
 === "RHEL8"
 
-    **Start Redis**
+    <h3>Start Redis</h3>
 
     Start the service and enable it to run at system startup:
 
@@ -516,7 +521,7 @@ Django requires the database encoding for PostgreSQL databases to be set to UTF-
     sudo systemctl enable --now redis
     ```
 
-    **Verify Redis Service Status**
+    <h3>Verify Redis Service Status</h3>
 
     Use the `redis-cli` utility to ensure the Redis service is functional:
 
