@@ -69,7 +69,7 @@ ALLOWED_URL_SCHEMES = [
     "xmpp",
 ]
 
-# Banners to display to users. HTML is allowed.
+# Banners to display to users. Markdown and limited HTML are allowed.
 if "NAUTOBOT_BANNER_BOTTOM" in os.environ and os.environ["NAUTOBOT_BANNER_BOTTOM"] != "":
     BANNER_BOTTOM = os.environ["NAUTOBOT_BANNER_BOTTOM"]
 if "NAUTOBOT_BANNER_LOGIN" in os.environ and os.environ["NAUTOBOT_BANNER_LOGIN"] != "":
@@ -686,15 +686,15 @@ CONSTANCE_CONFIG = {
     ),
     "BANNER_BOTTOM": ConstanceConfigItem(
         default="",
-        help_text="Custom HTML to display in a banner at the bottom of all pages.",
+        help_text="Custom Markdown or limited HTML to display in a banner at the bottom of all pages.",
     ),
     "BANNER_LOGIN": ConstanceConfigItem(
         default="",
-        help_text="Custom HTML to display in a banner at the top of the login page.",
+        help_text="Custom Markdown or limited HTML to display in a banner at the top of the login page.",
     ),
     "BANNER_TOP": ConstanceConfigItem(
         default="",
-        help_text="Custom HTML to display in a banner at the top of all pages.",
+        help_text="Custom Markdown or limited HTML to display in a banner at the top of all pages.",
     ),
     "CHANGELOG_RETENTION": ConstanceConfigItem(
         default=90,
@@ -972,6 +972,8 @@ BRANDING_FILEPATHS = {
         "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
     ),  # bullet image used for various view headers
     "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None),  # bullet image used for nav menu headers
+    "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
+    "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
 }
 
 # Title to use in place of "Nautobot"
