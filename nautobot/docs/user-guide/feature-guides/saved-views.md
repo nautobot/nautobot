@@ -74,7 +74,7 @@ Another way is from the "Saved View" dropdown button on any given model list vie
 
 ### How to clear configurations on a Saved View
 
-If the user is currently viewing a saved view, a "Clear View" button will be at the bottom of the dropdown menu. A modal should appear when the button is clicked, prompting the user to confirm the action 
+If the user is currently viewing a saved view, a "Clear View" button will be at the bottom of the dropdown menu. A modal should appear when the button is clicked, prompting the user to confirm the action.
 
 ![Clear View Button](./images/saved-views/clear-view-button.png)
 
