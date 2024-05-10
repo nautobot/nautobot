@@ -173,6 +173,8 @@ watchdog = "~4.0.0"
 mkdocs = "~1.5.3"
 # Embedding YAML files into Markdown documents as tables
 markdown-data-tables = "~1.0.0"
+# Render custom markdown for version added/changed/remove notes
+markdown-version-annotations = "~1.0.1"
 # Automatically generate some files as part of mkdocs build
 mkdocs-gen-files = "~0.5.0"
 # Allow Markdown files to include other files
@@ -186,8 +188,6 @@ mkdocs-material = "~9.5.16"
 mkdocs-redirects = "~1.2.1"
 # Automatically handle index pages for docs sections
 mkdocs-section-index = "~0.3.8"
-# Render custom markdown for version added/changed/remove notes
-mkdocs-version-annotations = "~1.0.0"
 # Automatic documentation from sources, for MkDocs
 mkdocstrings = "~0.24.1"
 # Python-specific extension to mkdocstrings
