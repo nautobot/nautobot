@@ -1631,7 +1631,7 @@ class Module(PrimaryModel):
         """Walk up parent chain to find the Device that this Module is installed in, if one exists."""
         if self.parent_module_bay is None:
             return None
-        return self.parent_module_bay.device
+        return self.parent_module_bay.parent
 
     def clean(self):
         super().clean()

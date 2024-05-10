@@ -141,7 +141,6 @@ class ModularComponentModel(ComponentModel):
     @property
     def parent(self):
         """Device that this component belongs to, walking up module inheritance if necessary."""
-        # TODO 3.0: We should rename this to parent_device and parent should return device or module
         return self.module.device if self.module else self.device
 
     def to_objectchange(self, action, **kwargs):
@@ -1195,14 +1194,8 @@ class ModuleBay(PrimaryModel):
 
     @property
     def parent(self):
-        return self.parent_device if self.parent_device else self.parent_module
-
-    @property
-    def device(self):
         """Walk up parent chain to find the Device that this ModuleBay is installed in, if one exists."""
-        if self.parent_device:
-            return self.parent_device
-        return self.parent_module.device
+        return self.parent_module.device if self.parent_module else self.parent_device
 
     def __str__(self):
         return f"{self.parent} ({self.position})"
