@@ -16,9 +16,13 @@ Note that there is a "Saved Views" dropdown button in the group of buttons on th
 
 ![Location List View](./images/saved-views/default-location-list-view.png)
 
-Configure the list view.
+Configure the list view by clicking on the "Filter" and "Configure" buttons on the right hand side.
+
+![Filter Button](./images/saved-views/filter-button.png)
 
 ![Applying Filters to Location List View](./images/saved-views/filter-application-to-locations.png)
+
+![Configure Button](./images/saved-views/configure-button.png)
 
 ![Configure Table Columns to Location List View](./images/saved-views/config-table-columns-to-locations.png)
 
@@ -70,8 +74,12 @@ Another way is from the "Saved View" dropdown button on any given model list vie
 
 ### How to clear configurations on a Saved View
 
-If the user is currently viewing a saved view, a "Clear View" button will be at the bottom of the dropdown menu. This button will clear the configurations of the saved view and the saved view will have the same configuration as the default model list view.
+If the user is currently viewing a saved view, a "Clear View" button will be at the bottom of the dropdown menu. A modal should appear when the button is clicked, prompting the user to confirm the action 
 
 ![Clear View Button](./images/saved-views/clear-view-button.png)
+
+![Clear View Modal](./images/saved-views/clear-view-modal.png)
+
+Clicking the confirm button will clear the saved and unsaved configurations of the saved view and the saved view will have the same configuration as the default model list view.
 
 ![Cleared Saved View](./images/saved-views/cleared-view.png)
