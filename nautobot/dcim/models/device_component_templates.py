@@ -67,6 +67,7 @@ class ComponentTemplateModel(
     _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True)
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    is_saved_view_model = False
 
     class Meta:
         abstract = True
