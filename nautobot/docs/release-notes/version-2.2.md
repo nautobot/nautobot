@@ -83,6 +83,11 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#4986](https://github.com/nautobot/nautobot/issues/4986) - Fixed inconsistent use of super causing `active_tab` context to be missing from several views.
 - [#5644](https://github.com/nautobot/nautobot/issues/5644) - Made the uniqueness constraints between the ContactAssociation model and the related API serializer consistent.
 - [#5684](https://github.com/nautobot/nautobot/issues/5684) - Fixed standard CSV export when using export templates.
+- [#5689](https://github.com/nautobot/nautobot/issues/5689) - Fixed change logging for bulk delete operations so that user is included in the log.
+
+### Documentation
+
+- [#5661](https://github.com/nautobot/nautobot/issues/5661) - Updated documentation to organize installation instructions and provide easier to use functions from mkdocs.
 
 ### Housekeeping
 
