@@ -159,7 +159,7 @@ class SavedViewTest(ModelViewTestCase):
         if action == "detail":
             url = reverse(view) + f"?saved_view={pk}"
         elif action == "edit":
-            url = saved_view.get_absolute_url() + "edit/" + f"?saved_view={pk}"
+            url = saved_view.get_absolute_url() + "edit/"
         else:
             url = reverse("users:savedview_add")
 
@@ -188,7 +188,7 @@ class SavedViewTest(ModelViewTestCase):
             response_body = response.content.decode(response.charset)
             self.assertNotIn("/login/", response_body, msg=response_body)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_object_with_permission(self):
         instance = self._get_queryset().first()
         view = instance.view
@@ -240,16 +240,9 @@ class SavedViewTest(ModelViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_update_saved_view(self):
         instance = self._get_queryset().first()
-        view = instance.view
-        app_label = view.split(":")[0]
-        model_name = view.split(":")[1].split("_")[0]
-        # Add model-level permission
-        self.add_permissions("users.view_savedview")
         self.add_permissions("users.change_savedview")
-        self.add_permissions(f"{app_label}.view_{model_name}")
-
-        update_query_strings = ["&per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
-        update_url = self.get_view_url_for_saved_view(instance, "edit") + "".join(update_query_strings)
+        update_query_strings = ["per_page=12", "&status=active", "&name=new_name_filter", "&sort=name"]
+        update_url = self.get_view_url_for_saved_view(instance, "edit") + "?" + "".join(update_query_strings)
         response = self.client.get(update_url)
         self.assertHttpStatus(response, 302)
         instance.refresh_from_db()
@@ -279,14 +272,7 @@ class SavedViewTest(ModelViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_saved_view(self):
         instance = self._get_queryset().first()
-        view = instance.view
-        app_label = view.split(":")[0]
-        model_name = view.split(":")[1].split("_")[0]
-        # Add model-level permission
-        self.add_permissions("users.view_savedview")
         self.add_permissions("users.add_savedview")
-        self.add_permissions(f"{app_label}.view_{model_name}")
-
         create_query_strings = [
             f"saved_view={instance.pk}",
             "&per_page=12",
