@@ -1,0 +1,2 @@
+Added support in `BRANDING_FILEPATHS` configuration to specify a custom `css` and/or `javascript` file to be added to Nautobot page content.
+Added Markdown support to the `BANNER_TOP`, `BANNER_BOTTOM`, and `BANNER_LOGIN` configuration settings.
