@@ -188,7 +188,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "sort",  # table sorting
         "saved_view",  # saved_view indicator pk or composite keys
         "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
-        "all_filters_removed",  # indicator for if there is all filter is removed from the saved view
+        "all_filters_removed",  # indicator for if all filters have been removed from the saved view
     )
 
     def get_filter_params(self, request):

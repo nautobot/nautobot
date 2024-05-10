@@ -286,7 +286,7 @@ def view_changes_not_saved(request, view, current_saved_view):
         return True
     query_dict = request.GET.dict()
 
-    if query_dict.get("table_changes_pending", None) or query_dict.get("all_filters_removed", None):
+    if "table_changes_pending" in query_dict or "all_filters_removed" in query_dict:
         return True
     per_page = int(query_dict.get("per_page", 0))
     if per_page and per_page != current_saved_view.config.get("pagination_count"):

@@ -1,13 +1,30 @@
 from datetime import timezone
 
 from django.contrib.auth import get_user_model
+from django.urls import reverse
 import factory
 
 from nautobot.core.factory import BaseModelFactory, NautobotBoolIterator, random_instance, UniqueFaker
-from nautobot.users.constants import VIEW_NAMES
 from nautobot.users.models import SavedView
 
 User = get_user_model()
+
+
+def populate_saved_view_view_name():
+    from nautobot.extras.utils import FeatureQuery
+
+    VIEW_NAMES = []
+    # Append all saved view supported view names
+    for choice in FeatureQuery("saved_views").get_choices():
+        app_label, model = choice[0].split(".")
+        # Relevant list view name only
+        if app_label in ["circuits", "dcim", "ipam", "extras", "tenancy", "virtualization"]:
+            list_view_name = f"{app_label}:{model}_list"
+            # make sure that list view exists
+            reverse(list_view_name)
+            VIEW_NAMES.append(list_view_name)
+
+    return VIEW_NAMES
 
 
 class UserFactory(BaseModelFactory):
@@ -43,6 +60,6 @@ class SavedViewFactory(BaseModelFactory):
     owner = random_instance(User, allow_null=False)
     view = factory.Faker(
         "random_element",
-        elements=VIEW_NAMES,
+        elements=populate_saved_view_view_name(),
     )
     config = factory.Faker("pydict")
