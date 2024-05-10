@@ -270,8 +270,8 @@ class SavedViewTest(ModelViewTestCase):
         }
         instance.validated_save()
         self.add_permissions("users.change_savedview")
-        update_url = reverse("users:savedview_clear", kwargs={"pk": instance.pk})
-        response = self.client.get(update_url)
+        clear_url = reverse("users:savedview_clear", kwargs={"pk": instance.pk})
+        response = self.client.get(clear_url)
         self.assertHttpStatus(response, 302)
         instance.refresh_from_db()
         self.assertEqual(instance.config, {})

@@ -732,6 +732,11 @@ def saved_view_modal(
     }
 
 
+@register.inclusion_tag("utilities/templatetags/clear_view_modal.html")
+def clear_view_modal(saved_view):
+    return {"saved_view": saved_view}
+
+
 @register.inclusion_tag("utilities/templatetags/modal_form_as_dialog.html")
 def modal_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type=None):
     """Generate a form in a modal view.
