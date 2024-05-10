@@ -1,11 +1,9 @@
 from datetime import timezone
 
 from django.contrib.auth import get_user_model
-from django.urls import NoReverseMatch, reverse
 import factory
 
 from nautobot.core.factory import BaseModelFactory, NautobotBoolIterator, random_instance, UniqueFaker
-from nautobot.extras.utils import FeatureQuery
 from nautobot.users.constants import VIEW_NAMES
 from nautobot.users.models import SavedView
 
