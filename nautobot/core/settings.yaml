@@ -1170,7 +1170,7 @@ properties:
       !!! note
           The Docker container normally attempts to run migrations on startup; however, if the database is
           in a read-only state the Docker container will fail to start. Setting the environment variable
-          [`NAUTOBOT_DOCKER_SKIP_INIT`](../installation/docker.md#nautobot_docker_skip_init) to `true`
+          [`NAUTOBOT_DOCKER_SKIP_INIT`](../installation-extras/docker.md#nautobot_docker_skip_init) to `true`
           will prevent the migrations from occurring.
 
       !!! note
