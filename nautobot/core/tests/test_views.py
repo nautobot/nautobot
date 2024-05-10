@@ -99,6 +99,39 @@ class HomeViewTestCase(TestCase):
         response_content = response.content.decode(response.charset).replace("\n", "")
         self.assertNotRegex(response_content, footer_hostname_version_pattern)
 
+    def test_banners_markdown(self):
+        url = reverse("home")
+        with override_settings(
+            BANNER_TOP="# Hello world",
+            BANNER_BOTTOM="[info](https://nautobot.com)",
+        ):
+            response = self.client.get(url)
+        self.assertInHTML("<h1>Hello world</h1>", response.content.decode(response.charset))
+        self.assertInHTML(
+            '<a href="https://nautobot.com" rel="noopener noreferrer">info</a>',
+            response.content.decode(response.charset),
+        )
+
+        with override_settings(BANNER_LOGIN="_Welcome to Nautobot!_"):
+            self.client.logout()
+            response = self.client.get(reverse("login"))
+        self.assertInHTML("<em>Welcome to Nautobot!</em>", response.content.decode(response.charset))
+
+    def test_banners_no_xss(self):
+        url = reverse("home")
+        with override_settings(
+            BANNER_TOP='<script>alert("Hello from above!");</script>',
+            BANNER_BOTTOM='<script>alert("Hello from below!");</script>',
+        ):
+            response = self.client.get(url)
+        self.assertNotIn("Hello from above", response.content.decode(response.charset))
+        self.assertNotIn("Hello from below", response.content.decode(response.charset))
+
+        with override_settings(BANNER_LOGIN='<script>alert("Welcome to Nautobot!");</script>'):
+            self.client.logout()
+            response = self.client.get(reverse("login"))
+        self.assertNotIn("Welcome to Nautobot!", response.content.decode(response.charset))
+
 
 @override_settings(BRANDING_TITLE="Nautobot")
 class SearchFieldsTestCase(TestCase):
