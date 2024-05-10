@@ -18,6 +18,7 @@ from django.utils.encoding import iri_to_uri
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
+from rest_framework.decorators import action
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.utils.config import get_settings_or_config
@@ -406,9 +407,8 @@ class SavedViewUIViewSet(
             messages.error(request, e)
             return redirect(self.get_return_url(request))
 
-
-class SavedViewClearView(GenericView):
-    def get(self, request, pk):
+    @action(detail=True, name="Clear", methods=["get"], url_path="clear", url_name="clear")
+    def clear(self, request, pk):
         try:
             sv = SavedView.objects.restrict(request.user, "view").get(pk=pk)
             sv.config = {}
