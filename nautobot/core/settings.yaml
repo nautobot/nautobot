@@ -128,24 +128,40 @@ properties:
     type: "array"
   BANNER_BOTTOM:
     default: ""
-    description: "Custom content to be displayed in a banner at the bottom of the page. HTML is allowed."
+    description: >-
+      Custom content to be displayed in a banner at the bottom of all Nautobot pages.
+    details: |-
+      +/- 2.2.4
+          Markdown formatting is supported within this message, as well as
+          [a limited subset of HTML](../../platform-functionality/template-filters.md#render_markdown).
     environment_variable: "NAUTOBOT_BANNER_BOTTOM"
     is_constance_config: true
     type: "string"
   BANNER_LOGIN:
     default: ""
-    description: "Custom content to be displayed on the login page above the login form. HTML is allowed."
+    description: >-
+      Custom content to be displayed in a banner on the login page above the login form.
+    details: |-
+      +/- 2.2.4
+          Markdown formatting is supported within this message, as well as
+          [a limited subset of HTML](../../platform-functionality/template-filters.md#render_markdown).
     environment_variable: "NAUTOBOT_BANNER_LOGIN"
     is_constance_config: true
     type: "string"
   BANNER_TOP:
     default: ""
-    description: "Custom content to be displayed in a banner at the top of the page. HTML is allowed."
+    description: >-
+      Custom content to be displayed in a banner at the top of all Nautobot pages.
+    details: |-
+      +/- 2.2.4
+          Markdown formatting is supported within this message, as well as
+          [a limited subset of HTML](../../platform-functionality/template-filters.md#render_markdown).
     environment_variable: "NAUTOBOT_BANNER_TOP"
     is_constance_config: true
     type: "string"
   BRANDING_FILEPATHS:
     default:
+      css: null
       favicon: null
       header_bullet: null
       icon_16: null
@@ -153,57 +169,76 @@ properties:
       icon_180: null
       icon_192: null
       icon_mask: null
+      javascript: null
       logo: null
       nav_bullet: null
     description: >-
-      A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate image assets used for
-      custom branding. Each of these assets takes the place of the corresponding stock Nautobot asset.
+      A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate assets used for
+      custom branding of your Nautobot instance.
+      With the exception of `css` and `javascript`, which provide the option to add an _additional_ file to Nautobot
+      page content, each of the other assets takes the place of the corresponding stock Nautobot asset.
       This allows for, for instance, providing your own navbar logo and favicon.
-      If a custom image asset is not provided for any of the above options, the stock Nautobot asset is used.
+      If a custom asset is not provided for any of the above options, the stock Nautobot asset is used.
+    details: |-
+      +++ 2.1.0
+          The `header_bullet` and `nav_bullet` assets were added as options.
+
+      +++ 2.2.4
+          The `css` and `javascript` assets were added as options.
     properties:
+      css:
+        "$ref": "#/definitions/relative_path"
+        default: null
+        description: "Custom global CSS file"
+        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_CSS"
       favicon:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "Browser favicon"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_FAVICON"
       header_bullet:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "Bullet image used for various view headers"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET"
       icon_16:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "16x16px icon"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_16"
       icon_180:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "180x180px icon - used for the apple-touch-icon header"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_180"
       icon_192:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "192x192px icon"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_192"
       icon_32:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "32x32px icon"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_32"
       icon_mask:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "Mono-chrome icon used for the mask-icon header"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK"
+      javascript:
+        "$ref": "#/definitions/relative_path"
+        default: null
+        description: "Custom global JavaScript file"
+        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT"
       logo:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "Navbar logo"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_LOGO"
       nav_bullet:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "Bullet image used for nav menu headers"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET"
     type: "object"
