@@ -2196,7 +2196,7 @@ query {
         self.assertEqual(interface_names, ["Int2", "Int1"])
 
         result_2 = self.execute_query(query_all)
-        self.assertEqual(len(result_2.data.get("interfaces", [])), 6)
+        self.assertEqual(len(result_2.data.get("interfaces", [])), Interface.objects.count())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_power_feeds_cable_peer(self):

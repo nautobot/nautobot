@@ -394,6 +394,10 @@ class NaturalKeyOrPKMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilte
     Filter that supports filtering on values matching the `pk` field and another
     field of a foreign-key related object. The desired field is set using the `to_field_name`
     keyword argument on filter initialization (defaults to `name`).
+
+    NOTE that the `to_field_name` field does not have to be a "true" natural key (ie. unique), it
+    was just the best name we could come up with for this filter
+
     """
 
     field_class = forms.MultiMatchModelMultipleChoiceField

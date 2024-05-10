@@ -134,6 +134,8 @@ class ModularComponentTemplateModel(ComponentTemplateModel):
         null=True,
     )
 
+    natural_key_field_names = ["device_type", "module_type", "name"]
+
     class Meta:
         abstract = True
         ordering = ("device_type", "module_type", "_name")
@@ -371,6 +373,8 @@ class FrontPortTemplate(ModularComponentTemplateModel):
             MaxValueValidator(REARPORT_POSITIONS_MAX),
         ],
     )
+
+    natural_key_field_names = ["device_type", "module_type", "name", "rear_port_template", "rear_port_position"]
 
     class Meta(ModularComponentTemplateModel.Meta):
         constraints = [
