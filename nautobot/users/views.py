@@ -275,8 +275,6 @@ class SavedViewUIViewSet(
         """
         Extract filter_params, pagination and sort_order from request.GET and apply it to the SavedView specified
         """
-        print(args)
-        print(kwargs)
         sv = get_object_or_404(SavedView, pk=request.GET.get("saved_view", None))
         table_changes_pending = request.GET.get("table_changes_pending", False)
         all_filters_removed = request.GET.get("all_filters_removed", False)

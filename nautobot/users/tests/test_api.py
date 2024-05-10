@@ -474,13 +474,11 @@ class UserConfigTest(APITestCase):
 class SavedViewTest(APIViewTestCases.APIViewTestCase):
     model = SavedView
 
-    @classmethod
-    def setUpTestData(cls):
-        # same user from setUpNautobot()
-        cls.user = User.objects.get(name="nautobotuser")
-        cls.create_data = [
+    def setUp(self):
+        super().setUp()
+        self.create_data = [
             {
-                "owner": cls.user.pk,
+                "owner": self.user.pk,
                 "name": "Saved View 1",
                 "view": "circuits:circuit_list",
                 "config": {
@@ -488,7 +486,7 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
                 },
             },
             {
-                "owner": cls.user.pk,
+                "owner": self.user.pk,
                 "name": "Saved View 2",
                 "view": "dcim:device_list",
                 "config": {
@@ -500,7 +498,7 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
                 },
             },
             {
-                "owner": cls.user.pk,
+                "owner": self.user.pk,
                 "name": "Saved View 3",
                 "view": "dcim:location_list",
                 "config": {
