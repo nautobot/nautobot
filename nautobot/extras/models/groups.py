@@ -74,6 +74,11 @@ class StaticGroup(PrimaryModel):
         blank=True,
         null=True,
     )
+    hidden = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Set to True to hide this group from the UI and API and disable change-logging of its associations",
+    )
 
     objects = StaticGroupManager()
 
@@ -85,6 +90,11 @@ class StaticGroup(PrimaryModel):
 
     def __str__(self):
         return self.name
+
+    def to_objectchange(self, *args, **kwargs):
+        if self.hidden:
+            return None
+        return super().to_objectchange(*args, **kwargs)
 
     @property
     def model(self):
@@ -213,7 +223,7 @@ class StaticGroupAssociation(OrganizationalModel):
 
     class Meta:
         unique_together = [["static_group", "associated_object_type", "associated_object_id"]]
-        ordering = ["static_group"]
+        ordering = ["static_group", "associated_object_type", "associated_object_id"]
 
     def __str__(self):
         return f"{self.associated_object} as a member of {self.static_group}"
@@ -223,6 +233,11 @@ class StaticGroupAssociation(OrganizationalModel):
 
         if self.associated_object_type != self.static_group.content_type:
             raise ValidationError({"associated_object_type": "Must match the static_group.content_type"})
+
+    def to_objectchange(self, *args, **kwargs):
+        if self.static_group.hidden:
+            return None
+        return super().to_objectchange(*args, **kwargs)
 
 
 @extras_features(

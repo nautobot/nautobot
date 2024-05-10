@@ -2341,6 +2341,13 @@ class StaticGroupUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.StaticGroupSerializer
     table_class = tables.StaticGroupTable
 
+    def alter_queryset(self, request):
+        queryset = super().alter_queryset(request)
+        # Default to hiding "hidden" static groups from the list view
+        if self.action == "list" and "hidden" not in request.GET:
+            queryset = queryset.filter(hidden=False)
+        return queryset
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
@@ -2378,6 +2385,13 @@ class StaticGroupAssociationUIViewSet(
     serializer_class = serializers.StaticGroupAssociationSerializer
     table_class = tables.StaticGroupAssociationTable
     action_buttons = ("export",)
+
+    def alter_queryset(self, request):
+        queryset = super().alter_queryset(request)
+        # Default to hiding associations for "hidden" static groups from the list view
+        if self.action == "list" and "hidden" not in request.GET:
+            queryset = queryset.filter(static_group__hidden=False)
+        return queryset
 
 
 class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):

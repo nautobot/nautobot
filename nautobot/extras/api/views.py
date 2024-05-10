@@ -1118,6 +1118,12 @@ class StaticGroupViewSet(NautobotModelViewSet):
     serializer_class = serializers.StaticGroupSerializer
     filterset_class = filters.StaticGroupFilterSet
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.request is not None and "hidden" not in self.request.GET:
+            queryset = queryset.filter(hidden=False)
+        return queryset
+
     @action(detail=True, methods=["get"])
     def members(self, request, pk, *args, **kwargs):
         """List member objects of this static group."""
@@ -1139,6 +1145,12 @@ class StaticGroupAssociationViewSet(NautobotModelViewSet):
     queryset = StaticGroupAssociation.objects.select_related("associated_object_type", "static_group")
     serializer_class = serializers.StaticGroupAssociationSerializer
     filterset_class = filters.StaticGroupAssociationFilterSet
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.request is not None and "hidden" not in self.request.GET:
+            queryset = queryset.filter(static_group__hidden=False)
+        return queryset
 
 
 #

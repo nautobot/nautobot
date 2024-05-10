@@ -1055,6 +1055,7 @@ class StaticGroupTable(BaseTable):
 
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
+    hidden = BooleanColumn()
     count = tables.TemplateColumn(MEMBERS_COUNT, verbose_name="Members")
     tenant = tables.Column(linkify=True)
     tags = TagColumn(url_name="extras:staticgroup_list")
@@ -1062,7 +1063,8 @@ class StaticGroupTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = StaticGroup
-        fields = ["pk", "name", "content_type", "count", "description", "tenant", "tags", "actions"]
+        fields = ["pk", "name", "content_type", "hidden", "count", "description", "tenant", "tags", "actions"]
+        default_columns = ["pk", "name", "content_type", "count", "description", "tenant", "tags", "actions"]
 
 
 class StaticGroupAssociationTable(BaseTable):
@@ -1071,11 +1073,13 @@ class StaticGroupAssociationTable(BaseTable):
     pk = ToggleColumn()
     static_group = tables.Column(linkify=True)
     associated_object = tables.Column(linkify=True, verbose_name="Associated Object")
+    hidden = BooleanColumn(accessor="static_group__hidden")
     actions = ButtonsColumn(StaticGroupAssociation, buttons=["changelog", "delete"])
 
     class Meta(BaseTable.Meta):
         model = StaticGroupAssociation
-        fields = ["pk", "static_group", "associated_object", "actions"]
+        fields = ["pk", "static_group", "associated_object", "hidden", "actions"]
+        default_columns = ["pk", "static_group", "associated_object", "actions"]
 
 
 #

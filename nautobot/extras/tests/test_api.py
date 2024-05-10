@@ -3530,6 +3530,9 @@ class StaticGroupTest(APIViewTestCases.APIViewTestCase):
             "tenant": Tenant.objects.last().pk,
         }
 
+    def _get_queryset(self):
+        return super()._get_queryset().filter(hidden=False)
+
     def test_changing_content_type_not_allowed(self):
         self.add_permissions("extras.change_staticgroup")
         data = {
@@ -3615,6 +3618,9 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
             "static_group": cls.sg3.pk,
             "associated_object_type": "ipam.vlan",
         }
+
+    def _get_queryset(self):
+        return super()._get_queryset().filter(static_group__hidden=False)
 
     def test_content_type_mismatch(self):
         self.add_permissions("extras.add_staticgroupassociation")

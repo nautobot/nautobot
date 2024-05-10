@@ -56,6 +56,10 @@ class Migration(migrations.Migration):
                         to="tenancy.tenant",
                     ),
                 ),
+                (
+                    "hidden",
+                    models.BooleanField(db_index=True, default=False),
+                ),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
@@ -105,7 +109,7 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={
-                "ordering": ["static_group"],
+                "ordering": ["static_group", "associated_object_type", "associated_object_id"],
                 "unique_together": {("static_group", "associated_object_type", "associated_object_id")},
             },
             bases=(

@@ -50,6 +50,12 @@
                 <td>Tenant</td>
                 <td>{{ object.tenant|hyperlinked_object }}</td>
             </tr>
+            {% if object.hidden %}
+                <tr>
+                    <td>Hidden</td>
+                    <td>{{ object.hidden|render_boolean }}</td>
+                </tr>
+            {% endif %}
         </table>
     </div>
 {% endblock content_left_page %}
