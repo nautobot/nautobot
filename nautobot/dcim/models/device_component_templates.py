@@ -27,7 +27,6 @@ from nautobot.extras.models import (
     Status,
 )
 from nautobot.extras.utils import extras_features
-from nautobot.users.models import SavedViewMixin
 
 from .device_components import (
     ConsolePort,
