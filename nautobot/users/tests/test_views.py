@@ -262,7 +262,8 @@ class SavedViewTest(ModelViewTestCase):
             "table_config": {"LocationTable": {"columns": ["name", "status", "location_type", "tags"]}},
         }
         instance.validated_save()
-        self.add_permissions("users.change_savedview")
+        # Custom action requires custom permission
+        self.add_permissions("users.clear_savedview")
         clear_url = reverse("users:savedview_clear", kwargs={"pk": instance.pk})
         response = self.client.get(clear_url)
         self.assertHttpStatus(response, 302)

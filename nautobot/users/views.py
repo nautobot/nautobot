@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import unquote
 
 from django.contrib import messages
 from django.contrib.auth import (
@@ -333,6 +334,7 @@ class SavedViewUIViewSet(
         for param in params_list:
             key, value = param.split("=")
             # Expected single value params
+            value = unquote(value)
             if key in single_value_params:
                 param_dict[key] = value
             else:
