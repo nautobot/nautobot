@@ -1,19 +1,10 @@
----
-hide:
-  - navigation
----
-
 # Overview
 
-Welcome to the Nautobot Core Documentation! Use the top navigation bar to read about:
-
-- [Installing Nautobot](user-guide/administration/installation/index.md), [Configuring Nautobot](user-guide/administration/configuration/index.md), [Getting Started with the Web Interface](user-guide/feature-guides/getting-started/index.md), [REST](user-guide/platform-functionality/rest-api/overview.md) and [GraphQL](user-guide/platform-functionality/graphql.md) APIs, [Apps](apps/index.md), additional features and much more can be found under the **Documentation** section.
-- Learn about how to [Develop and Contribute to Nautobot](development/index.md), [Set up your Development Environment](development/core/getting-started.md), and more under the **Development Guide** section.
-- Nautobot has a thriving ecosystem of **Apps** (formerly known as Plugins), developed as separate projects, for which you can find links to documentation under the [Nautobot Apps](apps/index.md) section.
+Welcome to the Nautobot Core Documentation! Use the top navigation bar to dive directly into the documentation.
 
 ## What is Nautobot?
 
-![Nautobot Logo](assets/nautobot_logo.svg)
+![Nautobot Logo](assets/nautobot_logo.svg){style="height: 80px; margin-bottom: 2em"}
 
 Nautobot is an open source Network Source of Truth and Network Automation Platform built as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database.
 
@@ -25,7 +16,63 @@ Nautobot enables three (3) key use cases.
 
 2. **Extensible Data Platform for Automation** - Nautobot has a rich feature set to seamlessly integrate with network automation solutions.  Nautobot offers GraphQL and native Git integration along with REST APIs and webhooks.  Git integration dynamically loads YAML data files as Nautobot config contexts.  Nautobot also has an evolving App system that enables users to create custom models, APIs, and UI elements.  The App system is also used to unify and aggregate disparate data sources creating a Single Source of Truth to streamline data management for network automation.
 
-3. **Platform for Network Automation Apps** - The Nautobot App system enables users to create Network Automation Apps.  Apps can be as lightweight or robust as needed based on user needs.  Using Nautobot for creating custom applications saves up to 70% development time by re-using features such as authentication, permissions, webhooks, GraphQL, change logging, etc. all while having access to the data already stored in Nautobot. Some production ready applications include:
+3. **Platform for Network Automation Apps** - The Nautobot App system enables users to create Network Automation Apps.  Apps can be as lightweight or robust as needed based on user needs.  Using Nautobot for creating custom applications saves up to 70% development time by re-using features such as authentication, permissions, webhooks, GraphQL, change logging, etc. all while having access to the data already stored in Nautobot.
+
+## Getting Started
+
+<div class="grid cards" markdown>
+
+- :fontawesome-solid-download:{ .lg .middle } **Installing Nautobot**
+    
+    ---
+    Get up and running with a [Nautobot install](user-guide/administration/installation/index.md) on your own Linux VM or in a Docker environment
+
+- :fontawesome-solid-user-gear:{ .lg .middle } **Configuring Nautobot**
+    
+    ---
+    [Configuration of Nautobot](user-guide/administration/configuration/index.md)
+
+- :material-web-check:{ .lg .middle } **Getting Started with Nautobot** 
+    
+    ---
+    Dive into [how to use Nautobot](user-guide/feature-guides/getting-started/index.md) and the key components of the core web interface.
+    How [Nautobot Apps](apps/index.md) can expand Nautobot's functionality.
+
+- :material-apps:{ .lg .middle } **Nautobot Apps**
+
+    ---
+    Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, for which you can find links to documentation under the [Nautobot Apps](apps/index.md) section.
+
+-  :material-api:{ .lg .middle } **Nautobot APIs!**
+
+    ---
+    Dive into the [REST](user-guide/platform-functionality/rest-api/overview.md), [GraphQL](user-guide/platform-functionality/graphql.md) APIs
+
+</div>
+
+## Contributing to Nautobot
+
+<div class="grid cards" markdown>
+
+- :fontawesome-solid-code:{ .lg .middle } **Develop and Contribute to Nautobot**
+    
+    ---
+    Learn how to [develop and contribute to Nautobot](development/index.md)
+
+- :fontawesome-solid-user-gear:{ .lg .middle } **Set Up Your Developer Environment**
+    
+    ---
+    [Configuration of Nautobot](user-guide/administration/configuration/index.md)
+
+- :material-web-check:{ .lg .middle } **Development Guide** 
+    
+    ---
+    Dive into [how to use Nautobot](user-guide/feature-guides/getting-started/index.md) and the key components of the core web interface.
+    How [Nautobot Apps](apps/index.md) can expand Nautobot's functionality.
+
+</div>
+
+ Some production ready applications include:
 
     - [Golden Configuration](https://github.com/nautobot/nautobot-app-golden-config)
     - [Device Lifecycle](https://github.com/nautobot/nautobot-app-device-lifecycle-mgmt)
