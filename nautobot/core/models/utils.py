@@ -150,9 +150,10 @@ def serialize_object_v2(obj):
     return data
 
 
-def find_models_with_matching_fields(app_models, field_names=[], field_attributes=None, additional_constraints=None):
+def find_models_with_matching_fields(app_models, field_names=None, field_attributes=None, additional_constraints=None):
     """
-    Find all models that have fields with the specified names, and return them grouped by app.
+    Find all models that have fields with the specified names and/or satisfy the additional constraints when the field names are not available,
+    and return them grouped by app.
 
     Args:
         app_models (list[BaseModel]): A list of model classes to search through.
@@ -181,6 +182,8 @@ def find_models_with_matching_fields(app_models, field_names=[], field_attribute
                 except FieldDoesNotExist:
                     pass
         else:
+            # SavedView does not add any specific fields to the model
+            # so we need to look at the additional constraints only.
             if all(
                 getattr(model_class, additional_field, None) == additional_value
                 for additional_field, additional_value in additional_constraints.items()

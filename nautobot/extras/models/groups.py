@@ -50,6 +50,7 @@ class StaticGroup(PrimaryModel):
 
     clone_fields = ["content_type"]
     is_static_group_associable_model = False
+    is_saved_view_model = False
 
     class Meta:
         ordering = ["name"]
@@ -150,6 +151,7 @@ class StaticGroupAssociation(OrganizationalModel):
 
     is_contact_associable_model = False
     is_static_group_associable_model = False
+    is_saved_view_model = False
 
     class Meta:
         unique_together = [["static_group", "associated_object_type", "associated_object_id"]]
