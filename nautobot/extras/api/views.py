@@ -1114,15 +1114,16 @@ class StaticGroupViewSet(NautobotModelViewSet):
     Manage Static Groups through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
-    queryset = StaticGroup.objects.select_related("content_type")
     serializer_class = serializers.StaticGroupSerializer
     filterset_class = filters.StaticGroupFilterSet
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        if self.request is not None and "hidden" not in self.request.GET:
-            queryset = queryset.filter(hidden=False)
-        return queryset
+        if self.queryset is None:
+            if hasattr(self, "request") and self.request is not None and "hidden" in self.request.GET:
+                self.queryset = StaticGroup.all_objects.select_related("content_type")
+            else:
+                self.queryset = StaticGroup.objects.select_related("content_type")
+        return super().get_queryset()
 
     @action(detail=True, methods=["get"])
     def members(self, request, pk, *args, **kwargs):
@@ -1142,15 +1143,18 @@ class StaticGroupAssociationViewSet(NautobotModelViewSet):
     Manage Static Group Associations through DELETE, GET, POST, PUT, and PATCH requests.
     """
 
-    queryset = StaticGroupAssociation.objects.select_related("associated_object_type", "static_group")
     serializer_class = serializers.StaticGroupAssociationSerializer
     filterset_class = filters.StaticGroupAssociationFilterSet
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        if self.request is not None and "hidden" not in self.request.GET:
-            queryset = queryset.filter(static_group__hidden=False)
-        return queryset
+        if self.queryset is None:
+            if hasattr(self, "request") and self.request is not None and "hidden" in self.request.GET:
+                self.queryset = StaticGroupAssociation.all_objects.select_related(
+                    "associated_object_type", "static_group"
+                )
+            else:
+                self.queryset = StaticGroupAssociation.objects.select_related("associated_object_type", "static_group")
+        return super().get_queryset()
 
 
 #

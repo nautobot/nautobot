@@ -242,7 +242,7 @@ class ModelViewSetMixin:
         if request.user.is_authenticated:
             http_action = HTTP_ACTIONS[request.method]
             if http_action:
-                self.queryset = self.queryset.restrict(request.user, http_action)
+                self.queryset = self.get_queryset().restrict(request.user, http_action)
 
     def initial(self, request, *args, **kwargs):
         """

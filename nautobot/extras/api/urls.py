@@ -87,8 +87,8 @@ router.register("secrets-groups", views.SecretsGroupViewSet)
 router.register("secrets-groups-associations", views.SecretsGroupAssociationViewSet)
 
 # Static groups
-router.register("static-groups", views.StaticGroupViewSet)
-router.register("static-group-associations", views.StaticGroupAssociationViewSet)
+router.register("static-groups", views.StaticGroupViewSet, basename="staticgroup")
+router.register("static-group-associations", views.StaticGroupAssociationViewSet, basename="staticgroupassociation")
 
 # Statuses
 router.register("statuses", views.StatusViewSet)

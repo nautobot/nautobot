@@ -66,7 +66,8 @@ class Migration(migrations.Migration):
                 "ordering": ["name"],
             },
             managers=[
-                ("objects", nautobot.extras.models.groups.StaticGroupManager()),
+                ("objects", nautobot.extras.models.groups.StaticGroupDefaultManager()),
+                ("all_objects", nautobot.extras.models.groups.StaticGroupManager()),
             ],
             bases=(
                 models.Model,
@@ -112,6 +113,10 @@ class Migration(migrations.Migration):
                 "ordering": ["static_group", "associated_object_type", "associated_object_id"],
                 "unique_together": {("static_group", "associated_object_type", "associated_object_id")},
             },
+            managers=[
+                ("objects", nautobot.extras.models.groups.StaticGroupAssociationDefaultManager()),
+                ("all_objects", nautobot.extras.models.groups.StaticGroupAssociationManager()),
+            ],
             bases=(
                 models.Model,
                 nautobot.extras.models.mixins.DynamicGroupMixin,

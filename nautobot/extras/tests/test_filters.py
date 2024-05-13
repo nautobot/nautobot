@@ -1829,7 +1829,7 @@ class StaticGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
     def test_hidden(self):
         params = {"hidden": True}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, StaticGroup.objects.filter(hidden=True)
+            self.filterset(params, StaticGroup.all_objects.all()).qs, StaticGroup.all_objects.filter(hidden=True)
         )
 
 
@@ -1855,7 +1855,8 @@ class StaticGroupAssociationTestCase(FilterTestCases.FilterTestCase):
     def test_hidden(self):
         params = {"hidden": True}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, StaticGroupAssociation.objects.filter(static_group__hidden=True)
+            self.filterset(params, StaticGroupAssociation.all_objects.all()).qs,
+            StaticGroupAssociation.all_objects.filter(static_group__hidden=True),
         )
 
 

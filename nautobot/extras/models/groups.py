@@ -48,6 +48,13 @@ class StaticGroupManager(BaseManager.from_queryset(RestrictedQuerySet)):
     get_for_model.cache_key_prefix = "nautobot.extras.staticgroup.get_for_model"
 
 
+class StaticGroupDefaultManager(StaticGroupManager):
+    """Subclass of StaticGroupManager that automatically filters out hidden groups."""
+
+    def get_queryset(self):
+        return super().get_queryset().exclude(hidden=True)
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -80,7 +87,8 @@ class StaticGroup(PrimaryModel):
         help_text="Set to True to hide this group from the UI and API and disable change-logging of its associations",
     )
 
-    objects = StaticGroupManager()
+    objects = StaticGroupDefaultManager()
+    all_objects = StaticGroupManager()
 
     clone_fields = ["content_type", "tenant"]
     is_static_group_associable_model = False
@@ -199,6 +207,17 @@ class StaticGroup(PrimaryModel):
             ).delete()
 
 
+class StaticGroupAssociationManager(BaseManager.from_queryset(RestrictedQuerySet)):
+    use_in_migrations = True
+
+
+class StaticGroupAssociationDefaultManager(StaticGroupAssociationManager):
+    """Subclass of StaticGroupAssociationManager that automatically filters out associations of hidden groups."""
+
+    def get_queryset(self):
+        return super().get_queryset().exclude(static_group__hidden=True)
+
+
 @extras_features(
     "custom_validators",
     "export_templates",
@@ -217,6 +236,9 @@ class StaticGroupAssociation(OrganizationalModel):
     )
     associated_object_id = models.UUIDField(db_index=True)
     associated_object = GenericForeignKey(ct_field="associated_object_type", fk_field="associated_object_id")
+
+    objects = StaticGroupAssociationDefaultManager()
+    all_objects = StaticGroupAssociationManager()
 
     is_contact_associable_model = False
     is_static_group_associable_model = False
