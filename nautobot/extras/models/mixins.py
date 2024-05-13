@@ -180,6 +180,9 @@ class StaticGroupMixin(models.Model):
 
     @property
     def static_groups(self):
+        """
+        Returns a QuerySet of StaticGroups that have this object as a member.
+        """
         from nautobot.extras.models.groups import StaticGroup
 
         return StaticGroup.objects.filter(pk__in=self.associated_static_groups.values_list("static_group", flat=True))

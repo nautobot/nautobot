@@ -35,6 +35,7 @@ from nautobot.extras.models import (
     JobResult,
     ObjectChange,
     Relationship,
+    StaticGroup,
 )
 from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
@@ -67,12 +68,15 @@ def get_user_if_authenticated(user, instance):
 @receiver(post_save, sender=ComputedField)
 @receiver(post_save, sender=CustomField)
 @receiver(post_save, sender=CustomField.content_types.through)
+@receiver(post_save, sender=StaticGroup)
 @receiver(m2m_changed, sender=ComputedField)
 @receiver(m2m_changed, sender=CustomField)
 @receiver(m2m_changed, sender=CustomField.content_types.through)
+@receiver(m2m_changed, sender=StaticGroup)
 @receiver(post_delete, sender=ComputedField)
 @receiver(post_delete, sender=CustomField)
 @receiver(post_delete, sender=CustomField.content_types.through)
+@receiver(post_delete, sender=StaticGroup)
 def invalidate_models_cache(sender, **kwargs):
     """Invalidate the related-models cache for ComputedFields and CustomFields."""
     if sender is CustomField.content_types.through:
@@ -142,6 +146,7 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
             unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}__{user.pk}"
         else:
             unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}"
+
         # If a change already exists for this change_id, user, and object, update it instead of creating a new one.
         # If the object was deleted then recreated with the same pk (don't do this), change the action to update.
         if unique_object_change_id in change_context.deferred_object_changes:

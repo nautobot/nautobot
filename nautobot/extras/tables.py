@@ -44,6 +44,8 @@ from .models import (
     ScheduledJob,
     Secret,
     SecretsGroup,
+    StaticGroup,
+    StaticGroupAssociation,
     Status,
     Tag,
     TaggedItem,
@@ -111,6 +113,17 @@ OBJECTCHANGE_OBJECT = """
 
 OBJECTCHANGE_REQUEST_ID = """
 <a href="{% url 'extras:objectchange_list' %}?request_id={{ value }}">{{ value }}</a>
+"""
+
+MEMBERS_COUNT = """
+{% load helpers %}
+{% with urlname=record.model|validated_viewname:"list" %}
+{% if urlname %}
+    <a href="{% url urlname %}?static_groups={{ record.name }}">{{ record.count }}</a>
+{% else %}
+    {{ record.count }}
+{% endif %}
+{% endwith %}
 """
 
 # TODO: Webhook content_types in table order_by
@@ -1033,6 +1046,39 @@ class SecretsGroupTable(BaseTable):
 
 
 #
+# Static Groups
+#
+
+
+class StaticGroupTable(BaseTable):
+    """Table for list view of `StaticGroup` objects."""
+
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    count = tables.TemplateColumn(MEMBERS_COUNT, verbose_name="Members")
+    tenant = tables.Column(linkify=True)
+    tags = TagColumn(url_name="extras:staticgroup_list")
+    actions = ButtonsColumn(StaticGroup)
+
+    class Meta(BaseTable.Meta):
+        model = StaticGroup
+        fields = ["pk", "name", "content_type", "count", "description", "tenant", "tags", "actions"]
+
+
+class StaticGroupAssociationTable(BaseTable):
+    """Table for list view of `StaticGroupAssociation` objects."""
+
+    pk = ToggleColumn()
+    static_group = tables.Column(linkify=True)
+    associated_object = tables.Column(linkify=True, verbose_name="Associated Object")
+    actions = ButtonsColumn(StaticGroupAssociation, buttons=["changelog", "delete"])
+
+    class Meta(BaseTable.Meta):
+        model = StaticGroupAssociation
+        fields = ["pk", "static_group", "associated_object", "actions"]
+
+
+#
 # Custom statuses
 #
 
@@ -1048,7 +1094,7 @@ class StatusTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Status
-        fields = ["pk", "name", "color", "content_types", "description"]
+        fields = ["pk", "name", "color", "content_types", "description", "actions"]
 
 
 class StatusTableMixin(BaseTable):

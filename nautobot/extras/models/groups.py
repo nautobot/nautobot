@@ -19,6 +19,7 @@ from nautobot.core.forms.fields import DynamicModelChoiceField
 from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices
@@ -26,6 +27,25 @@ from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGro
 from nautobot.extras.utils import extras_features, FeatureQuery
 
 logger = logging.getLogger(__name__)
+
+
+class StaticGroupManager(BaseManager.from_queryset(RestrictedQuerySet)):
+    use_in_migrations = True
+
+    def get_for_model(self, model):
+        """
+        Return all StaticGroups assignable to the given model class.
+        """
+        concrete_model = model._meta.concrete_model
+        cache_key = f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}"
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            content_type = ContentType.objects.get_for_model(concrete_model)
+            queryset = self.get_queryset().filter(content_type=content_type)
+            cache.set(cache_key, queryset)
+        return queryset
+
+    get_for_model.cache_key_prefix = "nautobot.extras.staticgroup.get_for_model"
 
 
 @extras_features(
@@ -43,12 +63,21 @@ class StaticGroup(PrimaryModel):
     content_type = models.ForeignKey(
         to=ContentType,
         on_delete=models.CASCADE,
-        related_name="static_groups",
+        related_name="static_groups_set",
         limit_choices_to=FeatureQuery("static_groups"),
         help_text="The type of object contained in this Static Group.",
     )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="managed_static_groups",  # "static_groups" clash with StaticGroupMixin.static_groups property
+        blank=True,
+        null=True,
+    )
 
-    clone_fields = ["content_type"]
+    objects = StaticGroupManager()
+
+    clone_fields = ["content_type", "tenant"]
     is_static_group_associable_model = False
 
     class Meta:
@@ -79,6 +108,37 @@ class StaticGroup(PrimaryModel):
         return self.model.objects.filter(
             pk__in=self.static_group_associations.values_list("associated_object_id", flat=True)
         )
+
+    @members.setter
+    def members(self, value):
+        """Set the member objects (QuerySet or list of records) for this group."""
+        if isinstance(value, models.QuerySet):
+            if value.model != self.model:
+                raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
+            to_remove = self.members.exclude(pk__in=value.values_list("pk", flat=True))
+            self.remove_members(to_remove)
+            to_add = value.exclude(pk__in=self.members.values_list("pk", flat=True))
+            self.add_members(to_add)
+        else:
+            for obj in value:
+                if not isinstance(obj, self.model):
+                    raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
+            to_remove = []
+            for member in self.members:
+                if member not in value:
+                    to_remove.append(member)
+            self.remove_members(to_remove)
+            to_add = []
+            members = self.members
+            for candidate in value:
+                if candidate not in members:
+                    to_add.append(candidate)
+            self.add_members(to_add)
+
+    @property
+    def count(self):
+        """Return the number of member objects in this group."""
+        return self.members.count()
 
     def clean(self):
         super().clean()

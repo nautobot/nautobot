@@ -642,6 +642,7 @@ class DynamicFilterFormTest(TestCase):
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
+                    ("static_groups", "Static groups (name or ID)"),
                 ],
             )
             self.assertEqual(
@@ -684,6 +685,7 @@ class DynamicFilterFormTest(TestCase):
                     ("racks", "Rack (name or ID)"),
                     ("rack_groups", "Rack groups (name or ID)"),
                     ("shipping_address", "Shipping address"),
+                    ("static_groups", "Static groups (name or ID)"),
                     ("status", "Status (name or ID)"),
                     ("vlans", "Tagged VLANs (VID or ID)"),
                     ("tags", "Tags"),
@@ -728,6 +730,7 @@ class DynamicFilterFormTest(TestCase):
                     ("id", "Id"),
                     ("last_updated", "Last updated"),
                     ("name", "Name"),
+                    ("static_groups", "Static groups (name or ID)"),
                 ],
             )
             self.assertEqual(
