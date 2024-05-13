@@ -27,6 +27,7 @@ from nautobot.extras.models import (
     ConfigContextSchema,
     ExportTemplate,
     GitRepository,
+    Job,
     JobLogEntry,
     JobResult,
     Secret,
@@ -119,13 +120,13 @@ class GitTest(TransactionTestCase):
 
     def populate_repo(self, path, url, *args, **kwargs):
         os.makedirs(path)
-        # TODO(Glenn): populate Jobs as well?
         os.makedirs(os.path.join(path, "config_contexts"))
         os.makedirs(os.path.join(path, "config_contexts", "devices"))
         os.makedirs(os.path.join(path, "config_contexts", "locations"))
         os.makedirs(os.path.join(path, "config_context_schemas"))
         os.makedirs(os.path.join(path, "export_templates", "dcim", "device"))
         os.makedirs(os.path.join(path, "export_templates", "ipam", "vlan"))
+        os.makedirs(os.path.join(path, "jobs"))
 
         with open(os.path.join(path, "config_contexts", "context.yaml"), "w") as fd:
             yaml.dump(
@@ -167,6 +168,19 @@ class GitTest(TransactionTestCase):
         with open(os.path.join(path, "export_templates", "ipam", "vlan", "template.j2"), "w") as fd:
             fd.write("{% for vlan in queryset %}\n{{ vlan.name }}\n{% endfor %}")
 
+        with open(os.path.join(path, "jobs", "__init__.py"), "w") as fd:
+            pass
+
+        with open(os.path.join(path, "jobs", "job.py"), "w") as fd:
+            fd.write(
+                """\
+from nautobot.extras.jobs import Job
+
+class MyJob(Job):
+    def run(self, data, commit):
+        pass"""
+            )
+
         return mock.DEFAULT
 
     def empty_repo(self, path, url, *args, **kwargs):
@@ -177,6 +191,8 @@ class GitTest(TransactionTestCase):
         os.remove(os.path.join(path, "export_templates", "dcim", "device", "template.j2"))
         os.remove(os.path.join(path, "export_templates", "dcim", "device", "template2.html"))
         os.remove(os.path.join(path, "export_templates", "ipam", "vlan", "template.j2"))
+        os.remove(os.path.join(path, "jobs", "__init__.py"))
+        os.remove(os.path.join(path, "jobs", "job.py"))
         return mock.DEFAULT
 
     def assert_config_context_schema_record_exists(self, name):
@@ -262,6 +278,11 @@ class GitTest(TransactionTestCase):
             name=name,
         )
         self.assertIsNotNone(export_template_vlan)
+
+    def assert_job_exists(self, installed=True):
+        """Helper function to assert Job exists."""
+        job = Job.objects.get(git_repository=self.repo, job_class_name="MyJob")
+        self.assertEqual(job.installed, installed)
 
     def test_pull_git_repository_and_refresh_data_with_no_data(self, MockGitRepo):
         """
@@ -482,6 +503,8 @@ class GitTest(TransactionTestCase):
                 # Case when ContentType.model != ContentType.name, template was added and deleted during sync (#570)
                 self.assert_export_template_vlan_exists("template.j2")
 
+                self.assert_job_exists()
+
                 # Now "resync" the repository, but now those files no longer exist in the repository
                 MockGitRepo.side_effect = self.empty_repo
                 # For verisimilitude, don't re-use the old request and job_result
@@ -524,6 +547,9 @@ class GitTest(TransactionTestCase):
                 device = Device.objects.get(name=self.device.name)
                 self.assertIsNone(device.local_context_data)
                 self.assertIsNone(device.local_context_data_owner)
+
+                # Job should still be present in the database but no longer installed
+                self.assert_job_exists(installed=False)
 
     def test_pull_git_repository_and_refresh_data_with_bad_data(self, MockGitRepo):
         """
@@ -654,11 +680,11 @@ class GitTest(TransactionTestCase):
 
                 def populate_repo(path, url):
                     os.makedirs(path)
-                    # Just make config_contexts and export_templates directories as we don't load jobs
                     os.makedirs(os.path.join(path, "config_contexts"))
                     os.makedirs(os.path.join(path, "config_contexts", "devices"))
                     os.makedirs(os.path.join(path, "config_context_schemas"))
                     os.makedirs(os.path.join(path, "export_templates", "dcim", "device"))
+                    os.makedirs(os.path.join(path, "jobs"))
                     with open(os.path.join(path, "config_contexts", "context.yaml"), "w") as fd:
                         yaml.dump(
                             {
@@ -685,6 +711,18 @@ class GitTest(TransactionTestCase):
                         "w",
                     ) as fd:
                         fd.write("{% for device in queryset %}\n{{ device.name }}\n{% endfor %}")
+                    with open(os.path.join(path, "jobs", "__init__.py"), "w") as fd:
+                        pass
+                    with open(os.path.join(path, "jobs", "job.py"), "w") as fd:
+                        fd.write(
+                            """\
+from nautobot.extras.jobs import Job
+
+class MyJob(Job):
+    def run(self, data, commit):
+        pass"""
+                        )
+
                     return mock.DEFAULT
 
                 MockGitRepo.side_effect = populate_repo
@@ -744,6 +782,8 @@ class GitTest(TransactionTestCase):
                 )
                 self.assertIsNotNone(export_template)
 
+                self.assert_job_exists()
+
                 # Now delete the GitRepository
                 self.repo.delete()
 
@@ -768,6 +808,36 @@ class GitTest(TransactionTestCase):
                 device = Device.objects.get(name=self.device.name)
                 self.assertIsNone(device.local_context_data)
                 self.assertIsNone(device.local_context_data_owner)
+                self.assert_job_exists(installed=False)
+
+                # Now recreate the repository (https://github.com/nautobot/nautobot/issues/2974)
+                self.repo = GitRepository(
+                    name="Test Git Repository",
+                    slug="test_git_repo",
+                    remote_url="http://localhost/git.git",
+                    # Provide everything we know we can provide
+                    provided_contents=[
+                        entry.content_identifier for entry in get_datasource_contents("extras.gitrepository")
+                    ],
+                )
+                self.repo.save(trigger_resync=False)
+
+                self.job_result = JobResult.objects.create(
+                    name=self.repo.name,
+                    obj_type=ContentType.objects.get_for_model(GitRepository),
+                    job_id=uuid.uuid4(),
+                )
+
+                pull_git_repository_and_refresh_data(self.repo.pk, self.mock_request, self.job_result.pk)
+                self.job_result.refresh_from_db()
+
+                self.assertEqual(
+                    self.job_result.status,
+                    JobResultStatusChoices.STATUS_COMPLETED,
+                    self.job_result.data,
+                )
+
+                self.assert_job_exists(installed=True)
 
     def test_git_dry_run(self, MockGitRepo):
         with tempfile.TemporaryDirectory() as tempdir:
