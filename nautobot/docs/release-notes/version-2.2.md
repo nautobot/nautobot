@@ -66,6 +66,35 @@ The CSV import functionality for all models has been changed from a synchronous 
 Model CharFields' `max_length` attributes have been standardized globally to have at least 255 characters except where a shorter `max_length` is explicitly justified.
 
 <!-- towncrier release notes start -->
+## v2.2.4 (2024-05-13)
+
+### Security
+
+- [#1858](https://github.com/nautobot/nautobot/issues/1858) - Added sanitization of HTML tags in the content of `BANNER_TOP`, `BANNER_BOTTOM`, and `BANNER_LOGIN` configuration to prevent against potential injection of malicious scripts (stored XSS) via these features ([GHSA-r2hr-4v48-fjv3](https://github.com/nautobot/nautobot/security/advisories/GHSA-r2hr-4v48-fjv3)).
+- [#5672](https://github.com/nautobot/nautobot/issues/5672) - Updated `Jinja2` dependency to `3.1.4` to address `CVE-2024-34064`.
+
+### Added
+
+- [#1858](https://github.com/nautobot/nautobot/issues/1858) - Added support in `BRANDING_FILEPATHS` configuration to specify a custom `css` and/or `javascript` file to be added to Nautobot page content.
+- [#1858](https://github.com/nautobot/nautobot/issues/1858) - Added Markdown support to the `BANNER_TOP`, `BANNER_BOTTOM`, and `BANNER_LOGIN` configuration settings.
+
+### Fixed
+
+- [#4986](https://github.com/nautobot/nautobot/issues/4986) - Fixed inconsistent use of super causing `active_tab` context to be missing from several views.
+- [#5644](https://github.com/nautobot/nautobot/issues/5644) - Made the uniqueness constraints between the ContactAssociation model and the related API serializer consistent.
+- [#5684](https://github.com/nautobot/nautobot/issues/5684) - Fixed standard CSV export when using export templates.
+- [#5689](https://github.com/nautobot/nautobot/issues/5689) - Fixed change logging for bulk delete operations so that user is included in the log.
+
+### Documentation
+
+- [#5661](https://github.com/nautobot/nautobot/issues/5661) - Updated documentation to organize installation instructions and provide easier to use functions from mkdocs.
+
+### Housekeeping
+
+- [#5263](https://github.com/nautobot/nautobot/issues/5263) - Updated `nh3` to `0.2.17` in `poetry.lock`.
+- [#5637](https://github.com/nautobot/nautobot/issues/5637) - Removed "version" from development `docker-compose.yml` files as newer versions of Docker complain about it being obsolete.
+- [#5637](https://github.com/nautobot/nautobot/issues/5637) - Fixed behavior of `invoke stop` so that it also stops the optional `mkdocs` container if present.
+
 ## v2.2.3 (2024-04-30)
 
 ### Security
