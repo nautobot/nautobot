@@ -9,6 +9,7 @@ import sys
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.db import IntegrityError
 from django.db.models import Q
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
@@ -365,21 +366,37 @@ def refresh_job_model_from_job_class(job_model_class, job_source, job_class, *, 
             JOB_MAX_NAME_LENGTH,
         )
 
-    job_model, created = job_model_class.objects.get_or_create(
-        source=job_source[:JOB_MAX_SOURCE_LENGTH],
-        git_repository=git_repository,
-        module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
-        job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
-        defaults={
-            "slug": default_slug[:JOB_MAX_SLUG_LENGTH],
-            "grouping": job_class.grouping[:JOB_MAX_GROUPING_LENGTH],
-            "name": job_class.name[:JOB_MAX_NAME_LENGTH],
-            "is_job_hook_receiver": issubclass(job_class, JobHookReceiver),
-            "is_job_button_receiver": issubclass(job_class, JobButtonReceiver),
-            "installed": True,
-            "enabled": False,
-        },
-    )
+    try:
+        job_model, created = job_model_class.objects.get_or_create(
+            source=job_source[:JOB_MAX_SOURCE_LENGTH],
+            git_repository=git_repository,
+            module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
+            job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
+            defaults={
+                "slug": default_slug[:JOB_MAX_SLUG_LENGTH],
+                "grouping": job_class.grouping[:JOB_MAX_GROUPING_LENGTH],
+                "name": job_class.name[:JOB_MAX_NAME_LENGTH],
+                "is_job_hook_receiver": issubclass(job_class, JobHookReceiver),
+                "is_job_button_receiver": issubclass(job_class, JobButtonReceiver),
+                "installed": True,
+                "enabled": False,
+            },
+        )
+    except IntegrityError:
+        # can occur in the case where we've deleted a GitRepository, resulting in a Job record with
+        # source="git" but git_repository=None, and are now creating a new GitRepository to "re-claim" the Job.
+        if git_repository is not None:
+            created = False
+            job_model = job_model_class.objects.get(
+                source=job_source[:JOB_MAX_SOURCE_LENGTH],
+                git_repository=None,
+                module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
+                job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
+            )
+            job_model.git_repository = git_repository
+            job_model.save()
+        else:
+            raise
 
     for field_name in JOB_OVERRIDABLE_FIELDS:
         # Was this field directly inherited from the job before, or was it overridden in the database?
