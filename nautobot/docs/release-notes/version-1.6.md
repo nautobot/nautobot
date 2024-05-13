@@ -83,6 +83,10 @@ As Python 3.7 has reached end-of-life, Nautobot 1.6 and later do not support ins
 - [#1858](https://github.com/nautobot/nautobot/issues/1858) - Added support in `BRANDING_FILEPATHS` configuration to specify a custom `css` and/or `javascript` file to be added to Nautobot page content.
 - [#1858](https://github.com/nautobot/nautobot/issues/1858) - Added Markdown support to the `BANNER_TOP`, `BANNER_BOTTOM`, and `BANNER_LOGIN` configuration settings.
 
+### Fixed
+
+- [#2974](https://github.com/nautobot/nautobot/issues/2974) - Fixed an error when deleting and then recreating a GitRepository that provides Jobs.
+
 ## v1.6.21 (2024-05-07)
 
 ### Security

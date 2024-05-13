@@ -1,1 +1,0 @@
-Fixed an error when deleting and then recreating a GitRepository that provides Jobs.
