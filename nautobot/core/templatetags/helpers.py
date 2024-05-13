@@ -737,6 +737,16 @@ def clear_view_modal(saved_view):
     return {"saved_view": saved_view}
 
 
+@register.inclusion_tag("utilities/templatetags/static_group_assignment_modal.html")
+def static_group_assignment_modal(request, content_type):
+    from nautobot.extras.forms import StaticGroupBulkAssignForm
+
+    return {
+        "request": request,
+        "form": StaticGroupBulkAssignForm(model=content_type.model_class()),
+    }
+
+
 @register.inclusion_tag("utilities/templatetags/modal_form_as_dialog.html")
 def modal_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type=None):
     """Generate a form in a modal view.

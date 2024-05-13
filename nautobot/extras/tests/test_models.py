@@ -1696,23 +1696,30 @@ class StaticGroupTest(ModelTestCases.BaseModelTestCase):
         # test bulk addition
         sg.add_members(Prefix.objects.filter(ip_version=4))
         self.assertIsInstance(sg.members, PrefixQuerySet)
-        self.assertEqual(sg.members.count(), Prefix.objects.filter(ip_version=4).count())
+        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=4))
         # test duplicate objects aren't re-added
         sg.add_members(Prefix.objects.all())
-        self.assertEqual(sg.members.count(), Prefix.objects.all().count())
+        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.all())
         self.assertEqual(sg.static_group_associations.count(), Prefix.objects.all().count())
         # test idempotence and alternate code path
         sg.add_members(list(Prefix.objects.all()))
-        self.assertEqual(sg.members.count(), Prefix.objects.all().count())
+        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.all())
         self.assertEqual(sg.static_group_associations.count(), Prefix.objects.all().count())
+
         # test bulk removal
         sg.remove_members(Prefix.objects.filter(ip_version=4))
-        self.assertEqual(sg.members.count(), Prefix.objects.filter(ip_version=6).count())
+        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
         self.assertEqual(sg.static_group_associations.count(), Prefix.objects.filter(ip_version=6).count())
         # test idempotence and alternate code path
         sg.remove_members(list(Prefix.objects.filter(ip_version=4)))
-        self.assertEqual(sg.members.count(), Prefix.objects.filter(ip_version=6).count())
+        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
         self.assertEqual(sg.static_group_associations.count(), Prefix.objects.filter(ip_version=6).count())
+
+        # test property setter
+        sg.members = Prefix.objects.filter(ip_version=4)
+        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=4))
+        sg.members = list(Prefix.objects.filter(ip_version=6))
+        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
 
         self.assertIsInstance(Prefix.objects.filter(ip_version=6).first().static_groups, QuerySet)
         self.assertIn(sg, list(Prefix.objects.filter(ip_version=6).first().static_groups))

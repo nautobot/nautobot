@@ -1,0 +1,56 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block extra_nav_tabs %}
+    <li role="presentation"{% if request.GET.tab == 'members' %} class="active"{% endif %}>
+        <a href="{{ object.get_absolute_url }}#members" onclick="switch_tab(this.href)" aria-controls="members" role="tab" data-toggle="tab">
+            Members {% badge object.count True %}
+        </a>
+    </li>
+{% endblock extra_nav_tabs %}
+
+{% block extra_tab_content %}
+    <div id="members" role="tabpanel" class="tab-pane{% if request.GET.tab == 'members' %} active{% else %} fade{% endif %}">
+        {% if members_list_url %}
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="alert alert-success" role="alert">
+                        You can bulk-add and bulk-remove members of this group from the <a href="{{ members_list_url }}">{{ members_verbose_name_plural|bettertitle }} list view</a>.
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        <div class="row">
+            <div class="col-md-12">
+                {% include 'utilities/obj_table.html' with table=members_table table_template='panel_table.html' heading='Static Group members' %}
+            </div>
+        </div>
+    </div>
+{% endblock extra_tab_content %}
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Static Group</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Name</td>
+                <td>{{ object.name }}</td>
+            </tr>
+            <tr>
+                <td>Description</td>
+                <td>{{ object.description }}</td>
+            </tr>
+            <tr>
+                <td>Content Type</td>
+                <td>{{ object.content_type }}</td>
+            </tr>
+            <tr>
+                <td>Tenant</td>
+                <td>{{ object.tenant|hyperlinked_object }}</td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_left_page %}
+

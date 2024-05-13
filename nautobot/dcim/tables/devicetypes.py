@@ -45,9 +45,21 @@ __all__ = (
 class ManufacturerTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    device_type_count = tables.Column(verbose_name="Device Types")
-    inventory_item_count = tables.Column(verbose_name="Inventory Items")
-    platform_count = tables.Column(verbose_name="Platforms")
+    device_type_count = LinkedCountColumn(
+        viewname="dcim:devicetype_list",
+        url_params={"manufacturer": "pk"},
+        verbose_name="Device Types",
+    )
+    inventory_item_count = LinkedCountColumn(
+        viewname="dcim:inventoryitem_list",
+        url_params={"manufacturer": "pk"},
+        verbose_name="Inventory Items",
+    )
+    platform_count = LinkedCountColumn(
+        viewname="dcim:platform_list",
+        url_params={"manufacturer": "pk"},
+        verbose_name="Platforms",
+    )
     actions = ButtonsColumn(Manufacturer)
 
     class Meta(BaseTable.Meta):
@@ -71,7 +83,11 @@ class ManufacturerTable(BaseTable):
 class DeviceFamilyTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    device_type_count = tables.Column(verbose_name="Device Types")
+    device_type_count = LinkedCountColumn(
+        viewname="dcim:devicetype_list",
+        url_params={"device_family": "pk"},
+        verbose_name="Device Types",
+    )
     actions = ButtonsColumn(DeviceFamily)
     tags = TagColumn(url_name="dcim:devicefamily_list")
 
