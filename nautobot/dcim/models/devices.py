@@ -1560,7 +1560,6 @@ class Module(PrimaryModel):
     )
     status = StatusField()
     role = RoleField(blank=True, null=True)
-    # TODO: add to new model checklist: all new models should have tenant field
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,

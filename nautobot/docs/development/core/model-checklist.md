@@ -21,6 +21,7 @@ article ul li {
 - Implement model in `nautobot.<app>.models` module
     - Use appropriate [base class](best-practices.md#base-classes) and mixin(s)
     - Use appropriate [`@extras_features`](#extras-features) decorator values
+    - Unless there is a strong reason not to, all models should have a ForeignKey to `tenancy.Tenant` named `tenant`
     - Define appropriate uniqueness constraint(s)
     - Define appropriate `__str__()` logic
     - _optional_ Define appropriate additional [`clean()`](best-practices.md#model-validation) logic
