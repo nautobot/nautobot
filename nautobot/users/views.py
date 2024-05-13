@@ -409,7 +409,7 @@ class SavedViewUIViewSet(
             messages.error(request, e)
             return redirect(self.get_return_url(request))
 
-    @action(detail=True, name="Clear", methods=["get"], url_path="clear", url_name="clear")
+    @action(detail=True, name="Clear", methods=["post"], url_path="clear", url_name="clear")
     def clear(self, request, pk):
         try:
             sv = SavedView.objects.restrict(request.user, "view").get(pk=pk)

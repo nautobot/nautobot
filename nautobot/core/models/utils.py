@@ -170,25 +170,24 @@ def find_models_with_matching_fields(app_models, field_names=None, field_attribu
     additional_constraints = additional_constraints or {}
     for model_class in app_models:
         app_label, model_name = model_class._meta.label_lower.split(".")
-        if field_names:
-            for field_name in field_names:
-                try:
-                    field = model_class._meta.get_field(field_name)
-                    if all((getattr(field, item, None) == value for item, value in field_attributes.items())) and all(
-                        getattr(model_class, additional_field, None) == additional_value
-                        for additional_field, additional_value in additional_constraints.items()
-                    ):
-                        registry_items.setdefault(app_label, set()).add(model_name)
-                except FieldDoesNotExist:
-                    pass
-        else:
-            # SavedView does not add any specific fields to the model
-            # so we need to look at the additional constraints only.
-            if all(
+        valid_model = True
+        for field_name in field_names:
+            try:
+                field = model_class._meta.get_field(field_name)
+                if not all((getattr(field, item, None) == value for item, value in field_attributes.items())):
+                    valid_model = False
+                    break
+            except FieldDoesNotExist:
+                valid_model = False
+                break
+        if valid_model:
+            if not all(
                 getattr(model_class, additional_field, None) == additional_value
                 for additional_field, additional_value in additional_constraints.items()
             ):
-                registry_items.setdefault(app_label, set()).add(model_name)
+                valid_model = False
+        if valid_model:
+            registry_items.setdefault(app_label, set()).add(model_name)
 
     registry_items = {key: sorted(value) for key, value in registry_items.items()}
     return registry_items
