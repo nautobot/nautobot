@@ -1002,6 +1002,8 @@ class TagSerializer(NautobotModelSerializer):
 
 
 class TeamSerializer(NautobotModelSerializer):
+    contacts = NautobotHyperlinkedRelatedField(queryset=Contact.objects.all(), many=True, required=False)
+
     class Meta:
         model = Team
         fields = "__all__"
