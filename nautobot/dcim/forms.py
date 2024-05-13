@@ -114,6 +114,10 @@ from .models import (
     Location,
     LocationType,
     Manufacturer,
+    Module,
+    ModuleBay,
+    ModuleBayTemplate,
+    ModuleType,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -170,6 +174,14 @@ class DeviceComponentFilterForm(NautobotFilterForm):
         required=False,
         label="Device",
         query_params={"location": "$location"},
+    )
+
+
+class ModularDeviceComponentFilterForm(DeviceComponentFilterForm):
+    module = DynamicModelMultipleChoiceField(
+        queryset=Module.objects.all(),
+        required=False,
+        label="Module",
     )
 
 
@@ -887,6 +899,90 @@ class DeviceTypeFilterForm(NautobotFilterForm):
 
 
 #
+# Module types
+#
+
+
+class ModuleTypeForm(NautobotModelForm):
+    manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all())
+
+    class Meta:
+        model = ModuleType
+        fields = [
+            "manufacturer",
+            "model",
+            "part_number",
+            "tags",
+        ]
+
+
+# TODO
+# class ModuleTypeImportForm(BootstrapMixin, forms.ModelForm):
+#     """
+#     Form for JSON/YAML import of ModuleType objects.
+
+#     TODO: at some point we'll want to add general-purpose YAML serialization/deserialization,
+#     similar to what we've done for CSV in 2.0, but for the moment we're leaving this as-is so that we can remain
+#     at least nominally compatible with the netbox-community/devicetype-library repo.
+#     """
+
+#     manufacturer = forms.ModelChoiceField(queryset=Manufacturer.objects.all(), to_field_name="name")
+#     device_family = forms.ModelChoiceField(queryset=DeviceFamily.objects.all(), to_field_name="name", required=False)
+
+#     class Meta:
+#         model = ModuleType
+#         fields = [
+#             "manufacturer",
+#             "device_family",
+#             "model",
+#             "part_number",
+#             "u_height",
+#             "is_full_depth",
+#             "subdevice_role",
+#             "comments",
+#         ]
+
+
+class ModuleTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=ModuleType.objects.all(), widget=forms.MultipleHiddenInput())
+    manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+
+
+class ModuleTypeFilterForm(NautobotFilterForm):
+    model = ModuleType
+    q = forms.CharField(required=False, label="Search")
+    manufacturer = DynamicModelMultipleChoiceField(
+        queryset=Manufacturer.objects.all(), to_field_name="name", required=False
+    )
+    has_console_ports = forms.NullBooleanField(
+        required=False,
+        label="Has console ports",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_console_server_ports = forms.NullBooleanField(
+        required=False,
+        label="Has console server ports",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_power_ports = forms.NullBooleanField(
+        required=False,
+        label="Has power ports",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_power_outlets = forms.NullBooleanField(
+        required=False,
+        label="Has power outlets",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_interfaces = forms.NullBooleanField(
+        required=False,
+        label="Has interfaces",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    tags = TagFilterField(model)
+
+
+#
 # Device component templates
 #
 
@@ -908,11 +1004,29 @@ class ComponentTemplateCreateForm(ComponentForm):
     description = forms.CharField(required=False)
 
 
+class ModularComponentTemplateCreateForm(ComponentTemplateCreateForm):
+    """
+    Base form for the creation of device component templates (subclassed from ModularComponentTemplateModel).
+    """
+
+    device_type = DynamicModelChoiceField(
+        queryset=DeviceType.objects.all(),
+        query_params={"manufacturer": "$manufacturer"},
+        required=False,
+    )
+    module_type = DynamicModelChoiceField(
+        queryset=ModuleType.objects.all(),
+        query_params={"manufacturer": "$manufacturer"},
+        required=False,
+    )
+
+
 class ConsolePortTemplateForm(NautobotModelForm):
     class Meta:
         model = ConsolePortTemplate
         fields = [
             "device_type",
+            "module_type",
             "name",
             "label",
             "type",
@@ -920,14 +1034,16 @@ class ConsolePortTemplateForm(NautobotModelForm):
         ]
         widgets = {
             "device_type": forms.HiddenInput(),
+            "module_type": forms.HiddenInput(),
         }
 
 
-class ConsolePortTemplateCreateForm(ComponentTemplateCreateForm):
+class ConsolePortTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=add_blank_choice(ConsolePortTypeChoices), widget=StaticSelect2())
     field_order = (
         "manufacturer",
         "device_type",
+        "module_type",
         "name_pattern",
         "label_pattern",
         "type",
@@ -953,6 +1069,7 @@ class ConsoleServerPortTemplateForm(NautobotModelForm):
         model = ConsoleServerPortTemplate
         fields = [
             "device_type",
+            "module_type",
             "name",
             "label",
             "type",
@@ -960,14 +1077,16 @@ class ConsoleServerPortTemplateForm(NautobotModelForm):
         ]
         widgets = {
             "device_type": forms.HiddenInput(),
+            "module_type": forms.HiddenInput(),
         }
 
 
-class ConsoleServerPortTemplateCreateForm(ComponentTemplateCreateForm):
+class ConsoleServerPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=add_blank_choice(ConsolePortTypeChoices), widget=StaticSelect2())
     field_order = (
         "manufacturer",
         "device_type",
+        "module_type",
         "name_pattern",
         "label_pattern",
         "type",
@@ -997,6 +1116,7 @@ class PowerPortTemplateForm(NautobotModelForm):
         model = PowerPortTemplate
         fields = [
             "device_type",
+            "module_type",
             "name",
             "label",
             "type",
@@ -1006,16 +1126,18 @@ class PowerPortTemplateForm(NautobotModelForm):
         ]
         widgets = {
             "device_type": forms.HiddenInput(),
+            "module_type": forms.HiddenInput(),
         }
 
 
-class PowerPortTemplateCreateForm(ComponentTemplateCreateForm):
+class PowerPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=add_blank_choice(PowerPortTypeChoices), required=False)
     maximum_draw = forms.IntegerField(min_value=1, required=False, help_text="Maximum power draw (watts)")
     allocated_draw = forms.IntegerField(min_value=1, required=False, help_text="Allocated power draw (watts)")
     field_order = (
         "manufacturer",
         "device_type",
+        "module_type",
         "name_pattern",
         "label_pattern",
         "type",
@@ -1052,6 +1174,7 @@ class PowerOutletTemplateForm(NautobotModelForm):
         model = PowerOutletTemplate
         fields = [
             "device_type",
+            "module_type",
             "name",
             "label",
             "type",
@@ -1061,19 +1184,24 @@ class PowerOutletTemplateForm(NautobotModelForm):
         ]
         widgets = {
             "device_type": forms.HiddenInput(),
+            "module_type": forms.HiddenInput(),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Limit power_port_template choices to current DeviceType
-        if hasattr(self.instance, "device_type"):
+        # Limit power_port_template choices to current DeviceType or ModuleType
+        if getattr(self.instance, "device_type", None):
             self.fields["power_port_template"].queryset = PowerPortTemplate.objects.filter(
                 device_type=self.instance.device_type
             )
+        elif getattr(self.instance, "module_type", None):
+            self.fields["power_port_template"].queryset = PowerPortTemplate.objects.filter(
+                module_type=self.instance.module_type
+            )
 
 
-class PowerOutletTemplateCreateForm(ComponentTemplateCreateForm):
+class PowerOutletTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=add_blank_choice(PowerOutletTypeChoices), required=False)
     power_port_template = DynamicModelChoiceField(
         queryset=PowerPortTemplate.objects.all(),
@@ -1088,6 +1216,7 @@ class PowerOutletTemplateCreateForm(ComponentTemplateCreateForm):
     field_order = (
         "manufacturer",
         "device_type",
+        "module_type",
         "name_pattern",
         "label_pattern",
         "type",
@@ -1139,6 +1268,7 @@ class InterfaceTemplateForm(NautobotModelForm):
         model = InterfaceTemplate
         fields = [
             "device_type",
+            "module_type",
             "name",
             "label",
             "type",
@@ -1147,16 +1277,18 @@ class InterfaceTemplateForm(NautobotModelForm):
         ]
         widgets = {
             "device_type": forms.HiddenInput(),
+            "module_type": forms.HiddenInput(),
             "type": StaticSelect2(),
         }
 
 
-class InterfaceTemplateCreateForm(ComponentTemplateCreateForm):
+class InterfaceTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=InterfaceTypeChoices, widget=StaticSelect2())
     mgmt_only = forms.BooleanField(required=False, label="Management only")
     field_order = (
         "manufacturer",
         "device_type",
+        "module_type",
         "name_pattern",
         "label_pattern",
         "type",
@@ -1185,6 +1317,7 @@ class FrontPortTemplateForm(NautobotModelForm):
         model = FrontPortTemplate
         fields = [
             "device_type",
+            "module_type",
             "name",
             "label",
             "type",
@@ -1194,20 +1327,25 @@ class FrontPortTemplateForm(NautobotModelForm):
         ]
         widgets = {
             "device_type": forms.HiddenInput(),
+            "module_type": forms.HiddenInput(),
             "rear_port_template": StaticSelect2(),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Limit rear_port_template choices to current DeviceType
-        if hasattr(self.instance, "device_type"):
+        # Limit rear_port_template choices to current DeviceType or ModuleType
+        if getattr(self.instance, "device_type", None):
             self.fields["rear_port_template"].queryset = RearPortTemplate.objects.filter(
                 device_type=self.instance.device_type
             )
+        elif getattr(self.instance, "module_type", None):
+            self.fields["rear_port_template"].queryset = RearPortTemplate.objects.filter(
+                device_type=self.instance.module_type
+            )
 
 
-class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
+class FrontPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=PortTypeChoices, widget=StaticSelect2())
     rear_port_template_set = forms.MultipleChoiceField(
         choices=[],
@@ -1217,6 +1355,7 @@ class FrontPortTemplateCreateForm(ComponentTemplateCreateForm):
     field_order = (
         "manufacturer",
         "device_type",
+        "module_type",
         "name_pattern",
         "label_pattern",
         "type",
@@ -1294,6 +1433,7 @@ class RearPortTemplateForm(NautobotModelForm):
         model = RearPortTemplate
         fields = [
             "device_type",
+            "module_type",
             "name",
             "label",
             "type",
@@ -1302,11 +1442,12 @@ class RearPortTemplateForm(NautobotModelForm):
         ]
         widgets = {
             "device_type": forms.HiddenInput(),
+            "module_type": forms.HiddenInput(),
             "type": StaticSelect2(),
         }
 
 
-class RearPortTemplateCreateForm(ComponentTemplateCreateForm):
+class RearPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(
         choices=PortTypeChoices,
         widget=StaticSelect2(),
@@ -1320,6 +1461,7 @@ class RearPortTemplateCreateForm(ComponentTemplateCreateForm):
     field_order = (
         "manufacturer",
         "device_type",
+        "module_type",
         "name_pattern",
         "label_pattern",
         "type",
@@ -1368,6 +1510,42 @@ class DeviceBayTemplateCreateForm(ComponentTemplateCreateForm):
 
 class DeviceBayTemplateBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceBayTemplate.objects.all(), widget=forms.MultipleHiddenInput())
+    label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    description = forms.CharField(required=False)
+
+    class Meta:
+        nullable_fields = ("label", "description")
+
+
+class ModuleBayTemplateForm(NautobotModelForm):
+    class Meta:
+        model = ModuleBayTemplate
+        fields = [
+            "device_type",
+            "module_type",
+            "position",
+            "label",
+            "description",
+        ]
+        widgets = {
+            "device_type": forms.HiddenInput(),
+            "module_type": forms.HiddenInput(),
+        }
+
+
+class ModuleBayTemplateCreateForm(NautobotModelForm):
+    field_order = (
+        "manufacturer",
+        "device_type",
+        "module_type",
+        "position_pattern",
+        "label_pattern",
+        "description",
+    )
+
+
+class ModuleBayTemplateBulkEditForm(NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=ModuleBayTemplate.objects.all(), widget=forms.MultipleHiddenInput())
     label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     description = forms.CharField(required=False)
 
@@ -1983,6 +2161,139 @@ class DeviceFilterForm(
 
 
 #
+# Modules
+#
+
+
+class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalContextModelForm):
+    manufacturer = DynamicModelChoiceField(
+        queryset=Manufacturer.objects.all(),
+        required=False,
+        initial_params={"device_types": "$device_type"},
+    )
+    module_type = DynamicModelChoiceField(
+        queryset=ModuleType.objects.all(),
+        query_params={"manufacturer": "$manufacturer"},
+    )
+
+    class Meta:
+        model = Module
+        fields = [
+            "module_type",
+            "parent_module_bay",
+            "location",
+            "serial",
+            "asset_tag",
+            "status",
+            "tenant_group",
+            "tenant",
+            "tags",
+        ]
+        help_texts = {
+            "serial": "Module serial number",
+        }
+
+
+class ModuleBulkEditForm(
+    TagsBulkEditFormMixin,
+    LocatableModelBulkEditFormMixin,
+    StatusModelBulkEditFormMixin,
+    RoleModelBulkEditFormMixin,
+    NautobotBulkEditForm,
+    LocalContextModelBulkEditForm,
+):
+    pk = forms.ModelMultipleChoiceField(queryset=Module.objects.all(), widget=forms.MultipleHiddenInput())
+    manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+    module_type = DynamicModelChoiceField(
+        queryset=ModuleType.objects.all(),
+        required=False,
+        query_params={"manufacturer": "$manufacturer"},
+    )
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    serial = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, label="Serial Number")
+
+    class Meta:
+        model = Module
+        nullable_fields = [
+            "location",
+            "tenant",
+            "serial",
+        ]
+
+
+class ModuleFilterForm(
+    NautobotFilterForm,
+    LocalContextFilterForm,
+    LocatableModelFilterFormMixin,
+    TenancyFilterForm,
+    StatusModelFilterFormMixin,
+    RoleModelFilterFormMixin,
+):
+    model = Module
+    field_order = [
+        "q",
+        "location",
+        "status",
+        "role",
+        "tenant_group",
+        "tenant",
+        "manufacturer",
+        "module_type",
+        "mac_address",
+    ]
+    q = forms.CharField(required=False, label="Search")
+    manufacturer = DynamicModelMultipleChoiceField(
+        queryset=Manufacturer.objects.all(),
+        to_field_name="name",
+        required=False,
+        label="Manufacturer",
+    )
+    module_type = DynamicModelMultipleChoiceField(
+        queryset=ModuleType.objects.all(),
+        required=False,
+        label="Model",
+        query_params={"manufacturer": "$manufacturer"},
+    )
+    mac_address = forms.CharField(required=False, label="MAC address")
+    has_console_ports = forms.NullBooleanField(
+        required=False,
+        label="Has console ports",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_console_server_ports = forms.NullBooleanField(
+        required=False,
+        label="Has console server ports",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_power_ports = forms.NullBooleanField(
+        required=False,
+        label="Has power ports",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_power_outlets = forms.NullBooleanField(
+        required=False,
+        label="Has power outlets",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_interfaces = forms.NullBooleanField(
+        required=False,
+        label="Has interfaces",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_front_ports = forms.NullBooleanField(
+        required=False,
+        label="Has front ports",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    has_rear_ports = forms.NullBooleanField(
+        required=False,
+        label="Has rear ports",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    tags = TagFilterField(model)
+
+
+#
 # Device components
 #
 
@@ -2026,7 +2337,7 @@ class DeviceBulkAddComponentForm(ComponentForm, CustomFieldModelBulkEditFormMixi
 #
 
 
-class ConsolePortFilterForm(DeviceComponentFilterForm):
+class ConsolePortFilterForm(ModularDeviceComponentFilterForm):
     model = ConsolePort
     type = forms.MultipleChoiceField(choices=ConsolePortTypeChoices, required=False, widget=StaticSelect2Multiple())
     tags = TagFilterField(model)
@@ -2081,7 +2392,7 @@ class ConsolePortBulkEditForm(
 #
 
 
-class ConsoleServerPortFilterForm(DeviceComponentFilterForm):
+class ConsoleServerPortFilterForm(ModularDeviceComponentFilterForm):
     model = ConsoleServerPort
     type = forms.MultipleChoiceField(choices=ConsolePortTypeChoices, required=False, widget=StaticSelect2Multiple())
     tags = TagFilterField(model)
@@ -2136,7 +2447,7 @@ class ConsoleServerPortBulkEditForm(
 #
 
 
-class PowerPortFilterForm(DeviceComponentFilterForm):
+class PowerPortFilterForm(ModularDeviceComponentFilterForm):
     model = PowerPort
     type = forms.MultipleChoiceField(choices=PowerPortTypeChoices, required=False, widget=StaticSelect2Multiple())
     tags = TagFilterField(model)
@@ -2208,7 +2519,7 @@ class PowerPortBulkEditForm(
 #
 
 
-class PowerOutletFilterForm(DeviceComponentFilterForm):
+class PowerOutletFilterForm(ModularDeviceComponentFilterForm):
     model = PowerOutlet
     type = forms.MultipleChoiceField(choices=PowerOutletTypeChoices, required=False, widget=StaticSelect2Multiple())
     tags = TagFilterField(model)
@@ -2303,7 +2614,7 @@ class PowerOutletBulkEditForm(
 #
 
 
-class InterfaceFilterForm(DeviceComponentFilterForm, RoleModelFilterFormMixin, StatusModelFilterFormMixin):
+class InterfaceFilterForm(ModularDeviceComponentFilterForm, RoleModelFilterFormMixin, StatusModelFilterFormMixin):
     model = Interface
     type = forms.MultipleChoiceField(choices=InterfaceTypeChoices, required=False, widget=StaticSelect2Multiple())
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -2659,7 +2970,7 @@ class InterfaceBulkEditForm(
 #
 
 
-class FrontPortFilterForm(DeviceComponentFilterForm):
+class FrontPortFilterForm(ModularDeviceComponentFilterForm):
     model = FrontPort
     type = forms.MultipleChoiceField(choices=PortTypeChoices, required=False, widget=StaticSelect2Multiple())
     tags = TagFilterField(model)
@@ -2783,7 +3094,7 @@ class FrontPortBulkEditForm(
 #
 
 
-class RearPortFilterForm(DeviceComponentFilterForm):
+class RearPortFilterForm(ModularDeviceComponentFilterForm):
     model = RearPort
     type = forms.MultipleChoiceField(choices=PortTypeChoices, required=False, widget=StaticSelect2Multiple())
     tags = TagFilterField(model)
@@ -2906,6 +3217,60 @@ class DeviceBayBulkEditForm(
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=DeviceBay.objects.all(), widget=forms.MultipleHiddenInput())
+
+    class Meta:
+        nullable_fields = ["label", "description"]
+
+
+#
+# Module bays
+#
+
+
+class ModuleBayFilterForm(NautobotFilterForm):
+    model = ModuleBay
+
+    field_order = ["q", "parent_device", "parent_module"]
+    q = forms.CharField(required=False, label="Search")
+    parent_device = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        label="Parent device",
+    )
+    parent_module = DynamicModelMultipleChoiceField(
+        queryset=Module.objects.all(),
+        required=False,
+        label="Parent module",
+    )
+
+
+class ModuleBayForm(ComponentEditForm):
+    class Meta:
+        model = ModuleBay
+        fields = [
+            "parent_device",
+            "parent_module",
+            "position",
+            "label",
+            "description",
+            "tags",
+        ]
+
+
+class ModuleBayCreateForm(ComponentCreateForm):
+    field_order = ("parent_device", "parent_module", "position_pattern", "label_pattern", "description", "tags")
+
+
+class ModuleBayBulkCreateForm(form_from_model(ModuleBay, ["tags"]), DeviceBulkAddComponentForm):
+    field_order = ("position_pattern", "label_pattern", "description", "tags")
+
+
+class ModuleBayBulkEditForm(
+    form_from_model(ModuleBay, ["label", "description"]),
+    TagsBulkEditFormMixin,
+    NautobotBulkEditForm,
+):
+    pk = forms.ModelMultipleChoiceField(queryset=ModuleBay.objects.all(), widget=forms.MultipleHiddenInput())
 
     class Meta:
         nullable_fields = ["label", "description"]

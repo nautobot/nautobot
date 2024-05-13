@@ -20,6 +20,7 @@ from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_tables2 import RequestConfig
+from rest_framework.decorators import action
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.forms import ConfirmationForm, restrict_form_fields
@@ -30,6 +31,8 @@ from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
     ObjectDestroyViewMixin,
     ObjectEditViewMixin,
     ObjectPermissionRequiredMixin,
@@ -74,6 +77,10 @@ from .models import (
     Location,
     LocationType,
     Manufacturer,
+    Module,
+    ModuleBay,
+    ModuleBayTemplate,
+    ModuleType,
     PathEndpoint,
     Platform,
     PowerFeed,
@@ -890,6 +897,82 @@ class DeviceTypeBulkDeleteView(generic.BulkDeleteView):
 
 
 #
+# Module types
+#
+
+
+class ModuleTypeUIViewSet(NautobotUIViewSet):
+    queryset = ModuleType.objects.all()
+    filterset_class = filters.ModuleTypeFilterSet
+    filterset_form_class = forms.ModuleTypeFilterForm
+    form_class = forms.ModuleTypeForm
+    bulk_update_form_class = forms.ModuleTypeBulkEditForm
+    serializer_class = serializers.ModuleTypeSerializer
+    table_class = tables.ModuleTypeTable
+
+    def get_extra_context(self, request, instance):
+        if not instance:
+            return {}
+
+        instance_count = Module.objects.restrict(request.user).filter(module_type=instance).count()
+
+        # Component tables
+        consoleport_table = tables.ConsolePortTemplateTable(
+            ConsolePortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+            orderable=False,
+        )
+        consoleserverport_table = tables.ConsoleServerPortTemplateTable(
+            ConsoleServerPortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+            orderable=False,
+        )
+        powerport_table = tables.PowerPortTemplateTable(
+            PowerPortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+            orderable=False,
+        )
+        poweroutlet_table = tables.PowerOutletTemplateTable(
+            PowerOutletTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+            orderable=False,
+        )
+        interface_table = tables.InterfaceTemplateTable(
+            list(InterfaceTemplate.objects.restrict(request.user, "view").filter(module_type=instance)),
+            orderable=False,
+        )
+        front_port_table = tables.FrontPortTemplateTable(
+            FrontPortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+            orderable=False,
+        )
+        rear_port_table = tables.RearPortTemplateTable(
+            RearPortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+            orderable=False,
+        )
+        modulebay_table = tables.ModuleBayTemplateTable(
+            ModuleBayTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
+            orderable=False,
+        )
+        if request.user.has_perm("dcim.change_moduletype"):
+            consoleport_table.columns.show("pk")
+            consoleserverport_table.columns.show("pk")
+            powerport_table.columns.show("pk")
+            poweroutlet_table.columns.show("pk")
+            interface_table.columns.show("pk")
+            front_port_table.columns.show("pk")
+            rear_port_table.columns.show("pk")
+            modulebay_table.columns.show("pk")
+
+        return {
+            "instance_count": instance_count,
+            "consoleport_table": consoleport_table,
+            "consoleserverport_table": consoleserverport_table,
+            "powerport_table": powerport_table,
+            "poweroutlet_table": poweroutlet_table,
+            "interface_table": interface_table,
+            "front_port_table": front_port_table,
+            "rear_port_table": rear_port_table,
+            "modulebay_table": modulebay_table,
+        }
+
+
+#
 # Console port templates
 #
 
@@ -1187,6 +1270,30 @@ class DeviceBayTemplateBulkDeleteView(generic.BulkDeleteView):
     queryset = DeviceBayTemplate.objects.all()
     table = tables.DeviceBayTemplateTable
     filterset = filters.DeviceBayTemplateFilterSet
+
+
+#
+# Module bay templates
+#
+
+
+class ModuleBayTemplateUIViewSet(
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    queryset = ModuleBayTemplate.objects.all()
+    bulk_update_form_class = forms.ModuleBayBulkEditForm
+    filterset_class = filters.ModuleBayTemplateFilterSet
+    # filterset_form_class = forms.ModuleBayTemplateFilterForm
+    form_class = forms.ModuleBayTemplateForm
+    serializer_class = serializers.ModuleBayTemplateSerializer
+    # table_class = tables.ModuleBayTemplateTable
+
+    @action(detail=False, url_path="rename", url_name="bulk_rename")
+    def add(self, request, *args, **kwargs):
+        return None
 
 
 #
@@ -1491,6 +1598,26 @@ class DeviceDeviceBaysView(generic.ObjectView):
         }
 
 
+class DeviceModuleBaysView(generic.ObjectView):
+    queryset = Device.objects.all()
+    template_name = "dcim/device/modulebays.html"
+
+    def get_extra_context(self, request, instance):
+        modulebays = (
+            ModuleBay.objects.restrict(request.user, "view")
+            .filter(parent_device=instance)
+            .prefetch_related("installed_module__status", "installed_module")
+        )
+        modulebay_table = tables.DeviceModuleBayTable(data=modulebays, user=request.user, orderable=False)
+        if request.user.has_perm("dcim.change_modulebay") or request.user.has_perm("dcim.delete_modulebay"):
+            modulebay_table.columns.show("pk")
+
+        return {
+            "modulebay_table": modulebay_table,
+            "active_tab": "module-bays",
+        }
+
+
 class DeviceInventoryView(generic.ObjectView):
     queryset = Device.objects.all()
     template_name = "dcim/device/inventory.html"
@@ -1603,6 +1730,21 @@ class DeviceBulkDeleteView(generic.BulkDeleteView):
     queryset = Device.objects.select_related("tenant", "location", "rack", "role", "device_type__manufacturer")
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
+
+
+#
+# Modules
+#
+
+
+class ModuleUIViewSet(NautobotUIViewSet):
+    queryset = Module.objects.all()
+    filterset_class = filters.ModuleFilterSet
+    filterset_form_class = forms.ModuleFilterForm
+    form_class = forms.ModuleForm
+    bulk_update_form_class = forms.ModuleBulkEditForm
+    serializer_class = serializers.ModuleSerializer
+    table_class = tables.ModuleTable
 
 
 #
@@ -2238,6 +2380,33 @@ class DeviceBayBulkDeleteView(generic.BulkDeleteView):
     queryset = DeviceBay.objects.all()
     filterset = filters.DeviceBayFilterSet
     table = tables.DeviceBayTable
+
+
+#
+# Module bays
+#
+
+
+class ModuleBayUIViewSet(NautobotUIViewSet):
+    queryset = ModuleBay.objects.all()
+    bulk_update_form_class = forms.ModuleBayBulkEditForm
+    filterset_class = filters.ModuleBayFilterSet
+    filterset_form_class = forms.ModuleBayFilterForm
+    form_class = forms.ModuleBayForm
+    serializer_class = serializers.ModuleBaySerializer
+    table_class = tables.ModuleBayTable
+
+    @action(detail=False, url_path="rename", url_name="bulk_rename")
+    def bulk_rename(self, request, *args, **kwargs):
+        return None
+
+    @action(detail=True)
+    def depopulate(self, request, *args, **kwargs):
+        return None
+
+    @action(detail=True)
+    def populate(self, request, *args, **kwargs):
+        return None
 
 
 #
@@ -3121,7 +3290,6 @@ class SoftwareImageFileUIViewSet(NautobotUIViewSet):
     form_class = forms.SoftwareImageFileForm
     bulk_update_form_class = forms.SoftwareImageFileBulkEditForm
     queryset = SoftwareImageFile.objects.all()
-
     serializer_class = serializers.SoftwareImageFileSerializer
     table_class = tables.SoftwareImageFileTable
 

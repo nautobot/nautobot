@@ -1858,7 +1858,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(self._get_queryset().filter(name="Device X").count(), 0)
 
 
-class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
+class ConsolePortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
     model = ConsolePort
 
     @classmethod
@@ -1898,7 +1898,7 @@ class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
         }
 
 
-class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
+class ConsoleServerPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
     model = ConsoleServerPort
 
     @classmethod
@@ -1937,7 +1937,7 @@ class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
         }
 
 
-class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
+class PowerPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
     model = PowerPort
 
     @classmethod
@@ -1981,7 +1981,7 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
         }
 
 
-class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
+class PowerOutletTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
     model = PowerOutlet
 
     @classmethod
@@ -2038,8 +2038,22 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "New description",
         }
 
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        form_data = self.form_data.copy()
+        form_data["power_port"] = instance.power_port  # power_port is not editable
+        self.form_data = form_data
+        super().test_edit_object_with_permission()
 
-class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        form_data = self.form_data.copy()
+        form_data["power_port"] = instance.power_port  # power_port is not editable
+        self.form_data = form_data
+        super().test_edit_object_with_constrained_permission()
+
+
+class InterfaceTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
     model = Interface
 
     @classmethod
@@ -2192,7 +2206,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertNotIn(invalid_ipaddress_link, response_content)
 
 
-class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
+class FrontPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
     model = FrontPort
 
     @classmethod
@@ -2247,7 +2261,7 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
         pass
 
 
-class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
+class RearPortTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
     model = RearPort
 
     @classmethod

@@ -280,3 +280,17 @@ DEVICEBAY_BUTTONS = """
     {% endif %}
 {% endif %}
 """
+
+MODULEBAY_BUTTONS = """
+{% if perms.dcim.change_modulebay %}
+    {% if record.installed_module %}
+        <a href="{% url 'dcim:modulebay_depopulate' pk=record.pk %}?return_url={% url 'dcim:device_modulebays' pk=object.pk %}" class="btn btn-danger btn-xs">
+            <i class="mdi mdi-minus-thick" aria-hidden="true" title="Remove module"></i>
+        </a>
+    {% else %}
+        <a href="{% url 'dcim:modulebay_populate' pk=record.pk %}?return_url={% url 'dcim:device_modulebays' pk=object.pk %}" class="btn btn-success btn-xs">
+            <i class="mdi mdi-plus-thick" aria-hidden="true" title="Install module"></i>
+        </a>
+    {% endif %}
+{% endif %}
+"""

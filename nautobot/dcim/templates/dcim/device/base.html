@@ -119,6 +119,12 @@
                 </li>
             {% endif %}
         {% endwith %}
+        {% with modulebay_count=object.module_bays.count %}
+            <li role="presentation" {% if active_tab == 'module-bays' %} class="active"{% endif %}>
+                {# TODO - Badge should show the number of modules instead of module bays #}
+                <a href="{% url 'dcim:device_modulebays' pk=object.pk %}">Modules {% badge modulebay_count %}</a>
+            </li>
+        {% endwith %}
         {% with inventoryitem_count=object.inventory_items.count %}
             {% if inventoryitem_count %}
                 <li role="presentation" {% if active_tab == 'inventory' %} class="active"{% endif %}>

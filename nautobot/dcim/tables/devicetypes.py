@@ -17,6 +17,8 @@ from nautobot.dcim.models import (
     FrontPortTemplate,
     InterfaceTemplate,
     Manufacturer,
+    ModuleBayTemplate,
+    ModuleType,
     PowerOutletTemplate,
     PowerPortTemplate,
     RearPortTemplate,
@@ -31,6 +33,8 @@ __all__ = (
     "FrontPortTemplateTable",
     "InterfaceTemplateTable",
     "ManufacturerTable",
+    "ModuleBayTemplateTable",
+    "ModuleTypeTable",
     "PowerOutletTemplateTable",
     "PowerPortTemplateTable",
     "RearPortTemplateTable",
@@ -140,6 +144,40 @@ class DeviceTypeTable(BaseTable):
             "u_height",
             "is_full_depth",
             "device_count",
+        )
+
+
+#
+# Module types
+#
+
+
+class ModuleTypeTable(BaseTable):
+    pk = ToggleColumn()
+    model = tables.Column(linkify=True, verbose_name="Module Type")
+    module_count = LinkedCountColumn(
+        viewname="dcim:module_list",
+        url_params={"module_type": "pk"},
+        verbose_name="Modules",
+    )
+    tags = TagColumn(url_name="dcim:devicetype_list")
+
+    class Meta(BaseTable.Meta):
+        model = ModuleType
+        fields = (
+            "pk",
+            "model",
+            "manufacturer",
+            "part_number",
+            "module_count",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "model",
+            "manufacturer",
+            "part_number",
+            "module_count",
         )
 
 
@@ -283,4 +321,19 @@ class DeviceBayTemplateTable(ComponentTemplateTable):
     class Meta(BaseTable.Meta):
         model = DeviceBayTemplate
         fields = ("pk", "name", "label", "description", "actions")
+        empty_text = "None"
+
+
+class ModuleBayTemplateTable(BaseTable):
+    pk = ToggleColumn()
+    position = tables.Column()
+    actions = ButtonsColumn(
+        model=ModuleBayTemplate,
+        buttons=("edit", "delete"),
+        return_url_extra="%23tab_modulebays",
+    )
+
+    class Meta(BaseTable.Meta):
+        model = ModuleBayTemplate
+        fields = ("pk", "position", "label", "description", "actions")
         empty_text = "None"

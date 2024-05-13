@@ -1580,3 +1580,22 @@ class ViewTestCases:
                     response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
                     expected_message = f"No valid {verbose_name_plural} were selected."
                     self.assertIn(expected_message, response.content.decode(response.charset))
+
+    class ModularDeviceComponentViewTestCase(DeviceComponentViewTestCase):
+        def test_edit_object_with_permission(self):
+            instance = self._get_queryset().first()
+            form_data = self.form_data.copy()
+            # device and module are not editable
+            form_data["device"] = getattr(getattr(instance, "device", {}), "pk", None)
+            form_data["module"] = getattr(getattr(instance, "module", {}), "pk", None)
+            self.form_data = form_data
+            super().test_edit_object_with_permission()
+
+        def test_edit_object_with_constrained_permission(self):
+            instance = self._get_queryset().first()
+            form_data = self.form_data.copy()
+            # device and module are not editable
+            form_data["device"] = getattr(getattr(instance, "device", {}), "pk", None)
+            form_data["module"] = getattr(getattr(instance, "module", {}), "pk", None)
+            self.form_data = form_data
+            super().test_edit_object_with_constrained_permission()

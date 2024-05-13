@@ -198,6 +198,10 @@ class DeviceModuleCommonFiltersMixin(django_filters.FilterSet):
         queryset=ModuleBay.objects.all(),
         label="Module Bays",
     )
+    has_modules = RelatedMembershipBooleanFilter(
+        field_name="module_bays__installed_module",
+        label="Has modules",
+    )
 
 
 class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):

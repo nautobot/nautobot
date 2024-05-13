@@ -1560,7 +1560,6 @@ class Module(PrimaryModel):
     )
     status = StatusField()
     role = RoleField(blank=True, null=True)
-    # TODO: add to new model checklist: all new models should have tenant field
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -1620,11 +1619,14 @@ class Module(PrimaryModel):
     def __str__(self):
         serial = f" (Serial: {self.serial})" if self.serial else ""
         asset_tag = f" (Asset Tag: {self.asset_tag})" if self.asset_tag else ""
-        display = str(self.module_type) + serial + asset_tag
+        return str(self.module_type) + serial + asset_tag
+
+    @property
+    def display(self):
         if self.location:
-            return f"{display} at location {self.location}"
+            return f"{self!s} at location {self.location}"
         else:
-            return f"{display} installed in {self.parent_module_bay}"
+            return f"{self!s} installed in {self.parent_module_bay}"
 
     @property
     def device(self):

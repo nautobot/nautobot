@@ -1198,7 +1198,10 @@ class ModuleBay(PrimaryModel):
         return self.parent_module.device if self.parent_module else self.parent_device
 
     def __str__(self):
-        return f"{self.parent} ({self.position})"
+        if self.parent is not None:
+            return f"{self.parent} ({self.position})"
+        else:
+            return f"{self.parent_module} ({self.position})"
 
     def to_objectchange(self, action, **kwargs):
         """

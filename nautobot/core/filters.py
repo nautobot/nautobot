@@ -122,8 +122,8 @@ class MultiValueUUIDFilter(django_filters.UUIDFilter, django_filters.MultipleCho
 
 class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
     """
-    BooleanFilter for related objects that will explicitly perform `exclude=True` and `isnull`
-    lookups. The `field_name` argument is required and must be set to the related field on the
+    BooleanFilter for related objects that will explicitly perform `isnull` lookups.
+    The `field_name` argument is required and must be set to the related field on the
     model.
 
     This should be used instead of a default `BooleanFilter` paired `method=`
@@ -137,9 +137,7 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
         )
     """
 
-    def __init__(
-        self, field_name=None, lookup_expr="isnull", *, label=None, method=None, distinct=False, exclude=True, **kwargs
-    ):
+    def __init__(self, field_name=None, lookup_expr="isnull", *, label=None, method=None, distinct=True, **kwargs):
         if field_name is None:
             raise ValueError(f"Field name is required for {self.__class__.__name__}")
 
@@ -149,10 +147,22 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
             label=label,
             method=method,
             distinct=distinct,
-            exclude=exclude,
             widget=forms.StaticSelect2(choices=forms.BOOLEAN_CHOICES),
             **kwargs,
         )
+
+    def filter(self, qs, value):
+        if value in EMPTY_VALUES:
+            return qs
+        if self.distinct:
+            qs = qs.distinct()
+        lookup = "%s__%s" % (self.field_name, self.lookup_expr)
+        if bool(value):
+            # return instances with field_name__isnull=False
+            return qs.filter(**{lookup: False})
+        else:
+            # exclude instances with field_name__isnull=False
+            return qs.exclude(**{lookup: False})
 
 
 class NumericArrayFilter(django_filters.NumberFilter):

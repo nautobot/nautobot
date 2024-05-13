@@ -2584,8 +2584,8 @@ class ModuleBayTestCase(ModelTestCases.BaseModelTestCase):
             module_bay.full_clean()
             module_bay.save()
 
-    def test_device_property(self):
-        """Assert that the device property walks up the inheritance tree of Device -> ModuleBay -> Module -> ModuleBay."""
+    def test_parent_property(self):
+        """Assert that the parent property walks up the inheritance tree of Device -> ModuleBay -> Module -> ModuleBay."""
         module_type = ModuleType.objects.first()
         status = Status.objects.get_for_model(Module).first()
 
@@ -2612,18 +2612,18 @@ class ModuleBayTestCase(ModelTestCases.BaseModelTestCase):
             position="1111",
         )
 
-        self.assertEqual(parent_module_bay.device, self.device)
-        self.assertEqual(child_module_bay.device, self.device)
-        self.assertEqual(grandchild_module_bay.device, self.device)
+        self.assertEqual(parent_module_bay.parent, self.device)
+        self.assertEqual(child_module_bay.parent, self.device)
+        self.assertEqual(grandchild_module_bay.parent, self.device)
 
         # Remove the module from the module bay and put it in storage
         module.parent_module_bay = None
         module.location = Location.objects.get_for_model(Module).first()
         module.save()
 
-        self.assertEqual(parent_module_bay.device, self.device)
-        self.assertIsNone(child_module_bay.device)
-        self.assertIsNone(grandchild_module_bay.device)
+        self.assertEqual(parent_module_bay.parent, self.device)
+        self.assertIsNone(child_module_bay.parent)
+        self.assertIsNone(grandchild_module_bay.parent)
 
     def test_uniqueness_parent_device(self):
         """Assert that the combination of parent device and position is unique."""
@@ -2684,26 +2684,6 @@ class ModuleBayTestCase(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(IntegrityError):
             module_bay.save()
-
-    def test_parent_property(self):
-        module_type = ModuleType.objects.first()
-        status = Status.objects.get_for_model(Module).first()
-
-        parent_module_bay = ModuleBay.objects.create(
-            parent_device=self.device,
-            position="1111",
-        )
-        module = Module.objects.create(
-            module_type=module_type,
-            parent_module_bay=parent_module_bay,
-            status=status,
-        )
-        child_module_bay = ModuleBay.objects.create(
-            parent_module=module,
-            position="1111",
-        )
-        self.assertEqual(parent_module_bay.parent, self.device)
-        self.assertEqual(child_module_bay.parent, module)
 
 
 class ModuleBayTemplateTestCase(ModelTestCases.BaseModelTestCase):

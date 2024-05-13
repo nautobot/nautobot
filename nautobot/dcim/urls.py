@@ -41,6 +41,10 @@ router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
 router.register("controllers", views.ControllerUIViewSet)
 router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
+router.register("modules", views.ModuleUIViewSet)
+router.register("module-bays", views.ModuleBayUIViewSet)
+router.register("module-bay-templates", views.ModuleBayTemplateUIViewSet)
+router.register("module-types", views.ModuleTypeUIViewSet)
 
 urlpatterns = [
     # Location types
@@ -647,6 +651,11 @@ urlpatterns = [
         "devices/<uuid:pk>/device-bays/",
         views.DeviceDeviceBaysView.as_view(),
         name="device_devicebays",
+    ),
+    path(
+        "devices/<uuid:pk>/module-bays/",
+        views.DeviceModuleBaysView.as_view(),
+        name="device_modulebays",
     ),
     path(
         "devices/<uuid:pk>/inventory/",

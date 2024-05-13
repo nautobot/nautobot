@@ -23,6 +23,8 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroup,
     InterfaceRedundancyGroupAssociation,
     InventoryItem,
+    Module,
+    ModuleBay,
     Platform,
     PowerOutlet,
     PowerPort,
@@ -48,6 +50,7 @@ from .template_code import (
     INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES,
     INTERFACE_REDUNDANCY_INTERFACE_PRIORITY,
     INTERFACE_TAGGED_VLANS,
+    MODULEBAY_BUTTONS,
     PATHENDPOINT,
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
@@ -68,6 +71,7 @@ __all__ = (
     "DeviceImportTable",
     "DeviceInterfaceTable",
     "DeviceInventoryItemTable",
+    "DeviceModuleBayTable",
     "DevicePowerPortTable",
     "DevicePowerOutletTable",
     "DeviceRearPortTable",
@@ -78,6 +82,8 @@ __all__ = (
     "InterfaceRedundancyGroupTable",
     "InterfaceRedundancyGroupAssociationTable",
     "InventoryItemTable",
+    "ModuleTable",
+    "ModuleBayTable",
     "PlatformTable",
     "PowerOutletTable",
     "PowerPortTable",
@@ -231,6 +237,52 @@ class DeviceImportTable(BaseTable):
             "device_type",
         )
         empty_text = False
+
+
+#
+# Modules
+#
+
+
+class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
+    pk = ToggleColumn()
+    display = tables.LinkColumn(orderable=False, verbose_name="Module")
+    parent_module_bay = tables.Column(linkify=True)
+    location = tables.Column(linkify=True)
+    module_type = tables.LinkColumn(
+        viewname="dcim:moduletype",
+        args=[Accessor("module_type__pk")],
+        verbose_name="Type",
+        text=lambda record: record.module_type.display,
+    )
+    tenant = TenantColumn()
+    tags = TagColumn(url_name="dcim:device_list")
+
+    class Meta(BaseTable.Meta):
+        model = Module
+        fields = (
+            "pk",
+            "display",
+            "parent_module_bay",
+            "location",
+            "module_type",
+            "serial",
+            "asset_tag",
+            "status",
+            "role",
+            "tenant",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "display",
+            "parent_module_bay",
+            "location",
+            "module_type",
+            "status",
+            "role",
+            "tenant",
+        )
 
 
 #
@@ -808,6 +860,40 @@ class DeviceBayTable(DeviceComponentTable):
         )
 
 
+class ModuleBayTable(StatusTableMixin, BaseTable):
+    pk = ToggleColumn()
+    position = tables.Column(linkify=True)
+    parent_device = tables.Column(linkify=True)
+    parent_module = tables.Column(linkify=True)
+    installed_module__status = ColoredLabelColumn()
+    installed_module = tables.Column(linkify=True)
+    tags = TagColumn(url_name="dcim:devicebay_list")
+
+    class Meta(BaseTable.Meta):
+        model = ModuleBay
+        fields = (
+            "pk",
+            "parent_device",
+            "parent_module",
+            "position",
+            "label",
+            "installed_module__status",
+            "installed_module",
+            "description",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "parent_device",
+            "parent_module",
+            "position",
+            "label",
+            "installed_module__status",
+            "installed_module",
+            "description",
+        )
+
+
 class DeviceDeviceBayTable(DeviceBayTable):
     name = tables.TemplateColumn(
         template_code='<i class="mdi mdi-circle{% if record.installed_device %}slice-8{% else %}outline{% endif %}'
@@ -835,6 +921,38 @@ class DeviceDeviceBayTable(DeviceBayTable):
             "installed_device__status",
             "installed_device",
             "description",
+            "actions",
+        )
+
+
+class DeviceModuleBayTable(ModuleBayTable):
+    name = tables.TemplateColumn(
+        template_code='<i class="mdi mdi-circle{% if record.installed_module %}slice-8{% else %}outline{% endif %}'
+        '"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
+        attrs={"td": {"class": "text-nowrap"}},
+    )
+    installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
+    actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=MODULEBAY_BUTTONS)
+
+    class Meta(DeviceComponentTable.Meta):
+        model = ModuleBay
+        fields = (
+            "pk",
+            "position",
+            "label",
+            "description",
+            "installed_module",
+            "installed_module__status",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "position",
+            "label",
+            "description",
+            "installed_module",
+            "installed_module__status",
             "actions",
         )
 
