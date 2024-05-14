@@ -2,7 +2,6 @@ from datetime import timezone
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.urls import reverse
 import factory
 
 from nautobot.core.factory import BaseModelFactory, NautobotBoolIterator, random_instance, UniqueFaker

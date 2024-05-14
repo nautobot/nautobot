@@ -1,5 +1,5 @@
 import logging
-from urllib.parse import parse_qs, unquote
+from urllib.parse import parse_qs
 
 from django.contrib import messages
 from django.contrib.auth import (
