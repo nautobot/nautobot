@@ -28,10 +28,10 @@ If you are using OpenID Connect or SAML you will also need to install the extra 
     sudo apt install -y libxmlsec1-dev libxmlsec1-openssl pkg-config
     ```
 
-Furthermore, due to potential incompatibilities between the precompiled binaries for the `lxml` and `xmlsec` Python packages that this installation will bring in, you need to tell Pip to not install the precompiled binary for `lxml`. Run the following command as the `nautobot` user:
+Furthermore, due to potential incompatibilities between the precompiled binaries for the `lxml` and `xmlsec` Python packages that this installation will bring in, you need to tell Pip to not install the precompiled binary for either of these packages. Run the following command as the `nautobot` user:
 
 ```no-highlight
-pip3 install --no-binary=lxml "nautobot[sso]"
+pip3 install --no-binary=lxml,xmlsec "nautobot[sso]"
 ```
 
 ## Configuration
