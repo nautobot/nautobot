@@ -555,6 +555,7 @@ class ContactFilterSetTestCase(ContactAndTeamFilterSetTestCaseMixin, FilterTestC
         ["comments"],
     )
 
+
 class ContactAssociationFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = ContactAssociation.objects.all()
     filterset = ContactAssociationFilterSet
