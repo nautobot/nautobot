@@ -1119,7 +1119,12 @@ class StaticGroupViewSet(NautobotModelViewSet):
     filterset_class = filters.StaticGroupFilterSet
 
     def get_queryset(self):
-        if hasattr(self, "request") and self.request is not None and "hidden" in self.request.GET:
+        if (
+            hasattr(self, "request")
+            and self.request is not None
+            and "hidden" in self.request.GET
+            and self.action in ["list", "retrieve", "members"]
+        ):
             self.queryset = StaticGroup.all_objects.select_related("content_type")
         return super().get_queryset()
 
@@ -1146,7 +1151,12 @@ class StaticGroupAssociationViewSet(NautobotModelViewSet):
     filterset_class = filters.StaticGroupAssociationFilterSet
 
     def get_queryset(self):
-        if hasattr(self, "request") and self.request is not None and "hidden" in self.request.GET:
+        if (
+            hasattr(self, "request")
+            and self.request is not None
+            and "hidden" in self.request.GET
+            and self.action in ["list", "retrieve"]
+        ):
             self.queryset = StaticGroupAssociation.all_objects.select_related("associated_object_type", "static_group")
         return super().get_queryset()
 

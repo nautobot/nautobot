@@ -2788,9 +2788,6 @@ class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": Tenant.objects.last().pk,
         }
 
-    def _get_queryset(self):
-        return super()._get_queryset().filter(hidden=False)
-
     def test_edit_object_with_permission(self):
         instance = self._get_queryset().first()
         self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
@@ -2845,9 +2842,6 @@ class StaticGroupAssociationTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = StaticGroupAssociation
-
-    def _get_queryset(self):
-        return super()._get_queryset().filter(static_group__hidden=False)
 
 
 class StatusTestCase(
