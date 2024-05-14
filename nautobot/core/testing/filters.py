@@ -1,12 +1,13 @@
 import random
 import string
 
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count, Q
 from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.test import tag
 
-from nautobot.core.filters import RelatedMembershipBooleanFilter, SearchFilter
+from nautobot.core.filters import ContentTypeFilter, RelatedMembershipBooleanFilter, SearchFilter
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
 from nautobot.tenancy import models
@@ -285,6 +286,14 @@ class FilterTestCases:
                     if is_nested_filter_name:
                         obj, obj_field_name = self._get_nested_related_obj_and_its_field_name(obj, obj_field_name)
                     self._assert_q_filter_predicate_validity(obj, obj_field_name, filter_field_name, lookup_method)
+
+        def test_content_type_related_fields_uses_content_type_filter(self):
+            for field in self.queryset.model._meta.fields:
+                related_model = getattr(field, "related_model", None)
+                if not related_model or related_model != ContentType:
+                    continue
+                with self.subTest(f"Assert {self.filterset.__class__.__name__}.{field.name} implements ContentTypeFilter"):
+                    self.assertIsInstance(self.filterset.get_filters().get(field.name), ContentTypeFilter)
 
     class NameOnlyFilterTestCase(FilterTestCase):
         """Add simple tests for filtering by name."""

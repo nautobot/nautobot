@@ -30,6 +30,7 @@ from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.filters import (
     ComputedFieldFilterSet,
     ConfigContextFilterSet,
+    ContactAssociationFilterSet,
     ContactFilterSet,
     ContentTypeFilterSet,
     CustomFieldChoiceFilterSet,
@@ -553,6 +554,45 @@ class ContactFilterSetTestCase(ContactAndTeamFilterSetTestCaseMixin, FilterTestC
         ["address"],
         ["comments"],
     )
+
+class ContactAssociationFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = ContactAssociation.objects.all()
+    filterset = ContactAssociationFilterSet
+
+    @classmethod
+    def setUpTestData(cls):
+        roles = Role.objects.get_for_model(ContactAssociation)
+        statuses = Status.objects.get_for_model(ContactAssociation)
+        ip_addresses = IPAddress.objects.all()
+        locations = Location.objects.all()
+        ContactAssociation.objects.create(
+            contact=Contact.objects.first(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=ip_addresses[0].pk,
+            role=roles[2],
+            status=statuses[1],
+        )
+        ContactAssociation.objects.create(
+            contact=Contact.objects.last(),
+            associated_object_type=ContentType.objects.get_for_model(IPAddress),
+            associated_object_id=ip_addresses[1].pk,
+            role=roles[1],
+            status=statuses[2],
+        )
+        ContactAssociation.objects.create(
+            team=Team.objects.first(),
+            associated_object_type=ContentType.objects.get_for_model(Location),
+            associated_object_id=locations[0].pk,
+            role=roles[0],
+            status=statuses[0],
+        )
+        ContactAssociation.objects.create(
+            team=Team.objects.last(),
+            associated_object_type=ContentType.objects.get_for_model(Location),
+            associated_object_id=locations[1].pk,
+            role=roles[0],
+            status=statuses[1],
+        )
 
 
 class CustomFieldChoiceFilterSetTestCase(FilterTestCases.FilterTestCase):
