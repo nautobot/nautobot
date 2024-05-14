@@ -2337,16 +2337,17 @@ class StaticGroupUIViewSet(NautobotUIViewSet):
     filterset_class = filters.StaticGroupFilterSet
     filterset_form_class = forms.StaticGroupFilterForm
     form_class = forms.StaticGroupForm
+    queryset = StaticGroup.all_objects.annotate(
+        members_count=count_related(StaticGroupAssociation, "static_group", manager_name="all_objects")
+    )
     serializer_class = serializers.StaticGroupSerializer
     table_class = tables.StaticGroupTable
 
-    def get_queryset(self):
-        if self.queryset is None:
-            if hasattr(self, "request") and self.request is not None and "hidden" in self.request.GET:
-                self.queryset = StaticGroup.all_objects.all()
-            else:
-                self.queryset = StaticGroup.objects.all()
-        return super().get_queryset()
+    def alter_queryset(self, request):
+        queryset = super().alter_queryset(request)
+        if request is None or "hidden" not in request.GET:
+            queryset = queryset.filter(hidden=False)
+        return queryset
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -2381,17 +2382,16 @@ class StaticGroupAssociationUIViewSet(
 ):
     filterset_class = filters.StaticGroupAssociationFilterSet
     filterset_form_class = forms.StaticGroupAssociationFilterForm
+    queryset = StaticGroupAssociation.all_objects.all()
     serializer_class = serializers.StaticGroupAssociationSerializer
     table_class = tables.StaticGroupAssociationTable
     action_buttons = ("export",)
 
-    def get_queryset(self):
-        if self.queryset is None:
-            if hasattr(self, "request") and self.request is not None and "hidden" in self.request.GET:
-                self.queryset = StaticGroupAssociation.all_objects.all()
-            else:
-                self.queryset = StaticGroupAssociation.objects.all()
-        return super().get_queryset()
+    def alter_queryset(self, request):
+        queryset = super().alter_queryset(request)
+        if request is None or "hidden" not in request.GET:
+            queryset = queryset.filter(static_group__hidden=False)
+        return queryset
 
 
 class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):

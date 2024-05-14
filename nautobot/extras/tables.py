@@ -119,9 +119,9 @@ MEMBERS_COUNT = """
 {% load helpers %}
 {% with urlname=record.model|validated_viewname:"list" %}
 {% if urlname %}
-    <a href="{% url urlname %}?static_groups={{ record.name }}">{{ record.count }}</a>
+    <a href="{% url urlname %}?static_groups={{ record.name }}">{{ record.members_count }}</a>
 {% else %}
-    {{ record.count }}
+    {{ record.members_count }}
 {% endif %}
 {% endwith %}
 """
@@ -1056,15 +1056,15 @@ class StaticGroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     hidden = BooleanColumn()
-    count = tables.TemplateColumn(MEMBERS_COUNT, verbose_name="Members")
+    members_count = tables.TemplateColumn(MEMBERS_COUNT, verbose_name="Members")
     tenant = tables.Column(linkify=True)
     tags = TagColumn(url_name="extras:staticgroup_list")
     actions = ButtonsColumn(StaticGroup)
 
     class Meta(BaseTable.Meta):
         model = StaticGroup
-        fields = ["pk", "name", "content_type", "hidden", "count", "description", "tenant", "tags", "actions"]
-        default_columns = ["pk", "name", "content_type", "count", "description", "tenant", "tags", "actions"]
+        fields = ["pk", "name", "content_type", "hidden", "members_count", "description", "tenant", "tags", "actions"]
+        default_columns = ["pk", "name", "content_type", "members_count", "description", "tenant", "tags", "actions"]
 
 
 class StaticGroupAssociationTable(BaseTable):

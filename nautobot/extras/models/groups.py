@@ -124,7 +124,7 @@ class StaticGroup(PrimaryModel):
         # Since associated_object is a GenericForeignKey, we can't just do:
         #     return self.static_group_associations.values_list("associated_object", flat=True)
         return self.model.objects.filter(
-            pk__in=self.static_group_associations.values_list("associated_object_id", flat=True)
+            pk__in=self.static_group_associations(manager="all_objects").values_list("associated_object_id", flat=True)
         )
 
     @members.setter
@@ -163,7 +163,7 @@ class StaticGroup(PrimaryModel):
 
         if self.present_in_database:
             # Check immutable fields
-            database_object = self.__class__.objects.get(pk=self.pk)
+            database_object = self.__class__.all_objects.get(pk=self.pk)
 
             if self.content_type != database_object.content_type:
                 raise ValidationError({"content_type": "ContentType cannot be changed once created"})
@@ -181,7 +181,7 @@ class StaticGroup(PrimaryModel):
         for obj in objects_to_add:
             # We don't use `.bulk_create()` currently because we want change logging for these creates.
             # Might be a good future performance improvement though.
-            StaticGroupAssociation.objects.get_or_create(
+            StaticGroupAssociation.all_objects.get_or_create(
                 static_group=self, associated_object_type=self.content_type, associated_object_id=obj.pk
             )
 
@@ -190,7 +190,7 @@ class StaticGroup(PrimaryModel):
         if isinstance(objects_to_remove, models.QuerySet):
             if objects_to_remove.model != self.model:
                 raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
-            StaticGroupAssociation.objects.filter(
+            StaticGroupAssociation.all_objects.filter(
                 static_group=self,
                 associated_object_type=self.content_type,
                 associated_object_id__in=objects_to_remove.values_list("pk", flat=True),
@@ -202,7 +202,7 @@ class StaticGroup(PrimaryModel):
                     raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
                 pks_to_remove.add(obj.pk)
 
-            StaticGroupAssociation.objects.filter(
+            StaticGroupAssociation.all_objects.filter(
                 static_group=self, associated_object_type=self.content_type, associated_object_id__in=pks_to_remove
             ).delete()
 
