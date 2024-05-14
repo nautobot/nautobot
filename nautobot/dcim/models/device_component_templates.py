@@ -489,7 +489,7 @@ class ModuleBayTemplate(BaseModel, ChangeLoggedModel, CustomFieldModel, Relation
         max_length=CHARFIELD_MAX_LENGTH,
         blank=False,
         null=False,
-        help_text="The position of the module bay within the device",
+        help_text="The position of the module bay within the device or module",
     )
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)

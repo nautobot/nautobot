@@ -271,6 +271,14 @@ menu_items = (
                         permissions=[
                             "dcim.view_module",
                         ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:module_add",
+                                permissions=[
+                                    "dcim.add_module",
+                                ],
+                            ),
+                        ),
                     ),
                 ),
             ),

@@ -39,6 +39,9 @@
                     {% if perms.dcim.add_devicebaytemplate %}
                         <li><a href="{% url 'dcim:devicebaytemplate_add' %}?device_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%23tab_devicebays">Device Bays</a></li>
                     {% endif %}
+                    {% if perms.dcim.add_modulebaytemplate %}
+                        <li><a href="{% url 'dcim:modulebaytemplate_add' %}?device_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%23tab_modulebays">Module Bays</a></li>
+                    {% endif %}
                 </ul>
             </div>
         {% endif %}
@@ -171,6 +174,9 @@
                 <li role="presentation">
                     <a href="#devicebays" role="tab" data-toggle="tab">Device Bays {% badge devicebay_table.rows|length %}</a>
                 </li>
+                <li role="presentation">
+                    <a href="#modulebays" role="tab" data-toggle="tab">Module Bays {% badge modulebay_table.rows|length %}</a>
+                </li>
             </ul>
             <div class="tab-content">
                 <div role="tabpanel" class="tab-pane active" id="interfaces">
@@ -196,6 +202,9 @@
                 </div>
                 <div role="tabpanel" class="tab-pane" id="devicebays">
                     {% include 'dcim/inc/devicetype_component_table.html' with table=devicebay_table title='Device Bays' tab='devicebays' %}
+                </div>
+                <div role="tabpanel" class="tab-pane" id="modulebays">
+                    {% include 'dcim/inc/devicetype_component_table.html' with table=modulebay_table title='Module Bays' tab='modulebays' %}
                 </div>
             </div>
 {% endblock content_full_width_page %}

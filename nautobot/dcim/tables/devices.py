@@ -863,10 +863,10 @@ class DeviceBayTable(DeviceComponentTable):
 class ModuleBayTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     position = tables.Column(linkify=True)
-    parent_device = tables.Column(linkify=True)
-    parent_module = tables.Column(linkify=True)
+    parent_device = tables.Column(linkify=True, verbose_name="Parent Device")
+    parent_module = tables.Column(linkify=True, verbose_name="Parent Module")
+    installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
     installed_module__status = ColoredLabelColumn()
-    installed_module = tables.Column(linkify=True)
     tags = TagColumn(url_name="dcim:devicebay_list")
 
     class Meta(BaseTable.Meta):
@@ -877,8 +877,8 @@ class ModuleBayTable(StatusTableMixin, BaseTable):
             "parent_module",
             "position",
             "label",
-            "installed_module__status",
             "installed_module",
+            "installed_module__status",
             "description",
             "tags",
         )
@@ -896,7 +896,7 @@ class ModuleBayTable(StatusTableMixin, BaseTable):
 
 class DeviceDeviceBayTable(DeviceBayTable):
     name = tables.TemplateColumn(
-        template_code='<i class="mdi mdi-circle{% if record.installed_device %}slice-8{% else %}outline{% endif %}'
+        template_code='<i class="mdi mdi-circle-{% if record.installed_device %}slice-8{% else %}outline{% endif %}'
         '"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
     )
@@ -926,8 +926,8 @@ class DeviceDeviceBayTable(DeviceBayTable):
 
 
 class DeviceModuleBayTable(ModuleBayTable):
-    name = tables.TemplateColumn(
-        template_code='<i class="mdi mdi-circle{% if record.installed_module %}slice-8{% else %}outline{% endif %}'
+    position = tables.TemplateColumn(
+        template_code='<i class="mdi mdi-circle-{% if record.installed_module %}slice-8{% else %}outline{% endif %}'
         '"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
     )

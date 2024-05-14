@@ -402,7 +402,12 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         logger = logging.getLogger(__name__ + ".ObjectEditView")
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
-        form = self.model_form(data=request.POST, files=request.FILES, instance=obj)
+        form = self.model_form(
+            data=request.POST,
+            files=request.FILES,
+            initial=normalize_querydict(request.GET, form_class=self.model_form),
+            instance=obj,
+        )
         restrict_form_fields(form, request.user)
 
         if form.is_valid():
@@ -1315,8 +1320,8 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
 
     def post(self, request):
         logger = logging.getLogger(__name__ + ".ComponentCreateView")
-        form = self.form(request.POST, initial=request.GET)
-        model_form = self.model_form(request.POST)
+        form = self.form(request.POST, initial=normalize_querydict(request.GET, form_class=self.form))
+        model_form = self.model_form(request.POST, initial=normalize_querydict(request.GET, form_class=self.model_form))
 
         if form.is_valid():
             new_components = []
@@ -1331,7 +1336,9 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
                 data["label"] = label
                 if hasattr(form, "get_iterative_data"):
                     data.update(form.get_iterative_data(i))
-                component_form = self.model_form(data)
+                component_form = self.model_form(
+                    data, initial=normalize_querydict(request.GET, form_class=self.model_form)
+                )
 
                 if component_form.is_valid():
                     new_components.append(component_form)

@@ -37,7 +37,7 @@
                         <li><a href="{% url 'dcim:rearporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%23tab_rearports">Rear Ports</a></li>
                     {% endif %}
                     {% if perms.dcim.add_modulebaytemplate %}
-                        <li><a href="{% url 'dcim:modulebaytemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%23tab_modulebays">Device Bays</a></li>
+                        <li><a href="{% url 'dcim:modulebaytemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%23tab_modulebays">Module Bays</a></li>
                     {% endif %}
                 </ul>
             </div>
@@ -133,7 +133,7 @@
                     {% include 'dcim/inc/moduletype_component_table.html' with table=poweroutlet_table title='Power Outlets' tab='poweroutlets' %}
                 </div>
                 <div role="tabpanel" class="tab-pane" id="modulebays">
-                    {% include 'dcim/inc/moduletype_component_table.html' with table=modulebay_table title='Device Bays' tab='modulebays' %}
+                    {% include 'dcim/inc/moduletype_component_table.html' with table=modulebay_table title='Module Bays' tab='modulebays' %}
                 </div>
             </div>
 {% endblock content_full_width_page %}

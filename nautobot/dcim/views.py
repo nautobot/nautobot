@@ -813,6 +813,10 @@ class DeviceTypeView(generic.ObjectView):
             DeviceBayTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
             orderable=False,
         )
+        modulebay_table = tables.ModuleBayTemplateTable(
+            ModuleBayTemplate.objects.restrict(request.user, "view").filter(device_type=instance),
+            orderable=False,
+        )
         if request.user.has_perm("dcim.change_devicetype"):
             consoleport_table.columns.show("pk")
             consoleserverport_table.columns.show("pk")
@@ -822,6 +826,7 @@ class DeviceTypeView(generic.ObjectView):
             front_port_table.columns.show("pk")
             rear_port_table.columns.show("pk")
             devicebay_table.columns.show("pk")
+            modulebay_table.columns.show("pk")
 
         software_image_files_table = tables.SoftwareImageFileTable(
             instance.software_image_files.restrict(request.user, "view").annotate(
@@ -841,6 +846,7 @@ class DeviceTypeView(generic.ObjectView):
             "front_port_table": front_port_table,
             "rear_port_table": rear_port_table,
             "devicebay_table": devicebay_table,
+            "modulebay_table": modulebay_table,
             "software_image_files_table": software_image_files_table,
         }
 
@@ -1416,16 +1422,34 @@ class DeviceView(generic.ObjectView):
         else:
             software_version_images = []
 
+        modulebay_count = instance.module_bays.count()
+        module_count = instance.module_bays.filter(installed_module__isnull=False).count()
+
         return {
             "services": services,
             "software_version_images": software_version_images,
             "vc_members": vc_members,
             "vrf_table": vrf_table,
             "active_tab": "device",
+            "modulebay_count": modulebay_count,
+            "module_count": f"{module_count}/{modulebay_count}",
         }
 
 
-class DeviceConsolePortsView(generic.ObjectView):
+class DeviceComponentTabView(generic.ObjectView):
+    queryset = Device.objects.all()
+
+    def get_extra_context(self, request, instance):
+        modulebay_count = instance.module_bays.count()
+        module_count = instance.module_bays.filter(installed_module__isnull=False).count()
+
+        return {
+            "modulebay_count": modulebay_count,
+            "module_count": f"{module_count}/{modulebay_count}",
+        }
+
+
+class DeviceConsolePortsView(DeviceComponentTabView):
     queryset = Device.objects.all()
     template_name = "dcim/device/consoleports.html"
 
@@ -1441,12 +1465,13 @@ class DeviceConsolePortsView(generic.ObjectView):
             consoleport_table.columns.show("pk")
 
         return {
+            **super().get_extra_context(request, instance),
             "consoleport_table": consoleport_table,
             "active_tab": "console-ports",
         }
 
 
-class DeviceConsoleServerPortsView(generic.ObjectView):
+class DeviceConsoleServerPortsView(DeviceComponentTabView):
     queryset = Device.objects.all()
     template_name = "dcim/device/consoleserverports.html"
 
@@ -1466,12 +1491,13 @@ class DeviceConsoleServerPortsView(generic.ObjectView):
             consoleserverport_table.columns.show("pk")
 
         return {
+            **super().get_extra_context(request, instance),
             "consoleserverport_table": consoleserverport_table,
             "active_tab": "console-server-ports",
         }
 
 
-class DevicePowerPortsView(generic.ObjectView):
+class DevicePowerPortsView(DeviceComponentTabView):
     queryset = Device.objects.all()
     template_name = "dcim/device/powerports.html"
 
@@ -1487,12 +1513,13 @@ class DevicePowerPortsView(generic.ObjectView):
             powerport_table.columns.show("pk")
 
         return {
+            **super().get_extra_context(request, instance),
             "powerport_table": powerport_table,
             "active_tab": "power-ports",
         }
 
 
-class DevicePowerOutletsView(generic.ObjectView):
+class DevicePowerOutletsView(DeviceComponentTabView):
     queryset = Device.objects.all()
     template_name = "dcim/device/poweroutlets.html"
 
@@ -1508,12 +1535,13 @@ class DevicePowerOutletsView(generic.ObjectView):
             poweroutlet_table.columns.show("pk")
 
         return {
+            **super().get_extra_context(request, instance),
             "poweroutlet_table": poweroutlet_table,
             "active_tab": "power-outlets",
         }
 
 
-class DeviceInterfacesView(generic.ObjectView):
+class DeviceInterfacesView(DeviceComponentTabView):
     queryset = Device.objects.all()
     template_name = "dcim/device/interfaces.html"
 
@@ -1535,12 +1563,13 @@ class DeviceInterfacesView(generic.ObjectView):
             interface_table.columns.show("pk")
 
         return {
+            **super().get_extra_context(request, instance),
             "interface_table": interface_table,
             "active_tab": "interfaces",
         }
 
 
-class DeviceFrontPortsView(generic.ObjectView):
+class DeviceFrontPortsView(DeviceComponentTabView):
     queryset = Device.objects.all()
     template_name = "dcim/device/frontports.html"
 
@@ -1555,12 +1584,13 @@ class DeviceFrontPortsView(generic.ObjectView):
             frontport_table.columns.show("pk")
 
         return {
+            **super().get_extra_context(request, instance),
             "frontport_table": frontport_table,
             "active_tab": "front-ports",
         }
 
 
-class DeviceRearPortsView(generic.ObjectView):
+class DeviceRearPortsView(DeviceComponentTabView):
     queryset = Device.objects.all()
     template_name = "dcim/device/rearports.html"
 
@@ -1571,12 +1601,13 @@ class DeviceRearPortsView(generic.ObjectView):
             rearport_table.columns.show("pk")
 
         return {
+            **super().get_extra_context(request, instance),
             "rearport_table": rearport_table,
             "active_tab": "rear-ports",
         }
 
 
-class DeviceDeviceBaysView(generic.ObjectView):
+class DeviceDeviceBaysView(DeviceComponentTabView):
     queryset = Device.objects.all()
     template_name = "dcim/device/devicebays.html"
 
@@ -1593,12 +1624,13 @@ class DeviceDeviceBaysView(generic.ObjectView):
             devicebay_table.columns.show("pk")
 
         return {
+            **super().get_extra_context(request, instance),
             "devicebay_table": devicebay_table,
             "active_tab": "device-bays",
         }
 
 
-class DeviceModuleBaysView(generic.ObjectView):
+class DeviceModuleBaysView(DeviceComponentTabView):
     queryset = Device.objects.all()
     template_name = "dcim/device/modulebays.html"
 
@@ -1613,6 +1645,7 @@ class DeviceModuleBaysView(generic.ObjectView):
             modulebay_table.columns.show("pk")
 
         return {
+            **super().get_extra_context(request, instance),
             "modulebay_table": modulebay_table,
             "active_tab": "module-bays",
         }
