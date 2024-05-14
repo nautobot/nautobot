@@ -512,6 +512,8 @@ class ContactAssociationFilterSet(NautobotFilterSet):
         },
     )
 
+    associated_object_type = ContentTypeFilter()
+
     class Meta:
         model = ContactAssociation
         fields = "__all__"
