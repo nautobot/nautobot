@@ -713,6 +713,10 @@ class PrefixBulkEditView(generic.BulkEditView):
             obj.locations.add(*form.cleaned_data["add_locations"])
         if form.cleaned_data.get("remove_locations", None):
             obj.locations.remove(*form.cleaned_data["remove_locations"])
+        if form.cleaned_data.get("add_vrfs", None):
+            obj.vrfs.add(*form.cleaned_data["add_vrfs"])
+        if form.cleaned_data.get("remove_vrfs", None):
+            obj.vrfs.remove(*form.cleaned_data["remove_vrfs"])
 
 
 class PrefixBulkDeleteView(generic.BulkDeleteView):

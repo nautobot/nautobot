@@ -358,6 +358,12 @@ class PrefixBulkEditForm(
     remove_locations = DynamicModelMultipleChoiceField(
         queryset=Location.objects.all(), required=False, query_params={"content_type": Prefix._meta.label_lower}
     )
+    add_vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
+    remove_vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
     date_allocated = forms.DateTimeField(required=False, widget=DateTimePicker)
