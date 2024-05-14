@@ -2,11 +2,11 @@
 
 Welcome to the Nautobot Core Documentation! Use the top navigation bar to dive directly into the documentation.
 
+![Nautobot Logo](assets/nautobot_logo.svg){style="height: 80px; margin-bottom: 2em" align=right}
+
 ## What is Nautobot?
 
-![Nautobot Logo](assets/nautobot_logo.svg){style="height: 80px; margin-bottom: 2em"}
-
-Nautobot is an open source Network Source of Truth and Network Automation Platform built as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database.
+Nautobot is an open source Network Source of Truth and Network Automation Platform built as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database.<p>
 
 ## Key Use Cases
 
@@ -72,18 +72,37 @@ Nautobot enables three (3) key use cases.
 
 </div>
 
- Some production ready applications include:
+## Nautobot Apps
 
-    - [Golden Configuration](https://github.com/nautobot/nautobot-app-golden-config)
+<div class="grid cards" markdown>
+
+- ![Golden Config](assets/app-icons/icon-GoldenConfiguration.png){style="height: 25px; margin-bottom: 0em" .middle } **Golden Configuration**
+
+    ---
+    [Golden Configuration](https://github.com/nautobot/nautobot-app-golden-config) backs up configurations, generate intended state configurations, compare for compliance and remediate device configurations.
+
+- ![Device Lifecycle](assets/app-icons/icon-DeviceLifecycle.png){style="height: 25px; margin-bottom: 0em" .middle } **Device Lifecycle**
+
+    ---
+    [Device Lifecycle](https://github.com/nautobot/nautobot-app-device-lifecycle-mgmt) adds additional capabilities around managing **hardware** lifecycle, **software** images, and **contracts** around your systems.
+
+- ![Firewall Models](assets/app-icons/icon-FirewallModels.png){style="height: 25px; margin-bottom: 0em" .middle } **Firewall Models**
+
+    ---
+     [Firewall Models](https://github.com/nautobot/nautobot-app-firewall-models) works to help model out firewall rules and objects. Using Nautobot to help generically manage firewall rules, including extended ACLs.
+
+</div>
+
+    - 
     - [Device Lifecycle](https://github.com/nautobot/nautobot-app-device-lifecycle-mgmt)
-    - [Firewall Models](https://github.com/nautobot/nautobot-app-firewall-models)
+    -
     - [SSoT](https://github.com/nautobot/nautobot-app-ssot)
     - [ChatOps](https://github.com/nautobot/nautobot-app-chatops)
     - [Circuit Maintenance](https://github.com/nautobot/nautobot-app-circuit-maintenance)
     - [Capacity Metrics](https://github.com/nautobot/nautobot-app-capacity-metrics)
     - [Device Onboarding](https://github.com/nautobot/nautobot-app-device-onboarding)
 
-## Screenshots
+## Nautobot Screenshots
 
 ![Main Page](media/ss_main_page.png)
 
