@@ -177,9 +177,9 @@ def get_view_name(view):
     elif hasattr(view, "queryset"):
         # Determine the model name from the queryset.
         if hasattr(view, "detail") and view.detail:
-            name = view.get_queryset().model._meta.verbose_name
+            name = view.queryset.model._meta.verbose_name
         else:
-            name = view.get_queryset().model._meta.verbose_name_plural
+            name = view.queryset.model._meta.verbose_name_plural
         name = " ".join([w[0].upper() + w[1:] for w in name.split()])  # Capitalize each word
 
     else:
