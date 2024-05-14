@@ -79,7 +79,6 @@ class StaticGroup(PrimaryModel):
 
     clone_fields = ["content_type", "tenant"]
     is_static_group_associable_model = False
-    is_saved_view_model = False
 
     class Meta:
         ordering = ["name"]

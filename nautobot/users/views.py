@@ -1,5 +1,5 @@
 import logging
-from urllib.parse import unquote
+from urllib.parse import parse_qs, unquote
 
 from django.contrib import messages
 from django.contrib.auth import (
@@ -327,22 +327,12 @@ class SavedViewUIViewSet(
         name = request.POST.get("name")
         params = request.POST.get("params", "")
 
-        params_list = params.split("&")
-        param_dict = {}
+        param_dict = parse_qs(params)
 
         single_value_params = ["saved_view", "table_changes_pending", "all_filters_removed", "q", "per_page"]
-        for param in params_list:
-            key, value = param.split("=")
-            # Expected single value params
-            value = unquote(value)
+        for key in param_dict.keys():
             if key in single_value_params:
-                param_dict[key] = value
-            else:
-                # Expected multi-value params
-                if key in param_dict:
-                    param_dict[key].append(value)
-                else:
-                    param_dict[key] = [value]
+                param_dict[key] = param_dict[key][0]
 
         derived_view_pk = param_dict.get("saved_view", None)
         derived_instance = None
