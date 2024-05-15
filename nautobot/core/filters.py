@@ -158,11 +158,11 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
             qs = qs.distinct()
         lookup = "%s__%s" % (self.field_name, self.lookup_expr)
         if bool(value):
-            # return instances with field_name__isnull=False
-            return qs.filter(**{lookup: False})
+            # return instances with field populated
+            return qs.filter(**{lookup: self.exclude})
         else:
-            # exclude instances with field_name__isnull=False
-            return qs.exclude(**{lookup: False})
+            # exclude instances with field populated
+            return qs.exclude(**{lookup: self.exclude})
 
 
 class NumericArrayFilter(django_filters.NumberFilter):

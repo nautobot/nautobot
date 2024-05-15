@@ -194,6 +194,10 @@ class DeviceModuleCommonFiltersMixin(django_filters.FilterSet):
         field_name="module_bays",
         label="Has module bays",
     )
+    has_empty_module_bays = django_filters.BooleanFilter(
+        method="filter_has_empty_module_bays",
+        label="Has empty module bays",
+    )
     module_bays = django_filters.ModelMultipleChoiceFilter(
         queryset=ModuleBay.objects.all(),
         label="Module Bays",
@@ -202,6 +206,19 @@ class DeviceModuleCommonFiltersMixin(django_filters.FilterSet):
         field_name="module_bays__installed_module",
         label="Has modules",
     )
+
+    def generate_query_filter_has_empty_module_bays(self, value):
+        if value is True:
+            query = Q(module_bays__isnull=False, module_bays__installed_module__isnull=True)
+        else:
+            query = Q(module_bays__isnull=True) | Q(module_bays__installed_module__isnull=False)
+        return query
+
+    def filter_has_empty_module_bays(self, queryset, name, value):
+        if value is None:
+            return queryset.none
+        params = self.generate_query_filter_has_empty_module_bays(value)
+        return queryset.filter(params)
 
 
 class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):

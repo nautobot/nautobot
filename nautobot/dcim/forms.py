@@ -2158,9 +2158,35 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         queryset=ModuleType.objects.all(),
         query_params={"manufacturer": "$manufacturer"},
     )
-    parent_module_bay = DynamicModelChoiceField(
-        queryset=ModuleBay.objects.all(),
+    parent_module_bay_device_filter = DynamicModelChoiceField(
+        queryset=Device.objects.all(),
         required=False,
+        label="Parent Device",
+        query_params={"has_empty_module_bays": True},
+    )
+    parent_module_bay_device = DynamicModelChoiceField(
+        queryset=ModuleBay.objects.all(),
+        label="Parent Module Bay",
+        required=False,
+        query_params={"parent_device": "$parent_module_bay_device_filter", "has_installed_module": False},
+    )
+    parent_module_bay_module_filter = DynamicModelChoiceField(
+        queryset=Module.objects.all(),
+        required=False,
+        label="Parent Module",
+        query_params={"has_empty_module_bays": True},
+    )
+    parent_module_bay_module = DynamicModelChoiceField(
+        queryset=ModuleBay.objects.all(),
+        label="Parent Module Bay",
+        required=False,
+        query_params={"parent_module": "$parent_module_bay_module_filter", "has_installed_module": False},
+    )
+    location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        label="Location",
+        query_params={"content_type": Module._meta.label_lower},
     )
 
     class Meta:
@@ -2180,6 +2206,30 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         help_texts = {
             "serial": "Module serial number",
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Set initial values for parent_module_bay_device and parent_module_bay_module
+        if self.initial.get("parent_module_bay", None):
+            parent_module_bay = ModuleBay.objects.filter(pk=self.initial["parent_module_bay"]).first()
+            if parent_module_bay.parent_device:
+                self.initial["parent_module_bay_device"] = self.initial["parent_module_bay"]
+                self.initial["parent_module_bay_device_filter"] = parent_module_bay.parent_device.pk
+            elif parent_module_bay.parent_module:
+                self.initial["parent_module_bay_module"] = self.initial["parent_module_bay"]
+                self.initial["parent_module_bay_module_filter"] = parent_module_bay.parent_module.pk
+
+    def clean(self):
+        cleaned_data = self.cleaned_data
+        if cleaned_data["parent_module_bay_device"] and cleaned_data["parent_module_bay_module"]:
+            raise forms.ValidationError("Multiple parent module bays selected.")
+        elif cleaned_data["parent_module_bay_device"]:
+            cleaned_data["parent_module_bay"] = cleaned_data.pop("parent_module_bay_device")
+        elif cleaned_data["parent_module_bay_module"]:
+            cleaned_data["parent_module_bay"] = cleaned_data.pop("parent_module_bay_module")
+
+        return cleaned_data
 
 
 class ModuleBulkEditForm(
