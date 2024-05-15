@@ -292,7 +292,9 @@ class FilterTestCases:
                 related_model = getattr(field, "related_model", None)
                 if not related_model or related_model != ContentType:
                     continue
-                with self.subTest(f"Assert {self.filterset.__class__.__name__}.{field.name} implements ContentTypeFilter"):
+                with self.subTest(
+                    f"Assert {self.filterset.__class__.__name__}.{field.name} implements ContentTypeFilter"
+                ):
                     self.assertIsInstance(self.filterset.get_filters().get(field.name), ContentTypeFilter)
 
     class NameOnlyFilterTestCase(FilterTestCase):
