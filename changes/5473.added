@@ -1,0 +1,1 @@
+Added support for objects to "opt out" of change logging by returning `None` from their `to_objectchange()` method.
