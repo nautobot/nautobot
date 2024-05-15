@@ -14,7 +14,6 @@ from nautobot.extras.forms import (
     ConfigContextFilterForm,
     ConfigContextForm,
     CustomFieldModelBulkEditFormMixin,
-    CustomFieldModelFilterFormMixin,
     CustomFieldModelFormMixin,
     JobButtonForm,
     JobEditForm,
