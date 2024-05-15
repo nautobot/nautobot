@@ -14,29 +14,31 @@
                             {% render_field form.tenant %}
                         </div>
                     </div>
-                    <div class="panel panel-default">
-                        <div class="panel-heading"><strong>Installation</strong></div>
-                        <div class="panel-body">
-                            <ul class="nav nav-tabs" role="tablist">
-                                <li role="presentation"{% if form.initial.parent_module_bay_device %} class="active"{% endif %}><a href="#device" role="tab" data-toggle="tab">Device</a></li>
-                                <li role="presentation"{% if form.initial.parent_module_bay_module %} class="active"{%endif %}><a href="#module" role="tab" data-toggle="tab">Module</a></li>
-                                <li role="presentation"{% if form.initial.location %} class="active"{%endif %}><a href="#location" role="tab" data-toggle="tab">Location</a></li>
-                            </ul>
-                            <div class="tab-content">
-                                <div class="tab-pane{% if form.initial.parent_module_bay_device %} active{% endif %}" id="device">
-                                    {% render_field form.parent_module_bay_device_filter %}
-                                    {% render_field form.parent_module_bay_device %}
-                                </div>
-                                <div class="tab-pane{% if form.initial.parent_module_bay_module %} active{% endif %}" id="module">
-                                    {% render_field form.parent_module_bay_module_filter %}
-                                    {% render_field form.parent_module_bay_module %}
-                                </div>
-                                <div class="tab-pane{% if form.initial.location %} active{% endif %}" id="location">
-                                    {% render_field form.location %}
+                    {% with parent_device=obj.parent_module_bay.parent_device parent_module=obj.parent_module_bay.parent_module location=obj.location %}
+                        <div class="panel panel-default">
+                            <div class="panel-heading"><strong>Installation</strong></div>
+                            <div class="panel-body">
+                                <ul class="nav nav-tabs" role="tablist">
+                                    <li role="presentation"{% if not editing or parent_device %} class="active"{% endif %}><a href="#device" role="tab" data-toggle="tab">Device</a></li>
+                                    <li role="presentation"{% if editing and parent_module %} class="active"{%endif %}><a href="#module" role="tab" data-toggle="tab">Module</a></li>
+                                    <li role="presentation"{% if editing and location %} class="active"{%endif %}><a href="#location" role="tab" data-toggle="tab">Location</a></li>
+                                </ul>
+                                <div class="tab-content">
+                                    <div class="tab-pane{% if not editing or parent_device %} active{% endif %}" id="device">
+                                        {% render_field form.parent_module_bay_device_filter %}
+                                        {% render_field form.parent_module_bay_device %}
+                                    </div>
+                                    <div class="tab-pane{% if editing and parent_module %} active{% endif %}" id="module">
+                                        {% render_field form.parent_module_bay_module_filter %}
+                                        {% render_field form.parent_module_bay_module %}
+                                    </div>
+                                    <div class="tab-pane{% if editing and location %} active{% endif %}" id="location">
+                                        {% render_field form.location %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    {% endwith %}
                     {% include 'inc/extras_features_edit_form_fields.html' %}
                 {% endblock %}
 

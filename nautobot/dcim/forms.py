@@ -2152,7 +2152,7 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     manufacturer = DynamicModelChoiceField(
         queryset=Manufacturer.objects.all(),
         required=False,
-        initial_params={"device_types": "$device_type"},
+        initial_params={"module_types": "$module_type"},
     )
     module_type = DynamicModelChoiceField(
         queryset=ModuleType.objects.all(),
@@ -2163,24 +2163,28 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         required=False,
         label="Parent Device",
         query_params={"has_empty_module_bays": True},
+        initial_params={"module_bays": "$parent_module_bay"},
     )
     parent_module_bay_device = DynamicModelChoiceField(
         queryset=ModuleBay.objects.all(),
         label="Parent Module Bay",
         required=False,
         query_params={"parent_device": "$parent_module_bay_device_filter", "has_installed_module": False},
+        initial_params={"pk": "$parent_module_bay", "parent_device__module_bays": "$parent_module_bay"},
     )
     parent_module_bay_module_filter = DynamicModelChoiceField(
         queryset=Module.objects.all(),
         required=False,
         label="Parent Module",
         query_params={"has_empty_module_bays": True},
+        initial_params={"module_bays": "$parent_module_bay"},
     )
     parent_module_bay_module = DynamicModelChoiceField(
         queryset=ModuleBay.objects.all(),
         label="Parent Module Bay",
         required=False,
         query_params={"parent_module": "$parent_module_bay_module_filter", "has_installed_module": False},
+        initial_params={"pk": "$parent_module_bay", "parent_module__module_bays": "$parent_module_bay"},
     )
     location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
@@ -2206,19 +2210,6 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         help_texts = {
             "serial": "Module serial number",
         }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Set initial values for parent_module_bay_device and parent_module_bay_module
-        if self.initial.get("parent_module_bay", None):
-            parent_module_bay = ModuleBay.objects.filter(pk=self.initial["parent_module_bay"]).first()
-            if parent_module_bay.parent_device:
-                self.initial["parent_module_bay_device"] = self.initial["parent_module_bay"]
-                self.initial["parent_module_bay_device_filter"] = parent_module_bay.parent_device.pk
-            elif parent_module_bay.parent_module:
-                self.initial["parent_module_bay_module"] = self.initial["parent_module_bay"]
-                self.initial["parent_module_bay_module_filter"] = parent_module_bay.parent_module.pk
 
     def clean(self):
         cleaned_data = self.cleaned_data

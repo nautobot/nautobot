@@ -159,7 +159,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         display_filter_params = []
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = self.construct_user_permissions(request, model)
-        if view.action in ["create", "retrieve", "update", "destroy", "changelog", "notes"]:
+        if view.detail:
             instance = view.get_object()
             return_url = view.get_return_url(request, instance)
         else:
@@ -222,6 +222,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 table = self.construct_table(view, object=instance, content_type=content_type)
 
         context = {
+            **data,
             "content_type": content_type,
             "form": form,
             "filter_form": filter_form,
@@ -239,7 +240,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "verbose_name": queryset.model._meta.verbose_name,
             "verbose_name_plural": queryset.model._meta.verbose_name_plural,
         }
-        if view.action == "retrieve":
+        if view.detail:
             context.update(common_detail_view_context(request, instance))
             context.update(view.get_extra_context(request, instance))
         else:

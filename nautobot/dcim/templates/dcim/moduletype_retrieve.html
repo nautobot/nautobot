@@ -1,14 +1,12 @@
-{% extends 'generic/object_detail.html' %}
+{% extends 'generic/object_retrieve.html' %}
 {% load buttons %}
 {% load helpers %}
-{% load plugins %}
 
 {% block extra_breadcrumbs %}
                 <li><a href="{% url 'dcim:moduletype_list' %}?manufacturer={{ object.manufacturer.name }}">{{ object.manufacturer }}</a></li>
 {% endblock extra_breadcrumbs %}
 
-{% block buttons %}
-        {% plugin_buttons object %}
+{% block extra_buttons %}
         {% if perms.dcim.change_moduletype %}
             <div class="btn-group">
                 <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -42,18 +40,7 @@
                 </ul>
             </div>
         {% endif %}
-        {% if perms.dcim.add_moduletype %}
-            {% clone_button object %}
-        {% endif %}
-        {% if perms.dcim.change_moduletype %}
-            {% edit_button object %}
-        {% endif %}
-        {% if perms.dcim.delete_moduletype %}
-            {% delete_button object %}
-        {% endif %}
-{% endblock buttons %}
-
-{% block title %}{{ object.manufacturer }} {{ object.model }}{% endblock title %}
+{% endblock extra_buttons %}
 
 {% block content_left_page %}
             <div class="panel panel-default">

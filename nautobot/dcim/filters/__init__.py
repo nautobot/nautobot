@@ -1837,6 +1837,18 @@ class ModuleFilterSet(
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
+            "parent_module_bay__parent_device__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "parent_module_bay__position": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
+            "parent_module_bay__parent_module__module_type__manufacturer__name": {
+                "lookup_expr": "icontains",
+                "preprocessor": str.strip,
+            },
         }
     )
     is_installed = RelatedMembershipBooleanFilter(
