@@ -2890,7 +2890,7 @@ class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertIsNotNone(sg2)
 
         self.add_permissions("extras.view_staticgroup")
-        response = self.client.get(f"{self._get_url("list")}?hidden=True")
+        response = self.client.get(f"{self._get_url('list')}?hidden=True")
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
 
@@ -2930,7 +2930,7 @@ class StaticGroupAssociationTestCase(
         self.assertIsNotNone(sga2)
 
         self.add_permissions("extras.view_staticgroupassociation")
-        response = self.client.get(f"{self._get_url("list")}?hidden=True")
+        response = self.client.get(f"{self._get_url('list')}?hidden=True")
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
 
