@@ -560,6 +560,17 @@ class ContactAssociationFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = ContactAssociation.objects.all()
     filterset = ContactAssociationFilterSet
 
+    generic_filter_tests = (
+        ["status", "status__id"],
+        ["status", "status__name"],
+        ["contact", "contact__id"],
+        ["contact", "contact__name"],
+        ["team", "team__id"],
+        ["team", "team__name"],
+        ["role", "role__id"],
+        ["role", "role__name"],
+    )
+
     @classmethod
     def setUpTestData(cls):
         roles = Role.objects.get_for_model(ContactAssociation)
@@ -584,7 +595,7 @@ class ContactAssociationFilterSetTestCase(FilterTestCases.FilterTestCase):
             team=Team.objects.first(),
             associated_object_type=ContentType.objects.get_for_model(Location),
             associated_object_id=locations[0].pk,
-            role=roles[0],
+            role=roles[3],
             status=statuses[0],
         )
         ContactAssociation.objects.create(

@@ -504,12 +504,23 @@ class ContactFilterSet(ContactTeamFilterSet):
         fields = "__all__"
 
 
-class ContactAssociationFilterSet(NautobotFilterSet):
+class ContactAssociationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, RoleModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "contact__name": "icontains",
             "team__name": "icontains",
         },
+    )
+
+    contact = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Contact.objects.all(),
+        to_field_name="name",
+        label="Contact (name or ID)",
+    )
+    team = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Team.objects.all(),
+        to_field_name="name",
+        label="Team (name or ID)",
     )
 
     associated_object_type = ContentTypeFilter()
