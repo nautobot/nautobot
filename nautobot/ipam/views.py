@@ -303,6 +303,12 @@ class VRFBulkEditView(generic.BulkEditView):
     table = tables.VRFTable
     form = forms.VRFBulkEditForm
 
+    def extra_post_save_action(self, obj, form):
+        if form.cleaned_data.get("add_prefixes", None):
+            obj.vrfs.add(*form.cleaned_data["add_prefixes"])
+        if form.cleaned_data.get("remove_prefixes", None):
+            obj.vrfs.remove(*form.cleaned_data["remove_prefixes"])
+
 
 class VRFBulkDeleteView(generic.BulkDeleteView):
     queryset = VRF.objects.select_related("tenant")
