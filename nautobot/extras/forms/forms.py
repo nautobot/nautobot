@@ -1598,8 +1598,11 @@ class StaticGroupBulkAssignForm(BootstrapMixin, BulkEditForm):
     def clean(self):
         data = super().clean()
 
-        if data["add_to_groups"].filter(pk__in=data["remove_from_groups"].values_list("pk", flat=True)).exists():
-            raise ValidationError("Same group specified for both addition and removal")
+        if "add_to_groups" in data and "remove_from_groups" in data:
+            if data["add_to_groups"].filter(pk__in=data["remove_from_groups"].values_list("pk", flat=True)).exists():
+                raise ValidationError("Same group specified for both addition and removal")
+
+        return data
 
 
 class StaticGroupAssociationFilterForm(NautobotFilterForm):
