@@ -45,7 +45,6 @@ __all__ = (
     # 2.0 TODO: remove the below deprecated aliases
     "AddRemoveTagsForm",
     "CustomFieldBulkEditForm",
-    "CustomFieldFilterForm",
     "CustomFieldModelForm",
     "RelationshipModelForm",
     "RoleModelBulkEditFormMixin",
@@ -764,11 +763,6 @@ class AddRemoveTagsForm(TagsBulkEditFormMixin):
 
 @class_deprecated_in_favor_of(CustomFieldModelBulkEditFormMixin)
 class CustomFieldBulkEditForm(CustomFieldModelBulkEditFormMixin):
-    pass
-
-
-@class_deprecated_in_favor_of(CustomFieldModelFilterFormMixin)
-class CustomFieldFilterForm(CustomFieldModelFilterFormMixin):
     pass
 
 

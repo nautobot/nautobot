@@ -80,6 +80,7 @@ class NamespaceUIViewSet(
     form_class = forms.NamespaceForm
     bulk_update_form_class = forms.NamespaceBulkEditForm
     filterset_class = filters.NamespaceFilterSet
+    filterset_form_class = forms.NamespaceFilterForm
     queryset = Namespace.objects.all()
     serializer_class = serializers.NamespaceSerializer
     table_class = tables.NamespaceTable
