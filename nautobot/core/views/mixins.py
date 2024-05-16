@@ -592,11 +592,7 @@ class ObjectDetailViewMixin(NautobotViewSetMixin, mixins.RetrieveModelMixin):
         """
         Retrieve a model instance.
         """
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-
-        context = serializer.data
-        context["use_new_ui"] = True
+        context = {"use_new_ui": True}
         return Response(context)
 
 

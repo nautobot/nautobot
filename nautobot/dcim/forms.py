@@ -3075,17 +3075,22 @@ class FrontPortCreateForm(ModularComponentCreateForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        device = Device.objects.get(pk=self.initial.get("device") or self.data.get("device"))
+        device = self.initial.get("device") or self.data.get("device")
+        module = self.initial.get("module") or self.data.get("module")
+        if device:
+            parent = Device.objects.get(pk=device)
+        if module:
+            parent = Module.objects.get(pk=module)
 
         # Determine which rear port positions are occupied. These will be excluded from the list of available
         # mappings.
         occupied_port_positions = [
-            (front_port.rear_port_id, front_port.rear_port_position) for front_port in device.front_ports.all()
+            (front_port.rear_port_id, front_port.rear_port_position) for front_port in parent.front_ports.all()
         ]
 
         # Populate rear port choices
         choices = []
-        rear_ports = RearPort.objects.filter(device=device)
+        rear_ports = RearPort.objects.filter(**{parent._meta.model_name: parent})
         for rear_port in rear_ports:
             for i in range(1, rear_port.positions + 1):
                 if (rear_port.pk, i) not in occupied_port_positions:

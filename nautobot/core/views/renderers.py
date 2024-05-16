@@ -131,6 +131,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             messages.error(request, f"Missing views for action(s) {', '.join(invalid_actions)}")
         return valid_actions
 
+    def get_template_context(self, data, renderer_context):
+        # borrowed from rest_framework's TemplateHTMLRenderer - should our html renderer be based on that class?
+        response = renderer_context["response"]
+        if response.exception:
+            data["status_code"] = response.status_code
+        return data
+
     def get_context(self, data, accepted_media_type, renderer_context):
         """
         Override get_context() from BrowsableAPIRenderer to obtain the context data we need to render our templates.
@@ -221,25 +228,29 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             elif view.action == "changelog":
                 table = self.construct_table(view, object=instance, content_type=content_type)
 
-        context = {
-            **data,
-            "content_type": content_type,
-            "form": form,
-            "filter_form": filter_form,
-            "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset_class=view.filterset_class),
-            "search_form": search_form,
-            "filter_params": display_filter_params,
-            "object": instance,
-            "obj": instance,  # NOTE: This context key is deprecated in favor of `object`.
-            "obj_type": queryset.model._meta.verbose_name,  # NOTE: This context key is deprecated in favor of `verbose_name`.
-            "obj_type_plural": queryset.model._meta.verbose_name_plural,  # NOTE: This context key is deprecated in favor of `verbose_name_plural`.
-            "permissions": permissions,
-            "return_url": return_url,
-            "table": table if table is not None else data.get("table", None),
-            "table_config_form": TableConfigForm(table=table) if table else None,
-            "verbose_name": queryset.model._meta.verbose_name,
-            "verbose_name_plural": queryset.model._meta.verbose_name_plural,
-        }
+        context = self.get_template_context(data, renderer_context)
+        context.update(
+            {
+                "content_type": content_type,
+                "form": form,
+                "filter_form": filter_form,
+                "dynamic_filter_form": self.get_dynamic_filter_form(
+                    view, request, filterset_class=view.filterset_class
+                ),
+                "search_form": search_form,
+                "filter_params": display_filter_params,
+                "object": instance,
+                "obj": instance,  # NOTE: This context key is deprecated in favor of `object`.
+                "obj_type": queryset.model._meta.verbose_name,  # NOTE: This context key is deprecated in favor of `verbose_name`.
+                "obj_type_plural": queryset.model._meta.verbose_name_plural,  # NOTE: This context key is deprecated in favor of `verbose_name_plural`.
+                "permissions": permissions,
+                "return_url": return_url,
+                "table": table if table is not None else data.get("table", None),
+                "table_config_form": TableConfigForm(table=table) if table else None,
+                "verbose_name": queryset.model._meta.verbose_name,
+                "verbose_name_plural": queryset.model._meta.verbose_name_plural,
+            }
+        )
         if view.detail:
             context.update(common_detail_view_context(request, instance))
             context.update(view.get_extra_context(request, instance))

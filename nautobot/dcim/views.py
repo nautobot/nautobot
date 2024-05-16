@@ -1790,33 +1790,112 @@ class ModuleUIViewSet(NautobotUIViewSet):
 
     @action(detail=True)
     def consoleports(self, request, *args, **kwargs):
-        return None
+        instance = self.get_object()
+        consoleports = (
+            instance.console_ports.restrict(request.user, "view")
+            .select_related("cable")
+            .prefetch_related("_path__destination")
+        )
+        consoleport_table = tables.DeviceModuleConsolePortTable(data=consoleports, user=request.user, orderable=False)
+        if request.user.has_perm("dcim.change_consoleport") or request.user.has_perm("dcim.delete_consoleport"):
+            consoleport_table.columns.show("pk")
+
+        return Response(
+            {
+                "consoleport_table": consoleport_table,
+                "active_tab": "console-ports",
+            }
+        )
 
     @action(detail=True)
     def consoleserverports(self, request, *args, **kwargs):
-        return None
+        instance = self.get_object()
+        consoleserverports = (
+            instance.console_server_ports.restrict(request.user, "view")
+            .select_related("cable")
+            .prefetch_related("_path__destination")
+        )
+        consoleserverport_table = tables.DeviceModuleConsoleServerPortTable(
+            data=consoleserverports, user=request.user, orderable=False
+        )
+        if request.user.has_perm("dcim.change_consoleserverport") or request.user.has_perm(
+            "dcim.delete_consoleserverport"
+        ):
+            consoleserverport_table.columns.show("pk")
+
+        return Response(
+            {
+                "consoleserverport_table": consoleserverport_table,
+                "active_tab": "console-server-ports",
+            }
+        )
 
     @action(detail=True)
     def powerports(self, request, *args, **kwargs):
-        return None
+        instance = self.get_object()
+        powerports = (
+            instance.power_ports.restrict(request.user, "view")
+            .select_related("cable")
+            .prefetch_related("_path__destination")
+        )
+        powerport_table = tables.DeviceModulePowerPortTable(data=powerports, user=request.user, orderable=False)
+        if request.user.has_perm("dcim.change_powerport") or request.user.has_perm("dcim.delete_powerport"):
+            powerport_table.columns.show("pk")
+
+        return Response(
+            {
+                "powerport_table": powerport_table,
+                "active_tab": "power-ports",
+            }
+        )
 
     @action(detail=True)
     def poweroutlets(self, request, *args, **kwargs):
-        return None
+        instance = self.get_object()
+        poweroutlets = (
+            instance.power_outlets.restrict(request.user, "view")
+            .select_related("cable", "power_port")
+            .prefetch_related("_path__destination")
+        )
+        poweroutlet_table = tables.DeviceModulePowerOutletTable(data=poweroutlets, user=request.user, orderable=False)
+        if request.user.has_perm("dcim.change_poweroutlet") or request.user.has_perm("dcim.delete_poweroutlet"):
+            poweroutlet_table.columns.show("pk")
+
+        return Response(
+            {
+                "poweroutlet_table": poweroutlet_table,
+                "active_tab": "power-outlets",
+            }
+        )
 
     @action(detail=True)
     def interfaces(self, request, *args, **kwargs):
-        return None
+        instance = self.get_object()
+        interfaces = (
+            instance.interfaces.restrict(request.user, "view")
+            .prefetch_related(
+                Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
+                Prefetch("member_interfaces", queryset=Interface.objects.restrict(request.user)),
+                "_path__destination",
+                "tags",
+            )
+            .select_related("lag", "cable")
+        )
+        interface_table = tables.DeviceModuleInterfaceTable(data=interfaces, user=request.user, orderable=False)
+        if request.user.has_perm("dcim.change_interface") or request.user.has_perm("dcim.delete_interface"):
+            interface_table.columns.show("pk")
+
+        return Response(
+            {
+                "interface_table": interface_table,
+                "active_tab": "interfaces",
+            }
+        )
 
     @action(detail=True)
     def frontports(self, request, *args, **kwargs):
         instance = self.get_object()
-
-        frontports = (
-            FrontPort.objects.restrict(request.user, "view")
-            .filter(module=instance)
-            .select_related("cable", "rear_port")
-        )
+        frontports = instance.front_ports.restrict(request.user, "view").select_related("cable", "rear_port")
         frontport_table = tables.DeviceModuleFrontPortTable(data=frontports, user=request.user, orderable=False)
         if request.user.has_perm("dcim.change_frontport") or request.user.has_perm("dcim.delete_frontport"):
             frontport_table.columns.show("pk")
@@ -1830,11 +1909,35 @@ class ModuleUIViewSet(NautobotUIViewSet):
 
     @action(detail=True)
     def rearports(self, request, *args, **kwargs):
-        return None
+        instance = self.get_object()
+        rearports = instance.rear_ports.restrict(request.user, "view").select_related("cable")
+        rearport_table = tables.DeviceModuleRearPortTable(data=rearports, user=request.user, orderable=False)
+        if request.user.has_perm("dcim.change_rearport") or request.user.has_perm("dcim.delete_rearport"):
+            rearport_table.columns.show("pk")
+
+        return Response(
+            {
+                "rearport_table": rearport_table,
+                "active_tab": "rear-ports",
+            }
+        )
 
     @action(detail=True)
     def modulebays(self, request, *args, **kwargs):
-        return None
+        instance = self.get_object()
+        modulebays = instance.module_bays.restrict(request.user, "view").prefetch_related(
+            "installed_module__status", "installed_module"
+        )
+        modulebay_table = tables.DeviceModuleModuleBayTable(data=modulebays, user=request.user, orderable=False)
+        if request.user.has_perm("dcim.change_modulebay") or request.user.has_perm("dcim.delete_modulebay"):
+            modulebay_table.columns.show("pk")
+
+        return Response(
+            {
+                "modulebay_table": modulebay_table,
+                "active_tab": "module-bays",
+            }
+        )
 
 
 #
