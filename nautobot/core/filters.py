@@ -172,9 +172,16 @@ class ContentTypeFilterMixin:
     Mixin to allow specifying a ContentType by <app_label>.<model> (e.g. "dcim.location").
     """
 
+    def __init__(self, *args, accept_pk=False, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.accept_pk = accept_pk
+
     def filter(self, qs, value):
         if value in EMPTY_VALUES:
             return qs
+
+        if self.accept_pk and value.isdigit():
+            return qs.filter(**{f"{self.field_name}__pk": value})
 
         try:
             app_label, model = value.lower().split(".")

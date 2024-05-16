@@ -7,7 +7,12 @@ from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.test import tag
 
-from nautobot.core.filters import ContentTypeFilter, ContentTypeMultipleChoiceFilter, RelatedMembershipBooleanFilter, SearchFilter
+from nautobot.core.filters import (
+    ContentTypeFilter,
+    ContentTypeMultipleChoiceFilter,
+    RelatedMembershipBooleanFilter,
+    SearchFilter,
+)
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
 from nautobot.tenancy import models
