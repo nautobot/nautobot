@@ -1,0 +1,1 @@
+Fixed integrity error when doing bulk edits that resulted from a delete operation on a related model.
