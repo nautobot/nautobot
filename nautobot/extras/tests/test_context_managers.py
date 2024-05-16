@@ -312,9 +312,8 @@ class BulkEditDeleteChangeLogging(TestCase):
         software_image_file = SoftwareImageFile.objects.create(
             image_file_name="test.iso", software_version=software_version, status=software_status
         )
-        device_type = DeviceType(manufacturer=manufacturer, model="test123")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="test123")
         device_type.software_image_files.set([software_image_file])
-        DeviceType.objects.bulk_create([device_type])
         with web_request_context(self.user):
             with deferred_change_logging_for_bulk_operation():
                 device_type.software_image_files.set([])
