@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 class OrganizationalModel(
     ChangeLoggedModel,
+    ContactMixin,
     CustomFieldModel,
     DynamicGroupMixin,
     NotesMixin,

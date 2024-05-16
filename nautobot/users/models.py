@@ -319,7 +319,7 @@ class SavedView(BaseModel, ChangeLoggedModel):
     )
 
     class Meta:
-        ordering = ["owner", "name"]
+        ordering = ["owner", "view", "name"]
         unique_together = [["owner", "name", "view"]]
         verbose_name = "saved view"
         verbose_name_plural = "saved views"

@@ -119,9 +119,11 @@
 <h1>{% block title %}
     {{ title }}
         {% if current_saved_view %}
-            — {{ current_saved_view.name }}
+            —
             {% if new_changes_not_applied %}
-                <sup title="Pending changes not saved">*</sup>
+                <i title="Pending changes not saved">{{ current_saved_view.name }}</i>
+            {% else %}
+                {{ current_saved_view.name }}
             {% endif %}
         {% endif %}
     {% endblock %}
@@ -245,7 +247,9 @@
 </div>
 {% if table %}{% table_config_form table table_name="ObjectTable" %}{% endif %}
 {% filter_form_modal filter_form dynamic_filter_form model_plural_name=title %}
-{% saved_view_modal request.GET.urlencode list_url %}
+{% if model.is_saved_view_model %}
+    {% saved_view_modal request.GET.urlencode list_url %}
+{% endif %}
 {% static_group_assignment_modal request=request content_type=content_type %}
 {% if current_saved_view %}
     {% clear_view_modal current_saved_view.pk %}

@@ -420,7 +420,6 @@ class SavedViewUIViewSet(
     @action(detail=True, name="Clear", methods=["post"], url_path="clear", url_name="clear")
     def clear(self, request, pk):
         try:
-            print("hey")
             sv = SavedView.objects.restrict(request.user, "view").get(pk=pk)
             sv.config = {}
             sv.validated_save()

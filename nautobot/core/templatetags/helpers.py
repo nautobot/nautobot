@@ -201,11 +201,10 @@ def render_json(value, syntax_highlight=True, pretty_print=False):
     `<code class="language-json>` HTML tag to flag it for syntax highlighting by highlight.js.
     """
     rendered_json = json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
-    html_string = '<code class="language-json">{}</code>'
-    if pretty_print:
-        html_string = "<pre>" + html_string + "</pre>"
-
     if syntax_highlight:
+        html_string = '<code class="language-json">{}</code>'
+        if pretty_print:
+            html_string = "<pre>" + html_string + "</pre>"
         return format_html(html_string, rendered_json)
 
     return rendered_json
