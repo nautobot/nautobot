@@ -1304,7 +1304,7 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
         return get_permission_for_model(self.queryset.model, "add")
 
     def get(self, request):
-        form = self.form(initial=request.GET)
+        form = self.form(initial=normalize_querydict(request.GET, form_class=self.form))
         model_form = self.model_form(request.GET)
 
         return render(

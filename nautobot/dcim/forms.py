@@ -987,6 +987,26 @@ class ModuleTypeFilterForm(NautobotFilterForm):
 #
 
 
+class ComponentTemplateForm(NautobotModelForm):
+    device_type = DynamicModelChoiceField(
+        queryset=DeviceType.objects.all(),
+        disabled=True,
+    )
+
+
+class ModularComponentTemplateForm(ComponentTemplateForm):
+    device_type = DynamicModelChoiceField(
+        queryset=DeviceType.objects.all(),
+        disabled=True,
+        required=False,
+    )
+    module_type = DynamicModelChoiceField(
+        queryset=ModuleType.objects.all(),
+        disabled=True,
+        required=False,
+    )
+
+
 class ComponentTemplateCreateForm(ComponentForm):
     """
     Base form for the creation of device component templates (subclassed from ComponentTemplateModel).
@@ -995,7 +1015,6 @@ class ComponentTemplateCreateForm(ComponentForm):
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
         disabled=True,
-        required=False,
     )
     description = forms.CharField(required=False)
 
@@ -1017,7 +1036,7 @@ class ModularComponentTemplateCreateForm(ComponentTemplateCreateForm):
     )
 
 
-class ConsolePortTemplateForm(NautobotModelForm):
+class ConsolePortTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = ConsolePortTemplate
         fields = [
@@ -1055,7 +1074,7 @@ class ConsolePortTemplateBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ["label", "type", "description"]
 
 
-class ConsoleServerPortTemplateForm(NautobotModelForm):
+class ConsoleServerPortTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = ConsoleServerPortTemplate
         fields = [
@@ -1066,10 +1085,6 @@ class ConsoleServerPortTemplateForm(NautobotModelForm):
             "type",
             "description",
         ]
-        widgets = {
-            "device_type": forms.HiddenInput(),
-            "module_type": forms.HiddenInput(),
-        }
 
 
 class ConsoleServerPortTemplateCreateForm(ModularComponentTemplateCreateForm):
@@ -1101,7 +1116,7 @@ class ConsoleServerPortTemplateBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ["label", "type", "description"]
 
 
-class PowerPortTemplateForm(NautobotModelForm):
+class PowerPortTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = PowerPortTemplate
         fields = [
@@ -1114,10 +1129,6 @@ class PowerPortTemplateForm(NautobotModelForm):
             "allocated_draw",
             "description",
         ]
-        widgets = {
-            "device_type": forms.HiddenInput(),
-            "module_type": forms.HiddenInput(),
-        }
 
 
 class PowerPortTemplateCreateForm(ModularComponentTemplateCreateForm):
@@ -1158,7 +1169,7 @@ class PowerPortTemplateBulkEditForm(NautobotBulkEditForm):
         ]
 
 
-class PowerOutletTemplateForm(NautobotModelForm):
+class PowerOutletTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = PowerOutletTemplate
         fields = [
@@ -1171,10 +1182,6 @@ class PowerOutletTemplateForm(NautobotModelForm):
             "feed_leg",
             "description",
         ]
-        widgets = {
-            "device_type": forms.HiddenInput(),
-            "module_type": forms.HiddenInput(),
-        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1251,7 +1258,7 @@ class PowerOutletTemplateBulkEditForm(NautobotBulkEditForm):
             self.fields["power_port_template"].widget.attrs["disabled"] = True
 
 
-class InterfaceTemplateForm(NautobotModelForm):
+class InterfaceTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = InterfaceTemplate
         fields = [
@@ -1264,8 +1271,6 @@ class InterfaceTemplateForm(NautobotModelForm):
             "description",
         ]
         widgets = {
-            "device_type": forms.HiddenInput(),
-            "module_type": forms.HiddenInput(),
             "type": StaticSelect2(),
         }
 
@@ -1299,7 +1304,7 @@ class InterfaceTemplateBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ["label", "description"]
 
 
-class FrontPortTemplateForm(NautobotModelForm):
+class FrontPortTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = FrontPortTemplate
         fields = [
@@ -1313,8 +1318,6 @@ class FrontPortTemplateForm(NautobotModelForm):
             "description",
         ]
         widgets = {
-            "device_type": forms.HiddenInput(),
-            "module_type": forms.HiddenInput(),
             "rear_port_template": StaticSelect2(),
         }
 
@@ -1414,7 +1417,7 @@ class FrontPortTemplateBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ["description"]
 
 
-class RearPortTemplateForm(NautobotModelForm):
+class RearPortTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = RearPortTemplate
         fields = [
@@ -1427,8 +1430,6 @@ class RearPortTemplateForm(NautobotModelForm):
             "description",
         ]
         widgets = {
-            "device_type": forms.HiddenInput(),
-            "module_type": forms.HiddenInput(),
             "type": StaticSelect2(),
         }
 
@@ -1469,7 +1470,7 @@ class RearPortTemplateBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ["description"]
 
 
-class DeviceBayTemplateForm(NautobotModelForm):
+class DeviceBayTemplateForm(ComponentTemplateForm):
     class Meta:
         model = DeviceBayTemplate
         fields = [
@@ -1478,9 +1479,6 @@ class DeviceBayTemplateForm(NautobotModelForm):
             "label",
             "description",
         ]
-        widgets = {
-            "device_type": forms.HiddenInput(),
-        }
 
 
 class DeviceBayTemplateCreateForm(ComponentTemplateCreateForm):
@@ -1501,7 +1499,7 @@ class DeviceBayTemplateBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ("label", "description")
 
 
-class ModuleBayTemplateForm(NautobotModelForm):
+class ModuleBayTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = ModuleBayTemplate
         fields = [
@@ -1511,13 +1509,46 @@ class ModuleBayTemplateForm(NautobotModelForm):
             "label",
             "description",
         ]
-        widgets = {
-            "device_type": forms.HiddenInput(),
-            "module_type": forms.HiddenInput(),
-        }
 
 
-class ModuleBayTemplateCreateForm(NautobotModelForm):
+class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
+    position_pattern = ExpandableNameField(label="Position")
+    label_pattern = ExpandableNameField(
+        label="Label",
+        required=False,
+        help_text="Alphanumeric ranges are supported. (Must match the number of positions being created.)",
+    )
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
+    def clean(self):
+        super().clean()
+
+        # Validate that the number of components being created from both the position_pattern and label_pattern are equal
+        if self.cleaned_data["label_pattern"]:
+            position_pattern_count = len(self.cleaned_data["position_pattern"])
+            label_pattern_count = len(self.cleaned_data["label_pattern"])
+            if position_pattern_count != label_pattern_count:
+                raise forms.ValidationError(
+                    {
+                        "label_pattern": f"The provided position pattern will create {position_pattern_count} components, however "
+                        f"{label_pattern_count} labels will be generated. These counts must match."
+                    },
+                    code="label_pattern_mismatch",
+                )
+
+
+class ModuleBayTemplateCreateForm(ModuleBayBaseCreateForm):
+    device_type = DynamicModelChoiceField(
+        queryset=DeviceType.objects.all(),
+        disabled=True,
+        required=False,
+    )
+    module_type = DynamicModelChoiceField(
+        queryset=ModuleType.objects.all(),
+        disabled=True,
+        required=False,
+    )
+
     field_order = (
         "device_type",
         "module_type",
@@ -3329,7 +3360,9 @@ class ModuleBayForm(NautobotModelForm):
         ]
 
 
-class ModuleBayCreateForm(ModularComponentCreateForm):
+class ModuleBayCreateForm(ModuleBayBaseCreateForm):
+    parent_device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False, disabled=True)
+    parent_module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False, disabled=True)
     field_order = ("parent_device", "parent_module", "position_pattern", "label_pattern", "description", "tags")
 
 
@@ -3353,8 +3386,7 @@ class ModuleBayBulkEditForm(
 #
 
 
-class InventoryItemForm(NautobotModelForm):
-    device = DynamicModelChoiceField(queryset=Device.objects.all())
+class InventoryItemForm(ComponentEditForm):
     parent = DynamicModelChoiceField(
         queryset=InventoryItem.objects.all(),
         required=False,

@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from copy import deepcopy
 import logging
 import uuid
 
@@ -1284,22 +1285,121 @@ class DeviceBayTemplateBulkDeleteView(generic.BulkDeleteView):
 #
 
 
+class ModuleBayBulkCreateViewSetMixin:
+    def create(self, request, *args, **kwargs):
+        if request.method == "POST":
+            return self.perform_create(request, *args, **kwargs)
+
+        form = self.create_form_class(initial=request.GET)
+        model_form = self.model_form_class(request.GET)
+
+        return Response(
+            {
+                "template": self.create_template_name,
+                "component_type": self.queryset.model._meta.verbose_name,
+                "model_form": model_form,
+                "form": form,
+                "return_url": self.get_return_url(request),
+            },
+        )
+
+    def perform_create(self, request, *args, **kwargs):
+        form = self.create_form_class(
+            request.POST,
+            initial=normalize_querydict(request.GET, form_class=self.create_form_class),
+        )
+        model_form = self.model_form_class(
+            request.POST,
+            initial=normalize_querydict(request.GET, form_class=self.model_form_class),
+        )
+
+        if form.is_valid():
+            new_components = []
+            data = deepcopy(request.POST)
+
+            positions = form.cleaned_data["position_pattern"]
+            labels = form.cleaned_data.get("label_pattern")
+            for i, position in enumerate(positions):
+                label = labels[i] if labels else None
+                # Initialize the individual component form
+                data["position"] = position
+                data["label"] = label
+                component_form = self.model_form_class(
+                    data,
+                    initial=normalize_querydict(request.GET, form_class=self.model_form_class),
+                )
+                self.logger.warn(component_form.initial)
+
+                if component_form.is_valid():
+                    new_components.append(component_form)
+                else:
+                    for field, errors in component_form.errors.as_data().items():
+                        # Assign errors on the child form's position/label field to position_pattern/label_pattern on the parent form
+                        if field == "position":
+                            field = "position_pattern"
+                        elif field == "label":
+                            field = "label_pattern"
+                        for e in errors:
+                            err_str = ", ".join(e)
+                            form.add_error(field, f"{position}: {err_str}")
+
+            if not form.errors:
+                try:
+                    with transaction.atomic():
+                        # Create the new components
+                        new_objs = []
+                        for component_form in new_components:
+                            obj = component_form.save()
+                            new_objs.append(obj)
+
+                        # Enforce object-level permissions
+                        if self.queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
+                            raise ObjectDoesNotExist
+
+                    messages.success(
+                        request,
+                        f"Added {len(new_components)} {self.queryset.model._meta.verbose_name_plural}",
+                    )
+                    if "_addanother" in request.POST:
+                        return redirect(request.get_full_path())
+                    else:
+                        return redirect(self.get_return_url(request))
+
+                except ObjectDoesNotExist:
+                    msg = "Component creation failed due to object-level permissions violation"
+                    self.logger.debug(msg)
+                    form.add_error(None, msg)
+
+        return Response(
+            {
+                "template": self.create_template_name,
+                "component_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "model_form": model_form,
+                "return_url": self.get_return_url(request),
+            },
+        )
+
+
 class ModuleBayTemplateUIViewSet(
+    ModuleBayBulkCreateViewSetMixin,
     ObjectEditViewMixin,
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
 ):
     queryset = ModuleBayTemplate.objects.all()
-    bulk_update_form_class = forms.ModuleBayBulkEditForm
     filterset_class = filters.ModuleBayTemplateFilterSet
-    # filterset_form_class = forms.ModuleBayTemplateFilterForm
+    bulk_update_form_class = forms.ModuleBayBulkEditForm
+    create_form_class = forms.ModuleBayTemplateCreateForm
     form_class = forms.ModuleBayTemplateForm
+    model_form_class = forms.ModuleBayTemplateForm
     serializer_class = serializers.ModuleBayTemplateSerializer
-    # table_class = tables.ModuleBayTemplateTable
+    table_class = tables.ModuleBayTemplateTable
+    create_template_name = "dcim/device_component_add.html"
 
-    @action(detail=False, url_path="rename", url_name="bulk_rename")
-    def add(self, request, *args, **kwargs):
+    @action(detail=False, url_name="bulk_rename")
+    def rename(self, request, *args, **kwargs):
         return None
 
 
@@ -1784,8 +1884,8 @@ class ModuleUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
         if instance:
             context["modulebay_count"] = instance.module_bays.count()
-            module_count = instance.module_bays.filter(installed_module__isnull=False).count()
-            context["module_count"] = f"{module_count}/{context['modulebay_count']}"
+            populated_module_count = instance.module_bays.filter(installed_module__isnull=False).count()
+            context["module_count"] = f"{populated_module_count}/{context['modulebay_count']}"
         return context
 
     @action(detail=True)
@@ -2580,14 +2680,17 @@ class DeviceBayBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ModuleBayUIViewSet(NautobotUIViewSet):
+class ModuleBayUIViewSet(ModuleBayBulkCreateViewSetMixin, NautobotUIViewSet):
     queryset = ModuleBay.objects.all()
-    bulk_update_form_class = forms.ModuleBayBulkEditForm
     filterset_class = filters.ModuleBayFilterSet
     filterset_form_class = forms.ModuleBayFilterForm
+    bulk_update_form_class = forms.ModuleBayBulkEditForm
+    create_form_class = forms.ModuleBayCreateForm
     form_class = forms.ModuleBayForm
+    model_form_class = forms.ModuleBayForm
     serializer_class = serializers.ModuleBaySerializer
     table_class = tables.ModuleBayTable
+    create_template_name = "dcim/device_component_add.html"
 
     @action(detail=False, url_path="rename", url_name="bulk_rename")
     def bulk_rename(self, request, *args, **kwargs):

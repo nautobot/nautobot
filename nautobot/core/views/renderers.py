@@ -166,7 +166,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         display_filter_params = []
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = self.construct_user_permissions(request, model)
-        if view.detail:
+        if view.detail or view.action == "create":
             instance = view.get_object()
             return_url = view.get_return_url(request, instance)
         else:
