@@ -275,9 +275,9 @@ class SavedViewUIViewSet(
         queryset = self.get_queryset()
         try:
             actions = [self.get_action()]
-            for i in range(len(actions)):
+            for i, item in enumerate(actions):
                 # Enforce users:change_savedview instead of users:clear_savedview
-                if actions[i] == "clear":
+                if item == "clear":
                     actions[i] = "change"
         except KeyError:
             messages.error(
