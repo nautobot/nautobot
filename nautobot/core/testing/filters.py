@@ -7,7 +7,7 @@ from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.test import tag
 
-from nautobot.core.filters import ContentTypeFilter, RelatedMembershipBooleanFilter, SearchFilter
+from nautobot.core.filters import ContentTypeFilter, ContentTypeMultipleChoiceFilter, RelatedMembershipBooleanFilter, SearchFilter
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.testing import views
 from nautobot.tenancy import models
@@ -295,7 +295,11 @@ class FilterTestCases:
                 with self.subTest(
                     f"Assert {self.filterset.__class__.__name__}.{field.name} implements ContentTypeFilter"
                 ):
-                    self.assertIsInstance(self.filterset.get_filters().get(field.name), ContentTypeFilter)
+                    filter_field = self.filterset.get_filters().get(field.name)
+                    if not filter_field:
+                        # This field is not part of the Filterset.
+                        continue
+                    self.assertIsInstance(filter_field, (ContentTypeFilter, ContentTypeMultipleChoiceFilter))
 
     class NameOnlyFilterTestCase(FilterTestCase):
         """Add simple tests for filtering by name."""

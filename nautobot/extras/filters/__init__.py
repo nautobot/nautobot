@@ -623,6 +623,7 @@ class ExportTemplateFilterSet(BaseFilterSet):
         },
     )
     owner_content_type = ContentTypeFilter()
+    content_type = ContentTypeFilter()
 
     class Meta:
         model = ExportTemplate
