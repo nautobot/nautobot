@@ -1,0 +1,2 @@
+Fixed unintended creation of `_custom_field_data` filter on various FilterSets.
+Fixed `Filter "_custom_field_data" on ... is not GraphQL safe, and will be omitted` warning logs when generating the GraphQL schema.
