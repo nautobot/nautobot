@@ -249,25 +249,9 @@ menu_items = (
                 weight=250,
                 items=(
                     NavMenuItem(
-                        link="dcim:moduletype_list",
-                        name="Module Types",
-                        weight=100,
-                        permissions=[
-                            "dcim.view_moduletype",
-                        ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="dcim:moduletype_add",
-                                permissions=[
-                                    "dcim.add_moduletype",
-                                ],
-                            ),
-                        ),
-                    ),
-                    NavMenuItem(
                         link="dcim:module_list",
                         name="Modules",
-                        weight=200,
+                        weight=100,
                         permissions=[
                             "dcim.view_module",
                         ],
@@ -276,6 +260,22 @@ menu_items = (
                                 link="dcim:module_add",
                                 permissions=[
                                     "dcim.add_module",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:moduletype_list",
+                        name="Module Types",
+                        weight=200,
+                        permissions=[
+                            "dcim.view_moduletype",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:moduletype_add",
+                                permissions=[
+                                    "dcim.add_moduletype",
                                 ],
                             ),
                         ),

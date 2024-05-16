@@ -246,15 +246,10 @@ class DeviceImportTable(BaseTable):
 
 class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
-    display = tables.LinkColumn(orderable=False, verbose_name="Module")
+    display = tables.Column(linkify=True, orderable=False, verbose_name="Module")
     parent_module_bay = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
-    module_type = tables.LinkColumn(
-        viewname="dcim:moduletype",
-        args=[Accessor("module_type__pk")],
-        verbose_name="Type",
-        text=lambda record: record.module_type.display,
-    )
+    module_type = tables.Column(linkify=True, verbose_name="Type", accessor="module_type__display")
     tenant = TenantColumn()
     tags = TagColumn(url_name="dcim:device_list")
     actions = ButtonsColumn(Module)
