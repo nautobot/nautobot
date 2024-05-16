@@ -251,41 +251,39 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 "verbose_name_plural": queryset.model._meta.verbose_name_plural,
             }
         )
-        if view.detail:
+        if view.action == "retrieve":
             context.update(common_detail_view_context(request, instance))
-            context.update(view.get_extra_context(request, instance))
-        else:
-            if view.action == "list":
-                # Construct valid actions for list view.
-                valid_actions = self.validate_action_buttons(view, request)
-                context.update(
-                    {
-                        "action_buttons": valid_actions,
-                        "list_url": validated_viewname(model, "list"),
-                        "title": bettertitle(model._meta.verbose_name_plural),
-                    }
-                )
-            elif view.action in ["create", "update"]:
-                context.update(
-                    {
-                        "editing": instance.present_in_database,
-                    }
-                )
-            elif view.action == "bulk_create":  # 3.0 TODO: remove, replaced by ImportObjects system Job
-                context.update(
-                    {
-                        "active_tab": view.bulk_create_active_tab if view.bulk_create_active_tab else "csv-data",
-                        "fields": get_csv_form_fields_from_serializer_class(view.serializer_class),
-                    }
-                )
-            elif view.action in ["changelog", "notes"]:
-                context.update(
-                    {
-                        "base_template": get_base_template(data.get("base_template"), model),
-                        "active_tab": view.action,
-                    }
-                )
-            context.update(view.get_extra_context(request, instance=None))
+        elif view.action == "list":
+            # Construct valid actions for list view.
+            valid_actions = self.validate_action_buttons(view, request)
+            context.update(
+                {
+                    "action_buttons": valid_actions,
+                    "list_url": validated_viewname(model, "list"),
+                    "title": bettertitle(model._meta.verbose_name_plural),
+                }
+            )
+        elif view.action in ["create", "update"]:
+            context.update(
+                {
+                    "editing": instance.present_in_database,
+                }
+            )
+        elif view.action == "bulk_create":  # 3.0 TODO: remove, replaced by ImportObjects system Job
+            context.update(
+                {
+                    "active_tab": view.bulk_create_active_tab if view.bulk_create_active_tab else "csv-data",
+                    "fields": get_csv_form_fields_from_serializer_class(view.serializer_class),
+                }
+            )
+        elif view.action in ["changelog", "notes"]:
+            context.update(
+                {
+                    "base_template": get_base_template(data.get("base_template"), model),
+                    "active_tab": view.action,
+                }
+            )
+        context.update(view.get_extra_context(request, instance))
         return context
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
