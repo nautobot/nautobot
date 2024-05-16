@@ -268,6 +268,24 @@ class SavedViewUIViewSet(
                 return table_class.__name__
         return None
 
+    def get_required_permission(self):
+        """
+        Obtain the permissions needed to perform certain actions on a model.
+        """
+        queryset = self.get_queryset()
+        try:
+            actions = [self.get_action()]
+            for i in range(len(actions)):
+                # Enforce users:change_savedview instead of users:clear_savedview
+                if actions[i] == "clear":
+                    actions[i] = "change"
+        except KeyError:
+            messages.error(
+                self.request,
+                "This action is not permitted. Please use the buttons at the bottom of the table for Bulk Delete and Bulk Update",
+            )
+        return self.get_permissions_for_model(queryset.model, actions)
+
     def retrieve(self, request, *args, **kwargs):
         """
         The detail view for a saved view should the related ObjectListView with saved configurations applied
