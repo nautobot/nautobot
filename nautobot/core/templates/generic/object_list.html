@@ -246,10 +246,10 @@
 {% if table %}{% table_config_form table table_name="ObjectTable" %}{% endif %}
 {% filter_form_modal filter_form dynamic_filter_form model_plural_name=title %}
 {% saved_view_modal request.GET.urlencode list_url %}
+{% static_group_assignment_modal request=request content_type=content_type %}
 {% if current_saved_view %}
     {% clear_view_modal current_saved_view.pk %}
 {% endif %}
-{% static_group_assignment_modal request=request content_type=content_type %}
 {% endblock %}
 
 {% block javascript %}
