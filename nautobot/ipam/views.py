@@ -305,9 +305,9 @@ class VRFBulkEditView(generic.BulkEditView):
 
     def extra_post_save_action(self, obj, form):
         if form.cleaned_data.get("add_prefixes", None):
-            obj.vrfs.add(*form.cleaned_data["add_prefixes"])
+            obj.prefixes.add(*form.cleaned_data["add_prefixes"])
         if form.cleaned_data.get("remove_prefixes", None):
-            obj.vrfs.remove(*form.cleaned_data["remove_prefixes"])
+            obj.prefixes.remove(*form.cleaned_data["remove_prefixes"])
 
 
 class VRFBulkDeleteView(generic.BulkDeleteView):
