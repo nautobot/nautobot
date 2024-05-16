@@ -655,6 +655,21 @@ function initializeDynamicFilterForm(context){
             let parent = $(this).attr("data-field-parent");
             query_params.delete(parent, field_value);
         }
+        if (query_params.has("saved_view")) {
+            var all_filters_removed = true
+
+            const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending", "all_filters_removed"]
+
+            query_params.forEach((value, key) => {
+                if (!non_filter_params.includes(key)){
+                    all_filters_removed = false
+                }
+            })
+
+            if (all_filters_removed && !query_params.has("all_filters_removed")){
+                query_params.append("all_filters_removed", true);
+            }
+        }
         location.assign("?" + query_params);
     })
 
@@ -688,6 +703,22 @@ function initializeDynamicFilterForm(context){
             if (value != "" && !search_query.has(key, value)) { search_query.append(key, value); }
         });
         $("#FilterForm_modal").modal("hide");
+
+        if (search_query.has("saved_view")) {
+            var all_filters_removed = true
+
+            const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending", "all_filters_removed"]
+
+            search_query.forEach((value, key) => {
+                if (!non_filter_params.includes(key)){
+                    all_filters_removed = false
+                }
+            })
+
+            if (all_filters_removed && !search_query.has("all_filters_removed")){
+                search_query.append("all_filters_removed", true);
+            }
+        }
         location.assign("?" + search_query);
     })
 

@@ -91,9 +91,9 @@
                         </a>
                     </li>
                 {% endif %}
-                {% if current_saved_view %}
+                {% if current_saved_view and perms.users.change_savedview %}
                     <li>
-                        <a href="{% url 'user:savedview' pk=request.GET.saved_view %}">
+                        <a href="" data-toggle="modal" data-target="#clear_view_modal" title="Confirm Clear View">
                             <i class="mdi mdi-arrow-u-right-bottom text-danger" aria-hidden="true"></i>
                             <span class="text-danger">Clear View</span>
                         </a>
@@ -121,7 +121,7 @@
         {% if current_saved_view %}
             — {{ current_saved_view.name }}
             {% if new_changes_not_applied %}
-                <sup>*</sup>
+                <sup title="Pending changes not saved">*</sup>
             {% endif %}
         {% endif %}
     {% endblock %}
@@ -246,6 +246,9 @@
 {% if table %}{% table_config_form table table_name="ObjectTable" %}{% endif %}
 {% filter_form_modal filter_form dynamic_filter_form model_plural_name=title %}
 {% saved_view_modal request.GET.urlencode list_url %}
+{% if current_saved_view %}
+    {% clear_view_modal current_saved_view.pk %}
+{% endif %}
 {% static_group_assignment_modal request=request content_type=content_type %}
 {% endblock %}
 

@@ -462,7 +462,12 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
         params = request.GET.copy()
         filter_params = get_filterable_params_from_filter_params(params, self.non_filter_params, self.filterset_class())
-        if params.get("saved_view") and not filter_params and not params.get("table_changes_pending"):
+        if (
+            params.get("saved_view")
+            and not filter_params
+            and not params.get("table_changes_pending")
+            and not params.get("all_filters_removed")
+        ):
             return SavedView.objects.get(pk=params.get("saved_view")).config.get("filter_params", {})
         return filter_params
 
@@ -620,6 +625,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         "sort",  # table sorting
         "saved_view",  # saved_view indicator pk or composite keys
         "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
+        "all_filters_removed",  # indicator for if all filters have been removed from the saved view
     )
 
     def filter_queryset(self, queryset):

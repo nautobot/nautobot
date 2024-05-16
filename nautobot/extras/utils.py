@@ -282,6 +282,11 @@ def populate_model_features_registry(refresh=False):
             "field_attributes": {"related_model": RelationshipAssociation},
         },
         {
+            "feature_name": "saved_views",
+            "field_names": [],
+            "additional_constraints": {"is_saved_view_model": True},
+        },
+        {
             "feature_name": "static_groups",
             "field_names": ["associated_static_groups"],
             "additional_constraints": {"is_static_group_associable_model": True},
