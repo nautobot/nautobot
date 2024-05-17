@@ -181,7 +181,7 @@ class StaticGroupMixin(models.Model):
     @property
     def static_groups(self):
         """
-        Returns a QuerySet of StaticGroups that have this object as a member.
+        Returns a QuerySet of StaticGroups that have this object as a member. Does not include hidden groups.
         """
         from nautobot.extras.models.groups import StaticGroup
 

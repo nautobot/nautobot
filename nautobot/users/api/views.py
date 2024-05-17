@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import AnonymousUser, Group
 from django.db.models import Count
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiTypes
 from rest_framework.authentication import BasicAuthentication
@@ -58,7 +58,9 @@ class TokenViewSet(ModelViewSet):
         Limit users to their own Tokens.
         """
         queryset = super().get_queryset()
-        return queryset.filter(user=self.request.user)
+        if not isinstance(self.request.user, AnonymousUser):
+            return queryset.filter(user=self.request.user)
+        return queryset.none()
 
 
 #

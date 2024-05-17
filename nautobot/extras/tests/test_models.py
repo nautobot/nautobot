@@ -1686,6 +1686,11 @@ class SecretsGroupTest(ModelTestCases.BaseModelTestCase):
 class StaticGroupTest(ModelTestCases.BaseModelTestCase):
     model = StaticGroup
 
+    def test_managers(self):
+        self.assertQuerysetEqualAndNotEmpty(StaticGroup.objects.all(), StaticGroup.all_objects.filter(hidden=False))
+        self.assertTrue(StaticGroup.all_objects.filter(hidden=True).exists())
+        self.assertFalse(StaticGroup.objects.filter(hidden=True).exists())
+
     def test_member_operations(self):
         sg = StaticGroup.objects.create(name="All Prefixes", content_type=ContentType.objects.get_for_model(Prefix))
         self.assertIsInstance(sg.members, PrefixQuerySet)
@@ -1724,9 +1729,58 @@ class StaticGroupTest(ModelTestCases.BaseModelTestCase):
         self.assertIsInstance(Prefix.objects.filter(ip_version=6).first().static_groups, QuerySet)
         self.assertIn(sg, list(Prefix.objects.filter(ip_version=6).first().static_groups))
 
+    def test_hidden_groups(self):
+        sg1 = StaticGroup.objects.create(name="Prefixes", content_type=ContentType.objects.get_for_model(Prefix))
+        sg2 = StaticGroup.objects.create(
+            name="Prefixes Hidden", content_type=ContentType.objects.get_for_model(Prefix), hidden=True
+        )
+
+        self.assertIn(sg1, StaticGroup.objects.all())
+        self.assertNotIn(sg2, StaticGroup.objects.all())
+
+        self.assertIn(sg1, StaticGroup.all_objects.all())
+        self.assertIn(sg2, StaticGroup.all_objects.all())
+
+        pfx = Prefix.objects.first()
+        sg1.add_members([pfx])
+        self.assertIn(pfx, sg1.members)
+        self.assertTrue(sg1.static_group_associations.exists())
+        sg2.add_members([pfx])
+        self.assertIn(pfx, sg2.members)
+        self.assertFalse(sg2.static_group_associations.exists())
+        self.assertTrue(sg2.static_group_associations(manager="all_objects").exists())
+
+        # hidden groups don't appear in `associated_static_groups` or `static_groups`
+        self.assertEqual(pfx.associated_static_groups.filter(static_group__in=[sg1, sg2]).count(), 1)
+        self.assertIn(sg1, pfx.static_groups)
+        self.assertNotIn(sg2, pfx.static_groups)
+
+        # can query explicitly to include hidden groups
+        self.assertIn(
+            sg1,
+            StaticGroup.all_objects.filter(
+                static_group_associations__associated_object_type=ContentType.objects.get_for_model(Prefix),
+                static_group_associations__associated_object_id=pfx.id,
+            ),
+        )
+        self.assertIn(
+            sg2,
+            StaticGroup.all_objects.filter(
+                static_group_associations__associated_object_type=ContentType.objects.get_for_model(Prefix),
+                static_group_associations__associated_object_id=pfx.id,
+            ),
+        )
+
 
 class StaticGroupAssociationTest(ModelTestCases.BaseModelTestCase):
     model = StaticGroupAssociation
+
+    def test_managers(self):
+        self.assertQuerysetEqualAndNotEmpty(
+            StaticGroupAssociation.objects.all(), StaticGroupAssociation.all_objects.filter(static_group__hidden=False)
+        )
+        self.assertTrue(StaticGroupAssociation.all_objects.filter(static_group__hidden=True).exists())
+        self.assertFalse(StaticGroupAssociation.objects.filter(static_group__hidden=True).exists())
 
 
 class StatusTest(ModelTestCases.BaseModelTestCase):

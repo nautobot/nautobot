@@ -1161,6 +1161,7 @@ class StaticGroupAssociationFilterSet(NautobotFilterSet):
     associated_object_type = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("static_groups").get_choices, conjoined=False
     )
+    hidden = django_filters.BooleanFilter(field_name="static_group__hidden")
 
     class Meta:
         model = StaticGroupAssociation
