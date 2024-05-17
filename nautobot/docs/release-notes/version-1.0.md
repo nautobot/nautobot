@@ -130,7 +130,7 @@ This has also meant `UserConfig` no longer exists as a separate model. `UserConf
 
 Historically, a user viewing the home page and navigation menu would see a list of all model types and menu items in the system, with a “lock” icon on items that they were not granted access to view in detail.
 
-As an [option](../user-guide/administration/configuration/optional-settings.md#hide_restricted_ui), administrators can now choose to instead hide un-permitted items altogether from the home page and the navigation menu, providing a simpler interface for limited-access users. The prior behavior remains as the default.
+As an option, administrators can now choose to instead hide un-permitted items altogether from the home page and the navigation menu, providing a simpler interface for limited-access users. The prior behavior remains as the default.
 
 #### IPAM Network Fields to VARBINARY
 
