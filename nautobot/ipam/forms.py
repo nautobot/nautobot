@@ -142,6 +142,12 @@ class VRFBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    add_prefixes = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
+    remove_prefixes = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
 
     class Meta:
         nullable_fields = [
@@ -357,6 +363,12 @@ class PrefixBulkEditForm(
     )
     remove_locations = DynamicModelMultipleChoiceField(
         queryset=Location.objects.all(), required=False, query_params={"content_type": Prefix._meta.label_lower}
+    )
+    add_vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(), required=False, query_params={"namespace": "$namespace"}
+    )
+    remove_vrfs = DynamicModelMultipleChoiceField(
+        queryset=VRF.objects.all(), required=False, query_params={"namespace": "$namespace"}
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
