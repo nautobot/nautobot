@@ -325,6 +325,7 @@ class StaticGroupFactory(PrimaryModelFactory):
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
+    hidden = NautobotBoolIterator(chance_of_getting_true=20)
 
     @factory.post_generation
     def members(self, created, extracted, **kwargs):

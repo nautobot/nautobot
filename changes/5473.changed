@@ -1,0 +1,1 @@
+Added StaticGroup `hidden` flag in support of the creation of non-user-serviceable StaticGroups. By default, hidden StaticGroups are not shown in the UI or the REST API.

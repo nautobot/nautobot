@@ -12,25 +12,31 @@ Once created, the Content Type for a Static Group may not be changed, as doing s
 
 Each association of a given object into a given Static Group is recorded by a [Static Group Association](staticgroupassociation.md) database record. Individual objects can be associated to Static Groups in their create/edit form, but in most cases it's easier and quicker to bulk-update a set of objects from their appropriate list/table view via the "Update Static Groups" button.
 
+Nautobot uses Static Groups internally for certain purposes; these groups are hidden by default from the UI, REST API, and GraphQL as such groups are generally not intended to be accessed or modified by users.
+
 ## REST API
 
 The REST API endpoints under `/api/extras/static-groups/` are used to perform standard CRUD (Create/Retrieve/Update/Delete) operations on Static Group definitions. There is also a special read-only endpoint `/api/extras/static-groups/<group UUID>/members/` that returns a serialized list of the group's member objects; for example, for a Static Group of Prefixes, this endpoint would return a list of the Prefix objects contained in this Static Group.
 
 As in the database itself, in the REST API, assignment of individual objects to an individual Static Group is managed via the endpoints under `/api/extras/static-group-associations/`. Here you can perform CRUD operations to associate objects to an existing Static Group, retrieve the list of associations, and update/delete existing object associations.
 
+The REST API does not by default include Nautobot's internal "hidden" Static Groups when listing or retrieving groups. It is possible to view (but not modify) such groups in the REST API by specifying `?hidden=True` as a query parameter but this should be treated as debugging functionality rather than a feature intended for consumption by end users.
+
 ## Python API
+
+The `StaticGroup.objects` default manager omits hidden groups. If you have a need to perform queries that include hidden groups as well, use the `StaticGroup.all_objects` manager instead.
 
 From a given `StaticGroup` record, the following Python APIs are available:
 
 * `group.members` - returns a `QuerySet` directly representing the objects (for example, a `QuerySet` of `Prefix` records for a Static Group of Prefixes) that are members of this group. Can also be set by providing either a list or `QuerySet` of appropriate objects -- doing so will replace all assigned group members with the provided objects, so in many cases you may prefer to use the `add_members` and `remove_members` APIs below instead.
-* `group.static_group_associations` - returns a `QuerySet` of `StaticGroupAssociation` records representing the assignment of objects to this group.
 * `group.add_members(list_or_queryset)` - associate the given objects to this group as members by creating the appropriate `StaticGroupAssociation` database records.
 * `group.remove_members(list_or_queryset)` - disassociate the given objects from this group by deleting any appropriate `StaticGroupAssociation` database records.
+* `group.static_group_associations` - returns a `QuerySet` of `StaticGroupAssociation` records representing the assignment of objects to this group. Note that for a hidden Static Group, you must use `group.static_group_associations(manager="all_objects")`.
 
 From a given record of any object type that can be a member of a Static Group, the following Python APIs are available:
 
-* `object.static_groups` - returns a `QuerySet` directly representing the `StaticGroup` records that contain this object as a member.
-* `object.associated_static_groups` - returns a `QuerySet` of `StaticGroupAssociation` records representing the assignment of this object to static groups.
+* `object.static_groups` - returns a `QuerySet` directly representing the `StaticGroup` records that contain this object as a member. Does not include hidden groups, by design.
+* `object.associated_static_groups.all()` - returns a `QuerySet` of `StaticGroupAssociation` records representing the assignment of this object to static groups. Does not include associations to hidden groups, by design.
 
 !!! tip
     By default, all models inheriting from Nautobot's `OrganizationalModel` or `PrimaryModel` classes are assumed to be a viable object type for Static Groups to contain. Individual models that do not wish to be assignable to Static Groups can declare the flag `is_static_group_associable_model = False` on their model definition. Conversely, models that inherit directly from Nautobot's `BaseModel` default to *not* supporting Static Groups, but can include the `nautobot.apps.models.StaticGroupMixin` class as a part of their class definition in order to enable Static Group support.
