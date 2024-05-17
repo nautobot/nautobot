@@ -1544,6 +1544,7 @@ class StaticGroupFilterForm(NautobotFilterForm):
         required=False,
     )
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    hidden = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
@@ -1597,8 +1598,11 @@ class StaticGroupBulkAssignForm(BootstrapMixin, BulkEditForm):
     def clean(self):
         data = super().clean()
 
-        if data["add_to_groups"].filter(pk__in=data["remove_from_groups"].values_list("pk", flat=True)).exists():
-            raise ValidationError("Same group specified for both addition and removal")
+        if "add_to_groups" in data and "remove_from_groups" in data:
+            if data["add_to_groups"].filter(pk__in=data["remove_from_groups"].values_list("pk", flat=True)).exists():
+                raise ValidationError("Same group specified for both addition and removal")
+
+        return data
 
 
 class StaticGroupAssociationFilterForm(NautobotFilterForm):
@@ -1609,6 +1613,7 @@ class StaticGroupAssociationFilterForm(NautobotFilterForm):
         queryset=ContentType.objects.filter(FeatureQuery("static_groups").get_query()).order_by("app_label", "model"),
         required=False,
     )
+    hidden = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
 
 
 #

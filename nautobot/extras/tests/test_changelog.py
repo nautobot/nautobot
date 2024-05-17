@@ -13,7 +13,7 @@ from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
-from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Status, Tag
+from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, StaticGroup, Status, Tag
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
@@ -504,6 +504,29 @@ class ObjectChangeModelTest(TestCase):  # TODO: change to BaseModelTestCase once
     @classmethod
     def setUpTestData(cls):
         cls.location_status = Status.objects.get_for_model(Location).first()
+
+    def test_opt_out(self):
+        """Hidden static groups can "opt out" of change logging."""
+        with context_managers.web_request_context(self.user):
+            sg = StaticGroup(
+                name="Hidden group",
+                content_type=ContentType.objects.get_for_model(Location),
+                hidden=True,
+            )
+            sg.validated_save()
+
+        self.assertIsNone(get_changes_for_model(sg).first())
+
+        with context_managers.web_request_context(self.user):
+            sg.description = "A hidden group of Locations"
+            sg.validated_save()
+
+        self.assertIsNone(get_changes_for_model(sg).first())
+
+        with context_managers.web_request_context(self.user):
+            sg.delete()
+
+        self.assertIsNone(get_changes_for_model(sg).first())
 
     def test_get_snapshots(self):
         with context_managers.web_request_context(self.user):

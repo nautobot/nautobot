@@ -3550,6 +3550,97 @@ class StaticGroupTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(member_count, response.json()["count"])
         # TODO: assert that members are serialized correctly?
 
+    def test_list_omits_hidden_by_default(self):
+        """Test that the list view defaults to omitting hidden groups."""
+        sg1 = StaticGroup.all_objects.filter(hidden=False).first()
+        self.assertIsNotNone(sg1)
+        sg2 = StaticGroup.all_objects.filter(hidden=True).first()
+        self.assertIsNotNone(sg2)
+
+        self.add_permissions("extras.view_staticgroup")
+        response = self.client.get(self._get_list_url(), **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, dict)
+        self.assertIn("results", response.data)
+        found_sg1 = False
+        found_sg2 = False
+        for record in response.data["results"]:
+            if record["id"] == str(sg1.id):
+                found_sg1 = True
+            elif record["id"] == str(sg2.id):
+                found_sg2 = True
+        self.assertTrue(found_sg1)
+        self.assertFalse(found_sg2)
+
+    def test_list_hidden_filter(self):
+        """Test that the list view can show hidden groups with the appropriate filter."""
+        sg1 = StaticGroup.all_objects.filter(hidden=False).first()
+        self.assertIsNotNone(sg1)
+        sg2 = StaticGroup.all_objects.filter(hidden=True).first()
+        self.assertIsNotNone(sg2)
+
+        self.add_permissions("extras.view_staticgroup")
+        response = self.client.get(f"{self._get_list_url()}?hidden=True", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, dict)
+        self.assertIn("results", response.data)
+        found_sg1 = False
+        found_sg2 = False
+        for record in response.data["results"]:
+            if record["id"] == str(sg1.id):
+                found_sg1 = True
+            elif record["id"] == str(sg2.id):
+                found_sg2 = True
+        self.assertFalse(found_sg1)
+        self.assertTrue(found_sg2)
+
+    def test_changes_to_hidden_groups_not_permitted(self):
+        """Test that the REST API cannot create/update/delete hidden groups."""
+        self.add_permissions(
+            "extras.view_staticgroup",
+            "extras.add_staticgroup",
+            "extras.delete_staticgroup",
+            "extras.change_staticgroup",
+        )
+
+        with self.subTest("create hidden group"):
+            create_data = self.create_data[0].copy()
+            create_data["hidden"] = True
+            # hidden flag is read-only so DRF just silently ignores it
+            response = self.client.post(self._get_list_url(), create_data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_201_CREATED)
+            sg = StaticGroup.all_objects.get(name=create_data["name"])
+            self.assertFalse(sg.hidden)
+
+        with self.subTest("update hidden group"):
+            sg = StaticGroup.all_objects.filter(hidden=True).first()
+            self.assertIsNotNone(sg)
+            url = self._get_detail_url(sg) + "?hidden=True"
+            update_data = {"name": "Changed the name"}
+            response = self.client.patch(url, update_data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+            sg.refresh_from_db()
+            self.assertNotEqual(sg.name, "Changed the name")
+
+        with self.subTest("update non-hidden group to hidden"):
+            sg = StaticGroup.all_objects.filter(hidden=False).first()
+            self.assertIsNotNone(sg)
+            url = self._get_detail_url(sg) + "?hidden="
+            update_data = {"hidden": True}
+            # hidden flag is read-only so DRF just silently ignores it
+            response = self.client.patch(url, update_data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            sg.refresh_from_db()
+            self.assertFalse(sg.hidden)
+
+        with self.subTest("delete hidden group"):
+            sg = StaticGroup.all_objects.filter(hidden=True).first()
+            self.assertIsNotNone(sg)
+            url = self._get_detail_url(sg) + "?hidden=True"
+            response = self.client.delete(url, **self.header)
+            self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+            self.assertTrue(StaticGroup.all_objects.filter(pk=sg.pk).exists())
+
 
 class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
     model = StaticGroupAssociation
@@ -3625,6 +3716,90 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
         }
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_list_omits_hidden_by_default(self):
+        """Test that the list view defaults to omitting associations of hidden groups."""
+        sga1 = StaticGroupAssociation.all_objects.filter(static_group__hidden=False).first()
+        self.assertIsNotNone(sga1)
+        sga2 = StaticGroupAssociation.all_objects.filter(static_group__hidden=True).first()
+        self.assertIsNotNone(sga2)
+
+        self.add_permissions("extras.view_staticgroupassociation")
+        response = self.client.get(self._get_list_url(), **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, dict)
+        self.assertIn("results", response.data)
+        found_sga1 = False
+        found_sga2 = False
+        for record in response.data["results"]:
+            if record["id"] == str(sga1.id):
+                found_sga1 = True
+            elif record["id"] == str(sga2.id):
+                found_sga2 = True
+        self.assertTrue(found_sga1)
+        self.assertFalse(found_sga2)
+
+    def test_list_hidden_filter(self):
+        """Test that the list view can show hidden groups' associations with the appropriate filter."""
+        sga1 = StaticGroupAssociation.all_objects.filter(static_group__hidden=False).first()
+        self.assertIsNotNone(sga1)
+        sga2 = StaticGroupAssociation.all_objects.filter(static_group__hidden=True).first()
+        self.assertIsNotNone(sga2)
+
+        self.add_permissions("extras.view_staticgroupassociation")
+        response = self.client.get(f"{self._get_list_url()}?hidden=True", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, dict)
+        self.assertIn("results", response.data)
+        found_sga1 = False
+        found_sga2 = False
+        for record in response.data["results"]:
+            if record["id"] == str(sga1.id):
+                found_sga1 = True
+            elif record["id"] == str(sga2.id):
+                found_sga2 = True
+        self.assertFalse(found_sga1)
+        self.assertTrue(found_sga2)
+
+    def test_changes_to_hidden_groups_not_permitted(self):
+        """Test that the REST API cannot create/update/delete associations for hidden groups."""
+        self.add_permissions(
+            "extras.view_staticgroupassociation",
+            "extras.add_staticgroupassociation",
+            "extras.delete_staticgroupassociation",
+            "extras.change_staticgroupassociation",
+        )
+
+        with self.subTest("create hidden association"):
+            sg = StaticGroup.all_objects.filter(hidden=True).first()
+            self.assertIsNotNone(sg)
+            create_data = {
+                "static_group": str(sg.pk),
+                "associated_object_type": f"{sg.content_type.app_label}.{sg.content_type.model}",
+                "associated_object_id": "00000000-0000-0000-0000-000000000000",
+            }
+            response = self.client.post(
+                f"{self._get_list_url()}?hidden=True", create_data, format="json", **self.header
+            )
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+        with self.subTest("update hidden association"):
+            sga = StaticGroupAssociation.all_objects.filter(static_group__hidden=True).first()
+            self.assertIsNotNone(sga)
+            url = self._get_detail_url(sga) + "?hidden=True"
+            update_data = {"associated_object_id": "00000000-0000-0000-0000-000000000000"}
+            response = self.client.patch(url, update_data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+            sga.refresh_from_db()
+            self.assertNotEqual(sga.associated_object_id, "00000000-0000-0000-0000-000000000000")
+
+        with self.subTest("delete hidden association"):
+            sga = StaticGroupAssociation.all_objects.filter(static_group__hidden=True).first()
+            self.assertIsNotNone(sga)
+            url = self._get_detail_url(sga) + "?hidden=True"
+            response = self.client.delete(url, **self.header)
+            self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+            self.assertTrue(StaticGroupAssociation.all_objects.filter(pk=sga.pk).exists())
 
 
 class StatusTest(APIViewTestCases.APIViewTestCase):

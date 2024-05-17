@@ -48,6 +48,13 @@ class StaticGroupManager(BaseManager.from_queryset(RestrictedQuerySet)):
     get_for_model.cache_key_prefix = "nautobot.extras.staticgroup.get_for_model"
 
 
+class StaticGroupDefaultManager(StaticGroupManager):
+    """Subclass of StaticGroupManager that automatically filters out hidden groups."""
+
+    def get_queryset(self):
+        return super().get_queryset().exclude(hidden=True)
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -74,8 +81,14 @@ class StaticGroup(PrimaryModel):
         blank=True,
         null=True,
     )
+    hidden = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Set to True to hide this group from the UI and API and disable change-logging of its associations",
+    )
 
-    objects = StaticGroupManager()
+    objects = StaticGroupDefaultManager()
+    all_objects = StaticGroupManager()
 
     clone_fields = ["content_type", "tenant"]
     is_static_group_associable_model = False
@@ -85,6 +98,11 @@ class StaticGroup(PrimaryModel):
 
     def __str__(self):
         return self.name
+
+    def to_objectchange(self, *args, **kwargs):
+        if self.hidden:
+            return None
+        return super().to_objectchange(*args, **kwargs)
 
     @property
     def model(self):
@@ -106,7 +124,7 @@ class StaticGroup(PrimaryModel):
         # Since associated_object is a GenericForeignKey, we can't just do:
         #     return self.static_group_associations.values_list("associated_object", flat=True)
         return self.model.objects.filter(
-            pk__in=self.static_group_associations.values_list("associated_object_id", flat=True)
+            pk__in=self.static_group_associations(manager="all_objects").values_list("associated_object_id", flat=True)
         )
 
     @members.setter
@@ -145,7 +163,7 @@ class StaticGroup(PrimaryModel):
 
         if self.present_in_database:
             # Check immutable fields
-            database_object = self.__class__.objects.get(pk=self.pk)
+            database_object = self.__class__.all_objects.get(pk=self.pk)
 
             if self.content_type != database_object.content_type:
                 raise ValidationError({"content_type": "ContentType cannot be changed once created"})
@@ -163,7 +181,7 @@ class StaticGroup(PrimaryModel):
         for obj in objects_to_add:
             # We don't use `.bulk_create()` currently because we want change logging for these creates.
             # Might be a good future performance improvement though.
-            StaticGroupAssociation.objects.get_or_create(
+            StaticGroupAssociation.all_objects.get_or_create(
                 static_group=self, associated_object_type=self.content_type, associated_object_id=obj.pk
             )
 
@@ -172,7 +190,7 @@ class StaticGroup(PrimaryModel):
         if isinstance(objects_to_remove, models.QuerySet):
             if objects_to_remove.model != self.model:
                 raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
-            StaticGroupAssociation.objects.filter(
+            StaticGroupAssociation.all_objects.filter(
                 static_group=self,
                 associated_object_type=self.content_type,
                 associated_object_id__in=objects_to_remove.values_list("pk", flat=True),
@@ -184,9 +202,20 @@ class StaticGroup(PrimaryModel):
                     raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
                 pks_to_remove.add(obj.pk)
 
-            StaticGroupAssociation.objects.filter(
+            StaticGroupAssociation.all_objects.filter(
                 static_group=self, associated_object_type=self.content_type, associated_object_id__in=pks_to_remove
             ).delete()
+
+
+class StaticGroupAssociationManager(BaseManager.from_queryset(RestrictedQuerySet)):
+    use_in_migrations = True
+
+
+class StaticGroupAssociationDefaultManager(StaticGroupAssociationManager):
+    """Subclass of StaticGroupAssociationManager that automatically filters out associations of hidden groups."""
+
+    def get_queryset(self):
+        return super().get_queryset().exclude(static_group__hidden=True)
 
 
 @extras_features(
@@ -208,12 +237,15 @@ class StaticGroupAssociation(OrganizationalModel):
     associated_object_id = models.UUIDField(db_index=True)
     associated_object = GenericForeignKey(ct_field="associated_object_type", fk_field="associated_object_id")
 
+    objects = StaticGroupAssociationDefaultManager()
+    all_objects = StaticGroupAssociationManager()
+
     is_contact_associable_model = False
     is_static_group_associable_model = False
 
     class Meta:
         unique_together = [["static_group", "associated_object_type", "associated_object_id"]]
-        ordering = ["static_group"]
+        ordering = ["static_group", "associated_object_type", "associated_object_id"]
 
     def __str__(self):
         return f"{self.associated_object} as a member of {self.static_group}"
@@ -223,6 +255,11 @@ class StaticGroupAssociation(OrganizationalModel):
 
         if self.associated_object_type != self.static_group.content_type:
             raise ValidationError({"associated_object_type": "Must match the static_group.content_type"})
+
+    def to_objectchange(self, *args, **kwargs):
+        if self.static_group.hidden:
+            return None
+        return super().to_objectchange(*args, **kwargs)
 
 
 @extras_features(
