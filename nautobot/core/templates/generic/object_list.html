@@ -248,7 +248,7 @@
 {% if table %}{% table_config_form table table_name="ObjectTable" %}{% endif %}
 {% filter_form_modal filter_form dynamic_filter_form model_plural_name=title %}
 {% if model.is_saved_view_model %}
-    {% saved_view_modal request.GET.urlencode list_url %}
+    {% saved_view_modal request.GET.urlencode list_url model request %}
 {% endif %}
 {% static_group_assignment_modal request=request content_type=content_type %}
 {% if current_saved_view %}

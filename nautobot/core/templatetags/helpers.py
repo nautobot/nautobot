@@ -5,7 +5,10 @@ import re
 
 from django import template
 from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.staticfiles.finders import find
+from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
@@ -20,6 +23,7 @@ from nautobot.core import forms
 from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 from nautobot.users.forms import SavedViewForm
+from nautobot.users.models import SavedView
 
 # S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
 HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
@@ -723,10 +727,96 @@ def filter_form_modal(
 def saved_view_modal(
     params,
     view,
+    model,
+    request,
 ):
+    from urllib.parse import parse_qs
+
+    param_dict = {}
+    filters_applied = parse_qs(params)
+
+    sort_order = []
+    per_page = None
+    table_changes_pending = False
+    all_filters_removed = False
+    current_saved_view = None
+    current_saved_view_pk = None
+    non_filter_params = [
+        "all_filters_removed",
+        "page",
+        "per_page",
+        "sort",
+        "saved_view",
+        "table_changes_pending",
+    ]
+
+    table_name = lookup.get_table_for_model(model).__name__
+    for param in non_filter_params:
+        if param == "saved_view":
+            current_saved_view_pk = filters_applied.pop(param, None)
+            if current_saved_view_pk:
+                current_saved_view_pk = current_saved_view_pk[0]
+                try:
+                    current_saved_view = SavedView.objects.restrict(request.user, "view").get(pk=current_saved_view_pk)
+                except ObjectDoesNotExist:
+                    messages.error(request, f"Saved view {current_saved_view_pk} not found")
+
+        elif param == "table_changes_pending":
+            table_changes_pending = filters_applied.pop(param, False)
+        elif param == "all_filters_removed":
+            all_filters_removed = filters_applied.pop(param, False)
+        elif param == "per_page":
+            per_page = filters_applied.pop(param, None)
+        elif param == "sort_order":
+            sort_order = filters_applied.pop(param, [])
+
+    if filters_applied:
+        param_dict["filter_params"] = filters_applied
+    else:
+        if current_saved_view is not None and all_filters_removed:
+            # user removed all the filters in a saved view
+            param_dict["filter_params"] = {}
+        elif current_saved_view is not None:
+            # user did not make any changes to the saved view filter params
+            param_dict["filter_params"] = current_saved_view.config.get("filter_params", {})
+
+    if current_saved_view is not None and not table_changes_pending:
+        # user did not make any changes to the saved view table config
+        view_table_config = current_saved_view.config.get("table_config", {}).get(f"{table_name}", None)
+        if view_table_config is not None:
+            param_dict["table_config"] = view_table_config.get("columns", [])
+    else:
+        # display default user display
+        if request.user is not None and not isinstance(request.user, AnonymousUser):
+            param_dict["table_config"] = request.user.get_config(f"tables.{table_name}.columns")
+    # If both are not available, do not display table_config
+
+    if per_page:
+        # user made changes to saved view pagination count
+        param_dict["per_page"] = per_page
+    elif current_saved_view is not None and not per_page:
+        # no changes made, display current saved view pagination count
+        param_dict["per_page"] = current_saved_view.config.get(
+            "pagination_count", config.get_settings_or_config("PAGINATE_COUNT")
+        )
+    else:
+        # display default pagination count
+        param_dict["per_page"] = config.get_settings_or_config("PAGINATE_COUNT")
+
+    if sort_order:
+        # user made changes to saved view sort order
+        param_dict["sort_order"] = sort_order
+    elif current_saved_view is not None and not sort_order:
+        # no changes made, display current saved view sort order
+        param_dict["sort_order"] = current_saved_view.config.get("sort_order", [])
+    else:
+        # no sorting applied
+        param_dict["sort_order"] = []
+
     return {
         "form": SavedViewForm(),
         "params": params,
+        "param_dict": param_dict,
         "view": view,
     }
 

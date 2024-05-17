@@ -25,7 +25,7 @@ class PasswordChangeForm(BootstrapMixin, DjangoPasswordChangeForm):
 class SavedViewForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         model = SavedView
-        fields = ["name"]
+        fields = ["name", "config"]
 
 
 class TokenForm(BootstrapMixin, forms.ModelForm):
