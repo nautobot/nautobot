@@ -23,7 +23,7 @@ from rest_framework.decorators import action
 
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.lookup import get_model_for_view_name, get_table_for_model
+from nautobot.core.utils.lookup import get_table_class_string_from_view_name
 from nautobot.core.views.generic import GenericView
 from nautobot.core.views.mixins import (
     ObjectBulkDestroyViewMixin,
@@ -250,24 +250,6 @@ class SavedViewUIViewSet(
     table_class = SavedViewTable
     action_buttons = ("export",)
 
-    def get_table_class_string_from_view_name(self, view_name):
-        """Return the name of the TableClass name associated with the view_name
-
-        e.g. returns `LocationTable` for view_name `dcim:location_list`
-
-        Args:
-            view_name (String): The name of the view e.g. dcim:location_list, circuits:circuit_list
-
-        Returns:
-            table_class_name (String): The name of the model table class or None e.g. LocationTable, CircuitTable
-        """
-        model = get_model_for_view_name(view_name)
-        if model:
-            table_class = get_table_for_model(model)
-            if table_class:
-                return table_class.__name__
-        return None
-
     def get_required_permission(self):
         """
         Obtain the permissions needed to perform certain actions on a model.
@@ -326,7 +308,7 @@ class SavedViewUIViewSet(
             sv.config["filter_params"] = {}
 
         if table_changes_pending:
-            table_class = self.get_table_class_string_from_view_name(sv.view)
+            table_class = get_table_class_string_from_view_name(sv.view)
             if table_class:
                 if sv.config.get("table_config", None) is None:
                     sv.config["table_config"] = {}
@@ -399,7 +381,7 @@ class SavedViewUIViewSet(
             elif derived_instance:
                 sv.config["filter_params"] = derived_instance.config["filter_params"]
 
-        table_class = self.get_table_class_string_from_view_name(view_name)
+        table_class = get_table_class_string_from_view_name(view_name)
         sv.config["table_config"] = {}
         if table_class:
             if table_changes_pending or derived_instance is None:
