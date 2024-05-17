@@ -40,3 +40,6 @@
     hljs.configure({ cssSelector: '.language-graphql, .language-json, .language-xml, .language-yaml' });
     hljs.highlightAll();
 </script>
+{% if settings.BRANDING_FILEPATHS.javascript %}
+<script src="{% custom_branding_or_static 'javascript' None %}"></script>
+{% endif %}

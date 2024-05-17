@@ -40,9 +40,7 @@ class TenantGroupView(generic.ObjectView):
         }
         RequestConfig(request, paginate).configure(tenant_table)
 
-        return {
-            "tenant_table": tenant_table,
-        }
+        return {"tenant_table": tenant_table, **super().get_extra_context(request, instance)}
 
 
 class TenantGroupEditView(generic.ObjectEditView):
@@ -101,9 +99,7 @@ class TenantView(generic.ObjectView):
             "vrf_count": VRF.objects.restrict(request.user, "view").filter(tenant=instance).count(),
         }
 
-        return {
-            "stats": stats,
-        }
+        return {"stats": stats, **super().get_extra_context(request, instance)}
 
 
 class TenantEditView(generic.ObjectEditView):

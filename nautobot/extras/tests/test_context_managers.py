@@ -12,6 +12,7 @@ from nautobot.extras.context_managers import (
     web_request_context,
 )
 from nautobot.extras.models import Status, Webhook
+from nautobot.extras.utils import bulk_delete_with_bulk_change_logging
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -234,6 +235,23 @@ class BulkEditDeleteChangeLogging(TestCase):
                     location = Location(name="Test Location 1", location_type=location_type, status=location_status)
                     location.save()
                     location.delete()
+
+    def test_bulk_delete_has_user_in_change_log(self):
+        """Test that the bulk delete operation adds the user to the change log"""
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
+        with web_request_context(self.user):
+            location = Location(name="Test Location 1", location_type=location_type, status=location_status)
+            location.save()
+            location_pk = location.pk
+            location_qs = Location.objects.filter(pk=location_pk)
+            bulk_delete_with_bulk_change_logging(location_qs)
+
+        oc_list = get_changes_for_model(location)
+        self.assertEqual(len(oc_list), 2)
+        self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_DELETE)
+        self.assertEqual(oc_list[0].user, self.user)
+        self.assertEqual(oc_list[0].user_name, self.user.username)
 
     def test_create_then_update(self):
         """Test that a create followed by an update is logged as a single create"""
