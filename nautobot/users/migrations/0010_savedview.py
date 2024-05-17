@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
             options={
                 "verbose_name": "saved view",
                 "verbose_name_plural": "saved views",
-                "ordering": ["owner", "name"],
+                "ordering": ["owner", "view", "name"],
                 "unique_together": {("owner", "name", "view")},
             },
         ),
