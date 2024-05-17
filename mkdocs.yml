@@ -470,6 +470,7 @@ nav:
               - Authentication: "user-guide/platform-functionality/rest-api/authentication.md"
               - UI Endpoints: "user-guide/platform-functionality/rest-api/ui-related-endpoints.md"
           - Roles: "user-guide/platform-functionality/role.md"
+          - Saved Views: user-guide/platform-functionality/savedview.md
           - Secrets: "user-guide/platform-functionality/secret.md"
           - Static Groups:
               - "user-guide/platform-functionality/staticgroup.md"
