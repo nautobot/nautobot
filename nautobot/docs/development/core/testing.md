@@ -41,7 +41,7 @@ The `invoke unittest` and `invoke integration-test` commands are intentionally d
 
 +++ 2.0.0
 
-Nautobot provides a set of generic tests for testing the behavior of FilterSets. These tests are located in [`nautobot.core.testing.filters.FilterTestCase`](../../code-reference/nautobot/apps/testing.md#nautobot.core.testing.filters.FilterTestCases.FilterTestCase) and can be used to test some common filters in Nautobot.
+Nautobot provides a set of generic tests for testing the behavior of FilterSets. These tests are located in [`nautobot.core.testing.filters.FilterTestCase`](../../code-reference/nautobot/apps/testing.md#nautobot.apps.testing.FilterTestCases.FilterTestCase) and can be used to test some common filters in Nautobot.
 
 ### Generic Boolean Filter Tests
 

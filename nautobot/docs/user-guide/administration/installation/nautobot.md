@@ -13,7 +13,7 @@ These instructions will guide you through the following actions:
 * Verify the installation using the development/test server
 
 !!! important
-    Your database server and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot Dependencies](index.md#installing-nautobot-dependencies)
+    Your database server and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot Dependencies](install_system.md)
 
 ## Create the Nautobot System User
 
@@ -259,7 +259,7 @@ Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on 
 
     - At a minimum, you'll need to update the `"USER"` and `"PASSWORD"` fields under `DATABASES`.
     - Additionally, since Nautobot's configuration defaults to assuming PostgreSQL, you must change the `"ENGINE"` setting from `django.db.backends.postgresql` to `django.db.backends.mysql`.
-    - If you want to enable support for Unicode text, including emojis, please make sure to add `"OPTIONS": {"charset": "utf8mb4"}`. Refer to the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#mysql-unicode-settings) for more information.
+    - If you want to enable support for Unicode text, including emojis, please make sure to add `"OPTIONS": {"charset": "utf8mb4"}`. Refer to the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#databases) for more information.
 
 !!! warning
     You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
@@ -278,7 +278,7 @@ If you decide to use any [Nautobot Apps](../../../apps/index.md), they should be
 
     We will cover two examples of common optional settings below.
 
-    <h4>NAPALM</h4>
+    <a name="napalm"><h4>NAPALM</h4></a>
 
     Nautobot provides built-in support for the [NAPALM automation](https://github.com/napalm-automation/napalm/) library, which allows Nautobot to fetch live data from devices and return it to a requester via its REST API. The [`NAPALM_USERNAME`](../configuration/optional-settings.md#napalm_username) and [`NAPALM_PASSWORD`](../configuration/optional-settings.md#napalm_password) configuration parameters define the credentials to be used when connecting to a device.
 
@@ -288,7 +288,7 @@ If you decide to use any [Nautobot Apps](../../../apps/index.md), they should be
     echo "nautobot[napalm]" >> $NAUTOBOT_ROOT/local_requirements.txt
     ```
 
-    <h4>Remote File Storage</h4>
+    <a name="remote-file-storage"><h4>Remote File Storage</h4></a>
 
     By default, Nautobot will use the local filesystem to store uploaded files. To use a remote filesystem, install the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) library and configure your [desired storage backend](../configuration/optional-settings.md#storage_backend) in `nautobot_config.py`.
 
