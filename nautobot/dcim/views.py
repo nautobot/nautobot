@@ -710,6 +710,7 @@ class ManufacturerListView(generic.ObjectListView):
         platform_count=count_related(Platform, "manufacturer"),
     )
     filterset = filters.ManufacturerFilterSet
+    filterset_form = forms.ManufacturerFilterForm
     table = tables.ManufacturerTable
 
 
@@ -1212,6 +1213,7 @@ class PlatformListView(generic.ObjectListView):
         virtual_machine_count=count_related(VirtualMachine, "platform"),
     )
     filterset = filters.PlatformFilterSet
+    filterset_form = forms.PlatformFilterForm
     table = tables.PlatformTable
 
 
@@ -3103,6 +3105,7 @@ class InterfaceRedundancyGroupAssociationUIViewSet(ObjectEditViewMixin, ObjectDe
 
 class DeviceFamilyUIViewSet(NautobotUIViewSet):
     filterset_class = filters.DeviceFamilyFilterSet
+    filterset_form_class = forms.DeviceFamilyFilterForm
     form_class = forms.DeviceFamilyForm
     bulk_update_form_class = forms.DeviceFamilyBulkEditForm
     queryset = DeviceFamily.objects.annotate(device_type_count=count_related(DeviceType, "device_family"))
