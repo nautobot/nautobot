@@ -56,8 +56,6 @@ from .datasources import (
     enqueue_pull_git_repository_and_refresh_data,
     get_datasource_contents,
 )
-from .filters import RoleFilterSet
-from .forms import RoleBulkEditForm, RoleForm
 from .jobs import get_job
 from .models import (
     ComputedField,
@@ -94,7 +92,6 @@ from .models import (
     Webhook,
 )
 from .registry import registry
-from .tables import AssociatedContactsTable, RoleTable
 
 logger = logging.getLogger(__name__)
 
@@ -398,7 +395,7 @@ class ContactAssociationUIViewSet(
     filterset_class = filters.ContactAssociationFilterSet
     queryset = ContactAssociation.objects.all()
     serializer_class = serializers.ContactAssociationSerializer
-    table_class = AssociatedContactsTable
+    table_class = tables.AssociatedContactsTable
     non_filter_params = ("export", "page", "per_page", "sort")
 
 
@@ -506,6 +503,7 @@ class CustomFieldListView(generic.ObjectListView):
     queryset = CustomField.objects.all()
     table = tables.CustomFieldTable
     filterset = filters.CustomFieldFilterSet
+    filterset_form = forms.CustomFieldFilterForm
     action_buttons = ("add",)
 
 
@@ -950,6 +948,7 @@ class ExportTemplateBulkDeleteView(generic.BulkDeleteView):
 class ExternalIntegrationUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.ExternalIntegrationBulkEditForm
     filterset_class = filters.ExternalIntegrationFilterSet
+    filterset_form_class = forms.ExternalIntegrationFilterForm
     form_class = forms.ExternalIntegrationForm
     queryset = ExternalIntegration.objects.select_related("secrets_group")
     serializer_class = serializers.ExternalIntegrationSerializer
@@ -2048,11 +2047,12 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
     """`Roles` UIViewSet."""
 
     queryset = Role.objects.all()
-    bulk_update_form_class = RoleBulkEditForm
-    filterset_class = RoleFilterSet
-    form_class = RoleForm
+    bulk_update_form_class = forms.RoleBulkEditForm
+    filterset_class = filters.RoleFilterSet
+    filterset_form_class = forms.RoleFilterForm
+    form_class = forms.RoleForm
     serializer_class = serializers.RoleSerializer
-    table_class = RoleTable
+    table_class = tables.RoleTable
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

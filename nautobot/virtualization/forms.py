@@ -62,6 +62,12 @@ class ClusterTypeForm(NautobotModelForm):
         ]
 
 
+class ClusterTypeFilterForm(NautobotFilterForm):
+    model = ClusterType
+    q = forms.CharField(required=False, label="Search")
+    clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), to_field_name="name", required=False)
+
+
 #
 # Cluster groups
 #
@@ -74,6 +80,12 @@ class ClusterGroupForm(NautobotModelForm):
             "name",
             "description",
         ]
+
+
+class ClusterGroupFilterForm(NautobotFilterForm):
+    model = ClusterGroup
+    q = forms.CharField(required=False, label="Search")
+    clusters = DynamicModelMultipleChoiceField(queryset=Cluster.objects.all(), to_field_name="name", required=False)
 
 
 #

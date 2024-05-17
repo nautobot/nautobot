@@ -94,6 +94,12 @@ class NamespaceBulkEditForm(
         ]
 
 
+class NamespaceFilterForm(LocatableModelFilterFormMixin, NautobotFilterForm):
+    model = Namespace
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
+
+
 #
 # VRFs
 #
