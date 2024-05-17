@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from copy import deepcopy
 import logging
+import re
 import uuid
 
 from django.contrib import messages
@@ -25,7 +26,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from nautobot.circuits.models import Circuit
-from nautobot.core.forms import ConfirmationForm, restrict_form_fields
+from nautobot.core.forms import BulkRenameForm, ConfirmationForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import has_perms
 from nautobot.core.utils.lookup import get_form_for_model
@@ -169,6 +170,14 @@ class BaseDeviceComponentsBulkRenameView(generic.BulkRenameView):
         selected_object = selected_objects.first()
         if selected_object and selected_object.device:
             return selected_object.device.name
+        return ""
+
+
+class BaseDeviceComponentTemplatesBulkRenameView(generic.BulkRenameView):
+    def get_selected_objects_parents_name(self, selected_objects):
+        selected_object = selected_objects.first()
+        if selected_object and selected_object.device_type:
+            return selected_object.device_type.display
         return ""
 
 
@@ -1009,7 +1018,7 @@ class ConsolePortTemplateBulkEditView(generic.BulkEditView):
     filterset = filters.ConsolePortTemplateFilterSet
 
 
-class ConsolePortTemplateBulkRenameView(generic.BulkRenameView):
+class ConsolePortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
     queryset = ConsolePortTemplate.objects.all()
 
 
@@ -1047,7 +1056,7 @@ class ConsoleServerPortTemplateBulkEditView(generic.BulkEditView):
     filterset = filters.ConsoleServerPortTemplateFilterSet
 
 
-class ConsoleServerPortTemplateBulkRenameView(generic.BulkRenameView):
+class ConsoleServerPortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
     queryset = ConsoleServerPortTemplate.objects.all()
 
 
@@ -1085,7 +1094,7 @@ class PowerPortTemplateBulkEditView(generic.BulkEditView):
     filterset = filters.PowerPortTemplateFilterSet
 
 
-class PowerPortTemplateBulkRenameView(generic.BulkRenameView):
+class PowerPortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
     queryset = PowerPortTemplate.objects.all()
 
 
@@ -1123,7 +1132,7 @@ class PowerOutletTemplateBulkEditView(generic.BulkEditView):
     filterset = filters.PowerOutletTemplateFilterSet
 
 
-class PowerOutletTemplateBulkRenameView(generic.BulkRenameView):
+class PowerOutletTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
     queryset = PowerOutletTemplate.objects.all()
 
 
@@ -1160,7 +1169,7 @@ class InterfaceTemplateBulkEditView(generic.BulkEditView):
     filterset = filters.InterfaceTemplateFilterSet
 
 
-class InterfaceTemplateBulkRenameView(generic.BulkRenameView):
+class InterfaceTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
     queryset = InterfaceTemplate.objects.all()
 
 
@@ -1197,7 +1206,7 @@ class FrontPortTemplateBulkEditView(generic.BulkEditView):
     filterset = filters.FrontPortTemplateFilterSet
 
 
-class FrontPortTemplateBulkRenameView(generic.BulkRenameView):
+class FrontPortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
     queryset = FrontPortTemplate.objects.all()
 
 
@@ -1234,7 +1243,7 @@ class RearPortTemplateBulkEditView(generic.BulkEditView):
     filterset = filters.RearPortTemplateFilterSet
 
 
-class RearPortTemplateBulkRenameView(generic.BulkRenameView):
+class RearPortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
     queryset = RearPortTemplate.objects.all()
 
 
@@ -1271,7 +1280,7 @@ class DeviceBayTemplateBulkEditView(generic.BulkEditView):
     filterset = filters.DeviceBayTemplateFilterSet
 
 
-class DeviceBayTemplateBulkRenameView(generic.BulkRenameView):
+class DeviceBayTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
     queryset = DeviceBayTemplate.objects.all()
 
 
@@ -1286,7 +1295,7 @@ class DeviceBayTemplateBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ModuleBayBulkCreateViewSetMixin:
+class ModuleBayCommonViewSetMixin:
     def create(self, request, *args, **kwargs):
         if request.method == "POST":
             return self.perform_create(request, *args, **kwargs)
@@ -1381,9 +1390,75 @@ class ModuleBayBulkCreateViewSetMixin:
             },
         )
 
+    def _bulk_rename(self, request, *args, **kwargs):
+        query_pks = request.POST.getlist("pk")
+        selected_objects = self.queryset.filter(pk__in=query_pks) if query_pks else None
+
+        # Create a new Form class from BulkRenameForm
+        class _Form(BulkRenameForm):
+            pk = ModelMultipleChoiceField(queryset=self.queryset, widget=MultipleHiddenInput())
+
+        # selected_objects would return False; if no query_pks or invalid query_pks
+        if not selected_objects:
+            messages.warning(request, f"No valid {self.queryset.model._meta.verbose_name_plural} were selected.")
+            return redirect(self.get_return_url(request))
+
+        if "_preview" in request.POST or "_apply" in request.POST:
+            form = _Form(request.POST, initial={"pk": query_pks})
+            if form.is_valid():
+                try:
+                    with transaction.atomic():
+                        renamed_pks = []
+                        for obj in selected_objects:
+                            find = form.cleaned_data["find"]
+                            replace = form.cleaned_data["replace"]
+                            if form.cleaned_data["use_regex"]:
+                                try:
+                                    obj.new_position = re.sub(find, replace, obj.position)
+                                # Catch regex group reference errors
+                                except re.error:
+                                    obj.new_position = obj.position
+                            else:
+                                obj.new_position = obj.position.replace(find, replace)
+                            renamed_pks.append(obj.pk)
+
+                        if "_apply" in request.POST:
+                            for obj in selected_objects:
+                                obj.position = obj.new_position
+                                obj.save()
+
+                            # Enforce constrained permissions
+                            if self.queryset.filter(pk__in=renamed_pks).count() != len(selected_objects):
+                                raise ObjectDoesNotExist
+
+                            messages.success(
+                                request,
+                                f"Renamed {len(selected_objects)} {self.queryset.model._meta.verbose_name_plural}",
+                            )
+                            return redirect(self.get_return_url(request))
+
+                except ObjectDoesNotExist:
+                    msg = "Object update failed due to object-level permissions violation"
+                    self.logger.debug(msg)
+                    form.add_error(None, msg)
+
+        else:
+            form = _Form(initial={"pk": query_pks})
+
+        return Response(
+            {
+                "template": "dcim/modulebay_bulk_rename.html",
+                "form": form,
+                "obj_type_plural": self.queryset.model._meta.verbose_name_plural,
+                "selected_objects": selected_objects,
+                "return_url": self.get_return_url(request),
+                "parent_name": self.get_selected_objects_parents_name(selected_objects),
+            }
+        )
+
 
 class ModuleBayTemplateUIViewSet(
-    ModuleBayBulkCreateViewSetMixin,
+    ModuleBayCommonViewSetMixin,
     ObjectEditViewMixin,
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
@@ -1399,9 +1474,16 @@ class ModuleBayTemplateUIViewSet(
     table_class = tables.ModuleBayTemplateTable
     create_template_name = "dcim/device_component_add.html"
 
-    @action(detail=False, url_name="bulk_rename")
-    def rename(self, request, *args, **kwargs):
-        return None
+    def get_selected_objects_parents_name(self, selected_objects):
+        selected_object = selected_objects.first()
+        if selected_object:
+            parent = selected_object.device_type or selected_object.module_type
+            return parent.display
+        return ""
+
+    @action(detail=False, methods=["POST"], url_path="rename", url_name="bulk_rename")
+    def bulk_rename(self, request, *args, **kwargs):
+        return self._bulk_rename(request, *args, **kwargs)
 
 
 #
@@ -1998,6 +2080,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
 
     @action(detail=True)
     def consoleports(self, request, *args, **kwargs):
+        # TODO: permissions enforcement?
         instance = self.get_object()
         consoleports = (
             instance.console_ports.restrict(request.user, "view")
@@ -2846,7 +2929,7 @@ class DeviceBayBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ModuleBayUIViewSet(ModuleBayBulkCreateViewSetMixin, NautobotUIViewSet):
+class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
     queryset = ModuleBay.objects.all()
     filterset_class = filters.ModuleBayFilterSet
     filterset_form_class = forms.ModuleBayFilterForm
@@ -2858,9 +2941,16 @@ class ModuleBayUIViewSet(ModuleBayBulkCreateViewSetMixin, NautobotUIViewSet):
     table_class = tables.ModuleBayTable
     create_template_name = "dcim/device_component_add.html"
 
-    @action(detail=False, url_name="bulk_rename")
-    def rename(self, request, *args, **kwargs):
-        return None
+    def get_selected_objects_parents_name(self, selected_objects):
+        selected_object = selected_objects.first()
+        if selected_object:
+            parent = selected_object.parent_device or selected_object.parent_module
+            return parent.display
+        return ""
+
+    @action(detail=False, methods=["POST"], url_path="rename", url_name="bulk_rename")
+    def bulk_rename(self, request, *args, **kwargs):
+        return self._bulk_rename(request, *args, **kwargs)
 
 
 #
