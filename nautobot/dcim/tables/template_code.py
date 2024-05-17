@@ -281,14 +281,20 @@ DEVICEBAY_BUTTONS = """
 {% endif %}
 """
 
-MODULEBAY_BUTTONS = """
-{% if perms.dcim.change_modulebay %}
-    {% if record.installed_module %}
-        <a href="{% url 'dcim:modulebay_depopulate' pk=record.pk %}?return_url={% url 'dcim:device_modulebays' pk=object.pk %}" class="btn btn-danger btn-xs">
-            <i class="mdi mdi-minus-thick" aria-hidden="true" title="Remove module"></i>
+DEVICE_MODULEBAY_BUTTONS = """
+{% if perms.dcim.change_modulebay and perms.dcim.add_module %}
+    {% if not record.installed_module %}
+        <a href="{% url 'dcim:module_add' %}?parent_module_bay={{ record.pk }}&return_url={% url 'dcim:device_modulebays' pk=object.pk %}" class="btn btn-success btn-xs">
+            <i class="mdi mdi-plus-thick" aria-hidden="true" title="Install module"></i>
         </a>
-    {% else %}
-        <a href="{% url 'dcim:modulebay_populate' pk=record.pk %}?return_url={% url 'dcim:device_modulebays' pk=object.pk %}" class="btn btn-success btn-xs">
+    {% endif %}
+{% endif %}
+"""
+
+MODULE_MODULEBAY_BUTTONS = """
+{% if perms.dcim.change_modulebay and perms.dcim.add_module %}
+    {% if not record.installed_module %}
+        <a href="{% url 'dcim:module_add' %}?parent_module_bay={{ record.pk }}&return_url={% url 'dcim:module_modulebays' pk=object.pk %}" class="btn btn-success btn-xs">
             <i class="mdi mdi-plus-thick" aria-hidden="true" title="Install module"></i>
         </a>
     {% endif %}

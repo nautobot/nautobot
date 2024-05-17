@@ -42,6 +42,7 @@ from .template_code import (
     CONSOLEPORT_BUTTONS,
     CONSOLESERVERPORT_BUTTONS,
     DEVICE_LINK,
+    DEVICE_MODULEBAY_BUTTONS,
     DEVICEBAY_BUTTONS,
     FRONTPORT_BUTTONS,
     INTERFACE_BUTTONS,
@@ -50,7 +51,7 @@ from .template_code import (
     INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES,
     INTERFACE_REDUNDANCY_INTERFACE_PRIORITY,
     INTERFACE_TAGGED_VLANS,
-    MODULEBAY_BUTTONS,
+    MODULE_MODULEBAY_BUTTONS,
     PATHENDPOINT,
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
@@ -67,11 +68,11 @@ __all__ = (
     "DeviceDeviceBayTable",
     "DeviceImportTable",
     "DeviceInventoryItemTable",
+    "DeviceModuleBayTable",
     "DeviceModuleConsolePortTable",
     "DeviceModuleConsoleServerPortTable",
     "DeviceModuleFrontPortTable",
     "DeviceModuleInterfaceTable",
-    "DeviceModuleModuleBayTable",
     "DeviceModulePowerPortTable",
     "DeviceModulePowerOutletTable",
     "DeviceModuleRearPortTable",
@@ -84,6 +85,7 @@ __all__ = (
     "InventoryItemTable",
     "ModuleTable",
     "ModuleBayTable",
+    "ModuleModuleBayTable",
     "PlatformTable",
     "PowerOutletTable",
     "PowerPortTable",
@@ -923,14 +925,14 @@ class DeviceDeviceBayTable(DeviceBayTable):
         )
 
 
-class DeviceModuleModuleBayTable(ModuleBayTable):
+class DeviceModuleBayTable(ModuleBayTable):
     position = tables.TemplateColumn(
         template_code='<i class="mdi mdi-circle-{% if record.installed_module %}slice-8{% else %}outline{% endif %}'
         '"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
     )
     installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
-    actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=MODULEBAY_BUTTONS)
+    actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=DEVICE_MODULEBAY_BUTTONS)
 
     class Meta(DeviceComponentTable.Meta):
         model = ModuleBay
@@ -953,6 +955,13 @@ class DeviceModuleModuleBayTable(ModuleBayTable):
             "installed_module__status",
             "actions",
         )
+
+
+class ModuleModuleBayTable(DeviceModuleBayTable):
+    actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=MODULE_MODULEBAY_BUTTONS)
+
+    class Meta(DeviceModuleBayTable.Meta):
+        pass
 
 
 class InventoryItemTable(DeviceComponentTable):

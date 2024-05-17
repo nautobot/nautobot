@@ -2383,7 +2383,14 @@ class ComponentEditForm(NautobotModelForm):
     Distinct from ComponentCreateForm in that it has a name/label instead of a name_pattern/label_pattern.
     """
 
-    device = DynamicModelChoiceField(queryset=Device.objects.all(), disabled=True)
+    device = DynamicModelChoiceField(queryset=Device.objects.all())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Disable the device field if an initial value is provided
+        if "device" in self.initial:
+            self.fields["device"].disabled = True
 
 
 class ModularComponentEditForm(ComponentEditForm):
@@ -2391,8 +2398,16 @@ class ModularComponentEditForm(ComponentEditForm):
     Base class for editing modular device components (models subclassed from ModularComponentModel).
     """
 
-    device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False, disabled=True)
-    module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False, disabled=True)
+    device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
+    module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Disable the device and module fields if an initial value is provided for either
+        if "device" in self.initial or "module" in self.initial:
+            self.fields["device"].disabled = True
+            self.fields["module"].disabled = True
 
 
 class DeviceBulkAddComponentForm(ComponentForm, CustomFieldModelBulkEditFormMixin):
@@ -2401,6 +2416,10 @@ class DeviceBulkAddComponentForm(ComponentForm, CustomFieldModelBulkEditFormMixi
 
     class Meta:
         nullable_fields = []
+
+
+class ModuleBulkAddComponentForm(DeviceBulkAddComponentForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Module.objects.all(), widget=forms.MultipleHiddenInput())
 
 
 #
@@ -2446,6 +2465,10 @@ class ConsolePortCreateForm(ModularComponentCreateForm):
 
 
 class ConsolePortBulkCreateForm(form_from_model(ConsolePort, ["type", "tags"]), DeviceBulkAddComponentForm):
+    field_order = ("name_pattern", "label_pattern", "type", "description", "tags")
+
+
+class ModuleConsolePortBulkCreateForm(form_from_model(ConsolePort, ["type", "tags"]), ModuleBulkAddComponentForm):
     field_order = ("name_pattern", "label_pattern", "type", "description", "tags")
 
 
@@ -2503,6 +2526,12 @@ class ConsoleServerPortCreateForm(ModularComponentCreateForm):
 
 
 class ConsoleServerPortBulkCreateForm(form_from_model(ConsoleServerPort, ["type", "tags"]), DeviceBulkAddComponentForm):
+    field_order = ("name_pattern", "label_pattern", "type", "description", "tags")
+
+
+class ModuleConsoleServerPortBulkCreateForm(
+    form_from_model(ConsoleServerPort, ["type", "tags"]), ModuleBulkAddComponentForm
+):
     field_order = ("name_pattern", "label_pattern", "type", "description", "tags")
 
 
@@ -2568,6 +2597,21 @@ class PowerPortCreateForm(ModularComponentCreateForm):
 class PowerPortBulkCreateForm(
     form_from_model(PowerPort, ["type", "maximum_draw", "allocated_draw", "tags"]),
     DeviceBulkAddComponentForm,
+):
+    field_order = (
+        "name_pattern",
+        "label_pattern",
+        "type",
+        "maximum_draw",
+        "allocated_draw",
+        "description",
+        "tags",
+    )
+
+
+class ModulePowerPortBulkCreateForm(
+    form_from_model(PowerPort, ["type", "maximum_draw", "allocated_draw", "tags"]),
+    ModuleBulkAddComponentForm,
 ):
     field_order = (
         "name_pattern",
@@ -2650,6 +2694,19 @@ class PowerOutletCreateForm(ModularComponentCreateForm):
 
 
 class PowerOutletBulkCreateForm(form_from_model(PowerOutlet, ["type", "feed_leg", "tags"]), DeviceBulkAddComponentForm):
+    field_order = (
+        "name_pattern",
+        "label_pattern",
+        "type",
+        "feed_leg",
+        "description",
+        "tags",
+    )
+
+
+class ModulePowerOutletBulkCreateForm(
+    form_from_model(PowerOutlet, ["type", "feed_leg", "tags"]), ModuleBulkAddComponentForm
+):
     field_order = (
         "name_pattern",
         "label_pattern",
@@ -2904,6 +2961,38 @@ class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleN
 class InterfaceBulkCreateForm(
     form_from_model(Interface, ["enabled", "mtu", "vrf", "mgmt_only", "mode", "tags"]),
     DeviceBulkAddComponentForm,
+    RoleNotRequiredModelFormMixin,
+):
+    model = Interface
+    type = forms.ChoiceField(
+        choices=InterfaceTypeChoices,
+        widget=StaticSelect2(),
+    )
+    status = DynamicModelChoiceField(
+        required=True,
+        queryset=Status.objects.all(),
+        query_params={"content_types": Interface._meta.label_lower},
+    )
+
+    field_order = (
+        "name_pattern",
+        "label_pattern",
+        "status",
+        "role",
+        "type",
+        "enabled",
+        "mtu",
+        "vrf",
+        "mgmt_only",
+        "description",
+        "mode",
+        "tags",
+    )
+
+
+class ModuleInterfaceBulkCreateForm(
+    form_from_model(Interface, ["enabled", "mtu", "vrf", "mgmt_only", "mode", "tags"]),
+    ModuleBulkAddComponentForm,
     RoleNotRequiredModelFormMixin,
 ):
     model = Interface
@@ -3240,6 +3329,19 @@ class RearPortBulkCreateForm(form_from_model(RearPort, ["type", "positions", "ta
     )
 
 
+class ModuleRearPortBulkCreateForm(
+    form_from_model(RearPort, ["type", "positions", "tags"]), ModuleBulkAddComponentForm
+):
+    field_order = (
+        "name_pattern",
+        "label_pattern",
+        "type",
+        "positions",
+        "description",
+        "tags",
+    )
+
+
 class RearPortBulkEditForm(
     form_from_model(RearPort, ["label", "type", "description"]),
     TagsBulkEditFormMixin,
@@ -3338,15 +3440,14 @@ class ModuleBayForm(NautobotModelForm):
     parent_device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
-        disabled=True,
         label="Parent Device",
     )
     parent_module = DynamicModelChoiceField(
         queryset=Module.objects.all(),
         required=False,
-        disabled=True,
         label="Parent Module",
     )
+    # TODO: Installed module field
 
     class Meta:
         model = ModuleBay
@@ -3359,6 +3460,14 @@ class ModuleBayForm(NautobotModelForm):
             "tags",
         ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Disable the parent_device and parent_module fields if an initial value is provided for either
+        if "parent_device" in self.initial or "parent_module" in self.initial:
+            self.fields["parent_device"].disabled = True
+            self.fields["parent_module"].disabled = True
+
 
 class ModuleBayCreateForm(ModuleBayBaseCreateForm):
     parent_device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False, disabled=True)
@@ -3366,8 +3475,25 @@ class ModuleBayCreateForm(ModuleBayBaseCreateForm):
     field_order = ("parent_device", "parent_module", "position_pattern", "label_pattern", "description", "tags")
 
 
-class ModuleBayBulkCreateForm(form_from_model(ModuleBay, ["tags"]), DeviceBulkAddComponentForm):
+class ModuleBayBulkCreateForm(
+    form_from_model(ModuleBay, ["tags"]),
+    ModuleBayBaseCreateForm,
+    CustomFieldModelBulkEditFormMixin,
+):
+    pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+
     field_order = ("position_pattern", "label_pattern", "description", "tags")
+
+    class Meta:
+        nullable_fields = []
+
+
+class ModuleModuleBayBulkCreateForm(ModuleBayBulkCreateForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Module.objects.all(), widget=forms.MultipleHiddenInput())
+
+    class Meta(ModuleBayBulkCreateForm.Meta):
+        pass
 
 
 class ModuleBayBulkEditForm(

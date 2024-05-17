@@ -1264,6 +1264,12 @@ urlpatterns = [
         views.DeviceBulkAddDeviceBayView.as_view(),
         name="device_bulk_add_devicebay",
     ),
+    # Module bays (legacy views)
+    path(
+        "devices/module-bays/add/",
+        views.DeviceBulkAddModuleBayView.as_view(),
+        name="device_bulk_add_modulebay",
+    ),
     # Inventory items
     path(
         "inventory-items/",
