@@ -105,8 +105,22 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={
-                "ordering": ["static_group"],
+                "ordering": ["static_group", "associated_object_id"],
                 "unique_together": {("static_group", "associated_object_type", "associated_object_id")},
+                "indexes": [
+                    models.Index(
+                        name="extras_sga_triple",
+                        fields=["static_group", "associated_object_type_id", "associated_object_id"],
+                    ),
+                    models.Index(
+                        name="extras_sga_double",
+                        fields=["static_group", "associated_object_id"],
+                    ),
+                    models.Index(
+                        name="extras_sga_associated_object",
+                        fields=["associated_object_type_id", "associated_object_id"],
+                    ),
+                ],
             },
             bases=(
                 models.Model,
