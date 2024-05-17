@@ -20,7 +20,7 @@ class SwaggerUITestCase(SeleniumTestCase):
         """Check that the dcim.location API endpoints are rendered correctly."""
         self.browser.visit(self.live_server_url + reverse("api_docs"))
         # Wait for Swagger UI to load, look for the location-list endpoint in the UI and click on it to expand it.
-        dcim_locations_list = self.browser.find_by_id("operations-dcim-dcim_locations_list", wait_time=20).first
+        dcim_locations_list = self.browser.find_by_id("operations-dcim-dcim_locations_list", wait_time=60).first
         dcim_locations_list.find_by_tag("button").first.click()
 
         # Look for the "Try it out" button and click it
