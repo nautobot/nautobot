@@ -27,6 +27,7 @@ class CircuitTypeUIViewSet(
     view_mixins.ObjectNotesViewMixin,
 ):
     filterset_class = filters.CircuitTypeFilterSet
+    filterset_form_class = forms.CircuitTypeFilterForm
     form_class = forms.CircuitTypeForm
     queryset = CircuitType.objects.annotate(circuit_count=count_related(Circuit, "circuit_type"))
     serializer_class = serializers.CircuitTypeSerializer
@@ -67,6 +68,7 @@ class CircuitTerminationUIViewSet(
 ):
     action_buttons = ("import", "export")
     filterset_class = filters.CircuitTerminationFilterSet
+    filterset_form_class = forms.CircuitTerminationFilterForm
     form_class = forms.CircuitTerminationForm
     queryset = CircuitTermination.objects.all()
     serializer_class = serializers.CircuitTerminationSerializer
