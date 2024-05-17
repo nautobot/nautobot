@@ -233,9 +233,10 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
         )
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, accept_pk=False, **kwargs):
         kwargs.setdefault("conjoined", True)
         super().__init__(*args, **kwargs)
+        self.accept_pk = accept_pk
 
     def filter(self, qs, value):
         """Filter on value, which should be list of content-type names.
@@ -249,6 +250,9 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
             if self.conjoined:
                 qs = ContentTypeFilter.filter(self, qs, v)
             else:
+                if self.accept_pk and v.isdigit():
+                    q |= models.Q(**{f"{self.field_name}__pk": value})
+                    continue
                 # Similar to the ContentTypeFilter.filter() call above, but instead of narrowing the query each time
                 # (a AND b AND c ...) we broaden the query each time (a OR b OR c ...).
                 # Specifically, we're mapping a value like ['dcim.device', 'ipam.vlan'] to a query like
