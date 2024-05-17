@@ -152,7 +152,7 @@ def serialize_object_v2(obj):
 
 def find_models_with_matching_fields(app_models, field_names=None, field_attributes=None, additional_constraints=None):
     """
-    Find all models that have fields with the specified names and/or satisfy the additional constraints when the field names are not available,
+    Find all models that have fields with the specified names and satisfy the additional constraints,
     and return them grouped by app.
 
     Args:

@@ -767,13 +767,13 @@ def saved_view_modal(
             all_filters_removed = filters_applied.pop(param, False)
         elif param == "per_page":
             per_page = filters_applied.pop(param, None)
-        elif param == "sort_order":
+        elif param == "sort":
             sort_order = filters_applied.pop(param, [])
 
     if filters_applied:
         param_dict["filter_params"] = filters_applied
     else:
-        if current_saved_view is not None and all_filters_removed:
+        if (current_saved_view is not None and all_filters_removed) or (current_saved_view is None):
             # user removed all the filters in a saved view
             param_dict["filter_params"] = {}
         elif current_saved_view is not None:
@@ -813,6 +813,7 @@ def saved_view_modal(
         # no sorting applied
         param_dict["sort_order"] = []
 
+    param_dict = json.dumps(param_dict, indent=4, sort_keys=True, ensure_ascii=False)
     return {
         "form": SavedViewForm(),
         "params": params,
