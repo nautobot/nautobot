@@ -71,7 +71,8 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         tenants = Tenant.objects.all()[:2]
-        namespace = Namespace.objects.create(name="ipam_test_views_vrf_test")
+        namespace = Prefix.objects.first().namespace
+        prefixes = Prefix.objects.filter(namespace=namespace)
 
         cls.form_data = {
             "name": "VRF X",
@@ -79,12 +80,16 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "rd": "65000:999",
             "tenant": tenants[0].pk,
             "description": "A new VRF",
+            "prefixes": [prefixes[1].id],
             "tags": [t.pk for t in Tag.objects.get_for_model(VRF)],
         }
 
         cls.bulk_edit_data = {
             "tenant": tenants[1].pk,
             "description": "New description",
+            "namespace": prefixes[0].namespace.id,
+            "add_prefixes": [prefixes[0].id],
+            "remove_prefixes": [prefixes[1].id],
         }
 
 
@@ -158,7 +163,6 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
         cls.bulk_edit_data = {
             "tenant": None,
-            # TODO "vrf": vrfs[1].pk,
             "status": cls.statuses[1].pk,
             "role": cls.roles[1].pk,
             "rir": RIR.objects.last().pk,
@@ -166,6 +170,9 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             "description": "New description",
             "add_locations": [cls.locations[0].pk],
             "remove_locations": [cls.locations[1].pk],
+            "namespace": vrfs[0].namespace.pk,
+            "add_vrfs": [vrfs[0].pk],
+            "remove_vrfs": [vrfs[1].pk],
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
