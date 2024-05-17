@@ -921,6 +921,9 @@ class StaticGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin)
     class Meta:
         model = StaticGroup
         fields = "__all__"
+        extra_kwargs = {
+            "hidden": {"read_only": True},
+        }
 
 
 class StaticGroupAssociationSerializer(NautobotModelSerializer):

@@ -2344,9 +2344,17 @@ class StaticGroupUIViewSet(NautobotUIViewSet):
     filterset_class = filters.StaticGroupFilterSet
     filterset_form_class = forms.StaticGroupFilterForm
     form_class = forms.StaticGroupForm
-    queryset = StaticGroup.objects.all()
+    queryset = StaticGroup.all_objects.annotate(
+        members_count=count_related(StaticGroupAssociation, "static_group", manager_name="all_objects")
+    )
     serializer_class = serializers.StaticGroupSerializer
     table_class = tables.StaticGroupTable
+
+    def alter_queryset(self, request):
+        queryset = super().alter_queryset(request)
+        if request is None or "hidden" not in request.GET:
+            queryset = queryset.filter(hidden=False)
+        return queryset
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -2381,10 +2389,16 @@ class StaticGroupAssociationUIViewSet(
 ):
     filterset_class = filters.StaticGroupAssociationFilterSet
     filterset_form_class = forms.StaticGroupAssociationFilterForm
-    queryset = StaticGroupAssociation.objects.all()
+    queryset = StaticGroupAssociation.all_objects.all()
     serializer_class = serializers.StaticGroupAssociationSerializer
     table_class = tables.StaticGroupAssociationTable
     action_buttons = ("export",)
+
+    def alter_queryset(self, request):
+        queryset = super().alter_queryset(request)
+        if request is None or "hidden" not in request.GET:
+            queryset = queryset.filter(static_group__hidden=False)
+        return queryset
 
 
 class StaticGroupBulkAssignView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
