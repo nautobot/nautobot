@@ -1586,8 +1586,8 @@ class ViewTestCases:
             instance = self._get_queryset().first()
             form_data = self.form_data.copy()
             # device and module are not editable
-            form_data["device"] = getattr(getattr(instance, "device", {}), "pk", None)
-            form_data["module"] = getattr(getattr(instance, "module", {}), "pk", None)
+            form_data["device"] = getattr(getattr(instance, "device", None), "pk", None)
+            form_data["module"] = getattr(getattr(instance, "module", None), "pk", None)
             self.form_data = form_data
             super().test_edit_object_with_permission()
 

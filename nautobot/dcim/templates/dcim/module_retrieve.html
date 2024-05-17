@@ -16,15 +16,7 @@
         <tr>
             <td>Installed in</td>
             <td>
-                {% with parent_module_bay=object.parent_module_bay %}
-                    {% if parent_module_bay.parent_device %}
-                        <a href="{{ parent_module_bay.parent_device.get_absolute_url }}">{{ parent_module_bay }}</a>
-                    {% elif parent_module_bay.parent_module %}
-                        <a href="{{ parent_module_bay.parent_module.get_absolute_url }}">{{ parent_module_bay }}</a>
-                    {% else %}
-                        {{ None|placeholder }}
-                    {% endif %}
-                {% endwith %}
+                {{ object.parent_module_bay|hyperlinked_object }}
             </td>
         </tr>
         <tr>
