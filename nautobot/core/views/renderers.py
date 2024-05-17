@@ -270,12 +270,14 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 valid_actions = self.validate_action_buttons(view, request)
                 # Query SavedViews for dropdown button
                 list_url = validated_viewname(model, "list")
-                saved_views = (
-                    SavedView.objects.filter(view=list_url)
-                    .restrict(request.user, "view")
-                    .order_by("name")
-                    .only("pk", "name")
-                )
+                saved_views = None
+                if model.is_saved_view_model:
+                    saved_views = (
+                        SavedView.objects.filter(view=list_url)
+                        .restrict(request.user, "view")
+                        .order_by("name")
+                        .only("pk", "name")
+                    )
 
                 new_changes_not_applied = view_changes_not_saved(request, view, self.saved_view)
                 context.update(

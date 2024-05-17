@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import re
+from urllib.parse import parse_qs
 
 from django import template
 from django.conf import settings
@@ -730,8 +731,6 @@ def saved_view_modal(
     model,
     request,
 ):
-    from urllib.parse import parse_qs
-
     param_dict = {}
     filters_applied = parse_qs(params)
 
