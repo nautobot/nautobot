@@ -196,11 +196,11 @@ mkdocstrings-python = "~1.9.0"
 
 [tool.poetry.group.linting.dependencies]
 # Code static analysis
-pylint = "~3.1.0"
+pylint = "~3.2.0"
 # Pylint extensions for Django
 pylint-django = "~2.5.3"
 # Combination linter and code formatter
-ruff = "~0.3.5"
+ruff = "~0.4.0"
 # YAML linting
 yamllint = "~1.35.1"
 
@@ -212,7 +212,7 @@ django-slowtests = "^1.1.1"
 # Integration Tests
 requests = ">=2.28.0,<2.32.0"
 # Selenium web drivers for live integration testing
-selenium = "~4.19.0"
+selenium = "~4.21.0"
 # Abstraction layer for working with Selenium
 splinter = "~0.21.0"
 # Serialization of tracebacks - used when running unittest with --parallel flag
