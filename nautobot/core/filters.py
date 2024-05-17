@@ -176,6 +176,9 @@ class ContentTypeFilterMixin:
         if value in EMPTY_VALUES:
             return qs
 
+        if value.isdigit():
+            return qs.filter(**{f"{self.field_name}__pk": value})
+
         try:
             app_label, model = value.lower().split(".")
         except ValueError:
@@ -242,6 +245,9 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
             if self.conjoined:
                 qs = ContentTypeFilter.filter(self, qs, v)
             else:
+                if v.isdigit():
+                    q |= models.Q(**{f"{self.field_name}__pk": value})
+                    continue
                 # Similar to the ContentTypeFilter.filter() call above, but instead of narrowing the query each time
                 # (a AND b AND c ...) we broaden the query each time (a OR b OR c ...).
                 # Specifically, we're mapping a value like ['dcim.device', 'ipam.vlan'] to a query like
