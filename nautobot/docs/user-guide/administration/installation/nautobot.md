@@ -15,30 +15,30 @@ These instructions will guide you through the following actions:
 !!! important
     Your database server and Redis must have been successfully installed before continuing with deployment steps. If you haven't done that yet, please visit the guide on [Installing Nautobot Dependencies](index.md#installing-nautobot-dependencies)
 
-## Choose your `NAUTOBOT_ROOT`
-
-You need to select a directory path where everything related to Nautobot will be installed. We will use this value across the documentation and it will be referred to as `NAUTOBOT_ROOT`.
-
-We will be using this path as the home directory of the `nautobot` user.
-
-!!! tip
-    We have selected `/opt/nautobot`, but you may use any directory you choose.
-
-Later on, we will need to set this directory path as the `NAUTOBOT_ROOT` environment variable to tell Nautobot where to find its files and settings.
-
 ## Create the Nautobot System User
 
 Create a system user account named `nautobot`. This user will own all of the Nautobot files, and the Nautobot web services will be configured to run under this account.
 
+??? abstract "Choosing Nautobot Root"
+
+    You need to select a directory path where everything related to Nautobot will be installed. We will use this value across the documentation and it will be referred to as `NAUTOBOT_ROOT`.
+
+    We will be using this path as the home directory of the `nautobot` user.
+
+    !!! tip
+        We have selected `/opt/nautobot`, but you may use any directory you choose.
+
 The following command also creates the `/opt/nautobot` directory and sets it as the home directory for the user.
 
-```no-highlight
+```no-highlight title="Add system user"
 sudo useradd --system --shell /bin/bash --create-home --home-dir /opt/nautobot nautobot
 ```
 
 ## Setup the Virtual Environment
 
-A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) or *virtualenv* is like a container for a set of Python packages. A virtualenv allows you to build environments suited to specific projects without interfering with system packages or other projects.
+??? info "Python Virtual Environment"
+
+    A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) or *virtualenv* is like a container for a set of Python packages. A virtualenv allows you to build environments suited to specific projects without interfering with system packages or other projects.
 
 When installed per the documentation, Nautobot uses a virtual environment in production.
 
@@ -53,13 +53,13 @@ As root, we're going to create the virtualenv in our `NAUTOBOT_ROOT` as the `nau
 
 === "Ubuntu/Debian"
 
-    ```no-highlight
+    ```no-highlight title="Create the Virtual Environment"
     sudo -u nautobot python3 -m venv /opt/nautobot
     ```
 
-=== "CentOS/RHEL8"
+=== "RHEL8"
 
-    ```no-highlight
+    ```no-highlight title="Create the Virtual Environment"
     sudo -u nautobot python3.8 -m venv /opt/nautobot
     ```
 
@@ -71,80 +71,87 @@ We need to set the `NAUTOBOT_ROOT` environment variable for the `nautobot` user 
 
 Run this command to update `~/.bashrc` for `nautobot` so that anytime you become `nautobot`, your `NAUTOBOT_ROOT` will be set automatically.
 
-```no-highlight
+```no-highlight title="Add NAUTOBOT_ROOT to the nautobot user .bashrc file"
 echo "export NAUTOBOT_ROOT=/opt/nautobot" | sudo tee -a ~nautobot/.bashrc
 ```
+
+??? example "Example bashrc update output"
+
+    ```no-highlight title="Example output of updating bashrc"
+    export NAUTOBOT_ROOT=/opt/nautobot
+    ```
 
 ## Sudo to nautobot
 
 It is critical to install Nautobot as the `nautobot` user so that we don't have to worry about fixing permissions later.
 
-```no-highlight
+```no-highlight title="Log into the nautobot user"
 sudo -iu nautobot
 ```
 
-Observe also that you can now echo the value of the `NAUTOBOT_ROOT` environment variable that is automatically set because we added to `.bashrc`:
+??? note "Validate the NAUTOBOT_ROOT variable"
+    Observe also that you can now echo the value of the `NAUTOBOT_ROOT` environment variable that is automatically set because we added to `.bashrc`:
 
-```no-highlight
-echo $NAUTOBOT_ROOT
-```
+    ```no-highlight title="Verify Nautobot Root"
+    echo $NAUTOBOT_ROOT
+    ```
 
-Example output:
+    ???+ example "Example NAUTOBOT_ROOT output"
 
-```no-highlight
-/opt/nautobot
-```
+        ```no-highlight
+        /opt/nautobot
+        ```
 
 !!! warning
     Unless explicitly stated, all remaining steps requiring the use of `pip3` or `nautobot-server` in this document should be performed as the `nautobot` user!
 
-## Understanding the Virtual Environment
-
-Because the `nautobot` user was created with `NAUTOBOT_ROOT` set as its home directory and we had you set the shell to `/bin/bash`, the binary path `$NAUTOBOT_ROOT/bin` is automatically added to the beginning of the `$PATH` environment variable:
-
-=== "Ubuntu 20.04"
-
-    ```no-highlight
-    echo $PATH
-    ```
-
-    Example output:
-
-    ```no-highlight
-    /opt/nautobot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
-    ```
-
-=== "RHEL8 flavors"
-
-    ```no-highlight
-    echo $PATH
-    ```
-
-    Example output:
-
-    ```no-highlight
-    /opt/nautobot/.local/bin:/opt/nautobot/bin:/opt/nautobot/.local/bin:/opt/nautobot/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin
-    ```
-
-Therefore, any commands executed by the `nautobot` user will always check `$NAUTOBOT_ROOT/bin` first.
-
-Since `NAUTOBOT_ROOT` also contains the Python virtualenv for Nautobot, all of the commands you will execute as the `nautobot` user, will automatically prefer the virtualenv's commands because they come first in the `$PATH`.
-
-As the `nautobot` user, you may use `which pip3` to confirm that you are using the correct version of `pip3`. The path should match that of `$NAUTOBOT_ROOT/bin`. For example:
-
-```no-highlight
-which pip3
-```
-
-Example output:
-
-```no-highlight
-/opt/nautobot/bin/pip3
-```
-
-This makes sure that the version of Python you're using, as well any dependencies that you install, remain isolated in this environment.
-
 ## Prepare the Virtual Environment
+
+??? abstract "Understanding the Virtual Environment"
+
+    Because the `nautobot` user was created with `NAUTOBOT_ROOT` set as its home directory and we had you set the shell to `/bin/bash`, the binary path `$NAUTOBOT_ROOT/bin` is automatically added to the beginning of the `$PATH` environment variable:
+
+    === "Ubuntu/Debian"
+
+        ```no-highlight title="Print out the PATH variable"
+        echo $PATH
+        ```
+
+        ??? example "Example path output"
+
+            ```no-highlight title="Example output of a PATH variable"
+            /opt/nautobot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+            ```
+
+    === "RHEL8"
+
+        ```no-highlight title="Print out the PATH variable"
+        echo $PATH
+        ```
+
+        ??? example "Example path output"
+
+            ```no-highlight title="Example output of a PATH variable"
+            /opt/nautobot/.local/bin:/opt/nautobot/bin:/opt/nautobot/.local/bin:/opt/nautobot/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin
+            ```
+
+    Therefore, any commands executed by the `nautobot` user will always check `$NAUTOBOT_ROOT/bin` first.
+
+    Since `NAUTOBOT_ROOT` also contains the Python virtualenv for Nautobot, all of the commands you will execute as the `nautobot` user, will automatically prefer the virtualenv's commands because they come first in the `$PATH`.
+
+    As the `nautobot` user, you may use `which pip3` to confirm that you are using the correct version of `pip3`. The path should match that of `$NAUTOBOT_ROOT/bin`. For example:
+
+    ```no-highlight title="Print out location of the pip3 executable"
+    which pip3
+    ```
+
+    ??? example "Example `which pip3` output"
+
+        ```no-highlight title="Example output"
+        /opt/nautobot/bin/pip3
+        ```
+
+    This makes sure that the version of Python you're using, as well any dependencies that you install, remain isolated in this environment.
 
 Before we install anything into the virtualenv, we want to make sure that Pip is running the latest version.
 
@@ -152,37 +159,55 @@ Before we install anything into the virtualenv, we want to make sure that Pip is
 
 We also want to deliberately install the `wheel` library which will tell Pip to always try to install wheel packages if they are available. A [wheel is a pre-compiled Python package](https://realpython.com/python-wheels/), which is quicker and safer to install because it does not require development libraries or `gcc` to be installed on your system just so that some more advanced Python libraries can be compiled.
 
-```no-highlight
+```no-highlight title="Update Python Pip and Wheel"
 pip3 install --upgrade pip wheel
 ```
 
+??? example "Example pip update output"
+
+    ```no-highlight
+    Requirement already satisfied: pip in ./lib/python3.10/site-packages (22.0.2)
+    Collecting pip
+    Downloading pip-24.0-py3-none-any.whl (2.1 MB)
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 14.8 MB/s eta 0:00:00
+    Collecting wheel
+    Downloading wheel-0.43.0-py3-none-any.whl (65 kB)
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 65.8/65.8 KB 11.8 MB/s eta 0:00:00
+    Installing collected packages: wheel, pip
+    Attempting uninstall: pip
+        Found existing installation: pip 22.0.2
+        Uninstalling pip-22.0.2:
+        Successfully uninstalled pip-22.0.2
+    Successfully installed pip-24.0 wheel-0.43.0
+    ```
+
 By default, Pip will now install Python packages as wheels. In most cases this is desirable, however in some cases the wheel versions of packages may have been compiled with options differing from what is needed for a specific scenario. One such case presents itself here - the wheel for `pyuwsgi`, a key web server component of Nautobot, is built without SSL (HTTPS) support. This may be fine for a non-production deployment of Nautobot, such as in your lab, but for production deployments, not supporting HTTPS will not do at all. Fortunately, you can tell Pip when you don't want to use wheels for a specific package by passing the `--no-binary=<package>` CLI parameter. We'll use that below.
+
+Great! We have `NAUTOBOT_ROOT` ready for use by the `nautobot` user, so let's proceed to verifying the installation.
 
 ## Install Nautobot
 
-=== "PostgreSQL (Ubuntu and RHEL Flavors)"
+=== "PostgreSQL"
 
     Use Pip to install Nautobot:
 
-    ```no-highlight
+    ```no-highlight title="Pip install Nautobot"
     pip3 install --no-binary=pyuwsgi nautobot
     ```
 
-=== "MySQL (Ubuntu and RHEL Flavors)"
+=== "MySQL"
 
     Use Pip to install Nautobot with the MySQL client:
 
-    ```no-highlight
+    ```no-highlight title="Pip install Nautobot"
     pip3 install --no-binary=pyuwsgi "nautobot[mysql]"
     ```
-
-Great! We have `NAUTOBOT_ROOT` ready for use by the `nautobot` user, so let's proceed to verifying the installation.
 
 ## Verify your Nautobot Installation
 
 You should now have a fancy `nautobot-server` command in your environment. This will be your gateway to all things Nautobot! Run it to confirm the installed version of `nautobot`:
 
-```no-highlight
+```no-highlight title="Verify Nautobot install"
 nautobot-server --version
 ```
 
@@ -196,19 +221,22 @@ Initialize a new configuration by running `nautobot-server init`. You may specif
 
 However, because we've set the `NAUTOBOT_ROOT`, this command will automatically create a new `nautobot_config.py` at the default location based on this at `$NAUTOBOT_ROOT/nautobot_config.py`:
 
-```no-highlight
+```no-highlight title="Initialize Nautobot server"
 nautobot-server init
 ```
 
-Example output:
+??? example "Example `nautobot-server init` output"
 
-```no-highlight
-Nautobot would like to send anonymized installation metrics to the project's maintainers.
-These metrics include the installed Nautobot version, the Python version in use, an anonymous "deployment ID", and a list of one-way-hashed names of enabled Nautobot Apps and their versions.
-Allow Nautobot to send these metrics? [y/n]: y
-Installation metrics will be sent when running 'nautobot-server post_upgrade'. Thank you!
-Configuration file created at /opt/nautobot/nautobot_config.py
-```
+    ```no-highlight title="Example `nautobot-server init`"
+    Nautobot would like to send anonymized installation metrics to the project's maintainers.
+    These metrics include the installed Nautobot version, the Python version in use, an anonymous "deployment ID", and a list of one-way-hashed names of enabled Nautobot Apps and their versions.
+    Allow Nautobot to send these metrics? [y/n]:
+    ```
+
+    ```no-highlight title="Example with Metrics sent"
+    Installation metrics will be sent when running 'nautobot-server post_upgrade'. Thank you!
+    Configuration file created at /opt/nautobot/nautobot_config.py
+    ```
 
 +++ 1.6.0
     The `nautobot-server init` command will now prompt you to set the initial value for the [`INSTALLATION_METRICS_ENABLED`](../configuration/optional-settings.md#installation_metrics_enabled) setting. See the [send_installation_metrics](../tools/nautobot-server.md#send_installation_metrics) command for more information about the feature that this setting toggles.
@@ -220,58 +248,63 @@ Your `nautobot_config.py` provides sane defaults for all of the configuration se
 Edit `$NAUTOBOT_ROOT/nautobot_config.py`, and head over to the documentation on [Required Settings](../configuration/required-settings.md) to tweak your required settings. At a minimum, you'll need to update the following settings:
 
 * [`ALLOWED_HOSTS`](../configuration/required-settings.md#allowed_hosts): You must set this value. This can be set to `["*"]` for a quick start, but this value is not suitable for production deployment.
-* [`DATABASES`](../configuration/required-settings.md#databases): Database connection parameters. If you installed your database server on the same system as Nautobot, you'll need to update the `USER` and `PASSWORD` fields here. If you are using MySQL, you'll also need to update the `ENGINE` field, changing the default database driver suffix from `django.db.backends.postgresql` to `django.db.backends.mysql`.
-* **Redis settings**: Redis configuration requires multiple settings, if different from the defaults. If you installed Redis on the same system as Nautobot, you do not need to change these settings.
+* [`DATABASES`](../configuration/required-settings.md#databases): Database connection parameters, see below.
+* [Redis settings](../configuration/required-settings.md#redis-settings): Redis configuration requires multiple settings, if different from the defaults. If you installed Redis on the same system as Nautobot, you most likely do not need to change these settings.
 
-!!! important
-    You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
+=== "PostgreSQL"
+
+    - At a minimum, you'll need to update the `"USER"` and `"PASSWORD"` fields under `DATABASES`.
+
+=== "MySQL"
+
+    - At a minimum, you'll need to update the `"USER"` and `"PASSWORD"` fields under `DATABASES`.
+    - Additionally, since Nautobot's configuration defaults to assuming PostgreSQL, you must change the `"ENGINE"` setting from `django.db.backends.postgresql` to `django.db.backends.mysql`.
+    - If you want to enable support for Unicode text, including emojis, please make sure to add `"OPTIONS": {"charset": "utf8mb4"}`. Refer to the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#mysql-unicode-settings) for more information.
 
 !!! warning
-    If you are using MySQL as your database backend, you **must also update** the database `ENGINE` setting to `django.db.backends.mysql`.
+    You absolutely must update your required settings in your `nautobot_config.py` or Nautobot will not work.
 
 Save your changes to your `nautobot_config.py` and then proceed to the next step.
 
-#### MySQL Unicode Settings
-
-If you are using MySQL as your database backend, and you want to enable support for Unicode emojis, please make sure to add `"OPTIONS": {"charset": "utf8mb4"}` to your `DATABASES` setting. Please see the [configuration guide on MySQL Unicode settings](../configuration/required-settings.md#mysql-unicode-settings) for more information.
-
-## Optional Settings
+### Optional Settings
 
 All Python packages required by Nautobot will be installed automatically when running `pip3 install nautobot`.
 
 Nautobot also supports the ability to install optional Python packages. If desired, these packages should be listed in `local_requirements.txt` within the `NAUTOBOT_ROOT` directory, such as `/opt/nautobot/local_requirements.txt`.
 
-If you decide to use any [Nautobot Apps](../../../apps/index.md), they should be listed in this file.
+If you decide to use any [Nautobot Apps](../../../apps/index.md), they should be listed in the file.
 
-We will cover two examples of common optional settings below.
+??? abstract "Examples of `local_requirements.txt`"
 
-### Configuring NAPALM
+    We will cover two examples of common optional settings below.
 
-Nautobot provides built-in support for the [NAPALM automation](https://github.com/napalm-automation/napalm/) library, which allows Nautobot to fetch live data from devices and return it to a requester via its REST API. The [`NAPALM_USERNAME`](../configuration/optional-settings.md#napalm_username) and [`NAPALM_PASSWORD`](../configuration/optional-settings.md#napalm_password) configuration parameters define the credentials to be used when connecting to a device.
+    <h4>NAPALM</h4>
 
-To use NAPALM, add `nautobot[napalm]` to your `local_requirements.txt` so that it can be installed and kept up to date:
+    Nautobot provides built-in support for the [NAPALM automation](https://github.com/napalm-automation/napalm/) library, which allows Nautobot to fetch live data from devices and return it to a requester via its REST API. The [`NAPALM_USERNAME`](../configuration/optional-settings.md#napalm_username) and [`NAPALM_PASSWORD`](../configuration/optional-settings.md#napalm_password) configuration parameters define the credentials to be used when connecting to a device.
 
-```no-highlight
-echo "nautobot[napalm]" >> $NAUTOBOT_ROOT/local_requirements.txt
-```
+    To use NAPALM, add `nautobot[napalm]` to your `local_requirements.txt` so that it can be installed and kept up to date:
 
-### Remote File Storage
+    ```no-highlight title="Add napalm to the local_requirements.txt file"
+    echo "nautobot[napalm]" >> $NAUTOBOT_ROOT/local_requirements.txt
+    ```
 
-By default, Nautobot will use the local filesystem to store uploaded files. To use a remote filesystem, install the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) library and configure your [desired storage backend](../configuration/optional-settings.md#storage_backend) in `nautobot_config.py`.
+    <h4>Remote File Storage</h4>
 
-To use remote file storage, add `nautobot[remote_storage]` to your `local_requirements.txt` so that it can be installed and kept up to date:
+    By default, Nautobot will use the local filesystem to store uploaded files. To use a remote filesystem, install the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) library and configure your [desired storage backend](../configuration/optional-settings.md#storage_backend) in `nautobot_config.py`.
 
-```no-highlight
-echo "nautobot[remote_storage]" >> $NAUTOBOT_ROOT/local_requirements.txt
-```
+    To use remote file storage, add `nautobot[remote_storage]` to your `local_requirements.txt` so that it can be installed and kept up to date:
 
-An example of using django-storages with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md) user-guide.
+    ```no-highlight title="Add remote storage to local_requirements.txt"
+    echo "nautobot[remote_storage]" >> $NAUTOBOT_ROOT/local_requirements.txt
+    ```
+
+    For an example of using django-storages with AWS S3 buckets, visit the [django-storages with S3](../guides/s3-django-storage.md) user-guide.
 
 ## Prepare the Database
 
 Before Nautobot can run, the database migrations must be performed to prepare the database for use. This will populate the database tables and relationships:
 
-```no-highlight
+```no-highlight title="Push migrations onto the Nautobot database"
 nautobot-server migrate
 ```
 
@@ -279,9 +312,19 @@ nautobot-server migrate
 
 Nautobot does not come with any predefined user accounts. You'll need to create a administrative superuser account to be able to log into Nautobot for the first time. Specifying an email address for the user is not required, but be sure to use a very strong password.
 
-```no-highlight
+```no-highlight title="Create Nautobot local super user account"
 nautobot-server createsuperuser
 ```
+
+??? example "Example with admin user created"
+
+    ```no title="Example output with admin user created"
+    Username: admin
+    Email address:
+    Password:
+    Password (again):
+    Superuser created successfully.
+    ```
 
 ## Create Static Directories
 
@@ -296,9 +339,16 @@ Each of these have their own corresponding setting that defined in `nautobot_con
 
 The `collectstatic` command will create these directories if they do not exist, and in the case of the `static` files directory, it will also copy the appropriate files:
 
-```no-highlight
+```no-highlight title="Collect static files"
 nautobot-server collectstatic
 ```
+
+??? example "Collect static example output"
+
+    ```no title="Collect static output"
+
+    1103 static files copied to '/opt/nautobot/static'.
+    ```
 
 ## Install Local Requirements
 
@@ -307,7 +357,7 @@ nautobot-server collectstatic
 
 This step is entirely optional. As indicated above, we mentioned that any extra local requirements should go into `$NAUTOBOT_ROOT/local_requirements.txt`.
 
-```no-highlight
+```no-highlight title="Install local requirements"
 pip3 install -r $NAUTOBOT_ROOT/local_requirements.txt
 ```
 
@@ -320,16 +370,22 @@ Checks are ran automatically when running a development server using `nautobot-s
 !!! hint
     Get into the habit of running checks before deployments!
 
-```no-highlight
+```no-highlight title="Run a nautobot-server check"
 nautobot-server check
 ```
+
+??? example "nautobot-server check output"
+
+    ```no title="Example nautobot-server check output"
+    System check identified no issues (0 silenced).
+    ```
 
 ## Test the Application
 
 At this point, we should be able to run Nautobot's development server for testing. We can check by starting a
 development instance:
 
-```no-highlight
+```no-highlight title="Optional: Test the Nautobot application"
 nautobot-server runserver 0.0.0.0:8080 --insecure
 ```
 
@@ -344,12 +400,14 @@ Next, connect to the name or IP of the server (as defined in `ALLOWED_HOSTS`) on
 !!! important
     Certain Nautobot features (Git repository synchronization, webhooks, jobs, etc.) depend on the presence of Nautobot's background Celery worker process, which is not automatically started by the `runserver` command. To start it for testing purposes, you can run `nautobot-server celery worker` separately. For production use, Nautobot and the worker processes should be managed by `systemd` rather than started manually, as described in the next section of this documentation.
 
-Unauthenticated users will be presented with a login page:
+??? "Screenshot Examples"
 
-![Nautobot UI as seen by a non-authenticated user](../../../media/installation/nautobot_ui_login.png)
+    Unauthenticated users will be presented with a login page:
 
-Try logging in using the superuser account we just created. Once authenticated, you'll be able to access all areas of the UI:
+    ![Nautobot UI as seen by a non-authenticated user](../../../media/installation/nautobot_ui_login.png)
 
-![Nautobot UI as seen by an administrator](../../../media/installation/nautobot_ui_admin.png)
+    Try logging in using the superuser account we just created. Once authenticated, you'll be able to access all areas of the UI:
+
+    ![Nautobot UI as seen by an administrator](../../../media/installation/nautobot_ui_admin.png)
 
 Type `Ctrl-C` to stop the development server. Now you're ready to proceed to [starting Nautobot as a system service](services.md).

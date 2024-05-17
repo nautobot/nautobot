@@ -230,17 +230,28 @@ class ContactAssociationSerializer(NautobotModelSerializer):
         }
 
     def validate(self, data):
-        # Validate uniqueness of (contact/team, role)
+        # Validate uniqueness of (associated object, associated object type, contact/team, role)
+        unique_together_fields = None
+
         if data.get("contact") and data.get("role"):
-            validator = UniqueTogetherValidator(
-                queryset=ContactAssociation.objects.all(),
-                fields=("contact", "role"),
+            unique_together_fields = (
+                "associated_object_type",
+                "associated_object_id",
+                "contact",
+                "role",
             )
-            validator(data, self)
         elif data.get("team") and data.get("role"):
+            unique_together_fields = (
+                "associated_object_type",
+                "associated_object_id",
+                "team",
+                "role",
+            )
+
+        if unique_together_fields is not None:
             validator = UniqueTogetherValidator(
                 queryset=ContactAssociation.objects.all(),
-                fields=("team", "role"),
+                fields=unique_together_fields,
             )
             validator(data, self)
 
