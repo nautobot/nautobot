@@ -8,6 +8,7 @@ from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.test import tag
 
 from nautobot.core.filters import (
+    ContentTypeChoiceFilter,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
@@ -304,7 +305,9 @@ class FilterTestCases:
                     if not filter_field:
                         # This field is not part of the Filterset.
                         continue
-                    self.assertIsInstance(filter_field, (ContentTypeFilter, ContentTypeMultipleChoiceFilter))
+                    self.assertIsInstance(
+                        filter_field, (ContentTypeFilter, ContentTypeMultipleChoiceFilter, ContentTypeChoiceFilter)
+                    )
 
     class NameOnlyFilterTestCase(FilterTestCase):
         """Add simple tests for filtering by name."""

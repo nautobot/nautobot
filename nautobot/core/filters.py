@@ -172,15 +172,11 @@ class ContentTypeFilterMixin:
     Mixin to allow specifying a ContentType by <app_label>.<model> (e.g. "dcim.location").
     """
 
-    def __init__(self, *args, accept_pk=False, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.accept_pk = accept_pk
-
     def filter(self, qs, value):
         if value in EMPTY_VALUES:
             return qs
 
-        if self.accept_pk and value.isdigit():
+        if value.isdigit():
             return qs.filter(**{f"{self.field_name}__pk": value})
 
         try:
@@ -233,10 +229,9 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
         )
     """
 
-    def __init__(self, *args, accept_pk=False, **kwargs):
+    def __init__(self, *args, **kwargs):
         kwargs.setdefault("conjoined", True)
         super().__init__(*args, **kwargs)
-        self.accept_pk = accept_pk
 
     def filter(self, qs, value):
         """Filter on value, which should be list of content-type names.
@@ -250,7 +245,7 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
             if self.conjoined:
                 qs = ContentTypeFilter.filter(self, qs, v)
             else:
-                if self.accept_pk and v.isdigit():
+                if v.isdigit():
                     q |= models.Q(**{f"{self.field_name}__pk": value})
                     continue
                 # Similar to the ContentTypeFilter.filter() call above, but instead of narrowing the query each time
