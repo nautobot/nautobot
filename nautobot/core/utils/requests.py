@@ -65,7 +65,10 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
                     # the filterset can handle the QueryDict conversion and we can just pass the QueryDict to the filterset
                     # then use the FilterSet to de-dupe the field names
                     lookup_field = re.sub(r"__\w+", "", filter_field_name)
-                lookup_value = request_querydict.getlist(filter_field_name)
+                if isinstance(request_querydict, QueryDict):
+                    lookup_value = request_querydict.getlist(filter_field_name)
+                else:
+                    lookup_value = request_querydict.get(filter_field_name)
 
                 query_dict.setlistdefault(lookup_field_placeholder % num, [lookup_field])
                 query_dict.setlistdefault(lookup_type_placeholder % num, [filter_field_name])

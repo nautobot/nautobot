@@ -992,6 +992,7 @@ class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
                     "Custom Links": "/extras/custom-links/",
                     "Notes": "/extras/notes/",
                 },
+                "Users": {"Saved Views": "/user/saved-views/"},
             },
         }
 

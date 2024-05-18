@@ -8,6 +8,9 @@ router = OrderedDefaultRouter(view_name="Users")
 router.register("users", views.UserViewSet)
 router.register("groups", views.GroupViewSet)
 
+# Saved Views
+router.register("saved-views", views.SavedViewViewSet)
+
 # Tokens
 router.register("tokens", views.TokenViewSet)
 
