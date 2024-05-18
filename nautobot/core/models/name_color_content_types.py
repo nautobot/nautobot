@@ -14,6 +14,7 @@ from nautobot.extras.models.change_logging import ChangeLoggedModel
 from nautobot.extras.models.customfields import CustomFieldModel
 from nautobot.extras.models.mixins import ContactMixin, DynamicGroupMixin, NotesMixin, StaticGroupMixin
 from nautobot.extras.models.relationships import RelationshipModel
+from nautobot.users.models import SavedViewMixin
 
 
 class ContentTypeRelatedQuerySet(RestrictedQuerySet):
@@ -45,6 +46,7 @@ class NameColorContentTypesModel(
     DynamicGroupMixin,
     NotesMixin,
     RelationshipModel,
+    SavedViewMixin,
     StaticGroupMixin,
     BaseModel,
 ):

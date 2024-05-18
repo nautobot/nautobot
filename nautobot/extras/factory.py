@@ -315,9 +315,6 @@ class StaticGroupFactory(PrimaryModelFactory):
         exclude = ("color", "has_description", "has_tenant")
 
     color = UniqueFaker("color_name")
-    content_type = random_instance(
-        lambda: ContentType.objects.filter(FeatureQuery("static_groups").get_query()), allow_null=False
-    )
     name = factory.LazyAttribute(
         lambda o: f"{o.color} {bettertitle(o.content_type.model_class()._meta.verbose_name_plural)}"
     )
@@ -335,6 +332,15 @@ class StaticGroupFactory(PrimaryModelFactory):
             return
         for member in get_random_instances(self.content_type.model_class().objects.all()):
             StaticGroupAssociationFactory.create(static_group=self, associated_object_id=member.pk)
+
+    @factory.lazy_attribute
+    def content_type(self):
+        while True:
+            content_type = factory.random.randgen.choice(
+                ContentType.objects.filter(FeatureQuery("static_groups").get_query())
+            )
+            if content_type.model_class().objects.exists():
+                return content_type
 
 
 class StaticGroupAssociationFactory(OrganizationalModelFactory):

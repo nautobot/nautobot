@@ -8,6 +8,7 @@ from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ColorField
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.utils import extras_features, TaggableClassesQuery
+from nautobot.users.models import SavedViewMixin
 
 # These imports are in this particular order because of circular import problems
 from .change_logging import ChangeLoggedModel
@@ -35,7 +36,14 @@ class TagQuerySet(RestrictedQuerySet):
     "custom_validators",
 )
 class Tag(
-    ChangeLoggedModel, ContactMixin, CustomFieldModel, NotesMixin, RelationshipModel, StaticGroupMixin, BaseModel
+    ChangeLoggedModel,
+    ContactMixin,
+    CustomFieldModel,
+    NotesMixin,
+    RelationshipModel,
+    SavedViewMixin,
+    StaticGroupMixin,
+    BaseModel,
 ):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     content_types = models.ManyToManyField(

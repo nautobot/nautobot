@@ -263,6 +263,7 @@ plugins:
         "models/ipam/vrf.md": "user-guide/core-data-model/ipam/vrf.md"
         "models/tenancy/tenant.md": "user-guide/core-data-model/tenancy/tenant.md"
         "models/tenancy/tenantgroup.md": "user-guide/core-data-model/tenancy/tenantgroup.md"
+        "models/users/savedview.md": "user-guide/platform-functionality/savedview.md"
         "models/virtualization/cluster.md": "user-guide/core-data-model/virtualization/cluster.md"
         "models/virtualization/clustergroup.md": "user-guide/core-data-model/virtualization/clustergroup.md"
         "models/virtualization/clustertype.md": "user-guide/core-data-model/virtualization/clustertype.md"
@@ -286,6 +287,7 @@ plugins:
         "user-guides/graphql.md": "user-guide/feature-guides/graphql.md"
         "user-guides/ip-address-merge-tool.md": "user-guide/feature-guides/ip-address-merge-tool.md"
         "user-guides/relationships.md": "user-guide/feature-guides/relationships.md"
+        "user-guides/saved-views.md": "user-guide/feature-guides/saved-views.md"
         "user-guides/s3-django-storage.md": "user-guide/administration/guides/s3-django-storage.md"
 
         # Post 2.x redirects
@@ -365,6 +367,7 @@ nav:
           - GraphQL: "user-guide/feature-guides/graphql.md"
           - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
           - Relationships: "user-guide/feature-guides/relationships.md"
+          - Saved Views: "user-guide/feature-guides/saved-views.md"
           - Software Image Files and Versions: "user-guide/feature-guides/software-image-files-and-versions.md"
       - Core Data Model:
           - Overview:
@@ -467,6 +470,7 @@ nav:
               - Authentication: "user-guide/platform-functionality/rest-api/authentication.md"
               - UI Endpoints: "user-guide/platform-functionality/rest-api/ui-related-endpoints.md"
           - Roles: "user-guide/platform-functionality/role.md"
+          - Saved Views: user-guide/platform-functionality/savedview.md
           - Secrets: "user-guide/platform-functionality/secret.md"
           - Static Groups:
               - "user-guide/platform-functionality/staticgroup.md"

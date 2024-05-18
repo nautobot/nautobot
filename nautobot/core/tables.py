@@ -36,7 +36,16 @@ class BaseTable(django_tables2.Table):
             "class": "table table-hover table-headings",
         }
 
-    def __init__(self, *args, user=None, hide_hierarchy_ui=False, **kwargs):
+    def __init__(
+        self,
+        *args,
+        table_changes_pending=False,
+        saved_view=None,
+        user=None,
+        hide_hierarchy_ui=False,
+        order_by=None,
+        **kwargs,
+    ):
         # Add custom field columns
         model = self._meta.model
 
@@ -72,8 +81,11 @@ class BaseTable(django_tables2.Table):
                 )
             # symmetric relationships are already handled above in the source_type case
 
+        if order_by is None and saved_view is not None:
+            order_by = saved_view.config.get("sort_order", None)
+
         # Init table
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, order_by=order_by, **kwargs)
         self.hide_hierarchy_ui = hide_hierarchy_ui
 
         # Set default empty_text if none was provided
@@ -89,18 +101,25 @@ class BaseTable(django_tables2.Table):
                     # Hide the column if it is non-default *and* not manually specified as an extra column
                     self.columns.hide(column.name)
 
-        # Apply custom column ordering for user
+        # Apply custom column ordering for SavedView if it is available
+        # Takes precedence before user config
+        columns = []
         pk = self.base_columns.pop("pk", None)
         actions = self.base_columns.pop("actions", None)
-        if user is not None and not isinstance(user, AnonymousUser):
-            columns = user.get_config(f"tables.{self.__class__.__name__}.columns")
-            if columns:
-                for name, column in self.base_columns.items():
-                    if name in columns:
-                        self.columns.show(name)
-                    else:
-                        self.columns.hide(name)
-                self.sequence = [c for c in columns if c in self.base_columns]
+        if saved_view is not None and not table_changes_pending:
+            view_table_config = saved_view.config.get("table_config", {}).get(f"{self.__class__.__name__}", None)
+            if view_table_config is not None:
+                columns = view_table_config.get("columns", [])
+        else:
+            if user is not None and not isinstance(user, AnonymousUser):
+                columns = user.get_config(f"tables.{self.__class__.__name__}.columns")
+        if columns:
+            for name, column in self.base_columns.items():
+                if name in columns:
+                    self.columns.show(name)
+                else:
+                    self.columns.hide(name)
+            self.sequence = [c for c in columns if c in self.base_columns]
 
         # Always include PK and actions columns, if defined on the table, as first and last columns respectively
         if pk:

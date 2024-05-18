@@ -41,6 +41,7 @@ from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import ContactMixin, NotesMixin, StaticGroupMixin
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
+from nautobot.users.models import SavedViewMixin
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,14 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 
 @extras_features("graphql")
-class ComputedField(ContactMixin, ChangeLoggedModel, NotesMixin, StaticGroupMixin, BaseModel):
+class ComputedField(
+    ContactMixin,
+    ChangeLoggedModel,
+    NotesMixin,
+    SavedViewMixin,
+    StaticGroupMixin,
+    BaseModel,
+):
     """
     Read-only rendered fields driven by a Jinja2 template that are applied to objects within a ContentType.
     """
@@ -332,7 +340,14 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 
 @extras_features("webhooks")
-class CustomField(ContactMixin, ChangeLoggedModel, NotesMixin, StaticGroupMixin, BaseModel):
+class CustomField(
+    ContactMixin,
+    ChangeLoggedModel,
+    NotesMixin,
+    SavedViewMixin,
+    StaticGroupMixin,
+    BaseModel,
+):
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="custom_fields",

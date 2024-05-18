@@ -50,6 +50,7 @@ from nautobot.extras.forms import NoteForm
 from nautobot.extras.models import ExportTemplate
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
+from nautobot.users.models import SavedView
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -459,8 +460,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
 
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
-        filter_params = request.GET.copy()
-        return get_filterable_params_from_filter_params(filter_params, self.non_filter_params, self.filterset_class())
+        params = request.GET.copy()
+        filter_params = get_filterable_params_from_filter_params(params, self.non_filter_params, self.filterset_class())
+        if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
+            return SavedView.objects.get(pk=params.get("saved_view")).config.get("filter_params", {})
+        return filter_params
 
     def get_queryset(self):
         """
@@ -618,6 +622,9 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
+        "saved_view",  # saved_view indicator pk or composite keys
+        "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
+        "all_filters_removed",  # indicator for if all filters have been removed from the saved view
     )
 
     def filter_queryset(self, queryset):

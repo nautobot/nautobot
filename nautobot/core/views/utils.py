@@ -279,6 +279,39 @@ def prepare_cloned_fields(instance):
     return param_string
 
 
+def view_changes_not_saved(request, view, current_saved_view):
+    """
+    Compare request.GET's query dict with the configuration stored on the current saved view
+    If there is any configuration different, return True
+    If every configuration is the same, return False
+    """
+    if current_saved_view is None:
+        return True
+    query_dict = request.GET.dict()
+
+    if "table_changes_pending" in query_dict or "all_filters_removed" in query_dict:
+        return True
+    per_page = int(query_dict.get("per_page", 0))
+    if per_page and per_page != current_saved_view.config.get("pagination_count"):
+        return True
+    sort = request.GET.getlist("sort", [])
+    if sort and sort != current_saved_view.config.get("sort_order", []):
+        return True
+    query_dict_keys = sorted(list(query_dict.keys()))
+    for param in view.non_filter_params:
+        if param in query_dict_keys:
+            query_dict_keys.remove(param)
+    filter_params = current_saved_view.config.get("filter_params", {})
+
+    if query_dict_keys:
+        if set(query_dict_keys) != set(filter_params.keys()):
+            return True
+        for key, value in filter_params.items():
+            if set(value) != set(request.GET.getlist(key)):
+                return True
+    return False
+
+
 def common_detail_view_context(request, instance):
     """Additional template context for object detail views, shared by both ObjectView and NautobotHTMLRenderer."""
     context = {}
