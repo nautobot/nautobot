@@ -212,7 +212,7 @@ class SavedViewTest(ModelViewTestCase):
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             # Assert that the star sign is rendered on the page since there are unsaved changes
-            self.assertIn('<sup title="Pending changes not saved">*</sup>', response_body, msg=response_body)
+            self.assertIn('<i title="Pending changes not saved">', response_body, msg=response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_object_with_constrained_permission(self):
