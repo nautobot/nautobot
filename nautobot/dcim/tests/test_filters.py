@@ -650,6 +650,24 @@ def common_test_data(cls):
     external_integrations = iter(ExternalIntegration.objects.all())
     device_redundancy_groups = iter(DeviceRedundancyGroup.objects.all())
 
+    module_types = ModuleType.objects.all()[:3]
+    module_status = Status.objects.get_for_model(Module).first()
+    Module.objects.create(
+        module_type=module_types[0],
+        status=module_status,
+        parent_module_bay=ModuleBay.objects.filter(installed_module__isnull=True, parent_device__isnull=False).first(),
+    )
+    Module.objects.create(
+        module_type=module_types[1],
+        status=module_status,
+        parent_module_bay=ModuleBay.objects.filter(installed_module__isnull=True, parent_device__isnull=False).first(),
+    )
+    Module.objects.create(
+        module_type=module_types[2],
+        status=module_status,
+        parent_module_bay=ModuleBay.objects.filter(installed_module__isnull=True, parent_device__isnull=False).first(),
+    )
+
     cls.controllers = (
         Controller.objects.create(
             name="Controller 1",

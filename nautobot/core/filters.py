@@ -156,7 +156,7 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
             return qs
         if self.distinct:
             qs = qs.distinct()
-        lookup = "%s__%s" % (self.field_name, self.lookup_expr)
+        lookup = f"{self.field_name}__{self.lookup_expr}"
         if bool(value):
             # return instances with field populated
             return qs.filter(**{lookup: self.exclude})

@@ -144,7 +144,7 @@ class FilterTestCases:
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
                 with self.subTest(f"{self.filterset.__name__} RelatedMembershipBooleanFilter {filter_name} (False)"):
                     filterset_result = self.filterset({filter_name: False}, self.queryset).qs
-                    qs_result = self.queryset.exclude(**{f"{field_name}__isnull": False})
+                    qs_result = self.queryset.exclude(**{f"{field_name}__isnull": False}).distinct()
                     self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
 
         def test_tags_filter(self):

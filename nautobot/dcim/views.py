@@ -387,7 +387,7 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
 
         associated_object_id = obj.pk
         associated_object_content_type = ContentType.objects.get_for_model(Location)
-        action = request.POST.get("action")
+        migrate_action = request.POST.get("action")
         try:
             with transaction.atomic():
                 if not has_perms(request.user, ["extras.add_contactassociation"]):
@@ -396,7 +396,7 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
                     )
                 contact = None
                 team = None
-                if action == LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_CONTACT:
+                if migrate_action == LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_CONTACT:
                     if not has_perms(request.user, ["extras.add_contact"]):
                         raise PermissionDenied("ObjectPermission extras.add_contact is needed to perform this action")
                     contact = Contact(
@@ -407,7 +407,7 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
                     contact.validated_save()
                     # Trigger permission check
                     Contact.objects.restrict(request.user, "view").get(pk=contact.pk)
-                elif action == LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_TEAM:
+                elif migrate_action == LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_TEAM:
                     if not has_perms(request.user, ["extras.add_team"]):
                         raise PermissionDenied("ObjectPermission extras.add_team is needed to perform this action")
                     team = Team(
@@ -418,12 +418,12 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
                     team.validated_save()
                     # Trigger permission check
                     Team.objects.restrict(request.user, "view").get(pk=team.pk)
-                elif action == LocationDataToContactActionChoices.ASSOCIATE_EXISTING_CONTACT:
+                elif migrate_action == LocationDataToContactActionChoices.ASSOCIATE_EXISTING_CONTACT:
                     contact = Contact.objects.restrict(request.user, "view").get(pk=request.POST.get("contact"))
-                elif action == LocationDataToContactActionChoices.ASSOCIATE_EXISTING_TEAM:
+                elif migrate_action == LocationDataToContactActionChoices.ASSOCIATE_EXISTING_TEAM:
                     team = Team.objects.restrict(request.user, "view").get(pk=request.POST.get("team"))
                 else:
-                    raise ValueError(f"Invalid action {action} passed from the form")
+                    raise ValueError(f"Invalid action {migrate_action} passed from the form")
 
                 association = ContactAssociation(
                     contact=contact,

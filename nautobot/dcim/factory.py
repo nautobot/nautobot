@@ -870,7 +870,6 @@ class FrontPortTemplateFactory(ModularDeviceComponentTemplateFactory):
     )
     type = factory.Faker("random_element", elements=PortTypeChoices.values())
     name = factory.Sequence(lambda n: f"FrontPort {n}")
-    rear_port_position = factory.Sequence(lambda n: n + 1)
 
     @factory.lazy_attribute
     def rear_port_template(self):
@@ -878,6 +877,10 @@ class FrontPortTemplateFactory(ModularDeviceComponentTemplateFactory):
             return factory.random.randgen.choice(self.module_type.rear_port_templates.all())
         else:
             return factory.random.randgen.choice(self.device_type.rear_port_templates.all())
+
+    @factory.lazy_attribute
+    def rear_port_position(self):
+        return self.rear_port_template.front_port_templates.count() + 1
 
 
 class RearPortTemplateFactory(ModularDeviceComponentTemplateFactory):
