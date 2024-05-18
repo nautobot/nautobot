@@ -516,6 +516,8 @@ def import_local_config_context(local_type, device_name, context_data, repositor
             record = Device.objects.get(name=device_name)
         elif local_type == "virtual_machines":
             record = VirtualMachine.objects.get(name=device_name)
+        else:
+            raise ValueError(f"Unknown local_type value: {local_type}")
     except MultipleObjectsReturned:
         # Possible for Device as name is not guaranteed globally unique
         # TODO: come up with a design that accounts for non-unique names, as well as un-named Devices.
