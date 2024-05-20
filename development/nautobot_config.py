@@ -39,15 +39,15 @@ LOGGING["loggers"]["nautobot"]["handlers"] = ["verbose_console" if DEBUG else "n
 LOGGING["loggers"]["nautobot"]["level"] = LOG_LEVEL  # noqa: F405
 
 # Enable the following to enable structlog logging for Django
-from nautobot.core.settings_funcs import setup_structlog_logging
-setup_structlog_logging(
-    LOGGING,
-    INSTALLED_APPS,
-    MIDDLEWARE,
-    log_level="DEBUG" if DEBUG else "INFO",
-    debug_db=False,  # Set to True to log all database queries
-    plain_format=bool(DEBUG),  # Set to True to use human-readable structlog format over JSON
-)
+# from nautobot.core.settings_funcs import setup_structlog_logging
+# setup_structlog_logging(
+#     LOGGING,
+#     INSTALLED_APPS,
+#     MIDDLEWARE,
+#     log_level="DEBUG" if DEBUG else "INFO",
+#     debug_db=False,  # Set to True to log all database queries
+#     plain_format=bool(DEBUG),  # Set to True to use human-readable structlog format over JSON
+# )
 
 #
 # Plugins
