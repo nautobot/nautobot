@@ -85,3 +85,20 @@ Markdown rendering is supported for the `description`, `details`, and `default_l
 ### Technical Details of Settings Documentation
 
 The `optional-settings.md` and `required-settings.md` files are rendered as Jinja2 templates via [`Mkdocs-Macros`](https://mkdocs-macros-plugin.readthedocs.io/en/latest/). The file `nautobot/docs/macros.py` is responsible for loading `settings.yaml` into the template context for rendering. `mkdocs.yml` instructs Mkdocs-Macros to run that file at documentation rendering time. The macros and templating are *not* enabled for all documentation by default - instead, only the files with `render_macros: true` in their headers will be templated.
+
+## Structlog Configuration
+
+As of Nautobot 2.3, structlog is added as a core dependency. To use structlog, you can add the following code to your `nautobot_config.py` file:
+
+```python
+from nautobot.core.settings_funcs import setup_structlog_logging
+
+setup_structlog_logging(
+    LOGGING,
+    INSTALLED_APPS,
+    MIDDLEWARE,
+    log_level="DEBUG" if DEBUG else "INFO",
+    debug_db=False,  # Set to True to log all database queries
+    plain_format=bool(DEBUG),  # Set to True to use human-readable structlog format over JSON
+)
+```

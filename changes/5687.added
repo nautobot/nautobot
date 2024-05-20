@@ -1,2 +1,1 @@
-Added `NAUTOBOT_LOG_DEBUG_DB` environment variable to enable Django database logs.
-Added `NAUTOBOT_LOG_PLAIN` environment variable to switch to plaintext structlog output from JSON.
+Added `setup_structlog_logging()` to configure structlog from `nautobot_config.py` file.

@@ -2,20 +2,18 @@
 
 import os
 
-#
-# Debugging defaults to True rather than False for the development environment
-#
-os.environ["NAUTOBOT_DEBUG"] = os.getenv("NAUTOBOT_DEBUG", "True")
-
-from nautobot.core.settings import *  # noqa: F403,E402  # undefined-local-with-import-star,import
+from nautobot.core.settings import *  # noqa: F403  # undefined-local-with-import-star
 
 # The above results in various F405 undefined-local-with-import-star-usage,
 # "may be undefined, or defined from star imports",
 # which we suppress on a case-by-case basis below
-from nautobot.core.settings_funcs import is_truthy  # noqa: E402  # import
+from nautobot.core.settings_funcs import is_truthy
 
 SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "012345678901234567890123456789012345678901234567890123456789")
 
+#
+# Debugging defaults to True rather than False for the development environment
+#
 DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "True"))
 
 
@@ -35,6 +33,21 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #
 # Logging for the development environment, taking into account the redefinition of DEBUG above
 #
+
+LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
+LOGGING["loggers"]["nautobot"]["handlers"] = ["verbose_console" if DEBUG else "normal_console"]  # noqa: F405
+LOGGING["loggers"]["nautobot"]["level"] = LOG_LEVEL  # noqa: F405
+
+# Enable the following to enable structlog logging for Django
+from nautobot.core.settings_funcs import setup_structlog_logging
+setup_structlog_logging(
+    LOGGING,
+    INSTALLED_APPS,
+    MIDDLEWARE,
+    log_level="DEBUG" if DEBUG else "INFO",
+    debug_db=False,  # Set to True to log all database queries
+    plain_format=bool(DEBUG),  # Set to True to use human-readable structlog format over JSON
+)
 
 #
 # Plugins
