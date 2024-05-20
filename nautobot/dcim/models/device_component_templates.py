@@ -53,7 +53,12 @@ __all__ = (
 
 # TODO: Changing ComponentTemplateModel to an OrganizationalModel would just involve adding Notes support...
 class ComponentTemplateModel(
-    ContactMixin, ChangeLoggedModel, CustomFieldModel, RelationshipModel, StaticGroupMixin, BaseModel
+    ContactMixin,
+    ChangeLoggedModel,
+    CustomFieldModel,
+    RelationshipModel,
+    StaticGroupMixin,
+    BaseModel,
 ):
     device_type = ForeignKeyWithAutoRelatedName(to="dcim.DeviceType", on_delete=models.CASCADE)
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)

@@ -14,7 +14,7 @@ This document will guide you through setting up uWSGI and establishing Nautobot 
 
 Nautobot includes a `nautobot-server start` management command that directly invokes uWSGI. This command behaves exactly as uWSGI does, but allows us to maintain a single entrypoint into the Nautobot application.
 
-```no-highlight
+```no-highlight title="Show help for the nautobot-server start command"
 nautobot-server start --help
 ```
 
@@ -22,7 +22,7 @@ nautobot-server start --help
 
 Nautobot requires at least one worker to consume background tasks required for advanced background features. A `nautobot-server celery` command is included that directly invokes Celery. This command behaves exactly as the Celery command-line utility does, but launches it through Nautobot's environment to share Redis and database connection settings transparently.
 
-```no-highlight
+```no-highlight title="Show help for the Nautobot worker service"
 nautobot-server celery --help
 ```
 
@@ -38,9 +38,21 @@ You may want to deploy multiple workers and/or multiple queues. For more informa
 
 ## Configuration
 
-As the `nautobot` user, copy and paste the following into `$NAUTOBOT_ROOT/uwsgi.ini`:
+As the `nautobot` user, copy and paste the following into the file:
 
-```ini
+=== "Vim"
+
+    ```no-highlight title="Edit uwsgi file with Vim"
+    vim $NAUTOBOT_ROOT/uwsgi.ini
+    ```
+
+=== "Nano"
+
+    ```no-highlight title="Edit uwsgi file with Nano"
+    nano $NAUTOBOT_ROOT/uwsgi.ini
+    ```
+
+```ini title="$NAUTOBOT_ROOT/uwsgi.ini"
 [uwsgi]
 ; The IP address (typically localhost) and port that the WSGI process should listen on
 socket = 127.0.0.1:8001
@@ -112,9 +124,21 @@ We'll use `systemd` to control both uWSGI and Nautobot's background worker proce
 
 ### Nautobot Service
 
-First, we'll establish the `systemd` unit file for the Nautobot web service. Copy and paste the following into `/etc/systemd/system/nautobot.service`:
+First, we'll establish the `systemd` unit file for the Nautobot web service. Copy and paste the following into the Nautobot service file.
 
-```ini
+=== "Vim"
+
+    ```no-highlight title="Edit Nautobot service file with Vim"
+    sudo vim /etc/systemd/system/nautobot.service
+    ```
+
+=== "Nano"
+
+    ```no-highlight title="Edit Nautobot service file with Nano"
+    sudo nano /etc/systemd/system/nautobot.service
+    ```
+
+```ini title="/etc/systemd/system/nautobot.service"
 [Unit]
 Description=Nautobot WSGI Service
 Documentation=https://docs.nautobot.com/projects/core/en/stable/
@@ -160,9 +184,21 @@ The Celery worker service consumes tasks from background task queues and is requ
 Nautobot features including [Jobs](../../platform-functionality/jobs/index.md), [Custom
 Fields](../../platform-functionality/customfield.md), and [Git Repositories](../../platform-functionality/gitrepository.md), among others.
 
-To establish the `systemd` unit file for the Celery worker, copy and paste the following into `/etc/systemd/system/nautobot-worker.service`:
+To establish the `systemd` unit file for the Celery worker, copy and paste the following into the Celery service definition.
 
-```ini
+=== "Vim"
+
+    ```no-highlight title="Edit worker service with Vim"
+    sudo vim /etc/systemd/system/nautobot-worker.service
+    ```
+
+=== "Nano"
+
+    ```no-highlight title="Edit worker service with Nano"
+    sudo nano /etc/systemd/system/nautobot-worker.service
+    ```
+
+```ini title="/etc/systemd/system/nautobot-worker.service"
 [Unit]
 Description=Nautobot Celery Worker
 Documentation=https://docs.nautobot.com/projects/core/en/stable/
@@ -192,15 +228,29 @@ WantedBy=multi-user.target
 
 +++ 1.2.0
 
-The Celery Beat scheduler enables the periodic execution of and scheduling of background tasks. It is required to take
-advantage of the [job scheduling and approval](../../platform-functionality/jobs/job-scheduling-and-approvals.md) features.
+The Celery Beat scheduler enables the periodic execution of and scheduling of background tasks. It is required to take advantage of the [job scheduling and approval](../../platform-functionality/jobs/job-scheduling-and-approvals.md) features.
+
+!!! warning
+    You should only have a single instance of the scheduler running. Having more than one scheduler will cause multiple task executions.
 
 !!! warning
     It's important that the [`TIME_ZONE`](../configuration/optional-settings.md#time_zone) setting on your Nautobot servers and Celery Beat server match to prevent scheduled jobs from running at the wrong time. See the [time zones](../configuration/time-zones.md) documentation for more information.
 
-To establish the `systemd` unit file for the Celery Beat scheduler, copy and paste the following into `/etc/systemd/system/nautobot-scheduler.service`:
+To establish the `systemd` unit file for the Celery Beat scheduler, copy and paste the following into the scheduler service file.
 
-```ini
+=== "Vim"
+
+    ```no-highlight title="Edit scheduler service file with Vim"
+    sudo vim /etc/systemd/system/nautobot-scheduler.service
+    ```
+
+=== "Nano"
+
+    ```no-highlight title="Edit scheduler service file with Nano"
+    sudo nano /etc/systemd/system/nautobot-scheduler.service
+    ```
+
+```ini title="/etc/systemd/system/nautobot-scheduler.service"
 [Unit]
 Description=Nautobot Celery Beat Scheduler
 Documentation=https://docs.nautobot.com/projects/core/en/stable/
@@ -246,7 +296,7 @@ To update your custom tasks, you'll need to do the following.
 
 For example:
 
-```diff
+```diff title="Diff of tasks for celery vs rq"
 diff --git a/task_example.py b/task_example.py
 index f84073fb5..52baf6096 100644
 --- a/task_example.py
@@ -270,13 +320,13 @@ index f84073fb5..52baf6096 100644
 
 Because we just added new service files, you'll need to reload the systemd daemon:
 
-```no-highlight
+```no-highlight title="Reload the systemd daemon"
 sudo systemctl daemon-reload
 ```
 
 Then, start the `nautobot`, `nautobot-worker`, and `nautobot-scheduler` services and enable them to initiate at boot time:
 
-```no-highlight
+```no-highlight title="Enable Nautobot services"
 sudo systemctl enable --now nautobot nautobot-worker nautobot-scheduler
 ```
 
@@ -284,7 +334,7 @@ sudo systemctl enable --now nautobot nautobot-worker nautobot-scheduler
 
 You can use the command `systemctl status nautobot.service` to verify that the WSGI service is running:
 
-```no-highlight
+```no-highlight title="Validate services are running"
 ● nautobot.service - Nautobot WSGI Service
      Loaded: loaded (/etc/systemd/system/nautobot.service; enabled; vendor preset: enabled)
      Active: active (running) since Fri 2021-03-05 22:23:33 UTC; 35min ago
@@ -320,7 +370,7 @@ Please see [Computed fields with fallback value that is unicode results in Opera
 
 When serving Nautobot directly from uWSGI on RedHat or CentOS there may be a problem rendering .svg images to include the Nautobot logo. On the RedHat based operating systems there is no file `/etc/mime.types` by default, unfortunately, uWSGI looks for this file to serve static files (see [Serving static files with uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/StaticFiles.html#mime-types)). To work around this copy the file `/etc/mime.types` from a known good system for example an Ubuntu/Debian system or even the Nautobot container to /opt/nautobot/mime.types. Then add the following line to your `uwsgi.ini` file and restart the Nautobot services:
 
-```no-highlight
+```no-highlight title="Add MIME file settings to uwsgi.ini"
 mime-file = /opt/nautobot/mime.types
 ```
 
@@ -328,16 +378,18 @@ Alternatively, host Nautobot behind Nginx as instructed in [HTTP server setup](h
 
 ### Test Redis Connectivity
 
-From a nautobot shell (`nautobot-server shell_plus`) use the following Python commands to test connectivity to your Redis server. If successful, python should not return any exceptions.
+??? info "Test Redis Connectivity with Python"
 
-```py
-import os
-import redis
-from nautobot.core.settings_funcs import parse_redis_connection
+    From a nautobot shell (`nautobot-server shell_plus`) use the following Python commands to test connectivity to your Redis server. If successful, python should not return any exceptions.
 
-connection = parse_redis_connection(0)
-client = redis.from_url(connection)
-client.ping() # test basic connectivity
-client.keys() # retrieve a list of keys in the redis database
-client.auth(password=os.getenv("NAUTOBOT_REDIS_PASSWORD")) # test password authentication
-```
+    ```py title="Test Redis Connectivity via Python"
+    import os
+    import redis
+    from nautobot.core.settings_funcs import parse_redis_connection
+
+    connection = parse_redis_connection(0)
+    client = redis.from_url(connection)
+    client.ping() # test basic connectivity
+    client.keys() # retrieve a list of keys in the redis database
+    client.auth(password=os.getenv("NAUTOBOT_REDIS_PASSWORD")) # test password authentication
+    ```

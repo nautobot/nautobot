@@ -633,16 +633,42 @@ function initializeDynamicFilterForm(context){
     // Remove applied filters
     this_context.find(".remove-filter-param").on("click", function(){
         let query_params = new URLSearchParams(location.search);
+        if (query_params.has("saved_view")) {
+            // Need to reverse-engineer the "real" query params from the rendered page
+            for (let element of document.getElementsByClassName("filter-selection-choice-remove")) {
+                let key = element.getAttribute("data-field-parent");
+                let value = element.getAttribute("data-field-value");
+                if (!query_params.has(key, value)) {
+                    query_params.append(key, value);
+                }
+            }
+        }
         let type = $(this).attr("data-field-type");
         let field_value = $(this).attr("data-field-value");
 
         if (type === "parent") {
             // Remove all instances of this query param
             query_params.delete(field_value);
+
         } else {
             // Remove this specific instance of this query param
             let parent = $(this).attr("data-field-parent");
             query_params.delete(parent, field_value);
+        }
+        if (query_params.has("saved_view")) {
+            var all_filters_removed = true
+
+            const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending", "all_filters_removed"]
+
+            query_params.forEach((value, key) => {
+                if (!non_filter_params.includes(key)){
+                    all_filters_removed = false
+                }
+            })
+
+            if (all_filters_removed && !query_params.has("all_filters_removed")){
+                query_params.append("all_filters_removed", true);
+            }
         }
         location.assign("?" + query_params);
     })
@@ -652,6 +678,7 @@ function initializeDynamicFilterForm(context){
         e.preventDefault()
         let dynamic_form = $("#dynamic-filter-form");
         dynamic_form.find(`input[name*="form-"], select[name*="form-"]`).removeAttr("name")
+
         // Append q form field to dynamic filter form via hidden input
         let q_field = $('#id_q')
         let q_field_phantom = $('<input type="hidden" name="q" />')
@@ -663,12 +690,35 @@ function initializeDynamicFilterForm(context){
         // 2) combine the two forms into a single set of data without duplicate entries
         let search_query = new URLSearchParams();
         let dynamic_query = new URLSearchParams(new FormData(document.getElementById("dynamic-filter-form")));
+        const urlParams = new URLSearchParams(window.location.search);
+        const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending"]
+        urlParams.forEach((value, key) => {
+            if (non_filter_params.includes(key)){
+                search_query.append(key, value)
+            }
+        })
         dynamic_query.forEach((value, key) => { if (value != "") { search_query.append(key, value); }});
         let default_query = new URLSearchParams(new FormData(document.getElementById("default-filter").firstElementChild));
         default_query.forEach((value, key) => {
             if (value != "" && !search_query.has(key, value)) { search_query.append(key, value); }
         });
         $("#FilterForm_modal").modal("hide");
+
+        if (search_query.has("saved_view")) {
+            var all_filters_removed = true
+
+            const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending", "all_filters_removed"]
+
+            search_query.forEach((value, key) => {
+                if (!non_filter_params.includes(key)){
+                    all_filters_removed = false
+                }
+            })
+
+            if (all_filters_removed && !search_query.has("all_filters_removed")){
+                search_query.append("all_filters_removed", true);
+            }
+        }
         location.assign("?" + search_query);
     })
 
@@ -678,6 +728,24 @@ function initializeDynamicFilterForm(context){
         e.preventDefault()
         $("#dynamic-filter-form").submit()
     })
+
+    // On clear of filter form
+    this_context.find("#dynamic-filter-form, #default-filter form").on("reset", function(e){
+        e.preventDefault()
+        // make two copies of url params
+        const urlParams = new URLSearchParams(window.location.search);
+        const newUrlParams = new URLSearchParams(window.location.search);
+        // every query string that is non-filter-related
+        const non_filter_params = ["saved_view", "sort", "per_page", "table_changes_pending"]
+        for (const [key, value] of urlParams.entries()) {
+            // remove filter params
+            if (non_filter_params.includes(key) === false) {
+                newUrlParams.delete(key, value)
+            }
+        }
+        location.assign("?" + newUrlParams.toString())
+    })
+
 
     // Clear new row values upon creation
     this_context.find(".dynamic-filterform-add .add-row").click(function(){

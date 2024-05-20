@@ -49,6 +49,7 @@ from nautobot.extras.plugins import CustomValidator
 from nautobot.extras.utils import extras_features
 from nautobot.ipam.fields import VarbinaryIPField
 from nautobot.ipam.models import get_default_namespace, get_default_namespace_pk
+from nautobot.users.models import SavedViewMixin
 
 __all__ = (
     "array_to_string",
@@ -96,6 +97,7 @@ __all__ = (
     "PrimaryModel",
     "RelationshipModel",
     "RestrictedQuerySet",
+    "SavedViewMixin",
     "serialize_object_v2",
     "serialize_object",
     "slugify_dashes_to_underscores",

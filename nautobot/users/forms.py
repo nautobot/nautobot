@@ -7,7 +7,7 @@ from django.contrib.auth.forms import (
 from nautobot.core.forms import BootstrapMixin, DateTimePicker
 from nautobot.core.utils.config import get_settings_or_config
 
-from .models import Token
+from .models import SavedView, Token
 
 
 class LoginForm(BootstrapMixin, AuthenticationForm):
@@ -20,6 +20,12 @@ class LoginForm(BootstrapMixin, AuthenticationForm):
 
 class PasswordChangeForm(BootstrapMixin, DjangoPasswordChangeForm):
     pass
+
+
+class SavedViewForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = SavedView
+        fields = ["name", "config"]
 
 
 class TokenForm(BootstrapMixin, forms.ModelForm):

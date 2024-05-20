@@ -223,6 +223,25 @@ def get_model_for_view_name(view_name):
         return None
 
 
+def get_table_class_string_from_view_name(view_name):
+    """Return the name of the TableClass name associated with the view_name
+
+    e.g. returns `LocationTable` for view_name `dcim:location_list`
+
+    Args:
+        view_name (String): The name of the view e.g. dcim:location_list, circuits:circuit_list
+
+    Returns:
+        table_class_name (String): The name of the model table class or None e.g. LocationTable, CircuitTable
+    """
+    model = get_model_for_view_name(view_name)
+    if model:
+        table_class = get_table_for_model(model)
+        if table_class:
+            return table_class.__name__
+    return None
+
+
 def get_created_and_last_updated_usernames_for_model(instance):
     """
     Args:

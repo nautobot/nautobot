@@ -11,11 +11,12 @@ from nautobot.core.filters import (
 )
 from nautobot.dcim.models import RackReservation
 from nautobot.extras.models import ObjectChange
-from nautobot.users.models import ObjectPermission, Token
+from nautobot.users.models import ObjectPermission, SavedView, Token
 
 __all__ = (
     "GroupFilterSet",
     "ObjectPermissionFilterSet",
+    "SavedViewFilterSet",
     "UserFilterSet",
 )
 
@@ -26,6 +27,24 @@ class GroupFilterSet(BaseFilterSet):
     class Meta:
         model = Group
         fields = ["id", "name"]
+
+
+class SavedViewFilterSet(BaseFilterSet):
+    q = SearchFilter(filter_predicates={"name": "icontains", "owner__username": "icontains"})
+    owner = NaturalKeyOrPKMultipleChoiceFilter(
+        to_field_name="username",
+        queryset=get_user_model().objects.all(),
+        label="Owner (ID or name)",
+    )
+
+    class Meta:
+        model = SavedView
+        fields = [
+            "id",
+            "owner",
+            "name",
+            "view",
+        ]
 
 
 class UserFilterSet(BaseFilterSet):

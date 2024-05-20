@@ -56,13 +56,18 @@ class Migration(migrations.Migration):
                         to="tenancy.tenant",
                     ),
                 ),
+                (
+                    "hidden",
+                    models.BooleanField(db_index=True, default=False),
+                ),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={
                 "ordering": ["name"],
             },
             managers=[
-                ("objects", nautobot.extras.models.groups.StaticGroupManager()),
+                ("objects", nautobot.extras.models.groups.StaticGroupDefaultManager()),
+                ("all_objects", nautobot.extras.models.groups.StaticGroupManager()),
             ],
             bases=(
                 models.Model,
@@ -105,9 +110,13 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={
-                "ordering": ["static_group"],
+                "ordering": ["static_group", "associated_object_type", "associated_object_id"],
                 "unique_together": {("static_group", "associated_object_type", "associated_object_id")},
             },
+            managers=[
+                ("objects", nautobot.extras.models.groups.StaticGroupAssociationDefaultManager()),
+                ("all_objects", nautobot.extras.models.groups.StaticGroupAssociationManager()),
+            ],
             bases=(
                 models.Model,
                 nautobot.extras.models.mixins.DynamicGroupMixin,

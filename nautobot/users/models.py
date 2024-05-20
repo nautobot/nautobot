@@ -15,10 +15,12 @@ from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMix
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.utils.data import flatten_dict
 from nautobot.extras.models.change_logging import ChangeLoggedModel
+from nautobot.extras.utils import extras_features
 
 __all__ = (
     "AdminGroup",
     "ObjectPermission",
+    "SavedView",
     "Token",
     "User",
 )
@@ -282,3 +284,45 @@ class ObjectPermission(BaseModel, ChangeLoggedModel):
         if not isinstance(self.constraints, list):
             return [self.constraints]
         return self.constraints
+
+
+#
+# SavedView
+#
+
+
+class SavedViewMixin(models.Model):
+    """Abstract mixin for enabling Saved View functionality to a given model class."""
+
+    class Meta:
+        abstract = True
+
+    is_saved_view_model = True
+
+
+@extras_features(
+    "custom_validators",
+)
+class SavedView(BaseModel, ChangeLoggedModel):
+    owner = models.ForeignKey(
+        to=User, blank=False, null=False, on_delete=models.CASCADE, help_text="The user that created this view"
+    )
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=False, null=False, help_text="The name of this view")
+    view = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=False,
+        null=False,
+        help_text="The name of the list view that the saved view is derived from, e.g. dcim:device_list",
+    )
+    config = models.JSONField(
+        encoder=DjangoJSONEncoder, blank=True, default=dict, help_text="Saved Configuration on this view"
+    )
+
+    class Meta:
+        ordering = ["owner", "view", "name"]
+        unique_together = [["owner", "name", "view"]]
+        verbose_name = "saved view"
+        verbose_name_plural = "saved views"
+
+    def __str__(self):
+        return f"{self.owner.username} - {self.view} - {self.name}"
