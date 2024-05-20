@@ -28,12 +28,12 @@ Nautobot enables three (3) key use cases.
 - :fontawesome-solid-download:{ .lg .middle } **Installing Nautobot**
     
     ---
-    Get up and running with a [Nautobot install](../user-guide/administration/installation/index.md) on your own Linux VM or in a Docker environment
+    Get up and running with a [Nautobot install](../user-guide/administration/installation/index.md) on your own Linux VM or in a Docker environment.
 
 - :fontawesome-solid-user-gear:{ .lg .middle } **Configuring Nautobot**
     
     ---
-    [Configuration of Nautobot](../user-guide/administration/configuration/index.md)
+    Learn about the many [configuration options](../user-guide/administration/configuration/index.md) that Nautobot offers for fine-tuning your installation.
 
 - :material-web-check:{ .lg .middle } **Getting Started with Nautobot** 
     
@@ -49,7 +49,7 @@ Nautobot enables three (3) key use cases.
 -  :material-api:{ .lg .middle } **Nautobot APIs!**
 
     ---
-    Dive into the [REST](../user-guide/platform-functionality/rest-api/overview.md), [GraphQL](../user-guide/platform-functionality/graphql.md) APIs
+    Dive into the [REST](../user-guide/platform-functionality/rest-api/overview.md) and [GraphQL](../user-guide/platform-functionality/graphql.md) APIs.
 
 -  :material-language-python:{ .lg .middle } **Nautobot SDKs**
 
@@ -65,27 +65,27 @@ Nautobot enables three (3) key use cases.
 - ![Golden Config](../assets/app-icons/icon-GoldenConfiguration.png){style="height: 35px; margin-bottom: 0em" .middle } **Golden Configuration**
 
     ---
-    [Golden Configuration](https://github.com/nautobot/nautobot-app-golden-config) backs up configurations, generate intended state configurations, compare for compliance and remediate device configurations.
+    [Golden Configuration](https://github.com/nautobot/nautobot-app-golden-config) backs up configurations, generates intended state configurations, compares them for compliance and remediates device configurations.
 
 - ![Device Lifecycle](../assets/app-icons/icon-DeviceLifecycle.png){style="height: 35px; margin-bottom: 0em" .middle } **Device Lifecycle**
 
     ---
-    [Device Lifecycle](https://github.com/nautobot/nautobot-app-device-lifecycle-mgmt) adds additional capabilities around managing **hardware** lifecycle, **software** images, and **contracts** around your systems.
+    [Device Lifecycle](https://github.com/nautobot/nautobot-app-device-lifecycle-mgmt) adds additional capabilities around managing the **hardware** and **software** lifecycle, including the tracking of related **contracts** .
 
 - ![Firewall Models](../assets/app-icons/icon-FirewallModels.png){style="height: 35px; margin-bottom: 0em" .middle } **Firewall Models**
 
     ---
-    [Firewall Models](https://github.com/nautobot/nautobot-app-firewall-models) works to help model out firewall rules and objects. Using Nautobot to help generically manage firewall rules, including extended ACLs.
+    [Firewall Models](https://github.com/nautobot/nautobot-app-firewall-models) helps to model out firewall rules and related objects, including extended ACLs.
 
 - ![SSoT](../assets/app-icons/icon-SSoT.png){style="height: 35px; margin-bottom: 0em" .middle } **SSoT**
 
     ---
-    [SSoT](https://github.com/nautobot/nautobot-app-ssot) is the framework to synchronize data from additional sources into and out of Nautobot, powered by DiffSync.
+    [Single Source of Truth](https://github.com/nautobot/nautobot-app-ssot) is the framework to synchronize data from other systems into and out of Nautobot.
 
  - ![ChatOps](../assets/app-icons/icon-ChatOps.png){style="height: 35px; margin-bottom: 0em" .middle } **ChatOps**
 
     ---
-    [ChatOps](https://github.com/nautobot/nautobot-app-chatops) allows you to quickly get up and creating ChatOps commands. Start to allow peer teams to interact and get information about the network.
+    [ChatOps](https://github.com/nautobot/nautobot-app-chatops) supports a variety of chat applications, allowing peer teams to conveniently interact with Nautobot and get information about the network.
 
  - ![Circuit Maintenance](../assets/app-icons/icon-nautobot-circuit-maintenance.png){style="height: 35px; margin-bottom: 0em" .middle } **Circuit Maintenance**
 
@@ -95,12 +95,12 @@ Nautobot enables three (3) key use cases.
  - ![Capacity Metrics](../assets/app-icons/icon-nautobot-capacity-metrics.svg){style="height: 35px; margin-bottom: 0em" .middle } **Capacity Metrics**
 
     ---
-    [Capacity Metrics](https://github.com/nautobot/nautobot-app-capacity-metrics) brings the Nautobot data to the Prometheus metrics endpoints, giving you time series information about your Nautobot data.
+    [Capacity Metrics](https://github.com/nautobot/nautobot-app-capacity-metrics) brings additional Nautobot data to Prometheus metrics, making it easy to derive time series information about your Nautobot data.
 
  - ![Device Onboarding](../assets/app-icons/icon-DeviceOnboarding.png){style="height: 35px; margin-bottom: 0em" .middle } **Device Onboarding**
 
     ---
-    [Device Onboarding](https://github.com/nautobot/nautobot-app-device-onboarding) brings the network data into your SOT, helping to build out the intended state from the current state of the network.
+    [Device Onboarding](https://github.com/nautobot/nautobot-app-device-onboarding) brings network data into Nautobot, helping to build out the intended state from the current state of the network.
 
 </div>
 
