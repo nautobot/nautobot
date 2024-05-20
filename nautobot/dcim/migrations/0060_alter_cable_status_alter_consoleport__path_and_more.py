@@ -164,7 +164,7 @@ class Migration(migrations.Migration):
             model_name="interface",
             name="role",
             field=nautobot.extras.models.roles.RoleField(
-                blank=True, null=True,on_delete=django.db.models.deletion.PROTECT, to="extras.role"
+                blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to="extras.role"
             ),
         ),
         migrations.AlterField(
