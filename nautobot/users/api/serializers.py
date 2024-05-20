@@ -9,7 +9,7 @@ from nautobot.core.api import (
     ContentTypeField,
     ValidatedModelSerializer,
 )
-from nautobot.users.models import ObjectPermission, Token
+from nautobot.users.models import ObjectPermission, SavedView, Token
 
 
 class UserSerializer(ValidatedModelSerializer):
@@ -45,12 +45,12 @@ class UserSerializer(ValidatedModelSerializer):
         Extract the password from validated data and set it separately to ensure proper hash generation.
         """
         update_password = False
+        password = None
         if "password" in validated_data:
             update_password = True
             password = validated_data.pop("password")
         elif not self.partial:
             update_password = True
-            password = None
         super().update(instance, validated_data)
         if update_password:
             instance.set_password(password)
@@ -65,6 +65,12 @@ class GroupSerializer(ValidatedModelSerializer):
     class Meta:
         model = Group
         exclude = ["permissions"]
+
+
+class SavedViewSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = SavedView
+        fields = "__all__"
 
 
 class TokenSerializer(ValidatedModelSerializer):

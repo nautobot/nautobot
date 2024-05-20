@@ -53,10 +53,12 @@ from nautobot.core.views.utils import (
     handle_protectederror,
     import_csv_helper,
     prepare_cloned_fields,
+    view_changes_not_saved,
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.models import ExportTemplate
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
+from nautobot.users.models import SavedView
 
 
 class GenericView(LoginRequiredMixin, View):
@@ -147,12 +149,18 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
+        "saved_view",  # saved_view indicator pk or composite keys
+        "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
+        "all_filters_removed",  # indicator for if all filters have been removed from the saved view
     )
 
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
-        filter_params = request.GET.copy()
-        return get_filterable_params_from_filter_params(filter_params, self.non_filter_params, self.filterset())
+        params = request.GET.copy()
+        filter_params = get_filterable_params_from_filter_params(params, self.non_filter_params, self.filterset())
+        if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
+            return SavedView.objects.get(pk=params.get("saved_view")).config.get("filter_params", {})
+        return filter_params
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -188,6 +196,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         model = self.queryset.model
         content_type = ContentType.objects.get_for_model(model)
 
+        filter_params = request.GET
         display_filter_params = []
         dynamic_filter_form = None
         filter_form = None
@@ -217,7 +226,7 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
             if request.GET:
                 factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
-                    request.GET, filterset
+                    filter_params, filterset
                 )
                 dynamic_filter_form = DynamicFilterFormSet(filterset=filterset, data=factory_formset_params)
             else:
@@ -259,18 +268,41 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         table = None
         table_config_form = None
+        current_saved_view = None
+        current_saved_view_pk = self.request.GET.get("saved_view", None)
+        list_url = validated_viewname(model, "list")
+        saved_views = (
+            SavedView.objects.filter(view=list_url).restrict(request.user, "view").order_by("name").only("pk", "name")
+        )
         if self.table:
             # Construct the objects table
-            if self.request.GET.getlist("sort"):
+            if current_saved_view_pk:
+                try:
+                    current_saved_view = SavedView.objects.restrict(request.user, "view").get(
+                        view=list_url, pk=current_saved_view_pk
+                    )
+                except ObjectDoesNotExist:
+                    messages.error(request, f"Saved view {current_saved_view_pk} not found")
+            if self.request.GET.getlist("sort") or (
+                current_saved_view is not None and current_saved_view.config.get("sort_order")
+            ):
                 hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
-            table = self.table(self.queryset, user=request.user, hide_hierarchy_ui=hide_hierarchy_ui)
+            table_changes_pending = self.request.GET.get("table_changes_pending", False)
+
+            table = self.table(
+                self.queryset,
+                table_changes_pending=table_changes_pending,
+                saved_view=current_saved_view,
+                user=request.user,
+                hide_hierarchy_ui=hide_hierarchy_ui,
+            )
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
 
             # Apply the request context
             paginate = {
                 "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
+                "per_page": get_paginate_count(request, current_saved_view),
             }
             RequestConfig(request, paginate).configure(table)
             table_config_form = TableConfigForm(table=table)
@@ -283,9 +315,12 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
         # For the search form field, use a custom placeholder.
         q_placeholder = "Search " + bettertitle(model._meta.verbose_name_plural)
-        search_form = SearchForm(data=request.GET, q_placeholder=q_placeholder)
+        search_form = SearchForm(data=filter_params, q_placeholder=q_placeholder)
 
         valid_actions = self.validate_action_buttons(request)
+
+        # Query SavedViews for dropdown button
+        new_changes_not_applied = view_changes_not_saved(request, self, current_saved_view)
 
         context = {
             "content_type": content_type,
@@ -297,8 +332,12 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             "filter_form": filter_form,
             "dynamic_filter_form": dynamic_filter_form,
             "search_form": search_form,
-            "list_url": validated_viewname(model, "list"),
+            "list_url": list_url,
             "title": bettertitle(model._meta.verbose_name_plural),
+            "new_changes_not_applied": new_changes_not_applied,
+            "current_saved_view": current_saved_view,
+            "saved_views": saved_views,
+            "model": model,
         }
 
         # `extra_context()` would require `request` access, however `request` parameter cannot simply be

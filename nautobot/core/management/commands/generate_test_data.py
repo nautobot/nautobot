@@ -108,6 +108,7 @@ class Command(BaseCommand):
                 VRFFactory,
             )
             from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
+            from nautobot.users.factory import SavedViewFactory, UserFactory
         except ImportError as err:
             raise CommandError('Unable to load data factories. Is the "factory-boy" package installed?') from err
 
@@ -127,6 +128,10 @@ class Command(BaseCommand):
         TagFactory.create_batch(5, content_types=TaggableClassesQuery().as_queryset(), using=db_name)
         # ...and some tags that apply to a random subset of content-types
         TagFactory.create_batch(15, using=db_name)
+        self.stdout.write("Creating Users...")
+        UserFactory.create_batch(3, using=db_name)
+        self.stdout.write("Creating SavedViews...")
+        SavedViewFactory.create_batch(10, using=db_name)
         self.stdout.write("Creating Contacts...")
         ContactFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Teams...")
@@ -295,6 +300,7 @@ class Command(BaseCommand):
                 RIRFactory,
                 RoleFactory,
                 RouteTargetFactory,
+                SavedViewFactory,
                 SoftwareImageFileFactory,
                 SoftwareVersionFactory,
                 StaticGroupAssociationFactory,
@@ -304,6 +310,7 @@ class Command(BaseCommand):
                 TeamFactory,
                 TenantFactory,
                 TenantGroupFactory,
+                UserFactory,
                 VLANFactory,
                 VLANGroupFactory,
                 VRFFactory,

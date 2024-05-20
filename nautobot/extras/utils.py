@@ -282,6 +282,11 @@ def populate_model_features_registry(refresh=False):
             "field_attributes": {"related_model": RelationshipAssociation},
         },
         {
+            "feature_name": "saved_views",
+            "field_names": [],
+            "additional_constraints": {"is_saved_view_model": True},
+        },
+        {
             "feature_name": "static_groups",
             "field_names": ["associated_static_groups"],
             "additional_constraints": {"is_static_group_associable_model": True},
@@ -657,11 +662,13 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
                     ObjectChange.objects.bulk_create(queued_object_changes)
                     queued_object_changes = []
                 oc = obj.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-                oc.user = change_context.user
-                oc.request_id = change_context.change_id
-                oc.change_context = change_context.context
-                oc.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
-                queued_object_changes.append(oc)
+                if oc is not None:
+                    oc.user = change_context.get_user()
+                    oc.user_name = oc.user.username
+                    oc.request_id = change_context.change_id
+                    oc.change_context = change_context.context
+                    oc.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+                    queued_object_changes.append(oc)
             ObjectChange.objects.bulk_create(queued_object_changes)
             return qs.delete()
         finally:

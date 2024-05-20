@@ -36,7 +36,9 @@ urlpatterns = [
     path("extras/", include("nautobot.extras.urls")),
     path("ipam/", include("nautobot.ipam.urls")),
     path("tenancy/", include("nautobot.tenancy.urls")),
+    # TODO: deprecate this url and use users
     path("user/", include("nautobot.users.urls")),
+    path("users/", include("nautobot.users.urls", "users")),
     path("virtualization/", include("nautobot.virtualization.urls")),
     # API
     path("api/", include("nautobot.core.api.urls")),

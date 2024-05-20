@@ -2,10 +2,14 @@ import datetime
 import json
 import logging
 import re
+from urllib.parse import parse_qs
 
 from django import template
 from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.staticfiles.finders import find
+from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
@@ -19,6 +23,8 @@ from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
+from nautobot.users.forms import SavedViewForm
+from nautobot.users.models import SavedView
 
 # S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
 HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
@@ -192,7 +198,7 @@ def render_markdown(value):
 
 @library.filter()
 @register.filter()
-def render_json(value, syntax_highlight=True):
+def render_json(value, syntax_highlight=True, pretty_print=False):
     """
     Render a dictionary as formatted JSON.
 
@@ -201,7 +207,11 @@ def render_json(value, syntax_highlight=True):
     """
     rendered_json = json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
     if syntax_highlight:
-        return format_html('<code class="language-json">{}</code>', rendered_json)
+        html_string = '<code class="language-json">{}</code>'
+        if pretty_print:
+            html_string = "<pre>" + html_string + "</pre>"
+        return format_html(html_string, rendered_json)
+
     return rendered_json
 
 
@@ -712,6 +722,108 @@ def filter_form_modal(
         "dynamic_filter_form": dynamic_filter_form,
         "dynamic_filter_form_name": dynamic_filter_form_name,
     }
+
+
+@register.inclusion_tag("utilities/templatetags/saved_view_modal.html")
+def saved_view_modal(
+    params,
+    view,
+    model,
+    request,
+):
+    param_dict = {}
+    filters_applied = parse_qs(params)
+
+    sort_order = []
+    per_page = None
+    table_changes_pending = False
+    all_filters_removed = False
+    current_saved_view = None
+    current_saved_view_pk = None
+    non_filter_params = [
+        "all_filters_removed",
+        "page",
+        "per_page",
+        "sort",
+        "saved_view",
+        "table_changes_pending",
+    ]
+
+    table_name = lookup.get_table_for_model(model).__name__
+    for param in non_filter_params:
+        if param == "saved_view":
+            current_saved_view_pk = filters_applied.pop(param, None)
+            if current_saved_view_pk:
+                current_saved_view_pk = current_saved_view_pk[0]
+                try:
+                    current_saved_view = SavedView.objects.restrict(request.user, "view").get(pk=current_saved_view_pk)
+                except ObjectDoesNotExist:
+                    messages.error(request, f"Saved view {current_saved_view_pk} not found")
+
+        elif param == "table_changes_pending":
+            table_changes_pending = filters_applied.pop(param, False)
+        elif param == "all_filters_removed":
+            all_filters_removed = filters_applied.pop(param, False)
+        elif param == "per_page":
+            per_page = filters_applied.pop(param, None)
+        elif param == "sort":
+            sort_order = filters_applied.pop(param, [])
+
+    if filters_applied:
+        param_dict["filter_params"] = filters_applied
+    else:
+        if (current_saved_view is not None and all_filters_removed) or (current_saved_view is None):
+            # user removed all the filters in a saved view
+            param_dict["filter_params"] = {}
+        elif current_saved_view is not None:
+            # user did not make any changes to the saved view filter params
+            param_dict["filter_params"] = current_saved_view.config.get("filter_params", {})
+
+    if current_saved_view is not None and not table_changes_pending:
+        # user did not make any changes to the saved view table config
+        view_table_config = current_saved_view.config.get("table_config", {}).get(f"{table_name}", None)
+        if view_table_config is not None:
+            param_dict["table_config"] = view_table_config.get("columns", [])
+    else:
+        # display default user display
+        if request.user is not None and not isinstance(request.user, AnonymousUser):
+            param_dict["table_config"] = request.user.get_config(f"tables.{table_name}.columns")
+    # If both are not available, do not display table_config
+
+    if per_page:
+        # user made changes to saved view pagination count
+        param_dict["per_page"] = per_page
+    elif current_saved_view is not None and not per_page:
+        # no changes made, display current saved view pagination count
+        param_dict["per_page"] = current_saved_view.config.get(
+            "pagination_count", config.get_settings_or_config("PAGINATE_COUNT")
+        )
+    else:
+        # display default pagination count
+        param_dict["per_page"] = config.get_settings_or_config("PAGINATE_COUNT")
+
+    if sort_order:
+        # user made changes to saved view sort order
+        param_dict["sort_order"] = sort_order
+    elif current_saved_view is not None and not sort_order:
+        # no changes made, display current saved view sort order
+        param_dict["sort_order"] = current_saved_view.config.get("sort_order", [])
+    else:
+        # no sorting applied
+        param_dict["sort_order"] = []
+
+    param_dict = json.dumps(param_dict, indent=4, sort_keys=True, ensure_ascii=False)
+    return {
+        "form": SavedViewForm(),
+        "params": params,
+        "param_dict": param_dict,
+        "view": view,
+    }
+
+
+@register.inclusion_tag("utilities/templatetags/clear_view_modal.html")
+def clear_view_modal(saved_view):
+    return {"saved_view": saved_view}
 
 
 @register.inclusion_tag("utilities/templatetags/static_group_assignment_modal.html")

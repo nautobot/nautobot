@@ -46,6 +46,7 @@ class BaseModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
 
     objects = BaseManager.from_queryset(RestrictedQuerySet)()
+    is_saved_view_model = False  # SavedViewMixin overrides this to default True
     is_contact_associable_model = False  # ContactMixin overrides this to default True
     is_static_group_associable_model = False  # StaticGroupMixin overrides this to default True
 

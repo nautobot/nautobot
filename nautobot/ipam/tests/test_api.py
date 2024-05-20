@@ -1076,6 +1076,9 @@ class VLANLocationAssignmentTest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         cls.vlans = VLAN.objects.filter(locations__isnull=False)
         cls.locations = Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(VLAN))
+        # make sure there are 4 locations without vlans 1 and 2 for the create_data below
+        for i in range(4):
+            cls.locations[i].vlans.set([])
         locations_without_vlans = cls.locations.exclude(vlans__in=[cls.vlans[0], cls.vlans[1]])
 
         cls.create_data = [
