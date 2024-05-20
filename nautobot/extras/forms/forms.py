@@ -104,6 +104,7 @@ __all__ = (
     "ConfigContextSchemaBulkEditForm",
     "ConfigContextSchemaFilterForm",
     "CustomFieldForm",
+    "CustomFieldFilterForm",
     "CustomFieldModelCSVForm",
     "CustomFieldBulkCreateForm",  # 2.0 TODO remove this deprecated class
     "CustomFieldChoiceFormSet",
@@ -114,6 +115,7 @@ __all__ = (
     "DynamicGroupMembershipFormSet",
     "ExportTemplateForm",
     "ExportTemplateFilterForm",
+    "ExternalIntegrationFilterForm",
     "ExternalIntegrationForm",
     "ExternalIntegrationBulkEditForm",
     "GitRepositoryForm",
@@ -144,6 +146,7 @@ __all__ = (
     "RelationshipFilterForm",
     "RelationshipAssociationFilterForm",
     "RoleBulkEditForm",
+    "RoleFilterForm",
     "RoleForm",
     "ScheduledJobFilterForm",
     "SecretForm",
@@ -421,6 +424,17 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
             self.fields["key"].widget.attrs["readonly"] = True
 
 
+class CustomFieldFilterForm(NautobotFilterForm):
+    model = CustomField
+    q = forms.CharField(required=False, label="Search")
+    content_types = MultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()),
+        choices_as_strings=True,
+        required=False,
+        label="Content Type(s)",
+    )
+
+
 class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
     """
     Base class for CSV/JSON/YAML import of models that support custom fields.
@@ -636,6 +650,14 @@ class ExternalIntegrationBulkEditForm(NautobotBulkEditForm):
     class Meta:
         model = ExternalIntegration
         nullable_fields = ["extra_config", "secrets_group", "headers"]
+
+
+class ExternalIntegrationFilterForm(NautobotFilterForm):
+    model = ExternalIntegration
+    q = forms.CharField(required=False, label="Search")
+    secrets_group = DynamicModelMultipleChoiceField(
+        queryset=SecretsGroup.objects.all(), to_field_name="name", required=False
+    )
 
 
 #
@@ -1427,6 +1449,17 @@ class RoleBulkEditForm(NautobotBulkEditForm):
 
     class Meta:
         nullable_fields = ["weight"]
+
+
+class RoleFilterForm(NautobotFilterForm):
+    model = Role
+    q = forms.CharField(required=False, label="Search")
+    content_types = MultipleContentTypeField(
+        queryset=RoleModelsQuery().as_queryset(),
+        required=False,
+        choices_as_strings=True,
+        label="Content Type(s)",
+    )
 
 
 #

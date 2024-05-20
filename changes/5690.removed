@@ -1,0 +1,1 @@
+Removed deprecated `CustomFieldFilterForm` alias of `CustomFieldModelFilterFormMixin` as this would have caused confusion with the newly added `CustomFieldFilterForm` class providing filtering support for the Custom Fields list view.

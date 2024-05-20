@@ -52,6 +52,7 @@ exclude_docs: |
 
 validation:
   absolute_links: warn
+  anchors: warn
   omitted_files: warn
   unrecognized_links: warn
 

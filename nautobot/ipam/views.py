@@ -80,6 +80,7 @@ class NamespaceUIViewSet(
     form_class = forms.NamespaceForm
     bulk_update_form_class = forms.NamespaceBulkEditForm
     filterset_class = filters.NamespaceFilterSet
+    filterset_form_class = forms.NamespaceFilterForm
     queryset = Namespace.objects.all()
     serializer_class = serializers.NamespaceSerializer
     table_class = tables.NamespaceTable
@@ -302,6 +303,12 @@ class VRFBulkEditView(generic.BulkEditView):
     filterset = filters.VRFFilterSet
     table = tables.VRFTable
     form = forms.VRFBulkEditForm
+
+    def extra_post_save_action(self, obj, form):
+        if form.cleaned_data.get("add_prefixes", None):
+            obj.prefixes.add(*form.cleaned_data["add_prefixes"])
+        if form.cleaned_data.get("remove_prefixes", None):
+            obj.prefixes.remove(*form.cleaned_data["remove_prefixes"])
 
 
 class VRFBulkDeleteView(generic.BulkDeleteView):
@@ -713,6 +720,10 @@ class PrefixBulkEditView(generic.BulkEditView):
             obj.locations.add(*form.cleaned_data["add_locations"])
         if form.cleaned_data.get("remove_locations", None):
             obj.locations.remove(*form.cleaned_data["remove_locations"])
+        if form.cleaned_data.get("add_vrfs", None):
+            obj.vrfs.add(*form.cleaned_data["add_vrfs"])
+        if form.cleaned_data.get("remove_vrfs", None):
+            obj.vrfs.remove(*form.cleaned_data["remove_vrfs"])
 
 
 class PrefixBulkDeleteView(generic.BulkDeleteView):
