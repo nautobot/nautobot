@@ -57,7 +57,7 @@ class ProviderTestCase(FilterTestCases.NameOnlyFilterTestCase, FilterTestCases.F
     def test_location(self):
         expected = self.queryset.filter(
             circuits__circuit_terminations__location__in=[self.locations[0].pk, self.locations[1].pk]
-        )
+        ).distinct()
         params = {"location": [self.locations[0].pk, self.locations[1].pk]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
         params = {"location": [self.locations[0].name, self.locations[1].name]}
@@ -157,7 +157,8 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
             location=location,
         )
         interface_status = Status.objects.get_for_model(Interface).first()
-        interface1 = Interface.objects.create(device=device1, name="eth0", status=interface_status)
+        interface_role = Role.objects.get_for_model(Interface).first()
+        interface1 = Interface.objects.create(device=device1, name="eth0", status=interface_status, role=interface_role)
         interface2 = Interface.objects.create(device=device2, name="eth0", status=interface_status)
 
         circuit_terminations = CircuitTermination.objects.all()

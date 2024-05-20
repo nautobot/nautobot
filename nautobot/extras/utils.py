@@ -19,7 +19,9 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
+from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.constants import (
+    CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL,
     EXTRAS_FEATURES,
     JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
@@ -142,15 +144,22 @@ class FeatureQuery:
         # `registry` record being used by `FeatureQuery`.
 
         populate_model_features_registry()
-        query = Q()
-        for app_label, models in self.as_dict():
-            query |= Q(app_label=app_label, model__in=models)
+        try:
+            query = Q()
+            for app_label, models in self.as_dict():
+                query |= Q(app_label=app_label, model__in=models)
+        except KeyError:
+            query = Q(pk__in=[])
 
         return query
 
     def as_dict(self):
         """
-        Given an extras feature, return a dict of app_label: [models] for content type lookup
+        Given an extras feature, return a iterable of app_label: [models] for content type lookup.
+
+        Mis-named, as it returns an iterable of (key, value) (i.e. dict.items()) rather than an actual dict.
+
+        Raises a KeyError if the given feature doesn't exist.
         """
         return registry["model_features"][self.feature].items()
 
@@ -246,8 +255,10 @@ def populate_model_features_registry(refresh=False):
                             useful to narrow down the search for fields that match certain criteria. For example, if
                             `field_attributes` is set to {"related_model": RelationshipAssociation}, only fields with
                             a related model of RelationshipAssociation will be considered.
+        - 'additional_constraints': Optional dictionary of additional `{field: value}` constraints that can be checked.
     - Looks up all the models in the installed apps.
-    - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have fields with the names given in the dictionary.
+    - For each dictionary in lookup_confs, calls lookup_by_field() function to look for all models that have
+      fields with the names given in the dictionary.
     - Groups the results by app and updates the registry model features for each app.
     """
     if registry.get("populate_model_features_registry_called", False) and not refresh:
@@ -257,6 +268,11 @@ def populate_model_features_registry(refresh=False):
 
     lookup_confs = [
         {
+            "feature_name": "contacts",
+            "field_names": ["associated_contacts"],
+            "additional_constraints": {"is_contact_associable_model": True},
+        },
+        {
             "feature_name": "custom_fields",
             "field_names": ["_custom_field_data"],
         },
@@ -264,6 +280,16 @@ def populate_model_features_registry(refresh=False):
             "feature_name": "relationships",
             "field_names": ["source_for_associations", "destination_for_associations"],
             "field_attributes": {"related_model": RelationshipAssociation},
+        },
+        {
+            "feature_name": "saved_views",
+            "field_names": [],
+            "additional_constraints": {"is_saved_view_model": True},
+        },
+        {
+            "feature_name": "static_groups",
+            "field_names": ["associated_static_groups"],
+            "additional_constraints": {"is_static_group_associable_model": True},
         },
     ]
 
@@ -273,6 +299,7 @@ def populate_model_features_registry(refresh=False):
             app_models=app_models,
             field_names=lookup_conf["field_names"],
             field_attributes=lookup_conf.get("field_attributes"),
+            additional_constraints=lookup_conf.get("additional_constraints"),
         )
         feature_name = lookup_conf["feature_name"]
         registry["model_features"][feature_name] = registry_items
@@ -610,3 +637,40 @@ def migrate_role_data(
             model_to_migrate._meta.label,
             to_role_field_name,
         )
+
+
+def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
+    """
+    Deletes objects in the provided queryset and creates ObjectChange instances in bulk to improve performance.
+    For use with bulk delete views. This operation is wrapped in an atomic transaction.
+    """
+    from nautobot.extras.models import ObjectChange
+    from nautobot.extras.signals import change_context_state
+
+    change_context = change_context_state.get()
+    if change_context is None:
+        raise ValueError("Change logging must be enabled before using bulk_delete_with_bulk_change_logging")
+
+    with transaction.atomic():
+        try:
+            queued_object_changes = []
+            change_context.defer_object_changes = True
+            for obj in qs.iterator():
+                if not hasattr(obj, "to_objectchange"):
+                    break
+                if len(queued_object_changes) >= batch_size:
+                    ObjectChange.objects.bulk_create(queued_object_changes)
+                    queued_object_changes = []
+                oc = obj.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
+                if oc is not None:
+                    oc.user = change_context.get_user()
+                    oc.user_name = oc.user.username
+                    oc.request_id = change_context.change_id
+                    oc.change_context = change_context.context
+                    oc.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+                    queued_object_changes.append(oc)
+            ObjectChange.objects.bulk_create(queued_object_changes)
+            return qs.delete()
+        finally:
+            change_context.defer_object_changes = False
+            change_context.reset_deferred_object_changes()

@@ -15,6 +15,7 @@ from django.utils.html import format_html
 from nautobot.circuits.models import Circuit
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
+from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import extract_form_failures, extract_page_body, TestCase, ViewTestCases
 from nautobot.core.testing.utils import disable_warnings, post_data
 from nautobot.dcim.models import (
@@ -64,6 +65,8 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroup,
+    StaticGroupAssociation,
     Status,
     Tag,
     Team,
@@ -74,6 +77,7 @@ from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import RoleModelsQuery, TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
 # Use the proper swappable User model
@@ -1765,10 +1769,8 @@ class JobTestCase(
     model = Job
 
     def _get_queryset(self):
-        """Don't include hidden Jobs, non-installed Jobs, JobHookReceivers or JobButtonReceivers as they won't appear in the UI by default."""
-        return self.model.objects.filter(
-            installed=True, hidden=False, is_job_hook_receiver=False, is_job_button_receiver=False
-        )
+        """Don't include hidden Jobs or non-installed Jobs, as they won't appear in the UI by default."""
+        return self.model.objects.filter(installed=True, hidden=False)
 
     @classmethod
     def setUpTestData(cls):
@@ -2767,7 +2769,177 @@ class RelationshipAssociationTestCase(
         self.assertNotIn(instance2.destination.name, content, msg=content)
 
 
+class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = StaticGroup
+
+    @classmethod
+    def setUpTestData(cls):
+        content_type = ContentType.objects.get_for_model(Device)
+
+        cls.form_data = {
+            "name": "The Best Devices",
+            "description": "No really!",
+            "content_type": content_type.pk,
+            "tenant": Tenant.objects.first().pk,
+        }
+
+        cls.bulk_edit_data = {
+            "description": "Is anyone there?",
+            "tenant": Tenant.objects.last().pk,
+        }
+
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
+        super().test_edit_object_with_permission()
+
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
+        super().test_edit_object_with_constrained_permission()
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_assign_successful(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+        group_1 = StaticGroup.objects.create(content_type=location_ct, name="Group 1")
+        group_2 = StaticGroup.objects.create(content_type=location_ct, name="Group 2")
+        group_2.add_members(Location.objects.filter(name__startswith="Root"))
+
+        self.add_permissions(
+            "extras.add_staticgroupassociation", "extras.delete_staticgroupassociation", "extras.add_staticgroup"
+        )
+
+        url = reverse("extras:staticgroup_bulk_assign")
+        request = {
+            "path": url,
+            "data": post_data(
+                {
+                    "content_type": location_ct.pk,
+                    "pk": list(Location.objects.filter(parent__isnull=True).values_list("pk", flat=True)),
+                    "create_and_assign_to_new_group_name": "Root Locations",
+                    "add_to_groups": [group_1.pk],
+                    "remove_from_groups": [group_2.pk],
+                }
+            ),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        new_group = StaticGroup.objects.get(name="Root Locations")
+        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), new_group.members)
+        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), group_1.members)
+        self.assertQuerysetEqualAndNotEmpty(
+            Location.objects.filter(name__startswith="Root").exclude(parent__isnull=True), group_2.members
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_assign_hidden_groups_forbidden(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+        group_1 = StaticGroup.all_objects.create(content_type=location_ct, name="Group 1", hidden=True)
+        group_2 = StaticGroup.all_objects.create(content_type=location_ct, name="Group 2", hidden=True)
+        group_2.add_members(Location.objects.filter(name__startswith="Root"))
+
+        self.add_permissions(
+            "extras.add_staticgroupassociation", "extras.delete_staticgroupassociation", "extras.add_staticgroup"
+        )
+
+        url = reverse("extras:staticgroup_bulk_assign")
+        request = {
+            "path": url,
+            "data": post_data(
+                {
+                    "content_type": location_ct.pk,
+                    "pk": list(Location.objects.filter(parent__isnull=True).values_list("pk", flat=True)),
+                    "add_to_groups": [group_1.pk],
+                },
+            ),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        # TODO check for specific form validation error?
+        self.assertQuerysetEqual(group_1.members, [])
+
+        del request["data"]["add_to_groups"]
+        request["data"]["remove_from_groups"] = [group_2.pk]
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        # TODO check for specific form validation error?
+        self.assertQuerysetEqual(group_2.members, Location.objects.filter(name__startswith="Root"))
+
+    # TODO: negative tests for bulk assign - global and object-level permission violations, invalid data, etc.
+
+    def test_list_objects_omits_hidden_by_default(self):
+        """The list view should not by default include any hidden groups."""
+        sg1 = StaticGroup.all_objects.filter(hidden=False).first()
+        self.assertIsNotNone(sg1)
+        sg2 = StaticGroup.all_objects.filter(hidden=True).first()
+        self.assertIsNotNone(sg2)
+
+        self.add_permissions("extras.view_staticgroup")
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertIn(sg1.get_absolute_url(), content, msg=content)
+        self.assertNotIn(sg2.get_absolute_url(), content, msg=content)
+
+    def test_list_objects_can_explicitly_include_hidden(self):
+        """The list view can include hidden groups with the correct query parameter."""
+        sg1 = StaticGroup.all_objects.filter(hidden=False).first()
+        self.assertIsNotNone(sg1)
+        sg2 = StaticGroup.all_objects.filter(hidden=True).first()
+        self.assertIsNotNone(sg2)
+
+        self.add_permissions("extras.view_staticgroup")
+        response = self.client.get(f"{self._get_url('list')}?hidden=True")
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertNotIn(sg1.get_absolute_url(), content, msg=content)
+        self.assertIn(sg2.get_absolute_url(), content, msg=content)
+
+
+class StaticGroupAssociationTestCase(
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
+    model = StaticGroupAssociation
+
+    def test_list_objects_omits_hidden_by_default(self):
+        """The list view should not by default include associations for hidden groups."""
+        sga1 = StaticGroupAssociation.all_objects.filter(static_group__hidden=False).first()
+        self.assertIsNotNone(sga1)
+        sga2 = StaticGroupAssociation.all_objects.filter(static_group__hidden=True).first()
+        self.assertIsNotNone(sga2)
+
+        self.add_permissions("extras.view_staticgroupassociation")
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertIn(sga1.get_absolute_url(), content, msg=content)
+        self.assertNotIn(sga2.get_absolute_url(), content, msg=content)
+
+    def test_list_objects_can_explicitly_include_hidden(self):
+        """The list view can include hidden groups' associations with the correct query parameter."""
+        sga1 = StaticGroupAssociation.all_objects.filter(static_group__hidden=False).first()
+        self.assertIsNotNone(sga1)
+        sga2 = StaticGroupAssociation.all_objects.filter(static_group__hidden=True).first()
+        self.assertIsNotNone(sga2)
+
+        self.add_permissions("extras.view_staticgroupassociation")
+        response = self.client.get(f"{self._get_url('list')}?hidden=True")
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertNotIn(sga1.get_absolute_url(), content, msg=content)
+        self.assertIn(sga2.get_absolute_url(), content, msg=content)
+
+
 class StatusTestCase(
+    # TODO? ViewTestCases.BulkDeleteObjectsViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
     ViewTestCases.EditObjectViewTestCase,
@@ -3007,11 +3179,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
             for model_class in eligible_ct_model_classes:
                 verbose_name_plural = model_class._meta.verbose_name_plural
                 content_type = ContentType.objects.get_for_model(model_class)
-                result = " ".join(elem.capitalize() for elem in verbose_name_plural.split())
-                if result == "Ip Addresses":
-                    result = "IP Addresses"
-                elif result == "Vlans":
-                    result = "VLANs"
+                result = " ".join(bettertitle(elem) for elem in verbose_name_plural.split())
                 # Assert tables are correctly rendered
                 if content_type not in role_content_types:
                     if result == "Contact Associations":

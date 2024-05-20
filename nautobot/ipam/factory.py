@@ -6,6 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 import factory
 import faker
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.factory import (
     get_random_instances,
     NautobotBoolIterator,
@@ -36,7 +37,7 @@ class RIRFactory(OrganizationalModelFactory):
     is_private = factory.LazyAttribute(lambda rir: rir.name.startswith("RFC"))
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
 
 def random_route_distinguisher():
@@ -72,7 +73,7 @@ class RouteTargetFactory(PrimaryModelFactory):
     name = factory.LazyFunction(random_route_distinguisher)
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
     has_tenant = factory.Faker("boolean", chance_of_getting_true=75)
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
@@ -100,7 +101,7 @@ class VRFFactory(PrimaryModelFactory):
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
     namespace = random_instance(Namespace, allow_null=False)
 
@@ -135,7 +136,7 @@ class VLANGroupFactory(OrganizationalModelFactory):
     name = factory.LazyAttribute(lambda o: o.unique_name.upper())
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
     has_location = NautobotBoolIterator()
     location = factory.Maybe(
@@ -211,7 +212,7 @@ class VLANFactory(PrimaryModelFactory):
     )
 
     has_description = NautobotBoolIterator()
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
     has_vlan_group = NautobotBoolIterator()
     vlan_group = factory.Maybe("has_vlan_group", random_instance(VLANGroup, allow_null=False), None)
@@ -251,7 +252,7 @@ class NamespaceFactory(PrimaryModelFactory):
     class Meta:
         model = Namespace
 
-    name = UniqueFaker("text", max_nb_chars=20)
+    name = UniqueFaker("text", max_nb_chars=20)  # could be up to CHARFIELD_MAX_LENGTH but that gets unwieldy fast
 
 
 class PrefixFactory(PrimaryModelFactory):
@@ -293,7 +294,7 @@ class PrefixFactory(PrimaryModelFactory):
         UniqueFaker("ipv6_network"),
         UniqueFaker("ipv4", network=True),
     )
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
     role = factory.Maybe(
         "has_role",
         random_instance(lambda: Role.objects.get_for_model(Prefix), allow_null=False),
@@ -462,7 +463,7 @@ class IPAddressFactory(PrimaryModelFactory):
     #     UniqueFaker("ipv6"),
     #     UniqueFaker("ipv4_private"),
     # )
-    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=200), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
     dns_name = factory.Maybe("has_dns_name", factory.Faker("hostname"), "")
     # TODO: Needs to be made more robust because prefixes and namespaces need to exist first
     # nat_inside = factory.SubFactory(

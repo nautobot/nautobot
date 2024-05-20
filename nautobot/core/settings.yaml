@@ -128,24 +128,40 @@ properties:
     type: "array"
   BANNER_BOTTOM:
     default: ""
-    description: "Custom content to be displayed in a banner at the bottom of the page. HTML is allowed."
+    description: >-
+      Custom content to be displayed in a banner at the bottom of all Nautobot pages.
+    details: |-
+      +/- 2.2.4
+          Markdown formatting is supported within this message, as well as
+          [a limited subset of HTML](../../platform-functionality/template-filters.md#render_markdown).
     environment_variable: "NAUTOBOT_BANNER_BOTTOM"
     is_constance_config: true
     type: "string"
   BANNER_LOGIN:
     default: ""
-    description: "Custom content to be displayed on the login page above the login form. HTML is allowed."
+    description: >-
+      Custom content to be displayed in a banner on the login page above the login form.
+    details: |-
+      +/- 2.2.4
+          Markdown formatting is supported within this message, as well as
+          [a limited subset of HTML](../../platform-functionality/template-filters.md#render_markdown).
     environment_variable: "NAUTOBOT_BANNER_LOGIN"
     is_constance_config: true
     type: "string"
   BANNER_TOP:
     default: ""
-    description: "Custom content to be displayed in a banner at the top of the page. HTML is allowed."
+    description: >-
+      Custom content to be displayed in a banner at the top of all Nautobot pages.
+    details: |-
+      +/- 2.2.4
+          Markdown formatting is supported within this message, as well as
+          [a limited subset of HTML](../../platform-functionality/template-filters.md#render_markdown).
     environment_variable: "NAUTOBOT_BANNER_TOP"
     is_constance_config: true
     type: "string"
   BRANDING_FILEPATHS:
     default:
+      css: null
       favicon: null
       header_bullet: null
       icon_16: null
@@ -153,57 +169,76 @@ properties:
       icon_180: null
       icon_192: null
       icon_mask: null
+      javascript: null
       logo: null
       nav_bullet: null
     description: >-
-      A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate image assets used for
-      custom branding. Each of these assets takes the place of the corresponding stock Nautobot asset.
+      A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate assets used for
+      custom branding of your Nautobot instance.
+      With the exception of `css` and `javascript`, which provide the option to add an _additional_ file to Nautobot
+      page content, each of the other assets takes the place of the corresponding stock Nautobot asset.
       This allows for, for instance, providing your own navbar logo and favicon.
-      If a custom image asset is not provided for any of the above options, the stock Nautobot asset is used.
+      If a custom asset is not provided for any of the above options, the stock Nautobot asset is used.
+    details: |-
+      +++ 2.1.0
+          The `header_bullet` and `nav_bullet` assets were added as options.
+
+      +++ 2.2.4
+          The `css` and `javascript` assets were added as options.
     properties:
+      css:
+        "$ref": "#/definitions/relative_path"
+        default: null
+        description: "Custom global CSS file"
+        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_CSS"
       favicon:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "Browser favicon"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_FAVICON"
       header_bullet:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "Bullet image used for various view headers"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET"
       icon_16:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "16x16px icon"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_16"
       icon_180:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "180x180px icon - used for the apple-touch-icon header"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_180"
       icon_192:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "192x192px icon"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_192"
       icon_32:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "32x32px icon"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_32"
       icon_mask:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "Mono-chrome icon used for the mask-icon header"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK"
+      javascript:
+        "$ref": "#/definitions/relative_path"
+        default: null
+        description: "Custom global JavaScript file"
+        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT"
       logo:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "Navbar logo"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_LOGO"
       nav_bullet:
         "$ref": "#/definitions/relative_path"
-        default: ""
+        default: null
         description: "Bullet image used for nav menu headers"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET"
     type: "object"
@@ -432,6 +467,12 @@ properties:
       !!! warning
           If enabling indefinite changelog retention, it is recommended to periodically delete old entries.
           Otherwise, the database may eventually exceed capacity.
+
+      +/- 2.2.0
+          As of Nautobot 2.2.0, changelog cleanup does not run automatically. Use the `Cleanup of ObjectChange records`
+          system Job to handle changelog cleanup; you may schedule this to run automatically like any other Job if
+          desired. The `CHANGELOG_RETENTION` setting provides a default age cutoff for the Job but may be overridden
+          at runtime if desired.
     environment_variable: "NAUTOBOT_CHANGELOG_RETENTION"
     is_constance_config: true
     type: "integer"
@@ -1135,7 +1176,7 @@ properties:
       !!! note
           The Docker container normally attempts to run migrations on startup; however, if the database is
           in a read-only state the Docker container will fail to start. Setting the environment variable
-          [`NAUTOBOT_DOCKER_SKIP_INIT`](../installation/docker.md#nautobot_docker_skip_init) to `true`
+          [`NAUTOBOT_DOCKER_SKIP_INIT`](../installation-extras/docker.md#nautobot_docker_skip_init) to `true`
           will prevent the migrations from occurring.
 
       !!! note
@@ -1171,6 +1212,19 @@ properties:
       "Guide to Nautobot Prometheus metrics": "../guides/prometheus-metrics.md"
     type: "boolean"
     version_added: "2.1.5"
+  METRICS_DISABLED_APPS:
+    default: []
+    description: >-
+      A list of app names for which Prometheus metrics should be disabled.
+      (If provided as an environment variable, it should be a comma-separated string, for example
+      `NAUTOBOT_METRICS_DISABLED_APPS="nautobot_ssot, nautobot_device_lifecycle_mgmt"`.)
+    environment_variable: "NAUTOBOT_METRICS_DISABLED_APPS"
+    items:
+      type: "string"
+    see_also:
+      "Guide to Nautobot Prometheus metrics": "../guides/prometheus-metrics.md"
+    type: "array"
+    version_added: "2.2.1"
   METRICS_ENABLED:
     default: false
     description: "Toggle the availability of Prometheus-compatible metrics at `/metrics`."
@@ -1376,6 +1430,13 @@ properties:
     environment_variable: "NAUTOBOT_RACK_ELEVATION_DEFAULT_UNIT_WIDTH"
     is_constance_config: true
     type: "integer"
+  RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT:
+    default: false
+    description: "Enables two-digit format for the rack unit numbering in a rack elevation diagram."
+    environment_variable: "NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"
+    is_constance_config: true
+    type: "boolean"
+    version_added: "2.2.1"
   REDIS_LOCK_TIMEOUT:
     default: 600
     description: >-

@@ -20,7 +20,7 @@ from nautobot.circuits.models import Provider
 from nautobot.core import testing
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
-from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.utils import get_serializer_for_model, get_view_name
 from nautobot.core.api.versioning import NautobotAPIVersioning
 from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
 from nautobot.core.utils.lookup import get_route_for_model
@@ -28,7 +28,7 @@ from nautobot.dcim import models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
 from nautobot.extras import choices, models as extras_models
 from nautobot.ipam import models as ipam_models
-from nautobot.ipam.api import serializers as ipam_serializers
+from nautobot.ipam.api import serializers as ipam_serializers, views as ipam_api_views
 from nautobot.tenancy import models as tenancy_models
 
 User = get_user_model()
@@ -770,6 +770,7 @@ class APIOrderingTestCase(testing.APITestCase):
             "TextField": "admin_contact",
             "DateTimeField": "created",
         }
+        cls.maxDiff = None
 
     def _validate_sorted_response(self, response, queryset, field_name, is_fk_field=False):
         self.assertHttpStatus(response, 200)
@@ -794,18 +795,24 @@ class APIOrderingTestCase(testing.APITestCase):
         """Tests that results are returned in the expected ascending order."""
 
         for field_type, field_name in self.field_type_map.items():
-            with self.subTest(f"Testing {field_type}"):
-                response = self.client.get(f"{self.url}?sort={field_name}&limit=10", **self.header)
-                self._validate_sorted_response(response, Provider.objects.all().order_by(field_name), field_name)
+            with self.subTest(f"Testing {field_type} {field_name}"):
+                # Use `name` as a secondary sort as fields like `asn` and `admin_contact` may be null
+                response = self.client.get(f"{self.url}?sort={field_name},name&limit=10", **self.header)
+                self._validate_sorted_response(
+                    response, Provider.objects.all().order_by(field_name, "name"), field_name
+                )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_descending_sort(self):
         """Tests that results are returned in the expected descending order."""
 
         for field_type, field_name in self.field_type_map.items():
-            with self.subTest(f"Testing {field_type}"):
-                response = self.client.get(f"{self.url}?sort=-{field_name}&limit=10", **self.header)
-                self._validate_sorted_response(response, Provider.objects.all().order_by(f"-{field_name}"), field_name)
+            with self.subTest(f"Testing {field_type} {field_name}"):
+                # Use `name` as a secondary sort as fields like `asn` and `admin_contact` may be null
+                response = self.client.get(f"{self.url}?sort=-{field_name},name&limit=10", **self.header)
+                self._validate_sorted_response(
+                    response, Provider.objects.all().order_by(f"-{field_name}", "name"), field_name
+                )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_sorting_tree_node_models(self):
@@ -985,8 +992,30 @@ class NewUIGetMenuAPIViewTestCase(testing.APITestCase):
                     "Custom Links": "/extras/custom-links/",
                     "Notes": "/extras/notes/",
                 },
+                "Users": {"Saved Views": "/user/saved-views/"},
             },
         }
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, expected_response)
+
+
+class NautobotGetViewNameTest(TestCase):
+    """
+    Some unit tests for the get_view_name() functionality.
+    """
+
+    @override_settings(ALLOWED_HOSTS=["*"])
+    def test_get(self):
+        """Assert that the proper view name is displayed for the correct view."""
+        viewset = ipam_api_views.PrefixViewSet
+        # We need to get a specific view, so we need to set the class kwargs
+        view_kwargs = {
+            "Prefixes": {"suffix": "List", "basename": "prefix", "detail": False},
+            "Prefix": {"suffix": "Instance", "basename": "prefix", "detail": True},
+            "Available IPs": {"name": "Available IPs"},
+            "Available Prefixes": {"name": "Available Prefixes"},
+            "Notes": {"name": "Notes"},
+        }
+        for view_name, view_kwarg in view_kwargs.items():
+            self.assertEqual(view_name, get_view_name(viewset(**view_kwarg)))

@@ -64,6 +64,13 @@ var ready = (callback) => {
     }
 };
 
+function getAttribute(node, querySelector, attribute) {
+    if (node === null || node.querySelector(querySelector) === null) {
+        return "";
+    }
+    return node.querySelector(querySelector).getAttribute(attribute) || "";
+}
+
 ready(() => {
     fetch("{% url 'dcim-api:device-napalm' pk=object.pk %}?method=get_lldp_neighbors_detail")
     .then((response) => {
@@ -80,10 +87,10 @@ ready(() => {
             // var row = $('*[data-interface-name="' + iface.split(".")[0].replace(/([\/:])/g, "\\$1") + '"]');
 
             // Glean configured hostnames/interfaces from the DOM
-            const configured_device = row.querySelector('td.configured_device').getAttribute('data');
-            const configured_chassis = row.querySelector('td.configured_device').getAttribute('data-chassis');
-            const configured_interface = row.querySelector('td.configured_interface').getAttribute('data-interface-name').toLowerCase();
-            const configured_mac_address = row.querySelector('td.configured_mac').getAttribute('data-mac-address').toLowerCase();
+            const configured_device = getAttribute(row, 'td.configured_device', 'data');
+            const configured_chassis = getAttribute(row, 'td.configured_device', 'data-chassis');
+            const configured_interface = getAttribute(row, 'td.configured_interface', 'data-interface-name').toLowerCase();
+            const configured_mac_address = getAttribute(row, 'td.configured_mac', 'data-mac-address').toLowerCase();
             let configured_interface_short = null;
             if (configured_interface) {
                 // Match long-form IOS names against short ones (e.g. Gi0/1 == GigabitEthernet0/1).
@@ -122,5 +129,6 @@ ready(() => {
         }
     });
 });
+
 </script>
 {% endblock %}

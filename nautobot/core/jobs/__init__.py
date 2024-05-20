@@ -14,6 +14,7 @@ from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
+from nautobot.core.jobs.cleanup import LogsCleanup
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
 from nautobot.extras.datasources import ensure_git_repository, git_repository_dry_run, refresh_datasource_content
@@ -50,7 +51,8 @@ class GitRepositorySync(Job):
             # Given that the above succeeded, tell all workers (including ourself) to call ensure_git_repository()
             app.control.broadcast("refresh_git_repository", repository_pk=repository.pk, head=repository.current_head)
         finally:
-            self.logger.info(f"Repository synchronization completed in {job_result.duration}")
+            if job_result.duration:
+                self.logger.info("Repository synchronization completed in %s", job_result.duration)
 
 
 class GitRepositoryDryRun(Job):
@@ -134,7 +136,15 @@ class ExportObjectList(Job):
         #       such that they never are even seen here.
         query_params = QueryDict(query_string)
         self.logger.debug("Parsed query_params: `%s`", query_params.dict())
-        default_non_filter_params = ("export", "page", "per_page", "sort")
+        default_non_filter_params = (
+            "all_filters_removed",
+            "export",
+            "page",
+            "per_page",
+            "saved_view",
+            "sort",
+            "table_changes_pending",
+        )
         filter_params = get_filterable_params_from_filter_params(
             query_params, default_non_filter_params, filterset_class()
         )
@@ -313,5 +323,5 @@ class ImportObjects(Job):
             raise RunJobTaskFailed("CSV import not fully successful, see logs")
 
 
-jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun, ImportObjects]
+jobs = [ExportObjectList, GitRepositorySync, GitRepositoryDryRun, ImportObjects, LogsCleanup]
 register_jobs(*jobs)

@@ -2,6 +2,7 @@ import re
 from unittest import mock
 import urllib.parse
 
+from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory
@@ -9,6 +10,7 @@ from django.test.utils import override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
 
+from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -71,6 +73,27 @@ class HomeViewTestCase(TestCase):
         response = self.client.get(f"{url}?{urllib.parse.urlencode(params)}")
         self.assertHttpStatus(response, 200)
 
+    def test_appropriate_models_included_in_global_search(self):
+        # Gather core app configs
+        existing_models = []
+        global_searchable_models = []
+        for app_name in ["circuits", "dcim", "extras", "ipam", "tenancy", "virtualization"]:
+            app_config = apps.get_app_config(app_name)
+            existing_models += [model._meta.model_name for model in app_config.get_models()]
+            global_searchable_models += app_config.searchable_models
+
+        # Remove those models that are not searchable
+        existing_models = [model for model in existing_models if model not in GLOBAL_SEARCH_EXCLUDE_LIST]
+        existing_models.sort()
+
+        # See if there are any models that are missing from global search
+        difference = [model for model in existing_models if model not in global_searchable_models]
+        if difference:
+            self.fail(
+                f'Existing model/models {",".join(difference)} are not included in the searchable_models attribute of the app config.\n'
+                'If you do not want the models to be searchable, please include them in the GLOBAL_SEARCH_EXCLUDE_LIST constant in nautobot.core.constants.'
+            )
+
     def make_request(self):
         url = reverse("home")
         response = self.client.get(url)
@@ -122,6 +145,39 @@ class HomeViewTestCase(TestCase):
         response = self.client.get(url)
         response_content = response.content.decode(response.charset).replace("\n", "")
         self.assertNotRegex(response_content, footer_hostname_version_pattern)
+
+    def test_banners_markdown(self):
+        url = reverse("home")
+        with override_settings(
+            BANNER_TOP="# Hello world",
+            BANNER_BOTTOM="[info](https://nautobot.com)",
+        ):
+            response = self.client.get(url)
+        self.assertInHTML("<h1>Hello world</h1>", response.content.decode(response.charset))
+        self.assertInHTML(
+            '<a href="https://nautobot.com" rel="noopener noreferrer">info</a>',
+            response.content.decode(response.charset),
+        )
+
+        with override_settings(BANNER_LOGIN="_Welcome to Nautobot!_"):
+            self.client.logout()
+            response = self.client.get(reverse("login"))
+        self.assertInHTML("<em>Welcome to Nautobot!</em>", response.content.decode(response.charset))
+
+    def test_banners_no_xss(self):
+        url = reverse("home")
+        with override_settings(
+            BANNER_TOP='<script>alert("Hello from above!");</script>',
+            BANNER_BOTTOM='<script>alert("Hello from below!");</script>',
+        ):
+            response = self.client.get(url)
+        self.assertNotIn("Hello from above", response.content.decode(response.charset))
+        self.assertNotIn("Hello from below", response.content.decode(response.charset))
+
+        with override_settings(BANNER_LOGIN='<script>alert("Welcome to Nautobot!");</script>'):
+            self.client.logout()
+            response = self.client.get(reverse("login"))
+        self.assertNotIn("Welcome to Nautobot!", response.content.decode(response.charset))
 
 
 @override_settings(BRANDING_TITLE="Nautobot")
@@ -218,6 +274,25 @@ class FilterFormsTestCase(TestCase):
         response_content = response.content.decode(response.charset).replace("\n", "")
         self.assertInHTML(locations[0].name, response_content)
         self.assertInHTML(locations[1].name, response_content)
+
+    def test_filtering_crafted_query_params(self):
+        """Test for reflected-XSS vulnerability GHSA-jxgr-gcj5-cqqg."""
+        self.add_permissions("dcim.view_location")
+        query_param = "?location_type=1 onmouseover=alert('hi') foo=bar"
+        url = reverse("dcim:location_list") + query_param
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_content = response.content.decode(response.charset)
+        # The important thing here is that the data-field-parent and data-field-value are correctly quoted
+        self.assertInHTML(
+            """
+<span class="filter-selection-choice-remove remove-filter-param"
+      data-field-type="child"
+      data-field-parent="location_type"
+      data-field-value="1 onmouseover=alert(&#x27;hi&#x27;) foo=bar"
+>×</span>""",  # noqa: RUF001 - ambiguous-unicode-character-string
+            response_content,
+        )
 
 
 class ForceScriptNameTestcase(TestCase):

@@ -25,6 +25,9 @@ CACHES = {
 }
 ```
 
++++ 2.2.1
+    In case the `/metrics` endpoint is not performant or not required, you can disable specific apps with the [`METRICS_DISABLED_APPS`](../configuration/optional-settings.md#metrics_disabled_apps) configuration setting.
+
 For more information see the [django-prometheus](https://github.com/korfuri/django-prometheus) docs.
 
 ## Authentication

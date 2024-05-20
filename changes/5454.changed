@@ -1,7 +1,0 @@
-Changed one-to-many links from Controller to `PROTECT` against deleting (WARNING: migrations have been changed, DB needs to be recreated if 2.0.0b1 was previously installed).
-Renamed ControllerDeviceGroup to ControllerManagedDeviceGroup.
-Renamed Controller.deployed_controller_device to Controller.controller_device.
-Renamed Controller.deployed_controller_group to Controller.controller_device_redundancy_group.
-Renamed Device.controller_device_group to Device.controller_managed_device_group.
-Removed ConfigContext from ControllerManagedDeviceGroup.
-Removed ConfigContext from Controller.

@@ -2,13 +2,17 @@ import datetime
 import json
 import logging
 import re
+from urllib.parse import parse_qs
 
 from django import template
 from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.staticfiles.finders import find
+from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify as django_slugify
 from django_jinja import library
@@ -19,6 +23,8 @@ from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.utils import color, config, data, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
+from nautobot.users.forms import SavedViewForm
+from nautobot.users.models import SavedView
 
 # S308 is suspicious-mark-safe-usage, but these are all using static strings that we know to be safe
 HTML_TRUE = mark_safe('<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>')  # noqa: S308
@@ -71,21 +77,14 @@ def hyperlinked_object(value, field="display"):
         >>> hyperlinked_object(location, "name")
         '<a href="/dcim/locations/leaf/">Leaf</a>'
     """
-    if value is None:
-        return placeholder(value)
-    display = getattr(value, field) if hasattr(value, field) else str(value)
-    if hasattr(value, "get_absolute_url"):
-        if hasattr(value, "description") and value.description:
-            return format_html('<a href="{}" title="{}">{}</a>', value.get_absolute_url(), value.description, display)
-        return format_html('<a href="{}">{}</a>', value.get_absolute_url(), display)
-    return format_html("{}", display)
+    return _build_hyperlink(value, field)
 
 
 @library.filter()
 @register.filter()
 def hyperlinked_email(value):
     """Render an email address as a `mailto:` hyperlink."""
-    if value is None:
+    if not value:
         return placeholder(value)
     return format_html('<a href="mailto:{}">{}</a>', value, value)
 
@@ -94,7 +93,7 @@ def hyperlinked_email(value):
 @register.filter()
 def hyperlinked_phone_number(value):
     """Render a phone number as a `tel:` hyperlink."""
-    if value is None:
+    if not value:
         return placeholder(value)
     return format_html('<a href="tel:{}">{}</a>', value, value)
 
@@ -199,7 +198,7 @@ def render_markdown(value):
 
 @library.filter()
 @register.filter()
-def render_json(value, syntax_highlight=True):
+def render_json(value, syntax_highlight=True, pretty_print=False):
     """
     Render a dictionary as formatted JSON.
 
@@ -208,7 +207,11 @@ def render_json(value, syntax_highlight=True):
     """
     rendered_json = json.dumps(value, indent=4, sort_keys=True, ensure_ascii=False)
     if syntax_highlight:
-        return format_html('<code class="language-json">{}</code>', rendered_json)
+        html_string = '<code class="language-json">{}</code>'
+        if pretty_print:
+            html_string = "<pre>" + html_string + "</pre>"
+        return format_html(html_string, rendered_json)
+
     return rendered_json
 
 
@@ -721,6 +724,118 @@ def filter_form_modal(
     }
 
 
+@register.inclusion_tag("utilities/templatetags/saved_view_modal.html")
+def saved_view_modal(
+    params,
+    view,
+    model,
+    request,
+):
+    param_dict = {}
+    filters_applied = parse_qs(params)
+
+    sort_order = []
+    per_page = None
+    table_changes_pending = False
+    all_filters_removed = False
+    current_saved_view = None
+    current_saved_view_pk = None
+    non_filter_params = [
+        "all_filters_removed",
+        "page",
+        "per_page",
+        "sort",
+        "saved_view",
+        "table_changes_pending",
+    ]
+
+    table_name = lookup.get_table_for_model(model).__name__
+    for param in non_filter_params:
+        if param == "saved_view":
+            current_saved_view_pk = filters_applied.pop(param, None)
+            if current_saved_view_pk:
+                current_saved_view_pk = current_saved_view_pk[0]
+                try:
+                    current_saved_view = SavedView.objects.restrict(request.user, "view").get(pk=current_saved_view_pk)
+                except ObjectDoesNotExist:
+                    messages.error(request, f"Saved view {current_saved_view_pk} not found")
+
+        elif param == "table_changes_pending":
+            table_changes_pending = filters_applied.pop(param, False)
+        elif param == "all_filters_removed":
+            all_filters_removed = filters_applied.pop(param, False)
+        elif param == "per_page":
+            per_page = filters_applied.pop(param, None)
+        elif param == "sort":
+            sort_order = filters_applied.pop(param, [])
+
+    if filters_applied:
+        param_dict["filter_params"] = filters_applied
+    else:
+        if (current_saved_view is not None and all_filters_removed) or (current_saved_view is None):
+            # user removed all the filters in a saved view
+            param_dict["filter_params"] = {}
+        elif current_saved_view is not None:
+            # user did not make any changes to the saved view filter params
+            param_dict["filter_params"] = current_saved_view.config.get("filter_params", {})
+
+    if current_saved_view is not None and not table_changes_pending:
+        # user did not make any changes to the saved view table config
+        view_table_config = current_saved_view.config.get("table_config", {}).get(f"{table_name}", None)
+        if view_table_config is not None:
+            param_dict["table_config"] = view_table_config.get("columns", [])
+    else:
+        # display default user display
+        if request.user is not None and not isinstance(request.user, AnonymousUser):
+            param_dict["table_config"] = request.user.get_config(f"tables.{table_name}.columns")
+    # If both are not available, do not display table_config
+
+    if per_page:
+        # user made changes to saved view pagination count
+        param_dict["per_page"] = per_page
+    elif current_saved_view is not None and not per_page:
+        # no changes made, display current saved view pagination count
+        param_dict["per_page"] = current_saved_view.config.get(
+            "pagination_count", config.get_settings_or_config("PAGINATE_COUNT")
+        )
+    else:
+        # display default pagination count
+        param_dict["per_page"] = config.get_settings_or_config("PAGINATE_COUNT")
+
+    if sort_order:
+        # user made changes to saved view sort order
+        param_dict["sort_order"] = sort_order
+    elif current_saved_view is not None and not sort_order:
+        # no changes made, display current saved view sort order
+        param_dict["sort_order"] = current_saved_view.config.get("sort_order", [])
+    else:
+        # no sorting applied
+        param_dict["sort_order"] = []
+
+    param_dict = json.dumps(param_dict, indent=4, sort_keys=True, ensure_ascii=False)
+    return {
+        "form": SavedViewForm(),
+        "params": params,
+        "param_dict": param_dict,
+        "view": view,
+    }
+
+
+@register.inclusion_tag("utilities/templatetags/clear_view_modal.html")
+def clear_view_modal(saved_view):
+    return {"saved_view": saved_view}
+
+
+@register.inclusion_tag("utilities/templatetags/static_group_assignment_modal.html")
+def static_group_assignment_modal(request, content_type):
+    from nautobot.extras.forms import StaticGroupBulkAssignForm
+
+    return {
+        "request": request,
+        "form": StaticGroupBulkAssignForm(model=content_type.model_class()),
+    }
+
+
 @register.inclusion_tag("utilities/templatetags/modal_form_as_dialog.html")
 def modal_form_as_dialog(form, editing=False, form_name=None, obj=None, obj_type=None):
     """Generate a form in a modal view.
@@ -813,7 +928,7 @@ def hyperlinked_object_with_color(obj):
     if obj:
         content = f'<span class="label" style="color: {fgcolor(obj.color)}; background-color: #{obj.color}">{hyperlinked_object(obj)}</span>'
         return format_html(content)
-    return "—"
+    return HTML_NONE
 
 
 @register.filter()
@@ -822,3 +937,67 @@ def queryset_to_pks(obj):
     result = list(obj.values_list("pk", flat=True)) if obj else []
     result = [str(entry) for entry in result]
     return ",".join(result)
+
+
+@library.filter()
+@register.filter()
+def hyperlinked_object_target_new_tab(value, field="display"):
+    """Render and link to a Django model instance, if any, or render a placeholder if not.
+
+    Similar to the hyperlinked_object filter, but passes attributes needed to open the link in new tab.
+
+    Uses the specified object field if available, otherwise uses the string representation of the object.
+    If the object defines `get_absolute_url()` this will be used to hyperlink the displayed object;
+    additionally if there is an `object.description` this will be used as the title of the hyperlink.
+
+    Args:
+        value (Union[django.db.models.Model, None]): Instance of a Django model or None.
+        field (Optional[str]): Name of the field to use for the display value. Defaults to "display".
+
+    Returns:
+        (str): String representation of the value (hyperlinked if it defines get_absolute_url()) or a placeholder.
+
+    Examples:
+        >>> hyperlinked_object_target_new_tab(device)
+        '<a href="/dcim/devices/3faafe8c-bdd6-4317-88dc-f791e6988caa/" target="_blank" rel="noreferrer">Device 1</a>'
+        >>> hyperlinked_object_target_new_tab(device_role)
+        '<a href="/dcim/device-roles/router/" title="Devices that are routers, not switches" target="_blank" rel="noreferrer">Router</a>'
+        >>> hyperlinked_object_target_new_tab(None)
+        '<span class="text-muted">&mdash;</span>'
+        >>> hyperlinked_object_target_new_tab("Hello")
+        'Hello'
+        >>> hyperlinked_object_target_new_tab(location)
+        '<a href="/dcim/locations/leaf/" target="_blank" rel="noreferrer">Root → Intermediate → Leaf</a>'
+        >>> hyperlinked_object_target_new_tab(location, "name")
+        '<a href="/dcim/locations/leaf/" target="_blank" rel="noreferrer">Leaf</a>'
+    """
+    return _build_hyperlink(value, field, target="_blank", rel="noreferrer")
+
+
+def _build_hyperlink(value, field="", target="", rel=""):
+    """Internal function used by filters to build hyperlinks.
+
+    Args:
+        value (Union[django.db.models.Model, None]): Instance of a Django model or None.
+        field (Optional[str]): Name of the field to use for the display value. Defaults to "display".
+        target (Optional[str]): Location to open the linked document.  Defaults to "" which is _self.
+        rel (Optional[str]): Relationship between current document and linked document. Defaults to "".
+
+    Returns:
+        (str): String representation of the value (hyperlinked if it defines get_absolute_url()) or a placeholder.
+    """
+    if value is None:
+        return placeholder(value)
+
+    attributes = {}
+    display = getattr(value, field) if hasattr(value, field) else str(value)
+    if hasattr(value, "get_absolute_url"):
+        attributes["href"] = value.get_absolute_url()
+        if hasattr(value, "description") and value.description:
+            attributes["title"] = value.description
+        if target:
+            attributes["target"] = target
+        if rel:
+            attributes["rel"] = rel
+        return format_html("<a {}>{}</a>", format_html_join(" ", '{}="{}"', attributes.items()), display)
+    return format_html("{}", display)

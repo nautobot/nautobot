@@ -66,7 +66,7 @@ namespace.configure(
     {
         "nautobot": {
             "project_name": "nautobot",
-            "python_ver": "3.8",
+            "python_ver": "3.12",
             "local": False,
             "compose_dir": os.path.join(BASE_DIR, "development/"),
             "compose_files": [
@@ -408,7 +408,7 @@ def stop(context, service=None):
     """Stop Nautobot and its dependencies."""
     print("Stopping Nautobot...")
     if not service:
-        docker_compose(context, "down")
+        docker_compose(context, "--profile '*' down")
     else:
         docker_compose(context, "stop", service=service)
 
@@ -570,18 +570,15 @@ def build_example_app_docs(context):
 )
 def pylint(context, target=None, recursive=False):
     """Perform static analysis of Nautobot code."""
+    base_command = 'pylint --verbose --init-hook "import nautobot; nautobot.setup()" '
     if not target:
         # Lint everything
-        # Lint the installed nautobot package and the file tasks.py in the current directory
-        command = "nautobot-server pylint nautobot tasks.py"
-        run_command(context, command)
-        # Lint Python files discovered recursively in the development/ and examples/ directories
-        command = "nautobot-server pylint --recursive development/ examples/"
+        command = base_command + "--recursive=y nautobot tasks.py development/ examples/"
         run_command(context, command)
     else:
-        command = "nautobot-server pylint "
+        command = base_command
         if recursive:
-            command += "--recursive "
+            command += "--recursive=y "
         command += " ".join(target)
         run_command(context, command)
 

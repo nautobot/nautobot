@@ -2,7 +2,7 @@
 
 +++ 1.3.0
 
-Dynamic Groups provide a way to organize objects of the same Content Type by matching filters. A Dynamic Group can be used to create unique groups of objects matching a given filter, such as Devices for a specific location or set of locations. As indicated by the name, Dynamic Groups update in real time as potential member objects are created, updated, or deleted.
+Dynamic Groups provide a way to organize objects of the same Content Type by matching filters. A Dynamic Group can be used to create unique groups of objects matching a given filter, such as Devices for a specific location or set of locations. As indicated by the name, Dynamic Groups update in real time as potential member objects are created, updated, or deleted. They are a counterpart to [Static Groups](staticgroup.md), the difference betwen the two being that members of a Static Group are manually (statically) assigned to that group, whereas members of a Dynamic Group are automatically (dynamically) determined based on a set of filter rules.
 
 When creating a Dynamic Group, one must select a Content Type to which it is associated, for example `dcim.device`. The filtering parameters saved to the group behave as a bi-directional search query that is used to identify members of that group, and can also be used to determine from an individual object the list of Dynamic Groups to which an individual object belongs.
 

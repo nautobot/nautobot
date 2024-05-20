@@ -52,6 +52,8 @@ from nautobot.extras.filters import (
     SecretFilterSet,
     SecretsGroupAssociationFilterSet,
     SecretsGroupFilterSet,
+    StaticGroupAssociationFilterSet,
+    StaticGroupFilterSet,
     StatusFilterSet,
     TagFilterSet,
     TeamFilterSet,
@@ -61,6 +63,7 @@ from nautobot.extras.models import (
     ComputedField,
     ConfigContext,
     Contact,
+    ContactAssociation,
     CustomField,
     CustomFieldChoice,
     CustomLink,
@@ -82,6 +85,8 @@ from nautobot.extras.models import (
     Secret,
     SecretsGroup,
     SecretsGroupAssociation,
+    StaticGroup,
+    StaticGroupAssociation,
     Status,
     Tag,
     Team,
@@ -457,7 +462,91 @@ class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
         )
 
 
-class ContactFilterSetTestCase(FilterTestCases.FilterTestCase):
+class ContactAndTeamFilterSetTestCaseMixin:
+    """Mixin class to test common filters to both Contact and Team filter sets."""
+
+    def test_similar_to_location_data(self):
+        """Complex test to test the complex `similar_to_location_data` method filter."""
+        ContactAssociation.objects.all().delete()
+        self.queryset.delete()
+        location_type = LocationType.objects.filter(parent__isnull=True).first()
+        location_status = Status.objects.get_for_model(Location).first()
+        test_locations = (
+            Location.objects.create(
+                location_type=location_type,
+                name="Filter Test Location 0",
+                status=location_status,
+                contact_name="match 0",
+            ),
+            Location.objects.create(
+                location_type=location_type,
+                name="Filter Test Location 1",
+                status=location_status,
+                contact_email="Test email for location 1 and 2",
+            ),
+            Location.objects.create(
+                location_type=location_type,
+                name="Filter Test Location 2",
+                status=location_status,
+                contact_email="TEST EMAIL FOR LOCATION 1 AND 2",
+                contact_phone="Test phone for location 2 and 3",
+            ),
+            Location.objects.create(
+                location_type=location_type,
+                name="Filter Test Location 3",
+                status=location_status,
+                contact_phone="Test phone for location 2 and 3",
+            ),
+            Location.objects.create(
+                location_type=location_type,
+                name="Filter Test Location 4",
+                status=location_status,
+                contact_name="Hopefully this doesn't match any random factory data",
+                contact_email="Hopefully this doesn't match any random factory data",
+                contact_phone="Hopefully this doesn't match any random factory data",
+                physical_address="Hopefully this doesn't match any random factory data",
+                shipping_address="Hopefully this doesn't match any random factory data",
+            ),
+        )
+
+        self.queryset.create(name="match 0")
+        self.queryset.create(name="match 1 and 2", email="Test email for location 1 and 2")
+        self.queryset.create(name="match 2 and 3", phone="Test phone for location 2 and 3")
+
+        # These subtests are confusing because we're trying to test the NaturalKeyOrPKMultipleChoiceFilter
+        # behavior while also testing the `similar_to_location_data` method filter behavior.
+        with self.subTest("Test name match"):
+            params = {"similar_to_location_data": [test_locations[0].pk]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(name__in=["match 0"]),
+            )
+        with self.subTest("Test email match"):
+            params = {"similar_to_location_data": [test_locations[1].pk]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(name__in=["match 1 and 2"]),
+            )
+        with self.subTest("Test phone match"):
+            params = {"similar_to_location_data": [test_locations[2].pk]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(name__in=["match 1 and 2", "match 2 and 3"]),
+            )
+        with self.subTest("Test email and phone match"):
+            params = {"similar_to_location_data": [test_locations[1].pk, test_locations[3].name]}
+            self.assertQuerysetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(name__in=["match 1 and 2", "match 2 and 3"]),
+            )
+        with self.subTest("Test no match"):
+            params = {"similar_to_location_data": [test_locations[4].pk]}
+            self.assertFalse(self.filterset(params, self.queryset).qs.exists())
+            params = {"similar_to_location_data": [test_locations[4].name]}
+            self.assertFalse(self.filterset(params, self.queryset).qs.exists())
+
+
+class ContactFilterSetTestCase(ContactAndTeamFilterSetTestCaseMixin, FilterTestCases.FilterTestCase):
     queryset = Contact.objects.all()
     filterset = ContactFilterSet
 
@@ -1149,15 +1238,33 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
     def test_search(self):
         params = {"q": "run"}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(grouping__icontains="run")
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(
+                # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+                # pylint: disable=unsupported-binary-operation
+                Q(grouping__icontains="run") | Q(message__icontains="run") | Q(log_level__icontains="run")
+                # pylint: enable=unsupported-binary-operation
+            ),
         )
-        params = {"q": "warning log"}
+        params = {"q": "warning"}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(message__icontains="warning log")
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(
+                # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+                # pylint: disable=unsupported-binary-operation
+                Q(grouping__icontains="warning") | Q(message__icontains="warning") | Q(log_level__icontains="warning")
+                # pylint: enable=unsupported-binary-operation
+            ),
         )
         params = {"q": "debug"}
         self.assertQuerysetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(log_level__icontains="debug")
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(
+                # TODO: Remove pylint disable after issue is resolved (see: https://github.com/PyCQA/pylint/issues/7381)
+                # pylint: disable=unsupported-binary-operation
+                Q(grouping__icontains="debug") | Q(message__icontains="debug") | Q(log_level__icontains="debug")
+                # pylint: enable=unsupported-binary-operation
+            ),
         )
 
 
@@ -1252,11 +1359,17 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
 
     def test_changed_object_type(self):
         params = {"changed_object_type": "dcim.location"}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(changed_object_type=ContentType.objects.get_for_model(Location)),
+        )
 
     def test_changed_object_type_id(self):
         params = {"changed_object_type_id": ContentType.objects.get(app_label="dcim", model="location").pk}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(changed_object_type=ContentType.objects.get_for_model(Location)),
+        )
 
     def test_search(self):
         value = self.queryset.values_list("pk", flat=True)[0]
@@ -1694,6 +1807,68 @@ class SecretsGroupAssociationTestCase(FilterTestCases.FilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
 
+class StaticGroupTestCase(FilterTestCases.NameOnlyFilterTestCase):
+    queryset = StaticGroup.objects.all()
+    filterset = StaticGroupFilterSet
+
+    generic_filter_tests = (
+        ["description"],
+        ["name"],
+        ["member_id", "static_group_associations__associated_object_id"],
+        ["tenant", "tenant__id"],
+        ["tenant", "tenant__name"],
+    )
+
+    def test_content_type(self):
+        ct = StaticGroup.objects.first().content_type
+        params = {"content_type": [ct.model_class()._meta.label_lower]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, StaticGroup.objects.filter(content_type=ct)
+        )
+
+    def test_hidden(self):
+        params = {"hidden": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, StaticGroup.all_objects.all()).qs, StaticGroup.all_objects.filter(hidden=True)
+        )
+        params = {"hidden": False}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, StaticGroup.all_objects.all()).qs, StaticGroup.all_objects.filter(hidden=False)
+        )
+
+
+class StaticGroupAssociationTestCase(FilterTestCases.FilterTestCase):
+    queryset = StaticGroupAssociation.objects.all()
+    filterset = StaticGroupAssociationFilterSet
+
+    generic_filter_tests = (
+        ["static_group", "static_group__id"],
+        ["static_group", "static_group__name"],
+        ["associated_object_id"],
+    )
+
+    def test_associated_object_type(self):
+        ct = StaticGroup.objects.filter(static_group_associations__isnull=False).first().content_type
+        params = {"associated_object_type": [ct.model_class()._meta.label_lower]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            StaticGroupAssociation.objects.filter(associated_object_type=ct),
+            ordered=False,
+        )
+
+    def test_hidden(self):
+        params = {"hidden": True}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, StaticGroupAssociation.all_objects.all()).qs,
+            StaticGroupAssociation.all_objects.filter(static_group__hidden=True),
+        )
+        params = {"hidden": False}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, StaticGroupAssociation.all_objects.all()).qs,
+            StaticGroupAssociation.all_objects.filter(static_group__hidden=False),
+        )
+
+
 class StatusTestCase(FilterTestCases.NameOnlyFilterTestCase):
     queryset = Status.objects.all()
     filterset = StatusFilterSet
@@ -1756,7 +1931,7 @@ class TagTestCase(FilterTestCases.NameOnlyFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.values_list("pk", flat=True)[0], value)
 
 
-class TeamFilterSetTestCase(FilterTestCases.FilterTestCase):
+class TeamFilterSetTestCase(ContactAndTeamFilterSetTestCaseMixin, FilterTestCases.FilterTestCase):
     queryset = Team.objects.all()
     filterset = TeamFilterSet
 
@@ -1838,8 +2013,8 @@ class RoleTestCase(FilterTestCases.NameOnlyFilterTestCase):
     def test_content_types(self):
         device_ct = ContentType.objects.get_for_model(Device)
         rack_ct = ContentType.objects.get_for_model(Rack)
-        device_roles = self.queryset.filter(content_types=device_ct)
-        params = {"content_types": ["dcim.device"]}
+        device_roles = self.queryset.filter(content_types__in=[device_ct, rack_ct]).distinct()
+        params = {"content_types": ["dcim.device", "dcim.rack"]}
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, device_roles)
 
         rack_roles = self.queryset.filter(content_types=rack_ct)

@@ -44,25 +44,30 @@ class IPAddressToInterfaceTest(TestCase):
             status=Status.objects.get_for_model(Device).first(),
         )
         int_status = Status.objects.get_for_model(Interface).first()
+        int_role = Role.objects.get_for_model(Interface).first()
         cls.test_int1 = Interface.objects.create(
             device=cls.test_device,
             name="int1",
             status=int_status,
+            role=int_role,
             type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
         )
         cls.test_int2 = Interface.objects.create(
             device=cls.test_device,
             name="int2",
             status=int_status,
+            role=int_role,
             type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
         )
         cluster_type = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="cluster1", cluster_type=cluster_type)
         vmint_status = Status.objects.get_for_model(VMInterface).first()
+        vmint_role = Role.objects.get_for_model(VMInterface).first()
         cls.test_vm = VirtualMachine.objects.create(
             name="vm1",
             cluster=cluster,
             status=Status.objects.get_for_model(VirtualMachine).first(),
+            role=vmint_role,
         )
         cls.test_vmint1 = VMInterface.objects.create(
             name="vmint1",
@@ -73,6 +78,7 @@ class IPAddressToInterfaceTest(TestCase):
             name="vmint2",
             virtual_machine=cls.test_vm,
             status=vmint_status,
+            role=vmint_role,
         )
 
     def test_removing_ip_addresses_containing_host_device_primary_ip_nullifies_host_device_primary_ip(self):
@@ -294,6 +300,50 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         )
         self.child1 = Prefix.objects.create(prefix="101.102.0.0/26", status=self.status, namespace=self.namespace)
         self.child2 = Prefix.objects.create(prefix="101.102.0.64/26", status=self.status, namespace=self.namespace)
+
+    def test_location_queries(self):
+        locations = Location.objects.all()[:4]
+        for location in locations:
+            location.location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
+        for i in range(10):
+            pfx = Prefix.objects.create(prefix=f"1.1.1.{4*i}/30", status=self.status, namespace=self.namespace)
+            if i > 4:
+                pfx.locations.set(locations)
+
+        with self.subTest("Assert filtering and excluding `location`"):
+            self.assertQuerysetEqualAndNotEmpty(
+                Prefix.objects.filter(location=locations[0]),
+                Prefix.objects.filter(locations__in=[locations[0]]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                Prefix.objects.exclude(location=locations[0]),
+                Prefix.objects.exclude(locations__in=[locations[0]]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                Prefix.objects.filter(location__in=[locations[0]]),
+                Prefix.objects.filter(locations__in=[locations[0]]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                Prefix.objects.exclude(location__in=[locations[0]]),
+                Prefix.objects.exclude(locations__in=[locations[0]]),
+            )
+
+        # We use `assertQuerysetEqualAndNotEmpty` for test validation. Including a nullable field could lead
+        # to flaky tests where querysets might return None, causing tests to fail. Therefore, we select
+        # fields that consistently contain values to ensure reliable filtering.
+        query_params = ["name", "location_type", "status"]
+
+        for field_name in query_params:
+            with self.subTest(f"Assert location__{field_name} query."):
+                value = getattr(locations[0], field_name)
+                self.assertQuerysetEqualAndNotEmpty(
+                    Prefix.objects.filter(**{f"location__{field_name}": value}),
+                    Prefix.objects.filter(**{f"locations__{field_name}": value}),
+                )
+                self.assertQuerysetEqualAndNotEmpty(
+                    Prefix.objects.exclude(**{f"location__{field_name}": value}),
+                    Prefix.objects.exclude(**{f"locations__{field_name}": value}),
+                )
 
     def test_prefix_validation(self):
         location_type = LocationType.objects.get(name="Room")
@@ -1200,6 +1250,44 @@ class TestVLAN(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError) as cm:
             location.vlans.add(vlan)
         self.assertIn(f"{location} is a Floor and may not have VLANs associated to it.", str(cm.exception))
+
+    def test_location_queries(self):
+        location = VLAN.objects.filter(locations__isnull=False).first().locations.first()
+
+        with self.subTest("Assert filtering and excluding `location`"):
+            self.assertQuerysetEqualAndNotEmpty(
+                VLAN.objects.filter(location=location),
+                VLAN.objects.filter(locations__in=[location]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                VLAN.objects.exclude(location=location),
+                VLAN.objects.exclude(locations__in=[location]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                VLAN.objects.filter(location__in=[location]),
+                VLAN.objects.filter(locations__in=[location]),
+            )
+            self.assertQuerysetEqualAndNotEmpty(
+                VLAN.objects.exclude(location__in=[location]),
+                VLAN.objects.exclude(locations__in=[location]),
+            )
+
+        # We use `assertQuerysetEqualAndNotEmpty` for test validation. Including a nullable field could lead
+        # to flaky tests where querysets might return None, causing tests to fail. Therefore, we select
+        # fields that consistently contain values to ensure reliable filtering.
+        query_params = ["name", "location_type", "status"]
+
+        for field_name in query_params:
+            with self.subTest(f"Assert location__{field_name} query."):
+                value = getattr(location, field_name)
+                self.assertQuerysetEqualAndNotEmpty(
+                    VLAN.objects.filter(**{f"location__{field_name}": value}),
+                    VLAN.objects.filter(**{f"locations__{field_name}": value}),
+                )
+                self.assertQuerysetEqualAndNotEmpty(
+                    VLAN.objects.exclude(**{f"location__{field_name}": value}),
+                    VLAN.objects.exclude(**{f"locations__{field_name}": value}),
+                )
 
 
 class TestVRF(ModelTestCases.BaseModelTestCase):

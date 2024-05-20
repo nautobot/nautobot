@@ -13,7 +13,7 @@ from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, ObjectChangeEventContextChoices
-from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, Status, Tag
+from nautobot.extras.models import CustomField, CustomFieldChoice, ObjectChange, StaticGroup, Status, Tag
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
@@ -271,7 +271,6 @@ class ChangeLogAPITest(APITestCase):
                 {"name": self.tags[1].name},
             ],
         }
-        self.assertEqual(ObjectChange.objects.count(), 0)
         url = reverse("dcim-api:location-list")
         self.add_permissions("dcim.add_location", "extras.view_status")
 
@@ -306,7 +305,6 @@ class ChangeLogAPITest(APITestCase):
             },
             "tags": [{"name": self.tags[2].name}],
         }
-        self.assertEqual(ObjectChange.objects.count(), 0)
         self.add_permissions("dcim.change_location", "extras.view_status")
         url = reverse("dcim-api:location-detail", kwargs={"pk": location.pk})
 
@@ -340,7 +338,6 @@ class ChangeLogAPITest(APITestCase):
             "description": "new description",
         }
 
-        self.assertEqual(ObjectChange.objects.count(), 0)
         self.add_permissions("dcim.change_location", "extras.view_status")
         url = reverse("dcim-api:location-detail", kwargs={"pk": location.pk})
 
@@ -368,7 +365,6 @@ class ChangeLogAPITest(APITestCase):
         )
         location.save()
         location.tags.set(self.tags[:2])
-        self.assertEqual(ObjectChange.objects.count(), 0)
         self.add_permissions("dcim.delete_location", "extras.view_status")
         url = reverse("dcim-api:location-detail", kwargs={"pk": location.pk})
         initial_count = Location.objects.count()
@@ -425,6 +421,7 @@ class ChangeLogAPITest(APITestCase):
         resp = execute_query(gql_payload, user=self.user).to_dict()
         self.assertFalse(resp["data"].get("error"))
         self.assertIsInstance(resp["data"].get("query"), list)
+        # ObjectChangeFactory creates records in the last year only; there shouldn't be any in this filtered response.
         self.assertEqual(len(resp["data"].get("query")), 0)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -455,7 +452,6 @@ class ChangeLogAPITest(APITestCase):
             "status": self.statuses[0].pk,
             "location_type": location_type.pk,
         }
-        self.assertEqual(ObjectChange.objects.count(), 0)
         self.add_permissions("dcim.add_location")
         url = reverse("dcim-api:location-list")
 
@@ -491,7 +487,6 @@ class ChangeLogAPITest(APITestCase):
         )
 
         payload = {"tagged_vlans": [str(tagged_vlan.pk)], "description": "test vm interface m2m change"}
-        self.assertEqual(ObjectChange.objects.count(), 0)
         self.add_permissions("virtualization.change_vminterface", "ipam.change_vlan")
         url = reverse("virtualization-api:vminterface-detail", kwargs={"pk": vm_interface.pk})
         response = self.client.patch(url, payload, format="json", **self.header)
@@ -499,7 +494,7 @@ class ChangeLogAPITest(APITestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
         oc = get_changes_for_model(vm_interface).first()
-        self.assertEqual(ObjectChange.objects.count(), 1)
+        self.assertEqual(get_changes_for_model(vm_interface).count(), 1)
         self.assertEqual(oc.user_id, self.user.pk)
         self.assertEqual(vm_interface.description, "test vm interface m2m change")
         self.assertSequenceEqual(list(vm_interface.tagged_vlans.all()), [tagged_vlan])
@@ -509,6 +504,29 @@ class ObjectChangeModelTest(TestCase):  # TODO: change to BaseModelTestCase once
     @classmethod
     def setUpTestData(cls):
         cls.location_status = Status.objects.get_for_model(Location).first()
+
+    def test_opt_out(self):
+        """Hidden static groups can "opt out" of change logging."""
+        with context_managers.web_request_context(self.user):
+            sg = StaticGroup(
+                name="Hidden group",
+                content_type=ContentType.objects.get_for_model(Location),
+                hidden=True,
+            )
+            sg.validated_save()
+
+        self.assertIsNone(get_changes_for_model(sg).first())
+
+        with context_managers.web_request_context(self.user):
+            sg.description = "A hidden group of Locations"
+            sg.validated_save()
+
+        self.assertIsNone(get_changes_for_model(sg).first())
+
+        with context_managers.web_request_context(self.user):
+            sg.delete()
+
+        self.assertIsNone(get_changes_for_model(sg).first())
 
     def test_get_snapshots(self):
         with context_managers.web_request_context(self.user):

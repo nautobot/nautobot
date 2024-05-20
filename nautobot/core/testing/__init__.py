@@ -102,14 +102,19 @@ def get_job_class_and_model(module, name, source="local"):
         (JobClassInfo): Named 2-tuple of (job_class, job_model)
     """
     job_class = get_job(f"{module}.{name}")
-    job_model = Job.objects.get(module_name=module, job_class_name=name)
+    try:
+        job_model = Job.objects.get(module_name=module, job_class_name=name)
+    except Job.DoesNotExist:
+        raise RuntimeError(
+            f"Job database record for {module}.{name} not found. Known jobs are: {list(Job.objects.all())}"
+        )
     job_model.enabled = True
     job_model.validated_save()
     return JobClassInfo(job_class, job_model)
 
 
 @tag("unit")
-class TransactionTestCase(_TransactionTestCase, NautobotTestCaseMixin):
+class TransactionTestCase(NautobotTestCaseMixin, _TransactionTestCase):
     """
     Base test case class using the TransactionTestCase for unit testing
     """

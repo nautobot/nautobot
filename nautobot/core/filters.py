@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from copy import deepcopy
 import logging
 import uuid
@@ -259,6 +258,9 @@ class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
 
         if not self.conjoined:
             qs = qs.filter(q)
+
+        if self.distinct:
+            qs = qs.distinct()
 
         return qs
 
@@ -522,7 +524,10 @@ class TreeNodeMultipleChoiceFilter(NaturalKeyOrPKMultipleChoiceFilter):
 
         # Fetch the generated Q object and filter the incoming qs with it before passing it along.
         query = self.generate_query(value)
-        return self.get_method(qs)(query)
+        result = self.get_method(qs)(query)
+        if self.distinct:
+            result = result.distinct()
+        return result
 
 
 #
@@ -699,8 +704,8 @@ class BaseFilterSet(django_filters.FilterSet):
     def get_fields(cls):
         fields = super().get_fields()
         if "id" not in fields and (cls._meta.exclude is None or "id" not in cls._meta.exclude):
-            # Add "id" as the first key in the `fields` OrderedDict
-            fields = OrderedDict(id=[django_filters.conf.settings.DEFAULT_LOOKUP_EXPR], **fields)
+            # Add "id" as the first key in the `fields` dict
+            fields = {"id": [django_filters.conf.settings.DEFAULT_LOOKUP_EXPR], **fields}
         return fields
 
     @classmethod
@@ -710,8 +715,23 @@ class BaseFilterSet(django_filters.FilterSet):
         """
         filters = super().get_filters()
 
+        if "static_groups" not in filters and getattr(cls._meta.model, "is_static_group_associable_model", False):
+            # Add "static_groups" field as the last key
+            from nautobot.extras.models import StaticGroup
+
+            filters["static_groups"] = NaturalKeyOrPKMultipleChoiceFilter(
+                queryset=StaticGroup.objects.all(),
+                field_name="associated_static_groups__static_group",
+                to_field_name="name",
+                query_params={"content_type": cls._meta.model._meta.label_lower},
+                label="Static groups (name or ID)",
+            )
+
         # django-filters has no concept of "abstract" filtersets, so we have to fake it
         if cls._meta.model is not None:
+            if "tags" in filters and isinstance(filters["tags"], TagFilter):
+                filters["tags"].extra["query_params"] = {"content_types": [cls._meta.model._meta.label_lower]}
+
             new_filters = {}
             for existing_filter_name, existing_filter in filters.items():
                 new_filters.update(

@@ -5,6 +5,7 @@ from nautobot.tenancy.models import Tenant, TenantGroup
 
 class TenantGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
     model = TenantGroup
+    sort_on_field = "name"
 
     @classmethod
     def setUpTestData(cls):

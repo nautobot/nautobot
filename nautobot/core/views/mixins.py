@@ -45,10 +45,12 @@ from nautobot.core.views.utils import (
     import_csv_helper,
     prepare_cloned_fields,
 )
+from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.models import ExportTemplate
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
-from nautobot.extras.utils import remove_prefix_from_cf_key
+from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
+from nautobot.users.models import SavedView
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -226,7 +228,6 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
     create_form_class = None
     update_form_class = None
     parser_classes = [FormParser, MultiPartParser]
-    is_contact_associatable_model = True
     queryset = None
     # serializer_class has to be specified to eliminate the need to override retrieve() in the RetrieveModelMixin for now.
     serializer_class = None
@@ -459,8 +460,11 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
 
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
-        filter_params = request.GET.copy()
-        return get_filterable_params_from_filter_params(filter_params, self.non_filter_params, self.filterset_class())
+        params = request.GET.copy()
+        filter_params = get_filterable_params_from_filter_params(params, self.non_filter_params, self.filterset_class())
+        if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
+            return SavedView.objects.get(pk=params.get("saved_view")).config.get("filter_params", {})
+        return filter_params
 
     def get_queryset(self):
         """
@@ -485,6 +489,10 @@ class NautobotViewSetMixin(GenericViewSet, AccessMixin, GetReturnURLMixin, FormV
         request: The current request
         instance: The object being viewed
         """
+        if instance is not None:
+            return {
+                "active_tab": request.GET.get("tab", "main"),
+            }
         return {}
 
     def get_template_name(self):
@@ -608,11 +616,15 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
     action_buttons = ("add", "import", "export")
     filterset_class = None
     filterset_form_class = None
+    hide_hierarchy_ui = False
     non_filter_params = (
         "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
         "page",  # used by django-tables2.RequestConfig
         "per_page",  # used by get_paginate_count
         "sort",  # table sorting
+        "saved_view",  # saved_view indicator pk or composite keys
+        "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
+        "all_filters_removed",  # indicator for if all filters have been removed from the saved view
     )
 
     def filter_queryset(self, queryset):
@@ -629,6 +641,12 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
                     format_html("Invalid filters were specified: {}", self.filterset.errors),
                 )
                 queryset = queryset.none()
+
+            # If a valid filterset is applied, we have to hide the hierarchy indentation in the UI for tables that support hierarchy indentation.
+            # NOTE: An empty filterset query-param is also valid filterset and we dont want to hide hierarchy indentation if no filter query-param is provided
+            #      hence `filterset.data`.
+            if self.filterset.is_valid() and self.filterset.data:
+                self.hide_hierarchy_ui = True
         return queryset
 
     # 3.0 TODO: remove, irrelevant after #4746
@@ -840,7 +858,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin):
 
         try:
             with transaction.atomic():
-                deleted_count = queryset.delete()[1][model._meta.label]
+                deleted_count = bulk_delete_with_bulk_change_logging(queryset)[1][model._meta.label]
                 msg = f"Deleted {deleted_count} {model._meta.verbose_name_plural}"
                 self.logger.info(msg)
                 self.success_url = self.get_return_url(request)
@@ -972,7 +990,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
             if field not in form_custom_fields + form_relationships + ["pk"] + ["object_note"]
         ]
         nullified_fields = request.POST.getlist("_nullify")
-        with transaction.atomic():
+        with deferred_change_logging_for_bulk_operation():
             updated_objects = []
             for obj in queryset.filter(pk__in=form.cleaned_data["pk"]):
                 self.obj = obj

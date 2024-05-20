@@ -152,6 +152,7 @@ class NautobotUiSchemaProcessor(NautobotProcessingMixin, schema.UiSchemaProcesso
         """
         data_index = self._generate_data_index(name)
         result = {}
+        is_int = False
         is_list = False
         if self._is_field_serializer(field):
             return NautobotUiSchemaProcessor(field, self.renderer_context, prefix=data_index).get_ui_schema()

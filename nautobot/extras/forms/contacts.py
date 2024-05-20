@@ -28,6 +28,13 @@ class ContactForm(NautobotModelForm):
             "tags",
         ]
 
+    def __init__(self, instance=None, initial=None, **kwargs):
+        if instance is not None:
+            if initial is None:
+                initial = {}
+            initial.setdefault("teams", instance.teams.all())
+        super().__init__(instance=instance, initial=initial, **kwargs)
+
     def save(self, *args, **kwargs):
         """
         Since `teams` field on Contact Model is the reverse side of an M2M,

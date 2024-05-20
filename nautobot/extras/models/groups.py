@@ -1,9 +1,10 @@
-"""Dynamic Groups Models."""
+"""Dynamic and Static Groups Models."""
 
 import logging
 import pickle
 
 from django import forms
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -17,14 +18,249 @@ from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import DynamicModelChoiceField
 from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.models import BaseManager, BaseModel
-from nautobot.core.models.generics import OrganizationalModel
+from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGroupQuerySet
-from nautobot.extras.utils import extras_features
+from nautobot.extras.utils import extras_features, FeatureQuery
 
 logger = logging.getLogger(__name__)
+
+
+class StaticGroupManager(BaseManager.from_queryset(RestrictedQuerySet)):
+    use_in_migrations = True
+
+    def get_for_model(self, model):
+        """
+        Return all StaticGroups assignable to the given model class.
+        """
+        concrete_model = model._meta.concrete_model
+        cache_key = f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}"
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            content_type = ContentType.objects.get_for_model(concrete_model)
+            queryset = self.get_queryset().filter(content_type=content_type)
+            cache.set(cache_key, queryset)
+        return queryset
+
+    get_for_model.cache_key_prefix = "nautobot.extras.staticgroup.get_for_model"
+
+
+class StaticGroupDefaultManager(StaticGroupManager):
+    """Subclass of StaticGroupManager that automatically filters out hidden groups."""
+
+    def get_queryset(self):
+        return super().get_queryset().exclude(hidden=True)
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class StaticGroup(PrimaryModel):
+    """A statically defined (as opposed to dynamically calculated) group of objects sharing a common content-type."""
+
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    content_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.CASCADE,
+        related_name="static_groups_set",
+        limit_choices_to=FeatureQuery("static_groups"),
+        help_text="The type of object contained in this Static Group.",
+    )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="managed_static_groups",  # "static_groups" clash with StaticGroupMixin.static_groups property
+        blank=True,
+        null=True,
+    )
+    hidden = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Set to True to hide this group from the UI and API and disable change-logging of its associations",
+    )
+
+    objects = StaticGroupDefaultManager()
+    all_objects = StaticGroupManager()
+
+    clone_fields = ["content_type", "tenant"]
+    is_static_group_associable_model = False
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    def to_objectchange(self, *args, **kwargs):
+        if self.hidden:
+            return None
+        return super().to_objectchange(*args, **kwargs)
+
+    @property
+    def model(self):
+        """
+        Access to the underlying Model class for this group's `content_type`.
+
+        This class object is cached on the instance after the first time it is accessed.
+        """
+        if getattr(self, "_model", None) is None:
+            try:
+                self._model = self.content_type.model_class()
+            except models.ObjectDoesNotExist:
+                self._model = None
+        return self._model
+
+    @property
+    def members(self):
+        """Return the member objects for this group."""
+        # Since associated_object is a GenericForeignKey, we can't just do:
+        #     return self.static_group_associations.values_list("associated_object", flat=True)
+        return self.model.objects.filter(
+            pk__in=self.static_group_associations(manager="all_objects").values_list("associated_object_id", flat=True)
+        )
+
+    @members.setter
+    def members(self, value):
+        """Set the member objects (QuerySet or list of records) for this group."""
+        if isinstance(value, models.QuerySet):
+            if value.model != self.model:
+                raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
+            to_remove = self.members.exclude(pk__in=value.values_list("pk", flat=True))
+            self.remove_members(to_remove)
+            to_add = value.exclude(pk__in=self.members.values_list("pk", flat=True))
+            self.add_members(to_add)
+        else:
+            for obj in value:
+                if not isinstance(obj, self.model):
+                    raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
+            to_remove = []
+            for member in self.members:
+                if member not in value:
+                    to_remove.append(member)
+            self.remove_members(to_remove)
+            to_add = []
+            members = self.members
+            for candidate in value:
+                if candidate not in members:
+                    to_add.append(candidate)
+            self.add_members(to_add)
+
+    @property
+    def count(self):
+        """Return the number of member objects in this group."""
+        return self.members.count()
+
+    def clean(self):
+        super().clean()
+
+        if self.present_in_database:
+            # Check immutable fields
+            database_object = self.__class__.all_objects.get(pk=self.pk)
+
+            if self.content_type != database_object.content_type:
+                raise ValidationError({"content_type": "ContentType cannot be changed once created"})
+
+    def add_members(self, objects_to_add):
+        """Add the given list or QuerySet of objects to this Static Group."""
+        if isinstance(objects_to_add, models.QuerySet):
+            if objects_to_add.model != self.model:
+                raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
+        else:
+            for obj in objects_to_add:
+                if not isinstance(obj, self.model):
+                    raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
+
+        for obj in objects_to_add:
+            # We don't use `.bulk_create()` currently because we want change logging for these creates.
+            # Might be a good future performance improvement though.
+            StaticGroupAssociation.all_objects.get_or_create(
+                static_group=self, associated_object_type=self.content_type, associated_object_id=obj.pk
+            )
+
+    def remove_members(self, objects_to_remove):
+        """Remove the given list or QuerySet of objects from this Static Group."""
+        if isinstance(objects_to_remove, models.QuerySet):
+            if objects_to_remove.model != self.model:
+                raise TypeError(f"QuerySet does not contain {self.model._meta.label_lower} objects")
+            StaticGroupAssociation.all_objects.filter(
+                static_group=self,
+                associated_object_type=self.content_type,
+                associated_object_id__in=objects_to_remove.values_list("pk", flat=True),
+            ).delete()
+        else:
+            pks_to_remove = set()
+            for obj in objects_to_remove:
+                if not isinstance(obj, self.model):
+                    raise TypeError(f"{obj} is not a {self.model._meta.label_lower}")
+                pks_to_remove.add(obj.pk)
+
+            StaticGroupAssociation.all_objects.filter(
+                static_group=self, associated_object_type=self.content_type, associated_object_id__in=pks_to_remove
+            ).delete()
+
+
+class StaticGroupAssociationManager(BaseManager.from_queryset(RestrictedQuerySet)):
+    use_in_migrations = True
+
+
+class StaticGroupAssociationDefaultManager(StaticGroupAssociationManager):
+    """Subclass of StaticGroupAssociationManager that automatically filters out associations of hidden groups."""
+
+    def get_queryset(self):
+        return super().get_queryset().exclude(static_group__hidden=True)
+
+
+@extras_features(
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class StaticGroupAssociation(OrganizationalModel):
+    """Intermediary model for associating an object to a StaticGroup."""
+
+    static_group = models.ForeignKey(to=StaticGroup, on_delete=models.CASCADE, related_name="static_group_associations")
+    associated_object_type = models.ForeignKey(
+        to=ContentType,
+        on_delete=models.CASCADE,
+        related_name="static_group_associations",
+        limit_choices_to=FeatureQuery("static_groups"),
+    )
+    associated_object_id = models.UUIDField(db_index=True)
+    associated_object = GenericForeignKey(ct_field="associated_object_type", fk_field="associated_object_id")
+
+    objects = StaticGroupAssociationDefaultManager()
+    all_objects = StaticGroupAssociationManager()
+
+    is_contact_associable_model = False
+    is_static_group_associable_model = False
+    is_saved_view_model = False
+
+    class Meta:
+        unique_together = [["static_group", "associated_object_type", "associated_object_id"]]
+        ordering = ["static_group", "associated_object_type", "associated_object_id"]
+
+    def __str__(self):
+        return f"{self.associated_object} as a member of {self.static_group}"
+
+    def clean(self):
+        super().clean()
+
+        if self.associated_object_type != self.static_group.content_type:
+            raise ValidationError({"associated_object_type": "Must match the static_group.content_type"})
+
+    def to_objectchange(self, *args, **kwargs):
+        if self.static_group.hidden:
+            return None
+        return super().to_objectchange(*args, **kwargs)
 
 
 @extras_features(

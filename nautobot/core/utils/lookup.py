@@ -208,6 +208,40 @@ def get_view_for_model(model, view_type=""):
     return result
 
 
+def get_model_for_view_name(view_name):
+    """
+    Return the model class associated with the given view_name e.g. "circuits:circuit_detail", "dcim:device_list" and etc.
+    If the app_label or model_name contained by the given view_name is invalid, this will return `None`.
+    """
+    app_label, model_name = view_name.split(":")  # dcim, device_list
+    model_name = model_name.split("_")[0]  # device
+
+    try:
+        model = apps.get_model(app_label=app_label, model_name=model_name)
+        return model
+    except LookupError:
+        return None
+
+
+def get_table_class_string_from_view_name(view_name):
+    """Return the name of the TableClass name associated with the view_name
+
+    e.g. returns `LocationTable` for view_name `dcim:location_list`
+
+    Args:
+        view_name (String): The name of the view e.g. dcim:location_list, circuits:circuit_list
+
+    Returns:
+        table_class_name (String): The name of the model table class or None e.g. LocationTable, CircuitTable
+    """
+    model = get_model_for_view_name(view_name)
+    if model:
+        table_class = get_table_for_model(model)
+        if table_class:
+            return table_class.__name__
+    return None
+
+
 def get_created_and_last_updated_usernames_for_model(instance):
     """
     Args:
@@ -224,8 +258,9 @@ def get_created_and_last_updated_usernames_for_model(instance):
     created_by = None
     last_updated_by = None
     try:
-        created_by_record = object_change_records.get(action=ObjectChangeActionChoices.ACTION_CREATE)
-        created_by = created_by_record.user_name
+        created_by_record = object_change_records.filter(action=ObjectChangeActionChoices.ACTION_CREATE).first()
+        if created_by_record is not None:
+            created_by = created_by_record.user_name
     except ObjectChange.DoesNotExist:
         pass
 
@@ -335,6 +370,8 @@ def get_url_for_url_pattern(url_pattern):
     url = re.sub(r"<str:\w+>", "string", url)
     # "/dcim/locations/<uuid:pk>/"
     url = re.sub(r"<uuid:\w+>", "00000000-0000-0000-0000-000000000000", url)
+    # "/api/circuits/<drf_format_suffix:format>"
+    url = re.sub(r"<drf_format_suffix:\w+>", ".json", url)
     # tokens in regexp-style router urls, including REST and NautobotUIViewSet:
     # "/extras/^external-integrations/(?P<pk>[^/.]+)/$"
     # "/api/virtualization/^interfaces/(?P<pk>[^/.]+)/$"

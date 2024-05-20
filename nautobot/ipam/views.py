@@ -332,6 +332,7 @@ class RouteTargetView(generic.ObjectView):
         return {
             "importing_vrfs_table": importing_vrfs_table,
             "exporting_vrfs_table": exporting_vrfs_table,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -368,7 +369,7 @@ class RouteTargetBulkDeleteView(generic.BulkDeleteView):
 
 
 class RIRListView(generic.ObjectListView):
-    queryset = RIR.objects.annotate(assigned_prefix_count=count_related(Prefix, "rir"))
+    queryset = RIR.objects.all()
     filterset = filters.RIRFilterSet
     filterset_form = forms.RIRFilterForm
     table = tables.RIRTable
@@ -389,9 +390,7 @@ class RIRView(generic.ObjectView):
         }
         RequestConfig(request, paginate).configure(assigned_prefix_table)
 
-        return {
-            "assigned_prefix_table": assigned_prefix_table,
-        }
+        return {"assigned_prefix_table": assigned_prefix_table, **super().get_extra_context(request, instance)}
 
 
 class RIREditView(generic.ObjectEditView):
@@ -409,7 +408,7 @@ class RIRBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
 
 
 class RIRBulkDeleteView(generic.BulkDeleteView):
-    queryset = RIR.objects.annotate(assigned_prefix_count=count_related(Prefix, "rir"))
+    queryset = RIR.objects.all()
     filterset = filters.RIRFilterSet
     table = tables.RIRTable
 
@@ -424,7 +423,7 @@ class PrefixListView(generic.ObjectListView):
     filterset_form = forms.PrefixFilterForm
     table = tables.PrefixDetailTable
     template_name = "ipam/prefix_list.html"
-    queryset = Prefix.objects.annotate(location_count=count_related(Location, "prefixes"))
+    queryset = Prefix.objects.all()
     use_new_ui = True
 
 
@@ -442,13 +441,8 @@ class PrefixView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table
-        parent_prefixes = (
-            instance.ancestors()
-            .restrict(request.user, "view")
-            .select_related("parent", "namespace", "status", "vlan", "role")
-            .annotate(location_count=count_related(Location, "prefixes"))
-        )
-        parent_prefix_table = tables.PrefixTable(list(parent_prefixes))
+        parent_prefixes = instance.ancestors().restrict(request.user, "view")
+        parent_prefix_table = tables.PrefixTable(parent_prefixes)
         parent_prefix_table.exclude = ("namespace",)
 
         vrfs = instance.vrf_assignments.restrict(request.user, "view")
@@ -457,6 +451,7 @@ class PrefixView(generic.ObjectView):
         return {
             "vrf_table": vrf_table,
             "parent_prefix_table": parent_prefix_table,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -701,9 +696,7 @@ class PrefixBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
 
 
 class PrefixBulkEditView(generic.BulkEditView):
-    queryset = Prefix.objects.select_related("status", "namespace", "tenant", "vlan", "role").annotate(
-        location_count=count_related(Location, "prefixes")
-    )
+    queryset = Prefix.objects.all()
     filterset = filters.PrefixFilterSet
     table = tables.PrefixTable
     form = forms.PrefixBulkEditForm
@@ -716,9 +709,7 @@ class PrefixBulkEditView(generic.BulkEditView):
 
 
 class PrefixBulkDeleteView(generic.BulkDeleteView):
-    queryset = Prefix.objects.select_related("status", "namespace", "tenant", "vlan", "role").annotate(
-        location_count=count_related(Location, "prefixes")
-    )
+    queryset = Prefix.objects.all()
     filterset = filters.PrefixFilterSet
     table = tables.PrefixTable
 
@@ -749,13 +740,8 @@ class IPAddressView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         # Parent prefixes table
-        parent_prefixes = (
-            instance.ancestors()
-            .restrict(request.user, "view")
-            .select_related("status", "role", "tenant")
-            .annotate(location_count=count_related(Location, "prefixes"))
-        )
-        parent_prefixes_table = tables.PrefixTable(list(parent_prefixes), orderable=False)
+        parent_prefixes = instance.ancestors().restrict(request.user, "view")
+        parent_prefixes_table = tables.PrefixTable(parent_prefixes, orderable=False)
 
         # Related IP table
         related_ips = (
@@ -780,6 +766,7 @@ class IPAddressView(generic.ObjectView):
         return {
             "parent_prefixes_table": parent_prefixes_table,
             "related_ips_table": related_ips_table,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -1218,7 +1205,7 @@ class IPAddressToInterfaceUIViewSet(view_mixins.ObjectBulkCreateViewMixin):  # 3
 
 
 class VLANGroupListView(generic.ObjectListView):
-    queryset = VLANGroup.objects.annotate(vlan_count=count_related(VLAN, "vlan_group"))
+    queryset = VLANGroup.objects.all()
     filterset = filters.VLANGroupFilterSet
     filterset_form = forms.VLANGroupFilterForm
     table = tables.VLANGroupTable
@@ -1261,6 +1248,7 @@ class VLANGroupView(generic.ObjectView):
             "vlan_table": vlan_table,
             "permissions": permissions,
             "vlans_count": vlans_count,
+            **super().get_extra_context(request, instance),
         }
 
 
@@ -1279,7 +1267,7 @@ class VLANGroupBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unus
 
 
 class VLANGroupBulkDeleteView(generic.BulkDeleteView):
-    queryset = VLANGroup.objects.select_related("location").annotate(vlan_count=count_related(VLAN, "vlan_group"))
+    queryset = VLANGroup.objects.all()
     filterset = filters.VLANGroupFilterSet
     table = tables.VLANGroupTable
 
@@ -1290,7 +1278,7 @@ class VLANGroupBulkDeleteView(generic.BulkDeleteView):
 
 
 class VLANListView(generic.ObjectListView):
-    queryset = VLAN.objects.annotate(location_count=count_related(Location, "vlans"))
+    queryset = VLAN.objects.all()
     filterset = filters.VLANFilterSet
     filterset_form = forms.VLANFilterForm
     table = tables.VLANDetailTable
@@ -1317,9 +1305,7 @@ class VLANView(generic.ObjectView):
         prefix_table = tables.PrefixTable(list(prefixes))
         prefix_table.exclude = ("vlan",)
 
-        return {
-            "prefix_table": prefix_table,
-        }
+        return {"prefix_table": prefix_table, **super().get_extra_context(request, instance)}
 
 
 class VLANInterfacesView(generic.ObjectView):

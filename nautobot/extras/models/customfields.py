@@ -38,9 +38,10 @@ from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
-from nautobot.extras.models.mixins import NotesMixin
+from nautobot.extras.models.mixins import ContactMixin, NotesMixin, StaticGroupMixin
 from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
+from nautobot.users.models import SavedViewMixin
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,14 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 
 @extras_features("graphql")
-class ComputedField(BaseModel, ChangeLoggedModel, NotesMixin):
+class ComputedField(
+    ContactMixin,
+    ChangeLoggedModel,
+    NotesMixin,
+    SavedViewMixin,
+    StaticGroupMixin,
+    BaseModel,
+):
     """
     Read-only rendered fields driven by a Jinja2 template that are applied to objects within a ContentType.
     """
@@ -332,7 +340,14 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
 
 
 @extras_features("webhooks")
-class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
+class CustomField(
+    ContactMixin,
+    ChangeLoggedModel,
+    NotesMixin,
+    SavedViewMixin,
+    StaticGroupMixin,
+    BaseModel,
+):
     content_types = models.ManyToManyField(
         to=ContentType,
         related_name="custom_fields",
@@ -724,7 +739,16 @@ class CustomField(BaseModel, ChangeLoggedModel, NotesMixin):
 
         super().delete(*args, **kwargs)
 
-        delete_custom_field_data.delay(self.key, content_types)
+        # Circular Import
+        from nautobot.extras.signals import change_context_state
+
+        change_context = change_context_state.get()
+        if change_context is None:
+            context = None
+        else:
+            context = change_context.as_dict(instance=self)
+            context["context_detail"] = "delete custom field data"
+        delete_custom_field_data.delay(self.key, content_types, context)
 
     def add_prefix_to_cf_key(self):
         return "cf_" + str(self.key)
@@ -783,8 +807,22 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
         super().save(*args, **kwargs)
 
         if self.value != database_object.value:
+            # Circular Import
+            from nautobot.extras.signals import change_context_state
+
+            change_context = change_context_state.get()
+            if change_context is None:
+                context = None
+            else:
+                context = change_context.as_dict(instance=self)
+                context["context_detail"] = "update custom field choice data"
             transaction.on_commit(
-                lambda: update_custom_field_choice_data.delay(self.custom_field.pk, database_object.value, self.value)
+                lambda: update_custom_field_choice_data.delay(
+                    self.custom_field.pk,
+                    database_object.value,
+                    self.value,
+                    context,
+                )
             )
 
     def delete(self, *args, **kwargs):

@@ -74,7 +74,12 @@ class Command(BaseCommand):
             from nautobot.extras.factory import (
                 ContactFactory,
                 ExternalIntegrationFactory,
+                JobLogEntryFactory,
+                JobResultFactory,
+                ObjectChangeFactory,
                 RoleFactory,
+                StaticGroupAssociationFactory,
+                StaticGroupFactory,
                 StatusFactory,
                 TagFactory,
                 TeamFactory,
@@ -93,6 +98,7 @@ class Command(BaseCommand):
                 VRFFactory,
             )
             from nautobot.tenancy.factory import TenantFactory, TenantGroupFactory
+            from nautobot.users.factory import SavedViewFactory, UserFactory
         except ImportError as err:
             raise CommandError('Unable to load data factories. Is the "factory-boy" package installed?') from err
 
@@ -112,6 +118,10 @@ class Command(BaseCommand):
         TagFactory.create_batch(5, content_types=TaggableClassesQuery().as_queryset(), using=db_name)
         # ...and some tags that apply to a random subset of content-types
         TagFactory.create_batch(15, using=db_name)
+        self.stdout.write("Creating Users...")
+        UserFactory.create_batch(3, using=db_name)
+        self.stdout.write("Creating SavedViews...")
+        SavedViewFactory.create_batch(10, using=db_name)
         self.stdout.write("Creating Contacts...")
         ContactFactory.create_batch(20, using=db_name)
         self.stdout.write("Creating Teams...")
@@ -220,6 +230,14 @@ class Command(BaseCommand):
         # ClusterFactory.create_batch(10)
         # VirtualMachineFactory.create_batch(10)
         # We need to remove them from there and enable them here instead, but that will require many test updates.
+        self.stdout.write("Creating StaticGroups and StaticGroupAssociations...")
+        StaticGroupFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating ObjectChanges...")
+        ObjectChangeFactory.create_batch(100, using=db_name)
+        self.stdout.write("Creating JobResults...")
+        JobResultFactory.create_batch(20, using=db_name)
+        self.stdout.write("Creating JobLogEntries...")
+        JobLogEntryFactory.create_batch(100, using=db_name)
 
         self._output_hash_for_factory_models(
             factories=[
@@ -235,10 +253,13 @@ class Command(BaseCommand):
                 DeviceTypeFactory,
                 ExternalIntegrationFactory,
                 IPAddressFactory,
+                JobLogEntryFactory,
+                JobResultFactory,
                 LocationFactory,
                 LocationTypeFactory,
                 ManufacturerFactory,
                 NamespaceFactory,
+                ObjectChangeFactory,
                 PlatformFactory,
                 PrefixFactory,
                 ProviderFactory,
@@ -246,13 +267,17 @@ class Command(BaseCommand):
                 RIRFactory,
                 RoleFactory,
                 RouteTargetFactory,
+                SavedViewFactory,
                 SoftwareImageFileFactory,
                 SoftwareVersionFactory,
+                StaticGroupAssociationFactory,
+                StaticGroupFactory,
                 StatusFactory,
                 TagFactory,
                 TeamFactory,
                 TenantFactory,
                 TenantGroupFactory,
+                UserFactory,
                 VLANFactory,
                 VLANGroupFactory,
                 VRFFactory,
@@ -292,7 +317,13 @@ Type 'yes' to continue, or 'no' to cancel: """
             self.stdout.write(
                 self.style.WARNING(f'Flushing all existing data from the database "{options["database"]}"...')
             )
-            call_command("flush", "--no-input", "--database", options["database"])
+
+            # If we already have a fixture file to use, suppress the "post_migrate" signal that "flush" would normally
+            # trigger, as that would lead to creation of Job records (etc.) that WILL conflict with the fixture data.
+            inhibit_post_migrate = options["cache_test_fixtures"] and os.path.exists(options["fixture_file"])
+            call_command(
+                "flush", "--no-input", "--database", options["database"], inhibit_post_migrate=inhibit_post_migrate
+            )
 
         if options["cache_test_fixtures"] and os.path.exists(options["fixture_file"]):
             self.stdout.write(self.style.WARNING(f"Loading factory data from file {options['fixture_file']}"))
@@ -307,7 +338,7 @@ Type 'yes' to continue, or 'no' to cancel: """
                     "dumpdata",
                     indent=2,
                     format="json",
-                    exclude=["auth.permission", "extras.job", "extras.customfield"],
+                    exclude=["auth.permission"],
                     output=options["fixture_file"],
                 )
 

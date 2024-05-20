@@ -89,6 +89,7 @@ class NavMenuTestCase(TestCase):
             self.assertEqual(expected_perms[tab_name], tab_details["permissions"])
 
 
+@tag("unit")
 class NewUINavTest(TestCase):
     @patch.dict(registry, values={"new_ui_nav_menu": {}}, clear=True)
     def test_build_new_ui_nav_menu(self):

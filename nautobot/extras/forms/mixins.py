@@ -22,6 +22,7 @@ from nautobot.extras.models import (
     Relationship,
     RelationshipAssociation,
     Role,
+    StaticGroup,
     Status,
     Tag,
 )
@@ -39,6 +40,7 @@ __all__ = (
     "RelationshipModelBulkEditFormMixin",
     "RelationshipModelFilterFormMixin",
     "RelationshipModelFormMixin",
+    "StaticGroupModelFormMixin",
     "StatusModelBulkEditFormMixin",
     "StatusModelFilterFormMixin",
     "TagsBulkEditFormMixin",
@@ -50,6 +52,8 @@ __all__ = (
     "RelationshipModelForm",
     "RoleModelBulkEditFormMixin",
     "RoleModelFilterFormMixin",
+    "RoleNotRequiredModelFormMixin",
+    "RoleRequiredModelFormMixin",
     "StatusBulkEditFormMixin",
     "StatusFilterFormMixin",
 )
@@ -700,6 +704,32 @@ class RoleModelBulkEditFormMixin(forms.Form):
         self.order_fields(self.field_order)  # Reorder fields again
 
 
+class RoleNotRequiredModelFormMixin(forms.Form):
+    """Mixin to add non-required `role` choice field to forms."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"] = DynamicModelChoiceField(
+            required=False,
+            queryset=Role.objects.all(),
+            query_params={"content_types": self.model._meta.label_lower},
+        )
+        self.order_fields(self.field_order)  # Reorder fields again
+
+
+class RoleRequiredModelFormMixin(forms.Form):
+    """Mixin to add required `role` choice field to forms"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["role"] = DynamicModelChoiceField(
+            required=True,
+            queryset=Role.objects.all(),
+            query_params={"content_types": self.model._meta.label_lower},
+        )
+        self.order_fields(self.field_order)  # Reorder fields again
+
+
 class RoleModelFilterFormMixin(forms.Form):
     """
     Mixin to add non-required `role` multiple-choice field to filter forms.
@@ -714,6 +744,33 @@ class RoleModelFilterFormMixin(forms.Form):
             to_field_name="name",
         )
         self.order_fields(self.field_order)  # Reorder fields again
+
+
+class StaticGroupModelFormMixin(forms.ModelForm):
+    """
+    Mixin to add `static_groups` field to model create/edit forms where applicable.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self._meta.model.is_static_group_associable_model:
+            self.fields["static_groups"] = DynamicModelMultipleChoiceField(
+                required=False,
+                initial=self.instance.static_groups if self.instance else None,
+                queryset=StaticGroup.objects.get_for_model(self._meta.model),
+                query_params={"content_type": self._meta.model._meta.label_lower},
+                to_field_name="name",
+            )
+
+    def save(self, commit=True):
+        obj = super().save(commit=commit)
+        if commit and obj.is_static_group_associable_model:
+            current_groups = set(obj.static_groups)
+            for static_group in set(self.cleaned_data.get("static_groups")).difference(current_groups):
+                static_group.add_members([obj])
+            for static_group in current_groups.difference(self.cleaned_data.get("static_groups")):
+                static_group.remove_members([obj])
+        return obj
 
 
 class StatusModelBulkEditFormMixin(forms.Form):

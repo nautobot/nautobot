@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load buttons %}
 {% load helpers %}
+{% load perms %}
 {% load plugins %}
 {% load static %}
 
@@ -46,6 +47,61 @@
     {% if filter_form or dynamic_filter_form %}
         <button type="button" class="btn btn-default" data-toggle="modal" data-target="#FilterForm_modal" title="Add filters" id="id__filterbtn"><i class="mdi mdi-filter"></i> Filter</button>
     {% endif %}
+    {% if model.is_saved_view_model %}
+        <div class="btn-group">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span> Saved Views <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu">
+                {% if perms.users.view_savedview %}
+                    {% for saved_view in saved_views %}
+                        <li>
+                            <a href="{{ saved_view.get_absolute_url }}">
+                                {% if saved_view == current_saved_view %}
+                                    <i class="mdi mdi-view-compact-outline text-bold" aria-hidden="true"></i>
+                                    <strong>
+                                        {{saved_view.name}}
+                                    </strong>
+                                {% else %}
+                                    <i class="mdi mdi-view-compact-outline text-muted" aria-hidden="true"></i>
+                                    {{saved_view.name}}
+                                {% endif %}
+                            </a>
+                        </li>
+                    {% endfor %}
+                    {% if saved_views %}
+                        <li role="separator" class="divider"></li>
+                    {% endif %}
+                {% endif %}
+                {% if current_saved_view %}
+                    {% if perms.users.change_savedview %}
+                        <li>
+                            <a href="{% url 'user:savedview_edit' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                                <i class="mdi mdi-content-save-outline text-muted" aria-hidden="true"></i>
+                                <span>Update Current View</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+                {% if perms.users.add_savedview %}
+                    <li>
+                        <a href="" data-toggle="modal" data-target="#saved_view_modal" title="Save Current View As">
+                            <i class="mdi mdi-content-save-plus-outline text-muted" aria-hidden="true"></i>
+                            <span>Save As New View</span>
+                        </a>
+                    </li>
+                {% endif %}
+                {% if current_saved_view and perms.users.change_savedview %}
+                    <li>
+                        <a href="" data-toggle="modal" data-target="#clear_view_modal" title="Confirm Clear View">
+                            <i class="mdi mdi-arrow-u-right-bottom text-danger" aria-hidden="true"></i>
+                            <span class="text-danger">Clear View</span>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    {% endif %}
     {% if permissions.add and 'add' in action_buttons %}
         {% add_button content_type.model_class|validated_viewname:"add" %}
     {% endif %}
@@ -60,7 +116,18 @@
         {% endblock export_button %}
     {% endif %}
 </div>
-<h1>{% block title %}{{ title }}{% endblock %}</h1>
+<h1>{% block title %}
+    {{ title }}
+        {% if current_saved_view %}
+            —
+            {% if new_changes_not_applied %}
+                <i title="Pending changes not saved">{{ current_saved_view.name }}</i>
+            {% else %}
+                {{ current_saved_view.name }}
+            {% endif %}
+        {% endif %}
+    {% endblock %}
+</h1>
 {% block header_extra %}{% endblock %}
 {% if filter_params %}
 <div class="filters-applied">
@@ -74,7 +141,7 @@
                     class="remove-filter-param"
                     title="Remove all items"
                     data-field-type="parent"
-                    data-field-value={{ field.name }}
+                    data-field-value="{{ field.name }}"
             >×</span>
             <ul class="filter-selection-rendered">
                 {% for value in field.values %}
@@ -85,8 +152,8 @@
                     <span
                             class="filter-selection-choice-remove remove-filter-param"
                             data-field-type="child"
-                            data-field-parent={{ field.name }}
-                            data-field-value={{ value.name }}
+                            data-field-parent="{{ field.name }}"
+                            data-field-value="{{ value.name }}"
                     >×</span>{{ value.display }}
                 </li>
                 {% endfor %}
@@ -103,7 +170,7 @@
     <div class="col-md-12">
         {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
         {% if permissions.change or permissions.delete %}
-            <form method="post" class="form form-horizontal">
+            <form id="object_list_form" method="post" class="form form-horizontal">
                 {% csrf_token %}
                 <input type="hidden" name="return_url" value="{% if return_url %}{{ return_url }}{% else %}{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}{% endif %}" />
                 {% if table.paginator.num_pages > 1 %}
@@ -117,6 +184,18 @@
                                 </label>
                             </div>
                             <div class="pull-right">
+                                {% if content_type.model_class.is_static_group_associable_model and perms.extras.add_staticgroupassociation %}
+                                    <button type="button"
+                                            id="update_static_groups_for_all"
+                                            data-toggle="modal"
+                                            data-target="#static_group_assignment_modal"
+                                            data-objects="all"
+                                            class="btn btn-primary btn-sm"
+                                            disabled="disabled">
+                                        <span class="mdi mdi-group" aria-hidden="true"></span>
+                                        Update Static Groups for All
+                                    </button>
+                                {% endif %}
                                 {% if bulk_edit_url and permissions.change %}
                                     <button type="submit" name="_edit" formaction="{% url bulk_edit_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-warning btn-sm" disabled="disabled">
                                         <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit All
@@ -135,6 +214,16 @@
                 {% include table_template|default:'panel_table.html' %}
                 <div class="pull-left noprint">
                     {% block bulk_buttons %}{% endblock %}
+                    {% if content_type.model_class.is_static_group_associable_model and perms.extras.add_staticgroupassociation %}
+                        <button type="button"
+                                id="update_static_groups_for_selected"
+                                data-toggle="modal"
+                                data-target="#static_group_assignment_modal"
+                                data-objects="selected"
+                                class="btn btn-primary btn-sm">
+                            <span class="mdi mdi-group" aria-hidden="true"></span> Update Static Groups
+                        </button>
+                    {% endif %}
                     {% if bulk_edit_url and permissions.change %}
                         <button type="submit" name="_edit" formaction="{% url bulk_edit_url %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-warning btn-sm">
                             <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit Selected
@@ -158,6 +247,13 @@
 </div>
 {% if table %}{% table_config_form table table_name="ObjectTable" %}{% endif %}
 {% filter_form_modal filter_form dynamic_filter_form model_plural_name=title %}
+{% if model.is_saved_view_model %}
+    {% saved_view_modal request.GET.urlencode list_url model request %}
+{% endif %}
+{% static_group_assignment_modal request=request content_type=content_type %}
+{% if current_saved_view %}
+    {% clear_view_modal current_saved_view.pk %}
+{% endif %}
 {% endblock %}
 
 {% block javascript %}
@@ -180,5 +276,38 @@
         added: jsify_form,
         removed: (row) => { row.remove(); }
     });
+
+    // TODO: move this to a JS file that is auto-included by static_group_assignment_modal templatetag
+    $("#static_group_assignment_modal").on("show.bs.modal", function (event) {
+        const button = $(event.relatedTarget);
+        const selected_or_all = button.data("objects");
+        const pks_target = document.getElementById("static_group_assignment_pks");
+        pks_target.replaceChildren();
+        if (selected_or_all == "all") {
+            document.getElementById("static_group_assignment_all").value = true;
+        } else {
+            document.getElementById("static_group_assignment_all").value = "";
+            const formData = new FormData(document.getElementById("object_list_form"));
+            for (let pk of formData.getAll("pk")) {
+                let input = document.createElement("input");
+                input.setAttribute("type", "hidden");
+                input.setAttribute("name", "pk");
+                input.setAttribute("value", pk);
+                pks_target.append(input);
+            }
+        }
+    });
+
+    document.getElementById("static_group_assignment_cancel").addEventListener("click", (e) => {
+        // Clear form data on cancel, but not on "close" "x" button
+        $("#static_group_assignment_modal").modal("hide");
+        document.getElementById("static_group_assignment_all").value = "";
+        document.getElementById("static_group_assignment_pks").replaceChildren();
+        document.getElementById("id_create_and_assign_to_new_group_name").value = "";
+        $("#id_add_to_groups").val(null).trigger("change");
+        $("#id_remove_from_groups").val(null).trigger("change");
+    });
+
+
 </script>
 {% endblock %}

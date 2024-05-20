@@ -45,7 +45,7 @@ UTILIZATION_GRAPH = """
 
 PREFIX_COPY_LINK = """
 {% load helpers %}
-{% tree_hierarchy_ui_representation record.ancestors.count|as_range table.order_by %}
+{% tree_hierarchy_ui_representation record.ancestors.count|as_range table.hide_hierarchy_ui%}
 <span class="hover_copy">
   <a href="\
 {% if record.present_in_database %}\
@@ -443,6 +443,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     )
     tenant = TenantColumn()
     parent__namespace = tables.Column(linkify=True)
+    # Interface, Device, and VirtualMachine tables aren't currently filterable by IP address (?) so no LinkedCountColumn
     interface_count = tables.Column(verbose_name="Interfaces")
     interface_parent_count = tables.Column(verbose_name="Devices")
     vm_interface_count = LinkedCountColumn(
@@ -771,7 +772,7 @@ class InterfaceVLANTable(StatusTableMixin, BaseTable):
     tenant = TenantColumn()
     role = tables.TemplateColumn(template_code=VLAN_ROLE_LINK)
     location_count = LinkedCountColumn(
-        viewname="dcim:location",
+        viewname="dcim:location_list",
         url_params={"vlans": "pk"},
         verbose_name="Locations",
     )
