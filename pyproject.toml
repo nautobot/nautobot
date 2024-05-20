@@ -86,7 +86,7 @@ drf-react-template-framework = "^0.0.17"
 # OpenAPI 3.0 schema generation for the REST API
 drf-spectacular = {version = "~0.26.5", extras = ["sidecar"]}
 # Emoji terminal output for Python.
-emoji = "~2.11.0"
+emoji = "~2.12.1"
 # Git integrations for Python
 GitPython = "~3.1.43"
 # GraphQL support
@@ -190,9 +190,9 @@ mkdocs-redirects = "~1.2.1"
 # Automatically handle index pages for docs sections
 mkdocs-section-index = "~0.3.8"
 # Automatic documentation from sources, for MkDocs
-mkdocstrings = "~0.24.1"
+mkdocstrings = "~0.25.1"
 # Python-specific extension to mkdocstrings
-mkdocstrings-python = "~1.9.0"
+mkdocstrings-python = "~1.10.2"
 
 [tool.poetry.group.linting.dependencies]
 # Code static analysis
