@@ -230,17 +230,28 @@ class ContactAssociationSerializer(NautobotModelSerializer):
         }
 
     def validate(self, data):
-        # Validate uniqueness of (contact/team, role)
+        # Validate uniqueness of (associated object, associated object type, contact/team, role)
+        unique_together_fields = None
+
         if data.get("contact") and data.get("role"):
-            validator = UniqueTogetherValidator(
-                queryset=ContactAssociation.objects.all(),
-                fields=("contact", "role"),
+            unique_together_fields = (
+                "associated_object_type",
+                "associated_object_id",
+                "contact",
+                "role",
             )
-            validator(data, self)
         elif data.get("team") and data.get("role"):
+            unique_together_fields = (
+                "associated_object_type",
+                "associated_object_id",
+                "team",
+                "role",
+            )
+
+        if unique_together_fields is not None:
             validator = UniqueTogetherValidator(
                 queryset=ContactAssociation.objects.all(),
-                fields=("team", "role"),
+                fields=unique_together_fields,
             )
             validator(data, self)
 
@@ -910,6 +921,9 @@ class StaticGroupSerializer(NautobotModelSerializer, TaggedModelSerializerMixin)
     class Meta:
         model = StaticGroup
         fields = "__all__"
+        extra_kwargs = {
+            "hidden": {"read_only": True},
+        }
 
 
 class StaticGroupAssociationSerializer(NautobotModelSerializer):
@@ -1002,6 +1016,8 @@ class TagSerializer(NautobotModelSerializer):
 
 
 class TeamSerializer(NautobotModelSerializer):
+    contacts = NautobotHyperlinkedRelatedField(queryset=Contact.objects.all(), many=True, required=False)
+
     class Meta:
         model = Team
         fields = "__all__"

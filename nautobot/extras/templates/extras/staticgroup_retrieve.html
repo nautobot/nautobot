@@ -11,7 +11,7 @@
 
 {% block extra_tab_content %}
     <div id="members" role="tabpanel" class="tab-pane{% if request.GET.tab == 'members' %} active{% else %} fade{% endif %}">
-        {% if members_list_url %}
+        {% if members_list_url and not object.hidden %}
             <div class="row">
                 <div class="col-md-12">
                     <div class="alert alert-success" role="alert">
@@ -50,6 +50,12 @@
                 <td>Tenant</td>
                 <td>{{ object.tenant|hyperlinked_object }}</td>
             </tr>
+            {% if object.hidden %}
+                <tr>
+                    <td>Hidden</td>
+                    <td>{{ object.hidden|render_boolean }}</td>
+                </tr>
+            {% endif %}
         </table>
     </div>
 {% endblock content_left_page %}

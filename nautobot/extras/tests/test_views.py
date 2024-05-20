@@ -2831,7 +2831,71 @@ class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Location.objects.filter(name__startswith="Root").exclude(parent__isnull=True), group_2.members
         )
 
-    # TODO: negative tests - global permission violation, object-level permission violation, invalid data, etc.
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_assign_hidden_groups_forbidden(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+        group_1 = StaticGroup.all_objects.create(content_type=location_ct, name="Group 1", hidden=True)
+        group_2 = StaticGroup.all_objects.create(content_type=location_ct, name="Group 2", hidden=True)
+        group_2.add_members(Location.objects.filter(name__startswith="Root"))
+
+        self.add_permissions(
+            "extras.add_staticgroupassociation", "extras.delete_staticgroupassociation", "extras.add_staticgroup"
+        )
+
+        url = reverse("extras:staticgroup_bulk_assign")
+        request = {
+            "path": url,
+            "data": post_data(
+                {
+                    "content_type": location_ct.pk,
+                    "pk": list(Location.objects.filter(parent__isnull=True).values_list("pk", flat=True)),
+                    "add_to_groups": [group_1.pk],
+                },
+            ),
+        }
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        # TODO check for specific form validation error?
+        self.assertQuerysetEqual(group_1.members, [])
+
+        del request["data"]["add_to_groups"]
+        request["data"]["remove_from_groups"] = [group_2.pk]
+        response = self.client.post(**request, follow=True)
+        self.assertHttpStatus(response, 200)
+        # TODO check for specific form validation error?
+        self.assertQuerysetEqual(group_2.members, Location.objects.filter(name__startswith="Root"))
+
+    # TODO: negative tests for bulk assign - global and object-level permission violations, invalid data, etc.
+
+    def test_list_objects_omits_hidden_by_default(self):
+        """The list view should not by default include any hidden groups."""
+        sg1 = StaticGroup.all_objects.filter(hidden=False).first()
+        self.assertIsNotNone(sg1)
+        sg2 = StaticGroup.all_objects.filter(hidden=True).first()
+        self.assertIsNotNone(sg2)
+
+        self.add_permissions("extras.view_staticgroup")
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertIn(sg1.get_absolute_url(), content, msg=content)
+        self.assertNotIn(sg2.get_absolute_url(), content, msg=content)
+
+    def test_list_objects_can_explicitly_include_hidden(self):
+        """The list view can include hidden groups with the correct query parameter."""
+        sg1 = StaticGroup.all_objects.filter(hidden=False).first()
+        self.assertIsNotNone(sg1)
+        sg2 = StaticGroup.all_objects.filter(hidden=True).first()
+        self.assertIsNotNone(sg2)
+
+        self.add_permissions("extras.view_staticgroup")
+        response = self.client.get(f"{self._get_url('list')}?hidden=True")
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertNotIn(sg1.get_absolute_url(), content, msg=content)
+        self.assertIn(sg2.get_absolute_url(), content, msg=content)
 
 
 class StaticGroupAssociationTestCase(
@@ -2842,6 +2906,36 @@ class StaticGroupAssociationTestCase(
     ViewTestCases.ListObjectsViewTestCase,
 ):
     model = StaticGroupAssociation
+
+    def test_list_objects_omits_hidden_by_default(self):
+        """The list view should not by default include associations for hidden groups."""
+        sga1 = StaticGroupAssociation.all_objects.filter(static_group__hidden=False).first()
+        self.assertIsNotNone(sga1)
+        sga2 = StaticGroupAssociation.all_objects.filter(static_group__hidden=True).first()
+        self.assertIsNotNone(sga2)
+
+        self.add_permissions("extras.view_staticgroupassociation")
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertIn(sga1.get_absolute_url(), content, msg=content)
+        self.assertNotIn(sga2.get_absolute_url(), content, msg=content)
+
+    def test_list_objects_can_explicitly_include_hidden(self):
+        """The list view can include hidden groups' associations with the correct query parameter."""
+        sga1 = StaticGroupAssociation.all_objects.filter(static_group__hidden=False).first()
+        self.assertIsNotNone(sga1)
+        sga2 = StaticGroupAssociation.all_objects.filter(static_group__hidden=True).first()
+        self.assertIsNotNone(sga2)
+
+        self.add_permissions("extras.view_staticgroupassociation")
+        response = self.client.get(f"{self._get_url('list')}?hidden=True")
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertNotIn(sga1.get_absolute_url(), content, msg=content)
+        self.assertIn(sga2.get_absolute_url(), content, msg=content)
 
 
 class StatusTestCase(

@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import AnonymousUser, Group
 from django.db.models import Count
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiTypes
 from rest_framework.authentication import BasicAuthentication
@@ -12,7 +12,7 @@ from nautobot.core.api.views import ModelViewSet
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import deepmerge
 from nautobot.users import filters
-from nautobot.users.models import ObjectPermission, Token
+from nautobot.users.models import ObjectPermission, SavedView, Token
 
 from . import serializers
 
@@ -38,6 +38,17 @@ class GroupViewSet(ModelViewSet):
 
 
 #
+# Saved Views
+#
+
+
+class SavedViewViewSet(ModelViewSet):
+    queryset = SavedView.objects.select_related("owner")
+    serializer_class = serializers.SavedViewSerializer
+    filterset_class = filters.SavedViewFilterSet
+
+
+#
 # REST API tokens
 #
 
@@ -58,7 +69,9 @@ class TokenViewSet(ModelViewSet):
         Limit users to their own Tokens.
         """
         queryset = super().get_queryset()
-        return queryset.filter(user=self.request.user)
+        if not isinstance(self.request.user, AnonymousUser):
+            return queryset.filter(user=self.request.user)
+        return queryset.none()
 
 
 #

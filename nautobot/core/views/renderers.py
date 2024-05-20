@@ -2,6 +2,7 @@ import logging
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django_tables2 import RequestConfig
 from rest_framework import renderers
@@ -24,9 +25,11 @@ from nautobot.core.views.utils import (
     check_filter_for_display,
     common_detail_view_context,
     get_csv_form_fields_from_serializer_class,
+    view_changes_not_saved,
 )
 from nautobot.extras.models.change_logging import ObjectChange
 from nautobot.extras.utils import get_base_template
+from nautobot.users.models import SavedView
 
 
 class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
@@ -36,6 +39,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
     # Log error messages within NautobotHTMLRenderer
     logger = logging.getLogger(__name__)
+    saved_view = None
 
     def get_dynamic_filter_form(self, view, request, *args, filterset_class=None, **kwargs):
         """
@@ -46,7 +50,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         filterset = None
         if filterset_class:
             filterset = filterset_class()
-            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(request.GET, filterset)
+            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
+                view.filter_params if view.filter_params is not None else request.GET, filterset
+            )
         return DynamicFilterFormSet(filterset=filterset, data=factory_formset_params)
 
     def construct_user_permissions(self, request, model):
@@ -66,14 +72,30 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         """
         table_class = view.get_table_class()
         request = kwargs.get("request", view.request)
+        saved_view_pk = request.GET.get("saved_view", None)
+        table_changes_pending = request.GET.get("table_changes_pending", False)
         queryset = view.alter_queryset(request)
 
         if view.action in ["list", "notes", "changelog"]:
             if view.action == "list":
                 permissions = kwargs.get("permissions", {})
-                if view.request.GET.getlist("sort"):
+                self.saved_view = None
+                if saved_view_pk is not None:
+                    try:
+                        self.saved_view = SavedView.objects.restrict(request.user, "view").get(pk=saved_view_pk)
+                    except ObjectDoesNotExist:
+                        pass
+                if view.request.GET.getlist("sort") or (
+                    self.saved_view is not None and self.saved_view.config.get("sort_order")
+                ):
                     view.hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
-                table = table_class(queryset, user=request.user, hide_hierarchy_ui=view.hide_hierarchy_ui)
+                table = table_class(
+                    queryset,
+                    table_changes_pending=table_changes_pending,
+                    saved_view=self.saved_view,
+                    user=request.user,
+                    hide_hierarchy_ui=view.hide_hierarchy_ui,
+                )
                 if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                     table.columns.show("pk")
             elif view.action == "notes":
@@ -95,7 +117,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             # Apply the request context
             paginate = {
                 "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
+                "per_page": get_paginate_count(request, self.saved_view),
             }
             max_page_size = get_settings_or_config("MAX_PAGE_SIZE")
             if max_page_size and paginate["per_page"] > max_page_size:
@@ -181,9 +203,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                         for field_name, values in view.filter_params.items()
                     ]
                     if view.filterset_form_class is not None:
-                        filter_form = view.filterset_form_class(request.GET, label_suffix="")
+                        filter_form = view.filterset_form_class(view.filter_params, label_suffix="")
                 table = self.construct_table(view, request=request, permissions=permissions)
-                search_form = SearchForm(data=request.GET)
+                search_form = SearchForm(data=view.filter_params)
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
@@ -246,10 +268,26 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             if view.action == "list":
                 # Construct valid actions for list view.
                 valid_actions = self.validate_action_buttons(view, request)
+                # Query SavedViews for dropdown button
+                list_url = validated_viewname(model, "list")
+                saved_views = None
+                if model.is_saved_view_model:
+                    saved_views = (
+                        SavedView.objects.filter(view=list_url)
+                        .restrict(request.user, "view")
+                        .order_by("name")
+                        .only("pk", "name")
+                    )
+
+                new_changes_not_applied = view_changes_not_saved(request, view, self.saved_view)
                 context.update(
                     {
+                        "model": model,
+                        "current_saved_view": self.saved_view,
+                        "new_changes_not_applied": new_changes_not_applied,
                         "action_buttons": valid_actions,
-                        "list_url": validated_viewname(model, "list"),
+                        "list_url": list_url,
+                        "saved_views": saved_views,
                         "title": bettertitle(model._meta.verbose_name_plural),
                     }
                 )
