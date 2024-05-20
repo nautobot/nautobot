@@ -141,6 +141,7 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
 
         # Generate a unique identifier for this change to stash in the change context
         # This is used for deferred change logging and for looking up related changes without querying the database
+        unique_object_change_id = None
         if user is not None:
             unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}__{user.pk}"
         else:

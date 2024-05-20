@@ -9,7 +9,7 @@ from nautobot.core.api import (
     ContentTypeField,
     ValidatedModelSerializer,
 )
-from nautobot.users.models import ObjectPermission, Token
+from nautobot.users.models import ObjectPermission, SavedView, Token
 
 
 class UserSerializer(ValidatedModelSerializer):
@@ -65,6 +65,12 @@ class GroupSerializer(ValidatedModelSerializer):
     class Meta:
         model = Group
         exclude = ["permissions"]
+
+
+class SavedViewSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = SavedView
+        fields = "__all__"
 
 
 class TokenSerializer(ValidatedModelSerializer):

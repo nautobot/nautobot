@@ -47,6 +47,61 @@
     {% if filter_form or dynamic_filter_form %}
         <button type="button" class="btn btn-default" data-toggle="modal" data-target="#FilterForm_modal" title="Add filters" id="id__filterbtn"><i class="mdi mdi-filter"></i> Filter</button>
     {% endif %}
+    {% if model.is_saved_view_model %}
+        <div class="btn-group">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <span class="mdi mdi-view-compact-outline" aria-hidden="true"></span> Saved Views <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu">
+                {% if perms.users.view_savedview %}
+                    {% for saved_view in saved_views %}
+                        <li>
+                            <a href="{{ saved_view.get_absolute_url }}">
+                                {% if saved_view == current_saved_view %}
+                                    <i class="mdi mdi-view-compact-outline text-bold" aria-hidden="true"></i>
+                                    <strong>
+                                        {{saved_view.name}}
+                                    </strong>
+                                {% else %}
+                                    <i class="mdi mdi-view-compact-outline text-muted" aria-hidden="true"></i>
+                                    {{saved_view.name}}
+                                {% endif %}
+                            </a>
+                        </li>
+                    {% endfor %}
+                    {% if saved_views %}
+                        <li role="separator" class="divider"></li>
+                    {% endif %}
+                {% endif %}
+                {% if current_saved_view %}
+                    {% if perms.users.change_savedview %}
+                        <li>
+                            <a href="{% url 'user:savedview_edit' pk=request.GET.saved_view %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+                                <i class="mdi mdi-content-save-outline text-muted" aria-hidden="true"></i>
+                                <span>Update Current View</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+                {% if perms.users.add_savedview %}
+                    <li>
+                        <a href="" data-toggle="modal" data-target="#saved_view_modal" title="Save Current View As">
+                            <i class="mdi mdi-content-save-plus-outline text-muted" aria-hidden="true"></i>
+                            <span>Save As New View</span>
+                        </a>
+                    </li>
+                {% endif %}
+                {% if current_saved_view and perms.users.change_savedview %}
+                    <li>
+                        <a href="" data-toggle="modal" data-target="#clear_view_modal" title="Confirm Clear View">
+                            <i class="mdi mdi-arrow-u-right-bottom text-danger" aria-hidden="true"></i>
+                            <span class="text-danger">Clear View</span>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    {% endif %}
     {% if permissions.add and 'add' in action_buttons %}
         {% add_button content_type.model_class|validated_viewname:"add" %}
     {% endif %}
@@ -61,7 +116,18 @@
         {% endblock export_button %}
     {% endif %}
 </div>
-<h1>{% block title %}{{ title }}{% endblock %}</h1>
+<h1>{% block title %}
+    {{ title }}
+        {% if current_saved_view %}
+            —
+            {% if new_changes_not_applied %}
+                <i title="Pending changes not saved">{{ current_saved_view.name }}</i>
+            {% else %}
+                {{ current_saved_view.name }}
+            {% endif %}
+        {% endif %}
+    {% endblock %}
+</h1>
 {% block header_extra %}{% endblock %}
 {% if filter_params %}
 <div class="filters-applied">
@@ -181,7 +247,13 @@
 </div>
 {% if table %}{% table_config_form table table_name="ObjectTable" %}{% endif %}
 {% filter_form_modal filter_form dynamic_filter_form model_plural_name=title %}
+{% if model.is_saved_view_model %}
+    {% saved_view_modal request.GET.urlencode list_url model request %}
+{% endif %}
 {% static_group_assignment_modal request=request content_type=content_type %}
+{% if current_saved_view %}
+    {% clear_view_modal current_saved_view.pk %}
+{% endif %}
 {% endblock %}
 
 {% block javascript %}
