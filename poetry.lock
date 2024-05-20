@@ -759,20 +759,19 @@ Django = ">=3.2.18"
 
 [[package]]
 name = "django-constance"
-version = "2.9.1"
+version = "3.1.0"
 description = "Django live settings with pluggable backends, including Redis."
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 files = [
-    {file = "django-constance-2.9.1.tar.gz", hash = "sha256:4c6a96a5f2cbce1bc3fa41aa20566b6ee26fbd896c9f91f996518a3a0904f6c8"},
-    {file = "django_constance-2.9.1-py3-none-any.whl", hash = "sha256:bf0b392efa18a1f3f464eddb7eb36ac5c02598354a5e31d0d4ce4fc8b535694b"},
+    {file = "django-constance-3.1.0.tar.gz", hash = "sha256:2b96e51de63751ef63f8f92f74e0f6aea30fb6453f3a736c21e1f8b3f6cf0b4f"},
+    {file = "django_constance-3.1.0-py3-none-any.whl", hash = "sha256:6242486a346e396d765a9333d17f3101c8613cabc92e0b98dcb70c2a391bc53b"},
 ]
 
 [package.dependencies]
-django-picklefield = {version = "*", optional = true, markers = "extra == \"database\""}
+django-picklefield = "*"
 
 [package.extras]
-database = ["django-picklefield"]
 redis = ["redis"]
 
 [[package]]
@@ -2230,27 +2229,26 @@ files = [
 
 [[package]]
 name = "napalm"
-version = "4.1.0"
+version = "5.0.0"
 description = "Network Automation and Programmability Abstraction Layer with Multivendor support"
 optional = true
 python-versions = "*"
 files = [
-    {file = "napalm-4.1.0-py2.py3-none-any.whl", hash = "sha256:14a5b7759a0247a26fff2c444b1cfc150a08224de8addf4076c384845285bf5b"},
-    {file = "napalm-4.1.0.tar.gz", hash = "sha256:3b3e18efd556861c056ba509eb46f5ffc9e3e6c42db399fa76b6ea9af272c17a"},
+    {file = "napalm-5.0.0-py2.py3-none-any.whl", hash = "sha256:458837932e527ca06a4bab7e600b0ca6e6bc3bb4b33fad9c9ef2befc7df6d2f5"},
+    {file = "napalm-5.0.0.tar.gz", hash = "sha256:350ac3d74f2f10030dbae44d3395551d7e03ee25c65fa5eb8263a4e6f51f2c94"},
 ]
 
 [package.dependencies]
 cffi = ">=1.11.3"
-future = "*"
 jinja2 = "*"
-junos-eznc = ">=2.6.3"
+junos-eznc = ">=2.7.0"
 lxml = ">=4.3.0"
 ncclient = "*"
 netaddr = "*"
 netmiko = ">=4.1.0"
 netutils = ">=1.0.0"
 paramiko = ">=2.6.0"
-pyeapi = ">=0.8.2"
+pyeapi = ">=1.0.2"
 pyYAML = "*"
 requests = ">=2.7.0"
 scp = "*"
@@ -4143,4 +4141,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.13"
-content-hash = "247b03af5781c3c7ff71b50ca175537a9f21745d509bdcc8a3ea2ef235ba5644"
+content-hash = "8e1e5549bbfc03b3fabd185c58ac2f6fbe856f34a21f8f12731b727b172118f1"

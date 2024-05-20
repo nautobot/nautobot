@@ -48,7 +48,7 @@ django-celery-beat = "~2.6.0"
 # Provides a database backend & models for Celery task results
 django-celery-results = "~2.5.1"
 # Management of app configuration via the Django admin UI
-django-constance = {version = "~2.9.1", extras = ["database"]}
+django-constance = "~3.1.0"
 # Permit cross-domain API requests
 django-cors-headers = "~4.3.1"
 # Store files in the database for background tasks
@@ -106,7 +106,7 @@ MarkupSafe = "~2.1.5"
 # MySQL database adapter
 mysqlclient = {version = "~2.2.3", optional = true}
 # NAPALM automation library
-napalm = {version = "~4.1.0", optional = true}
+napalm = {version = ">=4.1.0,<6.0.0", optional = true}
 # IP prefix and address handling
 netaddr = "~0.10.1"
 # Library of network related utilities including network driver mappings and Jinja Filters
