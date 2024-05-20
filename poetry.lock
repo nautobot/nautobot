@@ -710,13 +710,13 @@ files = [
 
 [[package]]
 name = "django-auth-ldap"
-version = "4.7.0"
+version = "4.8.0"
 description = "Django LDAP authentication backend"
 optional = true
 python-versions = ">=3.8"
 files = [
-    {file = "django-auth-ldap-4.7.0.tar.gz", hash = "sha256:8dea65376b8b2fa1beee52348760e3082e642939a5038cbe881a5e6381b65b8a"},
-    {file = "django_auth_ldap-4.7.0-py3-none-any.whl", hash = "sha256:de02c36e9f9025be9242cd40b5617403a886c72e3c5e0dd489b9b3db996dc875"},
+    {file = "django-auth-ldap-4.8.0.tar.gz", hash = "sha256:604250938ddc9fda619f247c7a59b0b2f06e53a7d3f46a156f28aa30dd71a738"},
+    {file = "django_auth_ldap-4.8.0-py3-none-any.whl", hash = "sha256:4b4b944f3c28bce362f33fb6e8db68429ed8fd8f12f0c0c4b1a4344a7ef225ce"},
 ]
 
 [package.dependencies]
@@ -1031,13 +1031,13 @@ pytz = "*"
 
 [[package]]
 name = "django-tree-queries"
-version = "0.17.0"
+version = "0.19.0"
 description = "Tree queries with explicit opt-in, without configurability"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "django_tree_queries-0.17.0-py3-none-any.whl", hash = "sha256:df62cc7daa7a766483a8ae11618ff7649d74425b5d245e9644526f2dd2f51af0"},
-    {file = "django_tree_queries-0.17.0.tar.gz", hash = "sha256:f115cf6756c55fde56bb876d5b5aa1b2bd33ae3d6e2949c3176ef0b4fb64c532"},
+    {file = "django_tree_queries-0.19.0-py3-none-any.whl", hash = "sha256:05b9e3158e31612528f136b4704a8d807e14edc0b4a607a45377e6132517ba2c"},
+    {file = "django_tree_queries-0.19.0.tar.gz", hash = "sha256:d1325e75f96e90b86c4316a3d63498101ec05703f4e629786b561e8aaab0e4a7"},
 ]
 
 [package.extras]
@@ -1803,13 +1803,13 @@ source = ["Cython (>=3.0.10)"]
 
 [[package]]
 name = "markdown"
-version = "3.5.2"
+version = "3.6"
 description = "Python implementation of John Gruber's Markdown."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "Markdown-3.5.2-py3-none-any.whl", hash = "sha256:d43323865d89fc0cb9b20c75fc8ad313af307cc087e84b657d9eec768eddeadd"},
-    {file = "Markdown-3.5.2.tar.gz", hash = "sha256:e1ac7b3dc550ee80e602e71c1d168002f062e49f1b11e26a36264dafd4df2ef8"},
+    {file = "Markdown-3.6-py3-none-any.whl", hash = "sha256:48f276f4d8cfb8ce6527c8f79e2ee29708508bf4d40aa410fbc3b4ee832c850f"},
+    {file = "Markdown-3.6.tar.gz", hash = "sha256:ed4f41f6daecbeeb96e576ce414c41d2d876daa9a16cb35fa8ed8c2ddfad0224"},
 ]
 
 [package.dependencies]
@@ -4123,4 +4123,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.13"
-content-hash = "2de31aa08d6c6218d0fd5081ddb6947f08d8a9213b700c752de17011a57113e0"
+content-hash = "6a6a79971591419c297cd9bafebf42ef950d5087944275b78f475ed16406882d"
