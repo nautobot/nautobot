@@ -281,6 +281,10 @@ DEVICEBAY_BUTTONS = """
 {% endif %}
 """
 
+MODULE_BUTTONS = """
+<a href="{% url 'dcim:module' pk=record.pk %}" class="btn btn-default btn-xs" title="Details"><i class="mdi mdi-information-outline" aria-hidden="true"></i></a>
+"""
+
 DEVICE_MODULEBAY_BUTTONS = """
 {% if perms.dcim.change_modulebay and perms.dcim.add_module %}
     {% if not record.installed_module %}

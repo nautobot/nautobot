@@ -1625,8 +1625,10 @@ class Module(PrimaryModel):
     def display(self):
         if self.location:
             return f"{self!s} at location {self.location}"
+        elif self.parent_module_bay.parent_device is not None:
+            return f"{self.module_type!s} installed in {self.parent_module_bay.parent_device.display}"
         else:
-            return f"{self!s} installed in {self.parent_module_bay}"
+            return f"{self.module_type!s} installed in {self.parent_module_bay.parent_module.display}"
 
     @property
     def device(self):

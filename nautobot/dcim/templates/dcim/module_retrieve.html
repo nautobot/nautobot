@@ -16,7 +16,15 @@
         <tr>
             <td>Installed in</td>
             <td>
-                {{ object.parent_module_bay|hyperlinked_object }}
+                {% if object.parent_module_bay %}
+                    {% if object.parent_module_bay.parent_device %}
+                        <a href="{{ object.parent_module_bay.parent_device.get_absolute_url }}">{{ object.parent_module_bay.display }}</a>
+                    {% else %}
+                        <a href="{{ object.parent_module_bay.parent_module.get_absolute_url }}">{{ object.parent_module_bay.display }}</a>
+                    {% endif %}
+                {% else %}
+                    {{ None|placeholder }}
+                {% endif %}
             </td>
         </tr>
         <tr>
@@ -48,11 +56,6 @@
     </table>
 </div>
 {% endblock content_left_page %}
-{% block content_right_page %}
-{% endblock content_right_page %}
-{% block content_full_width_page %}
-{% endblock content_full_width_page %}
-
 
 {% block javascript %}
 {{ block.super }}

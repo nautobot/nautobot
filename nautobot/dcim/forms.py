@@ -988,6 +988,8 @@ class ModuleTypeFilterForm(NautobotFilterForm):
 
 
 class ComponentTemplateForm(NautobotModelForm):
+    # TODO: placeholder values shouldn't be form controls, instead use:
+    #       <p class="form-control-static">{{ obj|hyperlinked_object_target_new_tab }}</p>
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
         disabled=True,
@@ -1331,7 +1333,7 @@ class FrontPortTemplateForm(ModularComponentTemplateForm):
             )
         elif getattr(self.instance, "module_type", None):
             self.fields["rear_port_template"].queryset = RearPortTemplate.objects.filter(
-                device_type=self.instance.module_type
+                module_type=self.instance.module_type
             )
 
 
@@ -1355,17 +1357,23 @@ class FrontPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        device_type = DeviceType.objects.get(pk=self.initial.get("device_type") or self.data.get("device_type"))
+        device_type = self.initial.get("device_type") or self.data.get("device_type")
+        module_type = self.initial.get("module_type") or self.data.get("module_type")
+        if device_type:
+            parent = DeviceType.objects.get(pk=device_type)
+        if module_type:
+            parent = ModuleType.objects.get(pk=module_type)
 
         # Determine which rear port positions are occupied. These will be excluded from the list of available mappings.
         occupied_port_positions = [
             (front_port_template.rear_port_template_id, front_port_template.rear_port_position)
-            for front_port_template in device_type.front_port_templates.all()
+            for front_port_template in parent.front_port_templates.all()
         ]
 
         # Populate rear port choices
         choices = []
-        rear_port_templates = RearPortTemplate.objects.filter(device_type=device_type)
+        parent_field_name = parent._meta.verbose_name.replace(" ", "_")
+        rear_port_templates = RearPortTemplate.objects.filter(**{parent_field_name: parent})
         for rear_port_template in rear_port_templates:
             for i in range(1, rear_port_template.positions + 1):
                 if (rear_port_template.pk, i) not in occupied_port_positions:

@@ -157,7 +157,7 @@ class DeviceFactory(PrimaryModelFactory):
         lambda: Location.objects.filter(location_type__content_types=ContentType.objects.get_for_model(Device)),
         allow_null=False,
     )
-    name = factory.LazyAttributeSequence(lambda o, n: f"{o.device_type.model} Device - {o.location} - {n + 1}")
+    name = factory.LazyAttributeSequence(lambda o, n: f"{o.device_type.model}-{n + 1}")
 
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
@@ -260,6 +260,18 @@ class DeviceFactory(PrimaryModelFactory):
     # )
 
 
+device_types = (
+    "router",
+    "switch",
+    "firewall",
+    "loadbalancer",
+    "wlan-controller",
+    "ap",
+    "san-fabric",
+    "console-server",
+)
+
+
 class DeviceTypeFactory(PrimaryModelFactory):
     class Meta:
         model = DeviceType
@@ -276,7 +288,20 @@ class DeviceTypeFactory(PrimaryModelFactory):
 
     manufacturer = random_instance(Manufacturer)
 
-    model = factory.LazyAttributeSequence(lambda o, n: f"{o.manufacturer.name} DeviceType {n + 1}")
+    @factory.lazy_attribute
+    def model(self):
+        possible_device_types = set(device_types)
+        count = 2
+        current_models = set(DeviceType.objects.filter(manufacturer=self.manufacturer).values_list("model", flat=True))
+        while True:
+            unused_models = possible_device_types.difference(current_models)
+            if unused_models:
+                return factory.random.randgen.choice(list(unused_models))
+            else:
+                possible_device_types = possible_device_types.union(
+                    {f"{device_type}-{count}" for device_type in device_types}
+                )
+                count += 1
 
     has_part_number = NautobotBoolIterator()
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
@@ -731,6 +756,13 @@ class ControllerManagedDeviceGroupFactory(PrimaryModelFactory):
     weight = factory.Faker("pyint", min_value=1, max_value=1000)
 
 
+module_types = (
+    "supervisor",
+    "linecard",
+    "fabric",
+)
+
+
 class ModuleTypeFactory(PrimaryModelFactory):
     class Meta:
         model = ModuleType
@@ -738,10 +770,23 @@ class ModuleTypeFactory(PrimaryModelFactory):
 
     manufacturer = random_instance(Manufacturer, allow_null=False)
 
-    model = factory.LazyAttributeSequence(lambda o, n: f"{o.manufacturer.name} ModuleType {n + 1}")
-
     has_part_number = NautobotBoolIterator()
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
+
+    @factory.lazy_attribute
+    def model(self):
+        possible_module_types = set(module_types)
+        count = 2
+        current_models = set(ModuleType.objects.filter(manufacturer=self.manufacturer).values_list("model", flat=True))
+        while True:
+            unused_models = possible_module_types.difference(current_models)
+            if unused_models:
+                return factory.random.randgen.choice(list(unused_models))
+            else:
+                possible_module_types = possible_module_types.union(
+                    {f"{module_type}-{count}" for module_type in module_types}
+                )
+                count += 1
 
 
 class ModuleFactory(PrimaryModelFactory):
