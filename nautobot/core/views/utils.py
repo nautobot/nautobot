@@ -231,9 +231,11 @@ def handle_protectederror(obj_list, request, e):
         '<a href="{}">{}</a>',
         ((dependent.get_absolute_url(), dependent) for dependent in objects_with_absolute_url),
     )
+    if objects_with_absolute_url and objects_without_absolute_url:
+        err_message += format_html(", ")
     err_message += format_html_join(
         ", ",
-        "{}",
+        "<span>{}</span>",
         ((dependent,) for dependent in objects_without_absolute_url),
     )
 
