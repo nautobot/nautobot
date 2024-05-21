@@ -280,6 +280,12 @@ class StaticGroupAssociation(OrganizationalModel):
         return super().to_objectchange(*args, **kwargs)
 
 
+class DynamicGroupManager(BaseManager.from_queryset(DynamicGroupQuerySet)):
+
+    def get_queryset(self):
+        return super().get_queryset().select_related("content_type", "_backing_group__content_type")
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -313,7 +319,7 @@ class DynamicGroup(OrganizationalModel):
         related_name="parents",
     )
 
-    objects = BaseManager.from_queryset(DynamicGroupQuerySet)()
+    objects = DynamicGroupManager()
 
     clone_fields = ["content_type", "filter"]
 
@@ -575,24 +581,7 @@ class DynamicGroup(OrganizationalModel):
         try:
             return self._backing_group.members
         except ObjectDoesNotExist:
-            pass
-
-        unpickled_query = None
-        try:
-            cached_query = cache.get(self.members_cache_key)
-            if cached_query is not None:
-                unpickled_query = pickle.loads(cached_query)  # noqa: S301  # suspicious-pickle-usage -- we know, but we control what's in the DB
-        except pickle.UnpicklingError:
-            logger.warning("Failed to unpickle cached members for %s", self)
-        finally:
-            if unpickled_query is None:
-                unpickled_query = self.members.all()
-                cached_query = pickle.dumps(unpickled_query)  # Explicitly pickle the query to evaluate it.
-                cache.set(
-                    self.members_cache_key, cached_query, get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT")
-                )
-
-        return unpickled_query
+            return self.update_cached_members()
 
     def update_cached_members(self):
         """
