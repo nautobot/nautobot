@@ -234,7 +234,7 @@ def handle_protectederror(obj_list, request, e):
     err_message += format_html_join(
         ", ",
         "<p>{}</p>",
-        ((dependent.__str__(),) for dependent in objects_without_absolute_url),
+        ((dependent,) for dependent in objects_without_absolute_url),
     )
 
     messages.error(request, err_message)
