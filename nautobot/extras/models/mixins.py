@@ -30,12 +30,15 @@ class DynamicGroupMixin:
     """
     Adds properties to a model to facilitate reversing DynamicGroup membership:
 
-    - `dynamic_groups` - A QuerySet of `DynamicGroup` objects this instance is a member of, performs the most database queries.
-    - `dynamic_groups_cached` - A QuerySet of `DynamicGroup` objects this instance is a member of, uses cached member list if available. Ideal for most use cases.
-    - `dynamic_groups_list` - A list of `DynamicGroup` objects this instance is a member of, performs one less database query than `dynamic_groups`.
-    - `dynamic_groups_list_cached` - A list of `DynamicGroup` objects this instance is a member of, uses cached member list if available. Performs no database queries in optimal conditions.
+    - `dynamic_groups` - QuerySet of `DynamicGroup` this instance is a member of, performs the most database queries.
+    - `dynamic_groups_cached` - QuerySet of `DynamicGroup` this instance is a member of, using cached member lists if
+      available. Ideal for most use cases.
+    - `dynamic_groups_list` - list of `DynamicGroup` objects this instance is a member of.
+    - `dynamic_groups_list_cached` - list of `DynamicGroup` objects this instance is a member of, using cached member
+      lists if available.
 
-    All properties are cached on the instance after the first call. To clear the instance cache without re-instantiating the object, call `delattr(instance, "_[the_property_name]")`.
+    All properties are cached on the instance after the first call.
+    To clear the instance cache without re-instantiating the object, call `delattr(instance, "_[the_property_name]")`.
         EX: `delattr(instance, "_dynamic_groups")`
     """
 
@@ -44,7 +47,8 @@ class DynamicGroupMixin:
         """
         Return a queryset of `DynamicGroup` objects this instance is a member of.
 
-        This will NOT use the cached member lists of the dynamic groups and will always query the database for each DynamicGroup.
+        This will NOT use the cached member lists of the dynamic groups and will always query the database
+        for each DynamicGroup.
 
         Additionally, this performs a final database query to turn the internal list into a queryset.
         """
@@ -63,7 +67,7 @@ class DynamicGroupMixin:
 
         This will use the cached member lists of the dynamic groups if available.
 
-        In optimal conditions this will incur a single database query to convert internal list into a queryset which is reasonably performant.
+        In optimal conditions this will incur a single database query to retrieve the relevant groups.
 
         This is the ideal property to use for most use cases.
         """
@@ -80,7 +84,8 @@ class DynamicGroupMixin:
         """
         Return a list of `DynamicGroup` objects this instance is a member of.
 
-        This will NOT use the cached member lists of the dynamic groups and will always query the database for each DynamicGroup.
+        This will NOT use the cached member lists of the dynamic groups and will always query the database
+        for each DynamicGroup.
 
         This saves a final query to turn the list into a queryset.
         """
@@ -99,7 +104,7 @@ class DynamicGroupMixin:
 
         This will use the cached member lists of the dynamic groups if available.
 
-        In optimal conditions this will incur no database queries.
+        In optimal conditions this will incur a single database query to retrieve the relevant groups.
         """
 
         from nautobot.extras.models.groups import DynamicGroup

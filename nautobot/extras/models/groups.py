@@ -571,7 +571,7 @@ class DynamicGroup(OrganizationalModel):
 
     @property
     def members_cache_key(self):
-        """Return the cache key for this group's members."""
+        """Obsolete cache key for this group's members."""
         return f"nautobot.extras.dynamicgroup.{self.id}.members_cached"
 
     @property
@@ -588,7 +588,6 @@ class DynamicGroup(OrganizationalModel):
         Update the cached members of the groups. Also returns the updated cached members.
         """
 
-        cache.delete(self.members_cache_key)
         try:
             self._backing_group.members = self.members
         except ObjectDoesNotExist:
