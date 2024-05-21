@@ -1,5 +1,5 @@
 Jinja2==3.1.4
-mkdocs==1.5.3
-mkdocs-material==9.5.8
-mkdocstrings==0.24.0
-mkdocstrings-python==1.8.0
+mkdocs==1.6.0
+mkdocs-material==9.5.23
+mkdocstrings==0.25.1
+mkdocstrings-python==1.10.2

@@ -182,7 +182,7 @@ Below is a table documenting [corrected filter field changes](../../../../../rel
 
 ### Removed Filter Fields
 
-Below is a table documenting [removed filter field changes](../../../../../release-notes/version-2.0.md#removed-redundant-filter-fields-2804) in v2.x. Most removed database fields in Nautobot 2.0 fall into the following general categories:
+Below is a table documenting [removed filter field changes](../../../../../release-notes/version-2.0.md#redundant-filter-fields-2804) in v2.x. Most removed database fields in Nautobot 2.0 fall into the following general categories:
 
 1. Removal of `*_id=<uuid>` filters as they have have been merged into filters that support both uuid and name/slug (for example, instead of `/api/circuits/circuits/?provider_id=<UUID>`, use `/api/circuits/circuits/?provider=<uuid>`).
 2. Removal of filtering on removed models such as `Region` and `Site`. (Use `location` filters instead.)
