@@ -1,0 +1,1 @@
+Updated `requests` to `2.32.1` to address [GHSA-9wx4-h78v-vm56](https://github.com/psf/requests/security/advisories/GHSA-9wx4-h78v-vm56). This is not a direct dependency so it will not auto-update when upgrading Nautobot. Please be sure to update your local environment.
