@@ -895,14 +895,17 @@ class ObjectDynamicGroupsView(generic.GenericView):
             obj = get_object_or_404(model, **kwargs)
 
         # Gather all dynamic groups for this object (and its related objects)
-        dynamicsgroups_table = tables.DynamicGroupTable(data=obj.dynamic_groups_cached, orderable=False)
+        dynamicgroups_table = tables.DynamicGroupTable(data=obj.dynamic_groups_cached, orderable=False)
+        dynamicgroups_table.columns.hide("content_type")
+        dynamicgroups_table.columns.hide("members")
+        dynamicgroups_table.columns.hide("static_group_count")
 
         # Apply the request context
         paginate = {
             "paginator_class": EnhancedPaginator,
             "per_page": get_paginate_count(request),
         }
-        RequestConfig(request, paginate).configure(dynamicsgroups_table)
+        RequestConfig(request, paginate).configure(dynamicgroups_table)
 
         self.base_template = get_base_template(self.base_template, model)
 
@@ -913,7 +916,7 @@ class ObjectDynamicGroupsView(generic.GenericView):
                 "object": obj,
                 "verbose_name": obj._meta.verbose_name,
                 "verbose_name_plural": obj._meta.verbose_name_plural,
-                "table": dynamicsgroups_table,
+                "table": dynamicgroups_table,
                 "base_template": self.base_template,
                 "active_tab": "dynamic-groups",
             },

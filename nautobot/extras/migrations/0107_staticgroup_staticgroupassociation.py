@@ -60,6 +60,16 @@ class Migration(migrations.Migration):
                     "hidden",
                     models.BooleanField(db_index=True, default=False),
                 ),
+                (
+                    "_dynamic_group",
+                    models.OneToOneField(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="_backing_group",
+                        to="extras.dynamicgroup",
+                    ),
+                ),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={

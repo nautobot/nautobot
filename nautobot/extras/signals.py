@@ -434,24 +434,12 @@ def dynamic_group_update_cached_members(sender, instance, **kwargs):
     When a DynamicGroup or DynamicGroupMembership is updated, update the cache of members.
     """
 
-    if get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT") == 0:
-        # Caching is disabled, so there's nothing to do
-        return
-
     if isinstance(instance, DynamicGroupMembership):
         group = instance.group
     else:
         group = instance
 
-    def _update_cache_and_parents(this_instance):
-        this_instance.update_cached_members()
-
-        # Since a change a group or group of groups does not affect it's children, we only need to go up the tree
-        # A group of groups does not use the cache of it's children due to the complexity of the set operations
-        for ancestor in list(this_instance.parents.all()):
-            _update_cache_and_parents(ancestor)
-
-    _update_cache_and_parents(group)
+    group.update_cached_members()
 
 
 post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroup)

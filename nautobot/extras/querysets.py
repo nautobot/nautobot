@@ -178,15 +178,29 @@ class DynamicGroupQuerySet(RestrictedQuerySet):
         if not isinstance(obj, Model):
             raise TypeError(f"{obj} is not an instance of Django Model class")
 
-        # Get dynamic groups for this content_type using the discrete content_type fields to
-        # optimize the query.
-        eligible_groups = self._get_eligible_dynamic_groups(obj, use_cache=use_cache)
+        from nautobot.extras.models.groups import StaticGroupAssociation
 
-        # Filter down to matching groups.
         my_groups = []
-        for dynamic_group in list(eligible_groups):
-            if dynamic_group.has_member(obj, use_cache=use_cache):
-                my_groups.append(dynamic_group)
+        if use_cache:
+            if hasattr(type(obj), "_content_type"):
+                content_type = obj._content_type
+            else:
+                content_type = ContentType.objects.get_for_model(type(obj))
+            for sga in StaticGroupAssociation.all_objects.select_related("static_group___dynamic_group").filter(
+                associated_object_type=content_type,
+                associated_object_id=obj.id,
+                static_group___dynamic_group__isnull=False
+            ):
+                my_groups.append(sga.static_group._dynamic_group)
+        else:
+            # Get dynamic groups for this content_type using the discrete content_type fields to
+            # optimize the query.
+            eligible_groups = self._get_eligible_dynamic_groups(obj, use_cache=use_cache)
+
+            # Filter down to matching groups.
+            for dynamic_group in list(eligible_groups):
+                if dynamic_group.has_member(obj, use_cache=use_cache):
+                    my_groups.append(dynamic_group)
 
         return my_groups
 

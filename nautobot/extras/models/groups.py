@@ -7,7 +7,7 @@ from django import forms
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.utils.functional import cached_property
@@ -85,6 +85,13 @@ class StaticGroup(PrimaryModel):
         default=False,
         db_index=True,
         help_text="Set to True to hide this group from the UI and API and disable change-logging of its associations",
+    )
+    _dynamic_group = models.OneToOneField(
+        to="extras.dynamicgroup",
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="_backing_group",
     )
 
     objects = StaticGroupDefaultManager()
@@ -326,12 +333,6 @@ class DynamicGroup(OrganizationalModel):
     class Meta:
         ordering = ["content_type", "name"]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Accessing this sets the dynamic attributes. Is there a better way? Maybe?
-        getattr(self, "model")
-
     def __str__(self):
         return self.name
 
@@ -349,50 +350,43 @@ class DynamicGroup(OrganizationalModel):
             except models.ObjectDoesNotExist:
                 model = None
 
-            if model is not None:
-                self._set_object_classes(model)
-
             self._model = model
 
         return self._model
 
-    def _set_object_classes(self, model):
-        """
-        Given the `content_type` for this group, dynamically map object classes to this instance.
-        Protocol for return values:
+    @property
+    def filterset_class(self):
+        if getattr(self, "_filterset_class", None) is None:
+            try:
+                self._filterset_class = get_filterset_for_model(self.model)
+            except TypeError:
+                self._filterset_class = None
+        return self._filterset_class
 
-        - True: Model and object classes mapped.
-        - False: Model not yet mapped (likely because of no `content_type`)
-        """
+    @property
+    def filterform_class(self):
+        if getattr(self, "_filterform_class", None) is None:
+            try:
+                self._filterform_class = get_form_for_model(self.model, form_prefix="Filter")
+            except TypeError:
+                self._filterform_class = None
+        return self._filterform_class
 
-        # If object classes have already been mapped, return True.
-        if getattr(self, "_object_classes_mapped", False):
-            return True
-
-        # Try to set the object classes for this model.
-        try:
-            self.filterset_class = get_filterset_for_model(model)
-            self.filterform_class = get_form_for_model(model, form_prefix="Filter")
-            self.form_class = get_form_for_model(model)
-        # We expect this to happen on new instances or in any case where `model` was not properly
-        # available to the caller, so always fail closed.
-        except TypeError:
-            logger.debug("Failed to map object classes for model %s", model)
-            self.filterset_class = None
-            self.filterform_class = None
-            self.form_class = None
-            self._object_classes_mapped = False
-        else:
-            self._object_classes_mapped = True
-
-        return self._object_classes_mapped
+    @property
+    def form_class(self):
+        if getattr(self, "_form_class", None) is None:
+            try:
+                self._form_class = get_form_for_model(self.model)
+            except TypeError:
+                self._form_class = None
+        return self._form_class
 
     @cached_property
     def _map_filter_fields(self):
         """Return all FilterForm fields in a dictionary."""
 
         # Fail gracefully with an empty dict if nothing is working yet.
-        if not self._set_object_classes(self.model):
+        if not self.form_class:
             return {}
 
         # Get model form and fields
@@ -578,6 +572,11 @@ class DynamicGroup(OrganizationalModel):
     def members_cached(self):
         """Return the member objects for this group, cached if available."""
 
+        try:
+            return self._backing_group.members
+        except ObjectDoesNotExist:
+            pass
+
         unpickled_query = None
         try:
             cached_query = cache.get(self.members_cache_key)
@@ -601,6 +600,22 @@ class DynamicGroup(OrganizationalModel):
         """
 
         cache.delete(self.members_cache_key)
+        try:
+            self._backing_group.members = self.members
+        except ObjectDoesNotExist:
+            StaticGroup.all_objects.create(
+                name=f"_{self.name}"[:CHARFIELD_MAX_LENGTH],
+                description=f"Backing static group for dynamic group {self.name}"[:CHARFIELD_MAX_LENGTH],
+                hidden=True,
+                content_type=self.content_type,
+                _dynamic_group=self,
+            )
+            self._backing_group.members = self.members
+        logger.debug("Refreshed cache for %s, now with %d members", self, self._backing_group.count)
+
+        # Since a change to a group or group of groups does not affect its children, we only need to go up the tree.
+        for ancestor in self.parents.all():
+            ancestor.update_cached_members()
 
         return self.members_cached
 
@@ -638,6 +653,11 @@ class DynamicGroup(OrganizationalModel):
     def count(self):
         """Return the number of member objects in this group."""
         return self.members.count()
+
+    @property
+    def count_cached(self):
+        """Return the cached number of member objects in this group."""
+        return self.members_cached.count()
 
     def get_group_members_url(self):
         """Get URL to group members."""
