@@ -88,7 +88,7 @@ The `optional-settings.md` and `required-settings.md` files are rendered as Jinj
 
 ## Structlog Configuration
 
-As of Nautobot 2.3, structlog is added as a core dependency. To use structlog, you can add the following code to your `nautobot_config.py` file:
+As of Nautobot 2.3, [django-structlog](https://django-structlog.readthedocs.io/en/latest/) is added as a core dependency. To use structlog, you can add the following code to your `nautobot_config.py` file:
 
 ```python
 from nautobot.core.settings_funcs import setup_structlog_logging
@@ -102,3 +102,13 @@ setup_structlog_logging(
     plain_format=bool(DEBUG),  # Set to True to use human-readable structlog format over JSON
 )
 ```
+
+Calling this function disables logging if running tests, otherwise:
+
+* Overwrites all `formatters` and `handlers` to avoid logging duplication.
+    It's possible to add custom `formatters` and `handlers` after calling this function.
+* Updates all `loggers` to use structlog with the specified `log_level`.
+* Adds or updates the root logger to use structlog with the specified `root_level`.
+* Uses a human-readable structlog format if `plain_format` is True, otherwise uses JSON.
+* Adds database query logging if `debug_db` is True.
+* Adds necessary Django apps and middleware for structlog.

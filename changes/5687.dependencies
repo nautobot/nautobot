@@ -1,1 +1,1 @@
-Added `structlog` dependency.
+Added [django-structlog](https://django-structlog.readthedocs.io/en/latest/) dependency.

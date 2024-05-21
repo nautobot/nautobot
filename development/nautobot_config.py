@@ -38,7 +38,9 @@ LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 LOGGING["loggers"]["nautobot"]["handlers"] = ["verbose_console" if DEBUG else "normal_console"]  # noqa: F405
 LOGGING["loggers"]["nautobot"]["level"] = LOG_LEVEL  # noqa: F405
 
-# Enable the following to enable structlog logging for Django
+# Enable the following to setup structlog logging for Nautobot.
+# Configures defined loggers to use structlog and overwrites all formatters and handlers.
+#
 # from nautobot.core.settings_funcs import setup_structlog_logging
 # setup_structlog_logging(
 #     LOGGING,

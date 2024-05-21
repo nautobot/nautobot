@@ -95,7 +95,18 @@ def setup_structlog_logging(
     debug_db=False,
     plain_format=False,
 ) -> None:
-    """Set up structlog logging for Django."""
+    """Set up structlog logging for Nautobot.
+
+    This function disables logging if running tests, otherwise:
+
+    * Overwrites all `formatters` and `handlers` to avoid logging duplication.
+        It's possible to add custom `formatters` and `handlers` after calling this function.
+    * Updates all `loggers` to use structlog with the specified `log_level`.
+    * Adds or updates the root logger to use structlog with the specified `root_level`.
+    * Uses a human-readable structlog format if `plain_format` is True, otherwise uses JSON.
+    * Adds database query logging if `debug_db` is True.
+    * Adds necessary Django apps and middleware for structlog.
+    """
     django_logging["version"] = 1
     django_logging["disable_existing_loggers"] = True
     if "test" in sys.argv:
