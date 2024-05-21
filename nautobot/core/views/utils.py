@@ -233,7 +233,7 @@ def handle_protectederror(obj_list, request, e):
     )
     err_message += format_html_join(
         ", ",
-        "<a>{}</a>",
+        "{}",
         ((dependent,) for dependent in objects_without_absolute_url),
     )
 
