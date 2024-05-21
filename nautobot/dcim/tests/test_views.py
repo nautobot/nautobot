@@ -3438,7 +3438,7 @@ class SoftwareImageFileTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(response, 200)
         response_body = response.content.decode(response.charset)
         # Assert protected error message included in the response body
-        self.assertIn(f"<p>{device_type_to_software_image_file}</p>", response_body)
+        self.assertInHTML(f"<a>{device_type_to_software_image_file}</a>", response_body)
 
 
 class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -3518,7 +3518,7 @@ class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(response, 200)
         response_body = response.content.decode(response.charset)
         # Assert protected error message included in the response body
-        self.assertIn(f"<p>{device_type_to_software_image_file}</p>", response_body)
+        self.assertInHTML(f"<a>{device_type_to_software_image_file}</a>", response_body)
 
 
 class ControllerTestCase(ViewTestCases.PrimaryObjectViewTestCase):
