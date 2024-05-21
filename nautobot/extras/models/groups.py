@@ -247,6 +247,16 @@ class StaticGroupAssociation(OrganizationalModel):
     class Meta:
         unique_together = [["static_group", "associated_object_type", "associated_object_id"]]
         ordering = ["static_group", "associated_object_type", "associated_object_id"]
+        indexes = [
+            models.Index(
+                name="extras_sga_double",
+                fields=["static_group", "associated_object_id"],
+            ),
+            models.Index(
+                name="extras_sga_associated_object",
+                fields=["associated_object_type_id", "associated_object_id"],
+            ),
+        ]
 
     def __str__(self):
         return f"{self.associated_object} as a member of {self.static_group}"
