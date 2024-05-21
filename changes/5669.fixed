@@ -1,0 +1,1 @@
+Fixed AttributeError thrown when deleting sofware versions or images from list views.
