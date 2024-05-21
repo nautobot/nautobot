@@ -49,7 +49,7 @@ from nautobot.extras.context_managers import deferred_change_logging_for_bulk_op
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.models import ExportTemplate
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
-from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, remove_prefix_from_cf_key
+from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
 from nautobot.users.models import SavedView
 
 PERMISSIONS_ACTION_MAP = {
@@ -1118,8 +1118,10 @@ class ObjectChangeLogViewMixin(NautobotViewSetMixin):
 
     @drf_action(detail=True)
     def changelog(self, request, *args, **kwargs):
+        model = self.get_queryset().model
         data = {
-            "base_template": self.base_template,
+            "base_template": get_base_template(self.base_template, model),
+            "active_tab": "changelog",
         }
         return Response(data)
 
@@ -1133,7 +1135,9 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
 
     @drf_action(detail=True)
     def notes(self, request, *args, **kwargs):
+        model = self.get_queryset().model
         data = {
-            "base_template": self.base_template,
+            "base_template": get_base_template(self.base_template, model),
+            "active_tab": "notes",
         }
         return Response(data)

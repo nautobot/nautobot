@@ -28,7 +28,6 @@ from nautobot.core.views.utils import (
     view_changes_not_saved,
 )
 from nautobot.extras.models.change_logging import ObjectChange
-from nautobot.extras.utils import get_base_template
 from nautobot.users.models import SavedView
 
 
@@ -250,29 +249,24 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             elif view.action == "changelog":
                 table = self.construct_table(view, object=instance, content_type=content_type)
 
-        context = self.get_template_context(data, renderer_context)
-        context.update(
-            {
-                "content_type": content_type,
-                "form": form,
-                "filter_form": filter_form,
-                "dynamic_filter_form": self.get_dynamic_filter_form(
-                    view, request, filterset_class=view.filterset_class
-                ),
-                "search_form": search_form,
-                "filter_params": display_filter_params,
-                "object": instance,
-                "obj": instance,  # NOTE: This context key is deprecated in favor of `object`.
-                "obj_type": queryset.model._meta.verbose_name,  # NOTE: This context key is deprecated in favor of `verbose_name`.
-                "obj_type_plural": queryset.model._meta.verbose_name_plural,  # NOTE: This context key is deprecated in favor of `verbose_name_plural`.
-                "permissions": permissions,
-                "return_url": return_url,
-                "table": table if table is not None else data.get("table", None),
-                "table_config_form": TableConfigForm(table=table) if table else None,
-                "verbose_name": queryset.model._meta.verbose_name,
-                "verbose_name_plural": queryset.model._meta.verbose_name_plural,
-            }
-        )
+        context = {
+            "content_type": content_type,
+            "form": form,
+            "filter_form": filter_form,
+            "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset_class=view.filterset_class),
+            "search_form": search_form,
+            "filter_params": display_filter_params,
+            "object": instance,
+            "obj": instance,  # NOTE: This context key is deprecated in favor of `object`.
+            "obj_type": queryset.model._meta.verbose_name,  # NOTE: This context key is deprecated in favor of `verbose_name`.
+            "obj_type_plural": queryset.model._meta.verbose_name_plural,  # NOTE: This context key is deprecated in favor of `verbose_name_plural`.
+            "permissions": permissions,
+            "return_url": return_url,
+            "table": table if table is not None else data.get("table", None),
+            "table_config_form": TableConfigForm(table=table) if table else None,
+            "verbose_name": queryset.model._meta.verbose_name,
+            "verbose_name_plural": queryset.model._meta.verbose_name_plural,
+        }
         if view.action == "retrieve":
             context.update(common_detail_view_context(request, instance))
         elif view.action == "list":
@@ -314,14 +308,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     "fields": get_csv_form_fields_from_serializer_class(view.serializer_class),
                 }
             )
-        elif view.action in ["changelog", "notes"]:
-            context.update(
-                {
-                    "base_template": get_base_template(data.get("base_template"), model),
-                    "active_tab": view.action,
-                }
-            )
+
         context.update(view.get_extra_context(request, instance))
+        context.update(self.get_template_context(data, renderer_context))
         return context
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
