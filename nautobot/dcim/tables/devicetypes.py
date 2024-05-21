@@ -103,6 +103,8 @@ class DeviceFamilyTable(BaseTable):
 class DeviceTypeTable(BaseTable):
     pk = ToggleColumn()
     model = tables.Column(linkify=True, verbose_name="Device Type")
+    manufacturer = tables.Column(linkify=True)
+    device_family = tables.Column(linkify=True)
     is_full_depth = BooleanColumn(verbose_name="Full Depth")
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
@@ -117,6 +119,7 @@ class DeviceTypeTable(BaseTable):
             "pk",
             "model",
             "manufacturer",
+            "device_family",
             "part_number",
             "u_height",
             "is_full_depth",
