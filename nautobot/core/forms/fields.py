@@ -546,7 +546,7 @@ class DynamicModelChoiceMixin:
             filter_ = self.filter(field_name=field_name)
             try:
                 self.data_queryset = filter_.filter(self.queryset, data)
-            except (TypeError, ValidationError):
+            except (TypeError, ValueError, ValidationError):
                 # Catch any error caused by invalid initial data passed from the user
                 self.data_queryset = self.queryset.none()
         else:
