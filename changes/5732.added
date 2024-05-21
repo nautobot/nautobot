@@ -1,0 +1,1 @@
+Added indices on `StaticGroupAssociation` table for common lookup patterns.
