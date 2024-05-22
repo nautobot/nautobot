@@ -105,7 +105,9 @@
         {% if perms.extras.view_dynamicgroup and object.get_dynamic_groups_url and object.dynamic_groups_cached.count %}
             {% if active_tab != 'dynamic-groups' and object.get_dynamic_groups_url or active_tab == 'dynamic-groups' %}
                 <li role="presentation"{% if active_tab == 'dynamic-groups' %} class="active"{% endif %}>
-                    <a href="{{ object.get_dynamic_groups_url }}">Dynamic Groups {% badge object.dynamic_groups_cached.count True %}</a>
+                    <a href="{{ object.get_dynamic_groups_url }}" title="Cached Dynamic Group membership">
+                        Dynamic Groups {% badge object.dynamic_groups_cached.count True %}
+                    </a>
                 </li>
             {% endif %}
         {% endif %}

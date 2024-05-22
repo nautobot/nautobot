@@ -1,18 +1,6 @@
 {% extends 'generic/object_detail.html' %}
 {% load helpers %}
 
-{% block extra_buttons %}
-<form id="cache_refresh_form" style="display: inline-block" action="{% url "extras:job_run_by_class_path" class_path="nautobot.core.jobs.groups.RefreshDynamicGroupCaches" %}" method="post">
-    {% csrf_token %}
-    <input type="hidden" name="single_group" value="{{ object.pk }}">
-    <input type="hidden" name="_schedule_type" value="immediately">
-    <input type="hidden" name="_return_url" value="{{ object.get_absolute_url }}?tab=members">
-    <button type="submit" class="btn btn-warning">
-        <span class="mdi mdi-refresh"></span> Refresh member cache
-    </button>
-</form>
-{% endblock extra_buttons %}
-
 {% block extra_nav_tabs %}
         <li role="presentation"{% if request.GET.tab == 'members' %} class="active"{% endif %}>
             <a href="{{ object.get_absolute_url }}#members" onclick="switch_tab(this.href, reload=false)" aria-controls="members" role="tab" data-toggle="tab">

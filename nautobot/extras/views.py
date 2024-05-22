@@ -713,6 +713,8 @@ class DynamicGroupView(generic.ObjectView):
         model = instance.content_type.model_class()
         table_class = get_table_for_model(model)
 
+        instance.update_cached_members()
+
         if table_class is not None:
             # Members table (for display on Members nav tab)
             members_table = table_class(instance.members_cached, orderable=False)
