@@ -605,7 +605,7 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
     )
 
     class Meta(ModularComponentModel.Meta):
-        ordering = ("device", CollateAsChar("_name"))
+        ordering = ("device", "module", CollateAsChar("_name"))
 
     def clean(self):
         super().clean()

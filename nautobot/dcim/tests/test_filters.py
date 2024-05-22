@@ -785,6 +785,36 @@ class ModularDeviceComponentTestMixin(DeviceComponentTestMixin):
     ]
 
 
+class ModuleDeviceCommonTestsMixin:
+    def test_has_empty_module_bays(self):
+        with self.subTest():
+            params = {"has_empty_module_bays": True}
+            qs = self.filterset(params, self.queryset).qs
+            self.assertGreater(qs.count(), 0)
+            for instance in qs:
+                self.assertTrue(instance.module_bays.filter(installed_module__isnull=True).exists())
+        with self.subTest():
+            params = {"has_empty_module_bays": False}
+            qs = self.filterset(params, self.queryset).qs
+            self.assertGreater(qs.count(), 0)
+            for instance in qs:
+                self.assertFalse(instance.module_bays.filter(installed_module__isnull=True).exists())
+
+    def test_has_modules(self):
+        with self.subTest():
+            params = {"has_modules": True}
+            qs = self.filterset(params, self.queryset).qs
+            self.assertGreater(qs.count(), 0)
+            for instance in qs:
+                self.assertTrue(instance.module_bays.filter(installed_module__isnull=False).exists())
+        with self.subTest():
+            params = {"has_modules": False}
+            qs = self.filterset(params, self.queryset).qs
+            self.assertGreater(qs.count(), 0)
+            for instance in qs:
+                self.assertFalse(instance.module_bays.filter(installed_module__isnull=False).exists())
+
+
 class PathEndpointModelTestMixin:
     def test_connected(self):
         with self.subTest():
@@ -1481,7 +1511,7 @@ class PlatformTestCase(FilterTestCases.NameOnlyFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(virtual_machines))
 
 
-class DeviceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
+class DeviceTestCase(ModuleDeviceCommonTestsMixin, FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
     queryset = Device.objects.all()
     filterset = DeviceFilterSet
     tenancy_related_name = "devices"
@@ -3488,7 +3518,7 @@ class ControllerManagedDeviceGroupFilterSetTestCase(FilterTestCases.FilterTestCa
         common_test_data(cls)
 
 
-class ModuleTestCase(FilterTestCases.TenancyFilterTestCaseMixin, FilterTestCases.FilterTestCase):
+class ModuleTestCase(ModuleDeviceCommonTestsMixin, FilterTestCases.TenancyFilterTestCaseMixin, FilterTestCases.FilterTestCase):
     queryset = Module.objects.all()
     filterset = ModuleFilterSet
     tenancy_related_name = "modules"

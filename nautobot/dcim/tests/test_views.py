@@ -830,7 +830,7 @@ class DeviceTypeTestCase(
         # Export is a little trickier to check since it's done as a form submission rather than an <a> element.
         self.assertIn(f'<form action="{export_url}" method="post">', content)
         self.assertInHTML(
-            f'<input type="hidden" name="content_type" value="{ContentType.objects.get_for_model(DeviceType).pk}">',
+            f'<input type="hidden" name="content_type" value="{ContentType.objects.get_for_model(self.model).pk}">',
             content,
         )
         self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
@@ -2110,18 +2110,16 @@ class PowerOutletTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
             "description": "New description",
         }
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_edit_object_with_permission(self):
         instance = self._get_queryset().first()
-        form_data = self.form_data.copy()
-        form_data["power_port"] = instance.power_port  # power_port is not editable
-        self.form_data = form_data
+        self.form_data["power_port"] = instance.power_port.pk  # power_port is not editable
         super().test_edit_object_with_permission()
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_edit_object_with_constrained_permission(self):
         instance = self._get_queryset().first()
-        form_data = self.form_data.copy()
-        form_data["power_port"] = instance.power_port  # power_port is not editable
-        self.form_data = form_data
+        self.form_data["power_port"] = instance.power_port.pk  # power_port is not editable
         super().test_edit_object_with_constrained_permission()
 
 

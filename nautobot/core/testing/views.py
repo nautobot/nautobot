@@ -1476,6 +1476,27 @@ class ViewTestCases:
 
         maxDiff = None
 
+        def _edit_object_test_setup(self):
+            test_instance = self._get_queryset().first()
+            if test_instance.device_type:
+                self.form_data["device_type"] = test_instance.device_type.pk
+                self.form_data["module_type"] = None
+            else:
+                self.form_data["device_type"] = None
+                self.form_data["module_type"] = test_instance.module_type.pk
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_edit_object_with_constrained_permission(self):
+            # Overload this test to account for mutually exclusive device_type and module_type fields
+            self._edit_object_test_setup()
+            super().test_edit_object_with_constrained_permission()
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_edit_object_with_permission(self):
+            # Overload this test to account for mutually exclusive device_type and module_type fields
+            self._edit_object_test_setup()
+            super().test_edit_object_with_permission()
+
     class DeviceComponentViewTestCase(
         GetObjectViewTestCase,
         GetObjectChangelogViewTestCase,

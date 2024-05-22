@@ -7,6 +7,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 import nautobot.core.models.fields
+import nautobot.core.models.query_functions
 import nautobot.extras.models.mixins
 import nautobot.extras.models.roles
 import nautobot.extras.models.statuses
@@ -454,6 +455,10 @@ class Migration(migrations.Migration):
         migrations.AlterModelOptions(
             name="rearport",
             options={"ordering": ("device", "module", "_name")},
+        ),
+        migrations.AlterModelOptions(
+            name='interface',
+            options={'ordering': ('device', 'module', nautobot.core.models.query_functions.CollateAsChar('_name'))},
         ),
         migrations.AlterField(
             model_name="consoleport",

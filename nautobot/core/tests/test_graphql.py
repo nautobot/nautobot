@@ -52,6 +52,8 @@ from nautobot.dcim.models import (
     InterfaceRedundancyGroupAssociation,
     Location,
     LocationType,
+    Manufacturer,
+    Module,
     PowerFeed,
     PowerOutlet,
     PowerPanel,
@@ -708,19 +710,21 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         super().setUpTestData()
         cls.user = User.objects.create(username="Super User", is_active=True, is_superuser=True)
 
-        # Remove random IPAddress and Device fixtures for this custom test
+        # Remove random IPAddress, Module and Device fixtures for this custom test
         IPAddress.objects.all().delete()
         Controller.objects.filter(controller_device__isnull=False).delete()
         Device.objects.all().delete()
+        Module.objects.all().delete()
 
         # Initialize fake request that will be required to execute GraphQL query
         cls.request = RequestFactory().request(SERVER_NAME="WebRequestContext")
         cls.request.id = uuid.uuid4()
         cls.request.user = cls.user
 
-        # Populate Data
-        cls.device_type1 = DeviceType.objects.first()
-        cls.device_type2 = DeviceType.objects.last()
+        # Populate Data - create new device types with no component templates
+        manufacturer = Manufacturer.objects.first()
+        cls.device_type1 = DeviceType.objects.create(manufacturer=manufacturer, model="test device_type1")
+        cls.device_type2 = DeviceType.objects.create(manufacturer=manufacturer, model="test device_type2")
         roles = Role.objects.get_for_model(Device)
         cls.device_role1 = roles[0]
         cls.device_role2 = roles[1]
@@ -2160,7 +2164,7 @@ query {
         self.assertIsNone(result.errors)
         self.assertIsInstance(result.data, dict, result)
         self.assertIsInstance(result.data["device_types"], list, result)
-        self.assertEqual(result.data["device_types"][0]["model"], self.device_type1.model, result)
+        self.assertEqual(result.data["device_types"][0]["model"], DeviceType.objects.first().model, result)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interface_pagination(self):

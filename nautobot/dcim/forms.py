@@ -992,19 +992,16 @@ class ComponentTemplateForm(NautobotModelForm):
     #       <p class="form-control-static">{{ obj|hyperlinked_object_target_new_tab }}</p>
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
-        disabled=True,
     )
 
 
 class ModularComponentTemplateForm(ComponentTemplateForm):
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
-        disabled=True,
         required=False,
     )
     module_type = DynamicModelChoiceField(
         queryset=ModuleType.objects.all(),
-        disabled=True,
         required=False,
     )
 
@@ -1016,7 +1013,6 @@ class ComponentTemplateCreateForm(ComponentForm):
 
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
-        disabled=True,
     )
     description = forms.CharField(required=False)
 
@@ -1028,12 +1024,10 @@ class ModularComponentTemplateCreateForm(ComponentTemplateCreateForm):
 
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
-        disabled=True,
         required=False,
     )
     module_type = DynamicModelChoiceField(
         queryset=ModuleType.objects.all(),
-        disabled=True,
         required=False,
     )
 
@@ -1228,7 +1222,6 @@ class PowerOutletTemplateBulkEditForm(NautobotBulkEditForm):
     device_type = forms.ModelChoiceField(
         queryset=DeviceType.objects.all(),
         required=False,
-        disabled=True,
         widget=forms.HiddenInput(),
     )
     label = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
@@ -1548,12 +1541,10 @@ class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
 class ModuleBayTemplateCreateForm(ModuleBayBaseCreateForm):
     device_type = DynamicModelChoiceField(
         queryset=DeviceType.objects.all(),
-        disabled=True,
         required=False,
     )
     module_type = DynamicModelChoiceField(
         queryset=ModuleType.objects.all(),
-        disabled=True,
         required=False,
     )
 
@@ -2231,6 +2222,11 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         label="Location",
         query_params={"content_type": Module._meta.label_lower},
     )
+    role = DynamicModelChoiceField(
+        queryset=Role.objects.all(),
+        required=False,
+        query_params={"content_types": Module._meta.label_lower},
+    )
 
     class Meta:
         model = Module
@@ -2241,6 +2237,7 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "location",
             "serial",
             "asset_tag",
+            "role",
             "status",
             "tenant_group",
             "tenant",
@@ -2371,7 +2368,7 @@ class ComponentCreateForm(ComponentForm):
     Base form for the creation of device components (models subclassed from ComponentModel).
     """
 
-    device = DynamicModelChoiceField(queryset=Device.objects.all(), disabled=True)
+    device = DynamicModelChoiceField(queryset=Device.objects.all())
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
 
@@ -2380,8 +2377,8 @@ class ModularComponentCreateForm(ComponentForm):
     Base form for the creation of modular device components (models subclassed from ModularComponentModel).
     """
 
-    device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False, disabled=True)
-    module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False, disabled=True)
+    device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
+    module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False)
 
 
 class ComponentEditForm(NautobotModelForm):
@@ -2734,7 +2731,6 @@ class PowerOutletBulkEditForm(
     device = forms.ModelChoiceField(
         queryset=Device.objects.all(),
         required=False,
-        disabled=True,
         widget=forms.HiddenInput(),
     )
 
@@ -3478,8 +3474,8 @@ class ModuleBayForm(NautobotModelForm):
 
 
 class ModuleBayCreateForm(ModuleBayBaseCreateForm):
-    parent_device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False, disabled=True)
-    parent_module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False, disabled=True)
+    parent_device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
+    parent_module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False)
     field_order = ("parent_device", "parent_module", "position_pattern", "label_pattern", "description", "tags")
 
 

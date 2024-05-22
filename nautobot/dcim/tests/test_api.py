@@ -2039,47 +2039,47 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
         cls.interfaces = (
             Interface.objects.create(
                 device=cls.devices[0],
-                name="Interface 1",
+                name="Test Interface 1",
                 type="1000base-t",
                 status=non_default_status,
                 role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.devices[0],
-                name="Interface 2",
+                name="Test Interface 2",
                 type="1000base-t",
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.devices[0],
-                name="Interface 3",
+                name="Test Interface 3",
                 type=InterfaceTypeChoices.TYPE_BRIDGE,
                 status=non_default_status,
                 role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.devices[1],
-                name="Interface 4",
+                name="Test Interface 4",
                 type=InterfaceTypeChoices.TYPE_1GE_GBIC,
                 status=non_default_status,
                 role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.devices[1],
-                name="Interface 5",
+                name="Test Interface 5",
                 type=InterfaceTypeChoices.TYPE_LAG,
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.devices[2],
-                name="Interface 6",
+                name="Test Interface 6",
                 type=InterfaceTypeChoices.TYPE_LAG,
                 status=non_default_status,
                 role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.devices[2],
-                name="Interface 7",
+                name="Test Interface 7",
                 type=InterfaceTypeChoices.TYPE_1GE_GBIC,
                 status=non_default_status,
                 role=intf_role,
@@ -3254,7 +3254,7 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
 
         interface_redundancy_groups = (
             InterfaceRedundancyGroup(
-                name="Interface Redundancy Group 1",
+                name="Test Interface Redundancy Group 1",
                 protocol="hsrp",
                 status=statuses[0],
                 virtual_ip=None,
@@ -3262,7 +3262,7 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
                 secrets_group=secrets_groups[0],
             ),
             InterfaceRedundancyGroup(
-                name="Interface Redundancy Group 2",
+                name="Test Interface Redundancy Group 2",
                 protocol="carp",
                 status=statuses[1],
                 virtual_ip=ips[1],
@@ -3270,7 +3270,7 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
                 secrets_group=secrets_groups[1],
             ),
             InterfaceRedundancyGroup(
-                name="Interface Redundancy Group 3",
+                name="Test Interface Redundancy Group 3",
                 protocol="vrrp",
                 status=statuses[2],
                 virtual_ip=ips[2],
@@ -3297,19 +3297,19 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
         cls.interfaces = (
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 1",
+                name="Test Interface 1",
                 type="1000base-t",
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 2",
+                name="Test Interface 2",
                 type="1000base-t",
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 3",
+                name="Test Interface 3",
                 type=InterfaceTypeChoices.TYPE_BRIDGE,
                 status=non_default_status,
             ),

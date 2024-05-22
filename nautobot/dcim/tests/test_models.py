@@ -799,31 +799,31 @@ class InterfaceRedundancyGroupTestCase(ModelTestCases.BaseModelTestCase):
         cls.interfaces = (
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 1",
+                name="Test Interface 1",
                 type="1000base-t",
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 2",
+                name="Test Interface 2",
                 type="1000base-t",
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 3",
+                name="Test Interface 3",
                 type=InterfaceTypeChoices.TYPE_BRIDGE,
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 4",
+                name="Test Interface 4",
                 type=InterfaceTypeChoices.TYPE_1GE_GBIC,
                 status=non_default_status,
             ),
             Interface.objects.create(
                 device=cls.device,
-                name="Interface 5",
+                name="Test Interface 5",
                 type=InterfaceTypeChoices.TYPE_LAG,
                 status=non_default_status,
             ),
@@ -2691,8 +2691,8 @@ class ModuleBayTemplateTestCase(ModelTestCases.BaseModelTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.device_type = DeviceType.objects.first()
-        cls.module_type = ModuleType.objects.first()
+        cls.device_type = DeviceType.objects.filter(module_bay_templates__isnull=True).first()
+        cls.module_type = ModuleType.objects.filter(module_bay_templates__isnull=True).first()
 
         # Create some instances for the generic natural key tests to use
         ModuleBayTemplate.objects.create(
