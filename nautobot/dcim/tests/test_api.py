@@ -1812,13 +1812,6 @@ class ModuleTestCase(APIViewTestCases.APIViewTestCase):
             "status": Status.objects.get_for_model(Module).last().pk,
         }
 
-    def get_deletable_object_pks(self):
-        """Modules and ModuleBays are nestable, find Modules that don't have any child Modules."""
-        instances = self._get_queryset().filter(module_bays__isnull=True).values_list("pk", flat=True)[:3]
-        if len(instances) < 3:
-            self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
-        return instances
-
     def test_parent_module_bay_location_validation(self):
         """Assert that a module can have a parent_module_bay or a location but not both."""
 
@@ -2604,13 +2597,6 @@ class ModuleBayTest(Mixins.BaseComponentTestMixin):
                 "position": "Test3",
             },
         ]
-
-    def get_deletable_object_pks(self):
-        """Modules and ModuleBays are nestable, find ModuleBays that don't have any child ModuleBays."""
-        instances = self._get_queryset().filter(installed_module__isnull=True).values_list("pk", flat=True)[:3]
-        if len(instances) < 3:
-            self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
-        return instances
 
     def test_parent_module_parent_device_validation(self):
         """Assert that a module bay can have a parent_module or a parent_device but not both."""
