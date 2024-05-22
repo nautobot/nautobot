@@ -3,7 +3,7 @@
 Nautobot supports integration with the [NAPALM automation](https://github.com/napalm-automation/napalm/) library. NAPALM allows Nautobot to serve a proxy for operational data, fetching live data from network devices and returning it to a requester via its REST API. Note that Nautobot does not store any NAPALM data locally.
 
 !!! note
-    To enable this integration, the NAPALM library must be installed. See [installation steps](../administration/installation/nautobot.md#configuring-napalm) for more information.
+    To enable this integration, the NAPALM library must be installed. See [installation steps](../administration/installation/nautobot.md#napalm) for more information.
 
 Below is an example REST API request and response:
 
@@ -25,7 +25,7 @@ GET /api/dcim/devices/1/napalm/?method=get_environment
 As of Nautobot 1.2, there are three ways to specify the authentication credentials to use for a given device:
 
 1. `NAPALM_USERNAME` and `NAPALM_PASSWORD` configuration parameters, setting global defaults to use for all devices.
-2. Assigning an appropriately defined [secrets group](./secret.md#secret-groups) to the device to specify its specific credentials.
+2. Assigning an appropriately defined [secrets group](./secret.md#secrets-groups) to the device to specify its specific credentials.
 3. In a REST API call, specifying the credentials as HTTP headers.
 
 ### Configuration Parameters

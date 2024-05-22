@@ -779,7 +779,7 @@ properties:
     description: "A mapping of permissions to assign a new user account when created using SSO authentication."
     details: |-
       Each key in the dictionary will be the permission name specified as `<app_label>.<action>_<model>`,
-      and the value should be set to the permission [constraints](../guides/permissions.md#constraints),
+      and the value should be set to the permission [constraints](../guides/permissions.md#example-constraint-definitions),
       or `None` to allow all objects.
 
       Example:
@@ -1284,7 +1284,7 @@ properties:
 
       !!! note
           If a given device has an appropriately populated
-          [secrets group](../../platform-functionality/secret.md#secretsgroup) assigned to it,
+          [secrets group](../../platform-functionality/secret.md#secrets-groups) assigned to it,
           the [secrets](../../platform-functionality/secret.md) defined in that group will take precedence
           over these default values.
     environment_variable: "NAUTOBOT_NAPALM_PASSWORD"
@@ -1306,7 +1306,7 @@ properties:
 
       !!! note
           If a given device has an appropriately populated
-          [secrets group](../../platform-functionality/secret.md#secretsgroup) assigned to it,
+          [secrets group](../../platform-functionality/secret.md#secrets-groups) assigned to it,
           the [secrets](../../platform-functionality/secret.md) defined in that group will take precedence
           over these default values.
     environment_variable: "NAUTOBOT_NAPALM_USERNAME"
