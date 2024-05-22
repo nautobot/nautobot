@@ -1511,7 +1511,11 @@ class PlatformTestCase(FilterTestCases.NameOnlyFilterTestCase):
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), len(virtual_machines))
 
 
-class DeviceTestCase(ModuleDeviceCommonTestsMixin, FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
+class DeviceTestCase(
+    ModuleDeviceCommonTestsMixin,
+    FilterTestCases.FilterTestCase,
+    FilterTestCases.TenancyFilterTestCaseMixin,
+):
     queryset = Device.objects.all()
     filterset = DeviceFilterSet
     tenancy_related_name = "devices"
@@ -3518,7 +3522,11 @@ class ControllerManagedDeviceGroupFilterSetTestCase(FilterTestCases.FilterTestCa
         common_test_data(cls)
 
 
-class ModuleTestCase(ModuleDeviceCommonTestsMixin, FilterTestCases.TenancyFilterTestCaseMixin, FilterTestCases.FilterTestCase):
+class ModuleTestCase(
+    ModuleDeviceCommonTestsMixin,
+    FilterTestCases.TenancyFilterTestCaseMixin,
+    FilterTestCases.FilterTestCase,
+):
     queryset = Module.objects.all()
     filterset = ModuleFilterSet
     tenancy_related_name = "modules"

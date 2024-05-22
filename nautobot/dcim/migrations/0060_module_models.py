@@ -457,8 +457,8 @@ class Migration(migrations.Migration):
             options={"ordering": ("device", "module", "_name")},
         ),
         migrations.AlterModelOptions(
-            name='interface',
-            options={'ordering': ('device', 'module', nautobot.core.models.query_functions.CollateAsChar('_name'))},
+            name="interface",
+            options={"ordering": ("device", "module", nautobot.core.models.query_functions.CollateAsChar("_name"))},
         ),
         migrations.AlterField(
             model_name="consoleport",
