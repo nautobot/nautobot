@@ -1686,6 +1686,12 @@ class SecretsGroupTest(ModelTestCases.BaseModelTestCase):
 class StaticGroupTest(ModelTestCases.BaseModelTestCase):
     model = StaticGroup
 
+    @classmethod
+    def setUpTestData(cls):
+        StaticGroup.all_objects.create(
+            name="Hidden Group", content_type=ContentType.objects.get_for_model(Prefix), hidden=True
+        )
+
     def test_managers(self):
         self.assertQuerysetEqualAndNotEmpty(StaticGroup.objects.all(), StaticGroup.all_objects.filter(hidden=False))
         self.assertTrue(StaticGroup.all_objects.filter(hidden=True).exists())
@@ -1774,6 +1780,13 @@ class StaticGroupTest(ModelTestCases.BaseModelTestCase):
 
 class StaticGroupAssociationTest(ModelTestCases.BaseModelTestCase):
     model = StaticGroupAssociation
+
+    @classmethod
+    def setUpTestData(cls):
+        sg = StaticGroup.all_objects.create(
+            name="Hidden Group", content_type=ContentType.objects.get_for_model(Prefix), hidden=True
+        )
+        sg.add_members(Prefix.objects.all())
 
     def test_managers(self):
         self.assertQuerysetEqualAndNotEmpty(

@@ -566,8 +566,17 @@ class DynamicGroup(OrganizationalModel):
         # If there are child groups, return the generated group queryset, otherwise use this group's
         # `filter` directly.
         if self.children.exists():
-            return self.get_group_queryset()
-        return self.get_queryset()
+            members = self.get_group_queryset()
+        else:
+            members = self.get_queryset()
+        # TODO: it "makes sense" to update the cache after we've gone to the trouble of looking up the members,
+        #       but bear in mind that this just creates the queryset, it doesn't actually evaluate it here.
+        #       Updating the cache would require actually evaluating the queryset, which could be relatively expensive,
+        #       and might actually be unnecessary (e.g. if we are doing `group.members.filter(...)` we don't need
+        #       to evaluate `group.members` itself).
+        #       Is there a way we could have the cache auto-update only when the queryset is evaluated?
+        # return self.update_cached_members(members=members)
+        return members
 
     @property
     def members_cache_key(self):
@@ -583,13 +592,15 @@ class DynamicGroup(OrganizationalModel):
         except ObjectDoesNotExist:
             return self.update_cached_members()
 
-    def update_cached_members(self):
+    def update_cached_members(self, members=None):
         """
         Update the cached members of the groups. Also returns the updated cached members.
         """
+        if members is None:
+            members = self.members
 
         try:
-            self._backing_group.members = self.members
+            self._backing_group.members = members
         except ObjectDoesNotExist:
             StaticGroup.all_objects.create(
                 name=f"_{self.name}"[:CHARFIELD_MAX_LENGTH],
@@ -598,14 +609,14 @@ class DynamicGroup(OrganizationalModel):
                 content_type=self.content_type,
                 _dynamic_group=self,
             )
-            self._backing_group.members = self.members
+            self._backing_group.members = members
         logger.debug("Refreshed cache for %s, now with %d members", self, self._backing_group.count)
 
         # Since a change to a group or group of groups does not affect its children, we only need to go up the tree.
         for ancestor in self.parents.all():
             ancestor.update_cached_members()
 
-        return self.members_cached
+        return members
 
     def has_member(self, obj, use_cache=False):
         """
