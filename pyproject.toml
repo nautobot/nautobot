@@ -48,7 +48,7 @@ django-celery-beat = "~2.6.0"
 # Provides a database backend & models for Celery task results
 django-celery-results = "~2.5.1"
 # Management of app configuration via the Django admin UI
-django-constance = {version = "~2.9.1", extras = ["database"]}
+django-constance = "~3.1.0"
 # Permit cross-domain API requests
 django-cors-headers = "~4.3.1"
 # Store files in the database for background tasks
@@ -86,7 +86,7 @@ drf-react-template-framework = "^0.0.17"
 # OpenAPI 3.0 schema generation for the REST API
 drf-spectacular = {version = "~0.26.5", extras = ["sidecar"]}
 # Emoji terminal output for Python.
-emoji = "~2.11.0"
+emoji = "~2.12.1"
 # Git integrations for Python
 GitPython = "~3.1.43"
 # GraphQL support
@@ -106,7 +106,7 @@ MarkupSafe = "~2.1.5"
 # MySQL database adapter
 mysqlclient = {version = "~2.2.3", optional = true}
 # NAPALM automation library
-napalm = {version = "~4.1.0", optional = true}
+napalm = {version = ">=4.1.0,<6.0.0", optional = true}
 # IP prefix and address handling
 netaddr = "~0.10.1"
 # Library of network related utilities including network driver mappings and Jinja Filters
@@ -171,7 +171,7 @@ watchdog = "~4.0.0"
 
 [tool.poetry.group.docs.dependencies]
 # Rendering docs to HTML
-mkdocs = "~1.5.3"
+mkdocs = "~1.6.0"
 # Embedding YAML files into Markdown documents as tables
 markdown-data-tables = "~1.0.0"
 # Render custom markdown for version added/changed/remove notes
@@ -184,15 +184,15 @@ mkdocs-include-markdown-plugin = ">=4.0.4"
 # Use Jinja2 templating in docs - see optional-settings.md and required-settings.md
 mkdocs-macros-plugin = "~1.0.5"
 # Material for mkdocs theme
-mkdocs-material = "~9.5.16"
+mkdocs-material = "~9.5.23"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.1"
 # Automatically handle index pages for docs sections
 mkdocs-section-index = "~0.3.8"
 # Automatic documentation from sources, for MkDocs
-mkdocstrings = "~0.24.1"
+mkdocstrings = "~0.25.1"
 # Python-specific extension to mkdocstrings
-mkdocstrings-python = "~1.9.0"
+mkdocstrings-python = "~1.10.2"
 
 [tool.poetry.group.linting.dependencies]
 # Code static analysis

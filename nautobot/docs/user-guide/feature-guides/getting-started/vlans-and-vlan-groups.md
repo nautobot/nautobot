@@ -24,7 +24,7 @@ The following example will show:
 
 !!! note
     This example will require a Location (`Ottawa 1`) within a Parent Location (`Ottawa`) in the `North America` Parent Location in addition to the `Vancouver 1` Location and `Vancouver` Parent Location created prior.
-    Refer back to the [Create a Loaction](creating-devices.md#create-a-location) sections to do so.
+    Refer back to the [Create a Location](creating-devices.md#creating-a-location) sections to do so.
 
 ### Creating the VLANs
 
