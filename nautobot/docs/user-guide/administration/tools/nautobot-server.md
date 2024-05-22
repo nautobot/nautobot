@@ -521,7 +521,6 @@ This will run the following management commands with default settings, in order:
 - `clearsessions`
 - `send_installation_metrics`
 - `refresh_content_type_cache`
-- `refresh_dynamic_group_member_caches`
 
 !!! note
     Commands listed here that are not covered in this document here are Django built-in commands.
@@ -537,6 +536,9 @@ This will run the following management commands with default settings, in order:
 
 --- 2.1.1
     Removed the `--build_ui` flag.
+
++/- 2.3.0
+    Changed the `--refresh-dynamic-group-member-caches` flag's value to be False by default.
 
 `--no-clearsessions`  
 Do not automatically clean out expired sessions.
@@ -559,8 +561,8 @@ Do not automatically generate missing cable paths.
 `--no-refresh-content-type-cache`  
 Do not automatically refresh the content type cache.
 
-`--no-refresh-dynamic-group-member-caches`  
-Do not automatically refresh the dynamic group member lists.
+`--refresh-dynamic-group-member-caches`  
+Automatically refresh the dynamic group member list caches.
 
 ```no-highlight
 nautobot-server post_upgrade
@@ -600,7 +602,7 @@ Removing expired sessions...
 
 `nautobot-server refresh_dynamic_group_member_caches`
 
-Refresh the cached members of all Dynamic Groups. This is useful to periodically update the cached list of members of a Dynamic Group without having to wait for caches to expire, which defaults to one hour.
+Refresh the cached members of all Dynamic Groups. This can also be achieved by running the `Refresh Dynamic Group Caches` system Job.
 
 ### `refresh_content_type_caches`
 
