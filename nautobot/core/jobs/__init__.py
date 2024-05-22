@@ -38,6 +38,7 @@ class GitRepositorySync(Job):
 
     class Meta:
         name = "Git Repository: Sync"
+        description = "Clone and/or pull a Git repository, then refresh data sourced from this repository."
         has_sensitive_variables = False
 
     def run(self, repository):
@@ -67,6 +68,7 @@ class GitRepositoryDryRun(Job):
 
     class Meta:
         name = "Git Repository: Dry-Run"
+        description = "Dry run of Git repository sync - will not update data sourced from this repository."
         has_sensitive_variables = False
 
     def run(self, repository):
@@ -113,6 +115,7 @@ class ExportObjectList(Job):
 
     class Meta:
         name = "Export Object List"
+        description = "Export a list of objects to CSV or YAML, or render a specified Export Template."
         has_sensitive_variables = False
         # Exporting large querysets may take substantial processing time
         soft_time_limit = 1800
@@ -222,6 +225,7 @@ class ImportObjects(Job):
 
     class Meta:
         name = "Import Objects"
+        description = "Import objects from CSV-formatted data."
         has_sensitive_variables = False
         # Importing large files may take substantial processing time
         soft_time_limit = 1800

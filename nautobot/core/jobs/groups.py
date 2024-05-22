@@ -18,6 +18,7 @@ class RefreshDynamicGroupCaches(Job):
 
     class Meta:
         name = "Refresh Dynamic Group Caches"
+        description = "Re-calculate and re-cache the membership lists of Dynamic Groups."
         has_sensitive_variables = False
 
     def run(self, single_group=None):

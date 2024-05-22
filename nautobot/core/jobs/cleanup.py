@@ -45,6 +45,7 @@ class LogsCleanup(Job):
 
     class Meta:
         name = "Logs Cleanup"
+        description = "Delete ObjectChange and/or JobResult/JobLogEntry records older than a specified cutoff."
         has_sensitive_variables = False
 
     def run(self, *, cleanup_types, max_age=None):
