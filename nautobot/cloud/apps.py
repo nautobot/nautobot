@@ -1,7 +1,7 @@
 from nautobot.core.apps import NautobotConfig
 
 
-class CircuitsConfig(NautobotConfig):
+class CloudConfig(NautobotConfig):
     name = "nautobot.cloud"
     verbose_name = "Cloud"
     searchable_models = ["cloudaccount"]

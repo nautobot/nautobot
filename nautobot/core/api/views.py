@@ -381,6 +381,10 @@ class APIRootView(AuthenticatedAPIRootView):
                         reverse("circuits-api:api-root", request=request, format=format),
                     ),
                     (
+                        "cloud",
+                        reverse("cloud-api:api-root", request=request, format=format),
+                    ),
+                    (
                         "dcim",
                         reverse("dcim-api:api-root", request=request, format=format),
                     ),
