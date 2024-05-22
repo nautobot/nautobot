@@ -13,6 +13,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
+        ("contenttypes", "0002_remove_content_type_name"),
         ("extras", "0107_staticgroup_staticgroupassociation"),
         ("dcim", "0059_add_role_field_to_interface_models"),
     ]

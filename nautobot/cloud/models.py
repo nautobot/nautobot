@@ -2,8 +2,17 @@ from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.generics import OrganizationalModel
+from nautobot.extras.utils import extras_features
 
 
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "dynamic_groups",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
 class CloudAccount(OrganizationalModel):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, help_text="The name of this Cloud Account.")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
