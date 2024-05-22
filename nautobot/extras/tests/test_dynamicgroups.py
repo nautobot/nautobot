@@ -1,10 +1,11 @@
+import contextlib
 import random
 import time
 from unittest.mock import patch
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import ProtectedError
 from django.test import override_settings
 from django.urls import reverse
@@ -272,7 +273,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # Assert that the groups we got from `get_for_object()` match the lookup
         # from the group instance itself.
         device1_groups = DynamicGroup.objects.get_for_object(device1)
-        self.assertQuerySetEqual(device1_groups, device1.dynamic_groups)
+        self.assertQuerySetEqualAndNotEmpty(device1_groups, device1.dynamic_groups)
 
         # Device4 should not be in ANY Dynamic Groups.
         device4_groups = DynamicGroup.objects.get_for_object(device4)
@@ -988,7 +989,8 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         group = self.first_child
 
         # Ensure the cache is empty from previous tests
-        cache.delete(group.members_cache_key)
+        with contextlib.suppress(ObjectDoesNotExist):
+            group._backing_group.delete()
 
         self.assertEqual(sorted(list(group.members)), sorted(list(group.members_cached)))
 
@@ -1004,7 +1006,8 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
                 return []
 
         # Ensure the cache is empty from previous tests
-        cache.delete(group.members_cache_key)
+        with contextlib.suppress(ObjectDoesNotExist):
+            group._backing_group.delete()
 
         with patch.object(group, "get_queryset", return_value=FakeQuerySet()) as mock_get_queryset:
             group.members_cached
@@ -1018,7 +1021,8 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
             self.assertEqual(mock_get_queryset.call_count, 2)
 
         # Clean-up after ourselves
-        cache.delete(group.members_cache_key)
+        with contextlib.suppress(ObjectDoesNotExist):
+            group._backing_group.delete()
 
     @override_settings(DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT=0)
     def test_member_caching_disabled(self):
@@ -1032,7 +1036,8 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
                 return []
 
         # Ensure the cache is empty from previous tests
-        cache.delete(group.members_cache_key)
+        with contextlib.suppress(ObjectDoesNotExist):
+            group._backing_group.delete()
 
         with patch.object(group, "get_queryset", return_value=FakeQuerySet()) as mock_get_queryset:
             group.members_cached
@@ -1103,6 +1108,44 @@ class DynamicGroupMembershipModelTest(DynamicGroupTestBase):  # TODO: BaseModelT
         self.assertEqual(mem.count, grp.count)
         self.assertEqual(mem.get_absolute_url(), grp.get_absolute_url())
         self.assertEqual(mem.get_group_members_url(), grp.get_group_members_url())
+
+
+class DynamicGroupMixinModelTest(DynamicGroupTestBase):
+    """DynamicGroupMixin model tests."""
+    
+    def test_dynamic_groups(self):
+        with contextlib.suppress(AttributeError):
+            delattr(self.devices[0], "_dynamic_groups")
+        ContentType.objects.clear_cache()
+        with self.assertNumQueries(8):  # 7 dynamic groups plus list conversion to queryset
+            qs = self.devices[0].dynamic_groups
+            list(qs)
+        self.assertQuerysetEqualAndNotEmpty(qs, [self.first_child, self.third_child, self.nested_child], ordered=False)
+
+    def test_dynamic_groups_cached(self):
+        with contextlib.suppress(AttributeError):
+            delattr(self.devices[0], "_dynamic_groups_cached")
+        ContentType.objects.clear_cache()
+        with self.assertNumQueries(2):  # ContentType lookup and actual cache query
+            qs = self.devices[0].dynamic_groups_cached
+            list(qs)
+        self.assertQuerysetEqualAndNotEmpty(qs, [self.first_child, self.third_child, self.nested_child], ordered=False)
+
+    def test_dynamic_groups_list(self):
+        with contextlib.suppress(AttributeError):
+            delattr(self.devices[0], "_dynamic_groups_list")
+        ContentType.objects.clear_cache()
+        with self.assertNumQueries(7):
+            groups = self.devices[0].dynamic_groups_list
+        self.assertEqual(set(groups), set([self.first_child, self.third_child, self.nested_child]))
+
+    def test_dynamic_groups_list_cached(self):
+        with contextlib.suppress(AttributeError):
+            delattr(self.devices[0], "_dynamic_groups_list_cached")
+        ContentType.objects.clear_cache()
+        with self.assertNumQueries(2):  # ContentType lookup and actual cache query
+            groups = self.devices[0].dynamic_groups_list_cached
+        self.assertEqual(set(groups), set([self.first_child, self.third_child, self.nested_child]))
 
 
 class DynamicGroupFilterTest(DynamicGroupTestBase):
