@@ -77,11 +77,11 @@ class Command(BaseCommand):
             help="Do not automatically refresh content type cache.",
         )
         parser.add_argument(
-            "--refresh-dynamic-group-member-caches",
-            action="store_true",
+            "--no-refresh-dynamic-group-member-caches",
+            action="store_false",
             dest="refresh_dynamic_group_member_caches",
-            default=False,
-            help="Automatically refresh dynamic group member caches.",
+            default=True,
+            help="Do not automatically refresh dynamic group member caches.",
         )
 
     def handle(self, *args, **options):
