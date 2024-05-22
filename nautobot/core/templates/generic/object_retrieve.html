@@ -102,17 +102,17 @@
                 </li>
             {% endif %}
         {% endif %}
-        {% if perms.extras.view_dynamicgroup and object.get_dynamic_groups_url %}
+        {% if perms.extras.view_dynamicgroup and object.get_dynamic_groups_url and object.dynamic_groups_cached.count %}
             {% if active_tab != 'dynamic-groups' and object.get_dynamic_groups_url or active_tab == 'dynamic-groups' %}
                 <li role="presentation"{% if active_tab == 'dynamic-groups' %} class="active"{% endif %}>
-                    <a href="{{ object.get_dynamic_groups_url }}">Dynamic Groups</a>
+                    <a href="{{ object.get_dynamic_groups_url }}">Dynamic Groups {% badge object.dynamic_groups_cached.count True %}</a>
                 </li>
             {% endif %}
         {% endif %}
-        {% if object.is_static_group_associable_model and perms.extras.view_staticgroup %}
+        {% if object.is_static_group_associable_model and perms.extras.view_staticgroup and object.static_groups.count %}
             <li role="presentation"{% if request.GET.tab == 'static_groups' %} class="active"{% endif %}>
                 <a href="{{ object.get_absolute_url }}#static_groups" onclick="switch_tab(this.href)" aria-controls="static_groups" role="tab" data-toggle="tab">
-                    Static Groups {% badge object.static_groups.count %}
+                    Static Groups {% badge object.static_groups.count True %}
                 </a>
             </li>
         {% endif %}
