@@ -211,7 +211,7 @@ class DeviceModuleCommonFiltersMixin(django_filters.FilterSet):
         if value is True:
             query = Q(module_bays__isnull=False, module_bays__installed_module__isnull=True)
         else:
-            query = Q(module_bays__isnull=True) | Q(module_bays__installed_module__isnull=False)
+            query = Q(module_bays__isnull=True) | ~Q(module_bays__installed_module__isnull=True)
         return query
 
     def filter_has_empty_module_bays(self, queryset, name, value):

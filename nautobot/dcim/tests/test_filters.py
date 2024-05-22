@@ -787,6 +787,19 @@ class ModularDeviceComponentTestMixin(DeviceComponentTestMixin):
 
 class ModuleDeviceCommonTestsMixin:
     def test_has_empty_module_bays(self):
+        test_instances = self.queryset.all()[:2]
+        ModuleBay.objects.create(
+            **{
+                f"parent_{self.queryset.model._meta.model_name}": test_instances[0],
+                "position": "test filters position 1",
+            }
+        )
+        ModuleBay.objects.create(
+            **{
+                f"parent_{self.queryset.model._meta.model_name}": test_instances[1],
+                "position": "test filters position 1",
+            }
+        )
         with self.subTest():
             params = {"has_empty_module_bays": True}
             qs = self.filterset(params, self.queryset).qs

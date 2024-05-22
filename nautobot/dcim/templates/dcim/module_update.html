@@ -19,20 +19,20 @@
                         <div class="panel-heading"><strong>Installation</strong></div>
                         <div class="panel-body">
                             <ul class="nav nav-tabs" role="tablist">
-                                <li role="presentation"{% if form.parent_module_bay_device.initial %} class="active"{% endif %}><a href="#device" role="tab" data-toggle="tab">Device</a></li>
-                                <li role="presentation"{% if form.parent_module_bay_module.initial %} class="active"{%endif %}><a href="#module" role="tab" data-toggle="tab">Module</a></li>
-                                <li role="presentation"{% if form.location.initial %} class="active"{%endif %}><a href="#location" role="tab" data-toggle="tab">Location</a></li>
+                                <li role="presentation"{% if active_parent_tab == 'device' %} class="active"{% endif %}><a href="#device" role="tab" data-toggle="tab">Device</a></li>
+                                <li role="presentation"{% if active_parent_tab == 'module' %} class="active"{%endif %}><a href="#module" role="tab" data-toggle="tab">Module</a></li>
+                                <li role="presentation"{% if active_parent_tab == 'location' %} class="active"{%endif %}><a href="#location" role="tab" data-toggle="tab">Location</a></li>
                             </ul>
                             <div class="tab-content">
-                                <div class="tab-pane{% if form.parent_module_bay_device.initial %} active{% endif %}" id="device">
+                                <div class="tab-pane{% if active_parent_tab == 'device' %} active{% endif %}" id="device">
                                     {% render_field form.parent_module_bay_device_filter %}
                                     {% render_field form.parent_module_bay_device %}
                                 </div>
-                                <div class="tab-pane{% if form.parent_module_bay_module.initial %} active{% endif %}" id="module">
+                                <div class="tab-pane{% if active_parent_tab == 'module' %} active{% endif %}" id="module">
                                     {% render_field form.parent_module_bay_module_filter %}
                                     {% render_field form.parent_module_bay_module %}
                                 </div>
-                                <div class="tab-pane{% if form.location.initial %} active{% endif %}" id="location">
+                                <div class="tab-pane{% if active_parent_tab == 'location' %} active{% endif %}" id="location">
                                     {% render_field form.location %}
                                 </div>
                             </div>
