@@ -17,6 +17,7 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.testing import extract_form_failures, extract_page_body, TestCase, ViewTestCases
 from nautobot.core.testing.utils import disable_warnings, post_data
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
     ConsolePort,
     Controller,
@@ -774,23 +775,48 @@ class DynamicGroupTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        content_type = ContentType.objects.get_for_model(Device)
+        cls.content_type = ContentType.objects.get_for_model(Device)
 
         # DynamicGroup objects to test.
-        DynamicGroup.objects.create(name="DG 1", content_type=content_type)
-        DynamicGroup.objects.create(name="DG 2", content_type=content_type)
-        DynamicGroup.objects.create(name="DG 3", content_type=content_type)
+        DynamicGroup.objects.create(name="DG 1", content_type=cls.content_type)
+        DynamicGroup.objects.create(name="DG 2", content_type=cls.content_type)
+        DynamicGroup.objects.create(name="DG 3", content_type=cls.content_type)
 
         cls.form_data = {
             "name": "new_dynamic_group",
             "description": "I am a new dynamic group object.",
-            "content_type": content_type.pk,
+            "content_type": cls.content_type.pk,
             # Management form fields required for the dynamic formset
             "dynamic_group_memberships-TOTAL_FORMS": "0",
             "dynamic_group_memberships-INITIAL_FORMS": "1",
             "dynamic_group_memberships-MIN_NUM_FORMS": "0",
             "dynamic_group_memberships-MAX_NUM_FORMS": "1000",
         }
+
+    def test_get_object_with_permission(self):
+        self.add_permissions(get_permission_for_model(self.content_type.model_class(), "view"))
+        instance, response = super().test_get_object_with_permission()
+        response_body = extract_page_body(response.content.decode(response.charset))
+        # Check that the "members" table in the detail view includes all appropriate member objects
+        for member in instance.members:
+            self.assertIn(str(member.pk), response_body)
+
+    def test_get_object_with_constrained_permission(self):
+        instance1 = self._get_queryset().first()
+        member1, member2 = instance1.members[:2]
+        obj_perm = ObjectPermission(
+            name="Members permission",
+            constraints={"pk": member1.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(instance1.content_type)
+        instance1, instance2, response = super().test_get_object_with_constrained_permission()
+        response_body = extract_page_body(response.content.decode(response.charset))
+        # Check that the "members" table in the detail view includes all appropriate member objects
+        self.assertIn(str(member1.pk), response_body)
+        self.assertNotIn(str(member2.pk), response_body)
 
     def test_get_object_dynamic_groups_anonymous(self):
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
