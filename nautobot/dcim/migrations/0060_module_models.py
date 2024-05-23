@@ -7,6 +7,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 import nautobot.core.models.fields
+import nautobot.core.models.ordering
 import nautobot.core.models.query_functions
 import nautobot.extras.models.mixins
 import nautobot.extras.models.roles
@@ -64,6 +65,16 @@ class Migration(migrations.Migration):
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
                 ("position", models.CharField(max_length=255)),
+                (
+                    "_position",
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "position",
+                        blank=True,
+                        db_index=True,
+                        max_length=255,
+                        naturalize_function=nautobot.core.models.ordering.naturalize,
+                    ),
+                ),
                 ("label", models.CharField(blank=True, max_length=255)),
                 ("description", models.CharField(blank=True, max_length=255)),
             ],
@@ -92,6 +103,16 @@ class Migration(migrations.Migration):
                     models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
                 ),
                 ("position", models.CharField(max_length=255)),
+                (
+                    "_position",
+                    nautobot.core.models.fields.NaturalOrderingField(
+                        "position",
+                        blank=True,
+                        db_index=True,
+                        max_length=255,
+                        naturalize_function=nautobot.core.models.ordering.naturalize,
+                    ),
+                ),
                 ("label", models.CharField(blank=True, max_length=255)),
                 ("description", models.CharField(blank=True, max_length=255)),
             ],
@@ -935,11 +956,11 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterModelOptions(
             name="modulebay",
-            options={"ordering": ("parent_device", "parent_module__id", "position")},
+            options={"ordering": ("parent_device", "parent_module__id", "_position")},
         ),
         migrations.AlterModelOptions(
             name="modulebaytemplate",
-            options={"ordering": ("device_type", "module_type", "position")},
+            options={"ordering": ("device_type", "module_type", "_position")},
         ),
         migrations.AddConstraint(
             model_name="module",

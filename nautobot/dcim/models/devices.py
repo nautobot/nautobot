@@ -1662,6 +1662,13 @@ class Module(PrimaryModel):
         if self.asset_tag == "":
             self.asset_tag = None
 
+        # Prevent creating a Module that is its own ancestor, creating an infinite loop
+        parent_module = getattr(self.parent_module_bay, "parent_module", None)
+        while parent_module is not None:
+            if parent_module == self:
+                raise ValidationError("Creating this instance would cause an infinite loop.")
+            parent_module = getattr(parent_module.parent_module_bay, "parent_module", None)
+
         super().save(*args, **kwargs)
 
         # If this is a new Module, instantiate all related components per the ModuleType definition

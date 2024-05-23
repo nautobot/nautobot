@@ -490,6 +490,7 @@ class ModuleBayTemplate(BaseModel, ChangeLoggedModel, CustomFieldModel, Relation
         blank=True,
         null=True,
     )
+    _position = NaturalOrderingField(target_field="position", max_length=CHARFIELD_MAX_LENGTH, blank=True)
     position = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         blank=False,
@@ -502,7 +503,7 @@ class ModuleBayTemplate(BaseModel, ChangeLoggedModel, CustomFieldModel, Relation
     natural_key_field_names = ["device_type", "module_type", "position"]
 
     class Meta:
-        ordering = ("device_type", "module_type", "position")
+        ordering = ("device_type", "module_type", "_position")
         constraints = [
             # Database constraint to make the device_type and module_type fields mutually exclusive
             models.CheckConstraint(

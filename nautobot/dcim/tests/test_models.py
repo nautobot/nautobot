@@ -3050,6 +3050,42 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
 
         ModuleBay.objects.get(parent_module=module, position="1111")
 
+    def test_module_infinite_recursion_self_parent(self):
+        """Assert that a module cannot be its own parent."""
+        module = Module.objects.create(
+            location=self.location,
+            module_type=self.module_type,
+            status=self.status,
+        )
+        module_bay = module.module_bays.first()
+        module.parent_module_bay = module_bay
+
+        with self.assertRaises(ValidationError) as context:
+            module.save()
+        self.assertEqual(context.exception.message, "Creating this instance would cause an infinite loop.")
+
+    def test_module_infinite_recursion_ancestor(self):
+        """Assert that a module cannot be its own ancestor."""
+        parent_module = Module.objects.create(
+            module_type=self.module_type,
+            location=self.location,
+            status=self.status,
+        )
+        parent_module_bay = parent_module.module_bays.first()
+        child_module = Module.objects.create(
+            module_type=self.module_type,
+            parent_module_bay=parent_module_bay,
+            status=self.status,
+        )
+        child_module_bay = child_module.module_bays.first()
+        parent_module.parent_module_bay = child_module_bay
+        parent_module.location = None
+
+        with self.assertRaises(ValidationError) as context:
+            parent_module.save()
+
+        self.assertEqual(context.exception.message, "Creating this instance would cause an infinite loop.")
+
 
 class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
     model = ModuleType

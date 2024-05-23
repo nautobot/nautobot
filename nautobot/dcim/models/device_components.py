@@ -1157,6 +1157,9 @@ class ModuleBay(PrimaryModel):
         blank=True,
         null=True,
     )
+    _position = NaturalOrderingField(
+        target_field="position", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True
+    )
     position = models.CharField(
         blank=False,
         null=False,
@@ -1173,7 +1176,7 @@ class ModuleBay(PrimaryModel):
         ordering = (
             "parent_device",
             "parent_module__id",
-            "position",
+            "_position",
         )
         constraints = [
             # Database constraint to make the parent_device and parent_module fields mutually exclusive
