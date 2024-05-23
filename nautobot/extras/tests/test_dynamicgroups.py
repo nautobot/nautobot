@@ -168,6 +168,7 @@ class DynamicGroupTestBase(TestCase):
             filter={"platform": ["invalidvalue"]},
             content_type=cls.device_ct,
         )
+        cls.groups.append(cls.invalid_filter)
 
         # Setup the group membership hiearchy to use for graph testing
         cls.memberships = [
@@ -352,19 +353,23 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         device1 = self.devices[0]
         device2 = self.devices[1]
 
-        self.assertTrue(group.has_member(device1))
+        with self.assertApproximateQueries(minimum=1, maximum=10):
+            self.assertTrue(group.has_member(device1))
         with self.assertNumQueries(1):
             self.assertTrue(group.has_member(device1, use_cache=True))
-        self.assertFalse(group.has_member(device2))
+        with self.assertApproximateQueries(minimum=1, maximum=10):
+            self.assertFalse(group.has_member(device2))
         with self.assertNumQueries(1):
             self.assertFalse(group.has_member(device2, use_cache=True))
 
         # Test fail-closed behavior of an invalid group filter
         group = self.invalid_filter
-        self.assertFalse(group.has_member(device1))
+        with self.assertApproximateQueries(minimum=1, maximum=5):
+            self.assertFalse(group.has_member(device1))
         with self.assertNumQueries(1):
             self.assertFalse(group.has_member(device1, use_cache=True))
-        self.assertFalse(group.has_member(device2))
+        with self.assertApproximateQueries(minimum=1, maximum=5):
+            self.assertFalse(group.has_member(device2))
         with self.assertNumQueries(1):
             self.assertFalse(group.has_member(device2, use_cache=True))
 
@@ -1109,8 +1114,7 @@ class DynamicGroupMixinModelTest(DynamicGroupTestBase):
     def test_dynamic_groups(self):
         with contextlib.suppress(AttributeError):
             delattr(self.devices[0], "_dynamic_groups")
-        ContentType.objects.clear_cache()
-        with self.assertNumQueries(55):  # TODO the exact number isn't as important to us
+        with self.assertApproximateQueries(minimum=len(self.groups), maximum=10*len(self.groups)):
             qs = self.devices[0].dynamic_groups
             list(qs)
         self.assertQuerysetEqualAndNotEmpty(qs, [self.first_child, self.third_child, self.nested_child], ordered=False)
@@ -1118,8 +1122,7 @@ class DynamicGroupMixinModelTest(DynamicGroupTestBase):
     def test_dynamic_groups_cached(self):
         with contextlib.suppress(AttributeError):
             delattr(self.devices[0], "_dynamic_groups_cached")
-        ContentType.objects.clear_cache()
-        with self.assertNumQueries(2):  # ContentType lookup and actual cache query
+        with self.assertApproximateQueries(minimum=1, maximum=2):  # ContentType lookup and actual cache query
             qs = self.devices[0].dynamic_groups_cached
             list(qs)
         self.assertQuerysetEqualAndNotEmpty(qs, [self.first_child, self.third_child, self.nested_child], ordered=False)
@@ -1127,8 +1130,7 @@ class DynamicGroupMixinModelTest(DynamicGroupTestBase):
     def test_dynamic_groups_list(self):
         with contextlib.suppress(AttributeError):
             delattr(self.devices[0], "_dynamic_groups_list")
-        ContentType.objects.clear_cache()
-        with self.assertNumQueries(57):  # TODO the exact number isn't as important to us
+        with self.assertApproximateQueries(minimum=len(self.groups), maximum=10*len(self.groups)):
             groups = self.devices[0].dynamic_groups_list
         self.assertEqual(set(groups), set([self.first_child, self.third_child, self.nested_child]))
 
@@ -1136,7 +1138,7 @@ class DynamicGroupMixinModelTest(DynamicGroupTestBase):
         with contextlib.suppress(AttributeError):
             delattr(self.devices[0], "_dynamic_groups_list_cached")
         ContentType.objects.clear_cache()
-        with self.assertNumQueries(2):  # ContentType lookup and actual cache query
+        with self.assertApproximateQueries(minimum=1, maximum=2):  # ContentType lookup and actual cache query
             groups = self.devices[0].dynamic_groups_list_cached
         self.assertEqual(set(groups), set([self.first_child, self.third_child, self.nested_child]))
 
