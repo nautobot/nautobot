@@ -1,0 +1,1 @@
+Added `setup_structlog_logging()` to allow using structlog from `nautobot_config.py` file.
