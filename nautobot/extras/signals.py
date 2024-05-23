@@ -21,7 +21,6 @@ import redis.exceptions
 
 from nautobot.core.celery import app, import_jobs
 from nautobot.core.models import BaseModel
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import JobResultStatusChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
@@ -396,37 +395,6 @@ def dynamic_group_membership_created(sender, instance, raw=False, **kwargs):
 
 m2m_changed.connect(dynamic_group_children_changed, sender=DynamicGroup.children.through)
 pre_save.connect(dynamic_group_membership_created, sender=DynamicGroupMembership)
-
-
-def dynamic_group_eligible_groups_changed(sender, instance, **kwargs):
-    """
-    When a DynamicGroup is created or deleted, refresh the cache of eligible groups for the associated ContentType.
-
-    Can't change content_type_id on an existing instance, so no need to check for that.
-    """
-
-    if get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT") == 0:
-        # Caching is disabled, so there's nothing to do
-        return
-
-    if kwargs.get("created", None) is False:
-        # We do not care about updates
-        # "created" is not a kwarg for post_delete signals, so is unset or None
-        # "created" is a kwarg for post_save signals, but you cannot change content types of existing groups
-        #   therefor we can ignore cache updates on DynamicGroups updates
-        return
-
-    content_type = instance.content_type
-    cache_key = f"nautobot.{content_type.app_label}.{content_type.model}._get_eligible_dynamic_groups"
-    cache.set(
-        cache_key,
-        DynamicGroup.objects.filter(content_type_id=instance.content_type_id),
-        get_settings_or_config("DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"),
-    )
-
-
-post_save.connect(dynamic_group_eligible_groups_changed, sender=DynamicGroup)
-post_delete.connect(dynamic_group_eligible_groups_changed, sender=DynamicGroup)
 
 
 def dynamic_group_update_cached_members(sender, instance, **kwargs):

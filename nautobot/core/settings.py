@@ -96,13 +96,6 @@ if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID
 if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
     DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
 
-# The number of seconds to cache the member list of dynamic groups. Set this to `0` to disable caching.
-if (
-    "NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT" in os.environ
-    and os.environ["NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"] != ""
-):
-    DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT = int(os.environ["NAUTOBOT_DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT"])
-
 # Exclude potentially sensitive models from wildcard view exemption. These may still be exempted
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
 EXEMPT_EXCLUDE_MODELS = (
@@ -714,14 +707,6 @@ CONSTANCE_CONFIG = {
         "Used for sending anonymous installation metrics, when settings.INSTALLATION_METRICS_ENABLED is set to True.",
         field_type=str,
     ),
-    "DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT": ConstanceConfigItem(
-        default=0,
-        help_text="Dynamic Group member cache timeout in seconds. This is the amount of time that a Dynamic Group's member list "
-        "will be cached in Django cache backend. Since retrieving the member list of a Dynamic Group can be a very "
-        "expensive operation, especially in reverse, this cache is used to speed up the process of retrieving the "
-        "member list. This cache is invalidated when a Dynamic Group is saved. Set to 0 to disable caching.",
-        field_type=int,
-    ),
     "JOB_CREATE_FILE_MAX_SIZE": ConstanceConfigItem(
         default=10 << 20,
         help_text=mark_safe(  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
@@ -815,7 +800,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_NAME_AS_NATURAL_KEY", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
-    "Performance": ["DYNAMIC_GROUPS_MEMBER_CACHE_TIMEOUT", "JOB_CREATE_FILE_MAX_SIZE"],
+    "Performance": ["JOB_CREATE_FILE_MAX_SIZE"],
     "Rack Elevation Rendering": [
         "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT",
         "RACK_ELEVATION_DEFAULT_UNIT_WIDTH",

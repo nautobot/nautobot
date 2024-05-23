@@ -278,11 +278,6 @@ class StaticGroupAssociation(OrganizationalModel):
         return super().to_objectchange(*args, **kwargs)
 
 
-class DynamicGroupManager(BaseManager.from_queryset(DynamicGroupQuerySet)):
-    def get_queryset(self):
-        return super().get_queryset().select_related("content_type", "_backing_group__content_type")
-
-
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -316,7 +311,7 @@ class DynamicGroup(OrganizationalModel):
         related_name="parents",
     )
 
-    objects = DynamicGroupManager()
+    objects = BaseManager.from_queryset(DynamicGroupQuerySet)()
 
     clone_fields = ["content_type", "filter"]
 
