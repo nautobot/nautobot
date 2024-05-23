@@ -1,7 +1,7 @@
 from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
-from nautobot.core.models.generics import OrganizationalModel
+from nautobot.core.models.generics import PrimaryModel
 from nautobot.extras.utils import extras_features
 
 
@@ -13,11 +13,17 @@ from nautobot.extras.utils import extras_features
     "graphql",
     "webhooks",
 )
-class CloudAccount(OrganizationalModel):
-    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, help_text="The name of this Cloud Account.")
+class CloudAccount(PrimaryModel):
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, help_text="The name of this Cloud Account.", unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
-    account_number = models.CharField(max_length=CHARFIELD_MAX_LENGTH, help_text="The number of this Cloud Account.")
-    provider = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="cloud_accounts")
+    account_number = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, help_text="The account identifier of this Cloud Account."
+    )
+    provider = models.ForeignKey(
+        to="dcim.Manufacturer",
+        on_delete=models.PROTECT,
+        related_name="cloud_accounts",
+    )
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
         on_delete=models.SET_NULL,
@@ -28,7 +34,6 @@ class CloudAccount(OrganizationalModel):
 
     class Meta:
         ordering = ["provider", "name", "account_number"]
-        unique_together = ["provider", "name", "account_number"]
 
     def __str__(self):
         return f"{self.provider}: {self.name} - {self.account_number}"

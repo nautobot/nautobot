@@ -57,6 +57,9 @@ class Command(BaseCommand):
                 ProviderFactory,
                 ProviderNetworkFactory,
             )
+            from nautobot.cloud.factory import (
+                CloudAccountFactory,
+            )
             from nautobot.dcim.factory import (
                 ControllerFactory,
                 ControllerManagedDeviceGroupFactory,
@@ -187,6 +190,8 @@ class Command(BaseCommand):
         SoftwareVersionFactory.create_batch(5)
         self.stdout.write("Creating SoftwareImageFiles without DeviceTypes...")
         SoftwareImageFileFactory.create_batch(5)
+        self.stdout.write("Creating CloudAccounts...")
+        CloudAccountFactory.create_batch(10, using=db_name)
         self.stdout.write("Creating CircuitTypes...")
         CircuitTypeFactory.create_batch(40, using=db_name)
         self.stdout.write("Creating Providers...")
@@ -244,6 +249,7 @@ class Command(BaseCommand):
                 CircuitFactory,
                 CircuitTerminationFactory,
                 CircuitTypeFactory,
+                CloudAccountFactory,
                 ContactFactory,
                 ControllerManagedDeviceGroupFactory,
                 ControllerFactory,

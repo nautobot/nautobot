@@ -38,4 +38,5 @@ class CloudAccountFilterSet(NautobotFilterSet):
             "name",
             "provider",
             "secrets_group",
+            "tags",
         ]
