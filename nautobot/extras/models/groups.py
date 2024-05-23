@@ -1,7 +1,6 @@
 """Dynamic and Static Groups Models."""
 
 import logging
-import pickle
 
 from django import forms
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -20,7 +19,6 @@ from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices
 from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGroupQuerySet
@@ -281,7 +279,6 @@ class StaticGroupAssociation(OrganizationalModel):
 
 
 class DynamicGroupManager(BaseManager.from_queryset(DynamicGroupQuerySet)):
-
     def get_queryset(self):
         return super().get_queryset().select_related("content_type", "_backing_group__content_type")
 

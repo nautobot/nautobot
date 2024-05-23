@@ -1,7 +1,6 @@
 from nautobot.extras.jobs import Job, ObjectVar
 from nautobot.extras.models import DynamicGroup
 
-
 name = "System Jobs"
 
 

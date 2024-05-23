@@ -1,13 +1,10 @@
 import contextlib
 import random
-import time
 from unittest.mock import patch
 
 from django.contrib.contenttypes.models import ContentType
-from django.core.cache import cache
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models import ProtectedError
-from django.test import override_settings
 from django.urls import reverse
 
 from nautobot.core.forms.fields import MultiMatchModelMultipleChoiceField, MultiValueCharField
@@ -1110,11 +1107,11 @@ class DynamicGroupMembershipModelTest(DynamicGroupTestBase):  # TODO: BaseModelT
 
 class DynamicGroupMixinModelTest(DynamicGroupTestBase):
     """DynamicGroupMixin model tests."""
-    
+
     def test_dynamic_groups(self):
         with contextlib.suppress(AttributeError):
             delattr(self.devices[0], "_dynamic_groups")
-        with self.assertApproximateQueries(minimum=len(self.groups), maximum=10*len(self.groups)):
+        with self.assertApproximateQueries(minimum=len(self.groups), maximum=10 * len(self.groups)):
             qs = self.devices[0].dynamic_groups
             list(qs)
         self.assertQuerysetEqualAndNotEmpty(qs, [self.first_child, self.third_child, self.nested_child], ordered=False)
@@ -1130,7 +1127,7 @@ class DynamicGroupMixinModelTest(DynamicGroupTestBase):
     def test_dynamic_groups_list(self):
         with contextlib.suppress(AttributeError):
             delattr(self.devices[0], "_dynamic_groups_list")
-        with self.assertApproximateQueries(minimum=len(self.groups), maximum=10*len(self.groups)):
+        with self.assertApproximateQueries(minimum=len(self.groups), maximum=10 * len(self.groups)):
             groups = self.devices[0].dynamic_groups_list
         self.assertEqual(set(groups), set([self.first_child, self.third_child, self.nested_child]))
 
