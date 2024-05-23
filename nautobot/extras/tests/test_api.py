@@ -69,6 +69,7 @@ from nautobot.ipam.factory import VLANFactory
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.users.models import ObjectPermission
 from nautobot.utilities.choices import ColorChoices
+from nautobot.utilities.permissions import get_permission_for_model
 from nautobot.utilities.testing import APITestCase, APIViewTestCases
 from nautobot.utilities.testing.utils import disable_warnings
 from nautobot.utilities.utils import get_route_for_model, slugify_dashes_to_underscores
@@ -752,12 +753,33 @@ class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     def test_get_members(self):
         """Test that the `/members/` API endpoint returns what is expected."""
         self.add_permissions("extras.view_dynamicgroup")
-        instance = DynamicGroup.objects.first()
+        instance = self.groups[0]
+        self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"))
         member_count = instance.members.count()
         url = reverse("extras-api:dynamicgroup-members", kwargs={"pk": instance.pk})
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(member_count, len(response.json()["results"]))
+
+    def test_get_members_with_constrained_permission(self):
+        """Test that the `/members/` API endpoint enforces permissions on the member model."""
+        self.add_permissions("extras.view_dynamicgroup")
+        instance = self.groups[0]
+        obj1, obj2 = instance.members[:2]
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk__in": [obj1.pk]},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(instance.content_type)
+
+        url = reverse("extras-api:dynamicgroup-members", kwargs={"pk": instance.pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()["results"]), 1)
+        self.assertEqual(response.json()["results"][0]["id"], str(obj1.pk))
 
 
 class DynamicGroupMembershipTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
