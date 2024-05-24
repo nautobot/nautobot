@@ -1,4 +1,7 @@
+from django.contrib.contenttypes.models import ContentType
+
 from nautobot.core.filters import (
+    ContentTypeMultipleChoiceFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
     SearchFilter,
 )
@@ -6,7 +9,7 @@ from nautobot.dcim.models import Manufacturer
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import SecretsGroup
 
-from .models import CloudAccount
+from .models import CloudAccount, CloudType
 
 
 class CloudAccountFilterSet(NautobotFilterSet):
@@ -40,3 +43,25 @@ class CloudAccountFilterSet(NautobotFilterSet):
             "secrets_group",
             "tags",
         ]
+
+
+class CloudTypeFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "provider__name": "icontains",
+        },
+    )
+    provider = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="provider",
+        queryset=Manufacturer.objects.all(),
+        to_field_name="name",
+        label="Provider (name or ID)",
+    )
+    content_types = ContentTypeMultipleChoiceFilter(
+        choices=ContentType.objects.all(),
+    )
+
+    class Meta:
+        model = CloudType
+        fields = ["id", "name", "description"]

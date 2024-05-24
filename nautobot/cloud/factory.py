@@ -1,7 +1,9 @@
+from django.contrib.contenttypes.models import ContentType
 import factory
 
-from nautobot.cloud.models import CloudAccount
+from nautobot.cloud.models import CloudAccount, CloudType
 from nautobot.core.factory import (
+    get_random_instances,
     NautobotBoolIterator,
     PrimaryModelFactory,
     random_instance,
@@ -25,3 +27,22 @@ class CloudAccountFactory(PrimaryModelFactory):
     #     "has_secrets_group",
     #     random_instance(SecretsGroup),
     # )
+
+
+class CloudTypeFactory(PrimaryModelFactory):
+    class Meta:
+        model = CloudType
+        exclude = ("has_description",)
+
+    provider = random_instance(Manufacturer)
+    name = factory.LazyAttributeSequence(lambda o, n: f"{o.provider.name} CloudType {n + 1}")
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+
+    @factory.post_generation
+    def content_types(self, create, extracted, **kwargs):
+        if create:
+            if extracted:
+                self.content_types.set(extracted)
+            else:
+                self.content_types.set(get_random_instances(ContentType.objects.all(), minimum=1))
