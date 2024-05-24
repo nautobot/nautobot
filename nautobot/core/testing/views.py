@@ -775,6 +775,10 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_filtered(self):
             instance1, instance2 = self._get_queryset().all()[:2]
+            if hasattr(self.model, "name") and instance1.name == instance2.name:
+                instance2.name += "X"
+                instance2.save()
+
             response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}")
             self.assertHttpStatus(response, 200)
             content = utils.extract_page_body(response.content.decode(response.charset))
@@ -800,6 +804,10 @@ class ViewTestCases:
         def test_list_objects_unknown_filter_no_strict_filtering(self):
             """Verify that without STRICT_FILTERING, an unknown filter is ignored."""
             instance1, instance2 = self._get_queryset().all()[:2]
+            if hasattr(self.model, "name") and instance1.name == instance2.name:
+                instance2.name += "X"
+                instance2.save()
+
             with self.assertLogs("nautobot.core.filters") as cm:
                 response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
             filterset = self.get_filterset()
@@ -866,6 +874,9 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_with_constrained_permission(self):
             instance1, instance2 = self._get_queryset().all()[:2]
+            if hasattr(self.model, "name") and instance1.name == instance2.name:
+                instance2.name += "X"
+                instance2.save()
 
             # Add object-level permission
             obj_perm = users_models.ObjectPermission(

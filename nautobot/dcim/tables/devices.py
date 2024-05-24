@@ -42,7 +42,6 @@ from .template_code import (
     CONSOLEPORT_BUTTONS,
     CONSOLESERVERPORT_BUTTONS,
     DEVICE_LINK,
-    DEVICE_MODULEBAY_BUTTONS,
     DEVICEBAY_BUTTONS,
     FRONTPORT_BUTTONS,
     INTERFACE_BUTTONS,
@@ -52,7 +51,7 @@ from .template_code import (
     INTERFACE_REDUNDANCY_INTERFACE_PRIORITY,
     INTERFACE_TAGGED_VLANS,
     MODULE_BUTTONS,
-    MODULE_MODULEBAY_BUTTONS,
+    MODULEBAY_BUTTONS,
     PATHENDPOINT,
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
@@ -960,7 +959,7 @@ class DeviceModuleBayTable(ModuleBayTable):
         attrs={"td": {"class": "text-nowrap"}},
     )
     installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
-    actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=DEVICE_MODULEBAY_BUTTONS)
+    actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=MODULEBAY_BUTTONS)
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = ModuleBay
@@ -986,7 +985,7 @@ class DeviceModuleBayTable(ModuleBayTable):
 
 
 class ModuleModuleBayTable(DeviceModuleBayTable):
-    actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=MODULE_MODULEBAY_BUTTONS)
+    actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=MODULEBAY_BUTTONS)
 
     class Meta(DeviceModuleBayTable.Meta):
         pass

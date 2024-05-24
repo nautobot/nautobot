@@ -947,45 +947,45 @@ device-bays:
 
         # Verify all of the components were created
         self.assertEqual(dt.console_port_templates.count(), 3)
-        cp1 = ConsolePortTemplate.objects.first()
+        cp1 = dt.console_port_templates.first()
         self.assertEqual(cp1.name, "Console Port 1")
         self.assertEqual(cp1.type, ConsolePortTypeChoices.TYPE_DE9)
 
         self.assertEqual(dt.console_server_port_templates.count(), 3)
-        csp1 = ConsoleServerPortTemplate.objects.first()
+        csp1 = dt.console_server_port_templates.first()
         self.assertEqual(csp1.name, "Console Server Port 1")
         self.assertEqual(csp1.type, ConsolePortTypeChoices.TYPE_RJ45)
 
         self.assertEqual(dt.power_port_templates.count(), 3)
-        pp1 = PowerPortTemplate.objects.first()
+        pp1 = dt.power_port_templates.first()
         self.assertEqual(pp1.name, "Power Port 1")
         self.assertEqual(pp1.type, PowerPortTypeChoices.TYPE_IEC_C14)
 
         self.assertEqual(dt.power_outlet_templates.count(), 3)
-        po1 = PowerOutletTemplate.objects.first()
+        po1 = dt.power_outlet_templates.first()
         self.assertEqual(po1.name, "Power Outlet 1")
         self.assertEqual(po1.type, PowerOutletTypeChoices.TYPE_IEC_C13)
         self.assertEqual(po1.power_port_template, pp1)
         self.assertEqual(po1.feed_leg, PowerOutletFeedLegChoices.FEED_LEG_A)
 
         self.assertEqual(dt.interface_templates.count(), 3)
-        iface1 = InterfaceTemplate.objects.first()
+        iface1 = dt.interface_templates.first()
         self.assertEqual(iface1.name, "Interface 1")
         self.assertEqual(iface1.type, InterfaceTypeChoices.TYPE_1GE_FIXED)
         self.assertTrue(iface1.mgmt_only)
 
         self.assertEqual(dt.rear_port_templates.count(), 3)
-        rp1 = RearPortTemplate.objects.first()
+        rp1 = dt.rear_port_templates.first()
         self.assertEqual(rp1.name, "Rear Port 1")
 
         self.assertEqual(dt.front_port_templates.count(), 3)
-        fp1 = FrontPortTemplate.objects.first()
+        fp1 = dt.front_port_templates.first()
         self.assertEqual(fp1.name, "Front Port 1")
         self.assertEqual(fp1.rear_port_template, rp1)
         self.assertEqual(fp1.rear_port_position, 1)
 
         self.assertEqual(dt.device_bay_templates.count(), 3)
-        db1 = DeviceBayTemplate.objects.first()
+        db1 = dt.device_bay_templates.first()
         self.assertEqual(db1.name, "Device Bay 1")
 
     def test_import_objects_unknown_type_enums(self):
@@ -1452,13 +1452,8 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.first()
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Test Device Type 1")
-        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Test Module Type 1")
-        ModuleBayTemplate.objects.create(device_type=device_type, position="Module Bay Template 1")
-        ModuleBayTemplate.objects.create(device_type=device_type, position="Module Bay Template 2")
-        ModuleBayTemplate.objects.create(module_type=module_type, position="Module Bay Template 3")
-        ModuleBayTemplate.objects.create(module_type=module_type, position="Module Bay Template 4")
+        device_type = DeviceType.objects.first()
+        module_type = ModuleType.objects.first()
 
         cls.form_data = {
             "device_type": device_type.pk,
@@ -2096,6 +2091,7 @@ class PowerOutletTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        PowerOutlet.objects.all().delete()
         device = create_test_device("Device 1")
 
         powerports = (
@@ -2166,6 +2162,7 @@ class InterfaceTestCase(ViewTestCases.ModularDeviceComponentViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        Interface.objects.all().delete()
         device = create_test_device("Device 1")
         vrfs = list(VRF.objects.all()[:3])
         for vrf in vrfs:
@@ -2903,6 +2900,9 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     def _get_base_url(self):
         return "dcim:console_connections_{}"
 
+    def _get_queryset(self):
+        return ConsolePort.objects.filter(cable__isnull=False)
+
     def get_list_url(self):
         return "/dcim/console-connections/"
 
@@ -2955,14 +2955,17 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     Test the PowerConnectionsListView.
     """
 
+    def _get_base_url(self):
+        return "dcim:power_connections_{}"
+
+    def _get_queryset(self):
+        return PowerPort.objects.filter(cable__isnull=False)
+
     def get_list_url(self):
         return "/dcim/power-connections/"
 
     def get_title(self):
         return "Power Connections"
-
-    def _get_base_url(self):
-        return "dcim:power_connections_{}"
 
     def get_list_view(self):
         return PowerConnectionsListView
@@ -3019,6 +3022,9 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
     def _get_base_url(self):
         return "dcim:interface_connections_{}"
+
+    def _get_queryset(self):
+        return Interface.objects.filter(cable__isnull=False)
 
     def get_list_url(self):
         return "/dcim/interface-connections/"
