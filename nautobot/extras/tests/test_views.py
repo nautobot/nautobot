@@ -2794,7 +2794,7 @@ class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         queryset = super()._get_queryset()
         # We want .first() to pick groups with members
         return queryset.annotate(members_count=count_related(StaticGroupAssociation, "static_group")).order_by(
-            "-members_count"
+            "-members_count", "name"
         )
 
     def test_get_object_with_permission(self):
