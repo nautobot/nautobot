@@ -765,7 +765,7 @@ class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
         """Test that the `/members/` API endpoint enforces permissions on the member model."""
         self.add_permissions("extras.view_dynamicgroup")
         instance = self.groups[0]
-        obj1, obj2 = instance.members[:2]
+        obj1 = instance.members.first()
         obj_perm = ObjectPermission(
             name="Test permission",
             constraints={"pk__in": [obj1.pk]},
