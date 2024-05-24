@@ -1301,7 +1301,7 @@ class DeviceBayTemplateBulkDeleteView(generic.BulkDeleteView):
 
 
 class ModuleBayCommonViewSetMixin:
-    """NautobotUIViewSet for ModuleBay views to handle templated create views."""
+    """NautobotUIViewSet for ModuleBay views to handle templated create and bulk rename views."""
 
     def create(self, request, *args, **kwargs):
         if request.method == "POST":
@@ -1473,7 +1473,7 @@ class ModuleBayTemplateUIViewSet(
 ):
     queryset = ModuleBayTemplate.objects.all()
     filterset_class = filters.ModuleBayTemplateFilterSet
-    bulk_update_form_class = forms.ModuleBayBulkEditForm
+    bulk_update_form_class = forms.ModuleBayTemplateBulkEditForm
     create_form_class = forms.ModuleBayTemplateCreateForm
     form_class = forms.ModuleBayTemplateForm
     model_form_class = forms.ModuleBayTemplateForm

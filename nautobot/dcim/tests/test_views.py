@@ -83,6 +83,8 @@ from nautobot.dcim.models import (
     Manufacturer,
     Module,
     ModuleBay,
+    ModuleBayTemplate,
+    ModuleType,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -1441,6 +1443,40 @@ class DeviceBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
 
         cls.bulk_edit_data = {
             "description": "Foo bar",
+        }
+
+
+class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCase):
+    model = ModuleBayTemplate
+    rename_field = "position"
+
+    @classmethod
+    def setUpTestData(cls):
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Test Device Type 1")
+        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Test Module Type 1")
+        ModuleBayTemplate.objects.create(device_type=device_type, position="Module Bay Template 1")
+        ModuleBayTemplate.objects.create(device_type=device_type, position="Module Bay Template 2")
+        ModuleBayTemplate.objects.create(module_type=module_type, position="Module Bay Template 3")
+        ModuleBayTemplate.objects.create(module_type=module_type, position="Module Bay Template 4")
+
+        cls.form_data = {
+            "device_type": device_type.pk,
+            "module_type": None,
+            "position": "Module Bay Template X",
+            "description": "Test modulebaytemplate description",
+            "label": "Test modulebaytemplate label",
+        }
+
+        cls.bulk_create_data = {
+            "module_type": module_type.pk,
+            "position_pattern": "Test Module Bay Template [5-7]",
+            "label_pattern": "Test modulebaytemplate label [1-3]",
+            "description": "Test modulebaytemplate description",
+        }
+
+        cls.bulk_edit_data = {
+            "description": "Description changed",
         }
 
 
