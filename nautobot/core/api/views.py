@@ -20,7 +20,7 @@ from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularRedocView, SpectacularSwaggerView
 from graphene_django.settings import graphene_settings
 from graphene_django.views import GraphQLView, HttpError, instantiate_middleware
-from graphql import get_default_backend
+from graphql import parse
 from graphql.execution import ExecutionResult
 from graphql.execution.middleware import MiddlewareManager
 from graphql.type.schema import GraphQLSchema
@@ -628,16 +628,14 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
     permission_classes = [IsAuthenticated]
     graphql_schema = None
     executor = None
-    backend = None
     middleware = None
     root_value = None
 
-    def __init__(self, schema=None, executor=None, middleware=None, root_value=None, backend=None, **kwargs):
+    def __init__(self, schema=None, executor=None, middleware=None, root_value=None, **kwargs):
         self.schema = schema
         self.executor = executor
         self.middleware = middleware
         self.root_value = root_value
-        self.backend = backend
         super().__init__(**kwargs)
 
     def get_root_value(self, request):
@@ -648,9 +646,6 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
 
     def get_context(self, request):
         return request
-
-    def get_backend(self, request):
-        return self.backend
 
     @extend_schema(
         request=serializers.GraphQLAPISerializer,
@@ -682,9 +677,6 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
     def init_graphql(self):
         if not self.schema:
             self.schema = graphene_settings.SCHEMA
-
-        if self.backend is None:
-            self.backend = get_default_backend()
 
         self.graphql_schema = self.graphql_schema or self.schema
 
@@ -774,13 +766,12 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             raise HttpError(HttpResponseBadRequest("Must provide query string."))
 
         try:
-            backend = self.get_backend(request)
-            document = backend.document_from_string(self.graphql_schema, query)
+            document = parse(self.graphql_schema, query)
         except Exception as e:
-            return ExecutionResult(errors=[e], invalid=True)
+            return ExecutionResult(errors=[e])
 
-        operation_type = document.get_operation_type(operation_name)
-        if operation_type and operation_type != "query":
+        operation_type = document.definitions[0].operation
+        if operation_type != "query":
             raise HttpError(
                 HttpResponseBadRequest(f"'{operation_type}' is not a supported operation, Only query are supported.")
             )
@@ -801,10 +792,9 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             }
             options.update(extra_options)
 
-            operation_type = document.get_operation_type(operation_name)
             return document.execute(**options)
         except Exception as e:
-            return ExecutionResult(errors=[e], invalid=True)
+            return ExecutionResult(errors=[e])
 
 
 #
