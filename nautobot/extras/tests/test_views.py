@@ -612,12 +612,14 @@ class DynamicGroupTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        cls.content_type = ContentType.objects.get_for_model(Device)
+        content_type = ContentType.objects.get_for_model(Device)
 
         # DynamicGroup objects to test.
-        DynamicGroup.objects.create(name="DG 1", slug="dg-1", content_type=cls.content_type)
-        DynamicGroup.objects.create(name="DG 2", slug="dg-2", content_type=cls.content_type)
-        DynamicGroup.objects.create(name="DG 3", slug="dg-3", content_type=cls.content_type)
+        cls.dynamic_groups = [
+            DynamicGroup.objects.create(name="DG 1", slug="dg-1", content_type=content_type),
+            DynamicGroup.objects.create(name="DG 2", slug="dg-2", content_type=content_type),
+            DynamicGroup.objects.create(name="DG 3", slug="dg-3", content_type=content_type),
+        ]
 
         manufacturer = Manufacturer.objects.create(name="Manufacturer 1", slug="manufacturer-1")
         devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1", slug="device-type-1")
@@ -630,7 +632,7 @@ class DynamicGroupTestCase(
             "name": "new_dynamic_group",
             "slug": "new-dynamic-group",
             "description": "I am a new dynamic group object.",
-            "content_type": cls.content_type.pk,
+            "content_type": content_type.pk,
             # Management form fields required for the dynamic formset
             "dynamic_group_memberships-TOTAL_FORMS": "0",
             "dynamic_group_memberships-INITIAL_FORMS": "1",
@@ -639,16 +641,21 @@ class DynamicGroupTestCase(
         }
 
     def test_get_object_with_permission(self):
-        self.add_permissions(get_permission_for_model(self.content_type.model_class(), "view"))
-        instance, response = super().test_get_object_with_permission()
+        instance = self._get_queryset().first()
+        # Add view permissions for the group's members:
+        self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"))
+
+        response = super().test_get_object_with_permission()
+
         response_body = extract_page_body(response.content.decode(response.charset))
         # Check that the "members" table in the detail view includes all appropriate member objects
         for member in instance.members:
             self.assertIn(str(member.pk), response_body)
 
     def test_get_object_with_constrained_permission(self):
-        instance1 = self._get_queryset().first()
-        member1, member2 = instance1.members[:2]
+        instance = self._get_queryset().first()
+        # Add view permission for one of the group's members but not the others:
+        member1, member2 = instance.members[:2]
         obj_perm = ObjectPermission(
             name="Members permission",
             constraints={"pk": member1.pk},
@@ -656,10 +663,12 @@ class DynamicGroupTestCase(
         )
         obj_perm.save()
         obj_perm.users.add(self.user)
-        obj_perm.object_types.add(instance1.content_type)
-        instance1, instance2, response = super().test_get_object_with_constrained_permission()
+        obj_perm.object_types.add(instance.content_type)
+
+        response = super().test_get_object_with_constrained_permission()
+
         response_body = extract_page_body(response.content.decode(response.charset))
-        # Check that the "members" table in the detail view includes all appropriate member objects
+        # Check that the "members" table in the detail view includes all permitted member objects
         self.assertIn(str(member1.pk), response_body)
         self.assertNotIn(str(member2.pk), response_body)
 
@@ -686,7 +695,6 @@ class DynamicGroupTestCase(
         self.assertIn("DG 3", response_body, msg=response_body)
 
     def test_get_object_dynamic_groups_with_constrained_permission(self):
-        self.add_permissions("extras.view_dynamicgroup")
         obj_perm = ObjectPermission(
             name="View a device",
             constraints={"pk": Device.objects.first().pk},
@@ -695,12 +703,22 @@ class DynamicGroupTestCase(
         obj_perm.save()
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Device))
+        obj_perm_2 = ObjectPermission(
+            name="View a Dynamic Group",
+            constraints={"pk": self.dynamic_groups[0].pk},
+            actions=["view"],
+        )
+        obj_perm_2.save()
+        obj_perm_2.users.add(self.user)
+        obj_perm_2.object_types.add(ContentType.objects.get_for_model(DynamicGroup))
 
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
         response_body = response.content.decode(response.charset)
         self.assertIn("DG 1", response_body, msg=response_body)
+        self.assertNotIn("DG 2", response_body, msg=response_body)
+        self.assertNotIn("DG 3", response_body, msg=response_body)
 
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.last().pk})
         response = self.client.get(url)

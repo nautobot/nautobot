@@ -209,7 +209,7 @@ class ViewTestCases:
                             escape(str(instance.cf.get(custom_field.name) or "")), response_body, msg=response_body
                         )
 
-            return instance, response  # for consumption by child test cases if desired
+            return response  # for consumption by child test cases if desired
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_get_object_with_constrained_permission(self):
@@ -234,7 +234,7 @@ class ViewTestCases:
             # Try GET to non-permitted object
             self.assertHttpStatus(self.client.get(instance2.get_absolute_url()), 404)
 
-            return instance1, instance2, response  # for consumption by child test cases if desired
+            return response  # for consumption by child test cases if desired
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_has_advanced_tab(self):
