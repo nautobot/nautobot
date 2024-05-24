@@ -884,7 +884,9 @@ class ObjectDynamicGroupsView(generic.GenericView):
             obj = get_object_or_404(model, **kwargs)
 
         # Gather all dynamic groups for this object (and its related objects)
-        dynamicsgroups_table = tables.DynamicGroupTable(data=obj.dynamic_groups_cached, orderable=False)
+        dynamicsgroups_table = tables.DynamicGroupTable(
+            data=obj.dynamic_groups_cached.restrict(request.user, "view"), orderable=False
+        )
 
         # Apply the request context
         paginate = {
