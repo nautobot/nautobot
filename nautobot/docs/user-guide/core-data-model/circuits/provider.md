@@ -4,5 +4,5 @@ A circuit provider is any entity which provides some form of connectivity among 
 
 Each provider may be assigned an autonomous system number (ASN), an account number, and contact information.
 
-!!!important
+!!! tip
     Circuit providers should **not** be used as cloud providers associated with your [cloud accounts](../cloud/cloudaccount.md). [Manufacturers](../dcim/manufacturer.md) are recommended instead.
