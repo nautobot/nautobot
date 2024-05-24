@@ -116,7 +116,8 @@ plugins:
   - "gen-files":
       scripts:
         - docs/generate_code_reference_pages.py
-  - "glightbox"
+  - "glightbox":
+      manual: true # See https://blueswen.github.io/mkdocs-glightbox/flexibility/enable-by-image-or-page/
   - "macros":
       module_name: "docs/macros"
       on_error_fail: true

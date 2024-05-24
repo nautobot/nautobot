@@ -1,7 +1,6 @@
 # 
 <figure markdown="span">
   ![Nautobot Logo](../assets/nautobot_logo.svg "Welcome"){ width="400" }
-  <figcaption></figcaption>
 </figure>
 
 ---
@@ -41,10 +40,7 @@ Nautobot enables three (3) key use cases.
     Dive into [how to use Nautobot](../user-guide/feature-guides/getting-started/index.md) and the key components of the core web interface.
     How [Nautobot Apps](../apps/index.md) can expand Nautobot's functionality.
 
-- :material-apps:{ .lg .middle } **Nautobot Apps**
-
     ---
-    Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, for which you can find links to documentation under the [Nautobot Apps](../apps/index.md) section.
 
 -  :material-api:{ .lg .middle } **Nautobot APIs!**
 
@@ -59,6 +55,8 @@ Nautobot enables three (3) key use cases.
 </div>
 
 ## Nautobot Apps
+
+Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, for which you can find links to documentation under the [Nautobot Apps](../apps/index.md) section.
 
 <div class="grid cards" markdown>
 
@@ -108,13 +106,13 @@ Nautobot enables three (3) key use cases.
 
 <div class="grid cards" markdown>
 
-- ![Main Page](../media/ss_main_page.png)
+- ![Main Page](../media/ss_main_page.png){ .on-glb }
 
-- ![Config Contexts](../media/ss_config_contexts.png)
+- ![Config Contexts](../media/ss_config_contexts.png){ .on-glb }
 
-- ![Prefix Hierarchy](../media/ss_prefix_hierarchy.png)
+- ![Prefix Hierarchy](../media/ss_prefix_hierarchy.png){ .on-glb }
 
-- ![GraphQL API](../media/ss_graphiql.png)
+- ![GraphQL API](../media/ss_graphiql.png){ .on-glb }
 
 </div>
 
@@ -123,9 +121,9 @@ Nautobot enables three (3) key use cases.
 
 <div class="grid cards" markdown>
 
-- ![Golden Config App](../media/ss_app_golden_config.png)
+- ![Golden Config App](../media/ss_app_golden_config.png){ .on-glb }
 
-- ![ChatOps App](../media/ss_app_chatops.png)
+- ![ChatOps App](../media/ss_app_chatops.png){ .on-glb }
 
 </div>
 
@@ -133,20 +131,19 @@ Nautobot enables three (3) key use cases.
 
 <div class="grid cards" markdown>
 
-- :fontawesome-solid-code:{ .lg .middle } **Develop and Contribute to Nautobot**
+- :material-code-block-braces:{ .lg .middle } **Develop and Contribute to Nautobot**
     
     ---
     Learn how to [develop and contribute to Nautobot](../development/index.md)
 
-- :fontawesome-solid-user-gear:{ .lg .middle } **Set Up Your Developer Environment**
+- :material-laptop:{ .lg .middle } **Set Up Your Developer Environment**
     
     ---
-    [Configuration of Nautobot](../user-guide/administration/configuration/index.md)
+    [Set up your Development Environment](development/core/getting-started.md)
 
-- :material-web-check:{ .lg .middle } **Development Guide** 
+- :material-pier-crane:{ .lg .middle } **Jobs Development Guide** 
     
     ---
-    Dive into [how to use Nautobot](../user-guide/feature-guides/getting-started/index.md) and the key components of the core web interface.
-    How [Nautobot Apps](../apps/index.md) can expand Nautobot's functionality.
+    Jump started your [development of Nautobot Jobs](../development/jobs/index.md).
 
 </div>
