@@ -25,6 +25,6 @@ class CloudAccountTestCase(FilterTestCases.NameOnlyFilterTestCase):
             SecretsGroup.objects.create(name="Secrets Group 4"),
         )
         cls.cloud_accounts = list(CloudAccount.objects.all()[:4])
-        for i, _ in enumerate(cls.cloud_accounts):
+        for i in range(4):
             cls.cloud_accounts[i].secrets_group = secrets_groups[i]
             cls.cloud_accounts[i].validated_save()
