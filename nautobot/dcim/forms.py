@@ -54,7 +54,16 @@ from nautobot.extras.forms import (
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
-from nautobot.extras.models import Contact, ContactAssociation, ExternalIntegration, Role, SecretsGroup, Status, Team
+from nautobot.extras.models import (
+    Contact,
+    ContactAssociation,
+    ExternalIntegration,
+    Role,
+    SecretsGroup,
+    Status,
+    Tag,
+    Team,
+)
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VLANLocationAssignment, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
@@ -3476,6 +3485,11 @@ class ModuleBayForm(NautobotModelForm):
 class ModuleBayCreateForm(ModuleBayBaseCreateForm):
     parent_device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
     parent_module = DynamicModelChoiceField(queryset=Module.objects.all(), required=False)
+    tags = DynamicModelMultipleChoiceField(
+        queryset=Tag.objects.all(),
+        required=False,
+        query_params={"content_types": ModuleBay._meta.label_lower},
+    )
     field_order = ("parent_device", "parent_module", "position_pattern", "label_pattern", "description", "tags")
 
 

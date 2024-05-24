@@ -17,7 +17,7 @@
             </div>
             {% render_table poweroutlet_table 'inc/table.html' %}
             <div class="panel-footer noprint">
-                {% if perms.dcim.change_powerport %}
+                {% if perms.dcim.change_poweroutlet %}
                     <button type="submit" name="_rename" formaction="{% url 'dcim:poweroutlet_bulk_rename' %}?return_url={% url 'dcim:module_poweroutlets' pk=object.pk %}" class="btn btn-warning btn-xs">
                         <span class="mdi mdi-pencil" aria-hidden="true"></span> Rename
                     </button>

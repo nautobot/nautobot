@@ -261,14 +261,14 @@ class DeviceFactory(PrimaryModelFactory):
 
 
 device_types = (
-    "router",
-    "switch",
-    "firewall",
-    "loadbalancer",
-    "wlan-controller",
-    "ap",
-    "san-fabric",
-    "console-server",
+    "Router",
+    "Switch",
+    "Firewall",
+    "Load Balancer",
+    "WLAN Controller",
+    "Access Point",
+    "SAN Fabric",
+    "Console Server",
 )
 
 
@@ -290,18 +290,19 @@ class DeviceTypeFactory(PrimaryModelFactory):
 
     @factory.lazy_attribute
     def model(self):
+        """
+        Use a random unused-for-this-manufacturer element from `device_types` if any.
+
+        If all are already used, append " 2" to all device-type strings and try again, and so forth.
+        """
         possible_device_types = set(device_types)
         count = 2
         current_models = set(DeviceType.objects.filter(manufacturer=self.manufacturer).values_list("model", flat=True))
-        while True:
-            unused_models = possible_device_types.difference(current_models)
-            if unused_models:
-                return factory.random.randgen.choice(list(unused_models))
-            else:
-                possible_device_types = possible_device_types.union(
-                    {f"{device_type}-{count}" for device_type in device_types}
-                )
-                count += 1
+        unused_models = possible_device_types.difference(current_models)
+        while not unused_models:
+            unused_models = {f"{device_type} {count}" for device_type in device_types}.difference(current_models)
+            count += 1
+        return factory.random.randgen.choice(list(unused_models))
 
     has_part_number = NautobotBoolIterator()
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
@@ -757,9 +758,9 @@ class ControllerManagedDeviceGroupFactory(PrimaryModelFactory):
 
 
 module_types = (
-    "supervisor",
-    "linecard",
-    "fabric",
+    "Supervisor",
+    "Line Card",
+    "Fabric",
 )
 
 
@@ -775,18 +776,19 @@ class ModuleTypeFactory(PrimaryModelFactory):
 
     @factory.lazy_attribute
     def model(self):
+        """
+        Use a random unused-for-this-manufacturer element from `module_types` if any.
+
+        If all are already used, append " 2" to all module-type strings and try again, and so forth.
+        """
         possible_module_types = set(module_types)
         count = 2
         current_models = set(ModuleType.objects.filter(manufacturer=self.manufacturer).values_list("model", flat=True))
-        while True:
-            unused_models = possible_module_types.difference(current_models)
-            if unused_models:
-                return factory.random.randgen.choice(list(unused_models))
-            else:
-                possible_module_types = possible_module_types.union(
-                    {f"{module_type}-{count}" for module_type in module_types}
-                )
-                count += 1
+        unused_models = possible_module_types.difference(current_models)
+        while not unused_models:
+            unused_models = {f"{module_type} {count}" for module_type in module_types}.difference(current_models)
+            count += 1
+        return factory.random.randgen.choice(list(unused_models))
 
 
 class ModuleFactory(PrimaryModelFactory):

@@ -81,6 +81,10 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
+    Module,
+    ModuleBay,
+    ModuleBayTemplate,
+    ModuleType,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -2431,6 +2435,67 @@ class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cls.bulk_edit_data = {
             "description": "New description",
         }
+
+
+class ModuleBayTestCase(
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+    ViewTestCases.GetObjectNotesViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.CreateMultipleObjectsViewTestCase,
+    ViewTestCases.BulkEditObjectsViewTestCase,
+    ViewTestCases.BulkRenameObjectsViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
+):
+    model = ModuleBay
+    rename_field = "position"
+
+    @classmethod
+    def setUpTestData(cls):
+        device = Device.objects.first()
+        module = Module.objects.first()
+
+        cls.form_data = {
+            "parent_device": device.pk,
+            "position": "Test ModuleBay 1",
+            "description": "Test modulebay description",
+            "label": "Test modulebay label",
+            "tags": sorted([t.pk for t in Tag.objects.get_for_model(ModuleBay)]),
+        }
+
+        cls.bulk_create_data = {
+            "parent_module": module.pk,
+            "position_pattern": "Test ModuleBay [0-2]",
+            # Test that a label can be applied to each generated module bay
+            "label_pattern": "Slot[1-3]",
+            "description": "Test modulebay description",
+            "tags": sorted([t.pk for t in Tag.objects.get_for_model(ModuleBay)]),
+        }
+
+        cls.bulk_edit_data = {
+            "description": "New description",
+            "label": "New label",
+        }
+
+    def get_deletable_object_pks(self):
+        # Since Modules and ModuleBays are nestable, we need to delete ModuleBays that don't have any child ModuleBays
+        return ModuleBay.objects.filter(installed_module__isnull=True).values_list("pk", flat=True)[:3]
+
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        # parent_device and parent_module are not editable
+        self.form_data["parent_device"] = getattr(getattr(instance, "parent_device", None), "pk", None)
+        self.form_data["parent_module"] = getattr(getattr(instance, "parent_module", None), "pk", None)
+        super().test_edit_object_with_permission()
+
+    def test_edit_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        # parent_device and parent_module are not editable
+        self.form_data["parent_device"] = getattr(getattr(instance, "parent_device", {}), "pk", None)
+        self.form_data["parent_module"] = getattr(getattr(instance, "parent_module", {}), "pk", None)
+        super().test_edit_object_with_constrained_permission()
 
 
 class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):

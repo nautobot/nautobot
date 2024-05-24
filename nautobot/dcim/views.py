@@ -23,6 +23,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from rest_framework.decorators import action
+from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
 
 from nautobot.circuits.models import Circuit
@@ -170,6 +171,8 @@ class BaseDeviceComponentsBulkRenameView(generic.BulkRenameView):
         selected_object = selected_objects.first()
         if selected_object and selected_object.device:
             return selected_object.device.name
+        if selected_object and selected_object.module:
+            return selected_object.module.display
         return ""
 
 
@@ -178,6 +181,8 @@ class BaseDeviceComponentTemplatesBulkRenameView(generic.BulkRenameView):
         selected_object = selected_objects.first()
         if selected_object and selected_object.device_type:
             return selected_object.device_type.display
+        if selected_object and selected_object.module_type:
+            return selected_object.module_type.display
         return ""
 
 
@@ -1296,6 +1301,8 @@ class DeviceBayTemplateBulkDeleteView(generic.BulkDeleteView):
 
 
 class ModuleBayCommonViewSetMixin:
+    """NautobotUIViewSet for ModuleBay views to handle templated create views."""
+
     def create(self, request, *args, **kwargs):
         if request.method == "POST":
             return self.perform_create(request, *args, **kwargs)
@@ -1338,8 +1345,6 @@ class ModuleBayCommonViewSetMixin:
                     data,
                     initial=normalize_querydict(request.GET, form_class=self.model_form_class),
                 )
-                self.logger.warn(component_form.initial)
-
                 if component_form.is_valid():
                     new_components.append(component_form)
                 else:
@@ -1363,7 +1368,7 @@ class ModuleBayCommonViewSetMixin:
                             new_objs.append(obj)
 
                         # Enforce object-level permissions
-                        if self.queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
+                        if self.get_queryset().filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
                             raise ObjectDoesNotExist
 
                     messages.success(
@@ -1377,7 +1382,6 @@ class ModuleBayCommonViewSetMixin:
 
                 except ObjectDoesNotExist:
                     msg = "Component creation failed due to object-level permissions violation"
-                    self.logger.debug(msg)
                     form.add_error(None, msg)
 
         return Response(
@@ -1391,12 +1395,16 @@ class ModuleBayCommonViewSetMixin:
         )
 
     def _bulk_rename(self, request, *args, **kwargs):
+        # TODO: This shouldn't be needed but default behavior of custom actions that don't support "GET" is broken
+        if request.method != "POST":
+            raise MethodNotAllowed(request.method)
+
         query_pks = request.POST.getlist("pk")
-        selected_objects = self.queryset.filter(pk__in=query_pks) if query_pks else None
+        selected_objects = self.get_queryset().filter(pk__in=query_pks) if query_pks else None
 
         # Create a new Form class from BulkRenameForm
         class _Form(BulkRenameForm):
-            pk = ModelMultipleChoiceField(queryset=self.queryset, widget=MultipleHiddenInput())
+            pk = ModelMultipleChoiceField(queryset=self.get_queryset(), widget=MultipleHiddenInput())
 
         # selected_objects would return False; if no query_pks or invalid query_pks
         if not selected_objects:
@@ -1428,7 +1436,7 @@ class ModuleBayCommonViewSetMixin:
                                 obj.save()
 
                             # Enforce constrained permissions
-                            if self.queryset.filter(pk__in=renamed_pks).count() != len(selected_objects):
+                            if self.get_queryset().filter(pk__in=renamed_pks).count() != len(selected_objects):
                                 raise ObjectDoesNotExist
 
                             messages.success(
@@ -1439,7 +1447,6 @@ class ModuleBayCommonViewSetMixin:
 
                 except ObjectDoesNotExist:
                     msg = "Object update failed due to object-level permissions violation"
-                    self.logger.debug(msg)
                     form.add_error(None, msg)
 
         else:
@@ -1481,7 +1488,7 @@ class ModuleBayTemplateUIViewSet(
             return parent.display
         return ""
 
-    @action(detail=False, methods=["POST"], url_path="rename", url_name="bulk_rename")
+    @action(detail=False, methods=["GET", "POST"], url_path="rename", url_name="bulk_rename")
     def bulk_rename(self, request, *args, **kwargs):
         return self._bulk_rename(request, *args, **kwargs)
 
@@ -1971,11 +1978,11 @@ class BulkComponentCreateUIViewSetMixin:
 
         # Are we editing *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all") and self.filterset is not None:
-            pk_list = [obj.pk for obj in self.filterset(request.GET, self.queryset.only("pk")).qs]
+            pk_list = [obj.pk for obj in self.filterset(request.GET, self.get_queryset().only("pk")).qs]
         else:
             pk_list = request.POST.getlist("pk")
 
-        selected_objects = self.queryset.filter(pk__in=pk_list)
+        selected_objects = self.get_queryset().filter(pk__in=pk_list)
         if not selected_objects:
             messages.warning(
                 request,
@@ -1985,12 +1992,9 @@ class BulkComponentCreateUIViewSetMixin:
         table = self.table_class(selected_objects)
 
         if "_create" in request.POST:
-            self.logger.info("creating components for model %s: %s", model, request.POST)
             form = bulk_component_form(model, request.POST)
 
             if form.is_valid():
-                self.logger.debug("Form validation was successful")
-
                 new_components = []
                 data = deepcopy(form.cleaned_data)
 
@@ -2008,11 +2012,9 @@ class BulkComponentCreateUIViewSetMixin:
                                     "label": label,
                                 }
                                 component_data.update(data)
-                                self.logger.info("trying to create component with data: %s", component_data)
                                 component_form = component_create_form(component_data)
                                 if component_form.is_valid():
                                     instance = component_form.save()
-                                    self.logger.debug(f"Created {instance} on {instance.parent}")
                                     new_components.append(instance)
                                 else:
                                     for (
@@ -2037,18 +2039,13 @@ class BulkComponentCreateUIViewSetMixin:
 
                 except ObjectDoesNotExist:
                     msg = "Component creation failed due to object-level permissions violation"
-                    self.logger.debug(msg)
                     form.add_error(None, msg)
 
                 if not form.errors:
                     msg = f"Added {len(new_components)} {model_name} to {len(form.cleaned_data['pk'])} {parent_model_name}."
-                    self.logger.info(msg)
                     messages.success(request, msg)
 
                     return redirect(self.get_return_url(request))
-
-            else:
-                self.logger.debug("Form validation failed: %s", form.errors)
 
         else:
             form = bulk_component_form(model, initial={"pk": pk_list})
@@ -2073,6 +2070,36 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     bulk_update_form_class = forms.ModuleBulkEditForm
     serializer_class = serializers.ModuleSerializer
     table_class = tables.ModuleTable
+    component_model = None
+
+    def get_action(self):
+        if self.component_model:
+            method = self.request.method.lower()
+            if method == "get":
+                return "view"
+            else:
+                return "change"
+
+        return super().get_action()
+
+    def get_required_permission(self):
+        # TODO: standardize a pattern for permissions enforcement on custom actions
+        if self.component_model:
+            model = self.component_model
+            method = self.request.method.lower()
+            if method == "get":
+                action = "view"
+                permissions = [*self.get_permissions_for_model(model, [action]), "dcim.view_module"]
+            elif self.action.endswith("_add"):
+                action = "add"
+                permissions = [*self.get_permissions_for_model(model, [action]), "dcim.change_module"]
+            else:
+                action = "change"
+                permissions = [*self.get_permissions_for_model(model, [action]), "dcim.change_module"]
+
+            return permissions
+
+        return super().get_required_permission()
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -2100,7 +2127,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
 
         return active_parent_tab
 
-    @action(detail=True)
+    @action(detail=True, url_path="console-ports", component_model=ConsolePort)
     def consoleports(self, request, *args, **kwargs):
         # TODO: permissions enforcement?
         instance = self.get_object()
@@ -2120,7 +2147,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True)
+    @action(detail=True, url_path="console-server-ports", component_model=ConsoleServerPort)
     def consoleserverports(self, request, *args, **kwargs):
         instance = self.get_object()
         consoleserverports = (
@@ -2143,7 +2170,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True)
+    @action(detail=True, url_path="power-ports", component_model=PowerPort)
     def powerports(self, request, *args, **kwargs):
         instance = self.get_object()
         powerports = (
@@ -2162,7 +2189,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True)
+    @action(detail=True, url_path="power-outlets", component_model=PowerOutlet)
     def poweroutlets(self, request, *args, **kwargs):
         instance = self.get_object()
         poweroutlets = (
@@ -2181,7 +2208,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True)
+    @action(detail=True, component_model=Interface)
     def interfaces(self, request, *args, **kwargs):
         instance = self.get_object()
         interfaces = (
@@ -2205,7 +2232,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True)
+    @action(detail=True, url_path="front-ports", component_model=FrontPort)
     def frontports(self, request, *args, **kwargs):
         instance = self.get_object()
         frontports = instance.front_ports.restrict(request.user, "view").select_related("cable", "rear_port")
@@ -2220,7 +2247,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             },
         )
 
-    @action(detail=True)
+    @action(detail=True, url_path="rear-ports", component_model=RearPort)
     def rearports(self, request, *args, **kwargs):
         instance = self.get_object()
         rearports = instance.rear_ports.restrict(request.user, "view").select_related("cable")
@@ -2235,7 +2262,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=True)
+    @action(detail=True, url_path="module-bays", component_model=ModuleBay)
     def modulebays(self, request, *args, **kwargs):
         instance = self.get_object()
         modulebays = instance.module_bays.restrict(request.user, "view").prefetch_related(
@@ -2252,56 +2279,98 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             }
         )
 
-    @action(detail=False, methods=["POST"], url_path="console-ports/add", url_name="bulk_add_consoleport")
-    def consoleports_add(self, request, *args, **kwargs):
+    @action(
+        detail=False,
+        methods=["POST"],
+        url_path="console-ports/add",
+        url_name="bulk_add_consoleport",
+        component_model=ConsolePort,
+    )
+    def bulk_add_consoleport(self, request, *args, **kwargs):
         return self._bulk_component_create(
             request=request,
             component_queryset=ConsolePort.objects.all(),
             bulk_component_form=forms.ModuleConsolePortBulkCreateForm,
         )
 
-    @action(detail=False, methods=["POST"], url_path="console-server-ports/add", url_name="bulk_add_consoleserverport")
-    def consoleserverports_add(self, request, *args, **kwargs):
+    @action(
+        detail=False,
+        methods=["POST"],
+        url_path="console-server-ports/add",
+        url_name="bulk_add_consoleserverport",
+        component_model=ConsoleServerPort,
+    )
+    def bulk_add_consoleserverport(self, request, *args, **kwargs):
         return self._bulk_component_create(
             request=request,
             component_queryset=ConsoleServerPort.objects.all(),
             bulk_component_form=forms.ModuleConsoleServerPortBulkCreateForm,
         )
 
-    @action(detail=False, methods=["POST"], url_path="power-ports/add", url_name="bulk_add_powerport")
-    def powerports_add(self, request, *args, **kwargs):
+    @action(
+        detail=False,
+        methods=["POST"],
+        url_path="power-ports/add",
+        url_name="bulk_add_powerport",
+        component_model=PowerPort,
+    )
+    def bulk_add_powerport(self, request, *args, **kwargs):
         return self._bulk_component_create(
             request=request,
             component_queryset=PowerPort.objects.all(),
             bulk_component_form=forms.ModulePowerPortBulkCreateForm,
         )
 
-    @action(detail=False, methods=["POST"], url_path="power-outlets/add", url_name="bulk_add_poweroutlet")
-    def poweroutlets_add(self, request, *args, **kwargs):
+    @action(
+        detail=False,
+        methods=["POST"],
+        url_path="power-outlets/add",
+        url_name="bulk_add_poweroutlet",
+        component_model=PowerOutlet,
+    )
+    def bulk_add_poweroutlet(self, request, *args, **kwargs):
         return self._bulk_component_create(
             request=request,
             component_queryset=PowerOutlet.objects.all(),
             bulk_component_form=forms.ModulePowerOutletBulkCreateForm,
         )
 
-    @action(detail=False, methods=["POST"], url_path="interfaces/add", url_name="bulk_add_interface")
-    def interfaces_add(self, request, *args, **kwargs):
+    @action(
+        detail=False,
+        methods=["POST"],
+        url_path="interfaces/add",
+        url_name="bulk_add_interface",
+        component_model=Interface,
+    )
+    def bulk_add_interface(self, request, *args, **kwargs):
         return self._bulk_component_create(
             request=request,
             component_queryset=Interface.objects.all(),
             bulk_component_form=forms.ModuleInterfaceBulkCreateForm,
         )
 
-    @action(detail=False, methods=["POST"], url_path="rear-ports/add", url_name="bulk_add_rearport")
-    def rearports_add(self, request, *args, **kwargs):
+    @action(
+        detail=False,
+        methods=["POST"],
+        url_path="rear-ports/add",
+        url_name="bulk_add_rearport",
+        component_model=RearPort,
+    )
+    def bulk_add_rearport(self, request, *args, **kwargs):
         return self._bulk_component_create(
             request=request,
             component_queryset=RearPort.objects.all(),
             bulk_component_form=forms.ModuleRearPortBulkCreateForm,
         )
 
-    @action(detail=False, methods=["POST"], url_path="module-bays/add", url_name="bulk_add_modulebay")
-    def modulebays_add(self, request, *args, **kwargs):
+    @action(
+        detail=False,
+        methods=["POST"],
+        url_path="module-bays/add",
+        url_name="bulk_add_modulebay",
+        component_model=ModuleBay,
+    )
+    def bulk_add_modulebay(self, request, *args, **kwargs):
         return self._bulk_component_create(
             request=request,
             component_queryset=ModuleBay.objects.all(),
@@ -3004,7 +3073,7 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
             return parent.display
         return ""
 
-    @action(detail=False, methods=["POST"], url_path="rename", url_name="bulk_rename")
+    @action(detail=False, methods=["GET", "POST"], url_path="rename", url_name="bulk_rename")
     def bulk_rename(self, request, *args, **kwargs):
         return self._bulk_rename(request, *args, **kwargs)
 

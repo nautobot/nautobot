@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
+from django.template import engines, loader
 from django_tables2 import RequestConfig
 from rest_framework import renderers
 
@@ -39,6 +40,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
     # Log error messages within NautobotHTMLRenderer
     logger = logging.getLogger(__name__)
     saved_view = None
+
+    exception_template_names = ["%(status_code)s.html"]
 
     def get_dynamic_filter_form(self, view, request, *args, filterset_class=None, **kwargs):
         """
@@ -158,6 +161,25 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         if response.exception:
             data["status_code"] = response.status_code
         return data
+
+    def get_exception_template(self, response):
+        # borrowed from rest_framework's TemplateHTMLRenderer - remove if switching base class
+        template_names = [name % {"status_code": response.status_code} for name in self.exception_template_names]
+
+        try:
+            # Try to find an appropriate error template
+            return self.resolve_template(template_names)
+        except Exception:
+            # Fall back to using eg '404 Not Found'
+            self.logger.info("Failed to find template for status code %d" % response.status_code)
+            self.logger.info("Tried %s" % ", ".join(template_names))
+            body = "%d %s" % (response.status_code, response.status_text.title())
+            template = engines["django"].from_string(body)
+            return template
+
+    def resolve_template(self, template_names):
+        # borrowed from rest_framework's TemplateHTMLRenderer - remove if switching base class
+        return loader.select_template(template_names)
 
     def get_context(self, data, accepted_media_type, renderer_context):
         """
@@ -318,6 +340,15 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         Overrode render() from BrowsableAPIRenderer to set self.template with NautobotViewSet's get_template_name() before it is rendered.
         """
         view = renderer_context["view"]
+        request = renderer_context["request"]
+        response = renderer_context["response"]
+
+        # TODO: borrowed from TemplateHTMLRenderer. Remove when switching base class
+        if response.exception:
+            template = self.get_exception_template(response)
+            context = self.get_context(data, accepted_media_type, renderer_context)
+            return template.render(context, request=request)
+
         # Get the corresponding template based on self.action in view.get_template_name() unless it is already specified in the Response() data.
         # See form_valid() for self.action == "bulk_create".
         self.template = data.get("template", view.get_template_name())

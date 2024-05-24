@@ -254,7 +254,11 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
         verbose_name="Type",
         accessor="module_type__display",
     )
-    parent_module_bay = tables.Column(linkify=True)
+    parent_module_bay = tables.Column(
+        linkify=lambda record: record.parent_module_bay.get_absolute_url(),
+        verbose_name="Parent Module Bay",
+        accessor="parent_module_bay__display",
+    )
     location = tables.Column(linkify=True)
     tenant = TenantColumn()
     tags = TagColumn(url_name="dcim:device_list")
@@ -300,15 +304,9 @@ class DeviceComponentTable(BaseTable):
     name = tables.Column(linkify=True, order_by=("_name",))
     cable = tables.Column(linkify=True)
 
-    class Meta(BaseTable.Meta):
-        order_by = ("device", "name")
-
 
 class ModularDeviceComponentTable(DeviceComponentTable):
     module = tables.Column(linkify=True)
-
-    class Meta(DeviceComponentTable.Meta):
-        order_by = ("device", "module", "name")
 
 
 class CableTerminationTable(BaseTable):
@@ -894,7 +892,7 @@ class ModuleBayTable(StatusTableMixin, BaseTable):
         verbose_name="Parent Module",
         accessor="parent_module__display",
     )
-    position = tables.Column(linkify=True)
+    position = tables.Column(linkify=True, order_by=("_position",))
     installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
     installed_module__status = ColoredLabelColumn()
     tags = TagColumn(url_name="dcim:devicebay_list")

@@ -60,6 +60,7 @@ PERMISSIONS_ACTION_MAP = {
     "update": "change",
     "bulk_create": "add",  # 3.0 TODO: remove, replaced by system Job
     "bulk_destroy": "delete",
+    "bulk_rename": "change",
     "bulk_update": "change",
     "changelog": "view",
     "notes": "view",

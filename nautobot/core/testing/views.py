@@ -1358,6 +1358,7 @@ class ViewTestCases:
             "replace": "\\1X",  # Append an X to the original value
             "use_regex": True,
         }
+        rename_field = "name"  # The model field to be changed
 
         def test_bulk_rename_objects_without_permission(self):
             pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
@@ -1394,7 +1395,9 @@ class ViewTestCases:
             # Try POST with model-level permission
             self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data), 302)
             for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
-                self.assertEqual(instance.name, f"{objects[i].name}X")
+                name = getattr(instance, self.rename_field)
+                expected_name = getattr(objects[i], self.rename_field) + "X"
+                self.assertEqual(name, expected_name)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename_objects_with_constrained_permission(self):
@@ -1409,7 +1412,7 @@ class ViewTestCases:
             # Assign constrained permission
             obj_perm = users_models.ObjectPermission(
                 name="Test permission",
-                constraints={"name__regex": "[^X]$"},
+                constraints={f"{self.rename_field}__regex": "[^X]$"},
                 actions=["change"],
             )
             obj_perm.save()
@@ -1427,7 +1430,9 @@ class ViewTestCases:
             # Bulk rename permitted objects
             self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data), 302)
             for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
-                self.assertEqual(instance.name, f"{objects[i].name}X")
+                name = getattr(instance, self.rename_field)
+                expected_name = getattr(objects[i], self.rename_field) + "X"
+                self.assertEqual(name, expected_name)
 
     class PrimaryObjectViewTestCase(
         GetObjectViewTestCase,
