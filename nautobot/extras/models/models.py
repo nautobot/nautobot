@@ -711,9 +711,7 @@ class GraphQLQuery(
         # that define one or more variables. For each operation and variable definition, store the variable's
         # default value (if any) into our own "variables" dict.
         definitions = [
-            d
-            for d in document.definitions
-            if isinstance(d, ExecutableDefinitionNode) and d.variable_definitions
+            d for d in document.definitions if isinstance(d, ExecutableDefinitionNode) and d.variable_definitions
         ]
         for definition in definitions:
             for variable_definition in definition.variable_definitions:

@@ -1,7 +1,7 @@
 from django.test.client import RequestFactory
 from graphene.types import Scalar
 from graphene_django.settings import graphene_settings
-from graphql import get_default_backend
+from graphql import execute, parse
 from graphql.language import ast
 
 from nautobot.extras.models import GraphQLQuery
@@ -24,13 +24,12 @@ def execute_query(query, variables=None, request=None, user=None):
     if not request:
         request = RequestFactory().post("/graphql/")
         request.user = user
-    backend = get_default_backend()
     schema = graphene_settings.SCHEMA
-    document = backend.document_from_string(schema, query)
+    document = parse(query)
     if variables:
-        return document.execute(context_value=request, variable_values=variables)
+        return execute(schema=schema, document=document, context_value=request, variable_values=variables)
     else:
-        return document.execute(context_value=request)
+        return execute(schema=schema, document=document, context_value=request)
 
 
 def execute_saved_query(saved_query_name, **kwargs):
