@@ -78,13 +78,8 @@ EMAIL = """
 """
 
 TAGGED_ITEM = """
-{% comment %}
-    Use 'url xxx as variable' so that an invalid
-    link doesn't throw an AttributeError exception.
-{% endcomment %}
-{% url value.get_absolute_url as absolute_url %}
-{% if absolute_url %}
-    <a href="{{ absolute_url }}">{{ value }}</a>
+{% if value.get_absolute_url %}
+    <a href="{{ value.get_absolute_url }}">{{ value }}</a>
 {% else %}
     {{ value }}
 {% endif %}
