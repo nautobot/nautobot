@@ -34,7 +34,7 @@ You can refer to the [plugin development guide](../development/apps/api/ui-exten
 
 Jobs can now specify a `template_name` property and provide a custom template with additional JavaScript and CSS to help with user input on the Job submission form.
 
-You can refer to the [Job class metadata attribute documentation](../user-guide/platform-functionality/jobs/index.md#template_name) on how to build and define this template.
+You can refer to the [Job class metadata attribute documentation](../development/jobs/index.md#template_name) on how to build and define this template.
 
 #### Dynamic Groups Support Additional Models ([#2200](https://github.com/nautobot/nautobot/pull/2200))
 
@@ -59,7 +59,7 @@ Please see the documentation on [best practices for mapping model fields to filt
 
 Jobs can now be configured to run automatically when a change event occurs on a Nautobot object. Job hooks associate jobs to content types and actions to run jobs when a create, update or delete action occurs on the selected content type. A new job base class `JobHookReceiver` was introduced that jobs must subclass to be associated with a job hook.
 
-Please see the documentation on [Job Hooks](../user-guide/platform-functionality/jobs/models.md#jobhook) for more information.
+Please see the documentation on [Job Hooks](../user-guide/platform-functionality/jobs/jobhook.md) for more information.
 
 #### Job Re-Runs ([#1875](https://github.com/nautobot/nautobot/issues/1875))
 

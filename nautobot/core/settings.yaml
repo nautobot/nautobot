@@ -766,7 +766,7 @@ properties:
     description: "A mapping of permissions to assign a new user account when created using SSO authentication."
     details: |-
       Each key in the dictionary will be the permission name specified as `<app_label>.<action>_<model>`,
-      and the value should be set to the permission [constraints](../guides/permissions.md#constraints),
+      and the value should be set to the permission [constraints](../guides/permissions.md#example-constraint-definitions),
       or `None` to allow all objects.
 
       Example:
@@ -1099,6 +1099,34 @@ properties:
       * `nautobot.core.graphql.*` - [GraphQL](../../platform-functionality/graphql.md) initialization and operation.
       * `nautobot.extras.plugins.*` - App loading and activity
       * `nautobot.core.views.generic.*` - Generic views which handle business logic for the web UI
+
+      #### Structlog Configuration
+
+      As of Nautobot 2.3, [django-structlog](https://django-structlog.readthedocs.io/en/latest/) is added as a core dependency. To use structlog, you can add the following code to your `nautobot_config.py` file:
+
+      ```python
+      from nautobot.core.settings_funcs import setup_structlog_logging
+
+      setup_structlog_logging(
+          LOGGING,
+          INSTALLED_APPS,
+          MIDDLEWARE,
+          log_level="DEBUG" if DEBUG else "INFO",
+          root_level="INFO",
+          plain_format=bool(DEBUG),  # Set to True to use human-readable structlog format over JSON
+          debug_db=False,  # Set to True to log all database queries
+      )
+      ```
+
+      Calling this function disables logging if running tests, otherwise:
+
+      * Overwrites all `formatters` and `handlers` to avoid logging duplication.
+          It's possible to add custom `formatters` and `handlers` after calling this function.
+      * Updates all `loggers` to use structlog with the specified `log_level`.
+      * Adds or updates the root logger to use structlog with the specified `root_level`.
+      * Uses a human-readable structlog format if `plain_format` is True, otherwise uses JSON.
+      * Adds database query logging if `debug_db` is True.
+      * Adds necessary Django apps and middleware for structlog.
     properties:
       additionalProperties: true
       disable_existing_loggers:
@@ -1271,7 +1299,7 @@ properties:
 
       !!! note
           If a given device has an appropriately populated
-          [secrets group](../../platform-functionality/secret.md#secretsgroup) assigned to it,
+          [secrets group](../../platform-functionality/secret.md#secrets-groups) assigned to it,
           the [secrets](../../platform-functionality/secret.md) defined in that group will take precedence
           over these default values.
     environment_variable: "NAUTOBOT_NAPALM_PASSWORD"
@@ -1293,7 +1321,7 @@ properties:
 
       !!! note
           If a given device has an appropriately populated
-          [secrets group](../../platform-functionality/secret.md#secretsgroup) assigned to it,
+          [secrets group](../../platform-functionality/secret.md#secrets-groups) assigned to it,
           the [secrets](../../platform-functionality/secret.md) defined in that group will take precedence
           over these default values.
     environment_variable: "NAUTOBOT_NAPALM_USERNAME"

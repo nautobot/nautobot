@@ -526,7 +526,6 @@ INSTALLED_APPS = [
     # "health_check.contrib.migrations",
     # "health_check.contrib.redis",
     "django_extensions",
-    "constance.backends.database",
     "django_ajax_tables",
     "silk",
 ]
