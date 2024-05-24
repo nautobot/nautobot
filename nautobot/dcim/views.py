@@ -2129,7 +2129,6 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
 
     @action(detail=True, url_path="console-ports", component_model=ConsolePort)
     def consoleports(self, request, *args, **kwargs):
-        # TODO: permissions enforcement?
         instance = self.get_object()
         consoleports = (
             instance.console_ports.restrict(request.user, "view")
