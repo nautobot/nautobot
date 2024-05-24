@@ -83,8 +83,6 @@ from nautobot.dcim.models import (
     Manufacturer,
     Module,
     ModuleBay,
-    ModuleBayTemplate,
-    ModuleType,
     Platform,
     PowerFeed,
     PowerOutlet,
