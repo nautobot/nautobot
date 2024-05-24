@@ -142,7 +142,6 @@ class ViewTestCases:
         def test_get_object_anonymous(self):
             # Make the request as an unauthenticated user
             self.client.logout()
-            print(self._get_queryset().first())
             response = self.client.get(self._get_queryset().first().get_absolute_url())
             self.assertHttpStatus(response, 200)
             response_body = response.content.decode(response.charset)
