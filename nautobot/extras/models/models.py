@@ -13,10 +13,9 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.http import HttpResponse
-from graphene_django.settings import graphene_settings
-from graphql import get_default_backend
+from graphql import IntValueNode, parse, StringValueNode
 from graphql.error import GraphQLSyntaxError
-from graphql.language.ast import OperationDefinition
+from graphql.language.ast import ExecutableDefinitionNode
 from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaValidationError
 from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
@@ -706,22 +705,22 @@ class GraphQLQuery(
 
     def save(self, *args, **kwargs):
         variables = {}
-        schema = graphene_settings.SCHEMA
-        backend = get_default_backend()
-        # Load query into GraphQL backend
-        document = backend.document_from_string(schema, self.query)
+        document = parse(self.query)
 
         # Inspect the parsed document tree (document.document_ast) to retrieve the query (operation) definition(s)
         # that define one or more variables. For each operation and variable definition, store the variable's
         # default value (if any) into our own "variables" dict.
         definitions = [
             d
-            for d in document.document_ast.definitions
-            if isinstance(d, OperationDefinition) and d.variable_definitions
+            for d in document.definitions
+            if isinstance(d, ExecutableDefinitionNode) and d.variable_definitions
         ]
         for definition in definitions:
             for variable_definition in definition.variable_definitions:
-                default = variable_definition.default_value.value if variable_definition.default_value else ""
+                if isinstance(variable_definition.default_value, (StringValueNode, IntValueNode)):
+                    default = variable_definition.default_value.value
+                else:
+                    default = ""
                 variables[variable_definition.variable.name.value] = default
 
         self.variables = variables
@@ -729,10 +728,8 @@ class GraphQLQuery(
 
     def clean(self):
         super().clean()
-        schema = graphene_settings.SCHEMA
-        backend = get_default_backend()
         try:
-            backend.document_from_string(schema, self.query)
+            parse(self.query)
         except GraphQLSyntaxError as error:
             raise ValidationError({"query": error})
 
