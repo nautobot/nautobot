@@ -108,7 +108,6 @@ class Migration(migrations.Migration):
                     nautobot.core.models.fields.NaturalOrderingField(
                         "position",
                         blank=True,
-                        db_index=True,
                         max_length=255,
                         naturalize_function=nautobot.core.models.ordering.naturalize,
                     ),
