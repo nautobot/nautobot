@@ -1812,6 +1812,10 @@ class ModuleTestCase(APIViewTestCases.APIViewTestCase):
             "status": Status.objects.get_for_model(Module).last().pk,
         }
 
+    def get_deletable_object_pks(self):
+        # Since Modules and ModuleBays are nestable, we need to delete Modules that don't have any child Modules
+        return Module.objects.exclude(module_bays__installed_module__isnull=False).values_list("pk", flat=True)[:3]
+
     def test_parent_module_bay_location_validation(self):
         """Assert that a module can have a parent_module_bay or a location but not both."""
 
@@ -2597,6 +2601,10 @@ class ModuleBayTest(Mixins.BaseComponentTestMixin):
                 "position": "Test3",
             },
         ]
+
+    def get_deletable_object_pks(self):
+        # Since Modules and ModuleBays are nestable, we need to delete ModuleBays that don't have any child ModuleBays
+        return ModuleBay.objects.filter(installed_module__isnull=True).values_list("pk", flat=True)[:3]
 
     def test_parent_module_parent_device_validation(self):
         """Assert that a module bay can have a parent_module or a parent_device but not both."""

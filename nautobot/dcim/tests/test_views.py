@@ -2495,6 +2495,48 @@ class ModuleBayTestCase(
         self.form_data["parent_module"] = getattr(getattr(instance, "parent_module", {}), "pk", None)
         super().test_edit_object_with_constrained_permission()
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_add_component(self):
+        """Test bulk-adding this component to modules."""
+        obj_perm = ObjectPermission(name="Test permission", actions=["add"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        initial_count = self._get_queryset().count()
+
+        data = self.bulk_create_data.copy()
+
+        # Load the module-bulk-add form
+        module_perm = ObjectPermission(name="Module permission", actions=["change"])
+        module_perm.save()
+        module_perm.users.add(self.user)
+        module_perm.object_types.add(ContentType.objects.get_for_model(Module))
+        url = reverse(f"dcim:module_bulk_add_{self.model._meta.model_name}")
+        request = {
+            "path": url,
+            "data": post_data({"pk": data["parent_module"]}),
+        }
+        self.assertHttpStatus(self.client.post(**request), 200)
+
+        # Post to the module-bulk-add form to create records
+        data["pk"] = data.pop("parent_module")
+        data["_create"] = ""
+        request["data"] = post_data(data)
+        self.assertHttpStatus(self.client.post(**request), 302)
+
+        updated_count = self._get_queryset().count()
+        self.assertEqual(updated_count, initial_count + self.bulk_create_count)
+
+        matching_count = 0
+        for instance in self._get_queryset().all():
+            try:
+                self.assertInstanceEqual(instance, self.bulk_create_data)
+                matching_count += 1
+            except AssertionError:
+                pass
+        self.assertEqual(matching_count, self.bulk_create_count)
+
 
 class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = InventoryItem
