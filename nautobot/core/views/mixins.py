@@ -1074,15 +1074,12 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin):
 
         # If we are editing *all* objects in the queryset, replace the PK list with all matched objects.
         if request.POST.get("_all"):
-            filter_params = self.get_filter_params(request)
-            if not filter_params:
-                self.pk_list = list(model.objects.only("pk").all().values_list("pk", flat=True))
-            elif self.filterset_class is None:
-                raise NotImplementedError("filterset_class must be defined to use _all")
-            else:
+            if self.filterset_class is not None:
                 self.pk_list = list(
-                    self.filterset_class(filter_params, model.objects.only("pk")).qs.values_list("pk", flat=True)
+                    self.filterset_class(request.GET, model.objects.only("pk")).qs.values_list("pk", flat=True)
                 )
+            else:
+                self.pk_list = list(model.objects.all().values_list("pk", flat=True))
         else:
             self.pk_list = list(request.POST.getlist("pk"))
         data = {}
