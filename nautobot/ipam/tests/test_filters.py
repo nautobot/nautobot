@@ -178,6 +178,24 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ["type"],
     )
 
+    def test_filters_generic(self):
+        # We usually have type container and network prefixes present
+        # but we need a third value for test_filters_generic() to work.
+        # So this is to ensure we have type pool prefixes in our test data.
+        Prefix.objects.create(
+            prefix="192.0.2.0/29",
+            type=PrefixTypeChoices.TYPE_POOL,
+            namespace=Namespace.objects.first(),
+            status=Status.objects.get_for_model(Prefix).first(),
+        )
+        Prefix.objects.create(
+            prefix="192.0.2.0/30",
+            type=PrefixTypeChoices.TYPE_POOL,
+            namespace=Namespace.objects.first(),
+            status=Status.objects.get_for_model(Prefix).first(),
+        )
+        return super().test_filters_generic()
+
     def test_search(self):
         prefixes = Prefix.objects.all()[:2]
         test_values = [

@@ -346,6 +346,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 memory=3,
                 disk=3,
                 comments="This is VM 4",
+                software_version=None,
             ),
             VirtualMachine.objects.create(
                 name="Virtual Machine 5",
@@ -358,6 +359,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 memory=3,
                 disk=3,
                 comments="This is VM 5",
+                software_version=None,
             ),
             VirtualMachine.objects.create(
                 name="Virtual Machine 6",
@@ -370,6 +372,7 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 memory=3,
                 disk=3,
                 comments="This is VM 6",
+                software_version=cls.software_versions[1],
             ),
         )
         vms[0].software_image_files.set(cls.software_versions[1].software_image_files.all())
