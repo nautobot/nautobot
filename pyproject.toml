@@ -69,6 +69,8 @@ django-redis = "~5.4.0"
 django-silk = "~5.1.0"
 # External Storage support (i.e. S3)
 django-storages = {version = "~1.14.2", optional = true}
+# Structured logging for Django
+django-structlog = {extras = ["all"], version = "^8.0.0"}
 # Advanced HTML tables
 django-tables2 = "~2.7.0"
 # Tags
