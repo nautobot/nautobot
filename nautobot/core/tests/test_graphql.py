@@ -15,7 +15,7 @@ from django.urls import reverse
 import graphene.types
 from graphene_django.registry import get_global_registry
 from graphene_django.settings import graphene_settings
-from graphql import get_default_backend, GraphQLError
+from graphql import GraphQLError
 from graphql.error.located_error import GraphQLLocatedError
 from rest_framework import status
 
@@ -1104,8 +1104,6 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
             destination=cls.device1,
         )
         cls.rm2ms_assoc_3.validated_save()
-
-        cls.backend = get_default_backend()
 
     def execute_query(self, query, variables=None):
         document = self.backend.document_from_string(self.SCHEMA, query)
