@@ -275,6 +275,8 @@ class NautobotTestCaseMixin:
         with context:
             func(*args, **kwargs)
 
+        return None
+
     #
     # Convenience methods
     #
