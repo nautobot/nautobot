@@ -2088,14 +2088,14 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             model = self.component_model
             method = self.request.method.lower()
             if method == "get":
-                action = "view"
-                permissions = [*self.get_permissions_for_model(model, [action]), "dcim.view_module"]
+                component_action = "view"
+                permissions = [*self.get_permissions_for_model(model, [component_action]), "dcim.view_module"]
             elif self.action.endswith("_add"):
-                action = "add"
-                permissions = [*self.get_permissions_for_model(model, [action]), "dcim.change_module"]
+                component_action = "add"
+                permissions = [*self.get_permissions_for_model(model, [component_action]), "dcim.change_module"]
             else:
-                action = "change"
-                permissions = [*self.get_permissions_for_model(model, [action]), "dcim.change_module"]
+                component_action = "change"
+                permissions = [*self.get_permissions_for_model(model, [component_action]), "dcim.change_module"]
 
             return permissions
 
