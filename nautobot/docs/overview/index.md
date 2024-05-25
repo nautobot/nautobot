@@ -24,12 +24,12 @@ Nautobot enables three (3) key use cases.
 
 <div class="grid cards" markdown>
 
-- :fontawesome-solid-download:{ .lg .middle } **Installing Nautobot**
+- :material-cloud-download:{ .lg .middle } **Installing Nautobot**
     
     ---
     Get up and running with a [Nautobot install](../user-guide/administration/installation/index.md) on your own Linux VM or in a Docker environment.
 
-- :fontawesome-solid-user-gear:{ .lg .middle } **Configuring Nautobot**
+- :material-account-settings:{ .lg .middle } **Configuring Nautobot**
     
     ---
     Learn about the many [configuration options](../user-guide/administration/configuration/index.md) that Nautobot offers for fine-tuning your installation.
