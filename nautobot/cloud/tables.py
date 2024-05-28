@@ -2,6 +2,7 @@ import django_tables2 as tables
 
 from nautobot.core.tables import (
     BaseTable,
+    ButtonsColumn,
     TagColumn,
     ToggleColumn,
 )
@@ -15,6 +16,7 @@ class CloudAccountTable(BaseTable):
     provider = tables.Column(linkify=True)
     secrets_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="cloud:cloudaccount_list")
+    actions = ButtonsColumn(CloudAccount)
 
     class Meta(BaseTable.Meta):
         model = CloudAccount

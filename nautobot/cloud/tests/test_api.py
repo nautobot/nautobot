@@ -33,12 +33,12 @@ class CloudAccountTest(APIViewTestCases.APIViewTestCase):
                 "account_number": "6782109915",
                 "provider": manufacturers[3].pk,
                 "secrets_group": secrets_groups[2].pk,
+                "description": "This is cloud account 3",
             },
             {
                 "name": "Account 4",
                 "account_number": "0989076098",
                 "provider": manufacturers[4].pk,
-                "secrets_group": secrets_groups[2].pk,
             },
         ]
         cls.bulk_update_data = {
