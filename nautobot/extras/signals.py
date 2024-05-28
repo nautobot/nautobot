@@ -399,15 +399,16 @@ pre_save.connect(dynamic_group_membership_created, sender=DynamicGroupMembership
 
 def dynamic_group_update_cached_members(sender, instance, **kwargs):
     """
-    When a DynamicGroup or DynamicGroupMembership is updated, update the cache of members.
+    When a DynamicGroup or DynamicGroupMembership is updated, update the cache of members for it and any parent groups.
     """
-
     if isinstance(instance, DynamicGroupMembership):
-        group = instance.group
+        group = instance.parent_group
     else:
         group = instance
 
     group.update_cached_members()
+    for ancestor in group.get_ancestors():
+        ancestor.update_cached_members()
 
 
 post_save.connect(dynamic_group_update_cached_members, sender=DynamicGroup)

@@ -604,10 +604,6 @@ class DynamicGroup(OrganizationalModel):
             self._backing_group.members = members
         logger.debug("Refreshed cache for %s, now with %d members", self, self._backing_group.count)
 
-        # Since a change to a group or group of groups does not affect its children, we only need to go up the tree.
-        for ancestor in self.parents.all():
-            ancestor.update_cached_members()
-
         return members
 
     def has_member(self, obj, use_cache=False):
