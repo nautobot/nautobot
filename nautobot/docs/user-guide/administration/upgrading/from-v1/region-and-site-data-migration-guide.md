@@ -149,5 +149,3 @@ The updated JSON data might look like this:
 ## Update Nautobot Apps
 
 Any Nautobot Apps that you use and maintain which have existing data referencing Site or Region records will need to be [updated](../../../../development/apps/migration/model-updates/dcim.md#replace-site-and-region-with-location-model) before you can complete your migration to Nautobot 2.0.
-
-## Region and Site Related Data Model Migration Guide For New Nautobot App installations in an Existing Nautobot 2.0 Environment
