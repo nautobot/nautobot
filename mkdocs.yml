@@ -199,6 +199,7 @@ plugins:
         "models/circuits/circuittype.md": "user-guide/core-data-model/circuits/circuittype.md"
         "models/circuits/provider.md": "user-guide/core-data-model/circuits/provider.md"
         "models/circuits/providernetwork.md": "user-guide/core-data-model/circuits/providernetwork.md"
+        "models/cloud/cloudaccount.md": "user-guide/core-data-model/cloud/cloudaccount.md"
         "models/dcim/cable.md": "user-guide/core-data-model/dcim/cable.md"
         "models/dcim/controller.md": "user-guide/core-data-model/dcim/controller.md"
         "models/dcim/controllermanageddevicegroup.md": "user-guide/core-data-model/dcim/controllermanageddevicegroup.md"
@@ -379,6 +380,8 @@ nav:
               - Circuit Type: "user-guide/core-data-model/circuits/circuittype.md"
               - Circuit Provider: "user-guide/core-data-model/circuits/provider.md"
               - Circuit Provider Network: "user-guide/core-data-model/circuits/providernetwork.md"
+          - Cloud:
+              - Cloud Account: "user-guide/core-data-model/cloud/cloudaccount.md"
           - DCIM:
               - Location Type: "user-guide/core-data-model/dcim/locationtype.md"
               - Location: "user-guide/core-data-model/dcim/location.md"

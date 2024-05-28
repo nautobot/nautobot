@@ -510,6 +510,7 @@ INSTALLED_APPS = [
     "rest_framework",  # Must be after `nautobot.core` for template overrides
     "db_file_storage",
     "nautobot.circuits",
+    "nautobot.cloud",
     "nautobot.dcim",
     "nautobot.ipam",
     "nautobot.extras",
