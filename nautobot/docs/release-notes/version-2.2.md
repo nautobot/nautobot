@@ -79,7 +79,7 @@ Model CharFields' `max_length` attributes have been standardized globally to hav
 - [#5588](https://github.com/nautobot/nautobot/issues/5588) - Added "Add Prefixes" and "Remove Prefixes" fields to `VRFBulkEditForm`.
 - [#5655](https://github.com/nautobot/nautobot/issues/5655) - Added "Device Family" as a configurable column in the Device Types table view.
 - [#5690](https://github.com/nautobot/nautobot/issues/5690) - Added a generic test case that asserts that all list views provide an appropriate FilterForm class.
-- [#5747](https://github.com/nautobot/nautobot/issues/5747) - Added "Circuit Terminations" menu item.
+- [#5747](https://github.com/nautobot/nautobot/issues/5747) - Added "Circuit Terminations" navigation menu item.
 
 ### Removed
 
