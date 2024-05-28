@@ -79,6 +79,3 @@ class CloudTypeTest(APIViewTestCases.APIViewTestCase):
                 "content_types": ["ipam.vlan"],
             },
         ]
-        cls.bulk_update_data = {
-            "provider": manufacturers[2].pk,
-        }

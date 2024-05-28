@@ -1,5 +1,4 @@
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Q
 
 from nautobot.cloud.filters import CloudAccountFilterSet, CloudTypeFilterSet
 from nautobot.cloud.models import CloudAccount, CloudType
@@ -54,7 +53,7 @@ class CloudTypeTestCase(FilterTestCases.NameOnlyFilterTestCase):
             cloud_type.content_types.add(cts[idx % 2])
 
         params = {"content_types": ["dcim.device", "dcim.rackgroup"]}
-        self.assertEqual(
-            self.filterset(params, self.queryset).qs.count(),
-            CloudType.objects.filter(Q(content_types__in=cts[0])).filter(Q(content_types__in=cts[1])).count(),
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            CloudType.objects.filter(content_types=cts[0]).filter(content_types=cts[1]),
         )

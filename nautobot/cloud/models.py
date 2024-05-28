@@ -52,25 +52,24 @@ class CloudAccount(PrimaryModel):
     "webhooks",
 )
 class CloudType(PrimaryModel):
-    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, help_text="The name of this Cloud Account.", unique=True)
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, help_text="Type of cloud objects", unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     provider = models.ForeignKey(
         to="dcim.Manufacturer",
         on_delete=models.PROTECT,
         related_name="cloud_types",
     )
-    extras_config_schema = models.JSONField(null=True, blank=True)
+    config_schema = models.JSONField(null=True, blank=True)
     content_types = models.ManyToManyField(
-        to=ContentType,
-        help_text="The content type(s) to which this model applies.",
+        to=ContentType, help_text="The content type(s) to which this model applies.", related_name="cloud_types"
     )
 
     class Meta:
-        ordering = ["provider", "name"]
+        ordering = ["name"]
 
     def __str__(self):
-        return f"{self.provider}: {self.name}"
+        return self.name
 
     @property
     def display(self):
-        return str(self)
+        return f"{self.provider}: {self.name}"
