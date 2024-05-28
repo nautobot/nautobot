@@ -1,1 +1,0 @@
-Fixed a `ProgrammingError` raised when attempting to render a Device's or Virtual Machine's config context.
