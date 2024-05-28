@@ -923,6 +923,10 @@ device-bays:
   - name: Device Bay 1
   - name: Device Bay 2
   - name: Device Bay 3
+module-bays:
+  - position: Module Bay 1
+  - position: Module Bay 2
+  - position: Module Bay 3
 """
 
         # Add all required permissions to the test user
@@ -988,6 +992,10 @@ device-bays:
         db1 = dt.device_bay_templates.first()
         self.assertEqual(db1.name, "Device Bay 1")
 
+        self.assertEqual(dt.module_bay_templates.count(), 3)
+        mb1 = dt.module_bay_templates.first()
+        self.assertEqual(mb1.position, "Module Bay 1")
+
     def test_import_objects_unknown_type_enums(self):
         """
         YAML import of data with `type` values that we don't recognize should remap those to "other" rather than fail.
@@ -1026,6 +1034,10 @@ device-bays:
   - name: Device Bay of Uncertain Type
     type: unknown  # should be ignored
   - name: Device Bay of Unspecified Type
+module-bays:
+  - position: Module Bay 1
+  - position: Module Bay 2
+  - position: Module Bay 3
 """
         # Add all required permissions to the test user
         self.add_permissions(
@@ -1087,6 +1099,9 @@ device-bays:
 
         self.assertEqual(dt.device_bay_templates.count(), 2)
         # DeviceBayTemplate doesn't have a type field.
+
+        self.assertEqual(dt.module_bay_templates.count(), 3)
+        # ModuleBayTemplate doesn't have a type field.
 
     def test_devicetype_export(self):
         url = reverse("dcim:devicetype_list")
@@ -1184,333 +1199,288 @@ class ModuleTypeTestCase(
             "manufacturer": manufacturers[1].pk,
         }
 
+    def test_list_has_correct_links(self):
+        """Assert that the ModuleType list view has import/export buttons for both CSV and YAML/JSON formats."""
+        self.add_permissions("dcim.add_moduletype", "dcim.view_moduletype")
+        response = self.client.get(reverse("dcim:moduletype_list"))
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
 
-# TODO
-#     def test_list_has_correct_links(self):
-#         """Assert that the DeviceType list view has import/export buttons for both CSV and YAML/JSON formats."""
-#         self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype")
-#         response = self.client.get(reverse("dcim:devicetype_list"))
-#         self.assertHttpStatus(response, 200)
-#         content = extract_page_body(response.content.decode(response.charset))
+        yaml_import_url = reverse("dcim:moduletype_import")
+        csv_import_url = job_import_url(ContentType.objects.get_for_model(ModuleType))
+        # Main import button links to YAML/JSON import
+        self.assertInHTML(
+            f'<a id="import-button" type="button" class="btn btn-info" href="{yaml_import_url}">'
+            '<span class="mdi mdi-database-import" aria-hidden="true"></span> Import</a>',
+            content,
+        )
+        # Dropdown provides both YAML/JSON and CSV import as options
+        self.assertInHTML(f'<a href="{yaml_import_url}">JSON/YAML format (single record)</a>', content)
+        self.assertInHTML(f'<a href="{csv_import_url}">CSV format (multiple records)</a>', content)
 
-#         yaml_import_url = reverse("dcim:devicetype_import")
-#         csv_import_url = job_import_url(ContentType.objects.get_for_model(DeviceType))
-#         # Main import button links to YAML/JSON import
-#         self.assertInHTML(
-#             f'<a id="import-button" type="button" class="btn btn-info" href="{yaml_import_url}">'
-#             '<span class="mdi mdi-database-import" aria-hidden="true"></span> Import</a>',
-#             content,
-#         )
-#         # Dropdown provides both YAML/JSON and CSV import as options
-#         self.assertInHTML(f'<a href="{yaml_import_url}">JSON/YAML format (single record)</a>', content)
-#         self.assertInHTML(f'<a href="{csv_import_url}">CSV format (multiple records)</a>', content)
+        export_url = job_export_url()
+        # Export is a little trickier to check since it's done as a form submission rather than an <a> element.
+        self.assertIn(f'<form action="{export_url}" method="post">', content)
+        self.assertInHTML(
+            f'<input type="hidden" name="content_type" value="{ContentType.objects.get_for_model(self.model).pk}">',
+            content,
+        )
+        self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
+        self.assertInHTML(
+            '<button type="submit" class="btn btn-link" form="export_default">YAML format</button>',
+            content,
+        )
+        self.assertInHTML('<button type="submit" class="btn btn-link">CSV format</button>', content)
 
-#         export_url = job_export_url()
-#         # Export is a little trickier to check since it's done as a form submission rather than an <a> element.
-#         self.assertIn(f'<form action="{export_url}" method="post">', content)
-#         self.assertInHTML(
-#             f'<input type="hidden" name="content_type" value="{ContentType.objects.get_for_model(self.model).pk}">',
-#             content,
-#         )
-#         self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
-#         self.assertInHTML(
-#             '<button type="submit" class="btn btn-link" form="export_default">YAML format</button>',
-#             content,
-#         )
-#         self.assertInHTML('<button type="submit" class="btn btn-link">CSV format</button>', content)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_import_objects(self):
+        """
+        Custom import test for YAML-based imports (versus CSV)
+        """
+        # Note use of "power-outlets.power_port" (not "power_port_template") and "front-ports.rear_port"
+        # (not "rear_port_template"). Note also inclusion of "slug" even though we removed DeviceType.slug in 2.0.
+        # This is intentional as we are testing backwards compatibility with the netbox/devicetype-library repository.
+        manufacturer = Manufacturer.objects.first()
+        IMPORT_DATA = f"""
+manufacturer: {manufacturer.name}
+model: TEST-1000
+slug: test-1000
+console-ports:
+  - name: Console Port 1
+    type: de-9
+  - name: Console Port 2
+    type: de-9
+  - name: Console Port 3
+    type: de-9
+console-server-ports:
+  - name: Console Server Port 1
+    type: rj-45
+  - name: Console Server Port 2
+    type: rj-45
+  - name: Console Server Port 3
+    type: rj-45
+power-ports:
+  - name: Power Port 1
+    type: iec-60320-c14
+  - name: Power Port 2
+    type: iec-60320-c14
+  - name: Power Port 3
+    type: iec-60320-c14
+power-outlets:
+  - name: Power Outlet 1
+    type: iec-60320-c13
+    power_port: Power Port 1
+    feed_leg: A
+  - name: Power Outlet 2
+    type: iec-60320-c13
+    power_port: Power Port 1
+    feed_leg: A
+  - name: Power Outlet 3
+    type: iec-60320-c13
+    power_port: Power Port 1
+    feed_leg: A
+interfaces:
+  - name: Interface 1
+    type: 1000base-t
+    mgmt_only: true
+  - name: Interface 2
+    type: 1000base-t
+  - name: Interface 3
+    type: 1000base-t
+rear-ports:
+  - name: Rear Port 1
+    type: 8p8c
+  - name: Rear Port 2
+    type: 8p8c
+  - name: Rear Port 3
+    type: 8p8c
+front-ports:
+  - name: Front Port 1
+    type: 8p8c
+    rear_port: Rear Port 1
+  - name: Front Port 2
+    type: 8p8c
+    rear_port: Rear Port 2
+  - name: Front Port 3
+    type: 8p8c
+    rear_port: Rear Port 3
+module-bays:
+  - position: Module Bay 1
+  - position: Module Bay 2
+  - position: Module Bay 3
+"""
 
-#     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-#     def test_import_objects(self):
-#         """
-#         Custom import test for YAML-based imports (versus CSV)
-#         """
-#         # Note use of "power-outlets.power_port" (not "power_port_template") and "front-ports.rear_port"
-#         # (not "rear_port_template"). Note also inclusion of "slug" even though we removed DeviceType.slug in 2.0.
-#         # This is intentional as we are testing backwards compatibility with the netbox/devicetype-library repository.
-#         manufacturer = Manufacturer.objects.first()
-#         IMPORT_DATA = f"""
-# manufacturer: {manufacturer.name}
-# model: TEST-1000
-# slug: test-1000
-# u_height: 2
-# subdevice_role: parent
-# comments: test comment
-# console-ports:
-#   - name: Console Port 1
-#     type: de-9
-#   - name: Console Port 2
-#     type: de-9
-#   - name: Console Port 3
-#     type: de-9
-# console-server-ports:
-#   - name: Console Server Port 1
-#     type: rj-45
-#   - name: Console Server Port 2
-#     type: rj-45
-#   - name: Console Server Port 3
-#     type: rj-45
-# power-ports:
-#   - name: Power Port 1
-#     type: iec-60320-c14
-#   - name: Power Port 2
-#     type: iec-60320-c14
-#   - name: Power Port 3
-#     type: iec-60320-c14
-# power-outlets:
-#   - name: Power Outlet 1
-#     type: iec-60320-c13
-#     power_port: Power Port 1
-#     feed_leg: A
-#   - name: Power Outlet 2
-#     type: iec-60320-c13
-#     power_port: Power Port 1
-#     feed_leg: A
-#   - name: Power Outlet 3
-#     type: iec-60320-c13
-#     power_port: Power Port 1
-#     feed_leg: A
-# interfaces:
-#   - name: Interface 1
-#     type: 1000base-t
-#     mgmt_only: true
-#   - name: Interface 2
-#     type: 1000base-t
-#   - name: Interface 3
-#     type: 1000base-t
-# rear-ports:
-#   - name: Rear Port 1
-#     type: 8p8c
-#   - name: Rear Port 2
-#     type: 8p8c
-#   - name: Rear Port 3
-#     type: 8p8c
-# front-ports:
-#   - name: Front Port 1
-#     type: 8p8c
-#     rear_port: Rear Port 1
-#   - name: Front Port 2
-#     type: 8p8c
-#     rear_port: Rear Port 2
-#   - name: Front Port 3
-#     type: 8p8c
-#     rear_port: Rear Port 3
-# device-bays:
-#   - name: Device Bay 1
-#   - name: Device Bay 2
-#   - name: Device Bay 3
-# """
+        # Add all required permissions to the test user
+        self.add_permissions(
+            "dcim.view_moduletype",
+            "dcim.add_moduletype",
+            "dcim.add_consoleporttemplate",
+            "dcim.add_consoleserverporttemplate",
+            "dcim.add_powerporttemplate",
+            "dcim.add_poweroutlettemplate",
+            "dcim.add_interfacetemplate",
+            "dcim.add_frontporttemplate",
+            "dcim.add_rearporttemplate",
+            "dcim.add_modulebaytemplate",
+        )
 
-#         # Add all required permissions to the test user
-#         self.add_permissions(
-#             "dcim.view_devicetype",
-#             "dcim.add_devicetype",
-#             "dcim.add_consoleporttemplate",
-#             "dcim.add_consoleserverporttemplate",
-#             "dcim.add_powerporttemplate",
-#             "dcim.add_poweroutlettemplate",
-#             "dcim.add_interfacetemplate",
-#             "dcim.add_frontporttemplate",
-#             "dcim.add_rearporttemplate",
-#             "dcim.add_devicebaytemplate",
-#         )
+        form_data = {"data": IMPORT_DATA, "format": "yaml"}
+        response = self.client.post(reverse("dcim:moduletype_import"), data=form_data, follow=True)
+        self.assertHttpStatus(response, 200)
+        mt = ModuleType.objects.get(model="TEST-1000")
 
-#         form_data = {"data": IMPORT_DATA, "format": "yaml"}
-#         response = self.client.post(reverse("dcim:devicetype_import"), data=form_data, follow=True)
-#         self.assertHttpStatus(response, 200)
-#         dt = DeviceType.objects.get(model="TEST-1000")
-#         self.assertEqual(dt.comments, "test comment")
+        # Verify all of the components were created
+        self.assertEqual(mt.console_port_templates.count(), 3)
+        cp1 = mt.console_port_templates.first()
+        self.assertEqual(cp1.name, "Console Port 1")
+        self.assertEqual(cp1.type, ConsolePortTypeChoices.TYPE_DE9)
 
-#         # Verify all of the components were created
-#         self.assertEqual(dt.console_port_templates.count(), 3)
-#         cp1 = dt.console_port_templates.first()
-#         self.assertEqual(cp1.name, "Console Port 1")
-#         self.assertEqual(cp1.type, ConsolePortTypeChoices.TYPE_DE9)
+        self.assertEqual(mt.console_server_port_templates.count(), 3)
+        csp1 = mt.console_server_port_templates.first()
+        self.assertEqual(csp1.name, "Console Server Port 1")
+        self.assertEqual(csp1.type, ConsolePortTypeChoices.TYPE_RJ45)
 
-#         self.assertEqual(dt.console_server_port_templates.count(), 3)
-#         csp1 = dt.console_server_port_templates.first()
-#         self.assertEqual(csp1.name, "Console Server Port 1")
-#         self.assertEqual(csp1.type, ConsolePortTypeChoices.TYPE_RJ45)
+        self.assertEqual(mt.power_port_templates.count(), 3)
+        pp1 = mt.power_port_templates.first()
+        self.assertEqual(pp1.name, "Power Port 1")
+        self.assertEqual(pp1.type, PowerPortTypeChoices.TYPE_IEC_C14)
 
-#         self.assertEqual(dt.power_port_templates.count(), 3)
-#         pp1 = dt.power_port_templates.first()
-#         self.assertEqual(pp1.name, "Power Port 1")
-#         self.assertEqual(pp1.type, PowerPortTypeChoices.TYPE_IEC_C14)
+        self.assertEqual(mt.power_outlet_templates.count(), 3)
+        po1 = mt.power_outlet_templates.first()
+        self.assertEqual(po1.name, "Power Outlet 1")
+        self.assertEqual(po1.type, PowerOutletTypeChoices.TYPE_IEC_C13)
+        self.assertEqual(po1.power_port_template, pp1)
+        self.assertEqual(po1.feed_leg, PowerOutletFeedLegChoices.FEED_LEG_A)
 
-#         self.assertEqual(dt.power_outlet_templates.count(), 3)
-#         po1 = dt.power_outlet_templates.first()
-#         self.assertEqual(po1.name, "Power Outlet 1")
-#         self.assertEqual(po1.type, PowerOutletTypeChoices.TYPE_IEC_C13)
-#         self.assertEqual(po1.power_port_template, pp1)
-#         self.assertEqual(po1.feed_leg, PowerOutletFeedLegChoices.FEED_LEG_A)
+        self.assertEqual(mt.interface_templates.count(), 3)
+        iface1 = mt.interface_templates.first()
+        self.assertEqual(iface1.name, "Interface 1")
+        self.assertEqual(iface1.type, InterfaceTypeChoices.TYPE_1GE_FIXED)
+        self.assertTrue(iface1.mgmt_only)
 
-#         self.assertEqual(dt.interface_templates.count(), 3)
-#         iface1 = dt.interface_templates.first()
-#         self.assertEqual(iface1.name, "Interface 1")
-#         self.assertEqual(iface1.type, InterfaceTypeChoices.TYPE_1GE_FIXED)
-#         self.assertTrue(iface1.mgmt_only)
+        self.assertEqual(mt.rear_port_templates.count(), 3)
+        rp1 = mt.rear_port_templates.first()
+        self.assertEqual(rp1.name, "Rear Port 1")
 
-#         self.assertEqual(dt.rear_port_templates.count(), 3)
-#         rp1 = dt.rear_port_templates.first()
-#         self.assertEqual(rp1.name, "Rear Port 1")
+        self.assertEqual(mt.front_port_templates.count(), 3)
+        fp1 = mt.front_port_templates.first()
+        self.assertEqual(fp1.name, "Front Port 1")
+        self.assertEqual(fp1.rear_port_template, rp1)
+        self.assertEqual(fp1.rear_port_position, 1)
 
-#         self.assertEqual(dt.front_port_templates.count(), 3)
-#         fp1 = dt.front_port_templates.first()
-#         self.assertEqual(fp1.name, "Front Port 1")
-#         self.assertEqual(fp1.rear_port_template, rp1)
-#         self.assertEqual(fp1.rear_port_position, 1)
+        self.assertEqual(mt.module_bay_templates.count(), 3)
+        mb1 = mt.module_bay_templates.first()
+        self.assertEqual(mb1.position, "Module Bay 1")
 
-#         self.assertEqual(dt.device_bay_templates.count(), 3)
-#         db1 = dt.device_bay_templates.first()
-#         self.assertEqual(db1.name, "Device Bay 1")
+    def test_import_objects_unknown_type_enums(self):
+        """
+        YAML import of data with `type` values that we don't recognize should remap those to "other" rather than fail.
+        """
+        manufacturer = Manufacturer.objects.first()
+        IMPORT_DATA = f"""
+manufacturer: {manufacturer.name}
+model: TEST-2000
+console-ports:
+  - name: Console Port Alpha-Beta
+    type: alpha-beta
+console-server-ports:
+  - name: Console Server Port Pineapple
+    type: pineapple
+power-ports:
+  - name: Power Port Fred
+    type: frederick
+power-outlets:
+  - name: Power Outlet Rick
+    type: frederick
+    power_port_template: Power Port Fred
+interfaces:
+  - name: Interface North
+    type: northern
+rear-ports:
+  - name: Rear Port Foosball
+    type: foosball
+front-ports:
+  - name: Front Port Pickleball
+    type: pickleball
+    rear_port_template: Rear Port Foosball
+module-bays:
+  - position: Module Bay 1
+  - position: Module Bay 2
+  - position: Module Bay 3
+"""
+        # Add all required permissions to the test user
+        self.add_permissions(
+            "dcim.view_moduletype",
+            "dcim.view_manufacturer",
+            "dcim.add_moduletype",
+            "dcim.add_consoleporttemplate",
+            "dcim.add_consoleserverporttemplate",
+            "dcim.add_powerporttemplate",
+            "dcim.add_poweroutlettemplate",
+            "dcim.add_interfacetemplate",
+            "dcim.add_frontporttemplate",
+            "dcim.add_rearporttemplate",
+            "dcim.add_modulebaytemplate",
+        )
 
-#     def test_import_objects_unknown_type_enums(self):
-#         """
-#         YAML import of data with `type` values that we don't recognize should remap those to "other" rather than fail.
-#         """
-#         manufacturer = Manufacturer.objects.first()
-#         IMPORT_DATA = f"""
-# manufacturer: {manufacturer.name}
-# model: TEST-2000
-# u_height: 0
-# subdevice_role: parent
-# comments: "test comment"
-# console-ports:
-#   - name: Console Port Alpha-Beta
-#     type: alpha-beta
-# console-server-ports:
-#   - name: Console Server Port Pineapple
-#     type: pineapple
-# power-ports:
-#   - name: Power Port Fred
-#     type: frederick
-# power-outlets:
-#   - name: Power Outlet Rick
-#     type: frederick
-#     power_port_template: Power Port Fred
-# interfaces:
-#   - name: Interface North
-#     type: northern
-# rear-ports:
-#   - name: Rear Port Foosball
-#     type: foosball
-# front-ports:
-#   - name: Front Port Pickleball
-#     type: pickleball
-#     rear_port_template: Rear Port Foosball
-# device-bays:
-#   - name: Device Bay of Uncertain Type
-#     type: unknown  # should be ignored
-#   - name: Device Bay of Unspecified Type
-# """
-#         # Add all required permissions to the test user
-#         self.add_permissions(
-#             "dcim.view_devicetype",
-#             "dcim.view_manufacturer",
-#             "dcim.add_devicetype",
-#             "dcim.add_consoleporttemplate",
-#             "dcim.add_consoleserverporttemplate",
-#             "dcim.add_powerporttemplate",
-#             "dcim.add_poweroutlettemplate",
-#             "dcim.add_interfacetemplate",
-#             "dcim.add_frontporttemplate",
-#             "dcim.add_rearporttemplate",
-#             "dcim.add_devicebaytemplate",
-#         )
+        form_data = {"data": IMPORT_DATA, "format": "yaml"}
+        response = self.client.post(reverse("dcim:moduletype_import"), data=form_data, follow=True)
+        self.assertHttpStatus(response, 200)
+        mt = ModuleType.objects.get(model="TEST-2000")
 
-#         form_data = {"data": IMPORT_DATA, "format": "yaml"}
-#         response = self.client.post(reverse("dcim:devicetype_import"), data=form_data, follow=True)
-#         self.assertHttpStatus(response, 200)
-#         dt = DeviceType.objects.get(model="TEST-2000")
-#         self.assertEqual(dt.comments, "test comment")
+        # Verify all of the components were created with appropriate "other" types
+        self.assertEqual(mt.console_port_templates.count(), 1)
+        cpt = ConsolePortTemplate.objects.filter(module_type=mt).first()
+        self.assertEqual(cpt.name, "Console Port Alpha-Beta")
+        self.assertEqual(cpt.type, ConsolePortTypeChoices.TYPE_OTHER)
 
-#         # Verify all of the components were created with appropriate "other" types
-#         self.assertEqual(dt.console_port_templates.count(), 1)
-#         cpt = ConsolePortTemplate.objects.filter(device_type=dt).first()
-#         self.assertEqual(cpt.name, "Console Port Alpha-Beta")
-#         self.assertEqual(cpt.type, ConsolePortTypeChoices.TYPE_OTHER)
+        self.assertEqual(mt.console_server_port_templates.count(), 1)
+        cspt = ConsoleServerPortTemplate.objects.filter(module_type=mt).first()
+        self.assertEqual(cspt.name, "Console Server Port Pineapple")
+        self.assertEqual(cspt.type, ConsolePortTypeChoices.TYPE_OTHER)
 
-#         self.assertEqual(dt.console_server_port_templates.count(), 1)
-#         cspt = ConsoleServerPortTemplate.objects.filter(device_type=dt).first()
-#         self.assertEqual(cspt.name, "Console Server Port Pineapple")
-#         self.assertEqual(cspt.type, ConsolePortTypeChoices.TYPE_OTHER)
+        self.assertEqual(mt.power_port_templates.count(), 1)
+        ppt = PowerPortTemplate.objects.filter(module_type=mt).first()
+        self.assertEqual(ppt.name, "Power Port Fred")
+        self.assertEqual(ppt.type, PowerPortTypeChoices.TYPE_OTHER)
 
-#         self.assertEqual(dt.power_port_templates.count(), 1)
-#         ppt = PowerPortTemplate.objects.filter(device_type=dt).first()
-#         self.assertEqual(ppt.name, "Power Port Fred")
-#         self.assertEqual(ppt.type, PowerPortTypeChoices.TYPE_OTHER)
+        self.assertEqual(mt.power_outlet_templates.count(), 1)
+        pot = PowerOutletTemplate.objects.filter(module_type=mt).first()
+        self.assertEqual(pot.name, "Power Outlet Rick")
+        self.assertEqual(pot.type, PowerOutletTypeChoices.TYPE_OTHER)
+        self.assertEqual(pot.power_port_template, ppt)
 
-#         self.assertEqual(dt.power_outlet_templates.count(), 1)
-#         pot = PowerOutletTemplate.objects.filter(device_type=dt).first()
-#         self.assertEqual(pot.name, "Power Outlet Rick")
-#         self.assertEqual(pot.type, PowerOutletTypeChoices.TYPE_OTHER)
-#         self.assertEqual(pot.power_port_template, ppt)
+        self.assertEqual(mt.interface_templates.count(), 1)
+        it = InterfaceTemplate.objects.filter(module_type=mt).first()
+        self.assertEqual(it.name, "Interface North")
+        self.assertEqual(it.type, InterfaceTypeChoices.TYPE_OTHER)
 
-#         self.assertEqual(dt.interface_templates.count(), 1)
-#         it = InterfaceTemplate.objects.filter(device_type=dt).first()
-#         self.assertEqual(it.name, "Interface North")
-#         self.assertEqual(it.type, InterfaceTypeChoices.TYPE_OTHER)
+        self.assertEqual(mt.rear_port_templates.count(), 1)
+        rpt = RearPortTemplate.objects.filter(module_type=mt).first()
+        self.assertEqual(rpt.name, "Rear Port Foosball")
+        self.assertEqual(rpt.type, PortTypeChoices.TYPE_OTHER)
 
-#         self.assertEqual(dt.rear_port_templates.count(), 1)
-#         rpt = RearPortTemplate.objects.filter(device_type=dt).first()
-#         self.assertEqual(rpt.name, "Rear Port Foosball")
-#         self.assertEqual(rpt.type, PortTypeChoices.TYPE_OTHER)
+        self.assertEqual(mt.front_port_templates.count(), 1)
+        fpt = FrontPortTemplate.objects.filter(module_type=mt).first()
+        self.assertEqual(fpt.name, "Front Port Pickleball")
+        self.assertEqual(fpt.type, PortTypeChoices.TYPE_OTHER)
 
-#         self.assertEqual(dt.front_port_templates.count(), 1)
-#         fpt = FrontPortTemplate.objects.filter(device_type=dt).first()
-#         self.assertEqual(fpt.name, "Front Port Pickleball")
-#         self.assertEqual(fpt.type, PortTypeChoices.TYPE_OTHER)
+        self.assertEqual(mt.module_bay_templates.count(), 3)
+        # ModuleBayTemplate doesn't have a type field.
 
-#         self.assertEqual(dt.device_bay_templates.count(), 2)
-#         # DeviceBayTemplate doesn't have a type field.
+    def test_moduletype_export(self):
+        url = reverse("dcim:moduletype_list")
+        self.add_permissions("dcim.view_moduletype")
 
-#     def test_devicetype_export(self):
-#         url = reverse("dcim:devicetype_list")
-#         self.add_permissions("dcim.view_devicetype")
+        response = self.client.get(f"{url}?export")
+        self.assertEqual(response.status_code, 200)
+        data = list(yaml.load_all(response.content, Loader=yaml.SafeLoader))
+        module_types = ModuleType.objects.all()
+        module_type = module_types.first()
 
-#         response = self.client.get(f"{url}?export")
-#         self.assertEqual(response.status_code, 200)
-#         data = list(yaml.load_all(response.content, Loader=yaml.SafeLoader))
-#         device_types = DeviceType.objects.all()
-#         device_type = device_types.first()
-
-#         self.assertEqual(len(data), device_types.count())
-#         self.assertEqual(data[0]["manufacturer"], device_type.manufacturer.name)
-#         self.assertEqual(data[0]["model"], device_type.model)
-
-#     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-#     def test_rack_height_bulk_edit_set_zero(self):
-#         """Test that rack height can be set to "0" in bulk_edit."""
-#         self.add_permissions("dcim.change_devicetype")
-#         url = self._get_url("bulk_edit")
-#         pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
-
-#         data = {
-#             "u_height": 0,
-#             "pk": pk_list,
-#             "_apply": True,  # Form button
-#         }
-
-#         response = self.client.post(url, data)
-#         self.assertHttpStatus(response, 302)
-#         for instance in self._get_queryset().filter(pk__in=pk_list):
-#             self.assertEqual(instance.u_height, data["u_height"])
-
-#     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-#     def test_rack_height_bulk_edit_invalid(self):
-#         """Test that a rack height cannot be set to an invalid value in bulk_edit."""
-#         self.add_permissions("dcim.change_devicetype")
-#         url = self._get_url("bulk_edit")
-#         pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
-
-#         data = {
-#             "u_height": -1,  # Invalid rack height
-#             "pk": pk_list,
-#             "_apply": True,  # Form button
-#         }
-
-#         response = self.client.post(url, data)
-#         self.assertHttpStatus(response, 200)
-#         self.assertIn("failed validation", response.content.decode(response.charset))
+        self.assertEqual(len(data), module_types.count())
+        self.assertEqual(data[0]["manufacturer"], module_type.manufacturer.name)
+        self.assertEqual(data[0]["model"], module_type.model)
 
 
 #

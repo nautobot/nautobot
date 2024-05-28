@@ -964,16 +964,15 @@ class ModuleTypeUIViewSet(
         action = self.get_action()
         if action == "import_view":
             return [
-                *self.get_permissions_for_model(ModuleType, "add"),
-                "dcim.add_moduletype",
-                "dcim.add_consoleporttemplate",
-                "dcim.add_consoleserverporttemplate",
-                "dcim.add_powerporttemplate",
-                "dcim.add_poweroutlettemplate",
-                "dcim.add_interfacetemplate",
-                "dcim.add_frontporttemplate",
-                "dcim.add_rearporttemplate",
-                "dcim.add_modulebaytemplate",
+                *self.get_permissions_for_model(ModuleType, ["add"]),
+                *self.get_permissions_for_model(ConsolePortTemplate, ["add"]),
+                *self.get_permissions_for_model(ConsoleServerPortTemplate, ["add"]),
+                *self.get_permissions_for_model(PowerPortTemplate, ["add"]),
+                *self.get_permissions_for_model(PowerOutletTemplate, ["add"]),
+                *self.get_permissions_for_model(InterfaceTemplate, ["add"]),
+                *self.get_permissions_for_model(FrontPortTemplate, ["add"]),
+                *self.get_permissions_for_model(RearPortTemplate, ["add"]),
+                *self.get_permissions_for_model(ModuleBayTemplate, ["add"]),
             ]
 
         return super().get_required_permission()
