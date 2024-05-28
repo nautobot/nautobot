@@ -1,2 +1,0 @@
-Fixed incorrect API query parameters when selecting VLANs to apply to a VM Interface.
-Fixed incorrect query parameters when accessing or creating Clusters from a Cluster Type detail view.
