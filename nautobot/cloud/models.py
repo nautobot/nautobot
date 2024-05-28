@@ -24,6 +24,7 @@ class CloudAccount(PrimaryModel):
         to="dcim.Manufacturer",
         on_delete=models.PROTECT,
         related_name="cloud_accounts",
+        help_text="Manufacturers are the recommended model to represent cloud providers.",
     )
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
