@@ -941,6 +941,7 @@ module-bays:
             "dcim.add_frontporttemplate",
             "dcim.add_rearporttemplate",
             "dcim.add_devicebaytemplate",
+            "dcim.add_modulebaytemplate",
         )
 
         form_data = {"data": IMPORT_DATA, "format": "yaml"}
@@ -1052,6 +1053,7 @@ module-bays:
             "dcim.add_frontporttemplate",
             "dcim.add_rearporttemplate",
             "dcim.add_devicebaytemplate",
+            "dcim.add_modulebaytemplate",
         )
 
         form_data = {"data": IMPORT_DATA, "format": "yaml"}

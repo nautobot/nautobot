@@ -961,8 +961,8 @@ class ModuleTypeUIViewSet(
     }
 
     def get_required_permission(self):
-        action = self.get_action()
-        if action == "import_view":
+        view_action = self.get_action()
+        if view_action == "import_view":
             return [
                 *self.get_permissions_for_model(ModuleType, ["add"]),
                 *self.get_permissions_for_model(ConsolePortTemplate, ["add"]),
