@@ -2360,7 +2360,7 @@ class StaticGroupUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
             members_table_class = get_table_for_model(instance.model)
-            members_table = members_table_class(instance.members, orderable=False)
+            members_table = members_table_class(instance.members.restrict(request.user, "view"), orderable=False)
             paginate = {
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request),

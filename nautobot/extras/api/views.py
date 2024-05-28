@@ -1136,7 +1136,7 @@ class StaticGroupViewSet(NautobotModelViewSet):
         # Retrieve the serializer for the content_type and paginate the results
         member_model_class = instance.content_type.model_class()
         member_serializer_class = get_serializer_for_model(member_model_class)
-        members = self.paginate_queryset(instance.members)
+        members = self.paginate_queryset(instance.members.restrict(request.user, "view"))
         member_serializer = member_serializer_class(members, many=True, context={"request": request})
         return self.get_paginated_response(member_serializer.data)
 

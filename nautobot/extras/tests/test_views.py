@@ -15,9 +15,11 @@ from django.utils.html import format_html
 from nautobot.circuits.models import Circuit
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
+from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import extract_form_failures, extract_page_body, TestCase, ViewTestCases
 from nautobot.core.testing.utils import disable_warnings, post_data
+from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.models import (
     ConsolePort,
     Controller,
@@ -2787,6 +2789,67 @@ class StaticGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "Is anyone there?",
             "tenant": Tenant.objects.last().pk,
         }
+
+    def _get_queryset(self):
+        queryset = super()._get_queryset()
+        # We want .first() to pick groups with members
+        return queryset.annotate(members_count=count_related(StaticGroupAssociation, "static_group")).order_by(
+            "-members_count", "name"
+        )
+
+    def test_get_object_with_permission(self):
+        instance = self._get_queryset().first()
+        # Add view permissions for the group's members:
+        self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"))
+
+        response = super().test_get_object_with_permission()
+
+        response_body = extract_page_body(response.content.decode(response.charset))
+        # Check that the "members" table in the detail view includes all appropriate member objects
+        for member in instance.members:
+            self.assertIn(str(member.pk), response_body)
+
+    def test_get_object_with_constrained_permission(self):
+        instance = self._get_queryset().first()
+        # Add permission for one of the group's members but not the others:
+        member1, member2 = instance.members[:2]
+        obj_perm = ObjectPermission(
+            name="Members permission",
+            constraints={"pk": member1.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(instance.content_type)
+
+        response = super().test_get_object_with_constrained_permission()
+
+        response_body = extract_page_body(response.content.decode(response.charset))
+        # Check that the "members" table in the detail view includes all permitted member objects
+        self.assertIn(str(member1.pk), response_body)
+        self.assertNotIn(str(member2.pk), response_body)
+
+    def test_get_object_static_groups_with_constrained_permission(self):
+        instance1 = self._get_queryset().first()
+        member = instance1.members.first()
+        self.add_permissions(get_permission_for_model(member, "view"))
+        instance2 = StaticGroup.objects.create(name="Forbidden group", content_type=instance1.content_type)
+        instance2.add_members([member])
+        obj_perm = ObjectPermission(
+            name="Groups permission",
+            constraints={"pk": instance1.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(StaticGroup))
+
+        url = member.get_absolute_url()
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        self.assertIn(str(instance1.pk), response_body)
+        self.assertNotIn(str(instance2.pk), response_body)
 
     def test_edit_object_with_permission(self):
         instance = self._get_queryset().first()
