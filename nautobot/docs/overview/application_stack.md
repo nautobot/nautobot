@@ -2,9 +2,12 @@
 
 Nautobot is built on the [Django](https://djangoproject.com/) Python Web framework and requires either a [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database backend. It runs as a WSGI service behind your choice of HTTP server.
 
+## Components
+
+<!-- markdownlint-disable MD033 MD003 MD022-->
 <div class="grid cards" markdown>
 
-- :material-language-python:{ .lg .middle } **Python** 
+- :material-language-python:{ .lg .middle } **Python**
     ---
     :material-language-python: Python 3.8 - 3.11 support
 
@@ -17,10 +20,10 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
     +/- 1.6.0
         Python 3.11 support was added and Python 3.7 support was removed.
 
--  :material-database:{ .lg .middle } **Database**
+- :material-database:{ .lg .middle } **Database**
 
     ---
-    :simple-postgresql: PostgreSQL 12+ 
+    :simple-postgresql: PostgreSQL 12+
     :simple-mysql: MySQL 8.0+
 
     --- 2.1.0
@@ -29,28 +32,27 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
     +++ 1.1.0
         MySQL support was added.
 
-- :simple-django:{ .lg .middle } **Application** 
-    
+- :simple-django:{ .lg .middle } **Application**
+
     ---
     Django/Python for the Nautobot web application.
 
 - :material-gate:{ .lg .middle } **WSGI Service**
-    
+
     ---
     Learn about the many [configuration options](../user-guide/administration/configuration/index.md) that Nautobot offers for fine-tuning your installation.
 
-        
 - :material-web:{ .lg .middle } **HTTP Service**
-    
+
     ---
     NGINX
 
--  :material-cached:{ .lg .middle } **Cache**
+- :material-cached:{ .lg .middle } **Cache**
 
     ---
     Django/Redis :simple-redis:
 
--  :material-human-queue:{ .lg .middle } **Task Queuing**
+- :material-human-queue:{ .lg .middle } **Task Queuing**
 
     ---
    Redis :simple-redis:
@@ -59,20 +61,23 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
         - `django-rq` support was removed.
         - `django-cacheops` usage was removed and replaced with Django's native caching features.
 
--  :material-truck-delivery-outline:{ .lg .middle } **Live Device Access**
+- :material-truck-delivery-outline:{ .lg .middle } **Live Device Access**
 
     ---
    [NAPALM](https://napalm.readthedocs.io/en/latest/) and [NAPALM Community Drivers](https://github.com/napalm-automation-community).
 
 </div>
+<!-- markdownlint-enable MD033 MD003 MD022 -->
 
 ## Application Diagram
 
 The following diagram displays how data travels through Nautobot's application stack.
 
+<!-- markdownlint-disable MD033 -->
 <figure markdown="span">
 ![Application stack diagram](../media/nautobot_application_stack_low_level.png "Application stack diagram")
 </figure>
+<!-- markdownlint-enable MD033 -->
 
 ## Getting Started
 
